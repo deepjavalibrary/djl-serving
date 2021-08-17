@@ -135,16 +135,16 @@ usage: djl-serving [OPTIONS]
 DJL Serving use RESTful API for both inference and management calls.
 
 When DJL Serving startup, it starts two web services:
-* [Inference API](docs/inference_api.md)
-* [Management API](docs/management_api.md)
+* [Inference API](serving/docs/inference_api.md)
+* [Management API](serving/docs/management_api.md)
 
 By default, DJL Serving listening on 8080 port and only accessible from localhost.
-Please see [DJL Serving Configuration](docs/configuration.md) for how to enable access from remote host.
+Please see [DJL Serving Configuration](serving/docs/configuration.md) for how to enable access from remote host.
 
 # Plugin management
 
 DJL Serving supports plugins, user can implement their own plugins to enrich DJL Serving features.
-See [DJL Plugin Management](docs/plugin_management.md) for how to install plugins to DJL Serving.
+See [DJL Plugin Management](serving/docs/plugin_management.md) for how to install plugins to DJL Serving.
 
 ## Logging
 you can set the logging level on the command-line adding a parameter for the JVM
