@@ -1,0 +1,102 @@
+plugins {
+    id 'application'
+    id "nebula.ospackage" version "8.5.6"
+}
+
+dependencies {
+    api platform("ai.djl:bom:${project.version}")
+    api "ai.djl:api"
+    api "io.netty:netty-all:${netty_version}"
+    api "org.slf4j:slf4j-api:${slf4j_version}"
+
+    implementation "commons-cli:commons-cli:${commons_cli_version}"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
+
+    runtimeOnly "ai.djl:model-zoo"
+    runtimeOnly "ai.djl.mxnet:mxnet-model-zoo"
+    runtimeOnly "ai.djl.tensorflow:tensorflow-model-zoo"
+    runtimeOnly "ai.djl.pytorch:pytorch-model-zoo"
+
+    runtimeOnly "ai.djl.mxnet:mxnet-native-auto"
+    runtimeOnly "ai.djl.pytorch:pytorch-native-auto"
+    runtimeOnly "ai.djl.tensorflow:tensorflow-native-auto"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'ai.djl.serving.ModelServer'
+    }
+    includeEmptyDirs = false
+
+    exclude "META-INF/maven/**"
+    exclude "META-INF/INDEX.LIST"
+    exclude "META-INF/MANIFEST*"
+}
+
+application {
+    getMainClass().set(System.getProperty("main", "ai.djl.serving.ModelServer"))
+}
+
+run {
+    environment("TF_CPP_MIN_LOG_LEVEL", "1") // turn off TensorFlow print out
+    environment("MXNET_ENGINE_TYPE", "NaiveEngine")
+    environment("OMP_NUM_THREADS", "1")
+    systemProperties System.getProperties()
+    systemProperties.remove("user.dir")
+    systemProperty("file.encoding", "UTF-8")
+    systemProperty("ai.djl.pytorch.num_interop_threads", "1")
+    applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000"]
+}
+
+clean {
+    delete file("plugins")
+}
+
+task createDeb(type: Deb, dependsOn: distTar) {
+    doFirst {
+        exec {
+            commandLine "tar", "xvf", "${project.buildDir}/distributions/serving-${project.version}.tar", "-C", "${project.buildDir}"
+        }
+    }
+
+    packageName = "djl-serving"
+    archiveVersion = "${project.version}"
+    release = 1
+    maintainer = "Deep Java Library <djl-dev@amazon.com>"
+    summary = "djl-serving is a general model server that can serve both Deep Learning models" +
+            "and traditional machine learning models."
+
+    postInstall "mkdir -p /usr/local/djl-serving-${project.version}/models" +
+            " && mkdir -p /usr/local/djl-serving-${project.version}/plugins"
+
+    from("${project.buildDir}/serving-${project.version}") {
+        into "/usr/local/djl-serving-${project.version}"
+    }
+    link("/usr/bin/djl-serving", "/usr/local/djl-serving-${project.version}/bin/serving")
+}
+
+startScripts {
+    defaultJvmOpts = []
+    doLast {
+        String text = unixScript.text.replace('exec "$JAVACMD" "$@"', 'exec env OMP_NUM_THREADS="1" MXNET_ENGINE_TYPE="NaiveEngine" TF_CPP_MIN_LOG_LEVEL=1 TF_NUM_INTRAOP_THREADS=1 "$JAVACMD" "$@"')
+        text = text.replace('DEFAULT_JVM_OPTS=""', 'if [ "${MODEL_SERVER_HOME}" = "" ] ; then\n' +
+                '    export MODEL_SERVER_HOME=${APP_HOME}\n' +
+                'fi\n' +
+                'DEFAULT_JVM_OPTS="-Dai.djl.pytorch.num_interop_threads=1 -Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml"\n')
+        text = text.replaceAll('CLASSPATH=\\$APP_HOME/lib/.*', 'CLASSPATH=\\$APP_HOME/lib/*')
+        unixScript.text = text
+    }
+}
+
+applicationDistribution.from("src/main/conf/") {
+    into "conf"
+}
+tasks.distZip.enabled = false
+tasks.test.dependsOn(
+        ":central:jar",
+        ":plugins:plugin-management-plugin:jar",
+        ":plugins:static-file-plugin:jar")

@@ -1,0 +1,5 @@
+rootProject.name = 'djl-serving'
+include ':central'
+include ':plugins:plugin-management-plugin'
+include ':plugins:static-file-plugin'
+include ':serving'

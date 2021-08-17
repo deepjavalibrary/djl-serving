@@ -1,0 +1,27 @@
+.gradle
+.DS_Store
+.idea
+*.iml
+build
+libs
+*.gz
+*.params
+*.zip
+*.jar
+*.so
+*.dylib
+*.dll
+*.class
+
+# Eclipse
+.settings
+.project
+.classpath
+bin/
+
+#node
+node_modules/
+**/static/dist/
+
+#vscode
+.vscode
