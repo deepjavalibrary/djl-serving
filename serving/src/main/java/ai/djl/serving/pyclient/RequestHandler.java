@@ -13,6 +13,7 @@
 package ai.djl.serving.pyclient;
 
 import ai.djl.serving.pyclient.protocol.Response;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;

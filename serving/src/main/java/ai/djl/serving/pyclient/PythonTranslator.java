@@ -16,6 +16,7 @@ import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
+import ai.djl.serving.pyclient.protocol.Request;
 import ai.djl.serving.util.CodecUtils;
 import ai.djl.translate.Batchifier;
 import ai.djl.translate.ServingTranslator;
@@ -30,6 +31,9 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * PythonTranslator which
+ */
 public class PythonTranslator implements ServingTranslator {
     private static final Logger logger = LoggerFactory.getLogger(PythonTranslator.class);
 
@@ -44,20 +48,16 @@ public class PythonTranslator implements ServingTranslator {
 
     @Override
     public Output processOutput(TranslatorContext ctx, NDList list) throws Exception {
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
-        Channel nettyClient = SocketConnector.getInstance().getChannel();
-        send(nettyClient, list.encode(), future);
-
-        //obtaining response
-        byte[] response = future.get(); // awaits till the future is complete, if necessary
-        return CodecUtils.decodeToOutput(response);
+        return null;
     }
 
     @Override
     public NDList processInput(TranslatorContext ctx, Input input) throws Exception {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         Channel nettyClient = SocketConnector.getInstance().getChannel();
-        send(nettyClient, CodecUtils.encodeInput(input), future);
+        //TODO: This will be changed in the following PRs
+        Request request = new Request(input.getContent().get(null));
+        send(nettyClient, CodecUtils.encodeRequest(request), future);
 
         //obtaining response
         byte[] response = future.get(); // awaits till the future is complete, if necessary
@@ -69,18 +69,19 @@ public class PythonTranslator implements ServingTranslator {
 
 
     /**
-     * TODO : Will be move this method to PythonWorker later
      * Sends data to nettyclient
+     * TODO : Will be move this method to PythonWorker later
      *
      * @param nettyClient
      * @param data
      * @param resFuture
-     * @throws IOException
      */
-    private void send(Channel nettyClient, byte[] data, CompletableFuture<byte[]> resFuture) throws IOException {
+    private void send(Channel nettyClient, byte[] data, CompletableFuture<byte[]> resFuture) {
+        logger.info("Sending data to python server");
         ChannelFuture writeFuture = nettyClient.writeAndFlush(Unpooled.copiedBuffer(data));
         writeFuture.addListener(future -> {
             if (future.isSuccess()) {
+                logger.info("Sent data to python server");
                 nettyClient.pipeline()
                         .get(RequestHandler.class)
                         .setResponseFuture(resFuture);
