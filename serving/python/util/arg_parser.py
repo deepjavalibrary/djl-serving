@@ -6,12 +6,19 @@
 # OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
 # and limitations under the License.
 
+"""
+Argument parser for python server.
+"""
+
 import argparse
 
 
 class ArgParser(object):
     @staticmethod
     def python_server_args():
+        """
+        Argument parser for python server.
+        """
         parser = argparse.ArgumentParser(prog='python-server', description='Python server')
         # TODO: add sock_type as argument
         parser.add_argument('--host',

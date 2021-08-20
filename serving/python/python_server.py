@@ -5,6 +5,12 @@
 # or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 # OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
 # and limitations under the License.
+
+"""
+Python server that is started from DJL serving.
+Communication message format: binary encoding
+"""
+
 import logging
 import os
 import socket
@@ -15,14 +21,22 @@ from util.arg_parser import ArgParser
 from util.serializing import construct_enc_response
 
 
-class SocketServer(object):
+class PythonServer(object):
     def __init__(self, host, port):
+        """
+        Initilizes the socket
+        :param host:
+        :param port:
+        """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock_name = host
         self.port = int(port)
 
     def run_server(self):
+        """
+        Starts the server and listens
+        """
         self.sock.bind((self.sock_name, self.port))
         self.sock.listen(128)
         logging.info("[PID] %d", os.getpid())
@@ -45,7 +59,7 @@ if __name__ == "__main__":
         args = ArgParser.python_server_args().parse_args()
         host = args.host
         port = args.port
-        server = SocketServer(host, port)
+        server = PythonServer(host, port)
         server.run_server()
     except socket.timeout:
         logging.error("Python server did not receive connection")
