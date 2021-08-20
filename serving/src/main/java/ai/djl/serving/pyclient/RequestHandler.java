@@ -13,30 +13,38 @@
 package ai.djl.serving.pyclient;
 
 import ai.djl.serving.pyclient.protocol.Response;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * A class handling inbound request handler for ipc with python.
+ */
 public class RequestHandler extends SimpleChannelInboundHandler<Response>  {
     private static final Logger logger = LoggerFactory.getLogger(RequestHandler.class);
     private CompletableFuture<byte[]> future;
 
+    /** {@inheritDoc} */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Response msg) {
         byte[] rawData = msg.getRawData();
         future.complete(rawData);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         logger.error("Exception occurred during request handler of python worker", cause);
         ctx.close();
     }
 
+    /**
+     * Sets the response future object. It gets completed when response is sent by the python server.
+     *
+     * @param future response future
+     */
     public void setResponseFuture(CompletableFuture<byte[]> future) {
         this.future = future;
     }

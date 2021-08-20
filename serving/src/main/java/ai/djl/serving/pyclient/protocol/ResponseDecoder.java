@@ -7,15 +7,24 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
+/**
+ * This class decodes the response from netty channel.
+ */
 public class ResponseDecoder extends ByteToMessageDecoder {
     private final int maxBufferSize;
 
+    /**
+     * Constructor sets the maximum buffer size.
+     *
+     * @param maxBufferSize limit of the buffer size that can be received.
+     */
     public ResponseDecoder(int maxBufferSize) {
         this.maxBufferSize = maxBufferSize;
     }
 
+    /** {@inheritDoc} */
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         int size = in.readableBytes();
         if (size < 4) {
             return;

@@ -24,33 +24,44 @@ import ai.djl.translate.TranslatorContext;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
- * PythonTranslator which
+ * PythonTranslator connects to python server for data processing.
  */
 public class PythonTranslator implements ServingTranslator {
     private static final Logger logger = LoggerFactory.getLogger(PythonTranslator.class);
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setArguments(Map<String, ?> arguments) {
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Batchifier getBatchifier() {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Output processOutput(TranslatorContext ctx, NDList list) throws Exception {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public NDList processInput(TranslatorContext ctx, Input input) throws Exception {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
@@ -69,12 +80,12 @@ public class PythonTranslator implements ServingTranslator {
 
 
     /**
-     * Sends data to nettyclient
+     * Sends data to nettyclient.
      * TODO : Will be move this method to PythonWorker later
      *
-     * @param nettyClient
-     * @param data
-     * @param resFuture
+     * @param nettyClient to connect with python server
+     * @param data        to be sent
+     * @param resFuture   response future gets completed when response is received
      */
     private void send(Channel nettyClient, byte[] data, CompletableFuture<byte[]> resFuture) {
         logger.info("Sending data to python server");
