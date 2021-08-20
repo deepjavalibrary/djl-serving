@@ -13,8 +13,6 @@
 package ai.djl.serving.pyclient;
 
 import ai.djl.serving.pyclient.protocol.ResponseDecoder;
-import ai.djl.serving.util.ConfigManager;
-import ai.djl.serving.util.Connector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -24,19 +22,26 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+/**
+ * This class creates a netty client.
+ */
 public class SocketConnector {
 
-    private static final SocketConnector socketConnector = newInstance();
+    private static final SocketConnector SOCKET_CONNECTOR = newInstance();
 
-    private final int MAX_BUFFER_SIZE = 6553500;
+    private static final int MAX_BUFFER_SIZE = 6553500;
     private Channel channel;
 
+    /**
+     * Creates a netty client.
+     */
     public SocketConnector() {
 
         EventLoopGroup group = new NioEventLoopGroup();
 
         try {
             Bootstrap clientBootstrap = new Bootstrap();
+            //TODO: Support uds also
             clientBootstrap.group(group);
             clientBootstrap.channel(NioSocketChannel.class);
             clientBootstrap.remoteAddress("127.0.0.1", 9000);
@@ -56,15 +61,27 @@ public class SocketConnector {
         }
     }
 
+
+    /**
+     * Getter for socket connector instance
+     *
+     * @return socket connector instance
+     */
+    public static SocketConnector getInstance() {
+        return SOCKET_CONNECTOR;
+    }
+
+    /**
+     * Getter for netty client channel.
+     *
+     * @return channel for netty client.
+     */
+    public Channel getChannel() {
+        return this.channel;
+    }
+
     private static SocketConnector newInstance() {
         return new SocketConnector();
     }
 
-    public static SocketConnector getInstance() {
-        return socketConnector;
-    }
-
-    public Channel getChannel() {
-        return this.channel;
-    }
 }
