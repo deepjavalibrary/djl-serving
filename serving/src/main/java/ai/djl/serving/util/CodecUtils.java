@@ -18,16 +18,33 @@ import ai.djl.serving.pyclient.protocol.Request;
 import ai.djl.util.PairList;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
-
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-public class CodecUtils {
+/**
+ * This is a utility class for encoding and decoding of request and response with python server.
+ */
+public final class CodecUtils {
 
+    public static final int BUFFER_SIZE = 81920;
     public static final int BUFFER_UNDER_RUN = -3;
 
+    private CodecUtils() {
+    }
+
+    /**
+     * Reads an integer value, which represents the length of the data.
+     *
+     * @param byteBuf   byte buffer
+     * @param maxLength maximum length of data that can be read.
+     * @return length
+     */
     public static int readLength(ByteBuf byteBuf, int maxLength) {
         int size = byteBuf.readableBytes();
         if (size < 4) {
@@ -44,6 +61,13 @@ public class CodecUtils {
         return len;
     }
 
+    /**
+     * Reads the specified length of data.
+     *
+     * @param in  byte buffer
+     * @param len length of the data to be read
+     * @return read data
+     */
     public static byte[] read(ByteBuf in, int len) {
         if (len < 0) {
             throw new CorruptedFrameException("Invalid message size: " + len);
@@ -105,8 +129,6 @@ public class CodecUtils {
      * @throws IOException when error occurs during decoding
      */
     public static Output decodeToOutput(byte[] byteArray) throws IOException {
-        int BUFFER_SIZE = 81920;
-
         ByteArrayInputStream in = new ByteArrayInputStream(byteArray);
         try (DataInputStream dis = new DataInputStream(in)) {
             String requestId = dis.readUTF();
@@ -115,8 +137,8 @@ public class CodecUtils {
             Output output = new Output(code, message);
             output.setRequestId(requestId);
 
-            int prop_size = dis.readInt();
-            for (int i = 0; i < prop_size; i++) {
+            int propSize = dis.readInt();
+            for (int i = 0; i < propSize; i++) {
                 String key = dis.readUTF();
                 String val = dis.readUTF();
                 output.addProperty(key, val);
@@ -145,6 +167,13 @@ public class CodecUtils {
         }
     }
 
+    /**
+     * Encodes the request into byte array.
+     *
+     * @param request instance
+     * @return encoded byte array
+     * @throws IOException if error occurs while encoding
+     */
     public static byte[] encodeRequest(Request request) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
