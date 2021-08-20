@@ -9,6 +9,7 @@ import sys
 
 from protocol.request_handler import retrieve_request
 from util.arg_parser import ArgParser
+from util.serializing import construct_enc_response
 
 
 class SocketServer(object):
@@ -29,7 +30,8 @@ class SocketServer(object):
         while True:
             byte_data = retrieve_request(cl_sock)
             logging.info("Received request from DJL Client")
-            is_sent = cl_sock.sendall(byte_data)
+            response_data = construct_enc_response(byte_data)
+            is_sent = cl_sock.sendall(response_data)
             if not is_sent:
                 logging.info("Response is sent to DJL Client")
 

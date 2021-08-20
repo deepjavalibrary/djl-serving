@@ -14,7 +14,10 @@ package ai.djl.serving.util;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.serving.pyclient.protocol.Request;
 import ai.djl.util.PairList;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.CorruptedFrameException;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -22,6 +25,34 @@ import java.util.List;
 import java.util.Map;
 
 public class CodecUtils {
+
+    public static final int BUFFER_UNDER_RUN = -3;
+
+    public static int readLength(ByteBuf byteBuf, int maxLength) {
+        int size = byteBuf.readableBytes();
+        if (size < 4) {
+            return BUFFER_UNDER_RUN;
+        }
+
+        int len = byteBuf.readInt();
+        if (len > maxLength) {
+            throw new CorruptedFrameException("Message size exceed limit: " + len);
+        }
+        if (len > byteBuf.readableBytes()) {
+            return BUFFER_UNDER_RUN;
+        }
+        return len;
+    }
+
+    public static byte[] read(ByteBuf in, int len) {
+        if (len < 0) {
+            throw new CorruptedFrameException("Invalid message size: " + len);
+        }
+
+        byte[] buf = new byte[len];
+        in.readBytes(buf);
+        return buf;
+    }
 
     /**
      * Converts the given Input to byte array.
@@ -111,6 +142,20 @@ public class CodecUtils {
             return output;
         } catch (IOException ioException) {
             throw new IOException("Exception while decoding output", ioException);
+        }
+    }
+
+    public static byte[] encodeRequest(Request request) throws IOException {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            DataOutputStream dos = new DataOutputStream(baos);
+            dos.writeInt(request.getRawData().length);
+            dos.write(request.getRawData());
+
+            dos.flush();
+            return baos.toByteArray();
+        } catch (IOException ioException) {
+            throw new IOException("Error while encoding Request", ioException);
         }
     }
 }

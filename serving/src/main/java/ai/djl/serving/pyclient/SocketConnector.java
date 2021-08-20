@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.pyclient;
 
+import ai.djl.serving.pyclient.protocol.ResponseDecoder;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import io.netty.bootstrap.Bootstrap;
@@ -32,7 +33,7 @@ public class SocketConnector {
 
     public SocketConnector() {
 
-        EventLoopGroup group = Connector.newEventLoopGroup(1);
+        EventLoopGroup group = new NioEventLoopGroup();
 
         try {
             Bootstrap clientBootstrap = new Bootstrap();
@@ -42,7 +43,7 @@ public class SocketConnector {
 
             clientBootstrap.handler(new ChannelInitializer<SocketChannel>() {
                 protected void initChannel(SocketChannel socketChannel) throws Exception {
-                    //socketChannel.pipeline().addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
+                    socketChannel.pipeline().addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
                     socketChannel.pipeline().addLast("handler", new RequestHandler());
                 }
             });
