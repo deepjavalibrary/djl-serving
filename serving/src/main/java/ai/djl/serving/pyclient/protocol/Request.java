@@ -13,14 +13,14 @@
 package ai.djl.serving.pyclient.protocol;
 
 /**
- * Request format to python server.
+ * Request format for ipc with python server.
  * TODO: Will be changed to support python file, method, process function type.
  */
 public class Request {
     private byte[] rawData;
 
     /**
-     * Sets the request data
+     * Sets the request data.
      *
      * @param rawData request data in bytes
      */
@@ -29,7 +29,7 @@ public class Request {
     }
 
     /**
-     * Getter for rawData
+     * Getter for rawData.
      *
      * @return rawData
      */
@@ -38,7 +38,7 @@ public class Request {
     }
 
     /**
-     * Setter for rawData
+     * Setter for rawData.
      *
      * @param rawData request data in bytes
      */

@@ -11,28 +11,3 @@
  * and limitations under the License.
  */
 package ai.djl.serving.pyclient.protocol;
-
-/**
- * Response format for ipc with python server.
- */
-public class Response {
-    private byte[] rawData;
-
-    /**
-     * Getter for rawData.
-     *
-     * @return response data in bytes
-     */
-    public byte[] getRawData() {
-        return rawData;
-    }
-
-    /**
-     * Setter for rawData.
-     *
-     * @param rawData response data in bytes
-     */
-    public void setRawData(byte[] rawData) {
-        this.rawData = rawData;
-    }
-}

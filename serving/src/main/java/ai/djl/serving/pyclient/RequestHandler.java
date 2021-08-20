@@ -15,9 +15,9 @@ package ai.djl.serving.pyclient;
 import ai.djl.serving.pyclient.protocol.Response;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * A class handling inbound request handler for ipc with python.

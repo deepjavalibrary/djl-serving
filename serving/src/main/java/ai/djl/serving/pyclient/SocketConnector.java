@@ -21,12 +21,15 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class creates a netty client.
  */
 public class SocketConnector {
 
+    private static final Logger logger = LoggerFactory.getLogger(SocketConnector.class);
     private static final SocketConnector SOCKET_CONNECTOR = newInstance();
 
     private static final int MAX_BUFFER_SIZE = 6553500;
@@ -47,6 +50,7 @@ public class SocketConnector {
             clientBootstrap.remoteAddress("127.0.0.1", 9000);
 
             clientBootstrap.handler(new ChannelInitializer<SocketChannel>() {
+                @Override
                 protected void initChannel(SocketChannel socketChannel) throws Exception {
                     socketChannel.pipeline().addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
                     socketChannel.pipeline().addLast("handler", new RequestHandler());
@@ -57,13 +61,12 @@ public class SocketConnector {
             this.channel = future.awaitUninterruptibly().channel();
             future.channel().closeFuture();
         } catch (Exception exception) {
-            exception.printStackTrace();
+            logger.error("Exception occurred while creating netty client");
         }
     }
 
-
     /**
-     * Getter for socket connector instance
+     * Getter for socket connector instance.
      *
      * @return socket connector instance
      */

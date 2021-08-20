@@ -16,7 +16,6 @@ import ai.djl.serving.util.CodecUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-
 import java.util.List;
 
 /**
@@ -49,12 +48,12 @@ public class ResponseDecoder extends ByteToMessageDecoder {
 
         try {
 
-            int arr_len = CodecUtils.readLength(in, maxBufferSize);
-            if (arr_len == CodecUtils.BUFFER_UNDER_RUN) {
+            int arrLen = CodecUtils.readLength(in, maxBufferSize);
+            if (arrLen == CodecUtils.BUFFER_UNDER_RUN) {
                 return;
             }
 
-            byte[] arr = CodecUtils.read(in, arr_len);
+            byte[] arr = CodecUtils.read(in, arrLen);
             Response response = new Response();
             response.setRawData(arr);
             completed = true;
