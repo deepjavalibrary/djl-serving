@@ -27,21 +27,18 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-/**
- * This is a utility class for encoding and decoding of request and response with python server.
- */
+/** This is a utility class for encoding and decoding of request and response with python server. */
 public final class CodecUtils {
 
     public static final int BUFFER_SIZE = 81920;
     public static final int BUFFER_UNDER_RUN = -3;
 
-    private CodecUtils() {
-    }
+    private CodecUtils() {}
 
     /**
      * Reads an integer value, which represents the length of the data.
      *
-     * @param byteBuf   byte buffer
+     * @param byteBuf byte buffer
      * @param maxLength maximum length of data that can be read.
      * @return length
      */
@@ -64,7 +61,7 @@ public final class CodecUtils {
     /**
      * Reads the specified length of data.
      *
-     * @param in  byte buffer
+     * @param in byte buffer
      * @param len length of the data to be read
      * @return read data
      */
@@ -117,7 +114,8 @@ public final class CodecUtils {
             dos.flush();
             return baos.toByteArray();
         } catch (IOException exception) {
-            throw new IOException("Error while encoding the processing file and package", exception);
+            throw new IOException(
+                    "Error while encoding the processing file and package", exception);
         }
     }
 
@@ -176,7 +174,6 @@ public final class CodecUtils {
      */
     public static byte[] encodeRequest(Request request) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-
             DataOutputStream dos = new DataOutputStream(baos);
             dos.writeInt(request.getRawData().length);
             dos.write(request.getRawData());

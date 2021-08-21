@@ -24,9 +24,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * This class creates a netty client.
- */
+/** This class creates a netty client. */
 public class SocketConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(SocketConnector.class);
@@ -35,27 +33,27 @@ public class SocketConnector {
     private static final int MAX_BUFFER_SIZE = 6553500;
     private Channel channel;
 
-    /**
-     * Creates a netty client.
-     */
+    /** Creates a netty client. */
     public SocketConnector() {
-
         EventLoopGroup group = new NioEventLoopGroup();
 
         try {
             Bootstrap clientBootstrap = new Bootstrap();
-            //TODO: Support uds also
+            // TODO: Support uds also
             clientBootstrap.group(group);
             clientBootstrap.channel(NioSocketChannel.class);
             clientBootstrap.remoteAddress("127.0.0.1", 9000);
 
-            clientBootstrap.handler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                protected void initChannel(SocketChannel socketChannel) throws Exception {
-                    socketChannel.pipeline().addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
-                    socketChannel.pipeline().addLast("handler", new RequestHandler());
-                }
-            });
+            clientBootstrap.handler(
+                    new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        protected void initChannel(SocketChannel socketChannel) throws Exception {
+                            socketChannel
+                                    .pipeline()
+                                    .addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
+                            socketChannel.pipeline().addLast("handler", new RequestHandler());
+                        }
+                    });
 
             ChannelFuture future = clientBootstrap.connect().sync();
             this.channel = future.awaitUninterruptibly().channel();
@@ -86,5 +84,4 @@ public class SocketConnector {
     private static SocketConnector newInstance() {
         return new SocketConnector();
     }
-
 }

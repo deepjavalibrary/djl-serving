@@ -13,10 +13,11 @@
 package ai.djl.serving.pyclient.protocol;
 
 /**
- * Request format for ipc with python server.
- * TODO: Will be changed to support python file, method, process function type.
+ * Request format for ipc with python server. TODO: Will be changed to support python file, method,
+ * process function type.
  */
 public class Request {
+
     private byte[] rawData;
 
     /**

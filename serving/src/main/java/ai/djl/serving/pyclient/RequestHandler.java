@@ -19,11 +19,11 @@ import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * A class handling inbound request handler for ipc with python.
- */
-public class RequestHandler extends SimpleChannelInboundHandler<Response>  {
+/** A class handling inbound request handler for ipc with python. */
+public class RequestHandler extends SimpleChannelInboundHandler<Response> {
+
     private static final Logger logger = LoggerFactory.getLogger(RequestHandler.class);
+
     private CompletableFuture<byte[]> future;
 
     /** {@inheritDoc} */
@@ -41,12 +41,12 @@ public class RequestHandler extends SimpleChannelInboundHandler<Response>  {
     }
 
     /**
-     * Sets the response future object. It gets completed when response is sent by the python server.
+     * Sets the response future object. It gets completed when response is sent by the python
+     * server.
      *
      * @param future response future
      */
     public void setResponseFuture(CompletableFuture<byte[]> future) {
         this.future = future;
     }
-
 }
