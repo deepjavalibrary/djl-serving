@@ -24,7 +24,21 @@ class ArgParser(object):
         Argument parser for python server.
         """
         parser = argparse.ArgumentParser(prog='python-server', description='Python server')
-        # TODO: add sock_type as argument
+        parser.add_argument('--sock-type',
+                            required=True,
+                            type=str,
+                            dest="sock_type",
+                            choices=["unix", "tcp"],
+                            help='Socket type the python server worker would use. The options are\n'
+                                 'unix: The python server expects to unix domain-socket\n'
+                                 'tcp: The python server expects a host-name and port-number'
+                            )
+        parser.add_argument('--sock-name',
+                            required=False,
+                            dest="sock_name",
+                            type=str,
+                            help='If \'sock-type\' is \'unix\', sock-name is expected to be a string. '
+                                 'Eg: --sock-name \"test_sock\"')
         parser.add_argument('--host',
                             type=str,
                             help='If \'sock-type\' is \'tcp\' this is expected to have a host IP address')

@@ -749,7 +749,7 @@ public class ModelServerTest {
                             .trustManager(InsecureTrustManagerFactory.INSTANCE)
                             .build();
             b.group(Connector.newEventLoopGroup(1))
-                    .channel(connector.getClientChannel())
+                    .channel(Connector.getClientChannel(connector.isUds()))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .handler(
                             new ChannelInitializer<Channel>() {
