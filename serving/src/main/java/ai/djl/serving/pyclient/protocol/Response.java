@@ -12,10 +12,9 @@
  */
 package ai.djl.serving.pyclient.protocol;
 
-/**
- * Response format for ipc with python server.
- */
+/** Response format for ipc with python server. */
 public class Response {
+
     private byte[] rawData;
 
     /**

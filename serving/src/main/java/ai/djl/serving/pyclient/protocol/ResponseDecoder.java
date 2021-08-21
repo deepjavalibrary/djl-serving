@@ -18,10 +18,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import java.util.List;
 
-/**
- * This class decodes the response from netty channel.
- */
+/** This class decodes the response from netty channel. */
 public class ResponseDecoder extends ByteToMessageDecoder {
+
     private final int maxBufferSize;
 
     /**
@@ -47,7 +46,6 @@ public class ResponseDecoder extends ByteToMessageDecoder {
         boolean completed = false;
 
         try {
-
             int arrLen = CodecUtils.readLength(in, maxBufferSize);
             if (arrLen == CodecUtils.BUFFER_UNDER_RUN) {
                 return;
