@@ -58,7 +58,7 @@ public class PythonTranslator implements ServingTranslator {
     public NDList processInput(TranslatorContext ctx, Input input)
             throws IOException, TranslateException {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        Channel nettyClient = SocketConnector.getInstance().getChannel();
+        Channel nettyClient = PythonConnector.getInstance().getChannel();
         // TODO: This will be changed in the following PRs
         Request request = new Request(input.getContent().get(null));
         send(nettyClient, CodecUtils.encodeRequest(request), future);

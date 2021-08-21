@@ -26,22 +26,43 @@ from util.serializing import construct_enc_response
 
 
 class PythonServer(object):
-    def __init__(self, host, port):
+    def __init__(self, sock_type, host=None, port=None, sock_name=None):
         """
         Initializes the socket
         :param host:
         :param port:
         """
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock_type = sock_type
+        if sock_type == "unix":
+            if sock_name is None:
+                raise ValueError("Wrong arguments passed. No socket name given.")
+            self.sock_name, self.port = sock_name, -1
+            try:
+                os.remove(sock_name)
+            except OSError:
+                if os.path.exists(sock_name):
+                    raise RuntimeError("socket already in use: {}.".format(sock_name))
+        elif sock_type == "tcp":
+            self.sock_name = host if host is not None else "127.0.0.1"
+            if port is None:
+                raise ValueError("Wrong arguments passed. No socket port given.")
+            self.port = int(port)
+        else:
+            raise ValueError("Invalid socket type provided")
+
+        socket_family = socket.AF_INET if sock_type == "tcp" else socket.AF_UNIX
+        self.sock = socket.socket(socket_family, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock_name = host
-        self.port = int(port)
+        self.socket_name = sock_name
 
     def run_server(self):
         """
         Starts the server and listens
         """
-        self.sock.bind((self.sock_name, self.port))
+        if self.sock_type == "unix":
+            self.sock.bind(self.sock_name)
+        else:
+            self.sock.bind((self.sock_name, self.port))
         self.sock.listen(128)
         logging.info("[PID] %d", os.getpid())
         logging.info("Python server started.")
@@ -61,9 +82,11 @@ if __name__ == "__main__":
     try:
         logging.basicConfig(stream=sys.stdout, format="%(message)s", level=logging.INFO)
         args = ArgParser.python_server_args().parse_args()
+        sock_type = args.sock_type
         host = args.host
         port = args.port
-        server = PythonServer(host, port)
+        sock_name = args.sock_name
+        server = PythonServer(sock_type=sock_type, host=host, port=port, sock_name=sock_name)
         server.run_server()
     except socket.timeout:
         logging.error("Python server did not receive connection")

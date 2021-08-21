@@ -20,15 +20,34 @@ import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.Shape;
 import ai.djl.serving.pyclient.PythonTranslator;
+import ai.djl.serving.util.ConfigManager;
 import ai.djl.translate.TranslatorContext;
+import org.apache.commons.cli.ParseException;
 import org.testng.Assert;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 /** This class contains tests for Python translator. */
 public class PythonTranslatorTest {
 
+    @BeforeClass
+    public void setup() throws ParseException {
+        ConfigManager.init(ConfigManagerTest.parseArguments(new String[0]));
+    }
+
     @Test(enabled = false)
-    public void testPythonTranslator() throws Exception {
+    public void testPythonTranslatorTCP() throws Exception {
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
+        testPythonTranslator();
+    }
+
+    @Test(enabled = false)
+    public void testPythonTranslatorUDS() throws Exception {
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
+        testPythonTranslator();
+    }
+
+    private void testPythonTranslator() throws Exception {
         try (NDManager manager = NDManager.newBaseManager()) {
             NDArray ndArray = manager.zeros(new Shape(2, 2));
             NDList ndList = new NDList(ndArray);

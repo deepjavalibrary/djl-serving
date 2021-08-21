@@ -201,9 +201,10 @@ public final class Connector {
     /**
      * Returns the client channel class.
      *
+     * @param uds is uds or not
      * @return the client channel class
      */
-    public Class<? extends Channel> getClientChannel() {
+    public static Class<? extends Channel> getClientChannel(boolean uds) {
         if (useNativeIo && Epoll.isAvailable()) {
             return uds ? EpollDomainSocketChannel.class : EpollSocketChannel.class;
         } else if (useNativeIo && KQueue.isAvailable()) {

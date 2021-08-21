@@ -13,45 +13,47 @@
 package ai.djl.serving.pyclient;
 
 import ai.djl.serving.pyclient.protocol.ResponseDecoder;
+import ai.djl.serving.util.ConfigManager;
+import ai.djl.serving.util.Connector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.unix.DomainSocketAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** This class creates a netty client. */
-public class SocketConnector {
+public class PythonConnector {
 
-    private static final Logger logger = LoggerFactory.getLogger(SocketConnector.class);
-    private static final SocketConnector SOCKET_CONNECTOR = newInstance();
+    private static final Logger logger = LoggerFactory.getLogger(PythonConnector.class);
+    private static final PythonConnector PYTHON_CONNECTOR = newInstance();
+    private static final String DEFAULT_SOCKET_PATH = "/tmp/uds_sock";
 
     private static final int MAX_BUFFER_SIZE = 6553500;
     private Channel channel;
 
     /** Creates a netty client. */
-    public SocketConnector() {
-        EventLoopGroup group = new NioEventLoopGroup();
+    public PythonConnector() {
+        EventLoopGroup group = Connector.newEventLoopGroup(1);
 
         try {
             Bootstrap clientBootstrap = new Bootstrap();
             // TODO: Support uds also
             clientBootstrap.group(group);
-            clientBootstrap.channel(NioSocketChannel.class);
-            clientBootstrap.remoteAddress("127.0.0.1", 9000);
+            Class<? extends Channel> channelClass = Connector.getClientChannel(isUDS());
+            clientBootstrap.channel(channelClass);
+            clientBootstrap.remoteAddress(getSocketAddress());
 
             clientBootstrap.handler(
-                    new ChannelInitializer<SocketChannel>() {
+                    new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(SocketChannel socketChannel) throws Exception {
-                            socketChannel
-                                    .pipeline()
-                                    .addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
-                            socketChannel.pipeline().addLast("handler", new RequestHandler());
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
+                            ch.pipeline().addLast("handler", new RequestHandler());
                         }
                     });
 
@@ -59,7 +61,7 @@ public class SocketConnector {
             this.channel = future.awaitUninterruptibly().channel();
             future.channel().closeFuture();
         } catch (Exception exception) {
-            logger.error("Exception occurred while creating netty client");
+            logger.error("Exception occurred while creating netty client", exception);
         }
     }
 
@@ -68,8 +70,8 @@ public class SocketConnector {
      *
      * @return socket connector instance
      */
-    public static SocketConnector getInstance() {
-        return SOCKET_CONNECTOR;
+    public static PythonConnector getInstance() {
+        return PYTHON_CONNECTOR;
     }
 
     /**
@@ -81,7 +83,18 @@ public class SocketConnector {
         return this.channel;
     }
 
-    private static SocketConnector newInstance() {
-        return new SocketConnector();
+    private static PythonConnector newInstance() {
+        return new PythonConnector();
+    }
+
+    private boolean isUDS() {
+        ConfigManager configManager = ConfigManager.getInstance();
+        return configManager.useNativeIo();
+    }
+
+    private SocketAddress getSocketAddress() {
+        return isUDS()
+                ? new DomainSocketAddress(DEFAULT_SOCKET_PATH)
+                : InetSocketAddress.createUnresolved("127.0.0.1", 9000);
     }
 }
