@@ -19,6 +19,7 @@ import ai.djl.util.Utils;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -39,6 +40,8 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 
 /** A class that hold configuration information. */
@@ -96,6 +99,12 @@ public final class ConfigManager {
         if (models != null) {
             prop.setProperty(LOAD_MODELS, String.join(",", models));
         }
+        for (Map.Entry<String, String> env : System.getenv().entrySet()) {
+            String key = env.getKey();
+            if (key.startsWith("SERVING_")) {
+                prop.put(key.substring(8).toLowerCase(Locale.ROOT), env.getValue());
+            }
+        }
     }
 
     /**
@@ -105,6 +114,19 @@ public final class ConfigManager {
      */
     public static void init(Arguments args) {
         instance = new ConfigManager(args);
+        // set default system properties
+        if (System.getProperty("ai.djl.pytorch.num_interop_threads") == null) {
+            System.setProperty("ai.djl.pytorch.num_interop_threads", "1");
+        }
+        if (System.getProperty("ai.djl.pytorch.num_threads") == null) {
+            System.setProperty("ai.djl.pytorch.num_threads", "1");
+        }
+        if (System.getProperty("log4j2.contextSelector") == null) {
+            // turn on async logging by default
+            System.setProperty(
+                    "log4j2.contextSelector",
+                    "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector");
+        }
     }
 
     /**

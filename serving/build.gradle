@@ -11,6 +11,7 @@ dependencies {
 
     implementation "commons-cli:commons-cli:${commons_cli_version}"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
+    implementation "com.lmax:disruptor:3.4.2"
 
     runtimeOnly "ai.djl:model-zoo"
     runtimeOnly "ai.djl.mxnet:mxnet-model-zoo"
@@ -95,7 +96,7 @@ startScripts {
         text = text.replace('DEFAULT_JVM_OPTS=""', 'if [ "${MODEL_SERVER_HOME}" = "" ] ; then\n' +
                 '    export MODEL_SERVER_HOME=${APP_HOME}\n' +
                 'fi\n' +
-                'DEFAULT_JVM_OPTS="-Dai.djl.pytorch.num_interop_threads=1 -Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml"\n')
+                'DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml"\n')
         text = text.replaceAll('CLASSPATH=\\$APP_HOME/lib/.*', 'CLASSPATH=\\$APP_HOME/lib/*')
         unixScript.text = text
     }

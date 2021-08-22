@@ -36,15 +36,16 @@
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Root level="info" additivity="false">
+        <Root level="info" additivity="false" includeLocation="false">
             <AppenderRef ref="console"/>
             <AppenderRef ref="application"/>
         </Root>
-        <Logger name="ai.djl" level="${sys:ai.djl.logging.level:-info}" additivity="false">
+        <Logger name="ai.djl" level="${sys:ai.djl.logging.level:-info}" additivity="false"
+                includeLocation="false">
             <AppenderRef ref="console"/>
             <AppenderRef ref="application"/>
         </Logger>
-        <Logger name="ACCESS_LOG" level="info" additivity="false">
+        <Logger name="ACCESS_LOG" level="info" additivity="false" includeLocation="false">
             <AppenderRef ref="access"/>
         </Logger>
     </Loggers>
