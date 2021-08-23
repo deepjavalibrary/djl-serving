@@ -12,9 +12,7 @@
  */
 package ai.djl.serving.pyclient.protocol;
 
-/**
- * Represents the type of the request to the python process.
- */
+/** Represents the type of the request to the python process. */
 public enum RequestType {
     PREPROCESS(0, "preprocess", "Pre-process"),
     POSTPROCESS(1, "postprocess", "Post-process");

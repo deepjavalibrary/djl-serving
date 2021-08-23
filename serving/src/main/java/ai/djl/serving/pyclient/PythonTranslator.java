@@ -56,7 +56,7 @@ public class PythonTranslator implements ServingTranslator {
     /** {@inheritDoc} */
     @Override
     public Output processOutput(TranslatorContext ctx, NDList list) {
-        //TODO: This will be changed to read the files in the following PR
+        // TODO: This will be changed to read the files in the following PR
         Output output = new Output(200, "success");
         output.setContent(list.encode());
         return output;
