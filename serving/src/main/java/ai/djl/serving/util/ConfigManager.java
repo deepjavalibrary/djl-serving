@@ -19,7 +19,6 @@ import ai.djl.util.Utils;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;

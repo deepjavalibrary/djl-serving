@@ -12,11 +12,13 @@
  */
 package ai.djl.serving.pyclient;
 
+import ai.djl.Model;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.serving.pyclient.protocol.Request;
+import ai.djl.serving.pyclient.protocol.RequestType;
 import ai.djl.serving.util.CodecUtils;
 import ai.djl.translate.Batchifier;
 import ai.djl.translate.ServingTranslator;
@@ -26,6 +28,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -36,10 +40,16 @@ import org.slf4j.LoggerFactory;
 public class PythonTranslator implements ServingTranslator {
 
     private static final Logger logger = LoggerFactory.getLogger(PythonTranslator.class);
+    private Map<String, ?> arguments;
+
+    private String preProcessingPythonFile;
+    private String preProcessingFunction;
 
     /** {@inheritDoc} */
     @Override
-    public void setArguments(Map<String, ?> arguments) {}
+    public void setArguments(Map<String, ?> arguments) {
+        this.arguments = arguments;
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -49,8 +59,23 @@ public class PythonTranslator implements ServingTranslator {
 
     /** {@inheritDoc} */
     @Override
+    public void prepare(NDManager manager, Model model) throws IOException {
+        String[] preProcessing = ((String) arguments.get("preProcessor")).split(":");
+        Path preProcessingPath = model.getModelPath().resolve("libs/" + preProcessing[0]);
+        if (!Files.exists(preProcessingPath)) {
+            throw new IOException("Process input file does not exist");
+        }
+        preProcessingPythonFile = preProcessingPath.toString();
+        preProcessingFunction = preProcessing[1];
+    }
+
+    /** {@inheritDoc} */
+    @Override
     public Output processOutput(TranslatorContext ctx, NDList list) {
-        return null;
+        // TODO: This will be changed to read the files in the following PR
+        Output output = new Output(200, "success");
+        output.setContent(list.encode());
+        return output;
     }
 
     /** {@inheritDoc} */
@@ -59,8 +84,14 @@ public class PythonTranslator implements ServingTranslator {
             throws IOException, TranslateException {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         Channel nettyClient = PythonConnector.getInstance().getChannel();
-        // TODO: This will be changed in the following PRs
-        Request request = new Request(input.getContent().get(null));
+        // TODO: This will be changed to include input properties in the following PRs
+        Request request =
+                new Request()
+                        .setRequestType(RequestType.PREPROCESS.reqTypeCode())
+                        .setPythonFile(preProcessingPythonFile)
+                        .setFunctionName(preProcessingFunction)
+                        .setFunctionParam(input.getContent().get(null));
+
         send(nettyClient, CodecUtils.encodeRequest(request), future);
 
         // obtaining response

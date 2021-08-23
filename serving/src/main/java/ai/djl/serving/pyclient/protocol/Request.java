@@ -12,38 +12,91 @@
  */
 package ai.djl.serving.pyclient.protocol;
 
-/**
- * Request format for ipc with python server. TODO: Will be changed to support python file, method,
- * process function type.
- */
+/** Request format for ipc with python server. */
 public class Request {
 
-    private byte[] rawData;
+    private int requestType;
+    private String pythonFile;
+    private String functionName;
+    private byte[] functionParam;
 
     /**
-     * Sets the request data.
+     * Getter for requestType.
      *
-     * @param rawData request data in bytes
+     * @return type of the request
      */
-    public Request(byte[] rawData) {
-        this.rawData = rawData;
+    public int getRequestType() {
+        return requestType;
     }
 
     /**
-     * Getter for rawData.
+     * Sets the requestType.
      *
-     * @return rawData
+     * @param requestType type of the request
+     * @return Request
      */
-    public byte[] getRawData() {
-        return rawData;
+    public Request setRequestType(int requestType) {
+        this.requestType = requestType;
+        return this;
     }
 
     /**
-     * Setter for rawData.
+     * Returns the pythonFile.
      *
-     * @param rawData request data in bytes
+     * @return python file
      */
-    public void setRawData(byte[] rawData) {
-        this.rawData = rawData;
+    public String getPythonFile() {
+        return pythonFile;
+    }
+
+    /**
+     * Returns the pythonFile.
+     *
+     * @param pythonFile python file
+     * @return Request
+     */
+    public Request setPythonFile(String pythonFile) {
+        this.pythonFile = pythonFile;
+        return this;
+    }
+
+    /**
+     * Returns the functionName.
+     *
+     * @return functionName
+     */
+    public String getFunctionName() {
+        return functionName;
+    }
+
+    /**
+     * Sets the functionName.
+     *
+     * @param functionName function to be executed.
+     * @return Request
+     */
+    public Request setFunctionName(String functionName) {
+        this.functionName = functionName;
+        return this;
+    }
+
+    /**
+     * Returns the functionParam.
+     *
+     * @return functionParam
+     */
+    public byte[] getFunctionParam() {
+        return functionParam;
+    }
+
+    /**
+     * Sets the functionParam.
+     *
+     * @param functionParam in bytes
+     * @return Request
+     */
+    public Request setFunctionParam(byte[] functionParam) {
+        this.functionParam = functionParam;
+        return this;
     }
 }

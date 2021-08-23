@@ -17,6 +17,9 @@ Request handler for the python server.
 import logging
 import struct
 
+from protocol.request import Request
+
+short_size = 2
 int_size = 4
 
 
@@ -51,12 +54,33 @@ def _retrieve_int(conn):
     return struct.unpack("!i", data)[0]
 
 
+def _retrieve_str(conn):
+    length_buf = _retrieve_buffer(conn, short_size)
+    length = struct.unpack(">h", length_buf)[0]
+    data = _retrieve_buffer(conn, length)
+    return data.decode("utf8")
+
+
 def retrieve_request(conn):
     """
     Retrieves the request data.
     :param conn: socket connection
-    :return: request byte array
+
+    :return: request object
     """
-    content_len = _retrieve_int(conn)
-    content = _retrieve_buffer(conn, content_len)
-    return content
+    request = Request()
+
+    process_type_code = _retrieve_int(conn)
+    request.set_request_type(process_type_code)
+
+    python_file = _retrieve_str(conn)
+    request.set_python_file(python_file)
+
+    function_name = _retrieve_str(conn)
+    request.set_function_name(function_name)
+
+    function_param_len = _retrieve_int(conn)
+    function_param = _retrieve_buffer(conn, function_param_len)
+    request.set_function_param(function_param)
+
+    return request

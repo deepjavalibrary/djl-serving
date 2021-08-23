@@ -18,7 +18,7 @@ public class Response {
     private byte[] rawData;
 
     /**
-     * Getter for rawData.
+     * Returns the rawData.
      *
      * @return response data in bytes
      */
@@ -27,7 +27,7 @@ public class Response {
     }
 
     /**
-     * Setter for rawData.
+     * Sets the rawData.
      *
      * @param rawData response data in bytes
      */

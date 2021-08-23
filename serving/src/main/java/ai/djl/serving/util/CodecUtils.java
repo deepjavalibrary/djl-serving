@@ -175,8 +175,11 @@ public final class CodecUtils {
     public static byte[] encodeRequest(Request request) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             DataOutputStream dos = new DataOutputStream(baos);
-            dos.writeInt(request.getRawData().length);
-            dos.write(request.getRawData());
+            dos.writeInt(request.getRequestType());
+            dos.writeUTF(request.getPythonFile());
+            dos.writeUTF(request.getFunctionName());
+            dos.writeInt(request.getFunctionParam().length);
+            dos.write(request.getFunctionParam());
 
             dos.flush();
             return baos.toByteArray();

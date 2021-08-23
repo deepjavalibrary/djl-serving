@@ -21,6 +21,7 @@ import socket
 import sys
 
 from protocol.request_handler import retrieve_request
+from python_exec_handler import run_processor
 from util.arg_parser import ArgParser
 from util.serializing import construct_enc_response
 
@@ -70,9 +71,10 @@ class PythonServer(object):
         logging.info("DJL Client is connected.")
 
         while True:
-            byte_data = retrieve_request(cl_sock)
+            request = retrieve_request(cl_sock)
             logging.info("Received request from DJL Client")
-            response_data = construct_enc_response(byte_data)
+            response_bytes = run_processor(request)
+            response_data = construct_enc_response(response_bytes)
             is_sent = cl_sock.sendall(response_data)
             if not is_sent:
                 logging.info("Response is sent to DJL Client")
