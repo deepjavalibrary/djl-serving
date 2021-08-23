@@ -24,7 +24,7 @@ public class ResponseDecoder extends ByteToMessageDecoder {
     private final int maxBufferSize;
 
     /**
-     * Constructor sets the maximum buffer size.
+     * Constructs a {@code ResponseDecoder} instance with the maximum buffer size.
      *
      * @param maxBufferSize limit of the buffer size that can be received.
      */

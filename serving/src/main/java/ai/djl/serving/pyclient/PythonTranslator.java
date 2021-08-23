@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.pyclient;
 
+import ai.djl.Model;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.NDList;
@@ -41,6 +42,9 @@ public class PythonTranslator implements ServingTranslator {
     private static final Logger logger = LoggerFactory.getLogger(PythonTranslator.class);
     private Map<String, ?> arguments;
 
+    private String preProcessingPythonFile;
+    private String preProcessingFunction;
+
     /** {@inheritDoc} */
     @Override
     public void setArguments(Map<String, ?> arguments) {
@@ -51,6 +55,18 @@ public class PythonTranslator implements ServingTranslator {
     @Override
     public Batchifier getBatchifier() {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void prepare(NDManager manager, Model model) throws IOException {
+        String[] preProcessing = ((String) arguments.get("preProcessor")).split(":");
+        Path preProcessingPath = model.getModelPath().resolve("libs/" + preProcessing[0]);
+        if (!Files.exists(preProcessingPath)) {
+            throw new IOException("Process input file does not exist");
+        }
+        preProcessingPythonFile = preProcessingPath.toString();
+        preProcessingFunction = preProcessing[1];
     }
 
     /** {@inheritDoc} */
@@ -66,26 +82,14 @@ public class PythonTranslator implements ServingTranslator {
     @Override
     public NDList processInput(TranslatorContext ctx, Input input)
             throws IOException, TranslateException {
-
-        logger.info("Processing input in python translator");
-        String[] preProcessing = ((String) arguments.get("preProcessor")).split(":");
-        Path preProcessingPath = ctx.getModel().getModelPath().resolve("libs/" + preProcessing[0]);
-        if (!Files.exists(preProcessingPath)) {
-            logger.warn("Process input file does not exist");
-            return null;
-        }
-
-        String pythonFile = preProcessingPath.toString();
-        String functionName = preProcessing[1];
-
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         Channel nettyClient = PythonConnector.getInstance().getChannel();
         // TODO: This will be changed to include input properties in the following PRs
         Request request =
                 new Request()
                         .setRequestType(RequestType.PREPROCESS.reqTypeCode())
-                        .setPythonFile(pythonFile)
-                        .setFunctionName(functionName)
+                        .setPythonFile(preProcessingPythonFile)
+                        .setFunctionName(preProcessingFunction)
                         .setFunctionParam(input.getContent().get(null));
 
         send(nettyClient, CodecUtils.encodeRequest(request), future);

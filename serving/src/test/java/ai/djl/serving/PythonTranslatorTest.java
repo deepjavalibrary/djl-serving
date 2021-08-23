@@ -13,7 +13,7 @@
 package ai.djl.serving;
 
 import ai.djl.Model;
-import ai.djl.engine.Engine;
+import ai.djl.ModelException;
 import ai.djl.inference.Predictor;
 import ai.djl.metric.Metrics;
 import ai.djl.modality.Classifications;
@@ -30,16 +30,19 @@ import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.pyclient.PythonTranslator;
 import ai.djl.serving.util.ConfigManager;
+import ai.djl.translate.TranslateException;
 import ai.djl.translate.TranslatorContext;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -56,17 +59,13 @@ public class PythonTranslatorTest {
     private byte[] data;
 
     @BeforeClass
-    public void setup() throws Exception {
-        if (!"MXNet".equals(Engine.getInstance().getEngineName())) {
-            return;
-        }
-
+    public void setup() throws ModelException, IOException, ParseException {
         Utils.deleteQuietly(modelDir);
         Files.createDirectories(modelDir);
         Criteria<Image, Classifications> criteria =
                 Criteria.builder()
                         .setTypes(Image.class, Classifications.class)
-                        .optArtifactId("ai.djl.mxnet:mlp")
+                        .optModelUrls("djl://ai.djl.mxnet/mlp/0.0.1/mlp")
                         .build();
 
         try (ZooModel<Image, Classifications> model = criteria.loadModel()) {
@@ -85,10 +84,10 @@ public class PythonTranslatorTest {
                 Files.copy(is, paramFile, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            Path libsDir = modelDir.resolve("libs");
+            Path libsDir = modelDir.resolve("bin");
             Files.createDirectories(libsDir);
 
-            Path preProcessFile = modelDir.resolve("libs/pre_processing.py");
+            Path preProcessFile = modelDir.resolve("bin/pre_processing.py");
             try (InputStream is = model.getArtifactAsStream("pre_processing.py")) {
                 Files.copy(is, preProcessFile, StandardCopyOption.REPLACE_EXISTING);
             }
@@ -108,37 +107,32 @@ public class PythonTranslatorTest {
     }
 
     @Test(enabled = false)
-    public void testImageClassification() {
-        if (!"MXNet".equals(Engine.getInstance().getEngineName())) {
-            return;
-        }
-
-        try {
-            ConfigManagerTest.setConfiguration(
-                    ConfigManager.getInstance(), "use_native_io", "false");
-            runPythonTranslator();
-        } catch (Exception ex) {
-            logger.error("Exception occurred when running python test", ex);
-        }
+    public void testImageClassification()
+            throws ModelException, NoSuchFieldException, IllegalAccessException, IOException,
+                    TranslateException {
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
+        runPythonTranslator();
     }
 
     @Test(enabled = false)
-    public void testPythonTranslatorTCP() throws Exception {
+    public void testPythonTranslatorTCP()
+            throws IOException, TranslateException, NoSuchFieldException, IllegalAccessException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
         testPythonTranslator();
     }
 
     @Test(enabled = false)
-    public void testPythonTranslatorUDS() throws Exception {
+    public void testPythonTranslatorUDS()
+            throws IOException, TranslateException, NoSuchFieldException, IllegalAccessException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
         testPythonTranslator();
     }
 
-    private void runPythonTranslator() throws Exception {
+    private void runPythonTranslator() throws ModelException, IOException, TranslateException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
-                        .optModelUrls(modelDir.toUri().toURL().toString())
+                        .optModelPath(modelDir)
                         .optArgument("translator", "ai.djl.serving.pyclient.PythonTranslator")
                         .optArgument("preProcessor", "pre_processing.py:preprocess")
                         .build();
@@ -171,7 +165,7 @@ public class PythonTranslatorTest {
         }
     }
 
-    private void testPythonTranslator() throws Exception {
+    private void testPythonTranslator() throws TranslateException, IOException {
         try (NDManager manager = NDManager.newBaseManager()) {
             NDArray ndArray = manager.zeros(new Shape(2, 2));
             NDList ndList = new NDList(ndArray);

@@ -41,7 +41,7 @@ public class Request {
     }
 
     /**
-     * Gets the pythonFile.
+     * Returns the pythonFile.
      *
      * @return python file
      */
@@ -50,7 +50,7 @@ public class Request {
     }
 
     /**
-     * Sets the pythonFile.
+     * Returns the pythonFile.
      *
      * @param pythonFile python file
      * @return Request
@@ -61,7 +61,7 @@ public class Request {
     }
 
     /**
-     * Gets the functionName.
+     * Returns the functionName.
      *
      * @return functionName
      */
@@ -81,7 +81,7 @@ public class Request {
     }
 
     /**
-     * Gets for functionParam.
+     * Returns the functionParam.
      *
      * @return functionParam
      */

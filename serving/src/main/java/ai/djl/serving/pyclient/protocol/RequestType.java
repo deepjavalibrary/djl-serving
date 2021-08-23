@@ -17,9 +17,9 @@ public enum RequestType {
     PREPROCESS(0, "preprocess", "Pre-process"),
     POSTPROCESS(1, "postprocess", "Post-process");
 
-    private final int reqTypeCode;
-    private final String defaultFuncName;
-    private final String displayStr;
+    private int reqTypeCode;
+    private String defaultFuncName;
+    private String displayStr;
 
     RequestType(int reqTypeCode, String defaultFuncName, String displayStr) {
         this.reqTypeCode = reqTypeCode;
@@ -28,7 +28,7 @@ public enum RequestType {
     }
 
     /**
-     * Gets the function name.
+     * Returns the function name.
      *
      * @return functionName
      */
@@ -37,7 +37,7 @@ public enum RequestType {
     }
 
     /**
-     * Gets the display string of the request type.
+     * Returns the display string of the request type.
      *
      * @return displayStr
      */
@@ -46,7 +46,7 @@ public enum RequestType {
     }
 
     /**
-     * Gets the request type code.
+     * Returns the request type code.
      *
      * @return reqTypeCode
      */

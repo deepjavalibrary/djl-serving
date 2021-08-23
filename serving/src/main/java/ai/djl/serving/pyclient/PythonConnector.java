@@ -50,8 +50,9 @@ public class PythonConnector {
 
             clientBootstrap.handler(
                     new ChannelInitializer<Channel>() {
+
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addLast("decoder", new ResponseDecoder(MAX_BUFFER_SIZE));
                             ch.pipeline().addLast("handler", new RequestHandler());
                         }
@@ -60,8 +61,8 @@ public class PythonConnector {
             ChannelFuture future = clientBootstrap.connect().sync();
             this.channel = future.awaitUninterruptibly().channel();
             future.channel().closeFuture();
-        } catch (Exception exception) {
-            logger.error("Exception occurred while creating netty client", exception);
+        } catch (InterruptedException e) {
+            logger.error("Exception occurred while creating netty client", e);
         }
     }
 
