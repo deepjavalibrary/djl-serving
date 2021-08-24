@@ -85,14 +85,17 @@ public class PythonTranslator implements ServingTranslator {
         }
         postProcessingPythonFile = postProcessingPath.toString();
         postProcessingFunction = postProcessing[1];
+        logger.info(postProcessingPythonFile);
     }
 
     /** {@inheritDoc} */
     @Override
     public Output processOutput(TranslatorContext ctx, NDList list)
             throws IOException, TranslateException {
+        Input input = (Input) ctx.getAttachment("input");
         if (postProcessingPythonFile == null) {
-            Output output = new Output(200, "success");
+            Output output = new Output(200, "OK");
+            output.setRequestId(input.getRequestId());
             output.setContent(list.encode());
             return output;
         }
@@ -110,8 +113,11 @@ public class PythonTranslator implements ServingTranslator {
 
         // obtaining response
         try {
-            byte[] response = future.get(); // awaits till the future is complete, if necessary
-            return CodecUtils.decodeToOutput(response);
+            byte[] response = future.get();
+            Output output = new Output(200, "OK");
+            output.setRequestId(input.getRequestId());
+            output.setContent(response);
+            return output;
         } catch (ExecutionException | InterruptedException e) {
             throw new TranslateException(e);
         }
@@ -121,6 +127,7 @@ public class PythonTranslator implements ServingTranslator {
     @Override
     public NDList processInput(TranslatorContext ctx, Input input)
             throws IOException, TranslateException {
+        ctx.setAttachment("input", input);
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         Channel nettyClient = PythonConnector.getInstance().getChannel();
         Request request =
