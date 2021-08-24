@@ -103,7 +103,7 @@ public class PythonTranslatorTest {
 
     @AfterClass
     public void tearDown() {
-        // Utils.deleteQuietly(modelDir);
+        Utils.deleteQuietly(modelDir);
     }
 
     @Test(enabled = false)
