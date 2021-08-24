@@ -1,7 +1,6 @@
-from protocol.output import Output
 from protocol.request import Request
 from util.codec_utils import decode_input
-from util.numpy_djl_util import np_to_djl_encode
+from util.np_util import np_to_djl_encode
 from util.packaging_util import get_class_name
 
 
@@ -15,7 +14,7 @@ def _exec_processor(request: Request, function_param):
     return data
 
 
-def run_processor(request: Request) -> Output:
+def run_processor(request: Request) -> bytearray:
     input_bytes = request.get_function_param()
     input = decode_input(input_bytes)
     np_list = _exec_processor(request, input)

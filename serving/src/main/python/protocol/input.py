@@ -1,8 +1,6 @@
-from typing import List
-
 import numpy as np
 
-from util.numpy_djl_util import djl_to_np_decode
+from util.np_util import djl_to_np_decode
 from util.pair_list import PairList
 
 
@@ -57,7 +55,7 @@ class Input(object):
     def add_property(self, key: str, val: str):
         self.properties[key] = val
 
-    def get_as_numpy(self, key=None) -> List[np.numpy]:
+    def get_as_numpy(self, key=None) -> list[np.ndarray]:
         # return list of values as numpy list if not provided key
         if key is None:
             values = self.content.get_values()

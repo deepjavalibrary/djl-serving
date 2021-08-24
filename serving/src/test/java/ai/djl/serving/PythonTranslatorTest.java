@@ -84,11 +84,15 @@ public class PythonTranslatorTest {
                 Files.copy(is, paramFile, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            Path libsDir = modelDir.resolve("bin");
+            Path libsDir = modelDir.resolve("libs");
+            Files.createDirectories(libsDir);
+
+            libsDir = modelDir.resolve("bin");
             Files.createDirectories(libsDir);
 
             Path preProcessFile = modelDir.resolve("bin/pre_processing.py");
-            try (InputStream is = model.getArtifactAsStream("pre_processing.py")) {
+            Path sourceFile = Paths.get("../serving/src/test/resources/pre_processing.py");
+            try (InputStream is = Files.newInputStream(sourceFile)) {
                 Files.copy(is, preProcessFile, StandardCopyOption.REPLACE_EXISTING);
             }
         }
