@@ -65,7 +65,8 @@ public class PythonTranslator implements ServingTranslator {
         String[] preProcessing = ((String) arguments.get("preProcessor")).split(":");
         Path preProcessingPath = model.getModelPath().resolve("bin/" + preProcessing[0]);
         if (!Files.exists(preProcessingPath)) {
-            throw new IOException("Specified preprocess file does not exist in the model directory");
+            throw new IOException(
+                    "Specified preprocess file does not exist in the model directory");
         }
         preProcessingPythonFile = preProcessingPath.toString();
         preProcessingFunction = preProcessing[1];
@@ -79,7 +80,8 @@ public class PythonTranslator implements ServingTranslator {
         String[] postProcessing = postProcessorArg.split(":");
         Path postProcessingPath = model.getModelPath().resolve("bin/" + postProcessing[0]);
         if (!Files.exists(postProcessingPath)) {
-            throw new IOException("Specified postprocess file does not exist in the model directory");
+            throw new IOException(
+                    "Specified postprocess file does not exist in the model directory");
         }
         postProcessingPythonFile = postProcessingPath.toString();
         postProcessingFunction = postProcessing[1];
@@ -87,7 +89,8 @@ public class PythonTranslator implements ServingTranslator {
 
     /** {@inheritDoc} */
     @Override
-    public Output processOutput(TranslatorContext ctx, NDList list) throws IOException, TranslateException {
+    public Output processOutput(TranslatorContext ctx, NDList list)
+            throws IOException, TranslateException {
         if (postProcessingPythonFile == null) {
             Output output = new Output(200, "success");
             output.setContent(list.encode());
@@ -109,7 +112,7 @@ public class PythonTranslator implements ServingTranslator {
         try {
             byte[] response = future.get(); // awaits till the future is complete, if necessary
             return CodecUtils.decodeToOutput(response);
-        } catch (ExecutionException| InterruptedException e) {
+        } catch (ExecutionException | InterruptedException e) {
             throw new TranslateException(e);
         }
     }
