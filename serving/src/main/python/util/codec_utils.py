@@ -15,44 +15,51 @@ Contains util functions for encoding and decoding of data.
 """
 
 from protocol.input import Input
-from util.binary_util import _set_int, _get_str, _get_int, _get_bytes
+from util.binary_util import set_int, get_str, get_int, get_bytes
 from util.pair_list import PairList
 
 
 def construct_enc_response(arr: bytearray) -> bytearray:
     """
-    Constructs the response to be sent. length of the array + data.
+    Returns the response to be sent. length of the array + data.
+
     :param arr: bytearray
-    :return: response format
+    :return: response bytes
     """
     response = bytearray()
-    response.extend(_set_int(len(arr)))
+    response.extend(set_int(len(arr)))
     response.extend(arr)
     return response
 
 
 def decode_input(arr: bytearray) -> Input:
+    """
+    Returns the decoded input from bytearray.
+
+    :param arr: bytearray
+    :return: input
+    """
     idx = 0
     _input = Input()
-    req_id, idx = _get_str(arr, idx)
+    req_id, idx = get_str(arr, idx)
     _input.set_request_id(req_id)
-    prop_size, idx = _get_int(arr, idx)
+    prop_size, idx = get_int(arr, idx)
 
     for _ in range(prop_size):
-        key, idx = _get_str(arr, idx)
-        val, idx = _get_str(arr, idx)
+        key, idx = get_str(arr, idx)
+        val, idx = get_str(arr, idx)
         _input.add_property(key, val)
 
-    content_size, idx = _get_int(arr, idx)
+    content_size, idx = get_int(arr, idx)
     keys = []
     for _ in range(content_size):
-        key, idx = _get_str(arr, idx)
+        key, idx = get_str(arr, idx)
         keys.append(key)
 
     values = []
     for _ in range(content_size):
-        val_len, idx = _get_int(arr, idx)
-        val, idx = _get_bytes(arr, idx, val_len)
+        val_len, idx = get_int(arr, idx)
+        val, idx = get_bytes(arr, idx, val_len)
         values.append(val)
 
     content = PairList(keys=keys, values=values)
