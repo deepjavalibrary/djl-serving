@@ -12,10 +12,8 @@
  */
 package ai.djl.serving;
 
-import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.inference.Predictor;
-import ai.djl.metric.Metrics;
 import ai.djl.modality.Classifications;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -25,13 +23,10 @@ import ai.djl.modality.cv.util.NDImageUtils;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
-import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
-import ai.djl.serving.pyclient.PythonTranslator;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.translate.TranslateException;
-import ai.djl.translate.TranslatorContext;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import java.io.ByteArrayInputStream;
@@ -125,7 +120,9 @@ public class PythonTranslatorTest {
     }
 
     @Test(enabled = false)
-    public void testImageClassificationUDS() throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException, IOException {
+    public void testImageClassificationUDS()
+            throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException,
+                    IOException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
         runPythonTranslator();
     }
