@@ -120,13 +120,12 @@ public class PythonTranslator implements ServingTranslator {
             throws IOException, TranslateException {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         Channel nettyClient = PythonConnector.getInstance().getChannel();
-        // TODO: This will be changed to include input properties in the following PRs
         Request request =
                 new Request()
                         .setRequestType(RequestType.PREPROCESS.reqTypeCode())
                         .setPythonFile(preProcessingPythonFile)
                         .setFunctionName(preProcessingFunction)
-                        .setFunctionParam(input.getContent().get(null));
+                        .setFunctionParam(CodecUtils.encodeInput(input));
 
         send(nettyClient, CodecUtils.encodeRequest(request), future);
 
