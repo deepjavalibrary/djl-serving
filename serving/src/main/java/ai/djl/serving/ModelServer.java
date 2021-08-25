@@ -254,8 +254,12 @@ public class ModelServer {
     }
 
     private void initPythonServers() {
-        PyServerManager.init(configManager);
-        PyServerManager.getInstance().startServers();
+        boolean startPythonServer =
+                Boolean.getBoolean(configManager.getProperty("startPythonServer", "false"));
+        if (startPythonServer) {
+            PyServerManager.init(configManager);
+            PyServerManager.getInstance().startServers();
+        }
     }
 
     private void initModelStore() throws IOException {

@@ -26,12 +26,6 @@ public final class PyServerManager {
 
     private PyServerManager(ConfigManager configManager) {
         this.configManager = configManager;
-        boolean startPythonServer =
-                Boolean.getBoolean(configManager.getProperty("startPythonServer", "false"));
-        if (!startPythonServer) {
-            return;
-        }
-
         noOfPythonWorkers = Integer.parseInt(configManager.getProperty("noOfPythonWorkers", "0"));
 
         if (noOfPythonWorkers > 0) {
@@ -66,9 +60,9 @@ public final class PyServerManager {
             port += i;
             PythonConnector connector;
             if (uds) {
-                connector = new PythonConnector(true, null, -1, DEFAULT_SOCKET_PATH);
+                connector = new PythonConnector(true, "", -1, DEFAULT_SOCKET_PATH);
             } else {
-                connector = new PythonConnector(false, "127.0.0.1", port, "null");
+                connector = new PythonConnector(false, "127.0.0.1", port, "");
             }
             wlm.addThread(connector, pythonPath);
         }
