@@ -29,6 +29,7 @@ import ai.djl.serving.util.ConfigManager;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +37,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.GeneralSecurityException;
 import java.util.List;
+
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,8 +119,12 @@ public class PythonTranslatorTest {
     @Test(enabled = false)
     public void testImageClassificationTCP()
             throws ModelException, NoSuchFieldException, IllegalAccessException, IOException,
-                    TranslateException {
+            TranslateException, GeneralSecurityException, InterruptedException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "pythonPath", "/usr/local/bin/python3");
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "noOfPythonWorkers", "5");
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "startPythonWorker", "True");
+        startModelServer();
         runPythonTranslator();
     }
 
@@ -125,6 +134,11 @@ public class PythonTranslatorTest {
                     IOException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
         runPythonTranslator();
+    }
+
+    private void startModelServer() throws GeneralSecurityException, IOException, InterruptedException {
+        ModelServer server = new ModelServer(ConfigManager.getInstance());
+        server.start();
     }
 
     private void runPythonTranslator() throws ModelException, IOException, TranslateException {
