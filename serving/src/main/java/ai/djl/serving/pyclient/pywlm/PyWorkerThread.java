@@ -15,33 +15,52 @@ package ai.djl.serving.pyclient.pywlm;
 import ai.djl.serving.pyclient.PythonConnector;
 import ai.djl.serving.pyclient.RequestHandler;
 import ai.djl.serving.pyclient.protocol.Request;
-import ai.djl.serving.pyclient.protocol.RequestType;
 import ai.djl.serving.util.CodecUtils;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/** This class represents a python worker thread. */
 public class PyWorkerThread implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(PyWorkerThread.class);
 
     private Channel nettyClient;
     private LinkedBlockingDeque<PyJob> jobQueue;
 
+    /**
+     * Constructs a new {@code PyWorkerThread} instance.
+     *
+     * @param builder builder
+     */
+    public PyWorkerThread(Builder builder) {
+        this.jobQueue = builder.jobQueue;
+        this.nettyClient = builder.nettyClient;
+    }
+
+    /**
+     * Returns the netty client.
+     *
+     * @return netty client.
+     */
     public Channel getNettyClient() {
         return nettyClient;
     }
 
+    /**
+     * Returns a new {@code Builder} instance.
+     *
+     * @return builder
+     */
     public static Builder builder() {
         return new Builder();
     }
@@ -59,12 +78,12 @@ public class PyWorkerThread implements Runnable {
         }
     }
 
-
     /**
      * Sends data to the netty client.
      *
-     * @param request   to be sent
+     * @param request to be sent
      * @param resFuture response future gets completed when response is received
+     * @throws IOException if error occurs while sending
      */
     private void send(Request request, CompletableFuture<byte[]> resFuture) throws IOException {
         byte[] requestData = CodecUtils.encodeRequest(request);
@@ -81,56 +100,17 @@ public class PyWorkerThread implements Runnable {
                 });
     }
 
-
-    public PyWorkerThread(Builder builder) {
-        this.jobQueue = builder.jobQueue;
-        this.nettyClient = builder.nettyClient;
-    }
-
+    /** A Builder to construct a {@link PyWorkerThread}. */
     public static class Builder {
-        private String socketPath;
-        private String host;
-        private int port;
+        private static final Logger logger = LoggerFactory.getLogger(Builder.class);
+
         private String pythonPath;
         private Channel nettyClient;
         private LinkedBlockingDeque<PyJob> jobQueue;
         private PythonConnector connector;
 
-        /**
-         * Sets the uds socket path.
-         *
-         * @param socketPath uds socket path
-         * @return this Builder
-         */
-        public Builder setSocketPath(String socketPath) {
-            this.socketPath = socketPath;
-            return this;
-        }
-
-        /**
-         * Sets the host for TCP connection with python server.
-         *
-         * @param host host of the python server
-         * @return this Builder
-         */
-        public Builder setHost(String host) {
-            this.host = host;
-            return self();
-        }
-
         protected Builder self() {
             return this;
-        }
-
-        /**
-         * Sets the port for TCP connection with python server.
-         *
-         * @param port port of the python server
-         * @return this Builder
-         */
-        public Builder setPort(int port) {
-            this.port = port;
-            return self();
         }
 
         /**
@@ -155,11 +135,23 @@ public class PyWorkerThread implements Runnable {
             return self();
         }
 
+        /**
+         * Sets the python connector.
+         *
+         * @param connector python connector
+         * @return this Builder
+         */
         public Builder setPythonConnector(PythonConnector connector) {
             this.connector = connector;
             return self();
         }
 
+        /**
+         * Builds the {@link PyWorkerThread} with the provided data after starting the python
+         * server.
+         *
+         * @return an {@link PyWorkerThread}
+         */
         public PyWorkerThread build() {
             String[] args = new String[10];
             args[0] = pythonPath;
@@ -173,11 +165,11 @@ public class PyWorkerThread implements Runnable {
             args[8] = "--sock-name";
             args[9] = connector.getSocketPath();
 
-            System.out.println(Arrays.toString(args));
             try {
                 Process process = Runtime.getRuntime().exec(args);
                 CompletableFuture<Boolean> future = new CompletableFuture<>();
-                ReaderThread readerThread = new ReaderThread("Python server", process.getInputStream(), future);
+                ReaderThread readerThread =
+                        new ReaderThread("Python server", process.getInputStream(), future);
                 readerThread.start();
 
                 if (future.get()) {
@@ -185,12 +177,11 @@ public class PyWorkerThread implements Runnable {
                     return new PyWorkerThread(this);
                 }
             } catch (InterruptedException | IOException | ExecutionException e) {
-                e.printStackTrace();
+                logger.error("Error occurred when starting a python server ");
             }
             return null;
         }
     }
-
 
     private static final class ReaderThread extends Thread {
 
@@ -199,7 +190,8 @@ public class PyWorkerThread implements Runnable {
         private CompletableFuture<Boolean> isServerStartedFuture;
         private Logger logger = LoggerFactory.getLogger(ReaderThread.class);
 
-        public ReaderThread(String name, InputStream is, CompletableFuture<Boolean> isServerStartedFuture) {
+        public ReaderThread(
+                String name, InputStream is, CompletableFuture<Boolean> isServerStartedFuture) {
             super(name + "-stdout");
             this.is = is;
             this.isServerStartedFuture = isServerStartedFuture;
@@ -212,8 +204,6 @@ public class PyWorkerThread implements Runnable {
         @Override
         public void run() {
             try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8.name())) {
-                logger.info("Py" +  isRunning);
-
                 while (isRunning.get() && scanner.hasNext()) {
 
                     String result = scanner.nextLine();
@@ -229,13 +219,13 @@ public class PyWorkerThread implements Runnable {
                 }
             } catch (Exception e) {
                 logger.error("Couldn't create scanner - {}", getName(), e);
-            } finally {
-                logger.info("Stopped Scanner - {}", getName());
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    logger.error("Failed to close stream for thread {}", this.getName(), e);
-                }
+            }
+
+            logger.info("Stopped Scanner - {}", getName());
+            try {
+                is.close();
+            } catch (IOException e) {
+                logger.error("Failed to close stream for thread {}", this.getName(), e);
             }
         }
     }

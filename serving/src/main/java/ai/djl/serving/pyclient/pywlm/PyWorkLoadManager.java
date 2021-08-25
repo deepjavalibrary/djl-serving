@@ -13,7 +13,6 @@
 package ai.djl.serving.pyclient.pywlm;
 
 import ai.djl.serving.pyclient.PythonConnector;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,21 +20,39 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 
+/** This class is responsible for managing the workload of the python worker threads. */
 public class PyWorkLoadManager {
     private LinkedBlockingDeque<PyJob> jobQueue;
     private List<PyWorkerThread> workers;
     private ExecutorService threadPool;
 
+    /**
+     * Constructs a {@code PyWorkLoadManager} instance.
+     *
+     * @param queueSize size of the queue
+     */
     PyWorkLoadManager(int queueSize) {
         jobQueue = new LinkedBlockingDeque<>(queueSize);
         workers = Collections.synchronizedList(new ArrayList<>());
         threadPool = Executors.newCachedThreadPool();
     }
 
+    /**
+     * Adds a job to the job queue.
+     *
+     * @param job job to be added.
+     * @return whether job is added or not
+     */
     public boolean addJob(PyJob job) {
         return jobQueue.offer(job);
     }
 
+    /**
+     * Adds a thread to worker pool.
+     *
+     * @param connector python connector
+     * @param pythonPath path of the python
+     */
     public void addThread(PythonConnector connector, String pythonPath) {
         PyWorkerThread workerThread =
                 PyWorkerThread.builder()
@@ -48,10 +65,20 @@ public class PyWorkLoadManager {
         threadPool.submit(workerThread);
     }
 
+    /**
+     * Returns a job queue.
+     *
+     * @return job queue
+     */
     public LinkedBlockingDeque<PyJob> getJobQueue() {
         return jobQueue;
     }
 
+    /**
+     * Returns the list of workers.
+     *
+     * @return workers
+     */
     public List<PyWorkerThread> getWorkers() {
         return workers;
     }

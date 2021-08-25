@@ -15,7 +15,8 @@ package ai.djl.serving.pyclient.pywlm;
 import ai.djl.serving.pyclient.PythonConnector;
 import ai.djl.serving.util.ConfigManager;
 
-public class PyServerManager {
+/** This class manages the python server connections. */
+public final class PyServerManager {
     private static final String DEFAULT_SOCKET_PATH = "/tmp/uds_sock";
 
     private ConfigManager configManager;
@@ -25,30 +26,39 @@ public class PyServerManager {
 
     private PyServerManager(ConfigManager configManager) {
         this.configManager = configManager;
-        boolean startPythonServer = Boolean.getBoolean(configManager.getProperty("startPythonServer", "false"));
+        boolean startPythonServer =
+                Boolean.getBoolean(configManager.getProperty("startPythonServer", "false"));
         if (!startPythonServer) {
             return;
         }
 
         noOfPythonWorkers = Integer.parseInt(configManager.getProperty("noOfPythonWorkers", "0"));
-        System.out.println("No of workers" + noOfPythonWorkers);
 
         if (noOfPythonWorkers > 0) {
-            System.out.println("No of workers > 1");
             this.wlm = new PyWorkLoadManager(noOfPythonWorkers);
         }
     }
 
+    /**
+     * Initializes the {@code PyServerManager} instance.
+     *
+     * @param configManager configmanager
+     */
     public static void init(ConfigManager configManager) {
         pyServerManager = new PyServerManager(configManager);
     }
 
+    /**
+     * Returns the {@code PyServerManager} instance.
+     *
+     * @return PyServerManager
+     */
     public static PyServerManager getInstance() {
         return pyServerManager;
     }
 
+    /** Starts the python servers. */
     public void startServers() {
-        ConfigManager configManager = ConfigManager.getInstance();
         boolean uds = configManager.useNativeIo();
         String pythonPath = configManager.getProperty("pythonPath", "python");
         int port = 9000;
@@ -61,10 +71,15 @@ public class PyServerManager {
                 connector = new PythonConnector(false, "127.0.0.1", port, "null");
             }
             wlm.addThread(connector, pythonPath);
-            System.out.println("Added ");
         }
     }
 
+    /**
+     * Adds a python job to the job queue.
+     *
+     * @param job python job
+     * @return whether job is added or not
+     */
     public boolean addJob(PyJob job) {
         return wlm.addJob(job);
     }

@@ -13,7 +13,6 @@
 package ai.djl.serving.pyclient;
 
 import ai.djl.serving.pyclient.protocol.ResponseDecoder;
-import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -30,15 +29,21 @@ import org.slf4j.LoggerFactory;
 public class PythonConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(PythonConnector.class);
-    private static final String DEFAULT_SOCKET_PATH = "/tmp/uds_sock";
 
     private static final int MAX_BUFFER_SIZE = 6553500;
-    private Channel channel;
     private boolean uds;
     private String host;
     private int port;
     private String socketPath;
 
+    /**
+     * Constructs a {@code PythonConnector}.
+     *
+     * @param uds isuds
+     * @param host host name for tcp connection
+     * @param port port num for tcp connection
+     * @param socketPath socket path for uds
+     */
     public PythonConnector(boolean uds, String host, int port, String socketPath) {
         this.uds = uds;
         this.host = host;
@@ -46,23 +51,47 @@ public class PythonConnector {
         this.socketPath = socketPath;
     }
 
+    /**
+     * Returns whether connection can be uds or not.
+     *
+     * @return is uds
+     */
     public boolean isUds() {
         return uds;
     }
 
+    /**
+     * Returns the host name.
+     *
+     * @return host
+     */
     public String getHost() {
         return host;
     }
 
+    /**
+     * Returns the port number.
+     *
+     * @return port
+     */
     public int getPort() {
         return port;
     }
 
+    /**
+     * Returns the socket path.
+     *
+     * @return socket path
+     */
     public String getSocketPath() {
         return socketPath;
     }
 
-    /** Creates a netty client. */
+    /**
+     * Connects to the python server.
+     *
+     * @return netty client.
+     */
     public Channel connect() {
         EventLoopGroup group = Connector.newEventLoopGroup(1);
 

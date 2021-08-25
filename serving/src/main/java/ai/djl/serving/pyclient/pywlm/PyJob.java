@@ -15,19 +15,36 @@ package ai.djl.serving.pyclient.pywlm;
 import ai.djl.serving.pyclient.protocol.Request;
 import java.util.concurrent.CompletableFuture;
 
+/** A class represents a python job. */
 public class PyJob {
     private Request request;
     private CompletableFuture<byte[]> resFuture;
 
+    /**
+     * Contructs a new {@code PyJob} instance.
+     *
+     * @param request to be sent to python server
+     * @param resFuture that holds the response
+     */
     public PyJob(Request request, CompletableFuture<byte[]> resFuture) {
         this.request = request;
         this.resFuture = resFuture;
     }
 
+    /**
+     * Returns the request.
+     *
+     * @return request
+     */
     public Request getRequest() {
         return request;
     }
 
+    /**
+     * Returns the response future.
+     *
+     * @return reponse future.
+     */
     public CompletableFuture<byte[]> getResFuture() {
         return resFuture;
     }
