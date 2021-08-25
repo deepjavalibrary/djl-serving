@@ -153,9 +153,10 @@ public class PyWorkerThread implements Runnable {
          * @return an {@link PyWorkerThread}
          */
         public PyWorkerThread build() {
+            logger.info("Working Directory = " + System.getProperty("user.dir"));
             String[] args = new String[10];
             args[0] = pythonPath;
-            args[1] = "/Users/sindhuso/djl-serving/serving/src/main/python/python_server.py";
+            args[1] = "src/main/python/python_server.py";
             args[2] = "--sock-type";
             args[3] = connector.isUds() ? "unix" : "tcp";
             args[4] = "--host";
