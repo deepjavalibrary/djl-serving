@@ -44,6 +44,8 @@ public class PythonTranslator implements ServingTranslator {
 
     private String preProcessingPythonFile;
     private String preProcessingFunction;
+    private String postProcessingPythonFile;
+    private String postProcessingFunction;
 
     /** {@inheritDoc} */
     @Override
@@ -61,36 +63,79 @@ public class PythonTranslator implements ServingTranslator {
     @Override
     public void prepare(NDManager manager, Model model) throws IOException {
         String[] preProcessing = ((String) arguments.get("preProcessor")).split(":");
-        Path preProcessingPath = model.getModelPath().resolve("libs/" + preProcessing[0]);
+        Path preProcessingPath = model.getModelPath().resolve("bin/" + preProcessing[0]);
         if (!Files.exists(preProcessingPath)) {
-            throw new IOException("Process input file does not exist");
+            throw new IOException(
+                    "Specified preprocess file does not exist in the model directory");
         }
         preProcessingPythonFile = preProcessingPath.toString();
         preProcessingFunction = preProcessing[1];
+
+        String postProcessorArg = (String) arguments.get("postProcessor");
+        // Post processing is optional
+        if (postProcessorArg == null) {
+            return;
+        }
+
+        String[] postProcessing = postProcessorArg.split(":");
+        Path postProcessingPath = model.getModelPath().resolve("bin/" + postProcessing[0]);
+        if (!Files.exists(postProcessingPath)) {
+            throw new IOException(
+                    "Specified postprocess file does not exist in the model directory");
+        }
+        postProcessingPythonFile = postProcessingPath.toString();
+        postProcessingFunction = postProcessing[1];
+        logger.info(postProcessingPythonFile);
     }
 
     /** {@inheritDoc} */
     @Override
-    public Output processOutput(TranslatorContext ctx, NDList list) {
-        // TODO: This will be changed to read the files in the following PR
-        Output output = new Output(200, "success");
-        output.setContent(list.encode());
-        return output;
+    public Output processOutput(TranslatorContext ctx, NDList list)
+            throws IOException, TranslateException {
+        Input input = (Input) ctx.getAttachment("input");
+        if (postProcessingPythonFile == null) {
+            Output output = new Output(200, "OK");
+            output.setRequestId(input.getRequestId());
+            output.setContent(list.encode());
+            return output;
+        }
+
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
+        Channel nettyClient = PythonConnector.getInstance().getChannel();
+        Request request =
+                new Request()
+                        .setRequestType(RequestType.POSTPROCESS.reqTypeCode())
+                        .setPythonFile(postProcessingPythonFile)
+                        .setFunctionName(postProcessingFunction)
+                        .setFunctionParam(list.encode());
+
+        send(nettyClient, CodecUtils.encodeRequest(request), future);
+
+        // obtaining response
+        try {
+            byte[] response = future.get();
+            Output output = new Output(200, "OK");
+            output.setRequestId(input.getRequestId());
+            output.setContent(response);
+            return output;
+        } catch (ExecutionException | InterruptedException e) {
+            throw new TranslateException(e);
+        }
     }
 
     /** {@inheritDoc} */
     @Override
     public NDList processInput(TranslatorContext ctx, Input input)
             throws IOException, TranslateException {
+        ctx.setAttachment("input", input);
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         Channel nettyClient = PythonConnector.getInstance().getChannel();
-        // TODO: This will be changed to include input properties in the following PRs
         Request request =
                 new Request()
                         .setRequestType(RequestType.PREPROCESS.reqTypeCode())
                         .setPythonFile(preProcessingPythonFile)
                         .setFunctionName(preProcessingFunction)
-                        .setFunctionParam(input.getContent().get(null));
+                        .setFunctionParam(CodecUtils.encodeInput(input));
 
         send(nettyClient, CodecUtils.encodeRequest(request), future);
 

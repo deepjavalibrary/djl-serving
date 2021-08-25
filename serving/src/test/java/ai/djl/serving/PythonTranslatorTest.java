@@ -12,10 +12,8 @@
  */
 package ai.djl.serving;
 
-import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.inference.Predictor;
-import ai.djl.metric.Metrics;
 import ai.djl.modality.Classifications;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -25,13 +23,10 @@ import ai.djl.modality.cv.util.NDImageUtils;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
-import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
-import ai.djl.serving.pyclient.PythonTranslator;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.translate.TranslateException;
-import ai.djl.translate.TranslatorContext;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import java.io.ByteArrayInputStream;
@@ -84,12 +79,22 @@ public class PythonTranslatorTest {
                 Files.copy(is, paramFile, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            Path libsDir = modelDir.resolve("bin");
+            Path libsDir = modelDir.resolve("libs");
             Files.createDirectories(libsDir);
 
-            Path preProcessFile = modelDir.resolve("bin/pre_processing.py");
-            try (InputStream is = model.getArtifactAsStream("pre_processing.py")) {
-                Files.copy(is, preProcessFile, StandardCopyOption.REPLACE_EXISTING);
+            libsDir = modelDir.resolve("bin");
+            Files.createDirectories(libsDir);
+
+            Path preProcessDestFile = modelDir.resolve("bin/pre_processing.py");
+            Path preProcessSrcFile = Paths.get("../serving/src/test/resources/pre_processing.py");
+            try (InputStream is = Files.newInputStream(preProcessSrcFile)) {
+                Files.copy(is, preProcessDestFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            Path postProcessDestFile = modelDir.resolve("bin/post_processing.py");
+            Path postProcessSrcFile = Paths.get("../serving/src/test/resources/post_processing.py");
+            try (InputStream is = Files.newInputStream(postProcessSrcFile)) {
+                Files.copy(is, postProcessDestFile, StandardCopyOption.REPLACE_EXISTING);
             }
         }
 
@@ -103,11 +108,11 @@ public class PythonTranslatorTest {
 
     @AfterClass
     public void tearDown() {
-        // Utils.deleteQuietly(modelDir);
+        Utils.deleteQuietly(modelDir);
     }
 
     @Test(enabled = false)
-    public void testImageClassification()
+    public void testImageClassificationTCP()
             throws ModelException, NoSuchFieldException, IllegalAccessException, IOException,
                     TranslateException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
@@ -115,17 +120,11 @@ public class PythonTranslatorTest {
     }
 
     @Test(enabled = false)
-    public void testPythonTranslatorTCP()
-            throws IOException, TranslateException, NoSuchFieldException, IllegalAccessException {
-        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
-        testPythonTranslator();
-    }
-
-    @Test(enabled = false)
-    public void testPythonTranslatorUDS()
-            throws IOException, TranslateException, NoSuchFieldException, IllegalAccessException {
+    public void testImageClassificationUDS()
+            throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException,
+                    IOException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
-        testPythonTranslator();
+        runPythonTranslator();
     }
 
     private void runPythonTranslator() throws ModelException, IOException, TranslateException {
@@ -135,6 +134,7 @@ public class PythonTranslatorTest {
                         .optModelPath(modelDir)
                         .optArgument("translator", "ai.djl.serving.pyclient.PythonTranslator")
                         .optArgument("preProcessor", "pre_processing.py:preprocess")
+                        .optArgument("postProcessor", "post_processing.py:postprocess")
                         .build();
 
         try (ZooModel<Input, Output> model = criteria.loadModel();
@@ -151,7 +151,7 @@ public class PythonTranslatorTest {
             Input input = new Input("1");
             input.addData(null, list.encode());
             Output output = predictor.predict(input);
-            // Assert.assertEquals(output.getRequestId(), "1");
+            Assert.assertEquals(output.getRequestId(), "1");
 
             // manually post process
             list = NDList.decode(manager, output.getContent());
@@ -162,49 +162,6 @@ public class PythonTranslatorTest {
             logger.info("Classification result is " + JsonUtils.GSON.toJson(result));
 
             Assert.assertEquals(result.best().getClassName(), "0");
-        }
-    }
-
-    private void testPythonTranslator() throws TranslateException, IOException {
-        try (NDManager manager = NDManager.newBaseManager()) {
-            NDArray ndArray = manager.zeros(new Shape(2, 2));
-            NDList ndList = new NDList(ndArray);
-            Input input = new Input("1");
-            input.addData(ndList.encode());
-
-            PythonTranslator pythonTranslator = new PythonTranslator();
-            TranslatorContext context =
-                    new TranslatorContext() {
-
-                        @Override
-                        public Model getModel() {
-                            return null;
-                        }
-
-                        @Override
-                        public NDManager getNDManager() {
-                            return manager;
-                        }
-
-                        @Override
-                        public Metrics getMetrics() {
-                            return null;
-                        }
-
-                        @Override
-                        public Object getAttachment(String key) {
-                            return null;
-                        }
-
-                        @Override
-                        public void setAttachment(String key, Object value) {}
-
-                        @Override
-                        public void close() {}
-                    };
-
-            NDList list = pythonTranslator.processInput(context, input);
-            Assert.assertFalse(list.isEmpty());
         }
     }
 }

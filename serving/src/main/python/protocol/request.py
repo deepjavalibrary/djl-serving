@@ -26,7 +26,7 @@ class Request(object):
         self._request_type = None
         self._python_file = None
         self._function_name = None
-        self._function_param = None
+        self._function_param_bytes = None
 
     def set_request_type(self, request_type):
         self._request_type = request_type
@@ -47,7 +47,7 @@ class Request(object):
         return self._function_name
 
     def set_function_param(self, function_param):
-        self._function_param = function_param
+        self._function_param_bytes = function_param
 
     def get_function_param(self):
-        return self._function_param
+        return self._function_param_bytes

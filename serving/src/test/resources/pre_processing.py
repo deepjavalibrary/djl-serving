@@ -9,29 +9,24 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import numpy as np
 
-"""
-Contains util functions for serializing data.
-"""
-import struct
+from util.np_util import djl_to_np_decode
 
 
-def _set_int(value: int) -> bytes:
-    """
-    Converts int value into bytes.
-    :param value: integer
-    :return: converted bytes
-    """
-    return struct.pack(">i", value)
+class Preprocessor(object):
 
+    def initialize(self):
+        pass
 
-def construct_enc_response(arr: bytearray) -> bytearray:
-    """
-    Constructs the response to be sent. length of the array + data.
-    :param arr: bytearray
-    :return: response format
-    """
-    response = bytearray()
-    response.extend(_set_int(len(arr)))
-    response.extend(arr)
-    return response
+    def preprocess(self, input_data) -> list[np.ndarray]:
+        content = input_data.get_content()
+        pair_keys = content.get_keys()
+        if "data" in pair_keys:
+            return content.get_as_numpy("data")
+        elif "body" in pair_keys:
+            return content.get_as_numpy("body")
+        else:
+            data = list(content.get_values())[0]
+        np_list = djl_to_np_decode(data)
+        return np_list

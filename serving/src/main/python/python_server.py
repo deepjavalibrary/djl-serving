@@ -23,7 +23,7 @@ import sys
 from protocol.request_handler import retrieve_request
 from python_exec_handler import run_processor
 from util.arg_parser import ArgParser
-from util.serializing import construct_enc_response
+from util.codec_utils import construct_enc_response
 
 
 class PythonServer(object):
