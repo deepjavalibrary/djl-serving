@@ -19,6 +19,8 @@ import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.serving.pyclient.protocol.Request;
 import ai.djl.serving.pyclient.protocol.RequestType;
+import ai.djl.serving.pyclient.pywlm.PyJob;
+import ai.djl.serving.pyclient.pywlm.PyServerManager;
 import ai.djl.serving.util.CodecUtils;
 import ai.djl.translate.Batchifier;
 import ai.djl.translate.ServingTranslator;
@@ -100,8 +102,6 @@ public class PythonTranslator implements ServingTranslator {
             return output;
         }
 
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
-        Channel nettyClient = PythonConnector.getInstance().getChannel();
         Request request =
                 new Request()
                         .setRequestType(RequestType.POSTPROCESS.reqTypeCode())
@@ -109,7 +109,9 @@ public class PythonTranslator implements ServingTranslator {
                         .setFunctionName(postProcessingFunction)
                         .setFunctionParam(list.encode());
 
-        send(nettyClient, CodecUtils.encodeRequest(request), future);
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
+        PyJob pyJob = new PyJob(request, future);
+        PyServerManager.getInstance().addJob(pyJob);
 
         // obtaining response
         try {
@@ -128,8 +130,7 @@ public class PythonTranslator implements ServingTranslator {
     public NDList processInput(TranslatorContext ctx, Input input)
             throws IOException, TranslateException {
         ctx.setAttachment("input", input);
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
-        Channel nettyClient = PythonConnector.getInstance().getChannel();
+
         Request request =
                 new Request()
                         .setRequestType(RequestType.PREPROCESS.reqTypeCode())
@@ -137,7 +138,9 @@ public class PythonTranslator implements ServingTranslator {
                         .setFunctionName(preProcessingFunction)
                         .setFunctionParam(CodecUtils.encodeInput(input));
 
-        send(nettyClient, CodecUtils.encodeRequest(request), future);
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
+        PyJob pyJob = new PyJob(request, future);
+        PyServerManager.getInstance().addJob(pyJob);
 
         // obtaining response
         try {

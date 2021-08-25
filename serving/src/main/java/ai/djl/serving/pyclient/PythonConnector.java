@@ -30,21 +30,46 @@ import org.slf4j.LoggerFactory;
 public class PythonConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(PythonConnector.class);
-    private static final PythonConnector PYTHON_CONNECTOR = newInstance();
     private static final String DEFAULT_SOCKET_PATH = "/tmp/uds_sock";
 
     private static final int MAX_BUFFER_SIZE = 6553500;
     private Channel channel;
+    private boolean uds;
+    private String host;
+    private int port;
+    private String socketPath;
+
+    public PythonConnector(boolean uds, String host, int port, String socketPath) {
+        this.uds = uds;
+        this.host = host;
+        this.port = port;
+        this.socketPath = socketPath;
+    }
+
+    public boolean isUds() {
+        return uds;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public String getSocketPath() {
+        return socketPath;
+    }
 
     /** Creates a netty client. */
-    public PythonConnector() {
+    public Channel connect() {
         EventLoopGroup group = Connector.newEventLoopGroup(1);
 
         try {
             Bootstrap clientBootstrap = new Bootstrap();
-            // TODO: Support uds also
             clientBootstrap.group(group);
-            Class<? extends Channel> channelClass = Connector.getClientChannel(isUDS());
+            Class<? extends Channel> channelClass = Connector.getClientChannel(uds);
             clientBootstrap.channel(channelClass);
             clientBootstrap.remoteAddress(getSocketAddress());
 
@@ -59,43 +84,17 @@ public class PythonConnector {
                     });
 
             ChannelFuture future = clientBootstrap.connect().sync();
-            this.channel = future.awaitUninterruptibly().channel();
-            future.channel().closeFuture();
+            return future.awaitUninterruptibly().channel();
         } catch (InterruptedException e) {
             logger.error("Exception occurred while creating netty client", e);
         }
-    }
 
-    /**
-     * Getter for socket connector instance.
-     *
-     * @return socket connector instance
-     */
-    public static PythonConnector getInstance() {
-        return PYTHON_CONNECTOR;
-    }
-
-    /**
-     * Getter for netty client channel.
-     *
-     * @return channel for netty client.
-     */
-    public Channel getChannel() {
-        return this.channel;
-    }
-
-    private static PythonConnector newInstance() {
-        return new PythonConnector();
-    }
-
-    private boolean isUDS() {
-        ConfigManager configManager = ConfigManager.getInstance();
-        return configManager.useNativeIo();
+        return null;
     }
 
     private SocketAddress getSocketAddress() {
-        return isUDS()
-                ? new DomainSocketAddress(DEFAULT_SOCKET_PATH)
-                : InetSocketAddress.createUnresolved("127.0.0.1", 9000);
+        return uds
+                ? new DomainSocketAddress(this.socketPath)
+                : InetSocketAddress.createUnresolved(this.host, this.port);
     }
 }

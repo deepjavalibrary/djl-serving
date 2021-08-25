@@ -14,6 +14,7 @@ package ai.djl.serving;
 
 import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.plugins.FolderScanPluginManager;
+import ai.djl.serving.pyclient.pywlm.PyServerManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.ServerGroups;
@@ -145,6 +146,7 @@ public class ModelServer {
 
         logger.info(configManager.dumpConfigurations());
 
+        initPythonServers();
         initModelStore();
         pluginManager.loadPlugins();
 
@@ -249,6 +251,11 @@ public class ModelServer {
 
         logger.info("{} API bind to: {}", connector.getType(), connector);
         return f;
+    }
+
+    private void initPythonServers() {
+        PyServerManager.init(configManager);
+        PyServerManager.getInstance().startServers();
     }
 
     private void initModelStore() throws IOException {
