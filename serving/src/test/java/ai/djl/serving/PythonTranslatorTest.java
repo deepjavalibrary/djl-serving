@@ -112,13 +112,12 @@ public class PythonTranslatorTest {
         Utils.deleteQuietly(modelDir);
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void testImageClassificationTCP()
             throws ModelException, NoSuchFieldException, IllegalAccessException, IOException,
                     TranslateException, GeneralSecurityException, InterruptedException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
-        ConfigManagerTest.setConfiguration(
-                ConfigManager.getInstance(), "pythonPath", "/usr/local/bin/python3");
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "pythonPath", "python");
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "noOfPythonWorkers", "5");
         ConfigManagerTest.setConfiguration(
                 ConfigManager.getInstance(), "startPythonWorker", "True");
@@ -126,7 +125,7 @@ public class PythonTranslatorTest {
         runPythonTranslator();
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void testImageClassificationUDS()
             throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException,
                     IOException {

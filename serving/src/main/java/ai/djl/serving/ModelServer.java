@@ -255,7 +255,7 @@ public class ModelServer {
 
     private void initPythonServers() {
         boolean startPythonServer =
-                Boolean.getBoolean(configManager.getProperty("startPythonServer", "false"));
+                Boolean.parseBoolean(configManager.getProperty("startPythonWorker", "false"));
         if (startPythonServer) {
             PyServerManager.init(configManager);
             PyServerManager.getInstance().startServers();

@@ -130,7 +130,6 @@ public class PythonTranslator implements ServingTranslator {
     public NDList processInput(TranslatorContext ctx, Input input)
             throws IOException, TranslateException {
         ctx.setAttachment("input", input);
-
         Request request =
                 new Request()
                         .setRequestType(RequestType.PREPROCESS.reqTypeCode())
