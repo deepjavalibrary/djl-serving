@@ -53,6 +53,7 @@ public class PythonTranslatorTest {
 
     private Path modelDir = Paths.get("build/models/mlp");
     private byte[] data;
+    ModelServer server;
 
     @BeforeClass
     public void setup() throws ModelException, IOException, ParseException {
@@ -109,6 +110,7 @@ public class PythonTranslatorTest {
 
     @AfterClass
     public void tearDown() {
+        server.stop();
         Utils.deleteQuietly(modelDir);
     }
 
@@ -117,7 +119,7 @@ public class PythonTranslatorTest {
             throws ModelException, NoSuchFieldException, IllegalAccessException, IOException,
                     TranslateException, GeneralSecurityException, InterruptedException {
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
-        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "pythonPath", "/usr/bin/python");
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "pythonPath", "python3");
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "noOfPythonWorkers", "5");
         ConfigManagerTest.setConfiguration(
                 ConfigManager.getInstance(), "startPythonWorker", "True");
@@ -125,7 +127,7 @@ public class PythonTranslatorTest {
         runPythonTranslator();
     }
 
-    @Test(enabled = true)
+    @Test
     public void testImageClassificationUDS()
             throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException,
                     IOException {
@@ -135,7 +137,7 @@ public class PythonTranslatorTest {
 
     private void startModelServer()
             throws GeneralSecurityException, IOException, InterruptedException {
-        ModelServer server = new ModelServer(ConfigManager.getInstance());
+        server = new ModelServer(ConfigManager.getInstance());
         server.start();
     }
 

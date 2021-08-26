@@ -69,9 +69,12 @@ public class PyWorkerThread implements Runnable {
     @Override
     public void run() {
         try {
-            PyJob job = jobQueue.take();
-            Request request = job.getRequest();
-            send(request, job.getResFuture());
+            // TODO: Add worker status
+            while (true) {
+                PyJob job = jobQueue.take();
+                Request request = job.getRequest();
+                send(request, job.getResFuture());
+            }
 
         } catch (Exception ex) {
             logger.info("Python server is not started");
@@ -174,6 +177,7 @@ public class PyWorkerThread implements Runnable {
                 readerThread.start();
 
                 if (future.get()) {
+                    logger.info("connected to python server");
                     this.nettyClient = connector.connect();
                     return new PyWorkerThread(this);
                 }
@@ -206,9 +210,7 @@ public class PyWorkerThread implements Runnable {
         public void run() {
             try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8.name())) {
                 while (isRunning.get() && scanner.hasNext()) {
-
                     String result = scanner.nextLine();
-                    logger.info("Py" + result);
 
                     if (result == null) {
                         break;
