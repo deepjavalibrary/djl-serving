@@ -15,17 +15,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Echo Python Path
-        run: echo $PATH
-      - name: Which python
-        run: which python
-      - name: run python server
-        run: /usr/bin/python /home/runner/work/djl-serving/djl-serving/serving/src/main/python/python_server.py --sock-type "tcp" --host "127.0.0.1" --port "9000"
       - uses: actions/checkout@v2
       - name: Set up JDK 1.8
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+      - name: Set up Python3
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.x'
+      - name: install Python Dependencies
+        run: pip3 install numpy
+      - name: Echo Python Path
+        run: echo $PATH
+      - name: Which python
+        run: python --version
       # Enable gradle cache: https://github.com/actions/cache/blob/master/examples.md#java---gradle
       - uses: actions/cache@v2
         with:
