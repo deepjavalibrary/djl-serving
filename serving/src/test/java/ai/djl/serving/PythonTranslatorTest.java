@@ -156,10 +156,12 @@ public class PythonTranslatorTest {
 
     private void setUseNativeIoField(boolean value) {
         try {
-            useNativeIoField = Connector.class.getDeclaredField("useNativeIo");
-            useNativeIoField.setAccessible(true);
-            previousUseNativeIoValue = useNativeIoField.get(null);
-            useNativeIoField.set(null, value);
+            if (ConfigManager.getInstance() != null) {
+                useNativeIoField = Connector.class.getDeclaredField("useNativeIo");
+                useNativeIoField.setAccessible(true);
+                previousUseNativeIoValue = useNativeIoField.get(null);
+                useNativeIoField.set(null, value);
+            }
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }
