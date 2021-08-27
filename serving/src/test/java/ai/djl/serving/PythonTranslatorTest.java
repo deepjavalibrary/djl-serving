@@ -56,6 +56,8 @@ public class PythonTranslatorTest {
     private Path modelDir = Paths.get("build/models/mlp");
     private byte[] data;
     private ModelServer server;
+    private Field useNativeIoField;
+    private Object previousUseNativeIoValue = true; // default value of useNativeIo is true.
 
     @BeforeClass
     public void setup() throws ModelException, IOException, ParseException {
@@ -118,16 +120,7 @@ public class PythonTranslatorTest {
             throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException,
                     IOException, GeneralSecurityException, InterruptedException, ParseException {
 
-        Field field;
-        Object previousValue; // default value of useNativeIo is true.
-        try {
-            field = Connector.class.getDeclaredField("useNativeIo");
-            field.setAccessible(true);
-            previousValue = field.get(null);
-            field.set(null, true);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
+        setUseNativeIoField(true);
 
         ConfigManager.init(ConfigManagerTest.parseArguments(new String[0]));
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
@@ -139,14 +132,7 @@ public class PythonTranslatorTest {
         startModelServer();
         runPythonTranslator();
         stopModelServer();
-
-        try {
-            if (previousValue != null) {
-                field.set(null, previousValue);
-            }
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
+        resetUseNativeIoField();
     }
 
     @Test
@@ -155,17 +141,7 @@ public class PythonTranslatorTest {
                     TranslateException, GeneralSecurityException, InterruptedException,
                     ParseException {
 
-        Field field;
-        Object previousValue;
-        try {
-            field = Connector.class.getDeclaredField("useNativeIo");
-            field.setAccessible(true);
-            previousValue = field.get(null);
-            field.set(null, true);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
-
+        setUseNativeIoField(false);
         ConfigManager.init(ConfigManagerTest.parseArguments(new String[0]));
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "pythonPath", "python3");
@@ -175,10 +151,26 @@ public class PythonTranslatorTest {
         startModelServer();
         runPythonTranslator();
         stopModelServer();
+        resetUseNativeIoField();
+    }
 
+    private void setUseNativeIoField(boolean value) {
         try {
-            if (previousValue != null) {
-                field.set(null, previousValue);
+            if (ConfigManager.getInstance() != null) {
+                useNativeIoField = Connector.class.getDeclaredField("useNativeIo");
+                useNativeIoField.setAccessible(true);
+                previousUseNativeIoValue = useNativeIoField.get(null);
+                useNativeIoField.set(null, value);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private void resetUseNativeIoField() {
+        try {
+            if (previousUseNativeIoValue != null && useNativeIoField != null) {
+                useNativeIoField.set(null, previousUseNativeIoValue);
             }
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);

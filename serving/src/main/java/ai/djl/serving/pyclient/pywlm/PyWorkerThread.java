@@ -209,7 +209,6 @@ public class PyWorkerThread implements Runnable {
             try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8.name())) {
                 while (isRunning.get() && scanner.hasNext()) {
                     String result = scanner.nextLine();
-                    logger.info("Py " + result);
 
                     if (result == null) {
                         break;
