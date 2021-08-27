@@ -156,7 +156,6 @@ public class PyWorkerThread implements Runnable {
          * @return an {@link PyWorkerThread}
          */
         public PyWorkerThread build() {
-            logger.info("Working Directory = " + System.getProperty("user.dir"));
             String[] args = new String[10];
             args[0] = pythonPath;
             args[1] = "src/main/python/python_server.py";
@@ -177,7 +176,6 @@ public class PyWorkerThread implements Runnable {
                 readerThread.start();
 
                 if (future.get()) {
-                    logger.info("connected to python server");
                     this.nettyClient = connector.connect();
                     return new PyWorkerThread(this);
                 }
@@ -211,6 +209,7 @@ public class PyWorkerThread implements Runnable {
             try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8.name())) {
                 while (isRunning.get() && scanner.hasNext()) {
                     String result = scanner.nextLine();
+                    logger.info("Py " + result);
 
                     if (result == null) {
                         break;

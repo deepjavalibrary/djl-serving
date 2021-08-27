@@ -26,12 +26,14 @@ import ai.djl.ndarray.NDManager;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.util.ConfigManager;
+import ai.djl.serving.util.Connector;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -53,7 +55,7 @@ public class PythonTranslatorTest {
 
     private Path modelDir = Paths.get("build/models/mlp");
     private byte[] data;
-    ModelServer server;
+    private ModelServer server;
 
     @BeforeClass
     public void setup() throws ModelException, IOException, ParseException {
@@ -104,20 +106,67 @@ public class PythonTranslatorTest {
         try (InputStream is = Files.newInputStream(imageFile)) {
             data = Utils.toByteArray(is);
         }
-
-        ConfigManager.init(ConfigManagerTest.parseArguments(new String[0]));
     }
 
     @AfterClass
     public void tearDown() {
-        server.stop();
         Utils.deleteQuietly(modelDir);
+    }
+
+    @Test
+    public void testImageClassificationUDS()
+            throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException,
+                    IOException, GeneralSecurityException, InterruptedException, ParseException {
+
+        Field field;
+        Object previousValue; // default value of useNativeIo is true.
+        try {
+            field = Connector.class.getDeclaredField("useNativeIo");
+            field.setAccessible(true);
+            previousValue = field.get(null);
+            field.set(null, true);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+
+        ConfigManager.init(ConfigManagerTest.parseArguments(new String[0]));
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "pythonPath", "python3");
+        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "noOfPythonWorkers", "1");
+        ConfigManagerTest.setConfiguration(
+                ConfigManager.getInstance(), "startPythonWorker", "True");
+
+        startModelServer();
+        runPythonTranslator();
+        stopModelServer();
+
+        try {
+            if (previousValue != null) {
+                field.set(null, previousValue);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
     public void testImageClassificationTCP()
             throws ModelException, NoSuchFieldException, IllegalAccessException, IOException,
-                    TranslateException, GeneralSecurityException, InterruptedException {
+                    TranslateException, GeneralSecurityException, InterruptedException,
+                    ParseException {
+
+        Field field;
+        Object previousValue;
+        try {
+            field = Connector.class.getDeclaredField("useNativeIo");
+            field.setAccessible(true);
+            previousValue = field.get(null);
+            field.set(null, true);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+
+        ConfigManager.init(ConfigManagerTest.parseArguments(new String[0]));
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "false");
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "pythonPath", "python3");
         ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "noOfPythonWorkers", "5");
@@ -125,20 +174,25 @@ public class PythonTranslatorTest {
                 ConfigManager.getInstance(), "startPythonWorker", "True");
         startModelServer();
         runPythonTranslator();
-    }
+        stopModelServer();
 
-    @Test
-    public void testImageClassificationUDS()
-            throws NoSuchFieldException, IllegalAccessException, ModelException, TranslateException,
-                    IOException {
-        ConfigManagerTest.setConfiguration(ConfigManager.getInstance(), "use_native_io", "true");
-        runPythonTranslator();
+        try {
+            if (previousValue != null) {
+                field.set(null, previousValue);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private void startModelServer()
             throws GeneralSecurityException, IOException, InterruptedException {
         server = new ModelServer(ConfigManager.getInstance());
         server.start();
+    }
+
+    private void stopModelServer() {
+        server.stop();
     }
 
     private void runPythonTranslator() throws ModelException, IOException, TranslateException {
