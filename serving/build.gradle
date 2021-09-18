@@ -11,7 +11,7 @@ dependencies {
 
     implementation "commons-cli:commons-cli:${commons_cli_version}"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
-    implementation "com.lmax:disruptor:3.4.2"
+    implementation "com.lmax:disruptor:3.4.4"
 
     runtimeOnly "ai.djl:model-zoo"
     runtimeOnly "ai.djl.mxnet:mxnet-model-zoo"
@@ -21,6 +21,7 @@ dependencies {
     runtimeOnly "ai.djl.mxnet:mxnet-native-auto"
     runtimeOnly "ai.djl.pytorch:pytorch-native-auto"
     runtimeOnly "ai.djl.tensorflow:tensorflow-native-auto"
+    runtimeOnly "ai.djl.tensorrt:tensorrt"
 
     if (project.hasProperty("GPU")) {
         runtimeOnly("ai.djl.onnxruntime:onnxruntime-engine") {
