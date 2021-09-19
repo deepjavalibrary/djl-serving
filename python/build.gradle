@@ -1,0 +1,48 @@
+group "ai.djl.python"
+
+dependencies {
+    api platform("ai.djl:bom:${project.version}")
+    api "ai.djl:api"
+    api "io.netty:netty-all:${netty_version}"
+    api "org.slf4j:slf4j-api:${slf4j_version}"
+
+    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+}
+
+processResources {
+    outputs.dir file("${project.buildDir}/classes/java/main/ai/djl/python")
+    doLast {
+        delete "src/main/resources/ai/djl/python/scripts/__pycache__/"
+        // write properties
+        def propFile = file("${project.buildDir}/classes/java/main/ai/djl/python/python.properties")
+        def sb = new StringBuilder()
+        sb.append("version=${version}\nlibraries=")
+        def first = true
+        for (String name : file("src/main/resources/ai/djl/python/scripts").list().sort()) {
+            if (first) {
+                first = false
+            } else {
+                sb.append(',')
+            }
+            sb.append(name)
+        }
+        propFile.text = sb.toString()
+    }
+}
+
+clean.doFirst {
+    delete "src/main/resources/ai/djl/python/scripts/__pycache__/"
+    delete "src/test/resources/accumulate/__pycache__/"
+    delete System.getProperty("user.home") + "/.djl.ai/python"
+}
+
+task formatPython {
+    doFirst {
+        exec {
+            commandLine "bash", "-c", "find . -name '*.py' -print0 | xargs -0 yapf --in-place"
+        }
+    }
+}

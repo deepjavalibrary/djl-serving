@@ -85,8 +85,8 @@ configure(javaProjects()) {
             // systemProperty "ai.djl.logging.level", "debug"
             systemProperty "org.slf4j.simpleLogger.defaultLogLevel", "debug"
             systemProperty "org.slf4j.simpleLogger.log.org.mortbay.log", "warn"
+            systemProperty "org.slf4j.simpleLogger.log.io.netty", "warn"
             systemProperty "disableProgressBar", "true"
-            systemProperty "nightly", System.getProperty("nightly", "false")
             if (gradle.startParameter.offline) {
                 systemProperty "offline", "true"
             }

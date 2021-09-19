@@ -20,6 +20,12 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+      - name: Set up Python3
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.x'
+      - name: install Python Dependencies
+        run: pip3 install numpy
       # Enable gradle cache: https://github.com/actions/cache/blob/master/examples.md#java---gradle
       - uses: actions/cache@v2
         with:
