@@ -11,26 +11,9 @@
         <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS,DB_DUPLICATE_SWITCH_CLAUSES,BC_UNCONFIRMED_CAST"/>
     </Match>
 
-    <!-- wildcard suppression -->
-    <Match>
-        <Class name="~ai\.djl\.mxnet\.jnarator\.parser\..*"/>
-    </Match>
-    <Match>
-        <Class name="~org\.tensorflow\.lite\..*"/>
-    </Match>
     <!-- function suppression -->
     <Match>
-        <Bug pattern="DC_DOUBLECHECK"/>
-        <Class name="~ai\.djl\.mxnet\.engine\.MxSymbolBlock"/>
-        <Method name="forwardInternal"/>
-    </Match>
-    <Match>
-        <Bug pattern="DC_DOUBLECHECK"/>
-        <Class name="~ai\.djl\.pytorch\.engine\.PtSymbolBlock"/>
-        <Method name="forwardInternal"/>
-    </Match>
-    <Match>
-        <Bug pattern="URF_UNREAD_FIELD"/>
-        <Class name="~ai\.djl\.pytorch\.engine\.PtNDArray"/>
+        <Bug pattern="IS2_INCONSISTENT_SYNC"/>
+        <Class name="~ai\.djl\.python\.engine\.PyProcess"/>
     </Match>
 </FindBugsFilter>
