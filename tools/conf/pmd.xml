@@ -371,6 +371,7 @@
         <exclude name="AvoidCatchingGenericException"/>
         <exclude name="AvoidDeeplyNestedIfStmts"/>
         <exclude name="AvoidThrowingNullPointerException"/>
+        <exclude name="CognitiveComplexity"/>
         <exclude name="CollapsibleIfStatements"/>
         <exclude name="CyclomaticComplexity"/>
         <exclude name="DataClass"/>
