@@ -51,12 +51,12 @@ public class PyNDManager extends BaseNDManager {
         if (array instanceof PyNDArray) {
             return (PyNDArray) array;
         }
-        return createDirect(array.toByteBuffer(), array.getShape(), array.getDataType());
+        return create(array.toByteBuffer(), array.getShape(), array.getDataType());
     }
 
     /** {@inheritDoc} */
     @Override
-    public PyNDArray createDirect(Buffer data, Shape shape, DataType dataType) {
+    public PyNDArray create(Buffer data, Shape shape, DataType dataType) {
         int size = Math.toIntExact(shape.size());
         BaseNDManager.validateBufferSize(data, dataType, size);
         if (data instanceof ByteBuffer) {
@@ -67,15 +67,6 @@ public class PyNDManager extends BaseNDManager {
         bb.order(ByteOrder.nativeOrder());
         BaseNDManager.copyBuffer(data, bb);
         return new PyNDArray(this, alternativeManager, bb, shape, dataType);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public NDArray create(Buffer data, Shape shape, DataType dataType) {
-        if (alternativeManager != null) {
-            return alternativeManager.create(data, shape, dataType);
-        }
-        return createDirect(data, shape, dataType);
     }
 
     /** {@inheritDoc} */
