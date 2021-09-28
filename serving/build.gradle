@@ -9,6 +9,7 @@ dependencies {
     api "io.netty:netty-all:${netty_version}"
     api "org.slf4j:slf4j-api:${slf4j_version}"
 
+    //noinspection GradlePackageUpdate
     implementation "commons-cli:commons-cli:${commons_cli_version}"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
     implementation "com.lmax:disruptor:3.4.4"
@@ -22,6 +23,7 @@ dependencies {
     runtimeOnly "ai.djl.pytorch:pytorch-native-auto"
     runtimeOnly "ai.djl.tensorflow:tensorflow-native-auto"
     runtimeOnly "ai.djl.tensorrt:tensorrt"
+    runtimeOnly project(":engines:python")
 
     if (project.hasProperty("GPU")) {
         runtimeOnly("ai.djl.onnxruntime:onnxruntime-engine") {
@@ -29,7 +31,7 @@ dependencies {
         }
         runtimeOnly "com.microsoft.onnxruntime:onnxruntime_gpu:1.8.1"
     } else {
-        runtimeOnly("ai.djl.onnxruntime:onnxruntime-engine")
+        runtimeOnly "ai.djl.onnxruntime:onnxruntime-engine"
     }
 
     testImplementation("org.testng:testng:${testng_version}") {
