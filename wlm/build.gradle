@@ -1,0 +1,101 @@
+plugins {
+    id "maven-publish"
+    id "signing"
+}
+
+dependencies {
+    api platform("ai.djl:bom:${project.version}")
+    api "ai.djl:api"
+    api "org.slf4j:slf4j-api:${slf4j_version}"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+javadoc {
+    title "DJL Serving WorkLoadManager ${version}"
+    options.encoding = "UTF-8"
+    options.overview "src/main/javadoc/overview.html"
+    options.addBooleanOption("-allow-script-in-comments", true)
+}
+
+task uploadJavadoc(type: Exec) {
+    dependsOn javadoc
+    commandLine "sh", "-c", "find . -name .DS_Store | xargs rm && aws s3 sync build/docs/javadoc s3://javadoc-djl-ai/${project.name}/${version} > build/upload.log"
+}
+
+signing {
+    required(project.hasProperty("staging") || project.hasProperty("snapshot"))
+    def signingKey = findProperty("signingKey")
+    def signingPassword = findProperty("signingPassword")
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign publishing.publications
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifacts = [jar, javadocJar, sourcesJar]
+            pom {
+                name = "DJL Serving WorkLoadManager"
+                description = "DJL Serving WorkLoadManager"
+                url = "http://www.djl.ai/"
+
+                packaging = "jar"
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:git@github.com:deepjavalibrary/djl-serving.git"
+                    developerConnection = "scm:git:git@github.com:deepjavalibrary/djl-serving.git"
+                    url = "https://github.com/deepjavalibrary/djl-serving"
+                    tag = "HEAD"
+                }
+
+                developers {
+                    developer {
+                        name = "DJL.AI Team"
+                        email = "djl-dev@amazon.com"
+                        organization = "Amazon AI"
+                        organizationUrl = "https://amazon.com"
+                    }
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            if (project.hasProperty("snapshot")) {
+                name = "snapshot"
+                url = "https://oss.sonatype.org/content/repositories/snapshots/"
+                credentials {
+                    username = findProperty("ossrhUsername")
+                    password = findProperty("ossrhPassword")
+                }
+            } else if (project.hasProperty("staging")) {
+                name = "staging"
+                url = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+                credentials {
+                    username = findProperty("ossrhUsername")
+                    password = findProperty("ossrhPassword")
+                }
+            } else {
+                name = "local"
+                url = "build/repo"
+            }
+        }
+    }
+}

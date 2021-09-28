@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -34,17 +35,17 @@ public class PermanentBatchAggregator extends BatchAggregator {
      * @param model the model to use.
      * @param jobQueue the job queue for polling data from.
      */
-    public PermanentBatchAggregator(ModelInfo model, LinkedBlockingDeque<Job> jobQueue) {
+    public PermanentBatchAggregator(ModelInfo model, LinkedBlockingDeque<WorkerJob> jobQueue) {
         super(model, jobQueue);
     }
 
     /** {@inheritDoc} */
     @Override
-    protected List<Job> pollBatch() throws InterruptedException {
-        List<Job> list = new ArrayList<>(batchSize);
-        Job job = jobQueue.take();
-        list.add(job);
-        logger.trace("get first job: {}", job.getRequestId());
+    protected List<WorkerJob> pollBatch() throws InterruptedException {
+        List<WorkerJob> list = new ArrayList<>(batchSize);
+        WorkerJob wj = jobQueue.take();
+        list.add(wj);
+        logger.trace("get first job: {}", wj.getJob().getRequestId());
         drainTo(list, maxBatchDelay);
         logger.trace("sending jobs, size: {}", list.size());
         return list;

@@ -14,10 +14,10 @@ package ai.djl.serving.http;
 
 import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.models.Endpoint;
+import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
-import ai.djl.serving.wlm.Endpoint;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.ModelManager;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;

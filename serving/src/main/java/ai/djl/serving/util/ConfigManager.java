@@ -12,9 +12,8 @@
  */
 package ai.djl.serving.util;
 
-import ai.djl.Device;
-import ai.djl.ndarray.NDManager;
 import ai.djl.serving.Arguments;
+import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.util.Utils;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -126,6 +125,9 @@ public final class ConfigManager {
                     "log4j2.contextSelector",
                     "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector");
         }
+
+        // Sets corresponding config in the WlmConfigManager
+        WlmConfigManager.getInstance().setDebug(instance.isDebug());
     }
 
     /**
@@ -206,35 +208,6 @@ public final class ConfigManager {
      */
     public int getMaxBatchDelay() {
         return getIntProperty(MAX_BATCH_DELAY, 300);
-    }
-
-    /**
-     * Returns the default number of workers for a new registered model.
-     *
-     * @param manager the {@code NDManager} the model uses
-     * @param target the target number of worker
-     * @return the default number of workers for a new registered model
-     */
-    public int getDefaultWorkers(NDManager manager, int target) {
-        if (target == 0) {
-            return 0;
-        } else if (target == -1 && isDebug()) {
-            return 1;
-        }
-        if (Device.Type.GPU.equals(manager.getDevice().getDeviceType())) {
-            if ("MXNet".equals(manager.getEngine().getEngineName())) {
-                // FIXME: MXNet GPU Model doesn't support multi-threading
-                return 1;
-            } else if (target == -1) {
-                target = 2; // default to max 2 workers per GPU
-            }
-            return target;
-        }
-
-        if (target > 0) {
-            return target;
-        }
-        return Runtime.getRuntime().availableProcessors();
     }
 
     /**

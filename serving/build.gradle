@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+    api project(":wlm")
     api platform("ai.djl:bom:${project.version}")
     api "ai.djl:api"
     api "io.netty:netty-all:${netty_version}"

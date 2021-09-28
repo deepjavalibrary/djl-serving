@@ -13,12 +13,12 @@
 package ai.djl.serving;
 
 import ai.djl.repository.FilenameUtils;
+import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.ServerGroups;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.ModelManager;
 import ai.djl.util.cuda.CudaUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;

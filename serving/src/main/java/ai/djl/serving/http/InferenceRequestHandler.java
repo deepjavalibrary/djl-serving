@@ -15,11 +15,11 @@ package ai.djl.serving.http;
 import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.ModelManager;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -179,25 +179,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             ConfigManager.getInstance().getMaxBatchDelay(),
                             ConfigManager.getInstance().getMaxIdleTime())
                     .thenApply(m -> modelManager.triggerModelUpdated(m.scaleWorkers(1, -1)))
-                    .thenAccept(
-                            m -> {
-                                try {
-                                    if (!modelManager.addJob(new Job(ctx, m, input))) {
-                                        throw new ServiceUnavailableException(
-                                                "No worker is available to serve request: "
-                                                        + modelName);
-                                    }
-                                } catch (ModelNotFoundException e) {
-                                    logger.warn("Unexpected error", e);
-                                    NettyUtils.sendError(ctx, e);
-                                }
-                            })
-                    .exceptionally(
-                            t -> {
-                                logger.warn("Unexpected error", t);
-                                NettyUtils.sendError(ctx, t);
-                                return null;
-                            });
+                    .thenApply(m -> modelManager.runJob(ctx, new Job(m, input)));
             return;
         }
 
@@ -206,11 +188,6 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             return;
         }
 
-        Job job = new Job(ctx, model, input);
-        if (!modelManager.addJob(job)) {
-            logger.error("unable to process prediction. no free worker available.");
-            throw new ServiceUnavailableException(
-                    "No worker is available to serve request: " + modelName);
-        }
+        modelManager.runJob(ctx, new Job(model, input));
     }
 }

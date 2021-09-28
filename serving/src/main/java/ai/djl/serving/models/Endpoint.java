@@ -10,8 +10,9 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package ai.djl.serving.wlm;
+package ai.djl.serving.models;
 
+import ai.djl.serving.wlm.ModelInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

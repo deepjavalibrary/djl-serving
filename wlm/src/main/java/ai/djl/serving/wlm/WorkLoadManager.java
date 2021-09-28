@@ -12,8 +12,13 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.modality.Output;
+import ai.djl.serving.wlm.util.WlmCapacityException;
+import ai.djl.serving.wlm.util.WlmShutdownException;
+import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -24,19 +29,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * WorkLoadManager is repsonsible to manage the work load of worker thread. the manage scales
+ * WorkLoadManager is responsible to manage the work load of worker thread. the manage scales
  * up/down the required amount of worker threads per model.
  *
  * @author erik.bamberg@web.de
  */
-class WorkLoadManager {
+public class WorkLoadManager {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkLoadManager.class);
     private ExecutorService threadPool;
 
     private ConcurrentHashMap<ModelInfo, WorkerPool> workerPools;
 
-    /** Constructs a {@code WorkLoadManager} instance. */
+    /** Constructs a {@link WorkLoadManager} instance. */
     public WorkLoadManager() {
         threadPool = Executors.newCachedThreadPool();
         workerPools = new ConcurrentHashMap<>();
@@ -69,18 +74,27 @@ class WorkLoadManager {
      * @param job an inference job to be executed.
      * @return {@code true} if submit success, false otherwise.
      */
-    public boolean addJob(Job job) {
+    public CompletableFuture<Output> runJob(Job job) {
+        CompletableFuture<Output> result = new CompletableFuture<>();
         ModelInfo modelInfo = job.getModel();
         int maxWorkers = modelInfo.getMaxWorkers();
         if (maxWorkers == 0) {
             logger.info("All model workers has been shutdown: {}", modelInfo.getModelName());
-            return false;
+            result.completeExceptionally(
+                    new WlmShutdownException(
+                            "No worker is available to serve request: "
+                                    + modelInfo.getModelName()));
+            return result;
         }
         WorkerPool pool = getWorkerPoolForModel(modelInfo);
-        LinkedBlockingDeque<Job> queue = pool.getJobQueue();
-        if (!queue.offer(job)) {
+        LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();
+        if (!queue.offer(new WorkerJob(job, result))) {
             logger.warn("Worker queue capacity exceeded for model: {}", modelInfo.getModelName());
-            return false;
+            result.completeExceptionally(
+                    new WlmCapacityException(
+                            "No worker is available to serve request: "
+                                    + modelInfo.getModelName()));
+            return result;
         }
 
         int currentWorkers = getNumRunningWorkers(modelInfo);
@@ -97,7 +111,7 @@ class WorkLoadManager {
                 }
             }
         }
-        return true;
+        return result;
     }
 
     /**
@@ -208,7 +222,7 @@ class WorkLoadManager {
     private static final class WorkerPool {
 
         private List<WorkerThread> workers;
-        private LinkedBlockingDeque<Job> jobQueue;
+        private LinkedBlockingDeque<WorkerJob> jobQueue;
         private String modelName;
 
         /**
@@ -236,7 +250,7 @@ class WorkLoadManager {
          *
          * @return the jobQueue
          */
-        public LinkedBlockingDeque<Job> getJobQueue() {
+        public LinkedBlockingDeque<WorkerJob> getJobQueue() {
             return jobQueue;
         }
 
