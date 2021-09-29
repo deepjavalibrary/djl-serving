@@ -8,10 +8,12 @@ following models out of the box:
 - PyTorch TorchScript model
 - TensorFlow SavedModel bundle
 - Apache MXNet model
+- ONNX model (CPU)
+- TensorRT model
+- Python script model
 
 You can install extra extensions to enable the following models:
 
-- ONNX model
 - PaddlePaddle model
 - TFLite model
 - Neo DLR (TVM) model
