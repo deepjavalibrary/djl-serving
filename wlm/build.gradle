@@ -3,6 +3,8 @@ plugins {
     id "signing"
 }
 
+group "ai.djl"
+
 dependencies {
     api platform("ai.djl:bom:${project.version}")
     api "ai.djl:api"

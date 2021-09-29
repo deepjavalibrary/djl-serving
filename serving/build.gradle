@@ -4,11 +4,9 @@ plugins {
 }
 
 dependencies {
-    api project(":wlm")
     api platform("ai.djl:bom:${project.version}")
-    api "ai.djl:api"
+    api project(":wlm")
     api "io.netty:netty-all:${netty_version}"
-    api "org.slf4j:slf4j-api:${slf4j_version}"
 
     //noinspection GradlePackageUpdate
     implementation "commons-cli:commons-cli:${commons_cli_version}"
