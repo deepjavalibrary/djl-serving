@@ -69,7 +69,7 @@ public class ModelListMetaDataHandler
                                                 e ->
                                                         e.getValue()
                                                                 .stream()
-                                                                .map(a -> new ModelReferenceDTO(a))
+                                                                .map(ModelReferenceDTO::new)
                                                                 .collect(Collectors.toList())));
                     } catch (IOException | ModelNotFoundException ex) {
                         throw new IllegalArgumentException(ex.getMessage(), ex);

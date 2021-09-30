@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -86,7 +87,7 @@ public class ModelMetaDataHandler implements RequestHandler<CompletableFuture<Mo
                             return ModelZoo.listModels(criteria)
                                     .values()
                                     .stream()
-                                    .flatMap(each -> each.stream())
+                                    .flatMap(Collection::stream)
                                     .filter(
                                             a ->
                                                     modelName.equals(a.getName())
