@@ -26,6 +26,7 @@ package "DJL Serving - single process" {
         HTTP - REST_API
     }
 
+    package "WorkLoad Manager" as wlm {
     frame "Worker thread pool" as wp {
         package Workers [
             resent18_v1 (GPU0)
@@ -39,8 +40,9 @@ package "DJL Serving - single process" {
     }
 
     queue "Job queue\nauto batch" as jq
-    [Model Manager] as wlm
+    }
 
+    [Model Manager] as mm
     frame Models {
         package Engines [
             PyTorch
@@ -54,10 +56,10 @@ package "DJL Serving - single process" {
     }
 
     REST_API -> jq
-    REST_API ---> wlm
+    REST_API ---> mm
     jq -> Workers : auto scale
-    jq ...> wlm
-    wlm -right-> Engines
+    jq ...> mm
+    mm -right-> Engines
     Engines -[hidden]up- [Translator]
     Translator <-up- Workers
 }
@@ -66,7 +68,7 @@ frame "Python Workers" {
     [preprocess] -[hidden]-- [postprocess]
 }
 
-wlm -down-> URL : load model
+mm -down-> URL : load model
 Translator -up.> preprocess : optional
 Translator -down.> postprocess : optional
 @enduml

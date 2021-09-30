@@ -26,6 +26,10 @@ You can install extra extensions to enable the following models:
 DJL serving is built on top of [Deep Java Library](https://djl.ai). You can visit
 [DJL github repository](https://github.com/deepjavalibrary/djl) to learn more about DJL. 
 
+It is also possible to leverage only the worker thread pool using the separate [WorkLoadManager](wlm) module.
+The separate WorkLoadManager can be used by customers who want to take advantage of DJL serving's model batching
+and threading but integrated into their own custom Java service.
+
 ![Architecture Diagram](https://resources.djl.ai/images/djl-serving/architecture.png)
 
 ## Key features

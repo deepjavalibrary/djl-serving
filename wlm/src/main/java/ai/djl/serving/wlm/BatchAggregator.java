@@ -14,7 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -30,8 +30,8 @@ abstract class BatchAggregator {
 
     protected int batchSize;
     protected int maxBatchDelay;
-    protected List<Job> jobs;
-    protected LinkedBlockingDeque<Job> jobQueue;
+    protected List<WorkerJob> wjs;
+    protected LinkedBlockingDeque<WorkerJob> jobQueue;
 
     /**
      * Constructs a new {@code BbatchAggregator} instance.
@@ -39,11 +39,11 @@ abstract class BatchAggregator {
      * @param model the model to use.
      * @param jobQueue the job queue for polling data from.
      */
-    public BatchAggregator(ModelInfo model, LinkedBlockingDeque<Job> jobQueue) {
+    public BatchAggregator(ModelInfo model, LinkedBlockingDeque<WorkerJob> jobQueue) {
         this.batchSize = model.getBatchSize();
         this.maxBatchDelay = model.getMaxBatchDelay();
         this.jobQueue = jobQueue;
-        jobs = new ArrayList<>();
+        wjs = new ArrayList<>();
     }
 
     /**
@@ -54,9 +54,10 @@ abstract class BatchAggregator {
      *     queue.
      */
     public List<Input> getRequest() throws InterruptedException {
-        jobs = pollBatch();
-        List<Input> list = new ArrayList<>(jobs.size());
-        for (Job job : jobs) {
+        wjs = pollBatch();
+        List<Input> list = new ArrayList<>(wjs.size());
+        for (WorkerJob wj : wjs) {
+            Job job = wj.getJob();
             job.setScheduled();
             list.add(job.getInput());
         }
@@ -69,30 +70,29 @@ abstract class BatchAggregator {
      * @param outputs list of model-outputs in same order as the input objects.
      */
     public void sendResponse(List<Output> outputs) {
-        if (jobs.size() != outputs.size()) {
+        if (wjs.size() != outputs.size()) {
             throw new IllegalStateException("Not all jobs get response.");
         }
 
         int i = 0;
         for (Output output : outputs) {
-            Job job = jobs.get(i++);
-            output.setRequestId(job.getRequestId());
-            job.sendOutput(output);
+            WorkerJob wj = wjs.get(i++);
+            output.setRequestId(wj.getJob().getRequestId());
+            wj.getFuture().complete(output);
         }
-        jobs.clear();
+        wjs.clear();
     }
 
     /**
-     * Sends an error response to client.
+     * Completes the job with an error.
      *
-     * @param status the HTTP status
      * @param error the exception
      */
-    public void sendError(HttpResponseStatus status, Throwable error) {
-        for (Job job : jobs) {
-            job.sendError(status, error);
+    public void sendError(Throwable error) {
+        for (WorkerJob wj : wjs) {
+            wj.getFuture().completeExceptionally(error);
         }
-        jobs.clear();
+        wjs.clear();
     }
 
     /**
@@ -101,7 +101,7 @@ abstract class BatchAggregator {
      * @return a list of jobs read by this batch interation.
      * @throws InterruptedException if interrupted
      */
-    protected abstract List<Job> pollBatch() throws InterruptedException;
+    protected abstract List<WorkerJob> pollBatch() throws InterruptedException;
 
     /**
      * Checks if this {@code BatchAggregator} and the thread can be shutdown or if this aggregator
@@ -112,19 +112,19 @@ abstract class BatchAggregator {
      */
     public abstract boolean isFinished();
 
-    protected void drainTo(List<Job> list, int maxDelay) throws InterruptedException {
+    protected void drainTo(List<WorkerJob> list, int maxDelay) throws InterruptedException {
         long begin = System.currentTimeMillis();
         jobQueue.drainTo(list, batchSize - 1);
         int remain = batchSize - list.size();
         for (int i = 0; i < remain; ++i) {
-            Job job = jobQueue.poll(maxDelay, TimeUnit.MILLISECONDS);
-            if (job == null) {
+            WorkerJob wj = jobQueue.poll(maxDelay, TimeUnit.MILLISECONDS);
+            if (wj == null || wj.getJob() == null) {
                 break;
             }
             long end = System.currentTimeMillis();
             maxDelay -= end - begin;
             begin = end;
-            list.add(job);
+            list.add(wj);
             if (maxDelay <= 0) {
                 break;
             }

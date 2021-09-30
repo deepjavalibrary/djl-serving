@@ -12,14 +12,12 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ZooModel;
-import ai.djl.serving.http.InternalServerException;
-import ai.djl.translate.TranslateException;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import ai.djl.serving.wlm.util.WlmException;
+import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,7 +25,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-final class WorkerThread implements Runnable {
+/** The {@link WorkerThread} is the worker managed by the {@link WorkLoadManager}. */
+public final class WorkerThread implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerThread.class);
 
@@ -76,12 +75,9 @@ final class WorkerThread implements Runnable {
                     try {
                         List<Output> reply = predictor.batchPredict(req);
                         aggregator.sendResponse(reply);
-                    } catch (EngineException e) {
+                    } catch (Exception e) {
                         logger.warn("Failed to predict", e);
-                        aggregator.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e);
-                    } catch (TranslateException e) {
-                        logger.warn("Failed to predict", e);
-                        aggregator.sendError(HttpResponseStatus.BAD_REQUEST, e);
+                        aggregator.sendError(e);
                     }
                 }
                 req = null;
@@ -96,40 +92,70 @@ final class WorkerThread implements Runnable {
             currentThread.set(null);
             shutdown(WorkerState.WORKER_STOPPED);
             if (req != null) {
-                Exception e = new InternalServerException(errorMessage);
-                aggregator.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e);
+                Exception e = new WlmException(errorMessage);
+                aggregator.sendError(e);
             }
         }
     }
 
+    /**
+     * Returns the worker thread ID.
+     *
+     * @return the worker thread ID
+     */
     public int getWorkerId() {
         return workerId;
     }
 
+    /**
+     * Returns true if the worker thread is running.
+     *
+     * @return true if the worker thread is running
+     */
     public boolean isRunning() {
         return running.get();
     }
 
+    /**
+     * Returns the gpu id used by the thread.
+     *
+     * @return the gpu id used by the thread
+     */
     public int getGpuId() {
         return gpuId;
     }
 
+    /**
+     * Returns the thread start time.
+     *
+     * @return the thread start time
+     */
     public long getStartTime() {
         return startTime;
     }
 
+    /**
+     * Returns the worker state.
+     *
+     * @return the worker state
+     */
     public WorkerState getState() {
         return state;
     }
 
+    /**
+     * Shuts down the worker thread.
+     *
+     * @param state the state to set the thread to
+     */
     public void shutdown(WorkerState state) {
         running.set(false);
         setState(state);
         Thread thread = currentThread.getAndSet(null);
         if (thread != null) {
             thread.interrupt();
-            Exception e = new InternalServerException("Worker shutting down");
-            aggregator.sendError(HttpResponseStatus.INTERNAL_SERVER_ERROR, e);
+            Exception e = new WlmException("Worker shutting down");
+            aggregator.sendError(e);
         }
         predictor.close();
     }
@@ -175,7 +201,7 @@ final class WorkerThread implements Runnable {
 
         private ModelInfo model;
         private BatchAggregator aggregator;
-        private LinkedBlockingDeque<Job> jobQueue;
+        private LinkedBlockingDeque<WorkerJob> jobQueue;
         private boolean fixPoolThread;
 
         Builder() {
@@ -253,7 +279,7 @@ final class WorkerThread implements Runnable {
          * @param jobQueue the jobQueue to set
          * @return self-reference to this builder.
          */
-        public Builder setJobQueue(LinkedBlockingDeque<Job> jobQueue) {
+        public Builder setJobQueue(LinkedBlockingDeque<WorkerJob> jobQueue) {
             this.jobQueue = jobQueue;
             return self();
         }

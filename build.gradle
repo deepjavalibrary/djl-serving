@@ -8,7 +8,7 @@ def djl_version = System.getenv("DJL_VERSION")
 djl_version = (djl_version == null) ? "0.13.0-SNAPSHOT" : djl_version
 
 allprojects {
-    group 'ai.djl'
+    group 'ai.djl.serving'
     version "${djl_version}"
 
     repositories {

@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -37,7 +38,7 @@ public class TemporaryBatchAggregator extends BatchAggregator {
      * @param model the model to run for.
      * @param jobQueue reference to external job queue for polling.
      */
-    public TemporaryBatchAggregator(ModelInfo model, LinkedBlockingDeque<Job> jobQueue) {
+    public TemporaryBatchAggregator(ModelInfo model, LinkedBlockingDeque<WorkerJob> jobQueue) {
         super(model, jobQueue);
         this.idleSince = System.currentTimeMillis();
         this.maxIdleTime = model.getMaxIdleTime();
@@ -45,11 +46,11 @@ public class TemporaryBatchAggregator extends BatchAggregator {
 
     /** {@inheritDoc} */
     @Override
-    protected List<Job> pollBatch() throws InterruptedException {
-        List<Job> list = new ArrayList<>(batchSize);
-        Job job = jobQueue.poll(maxIdleTime, TimeUnit.SECONDS);
-        if (job != null) {
-            list.add(job);
+    protected List<WorkerJob> pollBatch() throws InterruptedException {
+        List<WorkerJob> list = new ArrayList<>(batchSize);
+        WorkerJob wj = jobQueue.poll(maxIdleTime, TimeUnit.SECONDS);
+        if (wj != null && wj.getJob() != null) {
+            list.add(wj);
             drainTo(list, maxBatchDelay);
             logger.trace("sending jobs, size: {}", list.size());
             idleSince = System.currentTimeMillis();
