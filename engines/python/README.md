@@ -27,7 +27,7 @@ You can also build the latest javadocs locally using the following command:
 The javadocs output is generated in the `build/doc/javadoc` folder.
 
 ## Installation
-You can pull the ONNX Runtime engine from the central Maven repository by including the following dependency:
+You can pull the Python engine from the central Maven repository by including the following dependency:
 
 - ai.djl.python:python:0.12.0
 
