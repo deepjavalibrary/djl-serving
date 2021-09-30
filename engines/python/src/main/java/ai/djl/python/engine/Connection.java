@@ -16,6 +16,7 @@ import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.ndarray.BytesSupplier;
 import ai.djl.util.PairList;
 import ai.djl.util.Utils;
 import io.netty.bootstrap.Bootstrap;
@@ -41,6 +42,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -220,20 +222,20 @@ class Connection {
         /** {@inheritDoc} */
         @Override
         protected void encode(ChannelHandlerContext ctx, Input msg, ByteBuf out) {
-            CodecUtils.writeUtf8(out, msg.getRequestId());
             Map<String, String> prop = msg.getProperties();
             out.writeShort(prop.size());
             for (Map.Entry<String, String> entry : prop.entrySet()) {
                 CodecUtils.writeUtf8(out, entry.getKey());
                 CodecUtils.writeUtf8(out, entry.getValue());
             }
-            PairList<String, byte[]> content = msg.getContent();
+            PairList<String, BytesSupplier> content = msg.getContent();
             int size = content.size();
             out.writeShort(size);
             for (int i = 0; i < size; ++i) {
                 CodecUtils.writeUtf8(out, content.keyAt(i));
-                out.writeInt(content.valueAt(i).length);
-                out.writeBytes(content.valueAt(i));
+                ByteBuffer bb = content.valueAt(i).toByteBuffer();
+                out.writeInt(bb.remaining());
+                out.writeBytes(bb);
             }
         }
     }
@@ -257,12 +259,15 @@ class Connection {
                 int code = in.readShort();
                 String message = CodecUtils.readUtf8(in);
                 Output output = new Output(code, message);
-                output.setRequestId(CodecUtils.readUtf8(in));
                 int size = in.readShort();
                 for (int i = 0; i < size; ++i) {
                     output.addProperty(CodecUtils.readUtf8(in), CodecUtils.readUtf8(in));
                 }
-                output.setContent(CodecUtils.readBytes(in, maxBufferSize));
+                int contentSize = in.readShort();
+                for (int i = 0; i < contentSize; ++i) {
+                    String key = CodecUtils.readUtf8(in);
+                    output.add(key, CodecUtils.readBytes(in, maxBufferSize));
+                }
                 out.add(output);
                 completed = true;
             } catch (IndexOutOfBoundsException | NegativeArraySizeException e) {

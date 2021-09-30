@@ -63,10 +63,10 @@ class PairList(object):
             return self.values[key_index]
 
     def key_at(self, index: int):
-        return self.keys.index(index)
+        return self.keys[index]
 
     def value_at(self, index: int):
-        return self.values.index(index)
+        return self.values[index]
 
     def get_keys(self):
         return self.keys

@@ -327,11 +327,11 @@ public final class NettyUtils {
             switch (data.getHttpDataType()) {
                 case Attribute:
                     Attribute attribute = (Attribute) data;
-                    input.addData(name, attribute.getValue().getBytes(StandardCharsets.UTF_8));
+                    input.add(name, attribute.getValue().getBytes(StandardCharsets.UTF_8));
                     break;
                 case FileUpload:
                     FileUpload fileUpload = (FileUpload) data;
-                    input.addData(name, getBytes(fileUpload.getByteBuf()));
+                    input.add(name, getBytes(fileUpload.getByteBuf()));
                     break;
                 default:
                     throw new IllegalArgumentException(

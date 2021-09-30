@@ -45,7 +45,6 @@ public class PermanentBatchAggregator extends BatchAggregator {
         List<WorkerJob> list = new ArrayList<>(batchSize);
         WorkerJob wj = jobQueue.take();
         list.add(wj);
-        logger.trace("get first job: {}", wj.getJob().getRequestId());
         drainTo(list, maxBatchDelay);
         logger.trace("sending jobs, size: {}", list.size());
         return list;

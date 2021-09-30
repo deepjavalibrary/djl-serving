@@ -91,10 +91,6 @@ class PythonEngine(object):
                 outputs.set_code(500)
                 outputs.set_message(str(ex_value))
 
-            if outputs is None:
-                outputs = Output()
-
-            outputs.set_request_id(inputs.get_request_id())
             if not cl_socket.sendall(outputs.encode()):
                 logging.debug("Outputs is sent to DJL engine.")
 

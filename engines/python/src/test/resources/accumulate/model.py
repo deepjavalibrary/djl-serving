@@ -44,7 +44,7 @@ class Accumulation(object):
         try:
             data = inputs.get_as_numpy()
             self.nd = self.nd + data[0]
-            outputs.set_as_numpy([self.nd])
+            outputs.add_as_numpy([self.nd])
         except Exception as e:
             logging.error(e, exc_info=True)
             # error handling

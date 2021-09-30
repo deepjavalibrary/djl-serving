@@ -14,7 +14,6 @@ package ai.djl.serving.http;
 
 import ai.djl.modality.Input;
 import ai.djl.serving.util.NettyUtils;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpUtil;
@@ -22,7 +21,6 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -41,20 +39,17 @@ public class RequestParser {
     /**
      * parsing a request.
      *
-     * @param ctx the context.
      * @param req the full request.
      * @param decoder a decoder to decode the query string.
      * @return parsed input object.
      */
-    public Input parseRequest(
-            ChannelHandlerContext ctx, FullHttpRequest req, QueryStringDecoder decoder) {
-        String requestId = NettyUtils.getRequestId(ctx.channel());
-        Input input = new Input(requestId);
+    public Input parseRequest(FullHttpRequest req, QueryStringDecoder decoder) {
+        Input input = new Input();
         if (decoder != null) {
             for (Map.Entry<String, List<String>> entry : decoder.parameters().entrySet()) {
                 String key = entry.getKey();
                 for (String value : entry.getValue()) {
-                    input.addData(key, value.getBytes(StandardCharsets.UTF_8));
+                    input.add(key, value);
                 }
             }
         }
@@ -85,7 +80,7 @@ public class RequestParser {
             }
         } else {
             byte[] content = NettyUtils.getBytes(req.content());
-            input.addData("body", content);
+            input.add("data", content);
         }
         return input;
     }

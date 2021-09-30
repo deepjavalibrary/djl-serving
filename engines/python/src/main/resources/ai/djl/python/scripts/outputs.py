@@ -14,18 +14,15 @@
 import struct
 
 from np_util import to_nd_list
+from pair_list import PairList
 
 
 class Output(object):
     def __init__(self):
         self.code = 200
         self.message = 'OK'
-        self.request_id = None
         self.properties = dict()
-        self.content = None
-
-    def set_request_id(self, request_id):
-        self.request_id = request_id
+        self.content = PairList()
 
     def set_code(self, code):
         self.code = code
@@ -36,11 +33,11 @@ class Output(object):
     def add_property(self, key, val):
         self.properties[key] = val
 
-    def set_content(self, content):
-        self.content = content
+    def add(self, value, key=None):
+        self.content.add(key=key, value=value)
 
-    def set_as_numpy(self, np_list):
-        self.content = to_nd_list(np_list)
+    def add_as_numpy(self, np_list, key=None):
+        self.content.add(key=key, value=to_nd_list(np_list))
 
     @staticmethod
     def write_utf8(msg, val):
@@ -55,17 +52,19 @@ class Output(object):
         msg = bytearray()
         msg += struct.pack('>h', self.code)
         self.write_utf8(msg, self.message)
-        self.write_utf8(msg, self.request_id)
 
         msg += struct.pack('>h', len(self.properties))
         for k, v in self.properties:
             self.write_utf8(msg, k)
             self.write_utf8(msg, v)
 
-        if self.content is None:
-            msg += struct.pack('>i', -1)
-        else:
-            msg += struct.pack('>i', len(self.content))
-            msg += self.content
+        size = self.content.size()
+        msg += struct.pack('>h', size)
+        for i in range(size):
+            k = self.content.key_at(i)
+            v = self.content.value_at(i)
+            self.write_utf8(msg, k)
+            msg += struct.pack('>i', len(v))
+            msg += v
 
         return msg
