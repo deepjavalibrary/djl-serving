@@ -40,11 +40,7 @@ public class MetaDataSerializer implements JsonSerializer<Metadata> {
         jsonMetadata.addProperty("resourceType", metadata.getResourceType());
         jsonMetadata.addProperty("lastUpdated", dateFormat.format(metadata.getLastUpdated()));
         JsonObject licenses = new JsonObject();
-        metadata.getLicenses()
-                .forEach(
-                        (k, l) -> {
-                            licenses.addProperty(k, l.getName());
-                        });
+        metadata.getLicenses().forEach((k, l) -> licenses.addProperty(k, l.getName()));
         jsonMetadata.add("licenses", licenses);
 
         return jsonMetadata;
