@@ -77,7 +77,6 @@ abstract class BatchAggregator {
         int i = 0;
         for (Output output : outputs) {
             WorkerJob wj = wjs.get(i++);
-            output.setRequestId(wj.getJob().getRequestId());
             wj.getFuture().complete(output);
         }
         wjs.clear();

@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -104,23 +103,20 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         } else {
             version = null;
         }
-        Input input = requestParser.parseRequest(ctx, req, decoder);
+        Input input = requestParser.parseRequest(req, decoder);
         predict(ctx, req, input, modelName, version);
     }
 
     private void handleInvocations(
             ChannelHandlerContext ctx, FullHttpRequest req, QueryStringDecoder decoder)
             throws ModelNotFoundException {
-        Input input = requestParser.parseRequest(ctx, req, decoder);
+        Input input = requestParser.parseRequest(req, decoder);
         String modelName = NettyUtils.getParameter(decoder, "model_name", null);
         String version = NettyUtils.getParameter(decoder, "model_version", null);
         if ((modelName == null || modelName.isEmpty())) {
             modelName = input.getProperty("model_name", null);
             if (modelName == null) {
-                byte[] buf = input.getContent().get("model_name");
-                if (buf != null) {
-                    modelName = new String(buf, StandardCharsets.UTF_8);
-                }
+                modelName = input.getAsString("model_name");
             }
         }
         if (modelName == null) {
@@ -154,11 +150,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             }
             String modelUrl = input.getProperty("model_url", null);
             if (modelUrl == null) {
-                byte[] buf = input.getContent().get("model_url");
-                if (buf == null) {
+                modelUrl = input.getAsString("model_url");
+                if (modelUrl == null) {
                     throw new ModelNotFoundException("Parameter model_url is required.");
                 }
-                modelUrl = new String(buf, StandardCharsets.UTF_8);
                 if (!modelUrl.matches(regex)) {
                     throw new ModelNotFoundException("Permission denied: " + modelUrl);
                 }

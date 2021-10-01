@@ -37,15 +37,6 @@ public class Job {
     }
 
     /**
-     * Returns the request id.
-     *
-     * @return the request id
-     */
-    public String getRequestId() {
-        return input.getRequestId();
-    }
-
-    /**
      * Returns the model that associated with this job.
      *
      * @return the model that associated with this job

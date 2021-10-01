@@ -346,7 +346,7 @@ public final class ModelManager {
         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
             resp.headers().set(entry.getKey(), entry.getValue());
         }
-        resp.content().writeBytes(output.getContent());
+        resp.content().writeBytes(output.getData().getAsBytes());
 
         /*
          * We can load the models based on the configuration file.Since this Job is

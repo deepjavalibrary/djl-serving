@@ -70,20 +70,11 @@ def retrieve_utf8(conn):
 class Input(object):
     def __init__(self):
         self.function_name = None
-        self.request_id = None
         self.properties = dict()
         self.content = PairList()
 
     def get_function_name(self) -> str:
         return self.function_name
-
-    def get_request_id(self) -> str:
-        """
-        Returns the request id
-
-        :return: request_id
-        """
-        return self.request_id
 
     def get_properties(self) -> dict:
         """
@@ -130,7 +121,6 @@ class Input(object):
             return from_nd_list(value)
 
     def read(self, conn):
-        self.request_id = retrieve_utf8(conn)
         prop_size = retrieve_short(conn)
 
         for _ in range(prop_size):

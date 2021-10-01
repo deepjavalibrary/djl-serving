@@ -49,14 +49,14 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     @Override
     protected NDList predictInternal(TranslatorContext ctx, NDList ndList)
             throws TranslateException {
-        Input inputs = new Input(null);
-        inputs.addData(ndList.encode());
+        Input inputs = new Input();
+        inputs.add(ndList.encode());
         Output output = process.predict(inputs);
         if (output.getCode() != 200) {
             throw new TranslateException(output.getMessage());
         }
         NDManager manager = ndList.head().getManager();
-        return NDList.decode(manager, output.getContent());
+        return output.getDataAsNDList(manager);
     }
 
     /** {@inheritDoc} */
