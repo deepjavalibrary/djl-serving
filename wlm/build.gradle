@@ -3,8 +3,6 @@ plugins {
     id "signing"
 }
 
-group "ai.djl"
-
 dependencies {
     api platform("ai.djl:bom:${project.version}")
     api "ai.djl:api"
@@ -25,11 +23,6 @@ javadoc {
     options.encoding = "UTF-8"
     options.overview "src/main/javadoc/overview.html"
     options.addBooleanOption("-allow-script-in-comments", true)
-}
-
-task uploadJavadoc(type: Exec) {
-    dependsOn javadoc
-    commandLine "sh", "-c", "find . -name .DS_Store | xargs rm && aws s3 sync build/docs/javadoc s3://javadoc-djl-ai/${project.name}/${version} > build/upload.log"
 }
 
 signing {
