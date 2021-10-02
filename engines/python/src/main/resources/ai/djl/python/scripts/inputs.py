@@ -11,8 +11,9 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import ast
+import io
 import struct
-import numpy as np
 
 from np_util import from_nd_list
 from pair_list import PairList
@@ -92,14 +93,46 @@ class Input(object):
         """
         return self.content
 
-    def get_properties_value(self, key: str) -> str:
+    def get_property(self, key: str) -> str:
         """
         Returns the value of a property key
 
         :param key: key of map
         :return: value of the key
         """
-        return self.properties[key]
+        return next(
+            (v
+             for k, v in self.properties.items() if k.lower() == key.lower()),
+            None)
+
+    def get_data(self, key=None) -> list:
+        content_type = self.get_property("content-type")
+        if content_type == "tensor/ndlist":
+            return self.get_as_numpy(key)
+        elif content_type == "application/json":
+            return self.get_as_json(key)
+        elif content_type is not None and content_type.startswith("image/"):
+            return self.get_as_image(key)
+        else:
+            return self.get_as_bytes(key=key)
+
+    def get_as_bytes(self, key=None):
+        if self.content.is_empty():
+            raise Exception("input is empty.")
+
+        if key is not None:
+            return self.content.get(key)
+
+        ret = self.content.get("data")
+        if ret is None:
+            return self.content.value_at(0)
+
+    def get_as_json(self, key=None) -> list:
+        return ast.literal_eval(self.get_as_bytes(key=key).decode("utf-8"))
+
+    def get_as_image(self, key=None) -> list:
+        from PIL import Image
+        return Image.open(io.BytesIO(self.get_as_bytes(key=key)))
 
     def get_as_numpy(self, key=None) -> list:
         """
@@ -109,16 +142,7 @@ class Input(object):
         :param key: optional key
         :return: list of numpy array
         """
-        # return list of values as numpy list if not provided key
-        if key is None:
-            values = self.content.get_values()
-            result = []
-            for value in values:
-                result.extend(from_nd_list(value))
-            return result
-        else:
-            value = self.content.get(key=key)
-            return from_nd_list(value)
+        return from_nd_list(self.get_as_bytes(key=key))
 
     def read(self, conn):
         prop_size = retrieve_short(conn)

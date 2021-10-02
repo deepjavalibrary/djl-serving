@@ -17,6 +17,7 @@ Accumulation Python model example.
 import logging
 import numpy as np
 from outputs import Output
+from inputs import Input
 
 
 class Accumulation(object):
@@ -27,7 +28,7 @@ class Accumulation(object):
         self.nd = np.zeros(1, dtype='float32')
         self.initialized = False
 
-    def initialize(self):
+    def initialize(self, properties: dict):
         """
         Initialize model.
         """
@@ -57,13 +58,13 @@ class Accumulation(object):
 _service = Accumulation()
 
 
-def handle(inputs):
+def handle(inputs: Input):
     """
     Default handler function
     """
     if not _service.initialized:
         # stateful model
-        _service.initialize()
+        _service.initialize(inputs.get_properties())
 
     if inputs is None:
         return None

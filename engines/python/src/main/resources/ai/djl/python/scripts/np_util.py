@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 import struct
+
 import numpy as np
 
 MAGIC_NUMBER = "NDAR"

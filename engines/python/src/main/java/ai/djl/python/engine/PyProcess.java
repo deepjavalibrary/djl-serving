@@ -12,6 +12,7 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.modality.Input;
@@ -57,6 +58,8 @@ class PyProcess {
                     inputs.addProperty("handler", handler);
                 }
             }
+            Device device = model.getNDManager().getDevice();
+            inputs.addProperty("device_id", String.valueOf(device.getDeviceId()));
             return connection.send(inputs);
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
             throw new TranslateException(e);
