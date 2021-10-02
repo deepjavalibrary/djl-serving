@@ -267,6 +267,11 @@ public final class ModelManager {
                                     "Waiting time: {}, Backend time: {}",
                                     job.getScheduled() - job.getBegin(),
                                     System.currentTimeMillis() - job.getScheduled());
+                        })
+                .exceptionally(
+                        t -> {
+                            onException(t, ctx);
+                            return null;
                         });
     }
 
