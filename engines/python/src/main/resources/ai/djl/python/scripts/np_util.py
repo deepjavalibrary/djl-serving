@@ -54,7 +54,7 @@ def set_char(value: str) -> bytes:
     return struct.pack('>h', ord(value))
 
 
-def get_byte_as_int(encoded: bytearray, idx: int) -> tuple[int, int]:
+def get_byte_as_int(encoded: bytearray, idx: int) -> tuple:
     """
     Returns a byte value as int and next to be read index
     :param encoded: bytearray
@@ -64,7 +64,7 @@ def get_byte_as_int(encoded: bytearray, idx: int) -> tuple[int, int]:
     return encoded[idx], idx + 1
 
 
-def get_bytes(encoded: bytearray, idx: int, length: int) -> tuple[bytes, int]:
+def get_bytes(encoded: bytearray, idx: int, length: int) -> tuple:
     """
     Returns the bytes with given length, and next to be read index
     :param encoded: bytearray
@@ -75,7 +75,7 @@ def get_bytes(encoded: bytearray, idx: int, length: int) -> tuple[bytes, int]:
     return encoded[idx:idx + length], idx + length
 
 
-def get_char(encoded: bytearray, idx: int) -> tuple[str, int]:
+def get_char(encoded: bytearray, idx: int) -> tuple:
     """
     Returns a char and next to be read index
     :param encoded: bytearray
@@ -85,7 +85,7 @@ def get_char(encoded: bytearray, idx: int) -> tuple[str, int]:
     return chr(struct.unpack(">h", encoded[idx:idx + 2])[0]), idx + 2
 
 
-def get_str(encoded: bytearray, idx: int) -> tuple[str, int]:
+def get_str(encoded: bytearray, idx: int) -> tuple:
     """
     Returns a string and next to be read index
     :param encoded: bytearray
@@ -97,7 +97,7 @@ def get_str(encoded: bytearray, idx: int) -> tuple[str, int]:
     return encoded[idx:idx + length].decode("utf8"), idx + length
 
 
-def get_int(encoded: bytearray, idx: int) -> tuple[int, int]:
+def get_int(encoded: bytearray, idx: int) -> tuple:
     """
     Returns an integer and next to be read index
     :param encoded: bytearray
@@ -107,7 +107,7 @@ def get_int(encoded: bytearray, idx: int) -> tuple[int, int]:
     return struct.unpack(">i", encoded[idx:idx + 4])[0], idx + 4
 
 
-def get_long(encoded: bytearray, idx: int) -> tuple[int, int]:
+def get_long(encoded: bytearray, idx: int) -> tuple:
     """
     Returns the long value and next to be read index
     :param encoded: bytearray
@@ -119,7 +119,7 @@ def get_long(encoded: bytearray, idx: int) -> tuple[int, int]:
                          encoded[idx:idx + long_size])[0], idx + long_size
 
 
-def from_nd_list(encoded: bytearray) -> list[np.ndarray]:
+def from_nd_list(encoded: bytearray) -> list:
     """
     Converts djl format to list of numpy array
     :param encoded: bytearray
@@ -150,7 +150,7 @@ def from_nd_list(encoded: bytearray) -> list[np.ndarray]:
     return result
 
 
-def to_nd_list(np_list: list[np.ndarray]) -> bytearray:
+def to_nd_list(np_list: list) -> bytearray:
     """
     Converts list of numpy array into djl NDList
 
@@ -173,7 +173,7 @@ def to_nd_list(np_list: list[np.ndarray]) -> bytearray:
     return arr
 
 
-def _shape_encode(shape: tuple[int], arr: bytearray):
+def _shape_encode(shape: tuple, arr: bytearray):
     arr.extend(set_int(len(shape)))
     layout = ""
     for ele in shape:
@@ -184,7 +184,7 @@ def _shape_encode(shape: tuple[int], arr: bytearray):
         arr.extend(set_char(ele))
 
 
-def _shape_decode(encoded: bytearray, idx: int) -> tuple[tuple, int]:
+def _shape_decode(encoded: bytearray, idx: int) -> tuple:
     length, idx = get_int(encoded, idx)
     shape = []
     for _ in range(length):

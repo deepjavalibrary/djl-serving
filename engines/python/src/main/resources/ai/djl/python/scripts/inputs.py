@@ -101,7 +101,7 @@ class Input(object):
         """
         return self.properties[key]
 
-    def get_as_numpy(self, key=None) -> list[np.ndarray]:
+    def get_as_numpy(self, key=None) -> list:
         """
         Returns
             1. value as numpy list if key is provided
