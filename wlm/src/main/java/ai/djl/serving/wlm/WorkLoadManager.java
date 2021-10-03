@@ -79,20 +79,17 @@ public class WorkLoadManager {
         ModelInfo modelInfo = job.getModel();
         int maxWorkers = modelInfo.getMaxWorkers();
         if (maxWorkers == 0) {
-            logger.info("All model workers has been shutdown: {}", modelInfo.getModelName());
             result.completeExceptionally(
                     new WlmShutdownException(
-                            "No worker is available to serve request: "
-                                    + modelInfo.getModelName()));
+                            "All model workers has been shutdown: " + modelInfo.getModelName()));
             return result;
         }
         WorkerPool pool = getWorkerPoolForModel(modelInfo);
         LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();
         if (!queue.offer(new WorkerJob(job, result))) {
-            logger.warn("Worker queue capacity exceeded for model: {}", modelInfo.getModelName());
             result.completeExceptionally(
                     new WlmCapacityException(
-                            "No worker is available to serve request: "
+                            "Worker queue capacity exceeded for model: "
                                     + modelInfo.getModelName()));
             return result;
         }
