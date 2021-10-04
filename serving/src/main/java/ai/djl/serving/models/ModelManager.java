@@ -16,26 +16,16 @@ import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeModelResponse;
 import ai.djl.serving.util.ConfigManager;
-import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerThread;
-import ai.djl.serving.wlm.util.WlmCapacityException;
-import ai.djl.serving.wlm.util.WlmShutdownException;
-import ai.djl.translate.TranslateException;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -252,28 +242,11 @@ public final class ModelManager {
     /**
      * Runs an inference job by assigning the job to the next free worker.
      *
-     * @param ctx the netty channel handler context where the job response will be sent
      * @param job an inference job to be executed
+     * @return {@code true} if submit success, false otherwise.
      */
-    public void runJob(ChannelHandlerContext ctx, Job job) {
-        wlm.runJob(job)
-                .whenComplete(
-                        (o, t) -> {
-                            if (t != null) {
-                                onException(t, ctx);
-                            } else {
-                                sendOutput(o, ctx);
-                            }
-                            logger.trace(
-                                    "Waiting time: {}, Backend time: {}",
-                                    job.getScheduled() - job.getBegin(),
-                                    System.currentTimeMillis() - job.getScheduled());
-                        })
-                .exceptionally(
-                        t -> {
-                            onException(t, ctx);
-                            return null;
-                        });
+    public CompletableFuture<Output> runJob(Job job) {
+        return wlm.runJob(job);
     }
 
     /**
@@ -344,53 +317,5 @@ public final class ModelManager {
 
                     return response;
                 });
-    }
-
-    void sendOutput(Output output, ChannelHandlerContext ctx) {
-        FullHttpResponse resp =
-                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, false);
-        for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
-            resp.headers().set(entry.getKey(), entry.getValue());
-        }
-        BytesSupplier data = output.getData();
-        if (data != null) {
-            resp.content().writeBytes(data.getAsBytes());
-        }
-
-        /*
-         * We can load the models based on the configuration file.Since this Job is
-         * not driven by the external connections, we could have a empty context for
-         * this job. We shouldn't try to send a response to ctx if this is not triggered
-         * by external clients.
-         */
-        if (ctx != null) {
-            NettyUtils.sendHttpResponse(ctx, resp, true);
-        }
-    }
-
-    void onException(Throwable t, ChannelHandlerContext ctx) {
-        HttpResponseStatus status;
-        if (t instanceof TranslateException) {
-            status = HttpResponseStatus.BAD_REQUEST;
-        } else if (t instanceof WlmShutdownException) {
-            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
-            logger.error("Unable to process prediction. Worker shutdown");
-        } else if (t instanceof WlmCapacityException) {
-            logger.error("Unable to process prediction. Worker capacity exceeded");
-            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
-        } else {
-            logger.warn("Unexpected error", t);
-            status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        }
-
-        /*
-         * We can load the models based on the configuration file.Since this Job is
-         * not driven by the external connections, we could have a empty context for
-         * this job. We shouldn't try to send a response to ctx if this is not triggered
-         * by external clients.
-         */
-        if (ctx != null) {
-            NettyUtils.sendError(ctx, status, t);
-        }
     }
 }
