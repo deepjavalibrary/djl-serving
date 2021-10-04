@@ -16,6 +16,7 @@ import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
@@ -351,7 +352,10 @@ public final class ModelManager {
         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
             resp.headers().set(entry.getKey(), entry.getValue());
         }
-        resp.content().writeBytes(output.getData().getAsBytes());
+        BytesSupplier data = output.getData();
+        if (data != null) {
+            resp.content().writeBytes(data.getAsBytes());
+        }
 
         /*
          * We can load the models based on the configuration file.Since this Job is

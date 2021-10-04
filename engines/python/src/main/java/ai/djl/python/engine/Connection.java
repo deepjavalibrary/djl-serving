@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -154,14 +155,14 @@ class Connection {
         return new InetSocketAddress("127.0.0.1", port);
     }
 
-    static EventLoopGroup newEventLoopGroup(int threads) {
+    static EventLoopGroup newEventLoopGroup() {
         if (Epoll.isAvailable()) {
-            return new EpollEventLoopGroup(threads);
+            return new EpollEventLoopGroup(new DaemonThreadFactory());
         } else if (KQueue.isAvailable()) {
-            return new KQueueEventLoopGroup(threads);
+            return new KQueueEventLoopGroup(new DaemonThreadFactory());
         }
 
-        return new NioEventLoopGroup(threads);
+        return new NioEventLoopGroup(new DaemonThreadFactory());
     }
 
     private static Class<? extends Channel> getClientChannel() {
@@ -285,6 +286,17 @@ class Connection {
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             logger.error("Exception occurred during request handler of python worker", cause);
             ctx.close();
+        }
+    }
+
+    private static final class DaemonThreadFactory implements ThreadFactory {
+
+        /** {@inheritDoc} */
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r);
+            t.setDaemon(true);
+            return t;
         }
     }
 }

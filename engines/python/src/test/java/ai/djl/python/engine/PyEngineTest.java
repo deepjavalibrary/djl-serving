@@ -15,16 +15,27 @@ package ai.djl.python.engine;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.inference.Predictor;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
+import ai.djl.training.util.DownloadUtils;
 import ai.djl.translate.NoopTranslator;
 import ai.djl.translate.TranslateException;
+import ai.djl.util.JsonUtils;
+import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -74,6 +85,30 @@ public class PyEngineTest {
             float[] expected = {2};
             float[] actual = ret.head().toFloatArray();
             Assert.assertEquals(actual, expected);
+        }
+    }
+
+    @Test(enabled = false)
+    public void testResnet18() throws TranslateException, IOException, ModelException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/resnet18"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            Path file = Paths.get("build/test/kitten.jpg");
+            DownloadUtils.download(
+                    new URL("https://resources.djl.ai/images/kitten.jpg"), file, null);
+            input.add("data", Files.readAllBytes(file));
+            input.addProperty("Content-Type", "image/jpeg");
+            Output output = predictor.predict(input);
+            String classification = output.getData().getAsString();
+            Type type = new TypeToken<List<Map<String, Double>>>() {}.getType();
+            List<Map<String, Double>> list = JsonUtils.GSON.fromJson(classification, type);
+            Assert.assertTrue(list.get(0).containsKey("tabby"));
         }
     }
 }

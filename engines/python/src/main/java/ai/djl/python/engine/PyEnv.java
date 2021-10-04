@@ -50,7 +50,7 @@ public class PyEnv {
     }
 
     static void init() {
-        eventLoopGroup = Connection.newEventLoopGroup(0);
+        eventLoopGroup = Connection.newEventLoopGroup();
 
         Path tmp = null;
         try {

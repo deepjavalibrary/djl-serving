@@ -21,6 +21,8 @@ import ai.djl.ndarray.NDManager;
 import ai.djl.translate.TranslateException;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorContext;
+import java.util.ArrayList;
+import java.util.List;
 
 class PyPredictor<I, O> extends Predictor<I, O> {
 
@@ -35,14 +37,18 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     /** {@inheritDoc} */
     @Override
     @SuppressWarnings("unchecked")
-    public O predict(I input) throws TranslateException {
+    public List<O> batchPredict(List<I> inputs) throws TranslateException {
         if (process.isStopped()) {
             throw new TranslateException("Backend Python process is stopped.");
         }
-        if (input instanceof Input) {
-            return (O) process.predict((Input) input);
+        if (inputs.get(0) instanceof Input) {
+            List<O> ret = new ArrayList<>(inputs.size());
+            for (I input : inputs) {
+                ret.add((O) process.predict((Input) input));
+            }
+            return ret;
         }
-        return super.predict(input);
+        return super.batchPredict(inputs);
     }
 
     /** {@inheritDoc} */
@@ -50,6 +56,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     protected NDList predictInternal(TranslatorContext ctx, NDList ndList)
             throws TranslateException {
         Input inputs = new Input();
+        inputs.addProperty("Content-Type", "tensor/ndlist");
         inputs.add(ndList.encode());
         Output output = process.predict(inputs);
         if (output.getCode() != 200) {
