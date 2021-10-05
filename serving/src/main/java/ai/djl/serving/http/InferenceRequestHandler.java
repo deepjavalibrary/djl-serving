@@ -151,9 +151,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
+        ConfigManager config = ConfigManager.getInstance();
         ModelInfo model = modelManager.getModel(modelName, version, true);
         if (model == null) {
-            String regex = ConfigManager.getInstance().getModelUrlPattern();
+            String regex = config.getModelUrlPattern();
             if (regex == null) {
                 throw new ModelNotFoundException("Model not found: " + modelName);
             }
@@ -179,9 +180,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             modelUrl,
                             engineName,
                             gpuId,
-                            ConfigManager.getInstance().getBatchSize(),
-                            ConfigManager.getInstance().getMaxBatchDelay(),
-                            ConfigManager.getInstance().getMaxIdleTime())
+                            config.getBatchSize(),
+                            config.getMaxBatchDelay(),
+                            config.getMaxIdleTime())
                     .thenApply(m -> modelManager.triggerModelUpdated(m.scaleWorkers(1, -1)))
                     .thenAccept(m -> runJob(modelManager, ctx, new Job(m, input)));
             return;

@@ -13,6 +13,7 @@
 package ai.djl.serving.http;
 
 import ai.djl.modality.Input;
+import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -65,7 +66,8 @@ public class RequestParser {
         if (HttpPostRequestDecoder.isMultipart(req)
                 || HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.contentEqualsIgnoreCase(
                         contentType)) {
-            HttpDataFactory factory = new DefaultHttpDataFactory(6553500);
+            int sizeLimit = ConfigManager.getInstance().getMaxRequestSize();
+            HttpDataFactory factory = new DefaultHttpDataFactory(sizeLimit);
             HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
             try {
                 while (form.hasNext()) {
