@@ -48,7 +48,7 @@ public class PyNDManager extends BaseNDManager {
     /** {@inheritDoc} */
     @Override
     public PyNDArray from(NDArray array) {
-        if (array instanceof PyNDArray) {
+        if (array == null || array instanceof PyNDArray) {
             return (PyNDArray) array;
         }
         return create(array.toByteBuffer(), array.getShape(), array.getDataType());
