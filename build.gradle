@@ -5,6 +5,7 @@ plugins {
 defaultTasks 'build'
 
 def djl_version = System.getenv("DJL_VERSION")
+def stagingRepo = System.getenv("DJL_STAGING")
 djl_version = (djl_version == null) ? "0.13.0-SNAPSHOT" : djl_version
 
 allprojects {
@@ -13,6 +14,9 @@ allprojects {
 
     repositories {
         mavenCentral()
+        maven {
+            url "https://oss.sonatype.org/service/local/repositories/${stagingRepo}/content/"
+        }
         maven {
             url 'https://oss.sonatype.org/content/repositories/snapshots/'
         }
