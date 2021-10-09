@@ -6,7 +6,10 @@ defaultTasks 'build'
 
 def djl_version = System.getenv("DJL_VERSION")
 def stagingRepo = System.getenv("DJL_STAGING")
-djl_version = (djl_version == null) ? "0.13.0-SNAPSHOT" : djl_version
+djl_version = (djl_version == null) ? "0.13.0" : djl_version
+if (!project.hasProperty("staging")) {
+    djl_version += "-SNAPSHOT"
+}
 
 allprojects {
     group 'ai.djl.serving'
