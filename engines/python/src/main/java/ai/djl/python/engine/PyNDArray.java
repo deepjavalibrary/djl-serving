@@ -38,6 +38,12 @@ public class PyNDArray extends NDArrayAdapter {
 
     /** {@inheritDoc} */
     @Override
+    public void intern(NDArray replaced) {
+        data = ((PyNDArray) replaced).data;
+    }
+
+    /** {@inheritDoc} */
+    @Override
     public void detach() {
         manager.detachInternal(getUid());
         manager = PyNDManager.getSystemManager();
