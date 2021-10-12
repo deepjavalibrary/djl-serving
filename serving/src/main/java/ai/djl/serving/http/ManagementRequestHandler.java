@@ -16,6 +16,7 @@ import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
+import ai.djl.serving.models.ServingModel;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import io.netty.channel.ChannelHandlerContext;
@@ -135,7 +136,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
         for (int i = pageToken; i < last; ++i) {
             String modelName = keys.get(i);
-            for (ModelInfo m : endpoints.get(modelName).getModels()) {
+            for (ServingModel m : endpoints.get(modelName).getModels()) {
                 list.addModel(modelName, m.getModelUrl());
             }
         }
@@ -173,7 +174,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
         final ModelManager modelManager = ModelManager.getInstance();
-        CompletableFuture<ModelInfo> future =
+        CompletableFuture<ServingModel> future =
                 modelManager.registerModel(
                         modelName,
                         version,
@@ -187,7 +188,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 future.thenAccept(
                         m ->
                                 modelManager.triggerModelUpdated(
-                                        m.scaleWorkers(minWorkers, maxWorkers)
+                                        m.getModelInfo()
+                                                .scaleWorkers(minWorkers, maxWorkers)
                                                 .configurePool(maxIdleTime)
                                                 .configureModelBatch(batchSize, maxBatchDelay)));
 
@@ -221,10 +223,11 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             throws ModelNotFoundException {
         try {
             ModelManager modelManager = ModelManager.getInstance();
-            ModelInfo modelInfo = modelManager.getModel(modelName, version, false);
-            if (modelInfo == null) {
+            ServingModel sm = modelManager.getModel(modelName, version, false);
+            if (sm == null) {
                 throw new ModelNotFoundException("Model not found: " + modelName);
             }
+            ModelInfo modelInfo = sm.getModelInfo();
             int minWorkers =
                     NettyUtils.getIntParameter(
                             decoder, MIN_WORKER_PARAMETER, modelInfo.getMinWorkers());
@@ -248,11 +251,12 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             if (version == null) {
                 // scale all versions
                 Endpoint endpoint = modelManager.getEndpoints().get(modelName);
-                for (ModelInfo model : endpoint.getModels()) {
-                    model.scaleWorkers(minWorkers, maxWorkers)
+                for (ServingModel model : endpoint.getModels()) {
+                    model.getModelInfo()
+                            .scaleWorkers(minWorkers, maxWorkers)
                             .configurePool(maxIdleTime)
                             .configureModelBatch(batchSize, maxBatchDelay);
-                    modelManager.triggerModelUpdated(model);
+                    modelManager.triggerModelUpdated(model.getModelInfo());
                 }
             } else {
                 modelInfo
