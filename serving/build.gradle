@@ -107,7 +107,6 @@ startScripts {
 applicationDistribution.from("src/main/conf/") {
     into "conf"
 }
-tasks.distZip.enabled = false
 tasks.test.dependsOn(
         ":central:jar",
         ":plugins:plugin-management-plugin:jar",
