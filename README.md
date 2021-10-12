@@ -48,7 +48,7 @@ DJL serving has higher throughput than most of C++ based model server on the mar
 For macOS
 
 ```
-brew cask install djl-serving
+brew install djl-serving
 
 # Start djl-serving as service:
 brew services start djl-serving
@@ -60,14 +60,14 @@ brew services stop djl-serving
 For Ubuntu
 
 ```
-curl -O https://publish.djl.ai/djl-serving/djl-serving_0.12.0-1_all.deb
-sudo dpkg -i djl-serving_0.12.0-1_all.deb
+curl -O https://publish.djl.ai/djl-serving/djl-serving_0.13.0-1_all.deb
+sudo dpkg -i djl-serving_0.13.0-1_all.deb
 ```
 
 For Windows
 
 We are considering to create a `chocolatey` package for Windows. For the time being, you can 
-download djl-serving zip file from [here](https://publish.djl.ai/djl-serving/serving-0.12.0.zip).
+download djl-serving zip file from [here](https://publish.djl.ai/djl-serving/serving-0.13.0.zip).
 
 ### Docker
 
