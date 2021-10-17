@@ -126,6 +126,7 @@ class Input(object):
         ret = self.content.get("data")
         if ret is None:
             return self.content.value_at(0)
+        return ret
 
     def get_as_json(self, key=None) -> list:
         return ast.literal_eval(self.get_as_bytes(key=key).decode("utf-8"))
