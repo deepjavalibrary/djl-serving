@@ -271,8 +271,8 @@ class Connection {
                 }
                 out.add(output);
                 completed = true;
-            } catch (IndexOutOfBoundsException | NegativeArraySizeException e) {
-                logger.debug("", e);
+            } catch (IndexOutOfBoundsException | NegativeArraySizeException ignore) {
+                // ignore
             } finally {
                 if (!completed) {
                     // resetting the marked index. Index will be set to 0

@@ -24,8 +24,8 @@ import torch.nn.functional as F
 from torchvision import models
 from torchvision import transforms
 
-from outputs import Output
-from inputs import Input
+from djl_python import Input
+from djl_python import Output
 
 
 class Resnet18(object):

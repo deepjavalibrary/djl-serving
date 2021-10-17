@@ -14,8 +14,8 @@
 import json
 import struct
 
-from np_util import to_nd_list
-from pair_list import PairList
+from .np_util import to_nd_list
+from .pair_list import PairList
 
 
 class Output(object):
@@ -24,6 +24,20 @@ class Output(object):
         self.message = 'OK'
         self.properties = dict()
         self.content = PairList()
+
+    def __str__(self):
+        d = dict()
+        for i in range(self.content.size()):
+            v = "type: " + str(type(self.content.value_at(i)))
+            d[self.content.key_at(i)] = v
+        return json.dumps(
+            {
+                "code": self.code,
+                "message": self.message,
+                "properties": self.properties,
+                "content": d
+            },
+            indent=2)
 
     def set_code(self, code):
         self.code = code

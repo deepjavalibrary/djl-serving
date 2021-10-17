@@ -60,3 +60,32 @@ class ArgParser(object):
             'If \'sock-type\' is \'tcp\' this is expected to have the host port to bind on'
         )
         return parser
+
+    @staticmethod
+    def test_model_args():
+        parser = argparse.ArgumentParser(prog='djl-test-model',
+                                         description='Test DJL Python model')
+        parser.add_argument('--model-dir',
+                            type=str,
+                            dest='model_dir',
+                            help='Model directory')
+        parser.add_argument('--entry-point',
+                            required=False,
+                            type=str,
+                            dest="entry_point",
+                            default="model.py",
+                            help='The model entry point file')
+        parser.add_argument('--handler',
+                            type=str,
+                            dest='handler',
+                            required=False,
+                            default="handle",
+                            help='Python function to invoke')
+        parser.add_argument('--input',
+                            type=str,
+                            dest='input',
+                            required=False,
+                            nargs='+',
+                            default='input.txt',
+                            help='Input file')
+        return parser

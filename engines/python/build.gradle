@@ -17,29 +17,30 @@ dependencies {
     }
 }
 
+sourceSets {
+    main.resources.srcDirs "setup"
+}
+
 processResources {
+    exclude "build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py"
     outputs.dir file("${project.buildDir}/classes/java/main/ai/djl/python")
     doLast {
-        delete "src/main/resources/ai/djl/python/scripts/__pycache__/"
         // write properties
         def propFile = file("${project.buildDir}/classes/java/main/ai/djl/python/python.properties")
         def sb = new StringBuilder()
-        sb.append("version=${version}\nlibraries=")
-        def first = true
-        for (String name : file("src/main/resources/ai/djl/python/scripts").list().sort()) {
-            if (first) {
-                first = false
-            } else {
-                sb.append(',')
-            }
-            sb.append(name)
+        sb.append("version=${version}\nlibraries=djl_python_engine.py")
+        for (String name : file("setup/djl_python").list().sort()) {
+            sb.append(",djl_python/").append(name)
         }
         propFile.text = sb.toString()
     }
 }
 
 clean.doFirst {
-    delete "src/main/resources/ai/djl/python/scripts/__pycache__/"
+    delete "setup/build/"
+    delete "setup/djl_python.egg-info/"
+    delete "setup/__pycache__/"
+    delete "setup/djl_python/__pycache__/"
     delete "src/test/resources/accumulate/__pycache__/"
     delete System.getProperty("user.home") + "/.djl.ai/python"
 }
