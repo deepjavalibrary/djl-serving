@@ -56,6 +56,12 @@ public class PyModel extends BaseModel {
             throw new FileNotFoundException(".py file not found in: " + modelPath);
         }
         pyEnv.setEntryPoint(modelFile.toFile().getName());
+        if (options != null) {
+            String pythonExecutable = (String) options.get("pythonExecutable");
+            if (pythonExecutable != null) {
+                pyEnv.setPythonExecutable(pythonExecutable);
+            }
+        }
     }
 
     /** {@inheritDoc} */
