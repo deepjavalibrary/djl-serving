@@ -45,7 +45,10 @@ public class PyEnv {
 
     /** Constructs a new {@code PyEnv} instance. */
     public PyEnv() {
-        pythonExecutable = "python3";
+        pythonExecutable = System.getenv("PYTHON_EXECUTABLE");
+        if (pythonExecutable == null) {
+            pythonExecutable = "python3";
+        }
         handler = "handle";
     }
 
