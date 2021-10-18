@@ -87,7 +87,7 @@ public final class ModelManager {
      * @param maxIdleTime the maximum idle time of the worker threads before scaling down.
      * @return a {@code CompletableFuture} instance
      */
-    public CompletableFuture<ModelInfo> registerModel(
+    public CompletableFuture<ServingModel> registerModel(
             final String modelName,
             final String version,
             final String modelUrl,
@@ -115,8 +115,8 @@ public final class ModelManager {
                         }
 
                         ZooModel<Input, Output> model = builder.build().loadModel();
-                        ModelInfo modelInfo =
-                                new ModelInfo(
+                        ServingModel sm =
+                                new ServingModel(
                                         modelName,
                                         version,
                                         modelUrl,
@@ -128,14 +128,14 @@ public final class ModelManager {
 
                         Endpoint endpoint =
                                 endpoints.computeIfAbsent(modelName, k -> new Endpoint());
-                        if (!endpoint.add(modelInfo)) {
+                        if (!endpoint.add(sm)) {
                             // model already exists
                             model.close();
                             throw new BadRequestException(
-                                    "Model " + modelInfo + " is already registered.");
+                                    "Model " + sm + " is already registered.");
                         }
 
-                        return modelInfo;
+                        return sm;
                     } catch (ModelException | IOException e) {
                         throw new CompletionException(e);
                     }
@@ -157,7 +157,8 @@ public final class ModelManager {
         }
         if (version == null) {
             // unregister all versions
-            for (ModelInfo m : endpoint.getModels()) {
+            for (ServingModel sm : endpoint.getModels()) {
+                ModelInfo m = sm.getModelInfo();
                 m.scaleWorkers(0, 0);
                 wlm.modelChanged(m);
                 startupModels.remove(modelName);
@@ -166,7 +167,7 @@ public final class ModelManager {
             endpoint.getModels().clear();
             logger.info("Model {} unregistered.", modelName);
         } else {
-            ModelInfo model = endpoint.remove(version);
+            ModelInfo model = endpoint.remove(version).getModelInfo();
             if (model == null) {
                 logger.warn("Model not found: " + modelName + ':' + version);
                 return false;
@@ -183,7 +184,7 @@ public final class ModelManager {
     }
 
     /**
-     * trigger that a ModelInfo has been updated. Updates model workers for this model and scales
+     * trigger that a model has been updated. Updates model workers for this model and scales
      * up/down all workers to match the parameters for the model.
      *
      * @param modelInfo the model that has been updated
@@ -213,7 +214,7 @@ public final class ModelManager {
      * @param predict ture for selecting a model in load balance fashion
      * @return the model
      */
-    public ModelInfo getModel(String modelName, String version, boolean predict) {
+    public ServingModel getModel(String modelName, String version, boolean predict) {
         Endpoint endpoint = endpoints.get(modelName);
         if (endpoint == null) {
             return null;
@@ -259,14 +260,14 @@ public final class ModelManager {
      */
     public DescribeModelResponse describeModel(String modelName, String version)
             throws ModelNotFoundException {
-        ModelInfo model = getModel(modelName, version, false);
-        if (model == null) {
+        ServingModel sm = getModel(modelName, version, false);
+        if (sm == null) {
             throw new ModelNotFoundException("Model not found: " + modelName);
         }
-
+        ModelInfo model = sm.getModelInfo();
         DescribeModelResponse resp = new DescribeModelResponse();
         resp.setModelName(modelName);
-        resp.setModelUrl(model.getModelUrl());
+        resp.setModelUrl(sm.getModelUrl());
         resp.setBatchSize(model.getBatchSize());
         resp.setMaxBatchDelay(model.getMaxBatchDelay());
         resp.setMaxWorkers(model.getMaxWorkers());
@@ -303,9 +304,9 @@ public final class ModelManager {
 
                     int numScaled = 0;
                     for (Endpoint endpoint : endpoints.values()) {
-                        for (ModelInfo m : endpoint.getModels()) {
-                            numScaled += m.getMinWorkers();
-                            numWorking += wlm.getNumRunningWorkers(m);
+                        for (ServingModel m : endpoint.getModels()) {
+                            numScaled += m.getModelInfo().getMinWorkers();
+                            numWorking += wlm.getNumRunningWorkers(m.getModelInfo());
                         }
                     }
 

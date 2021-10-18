@@ -18,10 +18,10 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.ModelManager;
+import ai.djl.serving.models.ServingModel;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.Job;
-import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmShutdownException;
 import ai.djl.translate.TranslateException;
@@ -152,7 +152,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
         ConfigManager config = ConfigManager.getInstance();
-        ModelInfo model = modelManager.getModel(modelName, version, true);
+        ServingModel model = modelManager.getModel(modelName, version, true);
         if (model == null) {
             String regex = config.getModelUrlPattern();
             if (regex == null) {
@@ -183,7 +183,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             config.getBatchSize(),
                             config.getMaxBatchDelay(),
                             config.getMaxIdleTime())
-                    .thenApply(m -> modelManager.triggerModelUpdated(m.scaleWorkers(1, -1)))
+                    .thenApply(
+                            m ->
+                                    modelManager.triggerModelUpdated(
+                                            m.getModelInfo().scaleWorkers(1, -1)))
                     .thenAccept(m -> runJob(modelManager, ctx, new Job(m, input)));
             return;
         }
@@ -193,7 +196,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             return;
         }
 
-        runJob(modelManager, ctx, new Job(model, input));
+        runJob(modelManager, ctx, new Job(model.getModelInfo(), input));
     }
 
     void runJob(ModelManager modelManager, ChannelHandlerContext ctx, Job job) {
