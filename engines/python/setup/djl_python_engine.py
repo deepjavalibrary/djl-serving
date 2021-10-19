@@ -21,9 +21,9 @@ import os
 import socket
 import sys
 
-from arg_parser import ArgParser
-from inputs import Input
-from outputs import Output
+from djl_python.arg_parser import ArgParser
+from djl_python.inputs import Input
+from djl_python.outputs import Output
 
 SOCKET_ACCEPT_TIMEOUT = 30.0
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         entry_point_file = os.path.join(model_dir, entry_point)
         if not os.path.exists(entry_point_file):
             raise ValueError(
-                "entry-point file not file {}.".format(entry_point_file))
+                "entry-point file not found {}.".format(entry_point_file))
 
         entry_point = entry_point[:-3]
         module = importlib.import_module(entry_point)

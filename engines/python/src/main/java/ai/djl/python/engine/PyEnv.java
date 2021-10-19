@@ -73,8 +73,9 @@ public class PyEnv {
 
             Files.createDirectories(cacheDir);
             tmp = Files.createTempDirectory(cacheDir, "tmp");
+            Files.createDirectories(tmp.resolve("djl_python"));
             for (String file : platform.getLibraries()) {
-                String libPath = "/ai/djl/python/scripts/" + file;
+                String libPath = '/' + file;
                 logger.info("Extracting {} to cache ...", libPath);
                 try (InputStream is = PyEnv.class.getResourceAsStream(libPath)) {
                     if (is == null) {

@@ -39,3 +39,27 @@ You can pull the Python engine from the central Maven repository by including th
     <scope>runtime</scope>
 </dependency>
 ```
+
+## Test your python model
+
+Testing python code within Java environment is challenging. We provide a tool to help you develop
+and test your python model locally. You can easily use IDE to debug your model.
+
+1. Install djl_python toolkit:
+
+```
+cd engines/python/setup
+pip install -U .
+```
+
+2. You can use command line tool or python to run djl model testing. The following command is
+an example:
+
+```shell
+curl -O https://resources.djl.ai/images/kitten.jpg
+
+djl-test-model --model-dir src/test/resources/resnet18 --input kitten.jpg
+
+# or use python
+python -m djl_python.test_model --model-dir src/test/resources/resnet18 --input kitten.jpg
+```

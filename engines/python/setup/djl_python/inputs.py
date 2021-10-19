@@ -15,8 +15,8 @@ import ast
 import io
 import struct
 
-from np_util import from_nd_list
-from pair_list import PairList
+from .np_util import from_nd_list
+from .pair_list import PairList
 
 
 def retrieve_buffer(conn, length):
@@ -111,6 +111,8 @@ class Input(object):
             return self.get_as_numpy(key)
         elif content_type == "application/json":
             return self.get_as_json(key)
+        elif content_type is not None and content_type.startswith("text/"):
+            return self.get_as_string(key)
         elif content_type is not None and content_type.startswith("image/"):
             return self.get_as_image(key)
         else:
@@ -127,6 +129,9 @@ class Input(object):
         if ret is None:
             return self.content.value_at(0)
         return ret
+
+    def get_as_string(self, key=None):
+        return self.get_as_bytes(key=key).decode("utf-8")
 
     def get_as_json(self, key=None) -> list:
         return ast.literal_eval(self.get_as_bytes(key=key).decode("utf-8"))

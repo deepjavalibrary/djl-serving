@@ -16,8 +16,7 @@ Accumulation Python model example.
 
 import logging
 import numpy as np
-from outputs import Output
-from inputs import Input
+from djl_python import *
 
 
 class Accumulation(object):

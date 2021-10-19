@@ -4,16 +4,16 @@ plugins {
 
 defaultTasks 'build'
 
-def djl_version = System.getenv("DJL_VERSION")
+def serving_version = System.getenv("DJL_VERSION")
 def stagingRepo = System.getenv("DJL_STAGING")
-djl_version = (djl_version == null) ? "0.14.0" : djl_version
+serving_version = (serving_version == null) ? djl_version : serving_version
 if (!project.hasProperty("staging")) {
-    djl_version += "-SNAPSHOT"
+    serving_version += "-SNAPSHOT"
 }
 
 allprojects {
     group 'ai.djl.serving'
-    version "${djl_version}"
+    version "${serving_version}"
 
     repositories {
         mavenCentral()
