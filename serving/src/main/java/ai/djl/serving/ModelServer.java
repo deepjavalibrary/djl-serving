@@ -14,7 +14,7 @@ package ai.djl.serving;
 
 import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.models.ServingModel;
+import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
@@ -349,8 +349,8 @@ public class ModelServer {
                 } else {
                     modelVersion = version;
                 }
-                CompletableFuture<ServingModel> future =
-                        modelManager.registerModel(
+                CompletableFuture<WorkflowInfo> future =
+                        modelManager.registerWorkflow(
                                 modelName,
                                 modelVersion,
                                 modelUrl,
@@ -359,8 +359,8 @@ public class ModelServer {
                                 configManager.getBatchSize(),
                                 configManager.getMaxBatchDelay(),
                                 configManager.getMaxIdleTime());
-                ServingModel sm = future.join();
-                modelManager.triggerModelUpdated(sm.getModelInfo().scaleWorkers(1, -1));
+                WorkflowInfo workflow = future.join();
+                modelManager.scaleWorkers(workflow, 1, -1);
             }
             startupModels.add(modelName);
         }

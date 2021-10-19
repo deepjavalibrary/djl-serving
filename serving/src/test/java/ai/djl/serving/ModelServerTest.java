@@ -576,7 +576,7 @@ public class ModelServerTest {
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
             Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), "Model not found: InvalidModel");
+            Assert.assertEquals(resp.getMessage(), "Workflow not found: InvalidModel");
         }
     }
 
@@ -641,7 +641,7 @@ public class ModelServerTest {
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
             Assert.assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
-            Assert.assertEquals(resp.getMessage(), "Model mlp_2 is already registered.");
+            Assert.assertEquals(resp.getMessage(), "Workflow mlp_2 is already registered.");
         }
     }
 
