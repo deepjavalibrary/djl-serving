@@ -70,8 +70,8 @@ class Resnet18(object):
         try:
             content_type = inputs.get_property("Content-Type")
             if content_type is not None and content_type.startswith("tensor/"):
-                images = torch.from_numpy(inputs.get_as_numpy()[0])
-                data = self.model(images)
+                images = torch.from_numpy(inputs.get_as_numpy()[0]).to(self.device)
+                data = self.model(images).to(torch.device('cpu'))
                 outputs.add_property("Content-Type", "tensor/ndlist")
                 outputs.add_as_numpy([data.detach().numpy()])
                 return outputs
