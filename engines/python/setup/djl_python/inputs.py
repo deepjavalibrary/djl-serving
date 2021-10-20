@@ -150,6 +150,9 @@ class Input(object):
         """
         return from_nd_list(self.get_as_bytes(key=key))
 
+    def is_empty(self):
+        return self.content.is_empty()
+
     def read(self, conn):
         prop_size = retrieve_short(conn)
 

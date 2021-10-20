@@ -19,9 +19,9 @@ from .pair_list import PairList
 
 
 class Output(object):
-    def __init__(self):
-        self.code = 200
-        self.message = 'OK'
+    def __init__(self, code=200, message='OK'):
+        self.code = code
+        self.message = message
         self.properties = dict()
         self.content = PairList()
 

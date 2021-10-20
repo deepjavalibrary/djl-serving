@@ -86,6 +86,13 @@ class PyProcess {
             }
 
             connection.connect();
+
+            try {
+                // initialize model with an empty request
+                predict(new Input());
+            } catch (TranslateException ignore) {
+                logger.warn("Python model {} doesn't support warn up: ", model.getName());
+            }
         } catch (InterruptedException e) {
             throw new EngineException("Worker startup cancelled.", e);
         } catch (IOException e) {

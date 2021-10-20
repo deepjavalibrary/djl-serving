@@ -16,7 +16,8 @@ Accumulation Python model example.
 
 import logging
 import numpy as np
-from djl_python import *
+from djl_python import Input
+from djl_python import Output
 
 
 class Accumulation(object):
@@ -65,7 +66,8 @@ def handle(inputs: Input):
         # stateful model
         _service.initialize(inputs.get_properties())
 
-    if inputs is None:
+    if inputs.is_empty():
+        # initialization request
         return None
 
     return _service.accumulate(inputs)
