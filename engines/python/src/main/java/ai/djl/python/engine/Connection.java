@@ -92,7 +92,7 @@ class Connection {
             throw new IllegalStateException("Failed to send data to python.");
         }
         // TODO: make this configurable
-        return f.get(5, TimeUnit.MINUTES);
+        return f.get(10, TimeUnit.MINUTES);
     }
 
     private String[] getPythonStartCmd(PyEnv pyEnv, Model model) {

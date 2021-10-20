@@ -146,7 +146,8 @@ def handle(inputs: Input):
         # stateful model
         _service.initialize(inputs.get_properties())
 
-    if inputs is None:
+    if inputs.is_empty():
+        # initialization request
         return None
 
     return _service.inference(inputs)

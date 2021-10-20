@@ -84,12 +84,12 @@ class PythonEngine(object):
             function_name = inputs.get_function_name()
             try:
                 outputs = getattr(self.service, function_name)(inputs)
+                if outputs is None:
+                    outputs = Output(code=204, message="No content")
             except Exception as e:
                 logging.error(e, exc_info=True)
                 _, ex_value, _ = sys.exc_info()
-                outputs = Output()
-                outputs.set_code(500)
-                outputs.set_message(str(ex_value))
+                outputs = Output(code=500, message=str(ex_value))
 
             if not cl_socket.sendall(outputs.encode()):
                 logging.debug("Outputs is sent to DJL engine.")
