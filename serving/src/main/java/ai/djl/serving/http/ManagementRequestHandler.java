@@ -137,7 +137,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         for (int i = pageToken; i < last; ++i) {
             String modelName = keys.get(i);
             for (ServingModel m : endpoints.get(modelName).getModels()) {
-                list.addModel(modelName, m.getModelUrl());
+                list.addModel(modelName, m.getVersion(), m.getModelUrl());
             }
         }
 

@@ -229,13 +229,15 @@ public class DescribeModelResponse {
     /**
      * Adds worker to the worker list.
      *
+     * @param version the model version
      * @param id the worker's ID
      * @param startTime the worker's start time
      * @param isRunning {@code true} if worker is running
      * @param gpuId the GPU id assigned to the worker, -1 for CPU
      */
-    public void addWorker(int id, long startTime, boolean isRunning, int gpuId) {
+    public void addWorker(String version, int id, long startTime, boolean isRunning, int gpuId) {
         Worker worker = new Worker();
+        worker.setVersion(version);
         worker.setId(id);
         worker.setStartTime(new Date(startTime));
         worker.setStatus(isRunning ? "READY" : "UNLOADING");
@@ -246,10 +248,29 @@ public class DescribeModelResponse {
     /** A class that holds workers information. */
     public static final class Worker {
 
+        private String version;
         private int id;
         private Date startTime;
         private String status;
         private boolean gpu;
+
+        /**
+         * Returns the model version.
+         *
+         * @return the model version
+         */
+        public String getVersion() {
+            return version;
+        }
+
+        /**
+         * Sets the model version.
+         *
+         * @param version the model version
+         */
+        public void setVersion(String version) {
+            this.version = version;
+        }
 
         /**
          * Returns the worker's ID.
