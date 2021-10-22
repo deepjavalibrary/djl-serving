@@ -57,16 +57,18 @@ public class ListModelsResponse {
      * Adds the model tp the list.
      *
      * @param modelName the model name
+     * @param version the mode version
      * @param modelUrl the model url
      */
-    public void addModel(String modelName, String modelUrl) {
-        models.add(new ModelItem(modelName, modelUrl));
+    public void addModel(String modelName, String version, String modelUrl) {
+        models.add(new ModelItem(modelName, version, modelUrl));
     }
 
     /** A class that holds model name and url. */
     public static final class ModelItem {
 
         private String modelName;
+        private String version;
         private String modelUrl;
 
         /** Constructs a new {@code ModelItem} instance. */
@@ -76,10 +78,12 @@ public class ListModelsResponse {
          * Constructs a new {@code ModelItem} instance with model name and url.
          *
          * @param modelName the model name
+         * @param version the model version
          * @param modelUrl the model url
          */
-        public ModelItem(String modelName, String modelUrl) {
+        public ModelItem(String modelName, String version, String modelUrl) {
             this.modelName = modelName;
+            this.version = version;
             this.modelUrl = modelUrl;
         }
 
@@ -90,6 +94,15 @@ public class ListModelsResponse {
          */
         public String getModelName() {
             return modelName;
+        }
+
+        /**
+         * Returns the model version.
+         *
+         * @return the model version
+         */
+        public String getVersion() {
+            return version;
         }
 
         /**

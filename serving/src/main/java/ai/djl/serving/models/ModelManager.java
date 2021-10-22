@@ -260,14 +260,19 @@ public final class ModelManager {
      */
     public DescribeModelResponse describeModel(String modelName, String version)
             throws ModelNotFoundException {
-        ServingModel sm = getModel(modelName, version, false);
-        if (sm == null) {
+        Endpoint endpoint = endpoints.get(modelName);
+        if (endpoint == null) {
             throw new ModelNotFoundException("Model not found: " + modelName);
         }
-        ModelInfo model = sm.getModelInfo();
+        List<ServingModel> list = endpoint.getModels();
+        if (list.isEmpty()) {
+            throw new ModelNotFoundException("Model not found: " + modelName);
+        }
+
         DescribeModelResponse resp = new DescribeModelResponse();
         resp.setModelName(modelName);
-        resp.setModelUrl(sm.getModelUrl());
+        ModelInfo model = list.get(0).getModelInfo();
+        resp.setModelUrl(list.get(0).getModelUrl());
         resp.setBatchSize(model.getBatchSize());
         resp.setMaxBatchDelay(model.getMaxBatchDelay());
         resp.setMaxWorkers(model.getMaxWorkers());
@@ -276,18 +281,25 @@ public final class ModelManager {
         resp.setQueueLength(wlm.getQueueLength(model));
         resp.setLoadedAtStartup(startupModels.contains(modelName));
 
-        int activeWorker = wlm.getNumRunningWorkers(model);
-        int targetWorker = model.getMinWorkers();
-        resp.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
+        for (ServingModel sm : list) {
+            model = sm.getModelInfo();
+            String modelVersion = sm.getVersion();
+            if (version == null || version.equals(modelVersion)) {
+                int activeWorker = wlm.getNumRunningWorkers(model);
+                int targetWorker = model.getMinWorkers();
+                resp.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
 
-        List<WorkerThread> workers = wlm.getWorkers(model);
-        for (WorkerThread worker : workers) {
-            int workerId = worker.getWorkerId();
-            long startTime = worker.getStartTime();
-            boolean isRunning = worker.isRunning();
-            int gpuId = worker.getGpuId();
-            resp.addWorker(workerId, startTime, isRunning, gpuId);
+                List<WorkerThread> workers = wlm.getWorkers(model);
+                for (WorkerThread worker : workers) {
+                    int workerId = worker.getWorkerId();
+                    long startTime = worker.getStartTime();
+                    boolean isRunning = worker.isRunning();
+                    int gpuId = worker.getGpuId();
+                    resp.addWorker(modelVersion, workerId, startTime, isRunning, gpuId);
+                }
+            }
         }
+
         return resp;
     }
 
