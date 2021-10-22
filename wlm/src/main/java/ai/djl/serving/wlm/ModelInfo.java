@@ -30,6 +30,8 @@ public final class ModelInfo implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
 
     private String modelName;
+    private String version;
+
     private int minWorkers;
     private int maxWorkers;
     private int queueSize;
@@ -43,6 +45,7 @@ public final class ModelInfo implements AutoCloseable {
      * Constructs a new {@code ModelInfo} instance.
      *
      * @param modelName the name of the model that will be used as HTTP endpoint
+     * @param version the version of the model
      * @param model the {@link ZooModel}
      * @param queueSize the maximum request queue size
      * @param maxIdleTime the initial maximum idle time for workers.
@@ -51,12 +54,14 @@ public final class ModelInfo implements AutoCloseable {
      */
     public ModelInfo(
             String modelName,
+            String version,
             ZooModel<Input, Output> model,
             int queueSize,
             int maxIdleTime,
             int maxBatchDelay,
             int batchSize) {
         this.modelName = modelName;
+        this.version = version;
         this.model = model;
         this.maxBatchDelay = maxBatchDelay;
         this.maxIdleTime = maxIdleTime; // default max idle time 60s
@@ -124,6 +129,15 @@ public final class ModelInfo implements AutoCloseable {
      */
     public String getModelName() {
         return modelName;
+    }
+
+    /**
+     * Returns the model version.
+     *
+     * @return the model version
+     */
+    public String getVersion() {
+        return version;
     }
 
     /**
@@ -235,18 +249,21 @@ public final class ModelInfo implements AutoCloseable {
             return false;
         }
         ModelInfo modelInfo = (ModelInfo) o;
-        return modelName.equals(modelInfo.modelName);
+        return modelName.equals(modelInfo.modelName) && Objects.equals(version, modelInfo.version);
     }
 
     /** {@inheritDoc} */
     @Override
     public int hashCode() {
-        return Objects.hash(modelName);
+        return Objects.hash(modelName, version);
     }
 
     /** {@inheritDoc} */
     @Override
     public String toString() {
+        if (version != null) {
+            return modelName + ':' + version;
+        }
         return modelName;
     }
 }
