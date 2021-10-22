@@ -47,7 +47,14 @@ public class ServingModel {
             int maxBatchDelay,
             int batchSize) {
         this.modelInfo =
-                new ModelInfo(modelName, model, queueSize, maxIdleTime, maxBatchDelay, batchSize);
+                new ModelInfo(
+                        modelName,
+                        version,
+                        model,
+                        queueSize,
+                        maxIdleTime,
+                        maxBatchDelay,
+                        batchSize);
         this.version = version;
         this.modelUrl = modelUrl;
     }
