@@ -16,7 +16,7 @@ import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.models.ServingModel;
+import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * A class handling inbound HTTP requests to the management API.
@@ -136,7 +137,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
         for (int i = pageToken; i < last; ++i) {
             String modelName = keys.get(i);
-            for (ServingModel m : endpoints.get(modelName).getModels()) {
+            for (WorkflowInfo m : endpoints.get(modelName).getWorkflows()) {
                 list.addModel(modelName, m.getVersion(), m.getModelUrl());
             }
         }
@@ -147,7 +148,17 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private void handleDescribeModel(ChannelHandlerContext ctx, String modelName, String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
-        DescribeModelResponse resp = modelManager.describeModel(modelName, version);
+        List<DescribeModelResponse> resps = modelManager.describeWorkflow(modelName, version);
+
+        if (resps.size() != 1) {
+            NettyUtils.sendError(
+                    ctx,
+                    new IllegalArgumentException(
+                            modelName + " describes a full workflow, not just a model"));
+            return;
+        }
+
+        DescribeModelResponse resp = resps.get(0);
         NettyUtils.sendJsonResponse(ctx, resp);
     }
 
@@ -174,8 +185,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
         final ModelManager modelManager = ModelManager.getInstance();
-        CompletableFuture<ServingModel> future =
-                modelManager.registerModel(
+        CompletableFuture<WorkflowInfo> future =
+                modelManager.registerWorkflow(
                         modelName,
                         version,
                         modelUrl,
@@ -186,12 +197,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         maxIdleTime);
         CompletableFuture<Void> f =
                 future.thenAccept(
-                        m ->
+                        p -> {
+                            for (ModelInfo m : p.getWorkflow().getModels()) {
                                 modelManager.triggerModelUpdated(
-                                        m.getModelInfo()
-                                                .scaleWorkers(minWorkers, maxWorkers)
+                                        m.scaleWorkers(minWorkers, maxWorkers)
                                                 .configurePool(maxIdleTime)
-                                                .configureModelBatch(batchSize, maxBatchDelay)));
+                                                .configureModelBatch(batchSize, maxBatchDelay));
+                            }
+                        });
 
         if (synchronous) {
             final String msg = "Model \"" + modelName + "\" registered.";
@@ -211,7 +224,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private void handleUnregisterModel(ChannelHandlerContext ctx, String modelName, String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
-        if (!modelManager.unregisterModel(modelName, version)) {
+        if (!modelManager.unregisterWorkflow(modelName, version)) {
             throw new ModelNotFoundException("Model not found: " + modelName);
         }
         String msg = "Model \"" + modelName + "\" unregistered";
@@ -223,57 +236,62 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             throws ModelNotFoundException {
         try {
             ModelManager modelManager = ModelManager.getInstance();
-            ServingModel sm = modelManager.getModel(modelName, version, false);
-            if (sm == null) {
+            WorkflowInfo workflow = modelManager.getWorkflow(modelName, version, false);
+            if (workflow == null) {
                 throw new ModelNotFoundException("Model not found: " + modelName);
             }
-            ModelInfo modelInfo = sm.getModelInfo();
-            int minWorkers =
-                    NettyUtils.getIntParameter(
-                            decoder, MIN_WORKER_PARAMETER, modelInfo.getMinWorkers());
-            int maxWorkers =
-                    NettyUtils.getIntParameter(
-                            decoder, MAX_WORKER_PARAMETER, modelInfo.getMaxWorkers());
-            if (maxWorkers < minWorkers) {
-                throw new BadRequestException("max_worker cannot be less than min_worker.");
-            }
+            List<String> msgs = new ArrayList<>();
+            for (ModelInfo modelInfo : workflow.getWorkflow().getModels()) {
+                int minWorkers =
+                        NettyUtils.getIntParameter(
+                                decoder, MIN_WORKER_PARAMETER, modelInfo.getMinWorkers());
+                int maxWorkers =
+                        NettyUtils.getIntParameter(
+                                decoder, MAX_WORKER_PARAMETER, modelInfo.getMaxWorkers());
+                if (maxWorkers < minWorkers) {
+                    throw new BadRequestException("max_worker cannot be less than min_worker.");
+                }
 
-            int maxIdleTime =
-                    NettyUtils.getIntParameter(
-                            decoder, MAX_IDLE_TIME_PARAMETER, modelInfo.getMaxIdleTime());
-            int batchSize =
-                    NettyUtils.getIntParameter(
-                            decoder, BATCH_SIZE_PARAMETER, modelInfo.getBatchSize());
-            int maxBatchDelay =
-                    NettyUtils.getIntParameter(
-                            decoder, MAX_BATCH_DELAY_PARAMETER, modelInfo.getMaxBatchDelay());
+                int maxIdleTime =
+                        NettyUtils.getIntParameter(
+                                decoder, MAX_IDLE_TIME_PARAMETER, modelInfo.getMaxIdleTime());
+                int batchSize =
+                        NettyUtils.getIntParameter(
+                                decoder, BATCH_SIZE_PARAMETER, modelInfo.getBatchSize());
+                int maxBatchDelay =
+                        NettyUtils.getIntParameter(
+                                decoder, MAX_BATCH_DELAY_PARAMETER, modelInfo.getMaxBatchDelay());
 
-            if (version == null) {
-                // scale all versions
-                Endpoint endpoint = modelManager.getEndpoints().get(modelName);
-                for (ServingModel model : endpoint.getModels()) {
-                    model.getModelInfo()
+                if (version == null) {
+                    // scale all versions
+                    Endpoint endpoint = modelManager.getEndpoints().get(modelName);
+                    for (WorkflowInfo p : endpoint.getWorkflows()) {
+                        for (ModelInfo m : p.getWorkflow().getModels()) {
+                            m.scaleWorkers(minWorkers, maxWorkers)
+                                    .configurePool(maxIdleTime)
+                                    .configureModelBatch(batchSize, maxBatchDelay);
+                            modelManager.triggerModelUpdated(m);
+                        }
+                    }
+                } else {
+                    modelInfo
                             .scaleWorkers(minWorkers, maxWorkers)
                             .configurePool(maxIdleTime)
                             .configureModelBatch(batchSize, maxBatchDelay);
-                    modelManager.triggerModelUpdated(model.getModelInfo());
+                    modelManager.triggerModelUpdated(modelInfo);
                 }
-            } else {
-                modelInfo
-                        .scaleWorkers(minWorkers, maxWorkers)
-                        .configurePool(maxIdleTime)
-                        .configureModelBatch(batchSize, maxBatchDelay);
-                modelManager.triggerModelUpdated(modelInfo);
-            }
 
-            String msg =
-                    "Model \""
-                            + modelName
-                            + "\" worker scaled. New Worker configuration min workers:"
-                            + modelInfo.getMinWorkers()
-                            + " max workers:"
-                            + modelInfo.getMaxWorkers();
-            NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
+                String msg =
+                        "Model \""
+                                + modelName
+                                + "\" worker scaled. New Worker configuration min workers:"
+                                + modelInfo.getMinWorkers()
+                                + " max workers:"
+                                + modelInfo.getMaxWorkers();
+                msgs.add(msg);
+            }
+            String combinedMsg = Strings.join(msgs, '\n');
+            NettyUtils.sendJsonResponse(ctx, new StatusResponse(combinedMsg));
         } catch (NumberFormatException ex) {
             throw new BadRequestException("parameter is invalid number." + ex.getMessage(), ex);
         }

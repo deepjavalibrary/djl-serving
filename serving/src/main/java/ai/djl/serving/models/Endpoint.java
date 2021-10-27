@@ -21,29 +21,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** A class that represents a webservice endpoint. */
 public class Endpoint {
 
-    private List<ServingModel> models;
+    private List<WorkflowInfo> workflows;
     private Map<String, Integer> map;
     private AtomicInteger position;
 
     /** Constructs an {@code Endpoint} instance. */
     public Endpoint() {
-        models = new ArrayList<>();
+        workflows = new ArrayList<>();
         map = new ConcurrentHashMap<>();
         position = new AtomicInteger(0);
     }
 
     /**
-     * Adds a model to the entpoint.
+     * Adds a workflow to the entpoint.
      *
-     * @param model the model to be added
+     * @param workflow the workflow to be added
      * @return true if add success
      */
-    public synchronized boolean add(ServingModel model) {
-        String version = model.getVersion();
+    public synchronized boolean add(WorkflowInfo workflow) {
+        String version = workflow.getVersion();
         if (version == null) {
-            if (models.isEmpty()) {
+            if (workflows.isEmpty()) {
                 map.put("default", 0);
-                return models.add(model);
+                return workflows.add(workflow);
             }
             return false;
         }
@@ -51,77 +51,77 @@ public class Endpoint {
             return false;
         }
 
-        map.put(version, models.size());
-        return models.add(model);
+        map.put(version, workflows.size());
+        return workflows.add(workflow);
     }
 
     /**
-     * Returns the models associated with the endpoint.
+     * Returns the {@link WorkflowInfo}s associated with the endpoint.
      *
-     * @return the models associated with the endpoint
+     * @return the {@link WorkflowInfo}s associated with the endpoint
      */
-    public List<ServingModel> getModels() {
-        return models;
+    public List<WorkflowInfo> getWorkflows() {
+        return workflows;
     }
 
     /**
-     * Removes a model version from the {@code Endpoint}.
+     * Removes a workflow version from the {@code Endpoint}.
      *
-     * @param version the model version
+     * @param version the workflow version
      * @return null if the specified version doesn't exist
      */
-    public synchronized ServingModel remove(String version) {
+    public synchronized WorkflowInfo remove(String version) {
         if (version == null) {
-            if (models.isEmpty()) {
+            if (workflows.isEmpty()) {
                 return null;
             }
-            ServingModel model = models.remove(0);
+            WorkflowInfo workflow = workflows.remove(0);
             reIndex();
-            return model;
+            return workflow;
         }
         Integer index = map.remove(version);
         if (index == null) {
             return null;
         }
-        ServingModel model = models.remove((int) index);
+        WorkflowInfo workflow = workflows.remove((int) index);
         reIndex();
-        return model;
+        return workflow;
     }
 
     /**
-     * Returns the {@code ServingModel} for the specified version.
+     * Returns the {@code WorkflowInfo} for the specified version.
      *
-     * @param version the version of the model to retrieve
-     * @return the {@code ServingModel} for the specified version
+     * @param version the version of the workflow to retrieve
+     * @return the {@code WorkflowInfo} for the specified version
      */
-    public ServingModel get(String version) {
+    public WorkflowInfo get(String version) {
         Integer index = map.get(version);
         if (index == null) {
             return null;
         }
-        return models.get(index);
+        return workflows.get(index);
     }
 
     /**
-     * Returns the next version of model to serve the inference request.
+     * Returns the next version of workflow to serve the inference request.
      *
-     * @return the next version of model to serve the inference request
+     * @return the next version of workflow to serve the inference request
      */
-    public ServingModel next() {
-        int size = models.size();
+    public WorkflowInfo next() {
+        int size = workflows.size();
         if (size == 1) {
-            return models.get(0);
+            return workflows.get(0);
         }
         int index = position.getAndUpdate(operand -> (operand + 1) % size);
-        return models.get(index);
+        return workflows.get(index);
     }
 
     private void reIndex() {
         map.clear();
-        int size = models.size();
+        int size = workflows.size();
         for (int i = 0; i < size; ++i) {
-            ServingModel model = models.get(i);
-            String version = model.getVersion();
+            WorkflowInfo workflow = workflows.get(i);
+            String version = workflow.getVersion();
             if (version != null) {
                 map.put(version, i);
             }

@@ -22,11 +22,12 @@ import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeModelResponse;
 import ai.djl.serving.util.ConfigManager;
-import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerThread;
+import ai.djl.serving.workflow.Workflow;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +88,7 @@ public final class ModelManager {
      * @param maxIdleTime the maximum idle time of the worker threads before scaling down.
      * @return a {@code CompletableFuture} instance
      */
-    public CompletableFuture<ServingModel> registerModel(
+    public CompletableFuture<WorkflowInfo> registerWorkflow(
             final String modelName,
             final String version,
             final String modelUrl,
@@ -97,88 +98,102 @@ public final class ModelManager {
             final int maxBatchDelay,
             final int maxIdleTime) {
         return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        Criteria.Builder<Input, Output> builder =
-                                Criteria.builder()
-                                        .setTypes(Input.class, Output.class)
-                                        .optModelUrls(modelUrl)
-                                        .optEngine(engineName);
-                        if (gpuId != -1) {
-                            builder.optDevice(Device.gpu(gpuId));
-                            logger.info("Loading model {} on {}.", modelName, Device.gpu(gpuId));
-                        } else {
-                            logger.info("Loading model {} on {}.", modelName, Device.cpu());
-                        }
-                        if (batchSize > 1) {
-                            builder.optArgument("batchifier", "stack");
-                        }
+                        () -> {
+                            try {
+                                Criteria.Builder<Input, Output> builder =
+                                        Criteria.builder()
+                                                .setTypes(Input.class, Output.class)
+                                                .optModelUrls(modelUrl)
+                                                .optEngine(engineName);
+                                if (gpuId != -1) {
+                                    builder.optDevice(Device.gpu(gpuId));
+                                    logger.info(
+                                            "Loading model {} on {}.",
+                                            modelName,
+                                            Device.gpu(gpuId));
+                                } else {
+                                    logger.info("Loading model {} on {}.", modelName, Device.cpu());
+                                }
+                                if (batchSize > 1) {
+                                    builder.optArgument("batchifier", "stack");
+                                }
 
-                        ZooModel<Input, Output> model = builder.build().loadModel();
-                        ServingModel sm =
-                                new ServingModel(
+                                ZooModel<Input, Output> model = builder.build().loadModel();
+                                return new WorkflowInfo(
                                         modelName,
                                         version,
                                         modelUrl,
-                                        model,
-                                        configManager.getJobQueueSize(),
-                                        maxIdleTime,
-                                        maxBatchDelay,
-                                        batchSize);
+                                        new ModelInfo(
+                                                modelName,
+                                                version,
+                                                model,
+                                                configManager.getJobQueueSize(),
+                                                maxIdleTime,
+                                                maxBatchDelay,
+                                                batchSize));
+                            } catch (ModelException | IOException e) {
+                                throw new CompletionException(e);
+                            }
+                        })
+                .thenApply(p -> registerWorkflow(p).join());
+    }
 
-                        Endpoint endpoint =
-                                endpoints.computeIfAbsent(modelName, k -> new Endpoint());
-                        if (!endpoint.add(sm)) {
-                            // model already exists
-                            model.close();
-                            throw new BadRequestException(
-                                    "Model " + sm + " is already registered.");
-                        }
-
-                        return sm;
-                    } catch (ModelException | IOException e) {
-                        throw new CompletionException(e);
+    /**
+     * Registers and loads a workflow.
+     *
+     * @param workflow the workflow to register
+     * @return a {@code CompletableFuture} instance
+     */
+    public CompletableFuture<WorkflowInfo> registerWorkflow(final WorkflowInfo workflow) {
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    Endpoint endpoint =
+                            endpoints.computeIfAbsent(workflow.getName(), k -> new Endpoint());
+                    if (!endpoint.add(workflow)) {
+                        // workflow already exists
+                        throw new BadRequestException(
+                                "Workflow " + workflow + " is already registered.");
                     }
+
+                    return workflow;
                 });
     }
 
     /**
-     * Unregisters a model by its name and version.
+     * Unregisters a workflow by its name and version.
      *
-     * @param modelName the model name to be unregistered
+     * @param workflowName the workflow name to be unregistered (may also be the same as a model
+     *     name)
      * @param version the model version
      * @return {@code true} if unregister success
      */
-    public boolean unregisterModel(String modelName, String version) {
-        Endpoint endpoint = endpoints.get(modelName);
+    public boolean unregisterWorkflow(String workflowName, String version) {
+        Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
-            logger.warn("Model not found: " + modelName);
+            logger.warn("Model not found: " + workflowName);
             return false;
         }
         if (version == null) {
             // unregister all versions
-            for (ServingModel sm : endpoint.getModels()) {
-                ModelInfo m = sm.getModelInfo();
-                m.scaleWorkers(0, 0);
-                wlm.modelChanged(m);
-                startupModels.remove(modelName);
-                m.close();
+            for (WorkflowInfo workflow : endpoint.getWorkflows()) {
+                scaleWorkers(workflow, 0, 0);
+                workflow.getWorkflow().close();
             }
-            endpoint.getModels().clear();
-            logger.info("Model {} unregistered.", modelName);
+            startupModels.remove(workflowName);
+            endpoint.getWorkflows().clear();
+            logger.info("Model {} unregistered.", workflowName);
         } else {
-            ModelInfo model = endpoint.remove(version).getModelInfo();
-            if (model == null) {
-                logger.warn("Model not found: " + modelName + ':' + version);
+            WorkflowInfo workflow = endpoint.remove(version);
+            if (workflow == null) {
+                logger.warn("Workflow not found: " + workflowName + ':' + version);
                 return false;
             }
-            model.scaleWorkers(0, 0);
-            wlm.modelChanged(model);
-            startupModels.remove(modelName);
-            model.close();
+            scaleWorkers(workflow, 0, 0);
+            workflow.getWorkflow().close();
+            startupModels.remove(workflowName);
         }
-        if (endpoint.getModels().isEmpty()) {
-            endpoints.remove(modelName);
+        if (endpoint.getWorkflows().isEmpty()) {
+            endpoints.remove(workflowName);
         }
         return true;
     }
@@ -198,6 +213,23 @@ public final class ModelManager {
     }
 
     /**
+     * Scales the workers for each model in a workflow.
+     *
+     * @param workflow the workflow to scale workers for
+     * @param minWorkers the min workers
+     * @param maxWorkers the max workers
+     * @return the info about the scaled workflow
+     * @see ModelInfo#scaleWorkers(int, int)
+     */
+    public WorkflowInfo scaleWorkers(WorkflowInfo workflow, int minWorkers, int maxWorkers) {
+        for (ModelInfo model : workflow.getWorkflow().getModels()) {
+            model.scaleWorkers(minWorkers, maxWorkers);
+            triggerModelUpdated(model);
+        }
+        return workflow;
+    }
+
+    /**
      * Returns the registry of all endpoints.
      *
      * @return the registry of all endpoints
@@ -207,26 +239,26 @@ public final class ModelManager {
     }
 
     /**
-     * Returns a version of model.
+     * Returns a version of workflow.
      *
-     * @param modelName the model name
+     * @param workflowName the workflow name
      * @param version the model version
      * @param predict ture for selecting a model in load balance fashion
      * @return the model
      */
-    public ServingModel getModel(String modelName, String version, boolean predict) {
-        Endpoint endpoint = endpoints.get(modelName);
+    public WorkflowInfo getWorkflow(String workflowName, String version, boolean predict) {
+        Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
             return null;
         }
         if (version == null) {
-            if (endpoint.getModels().isEmpty()) {
+            if (endpoint.getWorkflows().isEmpty()) {
                 return null;
             }
             if (predict) {
                 return endpoint.next();
             }
-            return endpoint.getModels().get(0);
+            return endpoint.getWorkflows().get(0);
         }
         return endpoint.get(version);
     }
@@ -243,48 +275,47 @@ public final class ModelManager {
     /**
      * Runs an inference job by assigning the job to the next free worker.
      *
-     * @param job an inference job to be executed
+     * @param workflow the workflow to run
+     * @param input the input to the task
      * @return {@code true} if submit success, false otherwise.
      */
-    public CompletableFuture<Output> runJob(Job job) {
-        return wlm.runJob(job);
+    public CompletableFuture<Output> runJob(Workflow workflow, Input input) {
+        return workflow.execute(wlm, input);
     }
 
     /**
-     * Returns a list of worker information for specified model.
+     * Returns a list of worker information for specified workflow.
      *
-     * @param modelName the model name to be queried
+     * @param workflowName the workflow name to be queried
      * @param version the model version to be queried
-     * @return a list of worker information for specified model
-     * @throws ModelNotFoundException if specified model not found
+     * @return a list of worker information for specified workflow
+     * @throws ModelNotFoundException if specified workflow not found
      */
-    public DescribeModelResponse describeModel(String modelName, String version)
+    public List<DescribeModelResponse> describeWorkflow(String workflowName, String version)
             throws ModelNotFoundException {
-        Endpoint endpoint = endpoints.get(modelName);
+        Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
-            throw new ModelNotFoundException("Model not found: " + modelName);
+            throw new ModelNotFoundException("Workflow not found: " + workflowName);
         }
-        List<ServingModel> list = endpoint.getModels();
+        List<WorkflowInfo> list = endpoint.getWorkflows();
         if (list.isEmpty()) {
-            throw new ModelNotFoundException("Model not found: " + modelName);
+            throw new ModelNotFoundException("Workflow not found: " + workflowName);
         }
 
-        DescribeModelResponse resp = new DescribeModelResponse();
-        resp.setModelName(modelName);
-        ModelInfo model = list.get(0).getModelInfo();
-        resp.setModelUrl(list.get(0).getModelUrl());
-        resp.setBatchSize(model.getBatchSize());
-        resp.setMaxBatchDelay(model.getMaxBatchDelay());
-        resp.setMaxWorkers(model.getMaxWorkers());
-        resp.setMinWorkers(model.getMinWorkers());
-        resp.setMaxIdleTime(model.getMaxIdleTime());
-        resp.setQueueLength(wlm.getQueueLength(model));
-        resp.setLoadedAtStartup(startupModels.contains(modelName));
+        List<DescribeModelResponse> resps = new ArrayList<>();
+        for (WorkflowInfo workflow : list) {
+            for (ModelInfo model : workflow.getWorkflow().getModels()) {
+                DescribeModelResponse resp = new DescribeModelResponse();
+                resp.setModelName(model.getModelName());
+                resp.setModelUrl(list.get(0).getModelUrl());
+                resp.setBatchSize(model.getBatchSize());
+                resp.setMaxBatchDelay(model.getMaxBatchDelay());
+                resp.setMaxWorkers(model.getMaxWorkers());
+                resp.setMinWorkers(model.getMinWorkers());
+                resp.setMaxIdleTime(model.getMaxIdleTime());
+                resp.setQueueLength(wlm.getQueueLength(model));
+                resp.setLoadedAtStartup(startupModels.contains(model.getModelName()));
 
-        for (ServingModel sm : list) {
-            model = sm.getModelInfo();
-            String modelVersion = sm.getVersion();
-            if (version == null || version.equals(modelVersion)) {
                 int activeWorker = wlm.getNumRunningWorkers(model);
                 int targetWorker = model.getMinWorkers();
                 resp.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
@@ -295,12 +326,13 @@ public final class ModelManager {
                     long startTime = worker.getStartTime();
                     boolean isRunning = worker.isRunning();
                     int gpuId = worker.getGpuId();
-                    resp.addWorker(modelVersion, workerId, startTime, isRunning, gpuId);
+                    resp.addWorker(model.getVersion(), workerId, startTime, isRunning, gpuId);
                 }
+                resps.add(resp);
             }
         }
 
-        return resp;
+        return resps;
     }
 
     /**
@@ -316,9 +348,11 @@ public final class ModelManager {
 
                     int numScaled = 0;
                     for (Endpoint endpoint : endpoints.values()) {
-                        for (ServingModel m : endpoint.getModels()) {
-                            numScaled += m.getModelInfo().getMinWorkers();
-                            numWorking += wlm.getNumRunningWorkers(m.getModelInfo());
+                        for (WorkflowInfo p : endpoint.getWorkflows()) {
+                            for (ModelInfo m : p.getWorkflow().getModels()) {
+                                numScaled += m.getMinWorkers();
+                                numWorking += wlm.getNumRunningWorkers(m);
+                            }
                         }
                     }
 

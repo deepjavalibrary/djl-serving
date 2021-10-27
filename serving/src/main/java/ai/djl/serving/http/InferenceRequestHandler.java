@@ -18,12 +18,12 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.models.ServingModel;
+import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
-import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmShutdownException;
+import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -147,16 +147,16 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             ChannelHandlerContext ctx,
             FullHttpRequest req,
             Input input,
-            String modelName,
+            String workflowName,
             String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
         ConfigManager config = ConfigManager.getInstance();
-        ServingModel model = modelManager.getModel(modelName, version, true);
-        if (model == null) {
+        WorkflowInfo workflow = modelManager.getWorkflow(workflowName, version, true);
+        if (workflow == null) {
             String regex = config.getModelUrlPattern();
             if (regex == null) {
-                throw new ModelNotFoundException("Model not found: " + modelName);
+                throw new ModelNotFoundException("Model not found: " + workflowName);
             }
             String modelUrl = input.getProperty("model_url", null);
             if (modelUrl == null) {
@@ -171,11 +171,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String engineName = input.getProperty("engine_name", null);
             int gpuId = Integer.parseInt(input.getProperty("gpu_id", "-1"));
 
-            logger.info("Loading model {} from: {}", modelName, modelUrl);
+            logger.info("Loading model {} from: {}", workflowName, modelUrl);
 
             modelManager
-                    .registerModel(
-                            modelName,
+                    .registerWorkflow(
+                            workflowName,
                             version,
                             modelUrl,
                             engineName,
@@ -183,11 +183,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             config.getBatchSize(),
                             config.getMaxBatchDelay(),
                             config.getMaxIdleTime())
-                    .thenApply(
-                            m ->
-                                    modelManager.triggerModelUpdated(
-                                            m.getModelInfo().scaleWorkers(1, -1)))
-                    .thenAccept(m -> runJob(modelManager, ctx, new Job(m, input)));
+                    .thenApply(p -> modelManager.scaleWorkers(p, 1, -1))
+                    .thenAccept(p -> runJob(modelManager, ctx, p.getWorkflow(), input));
             return;
         }
 
@@ -196,12 +193,13 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             return;
         }
 
-        runJob(modelManager, ctx, new Job(model.getModelInfo(), input));
+        runJob(modelManager, ctx, workflow.getWorkflow(), input);
     }
 
-    void runJob(ModelManager modelManager, ChannelHandlerContext ctx, Job job) {
+    void runJob(
+            ModelManager modelManager, ChannelHandlerContext ctx, Workflow workflow, Input input) {
         modelManager
-                .runJob(job)
+                .runJob(workflow, input)
                 .whenComplete(
                         (o, t) -> {
                             if (o != null) {

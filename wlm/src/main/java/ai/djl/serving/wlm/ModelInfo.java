@@ -85,12 +85,12 @@ public final class ModelInfo implements AutoCloseable {
     }
 
     /**
-     * Sets new workers capcities for this model and returns a new configured ModelInfo object. You
-     * have to triggerUpdates in the {@code ModelManager} using this new model.
+     * Sets new workers capcities for this model and returns the updated ModelInfo object. You have
+     * to triggerUpdates in the {@code ModelManager} using this new model.
      *
      * @param minWorkers minimum amount of workers.
      * @param maxWorkers maximum amount of workers.
-     * @return new configured ModelInfo.
+     * @return this {@link ModelInfo} after updating
      */
     public ModelInfo scaleWorkers(int minWorkers, int maxWorkers) {
         NDManager manager = model.getNDManager();
