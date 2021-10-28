@@ -27,6 +27,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +43,7 @@ public class PyEnv {
     private String pythonExecutable;
     private String entryPoint;
     private String handler;
+    private Map<String, String> envs;
 
     /** Constructs a new {@code PyEnv} instance. */
     public PyEnv() {
@@ -50,6 +52,7 @@ public class PyEnv {
             pythonExecutable = "python3";
         }
         handler = "handle";
+        envs = new ConcurrentHashMap<>();
     }
 
     static void init() {
@@ -105,6 +108,16 @@ public class PyEnv {
 
     static EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;
+    }
+
+    /**
+     * Add an environment variable.
+     *
+     * @param key the environment variable name
+     * @param value the environment variable value
+     */
+    public void addEnv(String key, String value) {
+        envs.put(key, value);
     }
 
     /**
@@ -172,6 +185,7 @@ public class PyEnv {
         pythonPath.append(model.getModelPath().toAbsolutePath());
 
         environment.put("PYTHONPATH", pythonPath.toString());
+        environment.putAll(envs);
         for (Map.Entry<String, String> entry : environment.entrySet()) {
             envList.add(entry.getKey() + '=' + entry.getValue());
         }

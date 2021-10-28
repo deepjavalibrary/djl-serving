@@ -75,6 +75,7 @@ public class PyEngineTest {
                         .setTypes(NDList.class, NDList.class)
                         .optModelPath(Paths.get("src/test/resources/accumulate"))
                         .optTranslator(new NoopTranslator())
+                        .optOption("env", "TEST_ENV1=a,TEST_ENV2=b")
                         .optEngine("Python")
                         .build();
         try (ZooModel<NDList, NDList> model = criteria.loadModel();
