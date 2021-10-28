@@ -61,6 +61,16 @@ public class PyModel extends BaseModel {
             if (pythonExecutable != null) {
                 pyEnv.setPythonExecutable(pythonExecutable);
             }
+            String env = (String) options.get("env");
+            if (env != null) {
+                String[] envs = env.split(",");
+                for (String e : envs) {
+                    String[] kv = e.split("=", 2);
+                    if (kv.length > 1) {
+                        pyEnv.addEnv(kv[0].trim(), kv[1].trim());
+                    }
+                }
+            }
         }
     }
 
