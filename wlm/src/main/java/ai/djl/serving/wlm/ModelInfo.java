@@ -14,10 +14,8 @@ package ai.djl.serving.wlm;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.ndarray.NDManager;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.zoo.ZooModel;
-import ai.djl.serving.wlm.util.WlmConfigManager;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -32,8 +30,6 @@ public final class ModelInfo implements AutoCloseable {
     private String modelName;
     private String version;
 
-    private int minWorkers;
-    private int maxWorkers;
     private int queueSize;
     private int batchSize;
     private int maxBatchDelay;
@@ -81,22 +77,6 @@ public final class ModelInfo implements AutoCloseable {
     public ModelInfo configureModelBatch(int batchSize, int maxBatchDelay) {
         this.batchSize = batchSize;
         this.maxBatchDelay = maxBatchDelay;
-        return this;
-    }
-
-    /**
-     * Sets new workers capcities for this model and returns the updated ModelInfo object. You have
-     * to triggerUpdates in the {@code ModelManager} using this new model.
-     *
-     * @param minWorkers minimum amount of workers.
-     * @param maxWorkers maximum amount of workers.
-     * @return this {@link ModelInfo} after updating
-     */
-    public ModelInfo scaleWorkers(int minWorkers, int maxWorkers) {
-        NDManager manager = model.getNDManager();
-        WlmConfigManager configManager = WlmConfigManager.getInstance();
-        this.maxWorkers = configManager.getDefaultWorkers(manager, maxWorkers);
-        this.minWorkers = Math.min(minWorkers, this.maxWorkers);
         return this;
     }
 
@@ -156,24 +136,6 @@ public final class ModelInfo implements AutoCloseable {
      */
     public int getMaxIdleTime() {
         return maxIdleTime;
-    }
-
-    /**
-     * Returns the configured minimum number of workers.
-     *
-     * @return the configured minimum number of workers
-     */
-    public int getMinWorkers() {
-        return minWorkers;
-    }
-
-    /**
-     * Returns the configured maximum number of workers.
-     *
-     * @return the configured maximum number of workers
-     */
-    public int getMaxWorkers() {
-        return maxWorkers;
     }
 
     /**
