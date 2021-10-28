@@ -52,8 +52,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private static final String MODEL_VERSION_PARAMETER = "model_version";
     /** HTTP Parameter "engine". */
     private static final String ENGINE_NAME_PARAMETER = "engine";
-    /** HTTP Parameter "gpu_id". */
-    private static final String GPU_ID_PARAMETER = "gpu_id";
+    /** HTTP Parameter "device". */
+    private static final String DEVICE_PARAMETER = "device";
     /** HTTP Parameter "max_batch_delay". */
     private static final String MAX_BATCH_DELAY_PARAMETER = "max_batch_delay";
     /** HTTP Parameter "max_idle_time". */
@@ -174,7 +174,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
         }
         String version = NettyUtils.getParameter(decoder, MODEL_VERSION_PARAMETER, null);
-        int gpuId = NettyUtils.getIntParameter(decoder, GPU_ID_PARAMETER, -1);
+        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, "-1");
         String engineName = NettyUtils.getParameter(decoder, ENGINE_NAME_PARAMETER, null);
         int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, 1);
         int maxBatchDelay = NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, 100);
@@ -192,7 +192,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         version,
                         modelUrl,
                         engineName,
-                        gpuId,
+                        deviceName,
                         batchSize,
                         maxBatchDelay,
                         maxIdleTime);
@@ -202,7 +202,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                             for (ModelInfo m : p.getWorkflow().getModels()) {
                                 m.configurePool(maxIdleTime)
                                         .configureModelBatch(batchSize, maxBatchDelay);
-                                modelManager.scaleWorkers(m, minWorkers, maxWorkers);
+                                modelManager.scaleWorkers(m, deviceName, minWorkers, maxWorkers);
                             }
                         });
 
@@ -271,14 +271,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         for (ModelInfo m : p.getWorkflow().getModels()) {
                             m.configurePool(maxIdleTime)
                                     .configureModelBatch(batchSize, maxBatchDelay);
-                            modelManager.scaleWorkers(m, minWorkers, maxWorkers);
+                            modelManager.scaleWorkers(m, null, minWorkers, maxWorkers);
                         }
                     }
                 } else {
                     modelInfo
                             .configurePool(maxIdleTime)
                             .configureModelBatch(batchSize, maxBatchDelay);
-                    modelManager.scaleWorkers(modelInfo, minWorkers, maxWorkers);
+                    modelManager.scaleWorkers(modelInfo, null, minWorkers, maxWorkers);
                 }
 
                 String msg =

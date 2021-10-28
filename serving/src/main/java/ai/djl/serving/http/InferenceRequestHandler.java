@@ -169,7 +169,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 }
             }
             String engineName = input.getProperty("engine_name", null);
-            int gpuId = Integer.parseInt(input.getProperty("gpu_id", "-1"));
+            String deviceName = input.getProperty("device", "-1");
 
             logger.info("Loading model {} from: {}", workflowName, modelUrl);
 
@@ -179,11 +179,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             version,
                             modelUrl,
                             engineName,
-                            gpuId,
+                            deviceName,
                             config.getBatchSize(),
                             config.getMaxBatchDelay(),
                             config.getMaxIdleTime())
-                    .thenApply(p -> modelManager.scaleWorkers(p, 1, -1))
+                    .thenApply(p -> modelManager.scaleWorkers(p, deviceName, 1, -1))
                     .thenAccept(p -> runJob(modelManager, ctx, p.getWorkflow(), input));
             return;
         }

@@ -313,7 +313,7 @@ public class ModelServer {
             String modelUrl = matcher.group(3);
             String version = null;
             String engine = null;
-            int[] gpuIds = {-1};
+            String[] devices = {"-1"};
             String modelName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
@@ -328,19 +328,22 @@ public class ModelServer {
                     if ("*".equals(tokens[3])) {
                         int gpuCount = CudaUtils.getGpuCount();
                         if (gpuCount > 0) {
-                            gpuIds = IntStream.range(0, gpuCount).toArray();
+                            devices =
+                                    IntStream.range(0, gpuCount)
+                                            .mapToObj(String::valueOf)
+                                            .toArray(String[]::new);
                         }
                     } else if (!tokens[3].isEmpty()) {
-                        gpuIds[0] = Integer.parseInt(tokens[3]);
+                        devices = tokens[3].split(";");
                     }
                 }
             } else {
                 modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
 
-            for (int i = 0; i < gpuIds.length; ++i) {
+            for (int i = 0; i < devices.length; ++i) {
                 String modelVersion;
-                if (gpuIds.length > 1) {
+                if (devices.length > 1) {
                     if (version == null) {
                         modelVersion = "v" + i;
                     } else {
@@ -355,12 +358,12 @@ public class ModelServer {
                                 modelVersion,
                                 modelUrl,
                                 engine,
-                                gpuIds[i],
+                                devices[i],
                                 configManager.getBatchSize(),
                                 configManager.getMaxBatchDelay(),
                                 configManager.getMaxIdleTime());
                 WorkflowInfo workflow = future.join();
-                modelManager.scaleWorkers(workflow, 1, -1);
+                modelManager.scaleWorkers(workflow, devices[i], 1, -1);
             }
             startupModels.add(modelName);
         }
