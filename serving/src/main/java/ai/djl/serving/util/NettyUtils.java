@@ -54,7 +54,8 @@ import org.slf4j.LoggerFactory;
 /** A utility class that handling Netty request and response. */
 public final class NettyUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger("ACCESS_LOG");
+    private static final Logger logger = LoggerFactory.getLogger(NettyUtils.class);
+    private static final Logger accessLogger = LoggerFactory.getLogger("ACCESS_LOG");
 
     private static final String REQUEST_ID = "x-request-id";
     private static final AttributeKey<Session> SESSION_KEY = AttributeKey.valueOf("session");
@@ -210,9 +211,9 @@ public final class NettyUtils {
             // session might be recycled if channel is closed already.
             session.setCode(code);
             headers.set(REQUEST_ID, session.getRequestId());
-            logger.info(session.toString());
+            accessLogger.info(session.toString());
         } else {
-            logger.info("HTTP " + code);
+            accessLogger.info("HTTP " + code);
         }
 
         String allowedOrigin = configManager.getCorsAllowedOrigin();
