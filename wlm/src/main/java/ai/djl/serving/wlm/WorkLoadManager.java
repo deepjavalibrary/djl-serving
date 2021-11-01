@@ -13,7 +13,9 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.modality.Output;
+import ai.djl.ndarray.NDManager;
 import ai.djl.serving.wlm.util.WlmCapacityException;
+import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmShutdownException;
 import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.Collections;
@@ -77,14 +79,14 @@ public class WorkLoadManager {
     public CompletableFuture<Output> runJob(Job job) {
         CompletableFuture<Output> result = new CompletableFuture<>();
         ModelInfo modelInfo = job.getModel();
-        int maxWorkers = modelInfo.getMaxWorkers();
+        WorkerPool pool = getWorkerPoolForModel(modelInfo);
+        int maxWorkers = pool.getMaxWorkers();
         if (maxWorkers == 0) {
             result.completeExceptionally(
                     new WlmShutdownException(
                             "All model workers has been shutdown: " + modelInfo.getModelName()));
             return result;
         }
-        WorkerPool pool = getWorkerPoolForModel(modelInfo);
         LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();
         if (!queue.offer(new WorkerJob(job, result))) {
             result.completeExceptionally(
@@ -104,7 +106,7 @@ public class WorkLoadManager {
                             "Scaling up workers for model {} to {} ",
                             modelInfo,
                             currentWorkers + 1);
-                    addThreads(pool.getWorkers(), modelInfo, 1, false);
+                    pool.addThreads(modelInfo, 1, false);
                 }
             }
         }
@@ -136,50 +138,6 @@ public class WorkLoadManager {
     }
 
     /**
-     * Triggers a model change event. scales up and down workers to match minWorkers/maxWorkers.
-     *
-     * @param modelInfo the changed model.
-     */
-    public void modelChanged(ModelInfo modelInfo) {
-        synchronized (modelInfo.getModel()) {
-            int minWorker = modelInfo.getMinWorkers();
-
-            WorkerPool pool = getWorkerPoolForModel(modelInfo);
-            if (pool != null) {
-                pool.cleanup();
-
-                List<WorkerThread> threads;
-                if (minWorker == 0) {
-                    workerPools.remove(modelInfo);
-                }
-
-                threads = pool.getWorkers();
-                List<WorkerThread> fixedPoolThread =
-                        threads.stream()
-                                .filter(WorkerThread::isFixPoolThread)
-                                .collect(Collectors.toList());
-
-                int numberOfCurrentFixedWorkers = fixedPoolThread.size();
-
-                if (numberOfCurrentFixedWorkers < minWorker) {
-                    // scale up the fixed pool
-                    addThreads(threads, modelInfo, minWorker - numberOfCurrentFixedWorkers, true);
-                } else {
-                    // scale down the fixed pool
-                    fixedPoolThread
-                            .subList(minWorker, numberOfCurrentFixedWorkers)
-                            .forEach(
-                                    t -> {
-                                        threads.remove(t);
-                                        t.shutdown(WorkerState.WORKER_SCALED_DOWN);
-                                    });
-                }
-                pool.log();
-            }
-        }
-    }
-
-    /**
      * Returns the current number of request in the queue.
      *
      * @param modelInfo the model
@@ -190,37 +148,28 @@ public class WorkLoadManager {
         return pool.getJobQueue().size();
     }
 
-    private WorkerPool getWorkerPoolForModel(ModelInfo modelInfo) {
+    /**
+     * Returns the {@link WorkerPool} for a model.
+     *
+     * @param modelInfo the model to get the worker pool for
+     * @return the {@link WorkerPool}
+     */
+    public WorkerPool getWorkerPoolForModel(ModelInfo modelInfo) {
         return workerPools.computeIfAbsent(modelInfo, k -> new WorkerPool(modelInfo));
     }
 
-    private void addThreads(
-            List<WorkerThread> threads, ModelInfo model, int count, boolean permanent) {
-
-        for (int i = 0; i < count; ++i) {
-
-            WorkerThread thread =
-                    WorkerThread.builder()
-                            .setModel(model)
-                            .setJobQueue(getWorkerPoolForModel(model).getJobQueue())
-                            .optFixPoolThread(permanent)
-                            .build();
-
-            threads.add(thread);
-            threadPool.submit(thread);
-        }
-    }
-
     /**
-     * Worker pools holds information per model.
+     * Manages the work load for a single model.
      *
      * @author erik.bamberg@web.de
      */
-    private static final class WorkerPool {
+    public final class WorkerPool {
 
+        private final ModelInfo model;
         private List<WorkerThread> workers;
         private LinkedBlockingDeque<WorkerJob> jobQueue;
-        private String modelName;
+        private int minWorkers;
+        private int maxWorkers;
 
         /**
          * Construct and initial data structure.
@@ -228,9 +177,9 @@ public class WorkLoadManager {
          * @param model the model this WorkerPool belongs to.
          */
         public WorkerPool(ModelInfo model) {
+            this.model = model;
             workers = new CopyOnWriteArrayList<>();
             jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
-            modelName = model.getModelName();
         }
 
         /**
@@ -252,6 +201,88 @@ public class WorkLoadManager {
         }
 
         /**
+         * Returns the minimum number of workers for a model.
+         *
+         * @return the minimum number of workers for a model
+         */
+        public int getMinWorkers() {
+            return minWorkers;
+        }
+
+        /**
+         * Returns the maximum number of workers for a model.
+         *
+         * @return the maximum number of workers for a model
+         */
+        public int getMaxWorkers() {
+            return maxWorkers;
+        }
+
+        /**
+         * Sets new worker capcities for this model.
+         *
+         * @param newMinWorkers minimum amount of workers.
+         * @param newMaxWorkers maximum amount of workers.
+         * @return this {@link ModelInfo}
+         */
+        public WorkerPool scaleWorkers(int newMinWorkers, int newMaxWorkers) {
+            synchronized (model) {
+                NDManager manager = model.getModel().getNDManager();
+                WlmConfigManager configManager = WlmConfigManager.getInstance();
+                maxWorkers = configManager.getDefaultWorkers(manager, newMaxWorkers);
+                minWorkers = Math.min(newMinWorkers, maxWorkers);
+
+                cleanup();
+
+                List<WorkerThread> threads;
+                if (minWorkers == 0) {
+                    workerPools.remove(model);
+                }
+
+                threads = getWorkers();
+                List<WorkerThread> fixedPoolThread =
+                        threads.stream()
+                                .filter(WorkerThread::isFixPoolThread)
+                                .collect(Collectors.toList());
+
+                int numberOfCurrentFixedWorkers = fixedPoolThread.size();
+
+                if (numberOfCurrentFixedWorkers < minWorkers) {
+                    // scale up the fixed pool
+                    addThreads(model, minWorkers - numberOfCurrentFixedWorkers, true);
+                } else {
+                    // scale down the fixed pool
+                    fixedPoolThread
+                            .subList(minWorkers, numberOfCurrentFixedWorkers)
+                            .forEach(
+                                    t -> {
+                                        threads.remove(t);
+                                        t.shutdown(WorkerState.WORKER_SCALED_DOWN);
+                                    });
+                }
+                log();
+
+                return this;
+            }
+        }
+
+        private void addThreads(ModelInfo model, int count, boolean permanent) {
+
+            for (int i = 0; i < count; ++i) {
+
+                WorkerThread thread =
+                        WorkerThread.builder()
+                                .setModel(model)
+                                .setJobQueue(getWorkerPoolForModel(model).getJobQueue())
+                                .optFixPoolThread(permanent)
+                                .build();
+
+                workers.add(thread);
+                threadPool.submit(thread);
+            }
+        }
+
+        /**
          * Logs the current state of this {@code WorkerPool} when level "Debug" is enabled.
          *
          * <p>Logs all thread-ids in the pool.
@@ -268,7 +299,7 @@ public class WorkLoadManager {
                                 buf.append("-tmpPool\n");
                             }
                         });
-                logger.debug("worker pool for model {}:\n {}", modelName, buf);
+                logger.debug("worker pool for model {}:\n {}", model.getModelName(), buf);
             }
         }
 

@@ -24,6 +24,7 @@ import ai.djl.serving.http.DescribeModelResponse;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
+import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
 import ai.djl.serving.wlm.WorkerThread;
 import ai.djl.serving.workflow.Workflow;
 import java.io.IOException;
@@ -199,34 +200,35 @@ public final class ModelManager {
     }
 
     /**
-     * trigger that a model has been updated. Updates model workers for this model and scales
-     * up/down all workers to match the parameters for the model.
-     *
-     * @param modelInfo the model that has been updated
-     * @return the model
-     */
-    public ModelInfo triggerModelUpdated(ModelInfo modelInfo) {
-        String modelName = modelInfo.getModelName();
-        logger.debug("updateModel: {}", modelName);
-        wlm.modelChanged(modelInfo);
-        return modelInfo;
-    }
-
-    /**
      * Scales the workers for each model in a workflow.
      *
      * @param workflow the workflow to scale workers for
      * @param minWorkers the min workers
      * @param maxWorkers the max workers
      * @return the info about the scaled workflow
-     * @see ModelInfo#scaleWorkers(int, int)
+     * @see WorkerPool#scaleWorkers(int, int)
      */
     public WorkflowInfo scaleWorkers(WorkflowInfo workflow, int minWorkers, int maxWorkers) {
         for (ModelInfo model : workflow.getWorkflow().getModels()) {
-            model.scaleWorkers(minWorkers, maxWorkers);
-            triggerModelUpdated(model);
+            scaleWorkers(model, minWorkers, maxWorkers);
         }
         return workflow;
+    }
+
+    /**
+     * Scales the workers for a model.
+     *
+     * @param model the model to scale workers for
+     * @param minWorkers the min workers
+     * @param maxWorkers the max workers
+     * @return the info about the scaled workflow
+     * @see WorkerPool#scaleWorkers(int, int)
+     */
+    public ModelInfo scaleWorkers(ModelInfo model, int minWorkers, int maxWorkers) {
+        String modelName = model.getModelName();
+        logger.debug("updateModel: {}", modelName);
+        wlm.getWorkerPoolForModel(model).scaleWorkers(minWorkers, maxWorkers);
+        return model;
     }
 
     /**
@@ -261,6 +263,15 @@ public final class ModelManager {
             return endpoint.getWorkflows().get(0);
         }
         return endpoint.get(version);
+    }
+
+    /**
+     * Returns the {@link WorkLoadManager}.
+     *
+     * @return the {@link WorkLoadManager}
+     */
+    public WorkLoadManager getWorkLoadManager() {
+        return wlm;
     }
 
     /**
@@ -310,14 +321,16 @@ public final class ModelManager {
                 resp.setModelUrl(list.get(0).getModelUrl());
                 resp.setBatchSize(model.getBatchSize());
                 resp.setMaxBatchDelay(model.getMaxBatchDelay());
-                resp.setMaxWorkers(model.getMaxWorkers());
-                resp.setMinWorkers(model.getMinWorkers());
                 resp.setMaxIdleTime(model.getMaxIdleTime());
                 resp.setQueueLength(wlm.getQueueLength(model));
                 resp.setLoadedAtStartup(startupModels.contains(model.getModelName()));
 
+                WorkerPool wp = wlm.getWorkerPoolForModel(model);
+                resp.setMaxWorkers(wp.getMaxWorkers());
+                resp.setMinWorkers(wp.getMinWorkers());
+
                 int activeWorker = wlm.getNumRunningWorkers(model);
-                int targetWorker = model.getMinWorkers();
+                int targetWorker = wp.getMinWorkers();
                 resp.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
 
                 List<WorkerThread> workers = wlm.getWorkers(model);
@@ -350,7 +363,7 @@ public final class ModelManager {
                     for (Endpoint endpoint : endpoints.values()) {
                         for (WorkflowInfo p : endpoint.getWorkflows()) {
                             for (ModelInfo m : p.getWorkflow().getModels()) {
-                                numScaled += m.getMinWorkers();
+                                numScaled += wlm.getWorkerPoolForModel(m).getMinWorkers();
                                 numWorking += wlm.getNumRunningWorkers(m);
                             }
                         }

@@ -19,6 +19,7 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -199,10 +200,9 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 future.thenAccept(
                         p -> {
                             for (ModelInfo m : p.getWorkflow().getModels()) {
-                                modelManager.triggerModelUpdated(
-                                        m.scaleWorkers(minWorkers, maxWorkers)
-                                                .configurePool(maxIdleTime)
-                                                .configureModelBatch(batchSize, maxBatchDelay));
+                                m.configurePool(maxIdleTime)
+                                        .configureModelBatch(batchSize, maxBatchDelay);
+                                modelManager.scaleWorkers(m, minWorkers, maxWorkers);
                             }
                         });
 
@@ -242,12 +242,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             }
             List<String> msgs = new ArrayList<>();
             for (ModelInfo modelInfo : workflow.getWorkflow().getModels()) {
+                WorkerPool pool =
+                        modelManager.getWorkLoadManager().getWorkerPoolForModel(modelInfo);
                 int minWorkers =
                         NettyUtils.getIntParameter(
-                                decoder, MIN_WORKER_PARAMETER, modelInfo.getMinWorkers());
+                                decoder, MIN_WORKER_PARAMETER, pool.getMinWorkers());
                 int maxWorkers =
                         NettyUtils.getIntParameter(
-                                decoder, MAX_WORKER_PARAMETER, modelInfo.getMaxWorkers());
+                                decoder, MAX_WORKER_PARAMETER, pool.getMaxWorkers());
                 if (maxWorkers < minWorkers) {
                     throw new BadRequestException("max_worker cannot be less than min_worker.");
                 }
@@ -267,27 +269,25 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                     Endpoint endpoint = modelManager.getEndpoints().get(modelName);
                     for (WorkflowInfo p : endpoint.getWorkflows()) {
                         for (ModelInfo m : p.getWorkflow().getModels()) {
-                            m.scaleWorkers(minWorkers, maxWorkers)
-                                    .configurePool(maxIdleTime)
+                            m.configurePool(maxIdleTime)
                                     .configureModelBatch(batchSize, maxBatchDelay);
-                            modelManager.triggerModelUpdated(m);
+                            modelManager.scaleWorkers(m, minWorkers, maxWorkers);
                         }
                     }
                 } else {
                     modelInfo
-                            .scaleWorkers(minWorkers, maxWorkers)
                             .configurePool(maxIdleTime)
                             .configureModelBatch(batchSize, maxBatchDelay);
-                    modelManager.triggerModelUpdated(modelInfo);
+                    modelManager.scaleWorkers(modelInfo, minWorkers, maxWorkers);
                 }
 
                 String msg =
                         "Model \""
                                 + modelName
                                 + "\" worker scaled. New Worker configuration min workers:"
-                                + modelInfo.getMinWorkers()
+                                + pool.getMinWorkers()
                                 + " max workers:"
-                                + modelInfo.getMaxWorkers();
+                                + pool.getMaxWorkers();
                 msgs.add(msg);
             }
             String combinedMsg = Strings.join(msgs, '\n');
