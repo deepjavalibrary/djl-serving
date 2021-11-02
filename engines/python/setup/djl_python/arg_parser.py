@@ -53,6 +53,12 @@ class ArgParser(object):
             help=
             'If \'sock-type\' is \'unix\', sock-name is expected to be a string. '
             'Eg: --sock-name \"test_sock\"')
+        parser.add_argument('--device-id',
+                            type=str,
+                            dest='device_id',
+                            required=False,
+                            default="-1",
+                            help='The device id for the model')
         parser.add_argument(
             '--port',
             type=str,

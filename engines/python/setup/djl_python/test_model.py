@@ -11,13 +11,13 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import importlib
 import logging
 import os
 import sys
 
 from .arg_parser import ArgParser
 from .inputs import Input
+from .service_loader import load_model_service
 
 
 def create_request(input_files):
@@ -74,23 +74,10 @@ def run():
     sys.path.append(model_dir)
 
     entry_point = args.entry_point
-    entry_point_file = os.path.join(model_dir, entry_point)
-    if not os.path.exists(entry_point_file):
-        logging.error(
-            "entry-point file not found {}.".format(entry_point_file))
-        return
-
-    entry_point = entry_point[:-3]
-    module = importlib.import_module(entry_point)
-    if module is None:
-        logging.error("Unable to load entry_point {}/{}.py".format(
-            model_dir, entry_point))
-        return
-
-    logging.info("model loaded: %s/%s.py", model_dir, entry_point)
+    service = load_model_service(model_dir, entry_point, "-1")
 
     function_name = inputs.get_function_name()
-    outputs = getattr(module, function_name)(inputs)
+    outputs = service.invoke_handler(function_name, inputs)
     print("output: " + str(outputs))
 
 

@@ -15,7 +15,6 @@ DJL Python engine.
 Communication message format: binary encoding
 """
 
-import importlib
 import logging
 import os
 import socket
@@ -24,6 +23,7 @@ import sys
 from djl_python.arg_parser import ArgParser
 from djl_python.inputs import Input
 from djl_python.outputs import Output
+from djl_python.service_loader import load_model_service
 
 SOCKET_ACCEPT_TIMEOUT = 30.0
 
@@ -83,7 +83,7 @@ class PythonEngine(object):
             inputs.read(cl_socket)
             function_name = inputs.get_function_name()
             try:
-                outputs = getattr(self.service, function_name)(inputs)
+                outputs = self.service.invoke_handler(function_name, inputs)
                 if outputs is None:
                     outputs = Output(code=204, message="No content")
             except Exception as e:
@@ -95,7 +95,7 @@ class PythonEngine(object):
                 logging.debug("Outputs is sent to DJL engine.")
 
 
-if __name__ == "__main__":
+def main():
     sock_type = None
     sock_name = None
 
@@ -107,23 +107,12 @@ if __name__ == "__main__":
         logging.info("djl_python_engine started with args: %s",
                      " ".join(sys.argv[1:]))
         args = ArgParser.python_engine_args().parse_args()
-        model_dir = args.model_dir
-        entry_point = args.entry_point
-        entry_point_file = os.path.join(model_dir, entry_point)
-        if not os.path.exists(entry_point_file):
-            raise ValueError(
-                "entry-point file not found {}.".format(entry_point_file))
-
-        entry_point = entry_point[:-3]
-        module = importlib.import_module(entry_point)
-        if module is None:
-            raise ValueError("Unable to load entry_point {}/{}.py".format(
-                model_dir, entry_point))
-
         sock_name = args.sock_name
         sock_type = args.sock_type
+        model_service = load_model_service(args.model_dir, args.entry_point,
+                                           args.device_id)
 
-        engine = PythonEngine(sock_type, sock_name, args.port, module)
+        engine = PythonEngine(sock_type, sock_name, args.port, model_service)
 
         engine.run_server()
     except socket.timeout:
@@ -135,4 +124,7 @@ if __name__ == "__main__":
         if sock_type == 'unix' and os.path.exists(sock_name):
             os.remove(sock_name)
 
+
+if __name__ == "__main__":
+    main()
     exit(1)
