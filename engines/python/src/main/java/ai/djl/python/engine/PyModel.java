@@ -21,6 +21,7 @@ import ai.djl.translate.Translator;
 import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 /** {@code PyModel} is the Python engine implementation of {@link Model}. */
@@ -87,6 +88,8 @@ public class PyModel extends BaseModel {
             if (file.toString().endsWith(".py")) {
                 return file;
             }
+        } else if (Files.isRegularFile(modelDir.resolve("MAR-INF/MANIFEST.json"))) {
+            return Paths.get("");
         }
         if (prefix == null) {
             prefix = modelName;

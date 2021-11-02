@@ -214,8 +214,13 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     }
 
     void sendOutput(Output output, ChannelHandlerContext ctx) {
-        FullHttpResponse resp =
-                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, false);
+        HttpResponseStatus status;
+        if (output.getCode() == 200) {
+            status = HttpResponseStatus.OK;
+        } else {
+            status = new HttpResponseStatus(output.getCode(), output.getMessage());
+        }
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
             resp.headers().set(entry.getKey(), entry.getValue());
         }

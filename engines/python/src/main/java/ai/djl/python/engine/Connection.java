@@ -96,7 +96,7 @@ class Connection {
     }
 
     private String[] getPythonStartCmd(PyEnv pyEnv, Model model) {
-        String[] args = new String[10];
+        String[] args = new String[12];
         args[0] = pyEnv.getPythonExecutable();
         args[1] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
         args[2] = "--sock-type";
@@ -107,6 +107,9 @@ class Connection {
         args[7] = model.getModelPath().toAbsolutePath().toString();
         args[8] = "--entry-point";
         args[9] = pyEnv.getEntryPoint();
+        args[10] = "--device-id";
+        args[11] = String.valueOf(model.getNDManager().getDevice().getDeviceId());
+
         return args;
     }
 
