@@ -221,15 +221,16 @@ public class WorkLoadManager {
         /**
          * Sets new worker capcities for this model.
          *
+         * @param deviceName the device for the model
          * @param newMinWorkers minimum amount of workers.
          * @param newMaxWorkers maximum amount of workers.
          * @return this {@link ModelInfo}
          */
-        public WorkerPool scaleWorkers(int newMinWorkers, int newMaxWorkers) {
+        public WorkerPool scaleWorkers(String deviceName, int newMinWorkers, int newMaxWorkers) {
             synchronized (model) {
                 NDManager manager = model.getModel().getNDManager();
                 WlmConfigManager configManager = WlmConfigManager.getInstance();
-                maxWorkers = configManager.getDefaultWorkers(manager, newMaxWorkers);
+                maxWorkers = configManager.getDefaultWorkers(manager, deviceName, newMaxWorkers);
                 minWorkers = Math.min(newMinWorkers, maxWorkers);
 
                 cleanup();
