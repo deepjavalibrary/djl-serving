@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -180,10 +181,11 @@ public final class ModelManager {
             logger.warn("Model not found: " + workflowName);
             return false;
         }
+        Set<ModelInfo> candidateModelsToUnregister = new HashSet<>();
         if (version == null) {
             // unregister all versions
             for (WorkflowInfo workflow : endpoint.getWorkflows()) {
-                scaleWorkers(workflow, null, 0, 0);
+                candidateModelsToUnregister.addAll(workflow.getWorkflow().getModels());
                 workflow.getWorkflow().close();
             }
             startupModels.remove(workflowName);
@@ -195,13 +197,20 @@ public final class ModelManager {
                 logger.warn("Workflow not found: " + workflowName + ':' + version);
                 return false;
             }
-            scaleWorkers(workflow, null, 0, 0);
+            candidateModelsToUnregister.addAll(workflow.getWorkflow().getModels());
             workflow.getWorkflow().close();
             startupModels.remove(workflowName);
         }
         if (endpoint.getWorkflows().isEmpty()) {
             endpoints.remove(workflowName);
         }
+
+        // Unregister candidate models if they are not used for a remaining endpoint
+        candidateModelsToUnregister.removeAll(getModels());
+        for (ModelInfo model : candidateModelsToUnregister) {
+            wlm.unregisterModel(model);
+        }
+
         return true;
     }
 
@@ -248,6 +257,20 @@ public final class ModelManager {
      */
     public Map<String, Endpoint> getEndpoints() {
         return endpoints;
+    }
+
+    /**
+     * Returns all models in an endpoint.
+     *
+     * @return all models in an endpoint
+     */
+    public Set<ModelInfo> getModels() {
+        return getEndpoints()
+                .values()
+                .stream()
+                .flatMap(e -> e.getWorkflows().stream())
+                .flatMap(w -> w.getWorkflow().getModels().stream())
+                .collect(Collectors.toSet());
     }
 
     /**

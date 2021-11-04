@@ -70,6 +70,17 @@ public class WorkLoadManager {
     }
 
     /**
+     * Removes a model from management.
+     *
+     * @param model the model to remove
+     */
+    public void unregisterModel(ModelInfo model) {
+        WorkerPool pool = getWorkerPoolForModel(model);
+        pool.scaleWorkers(null, 0, 0);
+        workerPools.remove(model);
+    }
+
+    /**
      * Adds an inference job to the job queue of the next free worker. scales up worker if
      * necessary.
      *
@@ -236,9 +247,6 @@ public class WorkLoadManager {
                 cleanup();
 
                 List<WorkerThread> threads;
-                if (minWorkers == 0) {
-                    workerPools.remove(model);
-                }
 
                 threads = getWorkers();
                 List<WorkerThread> fixedPoolThread =
@@ -274,7 +282,7 @@ public class WorkLoadManager {
                 WorkerThread thread =
                         WorkerThread.builder()
                                 .setModel(model)
-                                .setJobQueue(getWorkerPoolForModel(model).getJobQueue())
+                                .setJobQueue(jobQueue)
                                 .optFixPoolThread(permanent)
                                 .build();
 
