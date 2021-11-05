@@ -13,6 +13,7 @@
 package ai.djl.python.engine;
 
 import ai.djl.BaseModel;
+import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.inference.Predictor;
 import ai.djl.ndarray.NDManager;
@@ -77,8 +78,8 @@ public class PyModel extends BaseModel {
 
     /** {@inheritDoc} */
     @Override
-    public <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator) {
-        return new PyPredictor<>(this, translator, pyEnv);
+    public <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator, Device device) {
+        return new PyPredictor<>(this, translator, pyEnv, device);
     }
 
     private Path findModelFile(String prefix) {

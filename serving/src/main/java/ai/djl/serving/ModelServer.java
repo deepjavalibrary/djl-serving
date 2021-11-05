@@ -18,6 +18,7 @@ import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
+import ai.djl.serving.util.NeuronUtils;
 import ai.djl.serving.util.ServerGroups;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.util.cuda.CudaUtils;
@@ -332,7 +333,14 @@ public class ModelServer {
                                     IntStream.range(0, gpuCount)
                                             .mapToObj(String::valueOf)
                                             .toArray(String[]::new);
+                        } else if (NeuronUtils.hasNeuron()) {
+                            int neurons = NeuronUtils.getNeuronCores();
+                            devices =
+                                    IntStream.range(0, neurons)
+                                            .mapToObj(i -> "nc" + i)
+                                            .toArray(String[]::new);
                         }
+
                     } else if (!tokens[3].isEmpty()) {
                         devices = tokens[3].split(";");
                     }
