@@ -12,6 +12,7 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
@@ -28,8 +29,8 @@ class PyPredictor<I, O> extends Predictor<I, O> {
 
     private PyProcess process;
 
-    public PyPredictor(Model model, Translator<I, O> translator, PyEnv pyEnv) {
-        super(model, translator, false);
+    public PyPredictor(Model model, Translator<I, O> translator, PyEnv pyEnv, Device device) {
+        super(model, translator, device, false);
         process = new PyProcess(model, pyEnv);
         process.startPythonProcess();
     }
