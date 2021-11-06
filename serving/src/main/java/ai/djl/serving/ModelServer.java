@@ -12,7 +12,10 @@
  */
 package ai.djl.serving;
 
+import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
+import ai.djl.repository.MRL;
+import ai.djl.repository.Repository;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.plugins.FolderScanPluginManager;
@@ -31,7 +34,9 @@ import io.netty.channel.ServerChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +44,8 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -279,25 +286,8 @@ public class ModelServer {
             // Check folders to see if they can be models as well
             urls =
                     Files.list(modelStore)
-                            .filter(
-                                    p -> {
-                                        logger.info("Found file in model_store: {}", p);
-                                        try {
-                                            return !Files.isHidden(p) && Files.isDirectory(p)
-                                                    || FilenameUtils.isArchiveFile(p.toString());
-                                        } catch (IOException e) {
-                                            logger.warn("Failed to access file: " + p, e);
-                                            return false;
-                                        }
-                                    })
-                            .map(
-                                    p -> {
-                                        try {
-                                            return p.toUri().toURL().toString();
-                                        } catch (MalformedURLException e) {
-                                            throw new AssertionError("Invalid path: " + p, e);
-                                        }
-                                    })
+                            .map(this::mapModelUrl)
+                            .filter(Objects::nonNull)
                             .collect(Collectors.toList());
         } else {
             String[] modelsUrls = loadModels.split("[, ]+");
@@ -375,6 +365,99 @@ public class ModelServer {
             }
             startupModels.add(modelName);
         }
+    }
+
+    String mapModelUrl(Path path) {
+        try {
+            logger.info("Found file in model_store: {}", path);
+            if (Files.isHidden(path)
+                    || (!Files.isDirectory(path)
+                            && !FilenameUtils.isArchiveFile(path.toString()))) {
+                return null;
+            }
+
+            File[] files = path.toFile().listFiles();
+            if (files != null && files.length == 1 && files[0].isDirectory()) {
+                // handle archive file contains folder name case
+                path = files[0].toPath().toAbsolutePath();
+            }
+
+            String url = path.toUri().toURL().toString();
+            String modelName = ModelInfo.inferModelNameFromUrl(url);
+            String engine;
+            if (Files.isDirectory(path)) {
+                engine = inferEngine(path);
+            } else {
+                try {
+                    Repository repository = Repository.newInstance("modelStore", url);
+                    List<MRL> mrls = repository.getResources();
+                    Artifact artifact = mrls.get(0).getDefaultArtifact();
+                    repository.prepare(artifact);
+                    Path modelDir = repository.getResourceDirectory(artifact);
+                    engine = inferEngine(modelDir);
+                } catch (IOException e) {
+                    logger.warn("Failed to extract model: " + path, e);
+                    return null;
+                }
+            }
+            if (engine == null) {
+                return null;
+            }
+            return modelName + "::" + engine + ":*=" + url;
+        } catch (MalformedURLException e) {
+            throw new AssertionError("Invalid path: " + path, e);
+        } catch (IOException e) {
+            logger.warn("Failed to access file: " + path, e);
+            return null;
+        }
+    }
+
+    private String inferEngine(Path modelDir) {
+        Path file = modelDir.resolve("serving.properties");
+        if (Files.isRegularFile(file)) {
+            Properties prop = new Properties();
+            try (InputStream is = Files.newInputStream(file)) {
+                prop.load(is);
+                String engine = prop.getProperty("engine");
+                if (engine != null) {
+                    return engine;
+                }
+            } catch (IOException e) {
+                logger.warn("Failed read serving.properties file", e);
+            }
+        }
+
+        String dirName = modelDir.toFile().getName();
+        if (Files.isDirectory(modelDir.resolve("MAR-INF"))
+                || Files.isRegularFile(modelDir.resolve("model.py"))
+                || Files.isRegularFile(modelDir.resolve(dirName + ".py"))) {
+            // MMS/TorchServe
+            return "Python";
+        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".pt"))) {
+            return "PyTorch";
+        } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
+            return "TensorFlow";
+        } else if (Files.isRegularFile(modelDir.resolve(dirName + "-symbol.json"))) {
+            return "MXNet";
+        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".onnx"))) {
+            return "OnnxRuntime";
+        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".trt"))
+                || Files.isRegularFile(modelDir.resolve(dirName + ".uff"))) {
+            return "TensorRT";
+        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".tflite"))) {
+            return "TFLite";
+        } else if (Files.isRegularFile(modelDir.resolve("model"))
+                || Files.isRegularFile(modelDir.resolve("__model__"))
+                || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
+            return "PaddlePaddle";
+        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".json"))) {
+            return "XGBoost";
+        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".dylib"))
+                || Files.isRegularFile(modelDir.resolve(dirName + ".so"))) {
+            return "DLR";
+        }
+        logger.warn("Failed to detect engine of the model: " + modelDir);
+        return null;
     }
 
     private static void printHelp(String msg, Options options) {
