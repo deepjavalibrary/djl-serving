@@ -68,6 +68,7 @@ class PyProcess {
 
     synchronized void startPythonProcess() {
         try {
+            pyEnv.installDependency(model.getModelPath());
             process = connection.startPython(pyEnv, model);
 
             String modelName = model.getName();

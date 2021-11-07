@@ -44,6 +44,7 @@ public class PyEnv {
     private String entryPoint;
     private String handler;
     private Map<String, String> envs;
+    private boolean initialized;
 
     /** Constructs a new {@code PyEnv} instance. */
     public PyEnv() {
@@ -127,6 +128,37 @@ public class PyEnv {
      */
     public String getPythonExecutable() {
         return pythonExecutable;
+    }
+
+    /**
+     * Installs model dependencies if needed.
+     *
+     * @param modelDir the model directory
+     */
+    public synchronized void installDependency(Path modelDir) {
+        if (initialized) {
+            return;
+        }
+        Path file = modelDir.resolve("requirements.txt");
+        if (Files.isRegularFile(file)) {
+            String[] cmd = {
+                pythonExecutable,
+                "-m",
+                "pip",
+                "-q",
+                "install",
+                "-r",
+                file.toAbsolutePath().toString()
+            };
+            try {
+                Process process = Runtime.getRuntime().exec(cmd);
+                int ret = process.waitFor();
+                logger.info("pip install requirements finished: " + ret);
+            } catch (IOException | InterruptedException e) {
+                logger.warn("pip install requirements failed.", e);
+            }
+        }
+        initialized = true;
     }
 
     /**
