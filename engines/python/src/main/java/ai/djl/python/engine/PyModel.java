@@ -48,7 +48,7 @@ public class PyModel extends BaseModel {
     @Override
     public void load(Path modelPath, String prefix, Map<String, ?> options)
             throws FileNotFoundException {
-        modelDir = modelPath.toAbsolutePath();
+        setModelDir(modelPath);
         if (block != null) {
             throw new UnsupportedOperationException(
                     "Python engine does not support dynamic blocks");
