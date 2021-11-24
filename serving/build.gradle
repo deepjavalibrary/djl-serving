@@ -40,7 +40,7 @@ dependencies {
 
 jar {
     manifest {
-        attributes 'Main-Class': 'ai.djl.serving.ModelServer'
+        attributes 'Main-Class': 'ai.djl.serving.Main'
     }
     includeEmptyDirs = false
 
@@ -50,7 +50,7 @@ jar {
 }
 
 application {
-    mainClass = System.getProperty("main", "ai.djl.serving.ModelServer")
+    mainClass = System.getProperty("main", "ai.djl.serving.Main")
 }
 
 run {

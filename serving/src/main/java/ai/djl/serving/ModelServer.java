@@ -32,8 +32,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,11 +52,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,40 +79,6 @@ public class ModelServer {
         this.configManager = configManager;
         this.pluginManager = new FolderScanPluginManager(configManager);
         serverGroups = new ServerGroups(configManager);
-    }
-
-    /**
-     * The entry point for the model server.
-     *
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        Options options = Arguments.getOptions();
-        try {
-            DefaultParser parser = new DefaultParser();
-            CommandLine cmd = parser.parse(options, args, null, false);
-            Arguments arguments = new Arguments(cmd);
-            if (arguments.hasHelp()) {
-                printHelp("djl-serving [OPTIONS]", options);
-                return;
-            }
-
-            ConfigManager.init(arguments);
-
-            ConfigManager configManager = ConfigManager.getInstance();
-
-            InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
-            new ModelServer(configManager).startAndWait();
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid configuration: " + e.getMessage());
-            System.exit(1); // NOPMD
-        } catch (ParseException e) {
-            printHelp(e.getMessage(), options);
-            System.exit(1); // NOPMD
-        } catch (Throwable t) {
-            logger.error("Unexpected error", t);
-            System.exit(1); // NOPMD
-        }
     }
 
     /**
@@ -458,12 +417,5 @@ public class ModelServer {
         }
         logger.warn("Failed to detect engine of the model: " + modelDir);
         return null;
-    }
-
-    private static void printHelp(String msg, Options options) {
-        HelpFormatter formatter = new HelpFormatter();
-        formatter.setLeftPadding(1);
-        formatter.setWidth(120);
-        formatter.printHelp(msg, options);
     }
 }

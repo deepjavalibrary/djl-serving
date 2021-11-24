@@ -13,13 +13,13 @@
 package ai.djl.serving.util;
 
 import ai.djl.serving.Arguments;
-import ai.djl.serving.wlm.util.WlmConfigManager;
-import ai.djl.util.Utils;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -45,7 +45,6 @@ import java.util.Properties;
 /** A class that hold configuration information. */
 public final class ConfigManager {
 
-    private static final String DEBUG = "debug";
     private static final String INFERENCE_ADDRESS = "inference_address";
     private static final String MANAGEMENT_ADDRESS = "management_address";
     private static final String LOAD_MODELS = "load_models";
@@ -125,9 +124,6 @@ public final class ConfigManager {
                     "log4j2.contextSelector",
                     "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector");
         }
-
-        // Sets corresponding config in the WlmConfigManager
-        WlmConfigManager.getInstance().setDebug(instance.isDebug());
     }
 
     /**
@@ -137,16 +133,6 @@ public final class ConfigManager {
      */
     public static ConfigManager getInstance() {
         return instance;
-    }
-
-    /**
-     * Returns if debug is enabled.
-     *
-     * @return {@code true} if debug is enabled
-     */
-    public boolean isDebug() {
-        return Boolean.getBoolean("ai.djl.debug")
-                || Boolean.parseBoolean(prop.getProperty(DEBUG, "false"));
     }
 
     /**
@@ -470,8 +456,9 @@ public final class ConfigManager {
 
     private PrivateKey loadPrivateKey(Path keyFile) throws IOException, GeneralSecurityException {
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        try (InputStream is = Files.newInputStream(keyFile)) {
-            String content = Utils.toString(is);
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            Files.copy(keyFile, os);
+            String content = os.toString(StandardCharsets.UTF_8.name());
             content = content.replaceAll("-----(BEGIN|END)( RSA)? PRIVATE KEY-----\\s*", "");
             byte[] buf = Base64.getMimeDecoder().decode(content);
             try {
