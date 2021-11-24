@@ -24,15 +24,6 @@ dependencies {
     runtimeOnly "ai.djl.tensorrt:tensorrt"
     runtimeOnly project(":engines:python")
 
-    if (project.hasProperty("GPU")) {
-        runtimeOnly("ai.djl.onnxruntime:onnxruntime-engine") {
-            exclude group: "com.microsoft.onnxruntime", module: "onnxruntime"
-        }
-        runtimeOnly "com.microsoft.onnxruntime:onnxruntime_gpu:1.8.1"
-    } else {
-        runtimeOnly "ai.djl.onnxruntime:onnxruntime-engine"
-    }
-
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
     }
