@@ -20,7 +20,6 @@ import io.netty.channel.EventLoopGroup;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -61,11 +60,7 @@ public class PyEnv {
 
         Path tmp = null;
         try {
-            URL url = PyEnv.class.getResource("/ai/djl/python/python.properties");
-            if (url == null) {
-                throw new AssertionError("python.properties is missing in jar.");
-            }
-            Platform platform = Platform.fromUrl(url);
+            Platform platform = Platform.detectPlatform("python");
             version = platform.getVersion();
             Path cacheDir = Utils.getEngineCacheDir("python");
             logger.debug("Using cache dir: {}", cacheDir);

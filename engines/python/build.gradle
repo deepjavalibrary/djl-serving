@@ -29,10 +29,10 @@ sourceSets {
 
 processResources {
     exclude "build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py"
-    outputs.dir file("${project.buildDir}/classes/java/main/ai/djl/python")
+    outputs.file file("${project.buildDir}/classes/java/main/native/lib/python.properties")
     doLast {
         // write properties
-        def propFile = file("${project.buildDir}/classes/java/main/ai/djl/python/python.properties")
+        def propFile = file("${project.buildDir}/classes/java/main/native/lib/python.properties")
         def sb = new StringBuilder()
         sb.append("version=${version}\nlibraries=djl_python_engine.py")
         for (String name : file("setup/djl_python").list().sort()) {
