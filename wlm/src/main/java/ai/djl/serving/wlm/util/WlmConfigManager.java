@@ -20,8 +20,6 @@ public final class WlmConfigManager {
 
     private static final WlmConfigManager INSTANCE = new WlmConfigManager();
 
-    private boolean debug;
-
     /**
      * Returns the singleton {@code ConfigManager} instance.
      *
@@ -37,18 +35,7 @@ public final class WlmConfigManager {
      * @return {@code true} if debug is enabled
      */
     public boolean isDebug() {
-        return debug;
-    }
-
-    /**
-     * Sets debug mode.
-     *
-     * @param debug true to enable debug mode and false to disable
-     * @return this config manager
-     */
-    public WlmConfigManager setDebug(boolean debug) {
-        this.debug = debug;
-        return this;
+        return Boolean.getBoolean("ai.djl.serving.debug");
     }
 
     /**
