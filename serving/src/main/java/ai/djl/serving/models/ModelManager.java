@@ -21,6 +21,7 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeModelResponse;
+import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
@@ -102,6 +103,10 @@ public final class ModelManager {
         return CompletableFuture.supplyAsync(
                         () -> {
                             try {
+                                if (engineName != null) {
+                                    DependencyManager dm = DependencyManager.getInstance();
+                                    dm.installEngine(engineName);
+                                }
                                 Criteria.Builder<Input, Output> builder =
                                         Criteria.builder()
                                                 .setTypes(Input.class, Output.class)
