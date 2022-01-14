@@ -1,0 +1,11 @@
+{
+  "models": {
+    "m": "https://resources.djl.ai/test-models/mlp.tar.gz"
+  },
+  "functions": {
+    "oid": "ai.djl.serving.workflow.function.OtherIdentityWF"
+  },
+  "workflow": {
+    "out": ["oid", ["id", ["m", "in"]]]
+  }
+}

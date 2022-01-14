@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author erik.bamberg@web.de
  */
-public class WorkLoadManager {
+public class WorkLoadManager implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkLoadManager.class);
     private ExecutorService threadPool;
@@ -169,12 +169,20 @@ public class WorkLoadManager {
         return workerPools.computeIfAbsent(modelInfo, k -> new WorkerPool(modelInfo));
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public void close() {
+        for (WorkerPool wp : workerPools.values()) {
+            wp.close();
+        }
+    }
+
     /**
      * Manages the work load for a single model.
      *
      * @author erik.bamberg@web.de
      */
-    public final class WorkerPool {
+    public final class WorkerPool implements AutoCloseable {
 
         private final ModelInfo model;
         private List<WorkerThread> workers;
@@ -318,6 +326,18 @@ public class WorkLoadManager {
                     t ->
                             t.getState() == WorkerState.WORKER_STOPPED
                                     || t.getState() == WorkerState.WORKER_ERROR);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public void close() {
+            model.close();
+            for (WorkerThread worker : workers) {
+                worker.shutdown(WorkerState.WORKER_STOPPED);
+            }
+            for (WorkerJob wj : jobQueue) {
+                wj.getFuture().cancel(true);
+            }
         }
     }
 }
