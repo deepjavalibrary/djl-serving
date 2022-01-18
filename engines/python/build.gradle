@@ -18,9 +18,7 @@ dependencies {
     api "org.slf4j:slf4j-api:${slf4j_version}"
 
     testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
-    testImplementation("org.testng:testng:${testng_version}") {
-        exclude group: "junit", module: "junit"
-    }
+    testImplementation "org.testng:testng:${testng_version}"
 }
 
 sourceSets {
