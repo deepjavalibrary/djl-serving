@@ -10,10 +10,10 @@ Run
 cd djl-serving/serving/docker
 
 # build djl-serving cpu docker image
-docker build -t deepjavalibrary/djl-serving:0.14.0 --build-arg djl_version=0.14.0 .
+docker build -t deepjavalibrary/djl-serving:0.15.0 --build-arg djl_version=0.15.0 .
 
 # build docker image for inferentia
-docker build -t deepjavalibrary/djl-serving:0.14.0-inf1 --build-arg version=0.14.0 -f inf1.Dockerfile .
+docker build -t deepjavalibrary/djl-serving:0.15.0-inf1 --build-arg version=0.15.0 -f inf1.Dockerfile .
 ```
 
 ## Run docker image
@@ -28,7 +28,7 @@ mkdir models
 cd models
 curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_jit.tar.gz
 
-docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.14.0
+docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.15.0
 ```
 
 Here is an example to run djl-serving with AWS Inferentia:
@@ -38,5 +38,5 @@ mkdir models
 cd models
 
 curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_inf1.tar.gz
-docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.14.0-inf1
+docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.15.0-inf1
 ```

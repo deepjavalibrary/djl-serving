@@ -1,4 +1,4 @@
-ARG version=0.14.0
+ARG version=0.15.0
 FROM deepjavalibrary/djl-serving:$version
 
 RUN apt-get update -y \
@@ -24,9 +24,7 @@ RUN apt-get update -y  \
 RUN pip3 install torch==1.9.1+cpu -f https://download.pytorch.org/whl/torch_stable.html \
     && pip3 install numpy \
     && pip3 install torch-neuron \
-      --extra-index-url=https://pip.repos.neuron.amazonaws.com \
-    && wget -q https://publish.djl.ai/pytorch-1.9.1/jnilib/precxx11/0.14.0/linux-x86_64/cpu/libdjl_torch.so \
-        -O /usr/local/lib/python3.6/dist-packages/torch/lib/libdjl_torch.so
+      --extra-index-url=https://pip.repos.neuron.amazonaws.com
 
 # Sets up Path for Neuron tools
 ENV PATH="/opt/bin/:/opt/aws/neuron/bin:${PATH}"
@@ -36,6 +34,7 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.6/dist-packages/torch/lib
 ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
+ENV PYTORCH_VERSION=1.9.1
 ENV JAVA_OPTS="-Dai.djl.pytorch.num_interop_threads=1 -Dai.djl.default_engine=PyTorch"
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]

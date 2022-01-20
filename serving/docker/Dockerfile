@@ -1,10 +1,10 @@
 FROM ubuntu:18.04
-ARG djl_version=0.14.0
+ARG djl_version=0.15.0
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     fakeroot \
-    openjdk-8-jdk-headless \
+    openjdk-11-jdk-headless \
     curl
 
 RUN curl -O https://publish.djl.ai/djl-serving/djl-serving_${djl_version}-1_all.deb && \
@@ -20,7 +20,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 EXPOSE 8080
 
 WORKDIR /opt/djl
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV OMP_NUM_THREADS=1
 ENV TF_NUM_INTEROP_THREADS=1
 ENV TF_NUM_INTRAOP_THREADS=1
