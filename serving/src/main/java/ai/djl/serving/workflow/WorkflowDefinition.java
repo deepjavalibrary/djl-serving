@@ -57,6 +57,10 @@ import org.yaml.snakeyaml.Yaml;
  */
 public class WorkflowDefinition {
 
+    String name;
+    String version;
+    transient String url;
+
     Map<String, ModelDefinition> models;
 
     @SerializedName("workflow")
@@ -86,19 +90,22 @@ public class WorkflowDefinition {
      * @throws IOException if it fails to load the file for parsing
      */
     public static WorkflowDefinition parse(Path path) throws IOException {
+        WorkflowDefinition wd;
         try (Reader reader = Files.newBufferedReader(path)) {
             String fileName = Objects.requireNonNull(path.toString());
             if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
                 Object yaml = YAML.load(reader);
                 String asJson = GSON.toJson(yaml);
-                return GSON.fromJson(asJson, WorkflowDefinition.class);
+                wd = GSON.fromJson(asJson, WorkflowDefinition.class);
             } else if (fileName.endsWith(".json")) {
-                return GSON.fromJson(reader, WorkflowDefinition.class);
+                wd = GSON.fromJson(reader, WorkflowDefinition.class);
             } else {
                 throw new IllegalArgumentException(
                         "Unexpected file type in workflow file: " + path);
             }
         }
+        wd.url = path.toUri().toString();
+        return wd;
     }
 
     /**
@@ -156,7 +163,7 @@ public class WorkflowDefinition {
             }
         }
 
-        return new Workflow(loadedModels, expressions, loadedFunctions);
+        return new Workflow(name, version, url, loadedModels, expressions, loadedFunctions);
     }
 
     private int firstNonNull(Integer... inputs) {

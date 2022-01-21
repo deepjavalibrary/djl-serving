@@ -16,10 +16,10 @@ import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
+import ai.djl.serving.workflow.Workflow;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -138,8 +138,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
         for (int i = pageToken; i < last; ++i) {
             String modelName = keys.get(i);
-            for (WorkflowInfo m : endpoints.get(modelName).getWorkflows()) {
-                list.addModel(modelName, m.getVersion(), m.getModelUrl());
+            for (Workflow m : endpoints.get(modelName).getWorkflows()) {
+                list.addModel(modelName, m.getVersion(), m.getUrl());
             }
         }
 
@@ -186,7 +186,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
         final ModelManager modelManager = ModelManager.getInstance();
-        CompletableFuture<WorkflowInfo> future =
+        CompletableFuture<Workflow> future =
                 modelManager.registerWorkflow(
                         modelName,
                         version,
@@ -199,7 +199,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         CompletableFuture<Void> f =
                 future.thenAccept(
                         p -> {
-                            for (ModelInfo m : p.getWorkflow().getModels()) {
+                            for (ModelInfo m : p.getModels()) {
                                 m.configurePool(maxIdleTime)
                                         .configureModelBatch(batchSize, maxBatchDelay);
                                 modelManager.scaleWorkers(m, deviceName, minWorkers, maxWorkers);
@@ -236,12 +236,12 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             throws ModelNotFoundException {
         try {
             ModelManager modelManager = ModelManager.getInstance();
-            WorkflowInfo workflow = modelManager.getWorkflow(modelName, version, false);
+            Workflow workflow = modelManager.getWorkflow(modelName, version, false);
             if (workflow == null) {
                 throw new ModelNotFoundException("Model not found: " + modelName);
             }
             List<String> msgs = new ArrayList<>();
-            for (ModelInfo modelInfo : workflow.getWorkflow().getModels()) {
+            for (ModelInfo modelInfo : workflow.getModels()) {
                 WorkerPool pool =
                         modelManager.getWorkLoadManager().getWorkerPoolForModel(modelInfo);
                 int minWorkers =
@@ -267,8 +267,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 if (version == null) {
                     // scale all versions
                     Endpoint endpoint = modelManager.getEndpoints().get(modelName);
-                    for (WorkflowInfo p : endpoint.getWorkflows()) {
-                        for (ModelInfo m : p.getWorkflow().getModels()) {
+                    for (Workflow p : endpoint.getWorkflows()) {
+                        for (ModelInfo m : p.getModels()) {
                             m.configurePool(maxIdleTime)
                                     .configureModelBatch(batchSize, maxBatchDelay);
                             modelManager.scaleWorkers(m, null, minWorkers, maxWorkers);

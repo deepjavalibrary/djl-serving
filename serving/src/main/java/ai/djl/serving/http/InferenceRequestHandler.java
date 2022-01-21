@@ -18,7 +18,6 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.util.WlmCapacityException;
@@ -152,7 +151,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
         ConfigManager config = ConfigManager.getInstance();
-        WorkflowInfo workflow = modelManager.getWorkflow(workflowName, version, true);
+        Workflow workflow = modelManager.getWorkflow(workflowName, version, true);
         if (workflow == null) {
             String regex = config.getModelUrlPattern();
             if (regex == null) {
@@ -184,7 +183,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             config.getMaxBatchDelay(),
                             config.getMaxIdleTime())
                     .thenApply(p -> modelManager.scaleWorkers(p, deviceName, 1, -1))
-                    .thenAccept(p -> runJob(modelManager, ctx, p.getWorkflow(), input));
+                    .thenAccept(p -> runJob(modelManager, ctx, p, input));
             return;
         }
 
@@ -193,7 +192,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             return;
         }
 
-        runJob(modelManager, ctx, workflow.getWorkflow(), input);
+        runJob(modelManager, ctx, workflow, input);
     }
 
     void runJob(

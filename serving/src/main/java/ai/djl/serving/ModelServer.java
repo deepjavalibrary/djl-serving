@@ -17,13 +17,13 @@ import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.models.WorkflowInfo;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.NeuronUtils;
 import ai.djl.serving.util.ServerGroups;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.workflow.Workflow;
 import ai.djl.util.cuda.CudaUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -356,7 +356,7 @@ public class ModelServer {
                 } else {
                     modelVersion = version;
                 }
-                CompletableFuture<WorkflowInfo> future =
+                CompletableFuture<Workflow> future =
                         modelManager.registerWorkflow(
                                 modelName,
                                 modelVersion,
@@ -366,7 +366,7 @@ public class ModelServer {
                                 configManager.getBatchSize(),
                                 configManager.getMaxBatchDelay(),
                                 configManager.getMaxIdleTime());
-                WorkflowInfo workflow = future.join();
+                Workflow workflow = future.join();
                 modelManager.scaleWorkers(workflow, devices[i], 1, -1);
             }
             startupModels.add(modelName);
