@@ -265,14 +265,20 @@ public class ModelServer {
         Set<String> startupModels = ModelManager.getInstance().getStartupModels();
 
         String loadModels = configManager.getLoadModels();
+        Path modelStore = configManager.getModelStore();
         if (loadModels == null || loadModels.isEmpty()) {
-            return;
+            if (modelStore == null) {
+                return;
+            }
+            loadModels = "ALL";
         }
 
         ModelManager modelManager = ModelManager.getInstance();
         List<String> urls;
-        if ("ALL".equalsIgnoreCase(loadModels)) {
-            Path modelStore = configManager.getModelStore();
+        if ("NONE".equalsIgnoreCase(loadModels)) {
+            // to disable load all models from model store
+            return;
+        } else if ("ALL".equalsIgnoreCase(loadModels)) {
             if (modelStore == null) {
                 logger.warn("Model store is not configured.");
                 return;
