@@ -13,6 +13,7 @@ dependencies {
     api "io.netty:netty-transport-native-kqueue:${netty_version}:osx-x86_64"
 
     //noinspection GradlePackageUpdate
+    implementation "org.yaml:snakeyaml:1.29"
     implementation "commons-cli:commons-cli:${commons_cli_version}"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
     implementation "com.lmax:disruptor:3.4.4"
@@ -53,6 +54,7 @@ run {
     systemProperty("file.encoding", "UTF-8")
     systemProperty("ai.djl.pytorch.num_interop_threads", "1")
     applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000"]
+    workingDir getProjectDir()
 }
 
 clean {
@@ -102,3 +104,7 @@ tasks.test.dependsOn(
         ":central:jar",
         ":plugins:plugin-management-plugin:jar",
         ":plugins:static-file-plugin:jar")
+
+test {
+    workingDir projectDir
+}

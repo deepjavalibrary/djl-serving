@@ -1,0 +1,5 @@
+models:
+  m: "https://resources.djl.ai/test-models/mlp.tar.gz"
+
+workflow:
+  out: ["m", "in"]

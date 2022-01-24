@@ -14,20 +14,25 @@ package ai.djl.serving.workflow;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
+import ai.djl.serving.workflow.WorkflowExpression.Item;
+import ai.djl.serving.workflow.function.IdentityWF;
+import ai.djl.serving.workflow.function.ModelWorkflowFunction;
+import ai.djl.serving.workflow.function.WorkflowFunction;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** A flow of executing {@link ai.djl.Model}s. */
+/** A flow of executing {@link ai.djl.Model}s and custom functions. */
 public class Workflow implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Workflow.class);
@@ -35,8 +40,15 @@ public class Workflow implements AutoCloseable {
     public static final String IN = "in";
     public static final String OUT = "out";
 
+    private static final Map<String, WorkflowFunction> BUILT_INS = new ConcurrentHashMap<>();
+
+    static {
+        BUILT_INS.put("id", new IdentityWF());
+    }
+
     Map<String, ModelInfo> models;
     Map<String, WorkflowExpression> expressions;
+    Map<String, WorkflowFunction> funcs;
 
     /**
      * Constructs a workflow containing only a single model.
@@ -48,7 +60,8 @@ public class Workflow implements AutoCloseable {
         models = Collections.singletonMap(modelName, model);
         expressions =
                 Collections.singletonMap(
-                        OUT, new WorkflowExpression(modelName, Collections.singletonList(IN)));
+                        OUT, new WorkflowExpression(new Item(modelName), new Item(IN)));
+        funcs = Collections.emptyMap();
     }
 
     /**
@@ -57,10 +70,15 @@ public class Workflow implements AutoCloseable {
      * @param models a map of executableNames for a model (how it is referred to in the {@link
      *     WorkflowExpression}s to model
      * @param expressions a map of names to refer to an expression to the expression
+     * @param funcs the custom functions used in the workflow
      */
-    public Workflow(Map<String, ModelInfo> models, Map<String, WorkflowExpression> expressions) {
+    public Workflow(
+            Map<String, ModelInfo> models,
+            Map<String, WorkflowExpression> expressions,
+            Map<String, WorkflowFunction> funcs) {
         this.models = models;
         this.expressions = expressions;
+        this.funcs = funcs;
     }
 
     /**
@@ -81,76 +99,12 @@ public class Workflow implements AutoCloseable {
      */
     public CompletableFuture<Output> execute(WorkLoadManager wlm, Input input) {
         logger.debug("Beginning execution of workflow");
-        // Construct variable map to contain each expression and the input
-        Map<String, CompletableFuture<Input>> vars =
-                new ConcurrentHashMap<>(expressions.size() + 1);
-        vars.put(IN, CompletableFuture.completedFuture(input));
-
-        return execute(wlm, OUT, vars, new HashSet<>()).thenApply(i -> (Output) i);
-    }
-
-    @SuppressWarnings("unchecked")
-    private CompletableFuture<Input> execute(
-            WorkLoadManager wlm,
-            String target,
-            Map<String, CompletableFuture<Input>> vars,
-            Set<String> targetStack) {
-        if (vars.containsKey(target)) {
-            return vars.get(target).thenApply(i -> i);
-        }
-
-        // Use targetStack, the set of targets in the "call stack" to detect cycles
-        if (targetStack.contains(target)) {
-            // If a target is executed but already in the stack, there must be a cycle
-            throw new IllegalStateException(
-                    "Your workflow contains a cycle with target: " + target);
-        }
-        targetStack.add(target);
-
-        WorkflowExpression expr = expressions.get(target);
-        if (expr == null) {
-            throw new IllegalArgumentException(
-                    "Expected to find variable but it is not defined: " + target);
-        }
-
-        ModelInfo model = models.get(expr.getExecutableName());
-        if (model == null) {
-            throw new IllegalArgumentException(
-                    "Expected to find model but it is not defined: " + target);
-        }
-
-        CompletableFuture<Input>[] processedArgs =
-                expr.getArgs()
-                        .stream()
-                        .map(arg -> execute(wlm, arg, vars, targetStack))
-                        .toArray(CompletableFuture[]::new);
-
-        if (processedArgs.length != 1) {
-            throw new IllegalArgumentException(
-                    "In the definition for "
-                            + target
-                            + ", the model "
-                            + expr.getExecutableName()
-                            + " should have one arg, but has "
-                            + processedArgs.length);
-        }
-
-        return CompletableFuture.allOf(processedArgs)
+        WorkflowExecutor ex = new WorkflowExecutor(wlm, input);
+        return ex.execute(OUT)
                 .thenApply(
-                        v -> {
-                            CompletableFuture<Output> result =
-                                    wlm.runJob(new Job(model, processedArgs[0].join()));
-                            vars.put(target, result.thenApply(o -> o));
-                            result.thenAccept(
-                                    r -> {
-                                        targetStack.remove(target);
-                                        logger.debug(
-                                                "Workflow computed target "
-                                                        + target
-                                                        + " with value:\n"
-                                                        + r.toString());
-                                    });
-                            return result.join();
+                        i -> {
+                            logger.debug("Ending execution of workflow");
+                            return (Output) i;
                         });
     }
 
@@ -159,6 +113,156 @@ public class Workflow implements AutoCloseable {
     public void close() {
         for (ModelInfo m : getModels()) {
             m.close();
+        }
+    }
+
+    /** An executor is a session for a running {@link Workflow}. */
+    public final class WorkflowExecutor {
+        private WorkLoadManager wlm;
+        private Map<String, CompletableFuture<Input>> vars;
+        private Set<String> targetStack;
+
+        private WorkflowExecutor(WorkLoadManager wlm, Input input) {
+            this.wlm = wlm;
+
+            // Construct variable map to contain each expression and the input
+            vars = new ConcurrentHashMap<>(expressions.size() + 1);
+            vars.put(IN, CompletableFuture.completedFuture(input));
+
+            targetStack = new HashSet<>();
+        }
+
+        /**
+         * Returns the {@link WorkLoadManager} used by the {@link WorkflowExecutor}.
+         *
+         * @return the {@link WorkLoadManager} used by the {@link WorkflowExecutor}
+         */
+        public WorkLoadManager getWlm() {
+            return wlm;
+        }
+
+        /**
+         * Uses the execute to compute a local value or target.
+         *
+         * <p>These values can be found as the keys in the "workflow" object.
+         *
+         * @param target the target to compute
+         * @return a future that contains the target value
+         */
+        public CompletableFuture<Input> execute(String target) {
+            if (vars.containsKey(target)) {
+                return vars.get(target).thenApply(i -> i);
+            }
+
+            // Use targetStack, the set of targets in the "call stack" to detect cycles
+            if (targetStack.contains(target)) {
+                // If a target is executed but already in the stack, there must be a cycle
+                throw new IllegalStateException(
+                        "Your workflow contains a cycle with target: " + target);
+            }
+            targetStack.add(target);
+
+            WorkflowExpression expr = expressions.get(target);
+            if (expr == null) {
+                throw new IllegalArgumentException(
+                        "Expected to find variable but it is not defined: " + target);
+            }
+
+            CompletableFuture<Input> result = executeExpression(expr);
+            vars.put(target, result.thenApply(o -> o));
+            return result.whenComplete(
+                    (o, e) -> {
+                        if (e != null) {
+                            throw new WorkflowExecutionException(
+                                    "Failed to compute workflow target: " + target, e);
+                        }
+
+                        targetStack.remove(target);
+                        logger.debug(
+                                "Workflow computed target "
+                                        + target
+                                        + " with value:\n"
+                                        + o.toString());
+                    });
+        }
+
+        /**
+         * Computes the result of a {@link WorkflowExpression}.
+         *
+         * @param expr the expression to compute
+         * @return the computed value
+         */
+        public CompletableFuture<Input> executeExpression(WorkflowExpression expr) {
+            WorkflowFunction workflowFunction = getExecutable(expr.getExecutableName());
+            List<WorkflowArgument> args =
+                    expr.getExecutableArgs()
+                            .stream()
+                            .map(arg -> new WorkflowArgument(this, arg))
+                            .collect(Collectors.toList());
+            return workflowFunction.run(this, args);
+        }
+
+        /**
+         * Returns the executable (model, function, or built-in) with a given name.
+         *
+         * @param name the executable name
+         * @return the function to execute the found executable
+         */
+        public WorkflowFunction getExecutable(String name) {
+            ModelInfo model = models.get(name);
+            if (model != null) {
+                return new ModelWorkflowFunction(model);
+            }
+
+            if (funcs.containsKey(name)) {
+                return funcs.get(name);
+            }
+
+            if (BUILT_INS.containsKey(name)) {
+                return BUILT_INS.get(name);
+            }
+
+            throw new IllegalArgumentException("Could not find find model or function: " + name);
+        }
+    }
+
+    /** An argument that is passed to a {@link WorkflowFunction}. */
+    public static class WorkflowArgument {
+        private WorkflowExecutor executor;
+        private Item item;
+
+        /**
+         * Constructs a {@link WorkflowArgument}.
+         *
+         * @param executor the executor associated with the argument
+         * @param item the argument item
+         */
+        public WorkflowArgument(WorkflowExecutor executor, Item item) {
+            this.executor = executor;
+            this.item = item;
+        }
+
+        /**
+         * Returns the item (either {@link String} or {@link WorkflowExpression}).
+         *
+         * @return the item (either {@link String} or {@link WorkflowExpression})
+         */
+        public Item getItem() {
+            return item;
+        }
+
+        /**
+         * Evaluates the argument as a target reference (if string) or function call (if
+         * expression).
+         *
+         * @return the result of evaluating the argument
+         */
+        public CompletableFuture<Input> evaluate() {
+            if (item.getString() != null) {
+                return executor.execute(item.getString());
+            } else {
+                return executor.executeExpression(item.getExpression());
+            }
         }
     }
 }

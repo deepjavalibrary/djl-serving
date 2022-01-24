@@ -1,0 +1,15 @@
+{
+  "models": {
+    "m": {
+      "application": "cv/image_classification",
+      "groupId": "ai.djl.zoo",
+      "artifactId": "mlp",
+      "filters": {
+        "dataset": "mnist"
+      }
+    }
+  },
+  "workflow": {
+    "out": ["m", "in"]
+  }
+}
