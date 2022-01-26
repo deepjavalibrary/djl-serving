@@ -85,7 +85,7 @@ public final class ModelManager {
      * @param version the model version
      * @param modelUrl the model url
      * @param engineName the engine to load the model
-     * @param deviceName the accelerator device id, -1 for auto selection
+     * @param device the accelerator device
      * @param batchSize the batch size
      * @param maxBatchDelay the maximum delay for batching
      * @param maxIdleTime the maximum idle time of the worker threads before scaling down.
@@ -96,7 +96,7 @@ public final class ModelManager {
             final String version,
             final String modelUrl,
             final String engineName,
-            final String deviceName,
+            final Device device,
             final int batchSize,
             final int maxBatchDelay,
             final int maxIdleTime) {
@@ -112,21 +112,14 @@ public final class ModelManager {
                                                 .setTypes(Input.class, Output.class)
                                                 .optModelUrls(modelUrl)
                                                 .optEngine(engineName);
-                                if ("-1".equals(deviceName)) {
-                                    logger.info("Loading model {} on {}.", modelName, Device.cpu());
-                                } else if (deviceName.startsWith("nc")) {
-                                    logger.info("Loading model {} on {}.", modelName, deviceName);
-                                    String ncs = deviceName.substring(2);
-                                    builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
+                                if ("nc".equals(device.getDeviceType())) {
+                                    builder.optOption(
+                                            "env",
+                                            "NEURON_RT_VISIBLE_CORES=" + device.getDeviceId());
                                 } else {
-                                    // GPU case
-                                    int gpuId = Integer.parseInt(deviceName);
-                                    builder.optDevice(Device.gpu(gpuId));
-                                    logger.info(
-                                            "Loading model {} on {}.",
-                                            modelName,
-                                            Device.gpu(gpuId));
+                                    builder.optDevice(device);
                                 }
+                                logger.info("Loading model {} on {}.", modelName, device);
                                 if (batchSize > 1) {
                                     builder.optArgument("batchifier", "stack");
                                 }
@@ -223,16 +216,15 @@ public final class ModelManager {
      * Scales the workers for each model in a workflow.
      *
      * @param workflow the workflow to scale workers for
-     * @param deviceName the device for the model
+     * @param device the device for the model
      * @param minWorkers the min workers
      * @param maxWorkers the max workers
      * @return the info about the scaled workflow
-     * @see WorkerPool#scaleWorkers(String, int, int)
+     * @see WorkerPool#scaleWorkers(Device, int, int)
      */
-    public Workflow scaleWorkers(
-            Workflow workflow, String deviceName, int minWorkers, int maxWorkers) {
+    public Workflow scaleWorkers(Workflow workflow, Device device, int minWorkers, int maxWorkers) {
         for (ModelInfo model : workflow.getModels()) {
-            scaleWorkers(model, deviceName, minWorkers, maxWorkers);
+            scaleWorkers(model, device, minWorkers, maxWorkers);
         }
         return workflow;
     }
@@ -241,17 +233,16 @@ public final class ModelManager {
      * Scales the workers for a model.
      *
      * @param model the model to scale workers for
-     * @param deviceName the device for the model
+     * @param device the device for the model
      * @param minWorkers the min workers
      * @param maxWorkers the max workers
      * @return the info about the scaled workflow
-     * @see WorkerPool#scaleWorkers(String, int, int)
+     * @see WorkerPool#scaleWorkers(Device, int, int)
      */
-    public ModelInfo scaleWorkers(
-            ModelInfo model, String deviceName, int minWorkers, int maxWorkers) {
+    public ModelInfo scaleWorkers(ModelInfo model, Device device, int minWorkers, int maxWorkers) {
         String modelName = model.getModelName();
         logger.debug("updateModel: {}", modelName);
-        wlm.getWorkerPoolForModel(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
+        wlm.getWorkerPoolForModel(model).scaleWorkers(device, minWorkers, maxWorkers);
         return model;
     }
 
@@ -376,8 +367,8 @@ public final class ModelManager {
                     int workerId = worker.getWorkerId();
                     long startTime = worker.getStartTime();
                     boolean isRunning = worker.isRunning();
-                    int gpuId = worker.getGpuId();
-                    resp.addWorker(model.getVersion(), workerId, startTime, isRunning, gpuId);
+                    resp.addWorker(
+                            model.getVersion(), workerId, startTime, isRunning, worker.getDevice());
                 }
                 resps.add(resp);
             }

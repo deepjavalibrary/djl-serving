@@ -12,6 +12,7 @@
  */
 package ai.djl.serving;
 
+import ai.djl.Device;
 import ai.djl.MalformedModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -116,7 +117,7 @@ public class WorkflowTest {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         try (WorkLoadManager wlm = new WorkLoadManager()) {
             for (ModelInfo model : workflow.getModels()) {
-                wlm.getWorkerPoolForModel(model).scaleWorkers("cpu", 1, 1);
+                wlm.getWorkerPoolForModel(model).scaleWorkers(Device.cpu(), 1, 1);
             }
 
             Output output = workflow.execute(wlm, input).join();

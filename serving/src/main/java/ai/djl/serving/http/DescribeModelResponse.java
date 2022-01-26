@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.http;
 
+import ai.djl.Device;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -233,15 +234,16 @@ public class DescribeModelResponse {
      * @param id the worker's ID
      * @param startTime the worker's start time
      * @param isRunning {@code true} if worker is running
-     * @param gpuId the GPU id assigned to the worker, -1 for CPU
+     * @param device the device assigned to the worker
      */
-    public void addWorker(String version, int id, long startTime, boolean isRunning, int gpuId) {
+    public void addWorker(
+            String version, int id, long startTime, boolean isRunning, Device device) {
         Worker worker = new Worker();
         worker.setVersion(version);
         worker.setId(id);
         worker.setStartTime(new Date(startTime));
         worker.setStatus(isRunning ? "READY" : "UNLOADING");
-        worker.setGpu(gpuId >= 0);
+        worker.setDevice(device);
         workers.add(worker);
     }
 
@@ -252,7 +254,7 @@ public class DescribeModelResponse {
         private int id;
         private Date startTime;
         private String status;
-        private boolean gpu;
+        private Device device;
 
         /**
          * Returns the model version.
@@ -332,16 +334,16 @@ public class DescribeModelResponse {
          * @return {@code true} if the worker using GPU
          */
         public boolean isGpu() {
-            return gpu;
+            return device.isGpu();
         }
 
         /**
-         * Sets if the worker using GPU.
+         * Sets the worker device.
          *
-         * @param gpu if the worker using GPU
+         * @param device the worker device
          */
-        public void setGpu(boolean gpu) {
-            this.gpu = gpu;
+        public void setDevice(Device device) {
+            this.device = device;
         }
     }
 }

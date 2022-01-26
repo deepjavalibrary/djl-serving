@@ -12,14 +12,17 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.Device;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.NDManager;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmShutdownException;
 import ai.djl.serving.wlm.util.WorkerJob;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -117,7 +120,7 @@ public class WorkLoadManager implements AutoCloseable {
                             "Scaling up workers for model {} to {} ",
                             modelInfo,
                             currentWorkers + 1);
-                    pool.addThreads(modelInfo, 1, false);
+                    pool.addThreads(1);
                 }
             }
         }
@@ -185,10 +188,8 @@ public class WorkLoadManager implements AutoCloseable {
     public final class WorkerPool implements AutoCloseable {
 
         private final ModelInfo model;
-        private List<WorkerThread> workers;
+        private Map<Device, WorkerPoolDevice> devices;
         private LinkedBlockingDeque<WorkerJob> jobQueue;
-        private int minWorkers;
-        private int maxWorkers;
 
         /**
          * Construct and initial data structure.
@@ -197,7 +198,7 @@ public class WorkLoadManager implements AutoCloseable {
          */
         public WorkerPool(ModelInfo model) {
             this.model = model;
-            workers = new CopyOnWriteArrayList<>();
+            devices = new ConcurrentHashMap<>();
             jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
         }
 
@@ -207,7 +208,10 @@ public class WorkLoadManager implements AutoCloseable {
          * @return the workers
          */
         public List<WorkerThread> getWorkers() {
-            return workers;
+            return devices.values()
+                    .stream()
+                    .flatMap(d -> d.workers.stream())
+                    .collect(Collectors.toList());
         }
 
         /**
@@ -220,37 +224,45 @@ public class WorkLoadManager implements AutoCloseable {
         }
 
         /**
-         * Returns the minimum number of workers for a model.
+         * Returns the minimum number of workers for a model across all devices.
          *
-         * @return the minimum number of workers for a model
+         * @return the minimum number of workers for a model across all devices
          */
         public int getMinWorkers() {
-            return minWorkers;
+            return devices.values().stream().mapToInt(d -> d.minWorkers).reduce(0, Integer::sum);
         }
 
         /**
-         * Returns the maximum number of workers for a model.
+         * Returns the maximum number of workers for a model across all devices.
          *
-         * @return the maximum number of workers for a model
+         * @return the maximum number of workers for a model across all devices
          */
         public int getMaxWorkers() {
-            return maxWorkers;
+            return devices.values().stream().mapToInt(d -> d.maxWorkers).reduce(0, Integer::sum);
         }
 
         /**
          * Sets new worker capcities for this model.
          *
-         * @param deviceName the device for the model
+         * @param device the device for the model or cpu if null
          * @param newMinWorkers minimum amount of workers.
          * @param newMaxWorkers maximum amount of workers.
          * @return this {@link ModelInfo}
          */
-        public WorkerPool scaleWorkers(String deviceName, int newMinWorkers, int newMaxWorkers) {
+        public WorkerPool scaleWorkers(Device device, int newMinWorkers, int newMaxWorkers) {
             synchronized (model) {
+                // Use CPU as default device
+                if (device == null) {
+                    device = Device.cpu();
+                }
+
                 NDManager manager = model.getModel().getNDManager();
                 WlmConfigManager configManager = WlmConfigManager.getInstance();
-                maxWorkers = configManager.getDefaultWorkers(manager, deviceName, newMaxWorkers);
-                minWorkers = Math.min(newMinWorkers, maxWorkers);
+                newMaxWorkers = configManager.getDefaultWorkers(manager, device, newMaxWorkers);
+                newMinWorkers = Math.min(newMinWorkers, newMaxWorkers);
+
+                WorkerPoolDevice wpd = new WorkerPoolDevice(device, newMinWorkers, newMaxWorkers);
+                devices.put(device, wpd);
 
                 cleanup();
 
@@ -264,13 +276,13 @@ public class WorkLoadManager implements AutoCloseable {
 
                 int numberOfCurrentFixedWorkers = fixedPoolThread.size();
 
-                if (numberOfCurrentFixedWorkers < minWorkers) {
+                if (numberOfCurrentFixedWorkers < newMinWorkers) {
                     // scale up the fixed pool
-                    addThreads(model, minWorkers - numberOfCurrentFixedWorkers, true);
+                    wpd.addThreads(newMinWorkers - numberOfCurrentFixedWorkers, true);
                 } else {
                     // scale down the fixed pool
                     fixedPoolThread
-                            .subList(minWorkers, numberOfCurrentFixedWorkers)
+                            .subList(newMinWorkers, numberOfCurrentFixedWorkers)
                             .forEach(
                                     t -> {
                                         threads.remove(t);
@@ -283,20 +295,14 @@ public class WorkLoadManager implements AutoCloseable {
             }
         }
 
-        private void addThreads(ModelInfo model, int count, boolean permanent) {
-
-            for (int i = 0; i < count; ++i) {
-
-                WorkerThread thread =
-                        WorkerThread.builder()
-                                .setModel(model)
-                                .setJobQueue(jobQueue)
-                                .optFixPoolThread(permanent)
-                                .build();
-
-                workers.add(thread);
-                threadPool.submit(thread);
-            }
+        /**
+         * Returns the {@link WorkerPoolDevice} for a particular {@link Device}.
+         *
+         * @param device the device for a worker pool
+         * @return the {@link WorkerPoolDevice} or null if device is not used
+         */
+        public WorkerPoolDevice forDevice(Device device) {
+            return devices.get(device);
         }
 
         /**
@@ -307,36 +313,118 @@ public class WorkLoadManager implements AutoCloseable {
         public void log() {
             if (logger.isDebugEnabled()) {
                 StringBuffer buf = new StringBuffer();
-                workers.forEach(
-                        w -> {
-                            buf.append(w.getWorkerId());
-                            if (w.isFixPoolThread()) {
-                                buf.append("-fixedPool\n");
-                            } else {
-                                buf.append("-tmpPool\n");
-                            }
-                        });
+                getWorkers()
+                        .forEach(
+                                w -> {
+                                    buf.append(w.getWorkerId());
+                                    if (w.isFixPoolThread()) {
+                                        buf.append("-fixedPool\n");
+                                    } else {
+                                        buf.append("-tmpPool\n");
+                                    }
+                                });
                 logger.debug("worker pool for model {}:\n {}", model.getModelName(), buf);
             }
         }
 
         /** removes all stopped workers and workers in state error from the pool. */
         public void cleanup() {
-            workers.removeIf(
-                    t ->
-                            t.getState() == WorkerState.WORKER_STOPPED
-                                    || t.getState() == WorkerState.WORKER_ERROR);
+            for (WorkerPoolDevice wpd : devices.values()) {
+                wpd.workers.removeIf(
+                        t ->
+                                t.getState() == WorkerState.WORKER_STOPPED
+                                        || t.getState() == WorkerState.WORKER_ERROR);
+            }
         }
 
         /** {@inheritDoc} */
         @Override
         public void close() {
             model.close();
-            for (WorkerThread worker : workers) {
-                worker.shutdown(WorkerState.WORKER_STOPPED);
+            for (WorkerPoolDevice wpd : devices.values()) {
+                for (WorkerThread worker : wpd.workers) {
+                    worker.shutdown(WorkerState.WORKER_STOPPED);
+                }
             }
             for (WorkerJob wj : jobQueue) {
                 wj.getFuture().cancel(true);
+            }
+        }
+
+        /**
+         * Adds temporary threads across existing devices.
+         *
+         * <p>Only supports temporary threads because permanent threads are managed per-device, so
+         * it doesn't need a multi-device version.
+         *
+         * @param count number of threads to add
+         */
+        private void addThreads(int count) {
+            // Add threads to devices in a random order for now
+            List<WorkerPoolDevice> shuffled = new ArrayList<>(devices.values());
+            Collections.shuffle(shuffled);
+
+            for (WorkerPoolDevice wpd : devices.values()) {
+                int toAdd = Math.min(count, wpd.getMaxWorkers() - wpd.workers.size());
+                wpd.addThreads(toAdd, false);
+                count -= toAdd;
+                if (count == 0) {
+                    return;
+                }
+            }
+        }
+
+        /**
+         * The {@link WorkerPoolDevice} manages the {@link WorkerPool} for a particular {@link
+         * Device}.
+         */
+        public final class WorkerPoolDevice {
+
+            private Device device;
+            private int minWorkers;
+            private int maxWorkers;
+            private List<WorkerThread> workers;
+
+            private WorkerPoolDevice(Device device, int minWorkers, int maxWorkers) {
+                this.device = device;
+                this.minWorkers = minWorkers;
+                this.maxWorkers = maxWorkers;
+                workers = new CopyOnWriteArrayList<>();
+            }
+
+            /**
+             * Returns the min number of workers for the model and device.
+             *
+             * @return the min number of workers for the model and device
+             */
+            public int getMinWorkers() {
+                return minWorkers;
+            }
+
+            /**
+             * Returns the max number of workers for the model and device.
+             *
+             * @return the max number of workers for the model and device
+             */
+            public int getMaxWorkers() {
+                return maxWorkers;
+            }
+
+            private void addThreads(int count, boolean permanent) {
+
+                for (int i = 0; i < count; ++i) {
+
+                    WorkerThread thread =
+                            WorkerThread.builder()
+                                    .setModel(model)
+                                    .setDevice(device)
+                                    .setJobQueue(jobQueue)
+                                    .optFixPoolThread(permanent)
+                                    .build();
+
+                    workers.add(thread);
+                    threadPool.submit(thread);
+                }
             }
         }
     }

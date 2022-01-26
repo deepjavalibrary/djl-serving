@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.http;
 
+import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
@@ -185,6 +186,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 Boolean.parseBoolean(
                         NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
+        Device device = Device.fromName(deviceName);
         final ModelManager modelManager = ModelManager.getInstance();
         CompletableFuture<Workflow> future =
                 modelManager.registerWorkflow(
@@ -192,7 +194,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         version,
                         modelUrl,
                         engineName,
-                        deviceName,
+                        device,
                         batchSize,
                         maxBatchDelay,
                         maxIdleTime);
@@ -202,7 +204,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                             for (ModelInfo m : p.getModels()) {
                                 m.configurePool(maxIdleTime)
                                         .configureModelBatch(batchSize, maxBatchDelay);
-                                modelManager.scaleWorkers(m, deviceName, minWorkers, maxWorkers);
+                                modelManager.scaleWorkers(m, device, minWorkers, maxWorkers);
                             }
                         });
 

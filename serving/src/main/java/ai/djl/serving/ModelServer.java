@@ -12,6 +12,7 @@
  */
 package ai.djl.serving;
 
+import ai.djl.Device;
 import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
@@ -310,7 +311,7 @@ public class ModelServer {
             String modelUrl = matcher.group(3);
             String version = null;
             String engine = null;
-            String[] devices = {"-1"};
+            Device[] devices = {Device.cpu()};
             String modelName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
@@ -327,47 +328,40 @@ public class ModelServer {
                         if (gpuCount > 0) {
                             devices =
                                     IntStream.range(0, gpuCount)
-                                            .mapToObj(String::valueOf)
-                                            .toArray(String[]::new);
+                                            .mapToObj(Device::gpu)
+                                            .toArray(Device[]::new);
                         } else if (NeuronUtils.hasNeuron()) {
                             int neurons = NeuronUtils.getNeuronCores();
                             devices =
                                     IntStream.range(0, neurons)
-                                            .mapToObj(i -> "nc" + i)
-                                            .toArray(String[]::new);
+                                            .mapToObj(i -> Device.of("nc", i))
+                                            .toArray(Device[]::new);
                         }
 
                     } else if (!tokens[3].isEmpty()) {
-                        devices = tokens[3].split(";");
+                        devices =
+                                Arrays.stream(tokens[3].split(";"))
+                                        .map(Device::fromName)
+                                        .toArray(Device[]::new);
                     }
                 }
             } else {
                 modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
 
-            for (int i = 0; i < devices.length; ++i) {
-                String modelVersion;
-                if (devices.length > 1) {
-                    if (version == null) {
-                        modelVersion = "v" + i;
-                    } else {
-                        modelVersion = version + i;
-                    }
-                } else {
-                    modelVersion = version;
-                }
+            for (Device device : devices) {
                 CompletableFuture<Workflow> future =
                         modelManager.registerWorkflow(
                                 modelName,
-                                modelVersion,
+                                version,
                                 modelUrl,
                                 engine,
-                                devices[i],
+                                device,
                                 configManager.getBatchSize(),
                                 configManager.getMaxBatchDelay(),
                                 configManager.getMaxIdleTime());
                 Workflow workflow = future.join();
-                modelManager.scaleWorkers(workflow, devices[i], 1, -1);
+                modelManager.scaleWorkers(workflow, device, 1, -1);
             }
             startupModels.add(modelName);
         }
