@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.models;
 
+import ai.djl.serving.workflow.Workflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** A class that represents a webservice endpoint. */
 public class Endpoint {
 
-    private List<WorkflowInfo> workflows;
+    private List<Workflow> workflows;
     private Map<String, Integer> map;
     private AtomicInteger position;
 
@@ -38,7 +39,7 @@ public class Endpoint {
      * @param workflow the workflow to be added
      * @return true if add success
      */
-    public synchronized boolean add(WorkflowInfo workflow) {
+    public synchronized boolean add(Workflow workflow) {
         String version = workflow.getVersion();
         if (version == null) {
             if (workflows.isEmpty()) {
@@ -56,11 +57,11 @@ public class Endpoint {
     }
 
     /**
-     * Returns the {@link WorkflowInfo}s associated with the endpoint.
+     * Returns the {@link Workflow}s associated with the endpoint.
      *
-     * @return the {@link WorkflowInfo}s associated with the endpoint
+     * @return the {@link Workflow}s associated with the endpoint
      */
-    public List<WorkflowInfo> getWorkflows() {
+    public List<Workflow> getWorkflows() {
         return workflows;
     }
 
@@ -70,12 +71,12 @@ public class Endpoint {
      * @param version the workflow version
      * @return null if the specified version doesn't exist
      */
-    public synchronized WorkflowInfo remove(String version) {
+    public synchronized Workflow remove(String version) {
         if (version == null) {
             if (workflows.isEmpty()) {
                 return null;
             }
-            WorkflowInfo workflow = workflows.remove(0);
+            Workflow workflow = workflows.remove(0);
             reIndex();
             return workflow;
         }
@@ -83,18 +84,18 @@ public class Endpoint {
         if (index == null) {
             return null;
         }
-        WorkflowInfo workflow = workflows.remove((int) index);
+        Workflow workflow = workflows.remove((int) index);
         reIndex();
         return workflow;
     }
 
     /**
-     * Returns the {@code WorkflowInfo} for the specified version.
+     * Returns the {@code Workflow} for the specified version.
      *
      * @param version the version of the workflow to retrieve
-     * @return the {@code WorkflowInfo} for the specified version
+     * @return the {@code Workflow} for the specified version
      */
-    public WorkflowInfo get(String version) {
+    public Workflow get(String version) {
         Integer index = map.get(version);
         if (index == null) {
             return null;
@@ -107,7 +108,7 @@ public class Endpoint {
      *
      * @return the next version of workflow to serve the inference request
      */
-    public WorkflowInfo next() {
+    public Workflow next() {
         int size = workflows.size();
         if (size == 1) {
             return workflows.get(0);
@@ -120,7 +121,7 @@ public class Endpoint {
         map.clear();
         int size = workflows.size();
         for (int i = 0; i < size; ++i) {
-            WorkflowInfo workflow = workflows.get(i);
+            Workflow workflow = workflows.get(i);
             String version = workflow.getVersion();
             if (version != null) {
                 map.put(version, i);

@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +47,9 @@ public class Workflow implements AutoCloseable {
         BUILT_INS.put("id", new IdentityWF());
     }
 
+    String name;
+    String version;
+    String url;
     Map<String, ModelInfo> models;
     Map<String, WorkflowExpression> expressions;
     Map<String, WorkflowFunction> funcs;
@@ -53,10 +57,16 @@ public class Workflow implements AutoCloseable {
     /**
      * Constructs a workflow containing only a single model.
      *
+     * @param name the model/workflow name
+     * @param version the model/workflow version
+     * @param url the url the model was laoded from
      * @param model the model for the workflow
      */
-    public Workflow(ModelInfo model) {
+    public Workflow(String name, String version, String url, ModelInfo model) {
         String modelName = "model";
+        this.name = name;
+        this.version = version;
+        this.url = url;
         models = Collections.singletonMap(modelName, model);
         expressions =
                 Collections.singletonMap(
@@ -67,18 +77,36 @@ public class Workflow implements AutoCloseable {
     /**
      * Constructs a workflow.
      *
+     * @param name workflow name
+     * @param version workflow version
+     * @param url workflow source url
      * @param models a map of executableNames for a model (how it is referred to in the {@link
      *     WorkflowExpression}s to model
      * @param expressions a map of names to refer to an expression to the expression
      * @param funcs the custom functions used in the workflow
      */
     public Workflow(
+            String name,
+            String version,
+            String url,
             Map<String, ModelInfo> models,
             Map<String, WorkflowExpression> expressions,
             Map<String, WorkflowFunction> funcs) {
+        this.name = name;
+        this.version = version;
+        this.url = url;
         this.models = models;
         this.expressions = expressions;
         this.funcs = funcs;
+
+        // Default name and version
+        if (this.name == null && this.url != null) {
+            String[] nameParts = url.split("/");
+            this.name = nameParts[nameParts.length - 1].split("\\.")[0];
+        }
+        if (this.version == null) {
+            this.version = "1.0";
+        }
     }
 
     /**
@@ -106,6 +134,61 @@ public class Workflow implements AutoCloseable {
                             logger.debug("Ending execution of workflow");
                             return (Output) i;
                         });
+    }
+
+    /**
+     * Returns the workflow name.
+     *
+     * @return the workflow name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Returns the workflow version.
+     *
+     * @return the workflow version
+     */
+    public String getVersion() {
+        return version;
+    }
+
+    /**
+     * Returns the (optional) string url containing the workflow source.
+     *
+     * @return the (optional) string url containing the workflow source
+     */
+    public String getUrl() {
+        return url;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Workflow)) {
+            return false;
+        }
+        Workflow p = (Workflow) o;
+        return name.equals(p.getName()) && version.equals(p.getVersion());
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, getVersion());
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String toString() {
+        if (version != null) {
+            return name + ':' + version;
+        }
+        return name;
     }
 
     /** {@inheritDoc} * */

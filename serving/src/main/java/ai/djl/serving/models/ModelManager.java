@@ -91,7 +91,7 @@ public final class ModelManager {
      * @param maxIdleTime the maximum idle time of the worker threads before scaling down.
      * @return a {@code CompletableFuture} instance
      */
-    public CompletableFuture<WorkflowInfo> registerWorkflow(
+    public CompletableFuture<Workflow> registerWorkflow(
             final String modelName,
             final String version,
             final String modelUrl,
@@ -132,7 +132,7 @@ public final class ModelManager {
                                 }
 
                                 ZooModel<Input, Output> model = builder.build().loadModel();
-                                return new WorkflowInfo(
+                                return new Workflow(
                                         modelName,
                                         version,
                                         modelUrl,
@@ -157,7 +157,7 @@ public final class ModelManager {
      * @param workflow the workflow to register
      * @return a {@code CompletableFuture} instance
      */
-    public CompletableFuture<WorkflowInfo> registerWorkflow(final WorkflowInfo workflow) {
+    public CompletableFuture<Workflow> registerWorkflow(final Workflow workflow) {
         return CompletableFuture.supplyAsync(
                 () -> {
                     Endpoint endpoint =
@@ -189,21 +189,21 @@ public final class ModelManager {
         Set<ModelInfo> candidateModelsToUnregister = new HashSet<>();
         if (version == null) {
             // unregister all versions
-            for (WorkflowInfo workflow : endpoint.getWorkflows()) {
-                candidateModelsToUnregister.addAll(workflow.getWorkflow().getModels());
-                workflow.getWorkflow().close();
+            for (Workflow workflow : endpoint.getWorkflows()) {
+                candidateModelsToUnregister.addAll(workflow.getModels());
+                workflow.close();
             }
             startupModels.remove(workflowName);
             endpoint.getWorkflows().clear();
             logger.info("Model {} unregistered.", workflowName);
         } else {
-            WorkflowInfo workflow = endpoint.remove(version);
+            Workflow workflow = endpoint.remove(version);
             if (workflow == null) {
                 logger.warn("Workflow not found: " + workflowName + ':' + version);
                 return false;
             }
-            candidateModelsToUnregister.addAll(workflow.getWorkflow().getModels());
-            workflow.getWorkflow().close();
+            candidateModelsToUnregister.addAll(workflow.getModels());
+            workflow.close();
             startupModels.remove(workflowName);
         }
         if (endpoint.getWorkflows().isEmpty()) {
@@ -229,9 +229,9 @@ public final class ModelManager {
      * @return the info about the scaled workflow
      * @see WorkerPool#scaleWorkers(String, int, int)
      */
-    public WorkflowInfo scaleWorkers(
-            WorkflowInfo workflow, String deviceName, int minWorkers, int maxWorkers) {
-        for (ModelInfo model : workflow.getWorkflow().getModels()) {
+    public Workflow scaleWorkers(
+            Workflow workflow, String deviceName, int minWorkers, int maxWorkers) {
+        for (ModelInfo model : workflow.getModels()) {
             scaleWorkers(model, deviceName, minWorkers, maxWorkers);
         }
         return workflow;
@@ -274,7 +274,7 @@ public final class ModelManager {
                 .values()
                 .stream()
                 .flatMap(e -> e.getWorkflows().stream())
-                .flatMap(w -> w.getWorkflow().getModels().stream())
+                .flatMap(w -> w.getModels().stream())
                 .collect(Collectors.toSet());
     }
 
@@ -286,7 +286,7 @@ public final class ModelManager {
      * @param predict ture for selecting a model in load balance fashion
      * @return the model
      */
-    public WorkflowInfo getWorkflow(String workflowName, String version, boolean predict) {
+    public Workflow getWorkflow(String workflowName, String version, boolean predict) {
         Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
             return null;
@@ -346,17 +346,17 @@ public final class ModelManager {
         if (endpoint == null) {
             throw new ModelNotFoundException("Workflow not found: " + workflowName);
         }
-        List<WorkflowInfo> list = endpoint.getWorkflows();
+        List<Workflow> list = endpoint.getWorkflows();
         if (list.isEmpty()) {
             throw new ModelNotFoundException("Workflow not found: " + workflowName);
         }
 
         List<DescribeModelResponse> resps = new ArrayList<>();
-        for (WorkflowInfo workflow : list) {
-            for (ModelInfo model : workflow.getWorkflow().getModels()) {
+        for (Workflow workflow : list) {
+            for (ModelInfo model : workflow.getModels()) {
                 DescribeModelResponse resp = new DescribeModelResponse();
                 resp.setModelName(model.getModelName());
-                resp.setModelUrl(list.get(0).getModelUrl());
+                resp.setModelUrl(list.get(0).getUrl());
                 resp.setBatchSize(model.getBatchSize());
                 resp.setMaxBatchDelay(model.getMaxBatchDelay());
                 resp.setMaxIdleTime(model.getMaxIdleTime());
@@ -399,8 +399,8 @@ public final class ModelManager {
 
                     int numScaled = 0;
                     for (Endpoint endpoint : endpoints.values()) {
-                        for (WorkflowInfo p : endpoint.getWorkflows()) {
-                            for (ModelInfo m : p.getWorkflow().getModels()) {
+                        for (Workflow p : endpoint.getWorkflows()) {
+                            for (ModelInfo m : p.getModels()) {
                                 numScaled += wlm.getWorkerPoolForModel(m).getMinWorkers();
                                 numWorking += wlm.getNumRunningWorkers(m);
                             }
