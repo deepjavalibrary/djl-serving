@@ -14,6 +14,7 @@ package ai.djl.serving.models;
 
 import ai.djl.Device;
 import ai.djl.ModelException;
+import ai.djl.engine.Engine;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.Criteria;
@@ -113,7 +114,13 @@ public final class ModelManager {
                                                 .optModelUrls(modelUrl)
                                                 .optEngine(engineName);
                                 if ("-1".equals(deviceName)) {
-                                    logger.info("Loading model {} on {}.", modelName, Device.cpu());
+                                    Device device;
+                                    if (engineName == null) {
+                                        device = Device.cpu();
+                                    } else {
+                                        device = Engine.getEngine(engineName).defaultDevice();
+                                    }
+                                    logger.info("Loading model {} on {}.", modelName, device);
                                 } else if (deviceName.startsWith("nc")) {
                                     logger.info("Loading model {} on {}.", modelName, deviceName);
                                     String ncs = deviceName.substring(2);

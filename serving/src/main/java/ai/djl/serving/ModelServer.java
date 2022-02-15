@@ -344,6 +344,9 @@ public class ModelServer {
             } else {
                 modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
+            if (engine == null) {
+                engine = inferEngineFromUrl(modelUrl);
+            }
 
             for (int i = 0; i < devices.length; ++i) {
                 String modelVersion;
@@ -392,19 +395,9 @@ public class ModelServer {
             String modelName = ModelInfo.inferModelNameFromUrl(url);
             String engine;
             if (Files.isDirectory(path)) {
-                engine = inferEngine(path);
+                engine = inferEngine(path, path.toFile().getName());
             } else {
-                try {
-                    Repository repository = Repository.newInstance("modelStore", url);
-                    List<MRL> mrls = repository.getResources();
-                    Artifact artifact = mrls.get(0).getDefaultArtifact();
-                    repository.prepare(artifact);
-                    Path modelDir = repository.getResourceDirectory(artifact);
-                    engine = inferEngine(modelDir);
-                } catch (IOException e) {
-                    logger.warn("Failed to extract model: " + path, e);
-                    return null;
-                }
+                engine = inferEngineFromUrl(url);
             }
             if (engine == null) {
                 return null;
@@ -418,7 +411,21 @@ public class ModelServer {
         }
     }
 
-    private String inferEngine(Path modelDir) {
+    private String inferEngineFromUrl(String modelUrl) {
+        try {
+            Repository repository = Repository.newInstance("modelStore", modelUrl);
+            List<MRL> mrls = repository.getResources();
+            Artifact artifact = mrls.get(0).getDefaultArtifact();
+            repository.prepare(artifact);
+            Path modelDir = repository.getResourceDirectory(artifact);
+            return inferEngine(modelDir, artifact.getName());
+        } catch (IOException e) {
+            logger.warn("Failed to extract model: " + modelUrl, e);
+            return null;
+        }
+    }
+
+    private String inferEngine(Path modelDir, String modelName) {
         Path file = modelDir.resolve("serving.properties");
         if (Files.isRegularFile(file)) {
             Properties prop = new Properties();
@@ -428,38 +435,37 @@ public class ModelServer {
                 if (engine != null) {
                     return engine;
                 }
+                modelName = prop.getProperty("modelName");
             } catch (IOException e) {
                 logger.warn("Failed read serving.properties file", e);
             }
         }
-
-        String dirName = modelDir.toFile().getName();
         if (Files.isDirectory(modelDir.resolve("MAR-INF"))
                 || Files.isRegularFile(modelDir.resolve("model.py"))
-                || Files.isRegularFile(modelDir.resolve(dirName + ".py"))) {
+                || Files.isRegularFile(modelDir.resolve(modelName + ".py"))) {
             // MMS/TorchServe
             return "Python";
-        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".pt"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".pt"))) {
             return "PyTorch";
         } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
             return "TensorFlow";
-        } else if (Files.isRegularFile(modelDir.resolve(dirName + "-symbol.json"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + "-symbol.json"))) {
             return "MXNet";
-        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".onnx"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".onnx"))) {
             return "OnnxRuntime";
-        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".trt"))
-                || Files.isRegularFile(modelDir.resolve(dirName + ".uff"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".trt"))
+                || Files.isRegularFile(modelDir.resolve(modelName + ".uff"))) {
             return "TensorRT";
-        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".tflite"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".tflite"))) {
             return "TFLite";
         } else if (Files.isRegularFile(modelDir.resolve("model"))
                 || Files.isRegularFile(modelDir.resolve("__model__"))
                 || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
             return "PaddlePaddle";
-        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".json"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".json"))) {
             return "XGBoost";
-        } else if (Files.isRegularFile(modelDir.resolve(dirName + ".dylib"))
-                || Files.isRegularFile(modelDir.resolve(dirName + ".so"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".dylib"))
+                || Files.isRegularFile(modelDir.resolve(modelName + ".so"))) {
             return "DLR";
         }
         logger.warn("Failed to detect engine of the model: " + modelDir);
