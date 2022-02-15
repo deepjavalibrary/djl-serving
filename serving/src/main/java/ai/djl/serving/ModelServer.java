@@ -132,7 +132,6 @@ public class ModelServer {
     public void startAndWait() throws InterruptedException, IOException, GeneralSecurityException {
         try {
             List<ChannelFuture> channelFutures = start();
-            logger.info("Model server started.");
             channelFutures.get(0).sync();
         } finally {
             serverGroups.shutdown(true);
@@ -154,7 +153,6 @@ public class ModelServer {
 
         logger.info(configManager.dumpConfigurations());
 
-        initModelStore();
         pluginManager.loadPlugins();
 
         Connector inferenceConnector =
@@ -174,6 +172,16 @@ public class ModelServer {
         } else {
             futures.add(initializeServer(inferenceConnector, serverGroup, workerGroup));
             futures.add(initializeServer(managementConnector, serverGroup, workerGroup));
+        }
+        logger.info("Model server started.");
+
+        try {
+            initModelStore();
+        } catch (IOException e) {
+            logger.error("Failed to load startup models", e);
+            // delay 3 seconds, allows REST API to send PING response (health check)
+            Thread.sleep(3000);
+            stop();
         }
 
         return futures;
