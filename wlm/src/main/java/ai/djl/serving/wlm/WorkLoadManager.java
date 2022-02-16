@@ -94,16 +94,14 @@ public class WorkLoadManager implements AutoCloseable {
         int maxWorkers = pool.getMaxWorkers();
         if (maxWorkers == 0) {
             result.completeExceptionally(
-                    new WlmShutdownException(
-                            "All model workers has been shutdown: " + modelInfo.getModelName()));
+                    new WlmShutdownException("All model workers has been shutdown: " + modelInfo));
             return result;
         }
         LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();
         if (!queue.offer(new WorkerJob(job, result))) {
             result.completeExceptionally(
                     new WlmCapacityException(
-                            "Worker queue capacity exceeded for model: "
-                                    + modelInfo.getModelName()));
+                            "Worker queue capacity exceeded for model: " + modelInfo));
             return result;
         }
 
@@ -247,6 +245,10 @@ public class WorkLoadManager implements AutoCloseable {
          */
         public WorkerPool scaleWorkers(String deviceName, int newMinWorkers, int newMaxWorkers) {
             synchronized (model) {
+                if (model.getStatus() != ModelInfo.Status.READY) {
+                    logger.warn("Cannot scale workers while model is not READY: {}", model);
+                    return this;
+                }
                 NDManager manager = model.getModel().getNDManager();
                 WlmConfigManager configManager = WlmConfigManager.getInstance();
                 maxWorkers = configManager.getDefaultWorkers(manager, deviceName, newMaxWorkers);
@@ -316,7 +318,7 @@ public class WorkLoadManager implements AutoCloseable {
                                 buf.append("-tmpPool\n");
                             }
                         });
-                logger.debug("worker pool for model {}:\n {}", model.getModelName(), buf);
+                logger.debug("worker pool for model {}:\n {}", model, buf);
             }
         }
 

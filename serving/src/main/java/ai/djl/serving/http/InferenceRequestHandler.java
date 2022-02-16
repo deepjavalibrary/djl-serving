@@ -20,6 +20,7 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
+import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmShutdownException;
 import ai.djl.serving.workflow.Workflow;
@@ -171,18 +172,21 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String deviceName = input.getProperty("device", "-1");
 
             logger.info("Loading model {} from: {}", workflowName, modelUrl);
+            ModelInfo modelInfo =
+                    new ModelInfo(
+                            workflowName,
+                            modelUrl,
+                            version,
+                            engineName,
+                            config.getJobQueueSize(),
+                            config.getMaxIdleTime(),
+                            config.getMaxBatchDelay(),
+                            config.getBatchSize());
+            Workflow wf = new Workflow(modelInfo);
 
             modelManager
-                    .registerWorkflow(
-                            workflowName,
-                            version,
-                            modelUrl,
-                            engineName,
-                            deviceName,
-                            config.getBatchSize(),
-                            config.getMaxBatchDelay(),
-                            config.getMaxIdleTime())
-                    .thenApply(p -> modelManager.scaleWorkers(p, deviceName, 1, -1))
+                    .registerWorkflow(wf, deviceName)
+                    .thenApply(p -> modelManager.scaleWorkers(wf, deviceName, 1, -1))
                     .thenAccept(p -> runJob(modelManager, ctx, p, input));
             return;
         }

@@ -19,7 +19,10 @@ public class ModelInfoTest {
 
     @Test
     public void testQueueSizeIsSet() {
-        ModelInfo modelInfo = new ModelInfo("", null, null, 4711, 1, 300, 1);
+        ModelInfo modelInfo = new ModelInfo("", null, null, "MXNet", 4711, 1, 300, 1);
         Assert.assertEquals(4711, modelInfo.getQueueSize());
+        Assert.assertEquals(1, modelInfo.getMaxIdleTime());
+        Assert.assertEquals(300, modelInfo.getMaxBatchDelay());
+        Assert.assertEquals(1, modelInfo.getBatchSize());
     }
 }

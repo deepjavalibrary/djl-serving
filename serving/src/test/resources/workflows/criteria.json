@@ -2,8 +2,7 @@
   "models": {
     "m": {
       "application": "cv/image_classification",
-      "groupId": "ai.djl.zoo",
-      "artifactId": "mlp",
+      "modelUrl": "djl://ai.djl.zoo/mlp/0.0.3/mlp",
       "filters": {
         "dataset": "mnist"
       }

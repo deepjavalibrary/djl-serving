@@ -41,7 +41,7 @@ public class ModelWorkflowFunction extends WorkflowFunction {
         if (args.size() != 1) {
             throw new IllegalArgumentException(
                     "The model "
-                            + model.getModelName()
+                            + model.getModelId()
                             + " should have one arg, but has "
                             + args.size());
         }

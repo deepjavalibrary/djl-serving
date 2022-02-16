@@ -12,10 +12,8 @@
  */
 package ai.djl.serving;
 
-import ai.djl.MalformedModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
@@ -28,6 +26,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.apache.commons.cli.CommandLine;
 import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
@@ -52,40 +52,34 @@ public class WorkflowTest {
 
     @Test
     public void testJson()
-            throws IOException, ModelNotFoundException, MalformedModelException,
-                    BadWorkflowException {
+            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
         Path workflowFile = Paths.get("src/test/resources/workflows/basic.json");
         runWorkflow(workflowFile, zeroInput);
     }
 
     @Test
     public void testYaml()
-            throws ModelNotFoundException, MalformedModelException, IOException,
-                    BadWorkflowException {
+            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
         Path workflowFile = Paths.get("src/test/resources/workflows/basic.yaml");
         runWorkflow(workflowFile, zeroInput);
     }
 
     @Test
     public void testCriteria()
-            throws ModelNotFoundException, MalformedModelException, IOException,
-                    BadWorkflowException {
+            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
         Path workflowFile = Paths.get("src/test/resources/workflows/criteria.json");
         runWorkflow(workflowFile, zeroInput);
     }
 
     @Test
     public void testFunctions()
-            throws ModelNotFoundException, MalformedModelException, IOException,
-                    BadWorkflowException {
+            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
         Path workflowFile = Paths.get("src/test/resources/workflows/functions.json");
         runWorkflow(workflowFile, zeroInput);
     }
 
     @Test
-    public void testGlobalPerf()
-            throws ModelNotFoundException, MalformedModelException, IOException,
-                    BadWorkflowException {
+    public void testGlobalPerf() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/globalPerf.json");
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         ModelInfo m = workflow.getModels().stream().findFirst().get();
@@ -97,9 +91,7 @@ public class WorkflowTest {
     }
 
     @Test
-    public void testLocalPerf()
-            throws ModelNotFoundException, MalformedModelException, IOException,
-                    BadWorkflowException {
+    public void testLocalPerf() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/localPerf.json");
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         ModelInfo m = workflow.getModels().stream().findFirst().get();
@@ -111,9 +103,10 @@ public class WorkflowTest {
     }
 
     private Input runWorkflow(Path workflowFile, Input input)
-            throws IOException, ModelNotFoundException, MalformedModelException,
-                    BadWorkflowException {
+            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
+        CompletableFuture<Void> future = workflow.load("-1");
+        future.get();
         try (WorkLoadManager wlm = new WorkLoadManager()) {
             for (ModelInfo model : workflow.getModels()) {
                 wlm.getWorkerPoolForModel(model).scaleWorkers("cpu", 1, 1);
