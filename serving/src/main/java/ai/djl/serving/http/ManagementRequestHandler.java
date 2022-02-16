@@ -16,6 +16,7 @@ import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
+import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
@@ -137,9 +138,19 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         }
 
         for (int i = pageToken; i < last; ++i) {
-            String modelName = keys.get(i);
-            for (Workflow m : endpoints.get(modelName).getWorkflows()) {
-                list.addModel(modelName, m.getVersion(), m.getUrl());
+            String workflowName = keys.get(i);
+            for (Workflow workflow : endpoints.get(workflowName).getWorkflows()) {
+                for (ModelInfo m : workflow.getModels()) {
+                    String status = m.getStatus().toString();
+                    String id = m.getModelId();
+                    String modelName;
+                    if (workflowName.equals(id)) {
+                        modelName = workflowName;
+                    } else {
+                        modelName = workflowName + ':' + id;
+                    }
+                    list.addModel(modelName, workflow.getVersion(), m.getModelUrl(), status);
+                }
             }
         }
 
@@ -185,40 +196,42 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 Boolean.parseBoolean(
                         NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
-        final ModelManager modelManager = ModelManager.getInstance();
-        CompletableFuture<Workflow> future =
-                modelManager.registerWorkflow(
+        ModelInfo modelInfo =
+                new ModelInfo(
                         modelName,
-                        version,
                         modelUrl,
+                        version,
                         engineName,
-                        deviceName,
-                        batchSize,
+                        ConfigManager.getInstance().getJobQueueSize(),
+                        maxIdleTime,
                         maxBatchDelay,
-                        maxIdleTime);
+                        batchSize);
+        Workflow workflow = new Workflow(modelInfo);
+        final ModelManager modelManager = ModelManager.getInstance();
         CompletableFuture<Void> f =
-                future.thenAccept(
-                        p -> {
-                            for (ModelInfo m : p.getModels()) {
-                                m.configurePool(maxIdleTime)
-                                        .configureModelBatch(batchSize, maxBatchDelay);
-                                modelManager.scaleWorkers(m, deviceName, minWorkers, maxWorkers);
-                            }
-                        });
-
+                modelManager
+                        .registerWorkflow(workflow, deviceName)
+                        .thenAccept(
+                                v -> {
+                                    for (ModelInfo m : workflow.getModels()) {
+                                        m.configurePool(maxIdleTime)
+                                                .configureModelBatch(batchSize, maxBatchDelay);
+                                        modelManager.scaleWorkers(
+                                                m, deviceName, minWorkers, maxWorkers);
+                                    }
+                                })
+                        .exceptionally(
+                                t -> {
+                                    NettyUtils.sendError(ctx, t.getCause());
+                                    return null;
+                                });
         if (synchronous) {
             final String msg = "Model \"" + modelName + "\" registered.";
-            f = f.thenAccept(m -> NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg)));
+            f.thenAccept(v -> NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg)));
         } else {
             String msg = "Model \"" + modelName + "\" registration scheduled.";
             NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg), HttpResponseStatus.ACCEPTED);
         }
-
-        f.exceptionally(
-                t -> {
-                    NettyUtils.sendError(ctx, t.getCause());
-                    return null;
-                });
     }
 
     private void handleUnregisterModel(ChannelHandlerContext ctx, String modelName, String version)

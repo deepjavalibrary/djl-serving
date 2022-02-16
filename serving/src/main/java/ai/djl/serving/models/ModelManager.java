@@ -12,31 +12,22 @@
  */
 package ai.djl.serving.models;
 
-import ai.djl.Device;
-import ai.djl.ModelException;
-import ai.djl.engine.Engine;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelNotFoundException;
-import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeModelResponse;
-import ai.djl.serving.plugins.DependencyManager;
-import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
 import ai.djl.serving.wlm.WorkerThread;
 import ai.djl.serving.workflow.Workflow;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -47,27 +38,16 @@ public final class ModelManager {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelManager.class);
 
-    private static ModelManager modelManager;
+    private static ModelManager modelManager = new ModelManager();
 
-    private ConfigManager configManager;
     private WorkLoadManager wlm;
     private Map<String, Endpoint> endpoints;
     private Set<String> startupModels;
 
-    private ModelManager(ConfigManager configManager) {
-        this.configManager = configManager;
+    private ModelManager() {
         wlm = new WorkLoadManager();
         endpoints = new ConcurrentHashMap<>();
         startupModels = new HashSet<>();
-    }
-
-    /**
-     * Initialized the global {@code ModelManager} instance.
-     *
-     * @param configManager the configuration
-     */
-    public static void init(ConfigManager configManager) {
-        modelManager = new ModelManager(configManager);
     }
 
     /**
@@ -80,103 +60,19 @@ public final class ModelManager {
     }
 
     /**
-     * Registers and loads a model.
-     *
-     * @param modelName the name of the model for HTTP endpoint
-     * @param version the model version
-     * @param modelUrl the model url
-     * @param engineName the engine to load the model
-     * @param deviceName the accelerator device id, -1 for auto selection
-     * @param batchSize the batch size
-     * @param maxBatchDelay the maximum delay for batching
-     * @param maxIdleTime the maximum idle time of the worker threads before scaling down.
-     * @return a {@code CompletableFuture} instance
-     */
-    public CompletableFuture<Workflow> registerWorkflow(
-            final String modelName,
-            final String version,
-            final String modelUrl,
-            final String engineName,
-            final String deviceName,
-            final int batchSize,
-            final int maxBatchDelay,
-            final int maxIdleTime) {
-        return CompletableFuture.supplyAsync(
-                        () -> {
-                            try {
-                                if (engineName != null) {
-                                    DependencyManager dm = DependencyManager.getInstance();
-                                    dm.installEngine(engineName);
-                                }
-                                Criteria.Builder<Input, Output> builder =
-                                        Criteria.builder()
-                                                .setTypes(Input.class, Output.class)
-                                                .optModelUrls(modelUrl)
-                                                .optEngine(engineName);
-                                if ("-1".equals(deviceName)) {
-                                    Device device;
-                                    if (engineName == null) {
-                                        device = Device.cpu();
-                                    } else {
-                                        device = Engine.getEngine(engineName).defaultDevice();
-                                    }
-                                    logger.info("Loading model {} on {}.", modelName, device);
-                                } else if (deviceName.startsWith("nc")) {
-                                    logger.info("Loading model {} on {}.", modelName, deviceName);
-                                    String ncs = deviceName.substring(2);
-                                    builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
-                                } else {
-                                    // GPU case
-                                    int gpuId = Integer.parseInt(deviceName);
-                                    builder.optDevice(Device.gpu(gpuId));
-                                    logger.info(
-                                            "Loading model {} on {}.",
-                                            modelName,
-                                            Device.gpu(gpuId));
-                                }
-                                if (batchSize > 1) {
-                                    builder.optArgument("batchifier", "stack");
-                                }
-
-                                ZooModel<Input, Output> model = builder.build().loadModel();
-                                return new Workflow(
-                                        modelName,
-                                        version,
-                                        modelUrl,
-                                        new ModelInfo(
-                                                modelName,
-                                                version,
-                                                model,
-                                                configManager.getJobQueueSize(),
-                                                maxIdleTime,
-                                                maxBatchDelay,
-                                                batchSize));
-                            } catch (ModelException | IOException e) {
-                                throw new CompletionException(e);
-                            }
-                        })
-                .thenApply(p -> registerWorkflow(p).join());
-    }
-
-    /**
-     * Registers and loads a workflow.
+     * Registers and loads a {@link Workflow}.
      *
      * @param workflow the workflow to register
+     * @param deviceName the accelerator device id, -1 for auto selection
      * @return a {@code CompletableFuture} instance
      */
-    public CompletableFuture<Workflow> registerWorkflow(final Workflow workflow) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    Endpoint endpoint =
-                            endpoints.computeIfAbsent(workflow.getName(), k -> new Endpoint());
-                    if (!endpoint.add(workflow)) {
-                        // workflow already exists
-                        throw new BadRequestException(
-                                "Workflow " + workflow + " is already registered.");
-                    }
-
-                    return workflow;
-                });
+    public CompletableFuture<Void> registerWorkflow(Workflow workflow, String deviceName) {
+        Endpoint endpoint = endpoints.computeIfAbsent(workflow.getName(), k -> new Endpoint());
+        if (!endpoint.add(workflow)) {
+            // workflow already exists
+            throw new BadRequestException("Workflow " + workflow + " is already registered.");
+        }
+        return workflow.load(deviceName);
     }
 
     /**
@@ -256,8 +152,7 @@ public final class ModelManager {
      */
     public ModelInfo scaleWorkers(
             ModelInfo model, String deviceName, int minWorkers, int maxWorkers) {
-        String modelName = model.getModelName();
-        logger.debug("updateModel: {}", modelName);
+        logger.debug("updateModel: {}", model);
         wlm.getWorkerPoolForModel(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
         return model;
     }
@@ -362,13 +257,13 @@ public final class ModelManager {
         for (Workflow workflow : list) {
             for (ModelInfo model : workflow.getModels()) {
                 DescribeModelResponse resp = new DescribeModelResponse();
-                resp.setModelName(model.getModelName());
-                resp.setModelUrl(list.get(0).getUrl());
+                resp.setModelName(model.getModelId());
+                resp.setModelUrl(model.getModelUrl());
                 resp.setBatchSize(model.getBatchSize());
                 resp.setMaxBatchDelay(model.getMaxBatchDelay());
                 resp.setMaxIdleTime(model.getMaxIdleTime());
                 resp.setQueueLength(wlm.getQueueLength(model));
-                resp.setLoadedAtStartup(startupModels.contains(model.getModelName()));
+                resp.setLoadedAtStartup(startupModels.contains(model.getModelId()));
 
                 WorkerPool wp = wlm.getWorkerPoolForModel(model);
                 resp.setMaxWorkers(wp.getMaxWorkers());

@@ -161,11 +161,11 @@ public final class WorkerThread implements Runnable {
     }
 
     private String buildWorkerName(ModelInfo model) {
-        String modelName = model.getModelName();
-        if (modelName.length() > 25) {
-            modelName = modelName.substring(0, 25);
+        String modelId = model.getModelId();
+        if (modelId.length() > 25) {
+            modelId = modelId.substring(0, 25);
         }
-        return "W-" + modelName + '-' + workerId;
+        return "W-" + modelId + '-' + workerId;
     }
 
     void setState(WorkerState newState) {

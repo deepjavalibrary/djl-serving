@@ -389,7 +389,7 @@ public class ModelServerTest {
                 ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
                 for (ListModelsResponse.ModelItem item : resp.getModels()) {
                     Assert.assertNotNull(item.getModelUrl());
-                    if ("mlp_1".equals(item.getModelName())) {
+                    if ("mlp_1".equals(item.getModelName()) && "READY".equals(item.getStatus())) {
                         modelRegistered = true;
                         break OUTER;
                     }
