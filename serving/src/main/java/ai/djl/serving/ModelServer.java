@@ -416,7 +416,7 @@ public class ModelServer {
             Repository repository = Repository.newInstance("modelStore", modelUrl);
             List<MRL> mrls = repository.getResources();
             if (mrls.isEmpty()) {
-                throw new AssertionError("Model directory path does not exist : " + modelUrl);
+                throw new IllegalArgumentException("Invalid model url: " + modelUrl);
             }
 
             Artifact artifact = mrls.get(0).getDefaultArtifact();
