@@ -28,11 +28,8 @@ public class PyNDManager extends BaseNDManager {
 
     private static final PyNDManager SYSTEM_MANAGER = new SystemManager();
 
-    private NDManager alternativeManager;
-
     private PyNDManager(NDManager parent, Device device) {
         super(parent, device);
-        alternativeManager = getAlternativeManager();
     }
 
     static PyNDManager getSystemManager() {
