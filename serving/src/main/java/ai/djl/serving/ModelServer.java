@@ -423,7 +423,7 @@ public class ModelServer {
             if (engine == null) {
                 return null;
             }
-            return modelName + "::" + engine + ":*=" + url;
+            return modelName + "::" + engine + ':' + configManager.getLoadOnDevices() + '=' + url;
         } catch (MalformedURLException e) {
             throw new AssertionError("Invalid path: " + path, e);
         } catch (IOException e) {
