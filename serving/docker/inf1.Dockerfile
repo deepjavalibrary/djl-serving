@@ -21,10 +21,11 @@ RUN apt-get update -y  \
     && apt-get clean
 
 # Include framework tensorflow-neuron or torch-neuron and compiler (compiler not needed for inference)
-RUN pip3 install torch==1.9.1+cpu -f https://download.pytorch.org/whl/torch_stable.html \
-    && pip3 install numpy \
+RUN pip3 install numpy \
     && pip3 install torch-neuron \
-      --extra-index-url=https://pip.repos.neuron.amazonaws.com
+      --extra-index-url=https://pip.repos.neuron.amazonaws.com \
+    && pip3 uninstall -y torch \
+    && pip3 install torch==1.10.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
 # Sets up Path for Neuron tools
 ENV PATH="/opt/bin/:/opt/aws/neuron/bin:${PATH}"
@@ -34,7 +35,7 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.6/dist-packages/torch/lib
 ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
-ENV PYTORCH_VERSION=1.9.1
+ENV PYTORCH_VERSION=1.10.0
 ENV JAVA_OPTS="-Dai.djl.pytorch.num_interop_threads=1 -Dai.djl.default_engine=PyTorch"
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
