@@ -18,6 +18,7 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeModelResponse;
 import ai.djl.serving.http.StatusResponse;
+import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
@@ -280,9 +281,14 @@ public final class ModelManager {
                 resp.setMaxWorkers(wp.getMaxWorkers());
                 resp.setMinWorkers(wp.getMinWorkers());
 
-                int activeWorker = wlm.getNumRunningWorkers(model);
-                int targetWorker = wp.getMinWorkers();
-                resp.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
+                ModelInfo.Status status = model.getStatus();
+                if (status == ModelInfo.Status.READY) {
+                    int activeWorker = wlm.getNumRunningWorkers(model);
+                    int targetWorker = wp.getMinWorkers();
+                    resp.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
+                } else {
+                    resp.setStatus(status.name());
+                }
 
                 List<WorkerThread> workers = wlm.getWorkers(model);
                 for (WorkerThread worker : workers) {
@@ -309,16 +315,15 @@ public final class ModelManager {
                 () -> {
                     boolean hasFailure = false;
                     boolean hasPending = false;
-                    Map<String, StatusResponse> data = new LinkedHashMap<>();
+                    Map<String, StatusResponse> data = new LinkedHashMap<>(); // NOPMD
                     for (Endpoint endpoint : endpoints.values()) {
                         for (Workflow p : endpoint.getWorkflows()) {
                             String workflowName = p.getName();
                             for (ModelInfo m : p.getModels()) {
                                 String modelName = m.getModelId();
                                 if (!modelName.equals(workflowName)) {
-                                    modelName = workflowName + ':' + modelName;
+                                    modelName = workflowName + ':' + modelName; // NOPMD
                                 }
-
                                 ModelInfo.Status status = m.getStatus();
                                 switch (status) {
                                     case FAILED:
@@ -330,7 +335,13 @@ public final class ModelManager {
                                         hasPending = true;
                                         break;
                                     default:
-                                        data.put(modelName, new StatusResponse(status.name()));
+                                        int min = wlm.getWorkerPoolForModel(m).getMinWorkers();
+                                        int actual = wlm.getNumRunningWorkers(m);
+                                        if (actual < min) {
+                                            data.put(modelName, new StatusResponse("Unhealthy"));
+                                        } else {
+                                            data.put(modelName, new StatusResponse("Healthy"));
+                                        }
                                         break;
                                 }
                             }
@@ -341,7 +352,11 @@ public final class ModelManager {
                     if (hasFailure) {
                         status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                     } else if (hasPending) {
-                        status = HttpResponseStatus.MULTI_STATUS;
+                        if (ConfigManager.getInstance().allowsMultiStatus()) {
+                            status = HttpResponseStatus.MULTI_STATUS;
+                        } else {
+                            status = HttpResponseStatus.OK;
+                        }
                     } else {
                         status = HttpResponseStatus.OK;
                     }

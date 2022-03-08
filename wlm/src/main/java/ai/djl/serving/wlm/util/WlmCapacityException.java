@@ -13,7 +13,7 @@
 package ai.djl.serving.wlm.util;
 
 /** Thrown to throttle when a job is run but the job queue capacity is exceeded. */
-public class WlmCapacityException extends RuntimeException {
+public class WlmCapacityException extends WlmException {
 
     static final long serialVersionUID = 1L;
 

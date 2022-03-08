@@ -21,8 +21,7 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.util.WlmCapacityException;
-import ai.djl.serving.wlm.util.WlmShutdownException;
+import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
 import io.netty.channel.ChannelHandlerContext;
@@ -240,11 +239,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         HttpResponseStatus status;
         if (t instanceof TranslateException) {
             status = HttpResponseStatus.BAD_REQUEST;
-        } else if (t instanceof WlmShutdownException) {
-            logger.info(t.getMessage());
-            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
-        } else if (t instanceof WlmCapacityException) {
-            logger.warn(t.getMessage());
+        } else if (t instanceof WlmException) {
+            logger.warn(t.getMessage(), t);
             status = HttpResponseStatus.SERVICE_UNAVAILABLE;
         } else {
             logger.warn("Unexpected error", t);

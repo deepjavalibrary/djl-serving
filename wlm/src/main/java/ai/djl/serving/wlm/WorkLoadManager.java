@@ -16,6 +16,7 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.NDManager;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmConfigManager;
+import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WlmShutdownException;
 import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.Collections;
@@ -90,16 +91,17 @@ public class WorkLoadManager implements AutoCloseable {
     public CompletableFuture<Output> runJob(Job job) {
         CompletableFuture<Output> result = new CompletableFuture<>();
         ModelInfo modelInfo = job.getModel();
+        if (modelInfo.getStatus() != ModelInfo.Status.READY) {
+            result.completeExceptionally(
+                    new WlmException("Model is not ready: " + modelInfo.getStatus()));
+            return result;
+        }
+
         WorkerPool pool = getWorkerPoolForModel(modelInfo);
         int maxWorkers = pool.getMaxWorkers();
         if (maxWorkers == 0) {
             result.completeExceptionally(
                     new WlmShutdownException("All model workers has been shutdown: " + modelInfo));
-            return result;
-        }
-        if (modelInfo.getStatus() != ModelInfo.Status.READY) {
-            result.completeExceptionally(
-                    new WlmShutdownException("Model is not ready: " + modelInfo.getStatus()));
             return result;
         }
         LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();

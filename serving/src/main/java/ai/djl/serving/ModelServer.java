@@ -176,6 +176,11 @@ public class ModelServer {
             futures.add(initializeServer(managementConnector, serverGroup, workerGroup));
         }
 
+        if (stopped.get()) {
+            // check if model load failed in wait loading model case
+            stop();
+        }
+
         return futures;
     }
 
@@ -190,10 +195,7 @@ public class ModelServer {
 
     /** Stops the model server. */
     public void stop() {
-        if (stopped.get()) {
-            return;
-        }
-
+        logger.info("Stopping model server.");
         stopped.set(true);
         for (ChannelFuture future : futures) {
             future.channel().close();
