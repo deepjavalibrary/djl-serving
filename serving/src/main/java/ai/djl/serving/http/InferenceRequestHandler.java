@@ -74,16 +74,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             throws ModelException {
         switch (segments[1]) {
             case "ping":
-                // TODO: Check if its OK to send other 2xx errors to ALB for "Partial Healthy"
-                // and "Unhealthy"
                 ModelManager.getInstance()
                         .workerStatus()
-                        .thenAccept(
-                                response ->
-                                        NettyUtils.sendJsonResponse(
-                                                ctx,
-                                                new StatusResponse(response),
-                                                HttpResponseStatus.OK));
+                        .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
                 break;
             case "invocations":
                 handleInvocations(ctx, req, decoder);

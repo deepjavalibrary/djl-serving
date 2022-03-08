@@ -253,6 +253,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             if (workflow == null) {
                 throw new ModelNotFoundException("Model not found: " + modelName);
             }
+
+            // make sure all models are loaded and ready
+            for (ModelInfo modelInfo : workflow.getModels()) {
+                if (modelInfo.getStatus() != ModelInfo.Status.READY) {
+                    throw new ServiceUnavailableException("Model is not ready: " + modelName);
+                }
+            }
+
             List<String> msgs = new ArrayList<>();
             for (ModelInfo modelInfo : workflow.getModels()) {
                 WorkerPool pool =

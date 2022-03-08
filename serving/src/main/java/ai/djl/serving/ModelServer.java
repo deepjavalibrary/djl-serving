@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -369,23 +370,26 @@ public class ModelServer {
                                 configManager.getBatchSize());
                 Workflow workflow = new Workflow(modelInfo);
 
-                modelManager
-                        .registerWorkflow(workflow, device)
-                        .thenAccept(v -> modelManager.scaleWorkers(workflow, device, 1, -1))
-                        .exceptionally(
-                                t -> {
-                                    logger.error("Failed register workflow", t);
-                                    // delay 3 seconds, allows REST API to send PING
-                                    // response (health check)
-                                    try {
-                                        Thread.sleep(3000);
-                                    } catch (InterruptedException ignore) {
-                                        // ignore
-                                    }
-                                    stop();
-                                    return null;
-                                })
-                        .join();
+                CompletableFuture<Void> f =
+                        modelManager
+                                .registerWorkflow(workflow, device)
+                                .thenAccept(v -> modelManager.scaleWorkers(workflow, device, 1, -1))
+                                .exceptionally(
+                                        t -> {
+                                            logger.error("Failed register workflow", t);
+                                            // delay 3 seconds, allows REST API to send PING
+                                            // response (health check)
+                                            try {
+                                                Thread.sleep(3000);
+                                            } catch (InterruptedException ignore) {
+                                                // ignore
+                                            }
+                                            stop();
+                                            return null;
+                                        });
+                if (configManager.waitModelLoading()) {
+                    f.join();
+                }
             }
             startupModels.add(workflowName);
         }

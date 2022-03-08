@@ -97,6 +97,11 @@ public class WorkLoadManager implements AutoCloseable {
                     new WlmShutdownException("All model workers has been shutdown: " + modelInfo));
             return result;
         }
+        if (modelInfo.getStatus() != ModelInfo.Status.READY) {
+            result.completeExceptionally(
+                    new WlmShutdownException("Model is not ready: " + modelInfo.getStatus()));
+            return result;
+        }
         LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();
         if (!queue.offer(new WorkerJob(job, result))) {
             result.completeExceptionally(

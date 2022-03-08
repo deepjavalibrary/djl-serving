@@ -17,13 +17,24 @@ import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeModelResponse;
+import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
 import ai.djl.serving.wlm.WorkerThread;
 import ai.djl.serving.workflow.Workflow;
+import ai.djl.util.JsonUtils;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.CharsetUtil;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -293,29 +304,57 @@ public final class ModelManager {
      *
      * @return completableFuture with eventually result in the future after async execution
      */
-    public CompletableFuture<String> workerStatus() {
+    public CompletableFuture<FullHttpResponse> workerStatus() {
         return CompletableFuture.supplyAsync(
                 () -> {
-                    String response = "Healthy";
-                    int numWorking = 0;
-
-                    int numScaled = 0;
+                    boolean hasFailure = false;
+                    boolean hasPending = false;
+                    Map<String, StatusResponse> data = new LinkedHashMap<>();
                     for (Endpoint endpoint : endpoints.values()) {
                         for (Workflow p : endpoint.getWorkflows()) {
+                            String workflowName = p.getName();
                             for (ModelInfo m : p.getModels()) {
-                                numScaled += wlm.getWorkerPoolForModel(m).getMinWorkers();
-                                numWorking += wlm.getNumRunningWorkers(m);
+                                String modelName = m.getModelId();
+                                if (!modelName.equals(workflowName)) {
+                                    modelName = workflowName + ':' + modelName;
+                                }
+
+                                ModelInfo.Status status = m.getStatus();
+                                switch (status) {
+                                    case FAILED:
+                                        data.put(modelName, new StatusResponse(status.name()));
+                                        hasFailure = true;
+                                        break;
+                                    case PENDING:
+                                        data.put(modelName, new StatusResponse(status.name()));
+                                        hasPending = true;
+                                        break;
+                                    default:
+                                        data.put(modelName, new StatusResponse(status.name()));
+                                        break;
+                                }
                             }
                         }
                     }
 
-                    if ((numWorking > 0) && (numWorking < numScaled)) {
-                        response = "Partial Healthy";
-                    } else if ((numWorking == 0) && (numScaled > 0)) {
-                        response = "Unhealthy";
+                    HttpResponseStatus status;
+                    if (hasFailure) {
+                        status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+                    } else if (hasPending) {
+                        status = HttpResponseStatus.MULTI_STATUS;
+                    } else {
+                        status = HttpResponseStatus.OK;
                     }
 
-                    return response;
+                    FullHttpResponse resp =
+                            new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
+                    resp.headers()
+                            .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+                    ByteBuf content = resp.content();
+                    String body = JsonUtils.GSON_PRETTY.toJson(data);
+                    content.writeCharSequence(body, CharsetUtil.UTF_8);
+                    content.writeByte('\n');
+                    return resp;
                 });
     }
 }
