@@ -20,8 +20,8 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
-import ai.djl.serving.wlm.util.WlmCapacityException;
-import ai.djl.serving.wlm.util.WlmShutdownException;
+import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
 import io.netty.channel.ChannelHandlerContext;
@@ -73,16 +73,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             throws ModelException {
         switch (segments[1]) {
             case "ping":
-                // TODO: Check if its OK to send other 2xx errors to ALB for "Partial Healthy"
-                // and "Unhealthy"
                 ModelManager.getInstance()
                         .workerStatus()
-                        .thenAccept(
-                                response ->
-                                        NettyUtils.sendJsonResponse(
-                                                ctx,
-                                                new StatusResponse(response),
-                                                HttpResponseStatus.OK));
+                        .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
                 break;
             case "invocations":
                 handleInvocations(ctx, req, decoder);
@@ -171,18 +164,21 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String deviceName = input.getProperty("device", "-1");
 
             logger.info("Loading model {} from: {}", workflowName, modelUrl);
+            ModelInfo modelInfo =
+                    new ModelInfo(
+                            workflowName,
+                            modelUrl,
+                            version,
+                            engineName,
+                            config.getJobQueueSize(),
+                            config.getMaxIdleTime(),
+                            config.getMaxBatchDelay(),
+                            config.getBatchSize());
+            Workflow wf = new Workflow(modelInfo);
 
             modelManager
-                    .registerWorkflow(
-                            workflowName,
-                            version,
-                            modelUrl,
-                            engineName,
-                            deviceName,
-                            config.getBatchSize(),
-                            config.getMaxBatchDelay(),
-                            config.getMaxIdleTime())
-                    .thenApply(p -> modelManager.scaleWorkers(p, deviceName, 1, -1))
+                    .registerWorkflow(wf, deviceName)
+                    .thenApply(p -> modelManager.scaleWorkers(wf, deviceName, 1, -1))
                     .thenAccept(p -> runJob(modelManager, ctx, p, input));
             return;
         }
@@ -243,11 +239,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         HttpResponseStatus status;
         if (t instanceof TranslateException) {
             status = HttpResponseStatus.BAD_REQUEST;
-        } else if (t instanceof WlmShutdownException) {
-            logger.info(t.getMessage());
-            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
-        } else if (t instanceof WlmCapacityException) {
-            logger.warn(t.getMessage());
+        } else if (t instanceof WlmException) {
+            logger.warn(t.getMessage(), t);
             status = HttpResponseStatus.SERVICE_UNAVAILABLE;
         } else {
             logger.warn("Unexpected error", t);

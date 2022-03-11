@@ -13,7 +13,7 @@
 package ai.djl.serving.wlm.util;
 
 /** Thrown when a job is run but all workers are shutdown. */
-public class WlmShutdownException extends RuntimeException {
+public class WlmShutdownException extends WlmException {
 
     static final long serialVersionUID = 1L;
 

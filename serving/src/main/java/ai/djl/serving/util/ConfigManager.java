@@ -48,6 +48,8 @@ public final class ConfigManager {
     private static final String INFERENCE_ADDRESS = "inference_address";
     private static final String MANAGEMENT_ADDRESS = "management_address";
     private static final String LOAD_MODELS = "load_models";
+    private static final String WAIT_MODEL_LOADING = "wait_model_loading";
+    private static final String ALLOW_MULTI_STATUS = "allow_multi_status";
     private static final String NUMBER_OF_NETTY_THREADS = "number_of_netty_threads";
     private static final String JOB_QUEUE_SIZE = "job_queue_size";
     private static final String MAX_IDLE_TIME = "max_idle_time";
@@ -217,6 +219,24 @@ public final class ConfigManager {
         }
         home = getCanonicalPath(dir);
         return home;
+    }
+
+    /**
+     * Returns if model server should wait for model initialization on startup.
+     *
+     * @return true if model server should wait for model initialization on startup
+     */
+    public boolean waitModelLoading() {
+        return Boolean.parseBoolean(prop.getProperty(WAIT_MODEL_LOADING, "true"));
+    }
+
+    /**
+     * Returns if allows return MULTI-STATUS HTTP code.
+     *
+     * @return true if allows return MULTI-STATUS HTTP code
+     */
+    public boolean allowsMultiStatus() {
+        return Boolean.parseBoolean(prop.getProperty(ALLOW_MULTI_STATUS));
     }
 
     /**

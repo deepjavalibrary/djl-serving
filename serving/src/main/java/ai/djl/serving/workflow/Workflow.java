@@ -12,14 +12,17 @@
  */
 package ai.djl.serving.workflow;
 
+import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.IdentityWF;
 import ai.djl.serving.workflow.function.ModelWorkflowFunction;
 import ai.djl.serving.workflow.function.WorkflowFunction;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -28,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -49,7 +53,6 @@ public class Workflow implements AutoCloseable {
 
     String name;
     String version;
-    String url;
     Map<String, ModelInfo> models;
     Map<String, WorkflowExpression> expressions;
     Map<String, WorkflowFunction> funcs;
@@ -57,16 +60,12 @@ public class Workflow implements AutoCloseable {
     /**
      * Constructs a workflow containing only a single model.
      *
-     * @param name the model/workflow name
-     * @param version the model/workflow version
-     * @param url the url the model was laoded from
      * @param model the model for the workflow
      */
-    public Workflow(String name, String version, String url, ModelInfo model) {
+    public Workflow(ModelInfo model) {
         String modelName = "model";
-        this.name = name;
-        this.version = version;
-        this.url = url;
+        this.name = model.getModelId();
+        this.version = model.getVersion();
         models = Collections.singletonMap(modelName, model);
         expressions =
                 Collections.singletonMap(
@@ -79,7 +78,6 @@ public class Workflow implements AutoCloseable {
      *
      * @param name workflow name
      * @param version workflow version
-     * @param url workflow source url
      * @param models a map of executableNames for a model (how it is referred to in the {@link
      *     WorkflowExpression}s to model
      * @param expressions a map of names to refer to an expression to the expression
@@ -88,25 +86,14 @@ public class Workflow implements AutoCloseable {
     public Workflow(
             String name,
             String version,
-            String url,
             Map<String, ModelInfo> models,
             Map<String, WorkflowExpression> expressions,
             Map<String, WorkflowFunction> funcs) {
         this.name = name;
         this.version = version;
-        this.url = url;
         this.models = models;
         this.expressions = expressions;
         this.funcs = funcs;
-
-        // Default name and version
-        if (this.name == null && this.url != null) {
-            String[] nameParts = url.split("/");
-            this.name = nameParts[nameParts.length - 1].split("\\.")[0];
-        }
-        if (this.version == null) {
-            this.version = "1.0";
-        }
     }
 
     /**
@@ -116,6 +103,32 @@ public class Workflow implements AutoCloseable {
      */
     public Collection<ModelInfo> getModels() {
         return models.values();
+    }
+
+    /**
+     * Load all the models in this workflow.
+     *
+     * @param device the device to load the models
+     * @return a {@code CompletableFuture} instance
+     */
+    public CompletableFuture<Void> load(String device) {
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    try {
+                        for (ModelInfo modelInfo : models.values()) {
+                            String engine = modelInfo.getEngineName();
+                            if (engine != null) {
+                                DependencyManager dm = DependencyManager.getInstance();
+                                dm.installEngine(engine);
+                            }
+
+                            modelInfo.load(device);
+                        }
+                    } catch (ModelException | IOException e) {
+                        throw new CompletionException(e);
+                    }
+                    return null;
+                });
     }
 
     /**
@@ -152,15 +165,6 @@ public class Workflow implements AutoCloseable {
      */
     public String getVersion() {
         return version;
-    }
-
-    /**
-     * Returns the (optional) string url containing the workflow source.
-     *
-     * @return the (optional) string url containing the workflow source
-     */
-    public String getUrl() {
-        return url;
     }
 
     /** {@inheritDoc} */

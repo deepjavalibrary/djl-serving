@@ -16,6 +16,7 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.NDManager;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmConfigManager;
+import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WlmShutdownException;
 import ai.djl.serving.wlm.util.WorkerJob;
 import java.util.Collections;
@@ -90,20 +91,24 @@ public class WorkLoadManager implements AutoCloseable {
     public CompletableFuture<Output> runJob(Job job) {
         CompletableFuture<Output> result = new CompletableFuture<>();
         ModelInfo modelInfo = job.getModel();
+        if (modelInfo.getStatus() != ModelInfo.Status.READY) {
+            result.completeExceptionally(
+                    new WlmException("Model is not ready: " + modelInfo.getStatus()));
+            return result;
+        }
+
         WorkerPool pool = getWorkerPoolForModel(modelInfo);
         int maxWorkers = pool.getMaxWorkers();
         if (maxWorkers == 0) {
             result.completeExceptionally(
-                    new WlmShutdownException(
-                            "All model workers has been shutdown: " + modelInfo.getModelName()));
+                    new WlmShutdownException("All model workers has been shutdown: " + modelInfo));
             return result;
         }
         LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();
         if (!queue.offer(new WorkerJob(job, result))) {
             result.completeExceptionally(
                     new WlmCapacityException(
-                            "Worker queue capacity exceeded for model: "
-                                    + modelInfo.getModelName()));
+                            "Worker queue capacity exceeded for model: " + modelInfo));
             return result;
         }
 
@@ -247,6 +252,10 @@ public class WorkLoadManager implements AutoCloseable {
          */
         public WorkerPool scaleWorkers(String deviceName, int newMinWorkers, int newMaxWorkers) {
             synchronized (model) {
+                if (model.getStatus() != ModelInfo.Status.READY) {
+                    logger.warn("Cannot scale workers while model is not READY: {}", model);
+                    return this;
+                }
                 NDManager manager = model.getModel().getNDManager();
                 WlmConfigManager configManager = WlmConfigManager.getInstance();
                 maxWorkers = configManager.getDefaultWorkers(manager, deviceName, newMaxWorkers);
@@ -316,7 +325,7 @@ public class WorkLoadManager implements AutoCloseable {
                                 buf.append("-tmpPool\n");
                             }
                         });
-                logger.debug("worker pool for model {}:\n {}", model.getModelName(), buf);
+                logger.debug("worker pool for model {}:\n {}", model, buf);
             }
         }
 

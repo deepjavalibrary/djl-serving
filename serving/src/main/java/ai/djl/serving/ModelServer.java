@@ -176,6 +176,11 @@ public class ModelServer {
             futures.add(initializeServer(managementConnector, serverGroup, workerGroup));
         }
 
+        if (stopped.get()) {
+            // check if model load failed in wait loading model case
+            stop();
+        }
+
         return futures;
     }
 
@@ -190,10 +195,7 @@ public class ModelServer {
 
     /** Stops the model server. */
     public void stop() {
-        if (stopped.get()) {
-            return;
-        }
-
+        logger.info("Stopping model server.");
         stopped.set(true);
         for (ChannelFuture future : futures) {
             future.channel().close();
@@ -261,7 +263,6 @@ public class ModelServer {
     }
 
     private void initModelStore() throws IOException {
-        ModelManager.init(configManager);
         Set<String> startupModels = ModelManager.getInstance().getStartupModels();
 
         String loadModels = configManager.getLoadModels();
@@ -311,10 +312,10 @@ public class ModelServer {
             String version = null;
             String engine = null;
             String[] devices = {"-1"};
-            String modelName;
+            String workflowName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
-                modelName = tokens[0];
+                workflowName = tokens[0];
                 if (tokens.length > 1) {
                     version = tokens[1].isEmpty() ? null : tokens[1];
                 }
@@ -336,13 +337,12 @@ public class ModelServer {
                                             .mapToObj(i -> "nc" + i)
                                             .toArray(String[]::new);
                         }
-
                     } else if (!tokens[3].isEmpty()) {
                         devices = tokens[3].split(";");
                     }
                 }
             } else {
-                modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
+                workflowName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
             if (engine == null) {
                 engine = inferEngineFromUrl(modelUrl);
@@ -350,6 +350,7 @@ public class ModelServer {
 
             for (int i = 0; i < devices.length; ++i) {
                 String modelVersion;
+                String device = devices[i];
                 if (devices.length > 1) {
                     if (version == null) {
                         modelVersion = "v" + i;
@@ -359,20 +360,40 @@ public class ModelServer {
                 } else {
                     modelVersion = version;
                 }
-                CompletableFuture<Workflow> future =
-                        modelManager.registerWorkflow(
-                                modelName,
-                                modelVersion,
+                ModelInfo modelInfo =
+                        new ModelInfo(
+                                workflowName,
                                 modelUrl,
+                                modelVersion,
                                 engine,
-                                devices[i],
-                                configManager.getBatchSize(),
+                                configManager.getJobQueueSize(),
+                                configManager.getMaxIdleTime(),
                                 configManager.getMaxBatchDelay(),
-                                configManager.getMaxIdleTime());
-                Workflow workflow = future.join();
-                modelManager.scaleWorkers(workflow, devices[i], 1, -1);
+                                configManager.getBatchSize());
+                Workflow workflow = new Workflow(modelInfo);
+
+                CompletableFuture<Void> f =
+                        modelManager
+                                .registerWorkflow(workflow, device)
+                                .thenAccept(v -> modelManager.scaleWorkers(workflow, device, 1, -1))
+                                .exceptionally(
+                                        t -> {
+                                            logger.error("Failed register workflow", t);
+                                            // delay 3 seconds, allows REST API to send PING
+                                            // response (health check)
+                                            try {
+                                                Thread.sleep(3000);
+                                            } catch (InterruptedException ignore) {
+                                                // ignore
+                                            }
+                                            stop();
+                                            return null;
+                                        });
+                if (configManager.waitModelLoading()) {
+                    f.join();
+                }
             }
-            startupModels.add(modelName);
+            startupModels.add(workflowName);
         }
     }
 

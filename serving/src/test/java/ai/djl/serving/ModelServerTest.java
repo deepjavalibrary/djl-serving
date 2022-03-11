@@ -289,9 +289,9 @@ public class ModelServerTest {
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/ping");
         channel.writeAndFlush(req);
         latch.await();
-
+        Assert.assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        Assert.assertEquals(resp.getStatus(), "Healthy");
+        Assert.assertNotNull(resp);
         Assert.assertTrue(headers.contains("x-request-id"));
     }
 
@@ -389,7 +389,7 @@ public class ModelServerTest {
                 ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
                 for (ListModelsResponse.ModelItem item : resp.getModels()) {
                     Assert.assertNotNull(item.getModelUrl());
-                    if ("mlp_1".equals(item.getModelName())) {
+                    if ("mlp_1".equals(item.getModelName()) && "READY".equals(item.getStatus())) {
                         modelRegistered = true;
                         break OUTER;
                     }
