@@ -66,6 +66,7 @@ public final class ConfigManager {
     private static final String MAX_REQUEST_SIZE = "max_request_size";
     private static final String MODEL_STORE = "model_store";
     private static final String MODEL_URL_PATTERN = "model_url_pattern";
+    private static final String LOAD_ON_DEVICES = "load_on_devices";
     private static final String PLUGIN_FOLDER = "plugin_folder";
 
     // Configuration which are not documented or enabled through environment variables
@@ -264,6 +265,15 @@ public final class ConfigManager {
      */
     public String getLoadModels() {
         return prop.getProperty(LOAD_MODELS);
+    }
+
+    /**
+     * Returns the devices the default model will be loaded on at startup.
+     *
+     * @return the devices the default model will be loaded on at startup
+     */
+    public String getLoadOnDevices() {
+        return prop.getProperty(LOAD_ON_DEVICES, "*");
     }
 
     /**
