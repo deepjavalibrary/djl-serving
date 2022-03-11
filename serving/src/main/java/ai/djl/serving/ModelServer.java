@@ -12,10 +12,13 @@
  */
 package ai.djl.serving;
 
+import ai.djl.MalformedModelException;
 import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
+import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
@@ -23,7 +26,9 @@ import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.NeuronUtils;
 import ai.djl.serving.util.ServerGroups;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
+import ai.djl.serving.workflow.WorkflowDefinition;
 import ai.djl.util.cuda.CudaUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -38,6 +43,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
@@ -63,7 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The main entry point for model server. */
-public class ModelServer {
+public class ModelServer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelServer.class);
 
@@ -128,8 +135,11 @@ public class ModelServer {
      * @throws InterruptedException if interrupted
      * @throws IOException if failed to start socket listener
      * @throws GeneralSecurityException if failed to read SSL certificate
+     * @throws ServerStartupException if failed to startup server
      */
-    public void startAndWait() throws InterruptedException, IOException, GeneralSecurityException {
+    public void startAndWait()
+            throws InterruptedException, IOException, GeneralSecurityException,
+                    ServerStartupException {
         try {
             List<ChannelFuture> channelFutures = start();
             logger.info("Model server started.");
@@ -147,14 +157,25 @@ public class ModelServer {
      * @throws InterruptedException if interrupted
      * @throws IOException if failed to start socket listener
      * @throws GeneralSecurityException if failed to read SSL certificate
+     * @throws ServerStartupException if failed to startup server
      */
     public List<ChannelFuture> start()
-            throws InterruptedException, IOException, GeneralSecurityException {
+            throws InterruptedException, IOException, GeneralSecurityException,
+                    ServerStartupException {
         stopped.set(false);
 
         logger.info(configManager.dumpConfigurations());
 
-        initModelStore();
+        try {
+            initModelStore();
+            initWorkflows();
+        } catch (URISyntaxException
+                | ModelNotFoundException
+                | BadWorkflowException
+                | MalformedModelException e) {
+            throw new ServerStartupException(
+                    "Failed to initialize startup models and workflows", e);
+        }
         pluginManager.loadPlugins();
 
         Connector inferenceConnector =
@@ -263,7 +284,7 @@ public class ModelServer {
     }
 
     private void initModelStore() throws IOException {
-        Set<String> startupModels = ModelManager.getInstance().getStartupModels();
+        Set<String> startupModels = ModelManager.getInstance().getStartupWorkflows();
 
         String loadModels = configManager.getLoadModels();
         Path modelStore = configManager.getModelStore();
@@ -323,23 +344,7 @@ public class ModelServer {
                     engine = tokens[2].isEmpty() ? null : tokens[2];
                 }
                 if (tokens.length > 3) {
-                    if ("*".equals(tokens[3])) {
-                        int gpuCount = CudaUtils.getGpuCount();
-                        if (gpuCount > 0) {
-                            devices =
-                                    IntStream.range(0, gpuCount)
-                                            .mapToObj(String::valueOf)
-                                            .toArray(String[]::new);
-                        } else if (NeuronUtils.hasNeuron()) {
-                            int neurons = NeuronUtils.getNeuronCores();
-                            devices =
-                                    IntStream.range(0, neurons)
-                                            .mapToObj(i -> "nc" + i)
-                                            .toArray(String[]::new);
-                        }
-                    } else if (!tokens[3].isEmpty()) {
-                        devices = tokens[3].split(";");
-                    }
+                    devices = parseDevices(tokens[3]);
                 }
             } else {
                 workflowName = ModelInfo.inferModelNameFromUrl(modelUrl);
@@ -394,6 +399,69 @@ public class ModelServer {
                 }
             }
             startupModels.add(workflowName);
+        }
+    }
+
+    private void initWorkflows()
+            throws IOException, URISyntaxException, ModelNotFoundException, BadWorkflowException,
+                    MalformedModelException {
+        Set<String> startupWorkflows = ModelManager.getInstance().getStartupWorkflows();
+        String loadWorkflows = configManager.getLoadWorkflows();
+        if (loadWorkflows == null || loadWorkflows.isEmpty()) {
+            return;
+        }
+
+        ModelManager modelManager = ModelManager.getInstance();
+        String[] urls = loadWorkflows.split("[, ]+");
+
+        for (String url : urls) {
+            logger.info("Initializing workflow: {}", url);
+            Matcher matcher = MODEL_STORE_PATTERN.matcher(url);
+            if (!matcher.matches()) {
+                throw new AssertionError("Invalid model store url: " + url);
+            }
+            String endpoint = matcher.group(2);
+            String workflowUrlString = matcher.group(3);
+            String[] devices = {"-1"};
+            String modelName;
+            if (endpoint != null) {
+                String[] tokens = endpoint.split(":", -1);
+                modelName = tokens[0];
+                if (tokens.length > 1) {
+                    devices = parseDevices(tokens[1]);
+                }
+            } else {
+                modelName = ModelInfo.inferModelNameFromUrl(workflowUrlString);
+            }
+
+            URL workflowUrl = new URL(workflowUrlString);
+            Workflow workflow =
+                    WorkflowDefinition.parse(workflowUrl.toURI(), workflowUrl.openStream())
+                            .toWorkflow();
+
+            for (String device : devices) {
+                CompletableFuture<Void> f =
+                        modelManager
+                                .registerWorkflow(workflow, device)
+                                .thenAccept(v -> modelManager.scaleWorkers(workflow, device, 1, -1))
+                                .exceptionally(
+                                        t -> {
+                                            logger.error("Failed register workflow", t);
+                                            // delay 3 seconds, allows REST API to send PING
+                                            // response (health check)
+                                            try {
+                                                Thread.sleep(3000);
+                                            } catch (InterruptedException ignore) {
+                                                // ignore
+                                            }
+                                            stop();
+                                            return null;
+                                        });
+                if (configManager.waitModelLoading()) {
+                    f.join();
+                }
+            }
+            startupWorkflows.add(modelName);
         }
     }
 
@@ -497,10 +565,34 @@ public class ModelServer {
         return null;
     }
 
+    private String[] parseDevices(String devices) {
+        if ("*".equals(devices)) {
+            int gpuCount = CudaUtils.getGpuCount();
+            if (gpuCount > 0) {
+                return IntStream.range(0, gpuCount)
+                        .mapToObj(String::valueOf)
+                        .toArray(String[]::new);
+            } else if (NeuronUtils.hasNeuron()) {
+                int neurons = NeuronUtils.getNeuronCores();
+                return IntStream.range(0, neurons).mapToObj(i -> "nc" + i).toArray(String[]::new);
+            }
+
+        } else if (!devices.isEmpty()) {
+            return devices.split(";");
+        }
+        return new String[] {"-1"};
+    }
+
     private static void printHelp(String msg, Options options) {
         HelpFormatter formatter = new HelpFormatter();
         formatter.setLeftPadding(1);
         formatter.setWidth(120);
         formatter.printHelp(msg, options);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void close() {
+        stop();
     }
 }

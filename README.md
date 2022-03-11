@@ -134,7 +134,10 @@ usage: djl-serving [OPTIONS]
  -h,--help                         Print this help.
  -m,--models <MODELS>              Models to be loaded at startup.
  -s,--model-store <MODELS-STORE>   Model store location where models can be loaded.
+ -w,--workflows <WORKFLOWS>   Workflows to be loaded at startup.
 ```
+
+See [configuration](serving/docs/configuration.md) for details on defining models, model-store, and workflows.
 
 ## REST API
 

@@ -16,7 +16,9 @@ import ai.djl.modality.Classifications.Classification;
 import ai.djl.serving.http.DescribeModelResponse;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.ListModelsResponse;
+import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.http.StatusResponse;
+import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.util.JsonUtils;
@@ -76,7 +78,6 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
-import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
@@ -88,7 +89,6 @@ public class ModelServerTest {
             "Requested method is not allowed, please refer to API document.";
 
     private ConfigManager configManager;
-    private ModelServer server;
     private byte[] testImage;
     volatile CountDownLatch latch;
     volatile HttpResponseStatus httpStatus;
@@ -109,8 +109,7 @@ public class ModelServerTest {
     }
 
     @BeforeSuite
-    public void beforeSuite()
-            throws InterruptedException, IOException, GeneralSecurityException, ParseException {
+    public void beforeSuite() throws IOException {
         URL url = new URL("https://resources.djl.ai/images/0.png");
         try (InputStream is = url.openStream()) {
             testImage = Utils.toByteArray(is);
@@ -118,8 +117,171 @@ public class ModelServerTest {
         Path modelStore = Paths.get("build/models");
         Utils.deleteQuietly(modelStore);
         Files.createDirectories(modelStore);
+    }
 
-        String[] args = {"-f", "src/test/resources/config.properties"};
+    @Test
+    public void testModelStore()
+            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
+                    InterruptedException {
+        try (ModelServer server = initTestServer("src/test/resources/config.properties")) {
+            Path modelStore = Paths.get("build/models");
+            Path modelDir = modelStore.resolve("test_model");
+            Files.createDirectories(modelDir);
+            Path notModel = modelStore.resolve("non-model");
+            Files.createFile(notModel);
+
+            String url = server.mapModelUrl(notModel); // not a model dir
+            Assert.assertNull(url);
+
+            url = server.mapModelUrl(modelDir); // empty folder
+            Assert.assertNull(url);
+
+            String expected = modelDir.toUri().toURL().toString();
+
+            Path dlr = modelDir.resolve("test_model.so");
+            Files.createFile(dlr);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::DLR:*=" + expected);
+
+            Path xgb = modelDir.resolve("test_model.json");
+            Files.createFile(xgb);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::XGBoost:*=" + expected);
+
+            Path paddle = modelDir.resolve("__model__");
+            Files.createFile(paddle);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::PaddlePaddle:*=" + expected);
+
+            Path tflite = modelDir.resolve("test_model.tflite");
+            Files.createFile(tflite);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::TFLite:*=" + expected);
+
+            Path tensorRt = modelDir.resolve("test_model.uff");
+            Files.createFile(tensorRt);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::TensorRT:*=" + expected);
+
+            Path onnx = modelDir.resolve("test_model.onnx");
+            Files.createFile(onnx);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::OnnxRuntime:*=" + expected);
+
+            Path mxnet = modelDir.resolve("test_model-symbol.json");
+            Files.createFile(mxnet);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::MXNet:*=" + expected);
+
+            Path tensorflow = modelDir.resolve("saved_model.pb");
+            Files.createFile(tensorflow);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::TensorFlow:*=" + expected);
+
+            Path pytorch = modelDir.resolve("test_model.pt");
+            Files.createFile(pytorch);
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::PyTorch:*=" + expected);
+
+            Path prop = modelDir.resolve("serving.properties");
+            try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
+                writer.write("engine=MyEngine");
+            }
+            url = server.mapModelUrl(modelDir);
+            Assert.assertEquals(url, "test_model::MyEngine:*=" + expected);
+
+            Path mar = modelStore.resolve("torchServe.mar");
+            Path torchServe = modelStore.resolve("torchServe");
+            Files.createDirectories(torchServe.resolve("MAR-INF"));
+            ZipUtils.zip(torchServe, mar, false);
+
+            url = server.mapModelUrl(mar);
+            Assert.assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
+
+            ModelManager.getInstance().clear();
+        }
+    }
+
+    @Test
+    public void test()
+            throws InterruptedException, HttpPostRequestEncoder.ErrorDataEncoderException,
+                    IOException, ParseException, GeneralSecurityException,
+                    ReflectiveOperationException, ServerStartupException {
+
+        try (ModelServer server = initTestServer("src/test/resources/config.properties")) {
+            Assert.assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+
+            Assert.assertNotNull(channel, "Failed to connect to inference port.");
+
+            // inference API
+            testPing(channel);
+            testRoot(channel);
+            testPredictionsModels(channel);
+            testInvocations(channel);
+            testInvocationsMultipart(channel);
+            testDescribeApi(channel);
+
+            // management API
+            testRegisterModel(channel);
+            testRegisterModelAsync(channel);
+            testScaleModel(channel);
+            testDescribeModel(channel);
+            testUnregisterModel(channel);
+
+            testPredictionsInvalidRequestSize(channel);
+
+            // plugin tests
+            testStaticHtmlRequest();
+
+            channel.close().sync();
+
+            // negative test case that channel will be closed by server
+            testInvalidUri();
+            testInvalidPredictionsUri();
+            testInvalidPredictionsMethod();
+            testPredictionsModelNotFound();
+            testInvalidDescribeModel();
+            testDescribeModelNotFound();
+            testInvalidManagementUri();
+            testInvalidManagementMethod();
+            testUnregisterModelNotFound();
+            testInvalidScaleModel();
+            testScaleModelNotFound();
+            testRegisterModelMissingUrl();
+            testRegisterModelNotFound();
+            testRegisterModelConflict();
+            testServiceUnavailable();
+
+            ConfigManagerTest.testSsl();
+
+            ModelManager.getInstance().clear();
+        }
+    }
+
+    @Test
+    public void testWorkflows()
+            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
+                    InterruptedException, ReflectiveOperationException {
+        try (ModelServer server = initTestServer("src/test/resources/workflow.config.properties")) {
+            Assert.assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+
+            testPredictionsModels(channel);
+            testPredictionsWorkflows(channel);
+
+            channel.close().sync();
+
+            ConfigManagerTest.testSsl();
+
+            ModelManager.getInstance().clear();
+        }
+    }
+
+    private ModelServer initTestServer(String configFile)
+            throws ParseException, ServerStartupException, GeneralSecurityException, IOException,
+                    InterruptedException {
+        String[] args = {"-f", configFile};
         Arguments arguments = ConfigManagerTest.parseArguments(args);
         Assert.assertFalse(arguments.hasHelp());
 
@@ -128,99 +290,12 @@ public class ModelServerTest {
 
         InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
 
-        server = new ModelServer(configManager);
+        ModelServer server = new ModelServer(configManager);
         server.start();
+        return server;
     }
 
-    @AfterSuite
-    public void afterSuite() {
-        server.stop();
-    }
-
-    @Test
-    public void testModelStore() throws IOException {
-        Path modelStore = Paths.get("build/models");
-        Path modelDir = modelStore.resolve("test_model");
-        Files.createDirectories(modelDir);
-        Path notModel = modelStore.resolve("non-model");
-        Files.createFile(notModel);
-
-        String url = server.mapModelUrl(notModel); // not a model dir
-        Assert.assertNull(url);
-
-        url = server.mapModelUrl(modelDir); // empty folder
-        Assert.assertNull(url);
-
-        String expected = modelDir.toUri().toURL().toString();
-
-        Path dlr = modelDir.resolve("test_model.so");
-        Files.createFile(dlr);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::DLR:*=" + expected);
-
-        Path xgb = modelDir.resolve("test_model.json");
-        Files.createFile(xgb);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::XGBoost:*=" + expected);
-
-        Path paddle = modelDir.resolve("__model__");
-        Files.createFile(paddle);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::PaddlePaddle:*=" + expected);
-
-        Path tflite = modelDir.resolve("test_model.tflite");
-        Files.createFile(tflite);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::TFLite:*=" + expected);
-
-        Path tensorRt = modelDir.resolve("test_model.uff");
-        Files.createFile(tensorRt);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::TensorRT:*=" + expected);
-
-        Path onnx = modelDir.resolve("test_model.onnx");
-        Files.createFile(onnx);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::OnnxRuntime:*=" + expected);
-
-        Path mxnet = modelDir.resolve("test_model-symbol.json");
-        Files.createFile(mxnet);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::MXNet:*=" + expected);
-
-        Path tensorflow = modelDir.resolve("saved_model.pb");
-        Files.createFile(tensorflow);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::TensorFlow:*=" + expected);
-
-        Path pytorch = modelDir.resolve("test_model.pt");
-        Files.createFile(pytorch);
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::PyTorch:*=" + expected);
-
-        Path prop = modelDir.resolve("serving.properties");
-        try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
-            writer.write("engine=MyEngine");
-        }
-        url = server.mapModelUrl(modelDir);
-        Assert.assertEquals(url, "test_model::MyEngine:*=" + expected);
-
-        Path mar = modelStore.resolve("torchServe.mar");
-        Path torchServe = modelStore.resolve("torchServe");
-        Files.createDirectories(torchServe.resolve("MAR-INF"));
-        ZipUtils.zip(torchServe, mar, false);
-
-        url = server.mapModelUrl(mar);
-        Assert.assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
-    }
-
-    @Test
-    public void test()
-            throws InterruptedException, HttpPostRequestEncoder.ErrorDataEncoderException,
-                    IOException, ParseException, GeneralSecurityException,
-                    ReflectiveOperationException {
-        Assert.assertTrue(server.isRunning());
-
+    private Channel initTestChannel() throws InterruptedException {
         Channel channel = null;
         for (int i = 0; i < 5; ++i) {
             try {
@@ -230,49 +305,7 @@ public class ModelServerTest {
                 Thread.sleep(100);
             }
         }
-
-        Assert.assertNotNull(channel, "Failed to connect to inference port.");
-
-        // inference API
-        testPing(channel);
-        testRoot(channel);
-        testPredictions(channel);
-        testInvocations(channel);
-        testInvocationsMultipart(channel);
-        testDescribeApi(channel);
-
-        // management API
-        testRegisterModel(channel);
-        testRegisterModelAsync(channel);
-        testScaleModel(channel);
-        testDescribeModel(channel);
-        testUnregisterModel(channel);
-
-        testPredictionsInvalidRequestSize(channel);
-
-        // plugin tests
-        testStaticHtmlRequest();
-
-        channel.close().sync();
-
-        // negative test case that channel will be closed by server
-        testInvalidUri();
-        testInvalidPredictionsUri();
-        testInvalidPredictionsMethod();
-        testPredictionsModelNotFound();
-        testInvalidDescribeModel();
-        testDescribeModelNotFound();
-        testInvalidManagementUri();
-        testInvalidManagementMethod();
-        testUnregisterModelNotFound();
-        testInvalidScaleModel();
-        testScaleModelNotFound();
-        testRegisterModelMissingUrl();
-        testRegisterModelNotFound();
-        testRegisterModelConflict();
-        testServiceUnavailable();
-
-        ConfigManagerTest.testSsl();
+        return channel;
     }
 
     private void testRoot(Channel channel) throws InterruptedException {
@@ -295,21 +328,33 @@ public class ModelServerTest {
         Assert.assertTrue(headers.contains("x-request-id"));
     }
 
-    private void testPredictions(Channel channel) throws InterruptedException {
-        reset();
-        DefaultFullHttpRequest req =
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/mlp");
-        req.content().writeBytes(testImage);
-        HttpUtil.setContentLength(req, req.content().readableBytes());
-        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
-        channel.writeAndFlush(req);
+    private void testPredictionsModels(Channel channel) throws InterruptedException {
+        String[] targets = new String[] {"/predictions/mlp"};
+        testPredictions(channel, targets);
+    }
 
-        latch.await();
+    private void testPredictionsWorkflows(Channel channel) throws InterruptedException {
+        String[] targets = new String[] {"/predictions/BasicWorkflow"};
+        testPredictions(channel, targets);
+    }
 
-        Type type = new TypeToken<List<Classification>>() {}.getType();
-        List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
-        Assert.assertEquals(classifications.get(0).getClassName(), "0");
+    private void testPredictions(Channel channel, String[] targets) throws InterruptedException {
+        for (String target : targets) {
+            reset();
+            DefaultFullHttpRequest req =
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, target);
+            req.content().writeBytes(testImage);
+            HttpUtil.setContentLength(req, req.content().readableBytes());
+            req.headers()
+                    .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
+            channel.writeAndFlush(req);
+
+            latch.await();
+
+            Type type = new TypeToken<List<Classification>>() {}.getType();
+            List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
+            Assert.assertEquals(classifications.get(0).getClassName(), "0");
+        }
     }
 
     private void testInvocations(Channel channel) throws InterruptedException {

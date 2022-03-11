@@ -121,7 +121,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             }
         }
         if (modelName == null) {
-            Set<String> startModels = ModelManager.getInstance().getStartupModels();
+            Set<String> startModels = ModelManager.getInstance().getStartupWorkflows();
             if (startModels.size() == 1) {
                 modelName = startModels.iterator().next();
             }

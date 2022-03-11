@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** A class that represents a webservice endpoint. */
-public class Endpoint {
+public class Endpoint implements AutoCloseable {
 
     private List<Workflow> workflows;
     private Map<String, Integer> map;
@@ -126,6 +126,14 @@ public class Endpoint {
             if (version != null) {
                 map.put(version, i);
             }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void close() {
+        for (Workflow workflow : workflows) {
+            workflow.close();
         }
     }
 }
