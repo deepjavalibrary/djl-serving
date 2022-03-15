@@ -25,8 +25,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Type;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -76,18 +80,37 @@ public class WorkflowDefinition {
      * @throws IOException if it fails to load the file for parsing
      */
     public static WorkflowDefinition parse(Path path) throws IOException {
-        try (Reader reader = Files.newBufferedReader(path)) {
-            String fileName = Objects.requireNonNull(path.toString());
-            if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
-                Object yaml = YAML.load(reader);
-                String asJson = GSON.toJson(yaml);
-                return GSON.fromJson(asJson, WorkflowDefinition.class);
-            } else if (fileName.endsWith(".json")) {
-                return GSON.fromJson(reader, WorkflowDefinition.class);
-            } else {
-                throw new IllegalArgumentException(
-                        "Unexpected file type in workflow file: " + path);
-            }
+        return parse(path.toUri(), Files.newBufferedReader(path));
+    }
+
+    /**
+     * Parses a new {@link WorkflowDefinition} from an input stream.
+     *
+     * @param uri the uri of the file
+     * @param input the input
+     * @return the parsed {@link WorkflowDefinition}
+     */
+    public static WorkflowDefinition parse(URI uri, InputStream input) {
+        return parse(uri, new InputStreamReader(input, StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Parses a new {@link WorkflowDefinition} from a reader.
+     *
+     * @param uri the uri of the file
+     * @param input the input
+     * @return the parsed {@link WorkflowDefinition}
+     */
+    public static WorkflowDefinition parse(URI uri, Reader input) {
+        String fileName = Objects.requireNonNull(uri.toString());
+        if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
+            Object yaml = YAML.load(input);
+            String asJson = GSON.toJson(yaml);
+            return GSON.fromJson(asJson, WorkflowDefinition.class);
+        } else if (fileName.endsWith(".json")) {
+            return GSON.fromJson(input, WorkflowDefinition.class);
+        } else {
+            throw new IllegalArgumentException("Unexpected file type in workflow file: " + uri);
         }
     }
 

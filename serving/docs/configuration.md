@@ -25,7 +25,10 @@ usage: djl-serving [OPTIONS]
  -h,--help                         Print this help.
  -m,--models <MODELS>              Models to be loaded at startup.
  -s,--model-store <MODELS-STORE>   Model store location where models can be loaded.
+ -w,--workflows <WORKFLOWS>   Workflows to be loaded at startup.
 ```
+
+Details about the models, model-store, and workflows can be found in the equivalent configuration properties.
 
 ## config.properties file
 
@@ -46,6 +49,57 @@ inference_address=https://0.0.0.0:8443
 # bind inference API to private network interfaces
 inference_address=https://172.16.1.10:8443
 ```
+
+### Configure initial models and workflows
+
+**Model Store**
+
+The `model_store` config property can be used to define a directory where each file/folder in it is a model to be loaded.
+It will then attempt to load all of them by default.
+Here is an example:
+
+```properties
+model_store=build/models
+```
+
+**Load Models**
+
+The `load_models` config property can be used to define a list of models to be loaded.
+The list should be defined as a comma separated list of urls to load models from.
+
+Each model can be defined either as a URL directly or optionally with prepended endpoint data like `[EndpointData]=modelUrl`.
+The endpoint is a list of data items separated by commas.
+The possible variations are:
+
+- `[modelName]`
+- `[modelName:version]`
+- `[modelName:version:engine]`
+- `[modelName:version:engine:deviceNames]`
+
+The version can be an arbitrary string.
+The engines uses the standard DJL `Engine` names.
+
+Possible deviceNames strings include `*` for all devices and a `;` separated list of device names following the format defined in DJL `Device.fromName`.
+If no device is specified, it will use the DJL default device (usually GPU is available else CPU).
+
+```properties
+load_models=https://resources.djl.ai/test-models/mlp.tar.gz,[mlp:v1:MXNet:*]=https://resources.djl.ai/test-models/mlp.tar.gz
+```
+
+**Workflows**
+
+Use the `load_workflows` config property to define initial workflows that should be loaded on startup.
+It should be a comma separated list of workflow URLs.
+
+You can also specify the device that the model should be loaded on by using `modelUrl:deviceNames`.
+The `deviceNames` matches the format used in the `load_models` property described above.
+An example is shown below:
+
+```properties
+load_workflows=https://resources.djl.ai/test-models/basic-serving-workflow.json
+```
+
+View the [workflow documentation](workflows.md) to see more information about workflows and their configuration format.
 
 ### Enable SSL
 

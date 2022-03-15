@@ -54,12 +54,12 @@ public final class ModelManager {
 
     private WorkLoadManager wlm;
     private Map<String, Endpoint> endpoints;
-    private Set<String> startupModels;
+    private Set<String> startupWorkflows;
 
     private ModelManager() {
         wlm = new WorkLoadManager();
         endpoints = new ConcurrentHashMap<>();
-        startupModels = new HashSet<>();
+        startupWorkflows = new HashSet<>();
     }
 
     /**
@@ -108,7 +108,7 @@ public final class ModelManager {
                 candidateModelsToUnregister.addAll(workflow.getModels());
                 workflow.close();
             }
-            startupModels.remove(workflowName);
+            startupWorkflows.remove(workflowName);
             endpoint.getWorkflows().clear();
             logger.info("Model {} unregistered.", workflowName);
         } else {
@@ -119,7 +119,7 @@ public final class ModelManager {
             }
             candidateModelsToUnregister.addAll(workflow.getModels());
             workflow.close();
-            startupModels.remove(workflowName);
+            startupWorkflows.remove(workflowName);
         }
         if (endpoint.getWorkflows().isEmpty()) {
             endpoints.remove(workflowName);
@@ -227,12 +227,12 @@ public final class ModelManager {
     }
 
     /**
-     * Returns a set of models that was loaded at startup.
+     * Returns a set of models or workflows that were loaded at startup.
      *
-     * @return a set of models that was loaded at startup
+     * @return a set of models or workflows that were loaded at startup
      */
-    public Set<String> getStartupModels() {
-        return startupModels;
+    public Set<String> getStartupWorkflows() {
+        return startupWorkflows;
     }
 
     /**
@@ -275,7 +275,7 @@ public final class ModelManager {
                 resp.setMaxBatchDelay(model.getMaxBatchDelay());
                 resp.setMaxIdleTime(model.getMaxIdleTime());
                 resp.setQueueLength(wlm.getQueueLength(model));
-                resp.setLoadedAtStartup(startupModels.contains(model.getModelId()));
+                resp.setLoadedAtStartup(startupWorkflows.contains(model.getModelId()));
 
                 WorkerPool wp = wlm.getWorkerPoolForModel(model);
                 resp.setMaxWorkers(wp.getMaxWorkers());
@@ -371,5 +371,21 @@ public final class ModelManager {
                     content.writeByte('\n');
                     return resp;
                 });
+    }
+
+    /**
+     * Clears everything in the {@link ModelManager}.
+     *
+     * <p>Can be run between tests.
+     */
+    public void clear() {
+        wlm.close();
+        for (Endpoint endpoint : endpoints.values()) {
+            endpoint.close();
+        }
+
+        wlm = new WorkLoadManager();
+        endpoints = new ConcurrentHashMap<>();
+        startupWorkflows = new HashSet<>();
     }
 }

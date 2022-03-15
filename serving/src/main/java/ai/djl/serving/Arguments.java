@@ -26,6 +26,7 @@ public final class Arguments {
     private String configFile;
     private String modelStore;
     private String[] models;
+    private String[] workflows;
     private boolean help;
 
     /**
@@ -37,6 +38,7 @@ public final class Arguments {
         configFile = cmd.getOptionValue("config-file");
         modelStore = cmd.getOptionValue("model-store");
         models = cmd.getOptionValues("models");
+        workflows = cmd.getOptionValues("workflows");
         help = cmd.hasOption("help");
     }
 
@@ -69,6 +71,13 @@ public final class Arguments {
                         .hasArg()
                         .argName("MODELS-STORE")
                         .desc("Model store location where models can be loaded.")
+                        .build());
+        options.addOption(
+                Option.builder("w")
+                        .longOpt("workflows")
+                        .hasArgs()
+                        .argName("WORKFLOWS")
+                        .desc("Workflows to be loaded at startup.")
                         .build());
         return options;
     }
@@ -118,6 +127,15 @@ public final class Arguments {
      */
     public String[] getModels() {
         return models;
+    }
+
+    /**
+     * Returns the workflow urls that specified in command line.
+     *
+     * @return the workflow urls that specified in command line
+     */
+    public String[] getWorkflows() {
+        return workflows;
     }
 
     /**

@@ -1,4 +1,6 @@
 {
+  "name": "BasicWorkflow",
+  "version": "0.1",
   "models": {
     "m": "https://resources.djl.ai/test-models/mlp.tar.gz"
   },
