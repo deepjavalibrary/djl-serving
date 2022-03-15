@@ -80,7 +80,7 @@ The version can be an arbitrary string.
 The engines uses the standard DJL `Engine` names.
 
 Possible deviceNames strings include `*` for all devices and a `;` separated list of device names following the format defined in DJL `Device.fromName`.
-If no device is specified, the CPU will be used.
+If no device is specified, it will use the DJL default device (usually GPU is available else CPU).
 
 ```properties
 load_models=https://resources.djl.ai/test-models/mlp.tar.gz,[mlp:v1:MXNet:*]=https://resources.djl.ai/test-models/mlp.tar.gz
