@@ -1,5 +1,5 @@
 FROM ubuntu:18.04
-ARG djl_version=0.15.0
+ARG djl_version=0.16.0
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
