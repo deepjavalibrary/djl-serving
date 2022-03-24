@@ -177,6 +177,7 @@ public class WorkLoadManager implements AutoCloseable {
     /** {@inheritDoc} */
     @Override
     public void close() {
+        threadPool.shutdownNow();
         for (WorkerPool wp : workerPools.values()) {
             wp.close();
         }

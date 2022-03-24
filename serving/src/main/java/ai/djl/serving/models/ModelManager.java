@@ -16,7 +16,7 @@ import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.BadRequestException;
-import ai.djl.serving.http.DescribeModelResponse;
+import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
@@ -254,7 +254,7 @@ public final class ModelManager {
      * @return a list of worker information for specified workflow
      * @throws ModelNotFoundException if specified workflow not found
      */
-    public List<DescribeModelResponse> describeWorkflow(String workflowName, String version)
+    public List<DescribeWorkflowResponse> describeWorkflow(String workflowName, String version)
             throws ModelNotFoundException {
         Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
@@ -265,12 +265,12 @@ public final class ModelManager {
             throw new ModelNotFoundException("Workflow not found: " + workflowName);
         }
 
-        List<DescribeModelResponse> resps = new ArrayList<>();
+        List<DescribeWorkflowResponse> resps = new ArrayList<>();
         for (Workflow workflow : list) {
             for (ModelInfo model : workflow.getModels()) {
-                DescribeModelResponse resp = new DescribeModelResponse();
-                resp.setModelName(model.getModelId());
-                resp.setModelUrl(model.getModelUrl());
+                DescribeWorkflowResponse resp = new DescribeWorkflowResponse();
+                resp.setWorkflowName(model.getModelId());
+                resp.setWorkflowUrl(model.getModelUrl());
                 resp.setBatchSize(model.getBatchSize());
                 resp.setMaxBatchDelay(model.getMaxBatchDelay());
                 resp.setMaxIdleTime(model.getMaxIdleTime());

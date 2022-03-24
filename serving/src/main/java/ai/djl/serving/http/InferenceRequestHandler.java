@@ -148,7 +148,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         if (workflow == null) {
             String regex = config.getModelUrlPattern();
             if (regex == null) {
-                throw new ModelNotFoundException("Model not found: " + workflowName);
+                throw new ModelNotFoundException("Model or workflow not found: " + workflowName);
             }
             String modelUrl = input.getProperty("model_url", null);
             if (modelUrl == null) {

@@ -20,12 +20,17 @@ import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
+import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
+import ai.djl.serving.workflow.WorkflowDefinition;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -64,7 +69,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     /** HTTP Parameter "min_worker". */
     private static final String MIN_WORKER_PARAMETER = "min_worker";
 
-    private static final Pattern PATTERN = Pattern.compile("^/models([/?].*)?");
+    private static final Pattern PATTERN = Pattern.compile("^/(models|workflows)([/?].*)?");
+    private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
 
     /** {@inheritDoc} */
     @Override
@@ -87,10 +93,18 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         HttpMethod method = req.method();
         if (segments.length < 3) {
             if (HttpMethod.GET.equals(method)) {
-                handleListModels(ctx, decoder);
+                if (MODELS_PATTERN.matcher(req.uri()).matches()) {
+                    handleListModels(ctx, decoder);
+                } else {
+                    handleListWorkflows(ctx, decoder);
+                }
                 return;
             } else if (HttpMethod.POST.equals(method)) {
-                handleRegisterModel(ctx, decoder);
+                if (MODELS_PATTERN.matcher(req.uri()).matches()) {
+                    handleRegisterModel(ctx, decoder);
+                } else {
+                    handleRegisterWorkflow(ctx, decoder);
+                }
                 return;
             }
             throw new MethodNotAllowedException();
@@ -103,26 +117,17 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         }
 
         if (HttpMethod.GET.equals(method)) {
-            handleDescribeModel(ctx, modelName, version);
+            handleDescribeWorkflow(ctx, modelName, version);
         } else if (HttpMethod.PUT.equals(method)) {
-            handleScaleModel(ctx, decoder, modelName, version);
+            handleScaleWorkflow(ctx, decoder, modelName, version);
         } else if (HttpMethod.DELETE.equals(method)) {
-            handleUnregisterModel(ctx, modelName, version);
+            handleUnregisterWorkflow(ctx, modelName, version);
         } else {
             throw new MethodNotAllowedException();
         }
     }
 
     private void handleListModels(ChannelHandlerContext ctx, QueryStringDecoder decoder) {
-        int limit = NettyUtils.getIntParameter(decoder, "limit", 100);
-        int pageToken = NettyUtils.getIntParameter(decoder, "next_page_token", 0);
-        if (limit > 100 || limit < 0) {
-            limit = 100;
-        }
-        if (pageToken < 0) {
-            pageToken = 0;
-        }
-
         ModelManager modelManager = ModelManager.getInstance();
         Map<String, Endpoint> endpoints = modelManager.getEndpoints();
 
@@ -130,14 +135,12 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         Collections.sort(keys);
         ListModelsResponse list = new ListModelsResponse();
 
-        int last = pageToken + limit;
-        if (last > keys.size()) {
-            last = keys.size();
-        } else {
-            list.setNextPageToken(String.valueOf(last));
+        ListPagination pagination = new ListPagination(decoder, keys.size());
+        if (pagination.last <= keys.size()) {
+            list.setNextPageToken(String.valueOf(pagination.last));
         }
 
-        for (int i = pageToken; i < last; ++i) {
+        for (int i = pagination.pageToken; i < pagination.last; ++i) {
             String workflowName = keys.get(i);
             for (Workflow workflow : endpoints.get(workflowName).getWorkflows()) {
                 for (ModelInfo m : workflow.getModels()) {
@@ -157,20 +160,44 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         NettyUtils.sendJsonResponse(ctx, list);
     }
 
-    private void handleDescribeModel(ChannelHandlerContext ctx, String modelName, String version)
+    private void handleListWorkflows(ChannelHandlerContext ctx, QueryStringDecoder decoder) {
+        ModelManager modelManager = ModelManager.getInstance();
+        Map<String, Endpoint> endpoints = modelManager.getEndpoints();
+
+        List<String> keys = new ArrayList<>(endpoints.keySet());
+        Collections.sort(keys);
+        ListWorkflowsResponse list = new ListWorkflowsResponse();
+
+        ListPagination pagination = new ListPagination(decoder, keys.size());
+        if (pagination.last <= keys.size()) {
+            list.setNextPageToken(String.valueOf(pagination.last));
+        }
+
+        for (int i = pagination.pageToken; i < pagination.last; ++i) {
+            String workflowName = keys.get(i);
+            for (Workflow w : endpoints.get(workflowName).getWorkflows()) {
+                list.addWorkflow(workflowName, w.getVersion());
+            }
+        }
+
+        NettyUtils.sendJsonResponse(ctx, list);
+    }
+
+    private void handleDescribeWorkflow(
+            ChannelHandlerContext ctx, String workflowName, String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
-        List<DescribeModelResponse> resps = modelManager.describeWorkflow(modelName, version);
+        List<DescribeWorkflowResponse> resps = modelManager.describeWorkflow(workflowName, version);
 
         if (resps.size() != 1) {
             NettyUtils.sendError(
                     ctx,
                     new IllegalArgumentException(
-                            modelName + " describes a full workflow, not just a model"));
+                            workflowName + " describes a full workflow, not just a model"));
             return;
         }
 
-        DescribeModelResponse resp = resps.get(0);
+        DescribeWorkflowResponse resp = resps.get(0);
         NettyUtils.sendJsonResponse(ctx, resp);
     }
 
@@ -234,30 +261,86 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         }
     }
 
-    private void handleUnregisterModel(ChannelHandlerContext ctx, String modelName, String version)
+    private void handleRegisterWorkflow(
+            final ChannelHandlerContext ctx, QueryStringDecoder decoder) {
+        String workflowUrl = NettyUtils.getParameter(decoder, URL_PARAMETER, null);
+        if (workflowUrl == null) {
+            throw new BadRequestException("Parameter url is required.");
+        }
+
+        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, "-1");
+        int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, 1);
+        int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
+        boolean synchronous =
+                Boolean.parseBoolean(
+                        NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
+
+        try {
+            URL url = new URL(workflowUrl);
+            Workflow workflow =
+                    WorkflowDefinition.parse(url.toURI(), url.openStream()).toWorkflow();
+            String workflowName = workflow.getName();
+
+            final ModelManager modelManager = ModelManager.getInstance();
+            CompletableFuture<Void> f =
+                    modelManager
+                            .registerWorkflow(workflow, deviceName)
+                            .thenAccept(
+                                    v ->
+                                            modelManager.scaleWorkers(
+                                                    workflow, deviceName, minWorkers, maxWorkers))
+                            .exceptionally(
+                                    t -> {
+                                        NettyUtils.sendError(ctx, t.getCause());
+                                        return null;
+                                    });
+
+            if (synchronous) {
+                final String msg = "Workflow \"" + workflowName + "\" registered.";
+                f.thenAccept(m -> NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg)));
+            } else {
+                String msg = "Workflow \"" + workflowName + "\" registration scheduled.";
+                NettyUtils.sendJsonResponse(
+                        ctx, new StatusResponse(msg), HttpResponseStatus.ACCEPTED);
+            }
+
+        } catch (URISyntaxException | IOException | BadWorkflowException e) {
+            NettyUtils.sendError(ctx, e.getCause());
+        }
+    }
+
+    private void handleUnregisterWorkflow(
+            ChannelHandlerContext ctx, String workflowName, String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
-        if (!modelManager.unregisterWorkflow(modelName, version)) {
-            throw new ModelNotFoundException("Model not found: " + modelName);
+        if (!modelManager.unregisterWorkflow(workflowName, version)) {
+            ModelNotFoundException t =
+                    new ModelNotFoundException("Model or workflow not found: " + workflowName);
+            NettyUtils.sendError(ctx, t);
+            throw t;
         }
-        String msg = "Model \"" + modelName + "\" unregistered";
+        String msg = "Model or workflow \"" + workflowName + "\" unregistered";
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
     }
 
-    private void handleScaleModel(
-            ChannelHandlerContext ctx, QueryStringDecoder decoder, String modelName, String version)
+    private void handleScaleWorkflow(
+            ChannelHandlerContext ctx,
+            QueryStringDecoder decoder,
+            String workflowName,
+            String version)
             throws ModelNotFoundException {
         try {
             ModelManager modelManager = ModelManager.getInstance();
-            Workflow workflow = modelManager.getWorkflow(modelName, version, false);
+            Workflow workflow = modelManager.getWorkflow(workflowName, version, false);
             if (workflow == null) {
-                throw new ModelNotFoundException("Model not found: " + modelName);
+                throw new ModelNotFoundException("Model or workflow not found: " + workflowName);
             }
 
             // make sure all models are loaded and ready
             for (ModelInfo modelInfo : workflow.getModels()) {
                 if (modelInfo.getStatus() != ModelInfo.Status.READY) {
-                    throw new ServiceUnavailableException("Model is not ready: " + modelName);
+                    throw new ServiceUnavailableException(
+                            "Model or workflow is not ready: " + workflowName);
                 }
             }
 
@@ -287,7 +370,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
                 if (version == null) {
                     // scale all versions
-                    Endpoint endpoint = modelManager.getEndpoints().get(modelName);
+                    Endpoint endpoint = modelManager.getEndpoints().get(workflowName);
                     for (Workflow p : endpoint.getWorkflows()) {
                         for (ModelInfo m : p.getModels()) {
                             m.configurePool(maxIdleTime)
@@ -303,8 +386,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 }
 
                 String msg =
-                        "Model \""
-                                + modelName
+                        "Workflow \""
+                                + workflowName
                                 + "\" worker scaled. New Worker configuration min workers:"
                                 + pool.getMinWorkers()
                                 + " max workers:"
@@ -315,6 +398,27 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             NettyUtils.sendJsonResponse(ctx, new StatusResponse(combinedMsg));
         } catch (NumberFormatException ex) {
             throw new BadRequestException("parameter is invalid number." + ex.getMessage(), ex);
+        }
+    }
+
+    private static final class ListPagination {
+        private int pageToken;
+        private int last;
+
+        private ListPagination(QueryStringDecoder decoder, int keysSize) {
+            int limit = NettyUtils.getIntParameter(decoder, "limit", 100);
+            pageToken = NettyUtils.getIntParameter(decoder, "next_page_token", 0);
+            if (limit > 100 || limit < 0) {
+                limit = 100;
+            }
+            if (pageToken < 0) {
+                pageToken = 0;
+            }
+
+            last = pageToken + limit;
+            if (last > keysSize) {
+                last = keysSize;
+            }
         }
     }
 }

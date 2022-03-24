@@ -16,11 +16,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/** A class that holds information about model status. */
-public class DescribeModelResponse {
+/** A class that holds information about workflow status. */
+public class DescribeWorkflowResponse {
 
-    private String modelName;
-    private String modelUrl;
+    private String workflowName;
+    private String workflowUrl;
     private int minWorkers;
     private int maxWorkers;
     private int batchSize;
@@ -32,33 +32,33 @@ public class DescribeModelResponse {
 
     private List<Worker> workers;
 
-    /** Constructs a {@code DescribeModelResponse} instance. */
-    public DescribeModelResponse() {
+    /** Constructs a {@code DescribeWorkflowResponse} instance. */
+    public DescribeWorkflowResponse() {
         workers = new ArrayList<>();
     }
 
     /**
-     * Returns the model name.
+     * Returns the workflow name.
      *
-     * @return the model name
+     * @return the workflow name
      */
-    public String getModelName() {
-        return modelName;
+    public String getWorkflowName() {
+        return workflowName;
     }
 
     /**
-     * Sets the model name.
+     * Sets the workflow name.
      *
-     * @param modelName the model name
+     * @param workflowName the workflow name
      */
-    public void setModelName(String modelName) {
-        this.modelName = modelName;
+    public void setWorkflowName(String workflowName) {
+        this.workflowName = workflowName;
     }
 
     /**
-     * Returns if the models was loaded at startup.
+     * Returns if the workflows was loaded at startup.
      *
-     * @return {@code true} if the models was loaded at startup
+     * @return {@code true} if the workflows was loaded at startup
      */
     public boolean isLoadedAtStartup() {
         return loadedAtStartup;
@@ -67,28 +67,28 @@ public class DescribeModelResponse {
     /**
      * Sets the load at startup status.
      *
-     * @param loadedAtStartup {@code true} if the models was loaded at startup
+     * @param loadedAtStartup {@code true} if the workflows was loaded at startup
      */
     public void setLoadedAtStartup(boolean loadedAtStartup) {
         this.loadedAtStartup = loadedAtStartup;
     }
 
     /**
-     * Returns the model URL.
+     * Returns the workflow URL.
      *
-     * @return the model URL
+     * @return the workflow URL
      */
-    public String getModelUrl() {
-        return modelUrl;
+    public String getWorkflowUrl() {
+        return workflowUrl;
     }
 
     /**
-     * Sets the model URL.
+     * Sets the workflow URL.
      *
-     * @param modelUrl the model URL
+     * @param workflowUrl the workflow URL
      */
-    public void setModelUrl(String modelUrl) {
-        this.modelUrl = modelUrl;
+    public void setWorkflowUrl(String workflowUrl) {
+        this.workflowUrl = workflowUrl;
     }
 
     /**
@@ -182,18 +182,18 @@ public class DescribeModelResponse {
     }
 
     /**
-     * Returns the model's status.
+     * Returns the workflow's status.
      *
-     * @return the model's status
+     * @return the workflow's status
      */
     public String getStatus() {
         return status;
     }
 
     /**
-     * Sets the model's status.
+     * Sets the workflow's status.
      *
-     * @param status the model's status
+     * @param status the workflow's status
      */
     public void setStatus(String status) {
         this.status = status;
@@ -218,9 +218,9 @@ public class DescribeModelResponse {
     }
 
     /**
-     * Returns all workers information of the model.
+     * Returns all workers information of the workflow.
      *
-     * @return all workers information of the model
+     * @return all workers information of the workflow
      */
     public List<Worker> getWorkers() {
         return workers;
@@ -229,7 +229,7 @@ public class DescribeModelResponse {
     /**
      * Adds worker to the worker list.
      *
-     * @param version the model version
+     * @param version the workflow version
      * @param id the worker's ID
      * @param startTime the worker's start time
      * @param isRunning {@code true} if worker is running
