@@ -12,7 +12,9 @@
  */
 package ai.djl.serving;
 
+import ai.djl.Device;
 import ai.djl.MalformedModelException;
+import ai.djl.engine.Engine;
 import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
@@ -331,74 +333,71 @@ public class ModelServer implements AutoCloseable {
             String endpoint = matcher.group(2);
             String modelUrl = matcher.group(3);
             String version = null;
-            String engine = null;
-            String[] devices = {"-1"};
-            String workflowName;
+            String engineName = null;
+            Device[] devices = {null};
+            String modelName;
+            Engine engine = Engine.getInstance();
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
-                workflowName = tokens[0];
+                modelName = tokens[0];
                 if (tokens.length > 1) {
                     version = tokens[1].isEmpty() ? null : tokens[1];
                 }
                 if (tokens.length > 2) {
-                    engine = tokens[2].isEmpty() ? null : tokens[2];
+                    engineName = tokens[2].isEmpty() ? null : tokens[2];
+                    engine =
+                            engineName != null
+                                    ? Engine.getEngine(engineName)
+                                    : Engine.getInstance();
                 }
                 if (tokens.length > 3) {
-                    devices = parseDevices(tokens[3]);
+                    devices = parseDevices(tokens[3], engine);
                 }
             } else {
-                workflowName = ModelInfo.inferModelNameFromUrl(modelUrl);
+                modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
-            if (engine == null) {
-                engine = inferEngineFromUrl(modelUrl);
+            if (engineName == null) {
+                engineName = inferEngineFromUrl(modelUrl);
             }
 
-            for (int i = 0; i < devices.length; ++i) {
-                String modelVersion;
-                String device = devices[i];
-                if (devices.length > 1) {
-                    if (version == null) {
-                        modelVersion = "v" + i;
-                    } else {
-                        modelVersion = version + i;
-                    }
-                } else {
-                    modelVersion = version;
-                }
-                ModelInfo modelInfo =
-                        new ModelInfo(
-                                workflowName,
-                                modelUrl,
-                                modelVersion,
-                                engine,
-                                configManager.getJobQueueSize(),
-                                configManager.getMaxIdleTime(),
-                                configManager.getMaxBatchDelay(),
-                                configManager.getBatchSize());
-                Workflow workflow = new Workflow(modelInfo);
-
-                CompletableFuture<Void> f =
-                        modelManager
-                                .registerWorkflow(workflow, device)
-                                .thenAccept(v -> modelManager.scaleWorkers(workflow, device, 1, -1))
-                                .exceptionally(
-                                        t -> {
-                                            logger.error("Failed register workflow", t);
-                                            // delay 3 seconds, allows REST API to send PING
-                                            // response (health check)
-                                            try {
-                                                Thread.sleep(3000);
-                                            } catch (InterruptedException ignore) {
-                                                // ignore
-                                            }
-                                            stop();
-                                            return null;
-                                        });
-                if (configManager.waitModelLoading()) {
-                    f.join();
-                }
+            ModelInfo modelInfo =
+                    new ModelInfo(
+                            modelName,
+                            modelUrl,
+                            version,
+                            engineName,
+                            configManager.getJobQueueSize(),
+                            configManager.getMaxIdleTime(),
+                            configManager.getMaxBatchDelay(),
+                            configManager.getBatchSize());
+            Workflow workflow = new Workflow(modelInfo);
+            Device[] finalDevices = devices;
+            CompletableFuture<Void> f =
+                    modelManager
+                            .registerWorkflow(workflow)
+                            .thenAccept(
+                                    v -> {
+                                        for (Device device : finalDevices) {
+                                            modelManager.scaleWorkers(workflow, device, 1, -1);
+                                        }
+                                    })
+                            .exceptionally(
+                                    t -> {
+                                        logger.error("Failed register workflow", t);
+                                        // delay 3 seconds, allows REST API to send PING
+                                        // response (health check)
+                                        try {
+                                            Thread.sleep(3000);
+                                        } catch (InterruptedException ignore) {
+                                            // ignore
+                                        }
+                                        stop();
+                                        return null;
+                                    });
+            if (configManager.waitModelLoading()) {
+                f.join();
             }
-            startupModels.add(workflowName);
+            startupModels.add(modelName);
         }
     }
 
@@ -422,16 +421,16 @@ public class ModelServer implements AutoCloseable {
             }
             String endpoint = matcher.group(2);
             String workflowUrlString = matcher.group(3);
-            String[] devices = {"-1"};
-            String modelName;
+            Device[] devices = {null};
+            String workflowName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
-                modelName = tokens[0];
+                workflowName = tokens[0];
                 if (tokens.length > 1) {
-                    devices = parseDevices(tokens[1]);
+                    devices = parseDevices(tokens[1], Engine.getInstance());
                 }
             } else {
-                modelName = ModelInfo.inferModelNameFromUrl(workflowUrlString);
+                workflowName = ModelInfo.inferModelNameFromUrl(workflowUrlString);
             }
 
             URL workflowUrl = new URL(workflowUrlString);
@@ -439,29 +438,33 @@ public class ModelServer implements AutoCloseable {
                     WorkflowDefinition.parse(workflowUrl.toURI(), workflowUrl.openStream())
                             .toWorkflow();
 
-            for (String device : devices) {
-                CompletableFuture<Void> f =
-                        modelManager
-                                .registerWorkflow(workflow, device)
-                                .thenAccept(v -> modelManager.scaleWorkers(workflow, device, 1, -1))
-                                .exceptionally(
-                                        t -> {
-                                            logger.error("Failed register workflow", t);
-                                            // delay 3 seconds, allows REST API to send PING
-                                            // response (health check)
-                                            try {
-                                                Thread.sleep(3000);
-                                            } catch (InterruptedException ignore) {
-                                                // ignore
-                                            }
-                                            stop();
-                                            return null;
-                                        });
-                if (configManager.waitModelLoading()) {
-                    f.join();
-                }
+            Device[] finalDevices = devices;
+            CompletableFuture<Void> f =
+                    modelManager
+                            .registerWorkflow(workflow)
+                            .thenAccept(
+                                    v -> {
+                                        for (Device device : finalDevices) {
+                                            modelManager.scaleWorkers(workflow, device, 1, -1);
+                                        }
+                                    })
+                            .exceptionally(
+                                    t -> {
+                                        logger.error("Failed register workflow", t);
+                                        // delay 3 seconds, allows REST API to send PING
+                                        // response (health check)
+                                        try {
+                                            Thread.sleep(3000);
+                                        } catch (InterruptedException ignore) {
+                                            // ignore
+                                        }
+                                        stop();
+                                        return null;
+                                    });
+            if (configManager.waitModelLoading()) {
+                f.join();
             }
-            startupWorkflows.add(modelName);
+            startupWorkflows.add(workflowName);
         }
     }
 
@@ -565,22 +568,24 @@ public class ModelServer implements AutoCloseable {
         return null;
     }
 
-    private String[] parseDevices(String devices) {
+    private Device[] parseDevices(String devices, Engine engine) {
         if ("*".equals(devices)) {
             int gpuCount = CudaUtils.getGpuCount();
             if (gpuCount > 0) {
-                return IntStream.range(0, gpuCount)
-                        .mapToObj(String::valueOf)
-                        .toArray(String[]::new);
+                return IntStream.range(0, gpuCount).mapToObj(Device::gpu).toArray(Device[]::new);
             } else if (NeuronUtils.hasNeuron()) {
                 int neurons = NeuronUtils.getNeuronCores();
-                return IntStream.range(0, neurons).mapToObj(i -> "nc" + i).toArray(String[]::new);
+                return IntStream.range(0, neurons)
+                        .mapToObj(i -> Device.of("nc", i))
+                        .toArray(Device[]::new);
             }
 
         } else if (!devices.isEmpty()) {
-            return devices.split(";");
+            return Arrays.stream(devices.split(";"))
+                    .map(n -> Device.fromName(n, engine))
+                    .toArray(Device[]::new);
         }
-        return new String[] {"-1"};
+        return new Device[] {null};
     }
 
     private static void printHelp(String msg, Options options) {

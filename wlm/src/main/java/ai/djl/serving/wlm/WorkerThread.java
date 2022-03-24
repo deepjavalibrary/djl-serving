@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.Device;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -36,7 +37,7 @@ public final class WorkerThread implements Runnable {
     private AtomicBoolean running = new AtomicBoolean(true);
 
     private BatchAggregator aggregator;
-    private int gpuId;
+    private Device device;
     private AtomicReference<Thread> currentThread = new AtomicReference<>();
     private WorkerState state;
     private int workerId;
@@ -54,9 +55,10 @@ public final class WorkerThread implements Runnable {
         this.workerId = new WorkerIdGenerator().generate();
         this.startTime = System.currentTimeMillis();
         this.fixPoolThread = builder.fixPoolThread;
-        ZooModel<Input, Output> model = builder.model.getModel();
+        this.device = builder.device;
+        ZooModel<Input, Output> model = builder.model.getModel(device);
+
         predictor = model.newPredictor();
-        this.gpuId = model.getNDManager().getDevice().getDeviceId();
     }
 
     /** {@inheritDoc} */
@@ -117,12 +119,12 @@ public final class WorkerThread implements Runnable {
     }
 
     /**
-     * Returns the gpu id used by the thread.
+     * Returns the device used by the thread.
      *
-     * @return the gpu id used by the thread
+     * @return the device used by the thread
      */
-    public int getGpuId() {
-        return gpuId;
+    public Device getDevice() {
+        return device;
     }
 
     /**
@@ -200,6 +202,7 @@ public final class WorkerThread implements Runnable {
     public static class Builder {
 
         private ModelInfo model;
+        private Device device;
         private BatchAggregator aggregator;
         private LinkedBlockingDeque<WorkerJob> jobQueue;
         private boolean fixPoolThread;
@@ -228,8 +231,11 @@ public final class WorkerThread implements Runnable {
         }
 
         protected void validate() {
+            if (device == null) {
+                throw new IllegalArgumentException("Must set device for worker thread");
+            }
             if (model == null) {
-                throw new IllegalArgumentException("model must not be null");
+                throw new IllegalArgumentException("Must set model for worker thread");
             }
             if (jobQueue == null && aggregator == null) {
                 throw new IllegalArgumentException(
@@ -256,6 +262,17 @@ public final class WorkerThread implements Runnable {
          */
         public Builder setModel(ModelInfo model) {
             this.model = model;
+            return self();
+        }
+
+        /**
+         * RSets the device to run operations on.
+         *
+         * @param device the device to run operations on
+         * @return self-reference to this builder
+         */
+        public Builder setDevice(Device device) {
+            this.device = device;
             return self();
         }
 

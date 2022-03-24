@@ -12,6 +12,7 @@
  */
 package ai.djl.serving;
 
+import ai.djl.Device;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.serving.util.ConfigManager;
@@ -26,7 +27,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.apache.commons.cli.CommandLine;
 import org.testng.Assert;
@@ -103,13 +103,11 @@ public class WorkflowTest {
     }
 
     private Input runWorkflow(Path workflowFile, Input input)
-            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
+            throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        CompletableFuture<Void> future = workflow.load("-1");
-        future.get();
         try (WorkLoadManager wlm = new WorkLoadManager()) {
             for (ModelInfo model : workflow.getModels()) {
-                wlm.getWorkerPoolForModel(model).scaleWorkers("cpu", 1, 1);
+                wlm.getWorkerPoolForModel(model).scaleWorkers(Device.cpu(), 1, 1);
             }
 
             Output output = workflow.execute(wlm, input).join();

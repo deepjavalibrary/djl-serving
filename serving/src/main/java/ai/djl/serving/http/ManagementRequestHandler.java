@@ -12,7 +12,9 @@
  */
 package ai.djl.serving.http;
 
+import ai.djl.Device;
 import ai.djl.ModelException;
+import ai.djl.engine.Engine;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
@@ -224,6 +226,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 Boolean.parseBoolean(
                         NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
+        Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
+        Device device = Device.fromName(deviceName, engine);
         ModelInfo modelInfo =
                 new ModelInfo(
                         modelName,
@@ -238,14 +242,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         final ModelManager modelManager = ModelManager.getInstance();
         CompletableFuture<Void> f =
                 modelManager
-                        .registerWorkflow(workflow, deviceName)
+                        .registerWorkflow(workflow)
                         .thenAccept(
                                 v -> {
                                     for (ModelInfo m : workflow.getModels()) {
                                         m.configurePool(maxIdleTime)
                                                 .configureModelBatch(batchSize, maxBatchDelay);
                                         modelManager.scaleWorkers(
-                                                m, deviceName, minWorkers, maxWorkers);
+                                                m, device, minWorkers, maxWorkers);
                                     }
                                 })
                         .exceptionally(
@@ -282,14 +286,15 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                     WorkflowDefinition.parse(url.toURI(), url.openStream()).toWorkflow();
             String workflowName = workflow.getName();
 
+            Device device = Device.fromName(deviceName);
             final ModelManager modelManager = ModelManager.getInstance();
             CompletableFuture<Void> f =
                     modelManager
-                            .registerWorkflow(workflow, deviceName)
+                            .registerWorkflow(workflow)
                             .thenAccept(
                                     v ->
                                             modelManager.scaleWorkers(
-                                                    workflow, deviceName, minWorkers, maxWorkers))
+                                                    workflow, device, minWorkers, maxWorkers))
                             .exceptionally(
                                     t -> {
                                         NettyUtils.sendError(ctx, t.getCause());
