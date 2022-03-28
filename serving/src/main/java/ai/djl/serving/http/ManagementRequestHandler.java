@@ -69,7 +69,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     /** HTTP Parameter "min_worker". */
     private static final String MIN_WORKER_PARAMETER = "min_worker";
 
-    private static final Pattern PATTERN = Pattern.compile("^/(models|workflows)([/?].*)?");
+    private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?].*)?");
     private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
 
     /** {@inheritDoc} */
@@ -77,7 +77,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     public boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
             FullHttpRequest req = (FullHttpRequest) msg;
-            return PATTERN.matcher(req.uri()).matches();
+            return WORKFLOWS_PATTERN.matcher(req.uri()).matches()
+                    || MODELS_PATTERN.matcher(req.uri()).matches();
         }
         return false;
     }
