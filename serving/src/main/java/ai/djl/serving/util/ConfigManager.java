@@ -101,7 +101,7 @@ public final class ConfigManager {
             prop.setProperty(LOAD_MODELS, String.join(",", models));
         }
         String[] workflows = args.getWorkflows();
-        if (models != null) {
+        if (workflows != null) {
             prop.setProperty(LOAD_WORKFLOWS, String.join(",", workflows));
         }
         for (Map.Entry<String, String> env : System.getenv().entrySet()) {
