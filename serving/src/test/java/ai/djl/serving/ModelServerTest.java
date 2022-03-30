@@ -12,10 +12,18 @@
  */
 package ai.djl.serving;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
+
 import ai.djl.modality.Classifications.Classification;
-import ai.djl.serving.http.DescribeModelResponse;
+import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.ListModelsResponse;
+import ai.djl.serving.http.ListWorkflowsResponse;
+import ai.djl.serving.http.ListWorkflowsResponse.WorkflowItem;
 import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.models.ModelManager;
@@ -35,6 +43,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -50,6 +59,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -70,14 +80,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
@@ -90,6 +102,7 @@ public class ModelServerTest {
 
     private ConfigManager configManager;
     private byte[] testImage;
+    private List<EventLoopGroup> eventLoopGroups;
     volatile CountDownLatch latch;
     volatile HttpResponseStatus httpStatus;
     volatile String result;
@@ -117,6 +130,17 @@ public class ModelServerTest {
         Path modelStore = Paths.get("build/models");
         Utils.deleteQuietly(modelStore);
         Files.createDirectories(modelStore);
+        eventLoopGroups = new ArrayList<>();
+    }
+
+    @AfterMethod
+    public void afterMethod() {
+        for (EventLoopGroup elg : eventLoopGroups) {
+            elg.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+        }
+        eventLoopGroups = new ArrayList<>();
+
+        ModelManager.getInstance().clear();
     }
 
     @Test
@@ -131,64 +155,64 @@ public class ModelServerTest {
             Files.createFile(notModel);
 
             String url = server.mapModelUrl(notModel); // not a model dir
-            Assert.assertNull(url);
+            assertNull(url);
 
             url = server.mapModelUrl(modelDir); // empty folder
-            Assert.assertNull(url);
+            assertNull(url);
 
             String expected = modelDir.toUri().toURL().toString();
 
             Path dlr = modelDir.resolve("test_model.so");
             Files.createFile(dlr);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::DLR:*=" + expected);
+            assertEquals(url, "test_model::DLR:*=" + expected);
 
             Path xgb = modelDir.resolve("test_model.json");
             Files.createFile(xgb);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::XGBoost:*=" + expected);
+            assertEquals(url, "test_model::XGBoost:*=" + expected);
 
             Path paddle = modelDir.resolve("__model__");
             Files.createFile(paddle);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::PaddlePaddle:*=" + expected);
+            assertEquals(url, "test_model::PaddlePaddle:*=" + expected);
 
             Path tflite = modelDir.resolve("test_model.tflite");
             Files.createFile(tflite);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::TFLite:*=" + expected);
+            assertEquals(url, "test_model::TFLite:*=" + expected);
 
             Path tensorRt = modelDir.resolve("test_model.uff");
             Files.createFile(tensorRt);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::TensorRT:*=" + expected);
+            assertEquals(url, "test_model::TensorRT:*=" + expected);
 
             Path onnx = modelDir.resolve("test_model.onnx");
             Files.createFile(onnx);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::OnnxRuntime:*=" + expected);
+            assertEquals(url, "test_model::OnnxRuntime:*=" + expected);
 
             Path mxnet = modelDir.resolve("test_model-symbol.json");
             Files.createFile(mxnet);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::MXNet:*=" + expected);
+            assertEquals(url, "test_model::MXNet:*=" + expected);
 
             Path tensorflow = modelDir.resolve("saved_model.pb");
             Files.createFile(tensorflow);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::TensorFlow:*=" + expected);
+            assertEquals(url, "test_model::TensorFlow:*=" + expected);
 
             Path pytorch = modelDir.resolve("test_model.pt");
             Files.createFile(pytorch);
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::PyTorch:*=" + expected);
+            assertEquals(url, "test_model::PyTorch:*=" + expected);
 
             Path prop = modelDir.resolve("serving.properties");
             try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
                 writer.write("engine=MyEngine");
             }
             url = server.mapModelUrl(modelDir);
-            Assert.assertEquals(url, "test_model::MyEngine:*=" + expected);
+            assertEquals(url, "test_model::MyEngine:*=" + expected);
 
             Path mar = modelStore.resolve("torchServe.mar");
             Path torchServe = modelStore.resolve("torchServe");
@@ -196,10 +220,17 @@ public class ModelServerTest {
             ZipUtils.zip(torchServe, mar, false);
 
             url = server.mapModelUrl(mar);
-            Assert.assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
-
-            ModelManager.getInstance().clear();
+            assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
         }
+    }
+
+    public static void main(String[] args)
+            throws ReflectiveOperationException, ServerStartupException, GeneralSecurityException,
+                    ErrorDataEncoderException, IOException, ParseException, InterruptedException {
+        ModelServerTest t = new ModelServerTest();
+        t.beforeSuite();
+        t.test();
+        t.afterMethod();
     }
 
     @Test
@@ -209,10 +240,10 @@ public class ModelServerTest {
                     ReflectiveOperationException, ServerStartupException {
 
         try (ModelServer server = initTestServer("src/test/resources/config.properties")) {
-            Assert.assertTrue(server.isRunning());
+            assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
-            Assert.assertNotNull(channel, "Failed to connect to inference port.");
+            assertNotNull(channel, "Failed to connect to inference port.");
 
             // inference API
             testPing(channel);
@@ -225,7 +256,11 @@ public class ModelServerTest {
             // management API
             testRegisterModel(channel);
             testRegisterModelAsync(channel);
+            testRegisterWorkflow(channel);
+            testRegisterWorkflowAsync(channel);
             testScaleModel(channel);
+            testListModels(channel);
+            testListWorkflows(channel);
             testDescribeModel(channel);
             testUnregisterModel(channel);
 
@@ -254,8 +289,6 @@ public class ModelServerTest {
             testServiceUnavailable();
 
             ConfigManagerTest.testSsl();
-
-            ModelManager.getInstance().clear();
         }
     }
 
@@ -264,7 +297,7 @@ public class ModelServerTest {
             throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
                     InterruptedException, ReflectiveOperationException {
         try (ModelServer server = initTestServer("src/test/resources/workflow.config.properties")) {
-            Assert.assertTrue(server.isRunning());
+            assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
             testPredictionsModels(channel);
@@ -273,8 +306,6 @@ public class ModelServerTest {
             channel.close().sync();
 
             ConfigManagerTest.testSsl();
-
-            ModelManager.getInstance().clear();
         }
     }
 
@@ -283,7 +314,7 @@ public class ModelServerTest {
                     InterruptedException {
         String[] args = {"-f", configFile};
         Arguments arguments = ConfigManagerTest.parseArguments(args);
-        Assert.assertFalse(arguments.hasHelp());
+        assertFalse(arguments.hasHelp());
 
         ConfigManager.init(arguments);
         configManager = ConfigManager.getInstance();
@@ -314,7 +345,7 @@ public class ModelServerTest {
         channel.writeAndFlush(req).sync();
         latch.await();
 
-        Assert.assertEquals(result, "{}\n");
+        assertEquals(result, "{}\n");
     }
 
     private void testPing(Channel channel) throws InterruptedException {
@@ -322,10 +353,10 @@ public class ModelServerTest {
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/ping");
         channel.writeAndFlush(req);
         latch.await();
-        Assert.assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        Assert.assertNotNull(resp);
-        Assert.assertTrue(headers.contains("x-request-id"));
+        assertNotNull(resp);
+        assertTrue(headers.contains("x-request-id"));
     }
 
     private void testPredictionsModels(Channel channel) throws InterruptedException {
@@ -353,7 +384,7 @@ public class ModelServerTest {
 
             Type type = new TypeToken<List<Classification>>() {}.getType();
             List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
-            Assert.assertEquals(classifications.get(0).getClassName(), "0");
+            assertEquals(classifications.get(0).getClassName(), "0");
         }
     }
 
@@ -369,7 +400,7 @@ public class ModelServerTest {
 
         Type type = new TypeToken<List<Classification>>() {}.getType();
         List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
-        Assert.assertEquals(classifications.get(0).getClassName(), "0");
+        assertEquals(classifications.get(0).getClassName(), "0");
     }
 
     private void testInvocationsMultipart(Channel channel)
@@ -398,7 +429,7 @@ public class ModelServerTest {
 
         Type type = new TypeToken<List<Classification>>() {}.getType();
         List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
-        Assert.assertEquals(classifications.get(0).getClassName(), "0");
+        assertEquals(classifications.get(0).getClassName(), "0");
     }
 
     private void testRegisterModelAsync(Channel channel)
@@ -415,35 +446,9 @@ public class ModelServerTest {
         latch.await();
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        Assert.assertEquals(statusResp.getStatus(), "Model \"mlp_1\" registration scheduled.");
+        assertEquals(statusResp.getStatus(), "Model \"mlp_1\" registration scheduled.");
 
-        boolean modelRegistered = false;
-        OUTER:
-        for (int i = 0; i < 5; ++i) {
-            String token = "";
-            while (token != null) {
-                reset();
-                req =
-                        new DefaultFullHttpRequest(
-                                HttpVersion.HTTP_1_1,
-                                HttpMethod.GET,
-                                "/models?limit=1&next_page_token=" + token);
-                channel.writeAndFlush(req);
-                latch.await();
-
-                ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
-                for (ListModelsResponse.ModelItem item : resp.getModels()) {
-                    Assert.assertNotNull(item.getModelUrl());
-                    if ("mlp_1".equals(item.getModelName()) && "READY".equals(item.getStatus())) {
-                        modelRegistered = true;
-                        break OUTER;
-                    }
-                }
-                token = resp.getNextPageToken();
-            }
-            Thread.sleep(100);
-        }
-        Assert.assertTrue(modelRegistered);
+        assertTrue(checkWorkflowRegistered(channel, "mlp_1"));
     }
 
     private void testRegisterModel(Channel channel)
@@ -461,7 +466,43 @@ public class ModelServerTest {
         latch.await();
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        Assert.assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
+        assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
+    }
+
+    private void testRegisterWorkflow(Channel channel)
+            throws InterruptedException, UnsupportedEncodingException {
+        reset();
+
+        String url = "https://resources.djl.ai/test-models/basic-serving-workflow.json";
+        HttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/workflows?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+        channel.writeAndFlush(req);
+        latch.await();
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Workflow \"BasicWorkflow\" registered.");
+    }
+
+    private void testRegisterWorkflowAsync(Channel channel)
+            throws InterruptedException, UnsupportedEncodingException {
+        reset();
+        String url = "https://resources.djl.ai/test-models/basic-serving-workflow2.json";
+        HttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/workflows?synchronous=false&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+        channel.writeAndFlush(req);
+        latch.await();
+
+        StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(statusResp.getStatus(), "Workflow \"BasicWorkflow2\" registration scheduled.");
+
+        assertTrue(checkWorkflowRegistered(channel, "BasicWorkflow2"));
     }
 
     private void testScaleModel(Channel channel) throws InterruptedException {
@@ -475,9 +516,41 @@ public class ModelServerTest {
         latch.await();
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        Assert.assertEquals(
+        assertEquals(
                 resp.getStatus(),
-                "Model \"mlp_2\" worker scaled. New Worker configuration min workers:2 max workers:4");
+                "Workflow \"mlp_2\" worker scaled. New Worker configuration min workers:2 max workers:4");
+    }
+
+    private void testListModels(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models");
+        channel.writeAndFlush(req);
+        latch.await();
+
+        ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
+        for (String expectedModel : new String[] {"mlp", "mlp_1", "mlp_2"}) {
+            assertTrue(
+                    resp.getModels()
+                            .stream()
+                            .anyMatch(w -> expectedModel.equals(w.getModelName())));
+        }
+    }
+
+    private void testListWorkflows(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/workflows");
+        channel.writeAndFlush(req);
+        latch.await();
+
+        ListWorkflowsResponse resp = JsonUtils.GSON.fromJson(result, ListWorkflowsResponse.class);
+        for (String expectedWorkflow : new String[] {"mlp", "mlp_1", "mlp_2", "BasicWorkflow"}) {
+            assertTrue(
+                    resp.getWorkflows()
+                            .stream()
+                            .anyMatch(w -> expectedWorkflow.equals(w.getWorkflowName())));
+        }
     }
 
     private void testDescribeModel(Channel channel) throws InterruptedException {
@@ -487,21 +560,22 @@ public class ModelServerTest {
         channel.writeAndFlush(req);
         latch.await();
 
-        DescribeModelResponse resp = JsonUtils.GSON.fromJson(result, DescribeModelResponse.class);
-        Assert.assertTrue(resp.getWorkers().size() > 1);
+        DescribeWorkflowResponse resp =
+                JsonUtils.GSON.fromJson(result, DescribeWorkflowResponse.class);
+        assertTrue(resp.getWorkers().size() > 1);
 
-        Assert.assertEquals(resp.getModelName(), "mlp_2");
-        Assert.assertNotNull(resp.getModelUrl());
-        Assert.assertEquals(resp.getMinWorkers(), 2);
-        Assert.assertEquals(resp.getMaxWorkers(), 4);
-        Assert.assertEquals(resp.getBatchSize(), 1);
-        Assert.assertEquals(resp.getMaxBatchDelay(), 100);
-        Assert.assertEquals(resp.getStatus(), "Healthy");
-        DescribeModelResponse.Worker worker = resp.getWorkers().get(0);
-        Assert.assertTrue(worker.getId() > 0);
-        Assert.assertNotNull(worker.getStartTime());
-        Assert.assertNotNull(worker.getStatus());
-        Assert.assertEquals(worker.isGpu(), CudaUtils.hasCuda());
+        assertEquals(resp.getWorkflowName(), "mlp_2");
+        assertNotNull(resp.getWorkflowUrl());
+        assertEquals(resp.getMinWorkers(), 2);
+        assertEquals(resp.getMaxWorkers(), 4);
+        assertEquals(resp.getBatchSize(), 1);
+        assertEquals(resp.getMaxBatchDelay(), 100);
+        assertEquals(resp.getStatus(), "Healthy");
+        DescribeWorkflowResponse.Worker worker = resp.getWorkers().get(0);
+        assertTrue(worker.getId() > 0);
+        assertNotNull(worker.getStartTime());
+        assertNotNull(worker.getStatus());
+        assertEquals(worker.isGpu(), CudaUtils.hasCuda());
     }
 
     private void testUnregisterModel(Channel channel) throws InterruptedException {
@@ -513,7 +587,7 @@ public class ModelServerTest {
         latch.await();
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        Assert.assertEquals(resp.getStatus(), "Model \"mlp_1\" unregistered");
+        assertEquals(resp.getStatus(), "Model or workflow \"mlp_1\" unregistered");
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {
@@ -524,19 +598,19 @@ public class ModelServerTest {
         channel.writeAndFlush(req);
         latch.await();
 
-        Assert.assertEquals(result, "{}\n");
+        assertEquals(result, "{}\n");
     }
 
     private void testStaticHtmlRequest() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         channel.writeAndFlush(req).sync();
         latch.await();
 
-        Assert.assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testPredictionsInvalidRequestSize(Channel channel) throws InterruptedException {
@@ -552,12 +626,12 @@ public class ModelServerTest {
 
         latch.await();
 
-        Assert.assertEquals(httpStatus, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+        assertEquals(httpStatus, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
     }
 
     private void testInvalidUri() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -569,14 +643,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
         }
     }
 
     private void testInvalidDescribeModel() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -589,14 +663,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), "Model not found: InvalidModel");
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), "Model or workflow not found: InvalidModel");
         }
     }
 
     private void testInvalidPredictionsUri() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -608,14 +682,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
         }
     }
 
     private void testPredictionsModelNotFound() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -628,14 +702,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), "Model not found: InvalidModel");
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), "Model or workflow not found: InvalidModel");
         }
     }
 
     private void testInvalidManagementUri() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -647,14 +721,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
         }
     }
 
     private void testInvalidManagementMethod() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -666,14 +740,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.METHOD_NOT_ALLOWED.code());
-            Assert.assertEquals(resp.getMessage(), ERROR_METHOD_NOT_ALLOWED);
+            assertEquals(resp.getCode(), HttpResponseStatus.METHOD_NOT_ALLOWED.code());
+            assertEquals(resp.getMessage(), ERROR_METHOD_NOT_ALLOWED);
         }
     }
 
     private void testInvalidPredictionsMethod() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -685,14 +759,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.METHOD_NOT_ALLOWED.code());
-            Assert.assertEquals(resp.getMessage(), ERROR_METHOD_NOT_ALLOWED);
+            assertEquals(resp.getCode(), HttpResponseStatus.METHOD_NOT_ALLOWED.code());
+            assertEquals(resp.getMessage(), ERROR_METHOD_NOT_ALLOWED);
         }
     }
 
     private void testDescribeModelNotFound() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -705,14 +779,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), "Workflow not found: InvalidModel");
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), "Workflow not found: InvalidModel");
         }
     }
 
     private void testRegisterModelMissingUrl() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -724,14 +798,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
-            Assert.assertEquals(resp.getMessage(), "Parameter url is required.");
+            assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
+            assertEquals(resp.getMessage(), "Parameter url is required.");
         }
     }
 
     private void testRegisterModelNotFound() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -744,8 +818,8 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(
                     resp.getMessage(), "No matching model with specified Input/Output type found.");
         }
     }
@@ -753,7 +827,7 @@ public class ModelServerTest {
     private void testRegisterModelConflict()
             throws InterruptedException, UnsupportedEncodingException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
@@ -770,14 +844,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
-            Assert.assertEquals(resp.getMessage(), "Workflow mlp_2 is already registered.");
+            assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
+            assertEquals(resp.getMessage(), "Workflow mlp_2 is already registered.");
         }
     }
 
     private void testInvalidScaleModel() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         DefaultFullHttpRequest req =
@@ -792,14 +866,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(httpStatus, HttpResponseStatus.BAD_REQUEST);
-            Assert.assertEquals(resp.getMessage(), "max_worker cannot be less than min_worker.");
+            assertEquals(httpStatus, HttpResponseStatus.BAD_REQUEST);
+            assertEquals(resp.getMessage(), "max_worker cannot be less than min_worker.");
         }
     }
 
     private void testScaleModelNotFound() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -811,14 +885,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), "Model not found: fake");
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), "Model or workflow not found: fake");
         }
     }
 
     private void testUnregisterModelNotFound() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         HttpRequest req =
@@ -830,14 +904,14 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            Assert.assertEquals(resp.getMessage(), "Model not found: fake");
+            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertEquals(resp.getMessage(), "Model or workflow not found: fake");
         }
     }
 
     private void testServiceUnavailable() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        Assert.assertNotNull(channel);
+        assertNotNull(channel);
 
         reset();
         DefaultFullHttpRequest req =
@@ -862,9 +936,37 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            Assert.assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
-            Assert.assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2");
+            assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+            assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2");
         }
+    }
+
+    private boolean checkWorkflowRegistered(Channel channel, String workflowName)
+            throws InterruptedException {
+        for (int i = 0; i < 5; ++i) {
+            String token = "";
+            while (token != null) {
+                reset();
+                HttpRequest req =
+                        new DefaultFullHttpRequest(
+                                HttpVersion.HTTP_1_1,
+                                HttpMethod.GET,
+                                "/workflows?limit=1&next_page_token=" + token);
+                channel.writeAndFlush(req);
+                latch.await();
+
+                ListWorkflowsResponse resp =
+                        JsonUtils.GSON.fromJson(result, ListWorkflowsResponse.class);
+                for (WorkflowItem item : resp.getWorkflows()) {
+                    if (workflowName.equals(item.getWorkflowName())) {
+                        return true;
+                    }
+                }
+                token = resp.getNextPageToken();
+            }
+            Thread.sleep(100);
+        }
+        return false;
     }
 
     private Channel connect(Connector.ConnectorType type) {
@@ -877,7 +979,9 @@ public class ModelServerTest {
                     SslContextBuilder.forClient()
                             .trustManager(InsecureTrustManagerFactory.INSTANCE)
                             .build();
-            b.group(Connector.newEventLoopGroup(1))
+            EventLoopGroup elg = Connector.newEventLoopGroup(1);
+            eventLoopGroups.add(elg);
+            b.group(elg)
                     .channel(connector.getClientChannel())
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .handler(

@@ -16,9 +16,11 @@ Similar as [Inference API](inference_api.md).
 
 ### Register a model
 
+Registers a new model as a single model workflow. The workflow name and version matches the model name and version.
+
 `POST /models`
 * url - Model url.
-* model_name - the name of the model; this name will be used as {model_name} in other API as path.
+* model_name - the name of the model and workflow; this name will be used as {workflow_name} in other API as path.
   If this parameter is not present, modelName will be inferred by url.
 * model_version - the version of the mode
 * engine - the name of engine to load the model. The default is MXNet if the model doesn't define its engine.
@@ -59,11 +61,54 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
 }
 ```
 
+### Register a workflow
+
+`POST /workflows`
+* url - Workflow url.
+* engine - the name of engine to load the model. The default is MXNet if the model doesn't define its engine.
+* gpu_id - the GPU device id to load the model. The default is CPU (`-1').
+* min_worker - the minimum number of worker processes. The default value is `1`.
+* max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
+* synchronous - whether or not the creation of worker is synchronous. The default value is true.
+
+```bash
+curl -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.tar.gz"
+
+{
+  "status": "Workflow \"mlp\" registered."
+}
+```
+
+Download and load model may take some time, user can choose asynchronous call and check the status later.
+
+The asynchronous call will return before trying to create workers with HTTP code 202:
+
+```bash
+curl -v -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.tar.gz&synchronous=false"
+
+< HTTP/1.1 202 Accepted
+< content-type: application/json
+< x-request-id: bf998daa-892f-482b-a660-6d0447aa5a7a
+< Pragma: no-cache
+< Cache-Control: no-cache; no-store, must-revalidate, private
+< Expires: Thu, 01 Jan 1970 00:00:00 UTC
+< content-length: 56
+< connection: keep-alive
+< 
+{
+  "status": "Workflow \"mlp\" registration scheduled."
+}
+```
+
 ### Scale workers
 
 `PUT /models/{model_name}`
 or
 `PUT /models/{model_name}/{version}`
+or
+`PUT /workflows/{workflow_name}`
+or
+`PUT /workflows/{workflow_name}/{version}`
 
 * batch_size - the inference batch size. The default value is `1`.
 * max_batch_delay - the maximum delay for batch aggregation. The default value is 100 milliseconds.
@@ -78,7 +123,7 @@ There are two different flavour of this API, synchronous vs asynchronous.
 The asynchronous call will return immediately with HTTP code 202:
 
 ```bash
-curl -v -X PUT "http://localhost:8080/models/mlp?min_worker=3"
+curl -v -X PUT "http://localhost:8080/workflows/mlp?min_worker=3"
 
 < HTTP/1.1 202 Accepted
 < content-type: application/json
@@ -91,11 +136,13 @@ curl -v -X PUT "http://localhost:8080/models/mlp?min_worker=3"
 }
 ```
 
-### Describe model
+### Describe model or workflow
 
 `GET /models/{model_name}`
+or
+`GET /workflows/{workflow_name}`
 
-Use the Describe Model API to get detail runtime status of a model:
+Use the Describe Model API to get detail runtime status of a model or workflow:
 
 ```bash
 curl http://localhost:8080/models/mlp
@@ -121,30 +168,35 @@ curl http://localhost:8080/models/mlp
 }
 ```
 
-### Unregister a model
+### Unregister a model or workflow
 
 `DELETE /models/{model_name}`
+or
+`DELETE /workflows/{workflow_name}`
 
-Use the Unregister Model API to free up system resources:
+Use the Unregister Model or workflow API to free up system resources:
 
 ```bash
 curl -X DELETE http://localhost:8080/models/mlp
 
 {
-  "status": "Model \"mlp\" unregistered"
+  "status": "Workflow \"mlp\" unregistered"
 }
 ```
 
-### List models
+### List workflows
 
 `GET /models`
+or
+`GET /workflows`
+
 * limit - (optional) the maximum number of items to return. It is passed as a query parameter. The default value is `100`.
 * next_page_token - (optional) queries for next page. It is passed as a query parameter. This value is return by a previous API call.
 
-Use the Models API to query current registered models:
+Use the Workflows API to query current registered models and workflows:
 
 ```bash
-curl "http://localhost:8080/models"
+curl "http://localhost:8080/workflows"
 ```
 
 This API supports pagination:
