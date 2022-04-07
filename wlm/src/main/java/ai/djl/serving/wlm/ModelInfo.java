@@ -14,6 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Application;
 import ai.djl.Device;
+import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.modality.Input;
@@ -28,6 +29,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +57,7 @@ public final class ModelInfo implements AutoCloseable {
     private String translator;
     private transient Status status;
 
-    private transient ZooModel<Input, Output> model;
+    private transient Map<Device, ZooModel<Input, Output>> model;
 
     /**
      * Constructs a new {@code ModelInfo} instance.
@@ -100,12 +102,13 @@ public final class ModelInfo implements AutoCloseable {
     /**
      * Loads the model to the specified device.
      *
-     * @param deviceName the device to load model on
+     * @param device the device to load model on
      * @throws IOException if failed to read model file
      * @throws ModelException if failed to load the specified model
      */
-    public void load(String deviceName) throws ModelException, IOException {
-        if (model != null) {
+    public void load(Device device) throws ModelException, IOException {
+        device = withDefaultDevice(device);
+        if (getModels().containsKey(device)) {
             return;
         }
         Criteria.Builder<Input, Output> builder =
@@ -134,30 +137,20 @@ public final class ModelInfo implements AutoCloseable {
         } catch (ReflectiveOperationException e) {
             throw new ModelException("Invalid criteria", e);
         }
-        if ("-1".equals(deviceName)) {
-            Device device;
-            if (engineName == null) {
-                device = Device.cpu();
-            } else {
-                device = Engine.getEngine(engineName).defaultDevice();
-            }
-            logger.info("Loading model {} on {}.", id, device);
-        } else if (deviceName.startsWith("nc")) {
-            logger.info("Loading model {} on {}.", id, deviceName);
-            String ncs = deviceName.substring(2);
+        logger.info("Loading model {} on {}.", id, device);
+        if ("nc".equals(device.getDeviceType())) {
+            String ncs = String.valueOf(device.getDeviceId());
             builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
         } else {
-            // GPU case
-            int gpuId = Integer.parseInt(deviceName);
-            builder.optDevice(Device.gpu(gpuId));
-            logger.info("Loading model {} on {}.", id, Device.gpu(gpuId));
+            logger.info("Loading model {} on {}.", id, device);
+            builder.optDevice(device);
         }
         if (batchSize > 1) {
             builder.optArgument("batchifier", "stack");
         }
 
         try {
-            model = builder.build().loadModel();
+            getModels().put(device, builder.build().loadModel());
             status = Status.READY;
         } finally {
             if (status == null) {
@@ -194,16 +187,25 @@ public final class ModelInfo implements AutoCloseable {
         return this;
     }
 
-    /**
-     * Returns the loaded {@link ZooModel}.
-     *
-     * @return the loaded {@link ZooModel}
-     */
-    public ZooModel<Input, Output> getModel() {
+    private Map<Device, ZooModel<Input, Output>> getModels() {
         if (model == null) {
-            throw new IllegalStateException("Model \"" + id + "\" has not been loaded yet.");
+            model = new ConcurrentHashMap<>();
         }
         return model;
+    }
+
+    /**
+     * Returns the loaded {@link ZooModel} for a device.
+     *
+     * @param device the device to return the model on
+     * @return the loaded {@link ZooModel}
+     */
+    public ZooModel<Input, Output> getModel(Device device) {
+        device = withDefaultDevice(device);
+        if (getModels().get(device) == null) {
+            throw new IllegalStateException("Model \"" + id + "\" has not been loaded yet.");
+        }
+        return getModels().get(device);
     }
 
     /**
@@ -266,7 +268,7 @@ public final class ModelInfo implements AutoCloseable {
      * @return the model cache directory
      */
     public Path getModelDir() {
-        return model.getModelPath();
+        return getModels().values().iterator().next().getModelPath();
     }
 
     /**
@@ -344,9 +346,11 @@ public final class ModelInfo implements AutoCloseable {
     /** {@inheritDoc} */
     @Override
     public void close() {
-        if (model != null) {
+        if (!getModels().isEmpty()) {
             logger.debug("closing model {}", modelName);
-            model.close();
+            for (Model m : model.values()) {
+                m.close();
+            }
         }
     }
 
@@ -375,6 +379,21 @@ public final class ModelInfo implements AutoCloseable {
         }
         modelName = modelName.replaceAll("(\\W|^_)", "_");
         return modelName;
+    }
+
+    /**
+     * Returns the default device for this model if device is null.
+     *
+     * @param device the device to use if it is not null
+     * @return a non-null device
+     */
+    public Device withDefaultDevice(Device device) {
+        if (device != null) {
+            return device;
+        }
+
+        Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
+        return engine.defaultDevice();
     }
 
     /** {@inheritDoc} */

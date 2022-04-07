@@ -12,7 +12,9 @@
  */
 package ai.djl.serving.http;
 
+import ai.djl.Device;
 import ai.djl.ModelException;
+import ai.djl.engine.Engine;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -163,6 +165,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String engineName = input.getProperty("engine_name", null);
             String deviceName = input.getProperty("device", "-1");
 
+            Engine engine =
+                    engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
+            Device device = Device.fromName(deviceName, engine);
+
             logger.info("Loading model {} from: {}", workflowName, modelUrl);
             ModelInfo modelInfo =
                     new ModelInfo(
@@ -177,8 +183,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             Workflow wf = new Workflow(modelInfo);
 
             modelManager
-                    .registerWorkflow(wf, deviceName)
-                    .thenApply(p -> modelManager.scaleWorkers(wf, deviceName, 1, -1))
+                    .registerWorkflow(wf)
+                    .thenApply(p -> modelManager.scaleWorkers(wf, device, 1, -1))
                     .thenAccept(p -> runJob(modelManager, ctx, p, input));
             return;
         }

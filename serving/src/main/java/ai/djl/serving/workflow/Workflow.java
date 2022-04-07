@@ -12,17 +12,14 @@
  */
 package ai.djl.serving.workflow;
 
-import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.IdentityWF;
 import ai.djl.serving.workflow.function.ModelWorkflowFunction;
 import ai.djl.serving.workflow.function.WorkflowFunction;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -31,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -103,32 +99,6 @@ public class Workflow implements AutoCloseable {
      */
     public Collection<ModelInfo> getModels() {
         return models.values();
-    }
-
-    /**
-     * Load all the models in this workflow.
-     *
-     * @param device the device to load the models
-     * @return a {@code CompletableFuture} instance
-     */
-    public CompletableFuture<Void> load(String device) {
-        return CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        for (ModelInfo modelInfo : models.values()) {
-                            String engine = modelInfo.getEngineName();
-                            if (engine != null) {
-                                DependencyManager dm = DependencyManager.getInstance();
-                                dm.installEngine(engine);
-                            }
-
-                            modelInfo.load(device);
-                        }
-                    } catch (ModelException | IOException e) {
-                        throw new CompletionException(e);
-                    }
-                    return null;
-                });
     }
 
     /**

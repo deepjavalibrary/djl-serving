@@ -12,12 +12,14 @@
  */
 package ai.djl.serving.models;
 
+import ai.djl.Device;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.StatusResponse;
+import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
@@ -33,6 +35,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -40,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -75,16 +79,31 @@ public final class ModelManager {
      * Registers and loads a {@link Workflow}.
      *
      * @param workflow the workflow to register
-     * @param deviceName the accelerator device id, -1 for auto selection
      * @return a {@code CompletableFuture} instance
      */
-    public CompletableFuture<Void> registerWorkflow(Workflow workflow, String deviceName) {
+    public CompletableFuture<Void> registerWorkflow(Workflow workflow) {
         Endpoint endpoint = endpoints.computeIfAbsent(workflow.getName(), k -> new Endpoint());
         if (!endpoint.add(workflow)) {
             // workflow already exists
             throw new BadRequestException("Workflow " + workflow + " is already registered.");
         }
-        return workflow.load(deviceName);
+
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    for (ModelInfo model : workflow.getModels()) {
+                        try {
+                            // Install engine if necessary
+                            String engine = model.getEngineName();
+                            if (engine != null) {
+                                DependencyManager dm = DependencyManager.getInstance();
+                                dm.installEngine(engine);
+                            }
+                        } catch (IOException e) {
+                            throw new CompletionException(e);
+                        }
+                    }
+                    return null;
+                });
     }
 
     /**
@@ -138,16 +157,15 @@ public final class ModelManager {
      * Scales the workers for each model in a workflow.
      *
      * @param workflow the workflow to scale workers for
-     * @param deviceName the device for the model
+     * @param device the device for the model
      * @param minWorkers the min workers
      * @param maxWorkers the max workers
      * @return the info about the scaled workflow
-     * @see WorkerPool#scaleWorkers(String, int, int)
+     * @see WorkerPool#scaleWorkers(Device, int, int)
      */
-    public Workflow scaleWorkers(
-            Workflow workflow, String deviceName, int minWorkers, int maxWorkers) {
+    public Workflow scaleWorkers(Workflow workflow, Device device, int minWorkers, int maxWorkers) {
         for (ModelInfo model : workflow.getModels()) {
-            scaleWorkers(model, deviceName, minWorkers, maxWorkers);
+            scaleWorkers(model, device, minWorkers, maxWorkers);
         }
         return workflow;
     }
@@ -156,16 +174,15 @@ public final class ModelManager {
      * Scales the workers for a model.
      *
      * @param model the model to scale workers for
-     * @param deviceName the device for the model
+     * @param device the device for the model
      * @param minWorkers the min workers
      * @param maxWorkers the max workers
      * @return the info about the scaled workflow
-     * @see WorkerPool#scaleWorkers(String, int, int)
+     * @see WorkerPool#scaleWorkers(Device, int, int)
      */
-    public ModelInfo scaleWorkers(
-            ModelInfo model, String deviceName, int minWorkers, int maxWorkers) {
+    public ModelInfo scaleWorkers(ModelInfo model, Device device, int minWorkers, int maxWorkers) {
         logger.debug("updateModel: {}", model);
-        wlm.getWorkerPoolForModel(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
+        wlm.getWorkerPoolForModel(model).scaleWorkers(device, minWorkers, maxWorkers);
         return model;
     }
 
@@ -295,8 +312,8 @@ public final class ModelManager {
                     int workerId = worker.getWorkerId();
                     long startTime = worker.getStartTime();
                     boolean isRunning = worker.isRunning();
-                    int gpuId = worker.getGpuId();
-                    resp.addWorker(model.getVersion(), workerId, startTime, isRunning, gpuId);
+                    resp.addWorker(
+                            model.getVersion(), workerId, startTime, isRunning, worker.getDevice());
                 }
                 resps.add(resp);
             }

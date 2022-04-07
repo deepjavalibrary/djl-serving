@@ -42,17 +42,17 @@ public final class WlmConfigManager {
      * Returns the default number of workers for a new registered model.
      *
      * @param manager the {@code NDManager} the model uses
-     * @param deviceName the device that model loaded on
+     * @param device the device that model loaded on
      * @param target the target number of worker
      * @return the default number of workers for a new registered model
      */
-    public int getDefaultWorkers(NDManager manager, String deviceName, int target) {
+    public int getDefaultWorkers(NDManager manager, Device device, int target) {
         if (target == 0) {
             return 0;
         } else if (target == -1 && isDebug()) {
             return 1;
         }
-        if (deviceName != null && deviceName.startsWith("nc")) {
+        if (device != null && "nc".equals(device.getDeviceType())) {
             if ("Python".equals(manager.getEngine().getEngineName())) {
                 return 1;
             }
