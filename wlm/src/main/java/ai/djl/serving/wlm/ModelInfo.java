@@ -142,7 +142,6 @@ public final class ModelInfo implements AutoCloseable {
             String ncs = String.valueOf(device.getDeviceId());
             builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
         } else {
-            logger.info("Loading model {} on {}.", id, device);
             builder.optDevice(device);
         }
         if (batchSize > 1) {
