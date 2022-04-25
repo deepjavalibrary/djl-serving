@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 class PyProcess {
 
     static final Logger logger = LoggerFactory.getLogger(PyProcess.class);
+    static final Logger METRIC_LOGGER = LoggerFactory.getLogger("model_metrics");
 
     private PyEnv pyEnv;
     private Model model;
@@ -178,6 +179,11 @@ class PyProcess {
                     if ("Python engine started.".equals(result)) {
                         lifeCycle.setStarted(true);
                     }
+                    if (result.startsWith("[METRICS]")) {
+                        METRIC_LOGGER.info("{}", Metric.parse(result.substring(9)));
+                        continue;
+                    }
+
                     if (error) {
                         logger.warn(result);
                     } else {
