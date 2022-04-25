@@ -14,6 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
+import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -65,6 +66,40 @@ public class PyEngineTest {
             float[] buf = {0f, 1f, 2f, 3f};
             NDArray array = manager.create(buf);
             Assert.assertEquals(array.toFloatArray(), buf);
+        }
+    }
+
+    @Test
+    public void testModelLoadintTimeout() throws IOException, ModelException {
+        Criteria<NDList, NDList> criteria =
+                Criteria.builder()
+                        .setTypes(NDList.class, NDList.class)
+                        .optModelPath(Paths.get("src/test/resources/accumulate"))
+                        .optTranslator(new NoopTranslator())
+                        .optOption("model_loading_timeout", "1")
+                        .optEngine("Python")
+                        .build();
+
+        try (ZooModel<NDList, NDList> model = criteria.loadModel()) {
+            Assert.assertThrows(EngineException.class, model::newPredictor);
+        }
+    }
+
+    @Test
+    public void testPredictTimeout() throws IOException, ModelException {
+        Criteria<NDList, NDList> criteria =
+                Criteria.builder()
+                        .setTypes(NDList.class, NDList.class)
+                        .optModelPath(Paths.get("src/test/resources/accumulate"))
+                        .optTranslator(new NoopTranslator())
+                        .optOption("predict_timeout", "1")
+                        .optEngine("Python")
+                        .build();
+
+        try (ZooModel<NDList, NDList> model = criteria.loadModel();
+                Predictor<NDList, NDList> predictor = model.newPredictor()) {
+            NDArray x = model.getNDManager().create(new float[] {1});
+            Assert.assertThrows(TranslateException.class, () -> predictor.predict(new NDList(x)));
         }
     }
 

@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +42,7 @@ class PyProcess {
     private boolean started;
     private ReaderThread err;
     private ReaderThread out;
+    private CompletableFuture<Void> restartFuture;
 
     PyProcess(Model model, PyEnv pyEnv) {
         this.model = model;
@@ -50,7 +51,7 @@ class PyProcess {
         latch = new CountDownLatch(1);
     }
 
-    Output predict(Input inputs) throws TranslateException {
+    Output predict(Input inputs, int timeout, boolean restart) throws TranslateException {
         try {
             if (inputs.getProperty("handler", null) == null) {
                 String handler = pyEnv.getHandler();
@@ -60,8 +61,14 @@ class PyProcess {
             }
             Device device = model.getNDManager().getDevice();
             inputs.addProperty("device_id", String.valueOf(device.getDeviceId()));
-            return connection.send(inputs);
-        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+            CompletableFuture<Output> future = connection.send(inputs);
+            return future.get(timeout, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            if (restart) {
+                stopPythonProcess();
+                logger.info("Restart python process ...");
+                restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
+            }
             throw new TranslateException(e);
         }
     }
@@ -90,9 +97,9 @@ class PyProcess {
 
             try {
                 // initialize model with an empty request
-                predict(new Input());
-            } catch (TranslateException ignore) {
-                logger.warn("Python model {} doesn't support warn up: ", model.getName());
+                predict(new Input(), pyEnv.getModelLoadingTimeout(), false);
+            } catch (TranslateException e) {
+                throw new EngineException("Failed to load Python model.", e);
             }
         } catch (InterruptedException e) {
             throw new EngineException("Worker startup cancelled.", e);
@@ -106,6 +113,18 @@ class PyProcess {
     }
 
     synchronized void stopPythonProcess() {
+        if (restartFuture != null) {
+            try {
+                if (!restartFuture.isDone()) {
+                    if (!restartFuture.cancel(true)) {
+                        logger.warn("Failed to cancel restart python process task.");
+                    }
+                }
+            } catch (CancellationException ignore) {
+                // ignore
+            }
+            restartFuture = null;
+        }
         if (process != null) {
             started = false;
             if (err != null) {
@@ -114,8 +133,8 @@ class PyProcess {
             if (out != null) {
                 out.shutdown();
             }
+            connection.disconnect();
             process.destroyForcibly();
-            connection.clean();
             process = null;
         }
     }

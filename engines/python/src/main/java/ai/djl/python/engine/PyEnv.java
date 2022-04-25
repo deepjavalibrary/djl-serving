@@ -42,6 +42,8 @@ public class PyEnv {
     private String pythonExecutable;
     private String entryPoint;
     private String handler;
+    private int predictTimeout;
+    private int modelLoadingTimeout;
     private Map<String, String> envs;
     private boolean initialized;
 
@@ -201,6 +203,48 @@ public class PyEnv {
         this.handler = handler;
     }
 
+    /**
+     * Returns the prediction timeout in seconds.
+     *
+     * @return the prediction timeout in seconds
+     */
+    public int getPredictTimeout() {
+        if (predictTimeout == 0) {
+            predictTimeout = getDefaultTimeout("PREDICT_TIMEOUT", 120);
+        }
+        return predictTimeout;
+    }
+
+    /**
+     * Sets the prediction timeout in seconds.
+     *
+     * @param predictTimeout the prediction timeout in seconds
+     */
+    public void setPredictTimeout(int predictTimeout) {
+        this.predictTimeout = predictTimeout;
+    }
+
+    /**
+     * Returns the model loading timeout in seconds.
+     *
+     * @return the model loading timeout in seconds
+     */
+    public int getModelLoadingTimeout() {
+        if (modelLoadingTimeout == 0) {
+            modelLoadingTimeout = getDefaultTimeout("MODEL_LOADING_TIMEOUT", 240);
+        }
+        return modelLoadingTimeout;
+    }
+
+    /**
+     * Sets the model loading timeout in seconds.
+     *
+     * @param modelLoadingTimeout the model loading timeout in seconds
+     */
+    public void setModelLoadingTimeout(int modelLoadingTimeout) {
+        this.modelLoadingTimeout = modelLoadingTimeout;
+    }
+
     String[] getEnvironmentVars(Model model) {
         ArrayList<String> envList = new ArrayList<>();
         StringBuilder pythonPath = new StringBuilder();
@@ -218,5 +262,18 @@ public class PyEnv {
         }
 
         return envList.toArray(new String[0]);
+    }
+
+    private static int getDefaultTimeout(String key, int def) {
+        String timeout = System.getenv(key);
+        if (timeout == null) {
+            return def;
+        }
+        try {
+            return Integer.parseInt(timeout);
+        } catch (NumberFormatException e) {
+            logger.warn("Invalid timeout value: {}.", timeout);
+        }
+        return def;
     }
 }

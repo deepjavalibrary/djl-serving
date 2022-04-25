@@ -28,9 +28,11 @@ import java.util.List;
 class PyPredictor<I, O> extends Predictor<I, O> {
 
     private PyProcess process;
+    private int timeout;
 
     public PyPredictor(Model model, Translator<I, O> translator, PyEnv pyEnv, Device device) {
         super(model, translator, device, false);
+        timeout = pyEnv.getPredictTimeout();
         process = new PyProcess(model, pyEnv);
         process.startPythonProcess();
     }
@@ -45,7 +47,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         if (inputs.get(0) instanceof Input) {
             List<O> ret = new ArrayList<>(inputs.size());
             for (I input : inputs) {
-                ret.add((O) process.predict((Input) input));
+                ret.add((O) process.predict((Input) input, timeout, true));
             }
             return ret;
         }
@@ -59,7 +61,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         Input inputs = new Input();
         inputs.addProperty("Content-Type", "tensor/ndlist");
         inputs.add(ndList.encode());
-        Output output = process.predict(inputs);
+        Output output = process.predict(inputs, timeout, true);
         if (output.getCode() != 200) {
             throw new TranslateException(output.getMessage());
         }
