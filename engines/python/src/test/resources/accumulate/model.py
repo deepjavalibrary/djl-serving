@@ -16,6 +16,7 @@ Accumulation Python model example.
 
 import logging
 import numpy as np
+import time
 from djl_python import Input
 from djl_python import Output
 
@@ -46,6 +47,7 @@ class Accumulation(object):
             data = inputs.get_as_numpy()
             self.nd = self.nd + data[0]
             outputs.add_as_numpy([self.nd])
+            time.sleep(2)
         except Exception as e:
             logging.error(e, exc_info=True)
             # error handling
@@ -68,6 +70,7 @@ def handle(inputs: Input):
 
     if inputs.is_empty():
         # initialization request
+        time.sleep(2)
         return None
 
     return _service.accumulate(inputs)

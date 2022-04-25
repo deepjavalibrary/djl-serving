@@ -24,9 +24,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** {@code PyModel} is the Python engine implementation of {@link Model}. */
 public class PyModel extends BaseModel {
+
+    private static final Logger logger = LoggerFactory.getLogger(PyModel.class);
 
     private PyEnv pyEnv;
 
@@ -71,6 +75,24 @@ public class PyModel extends BaseModel {
                     if (kv.length > 1) {
                         pyEnv.addEnv(kv[0].trim(), kv[1].trim());
                     }
+                }
+            }
+            String predictTimeout = (String) options.get("predict_timeout");
+            if (predictTimeout != null) {
+                try {
+                    int timeoutSeconds = Integer.parseInt(predictTimeout);
+                    pyEnv.setPredictTimeout(timeoutSeconds);
+                } catch (NumberFormatException ignore) {
+                    logger.warn("Invalid predict_timeout value: " + predictTimeout);
+                }
+            }
+            String modelLoadingTimeout = (String) options.get("model_loading_timeout");
+            if (modelLoadingTimeout != null) {
+                try {
+                    int timeoutSeconds = Integer.parseInt(modelLoadingTimeout);
+                    pyEnv.setModelLoadingTimeout(timeoutSeconds);
+                } catch (NumberFormatException ignore) {
+                    logger.warn("Invalid model_loading_timeout value: " + modelLoadingTimeout);
                 }
             }
         }

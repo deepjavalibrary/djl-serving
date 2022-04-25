@@ -47,10 +47,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,14 +82,13 @@ class Connection {
         return port;
     }
 
-    Output send(Input input) throws ExecutionException, InterruptedException, TimeoutException {
+    CompletableFuture<Output> send(Input input) throws InterruptedException {
         CompletableFuture<Output> f = new CompletableFuture<>();
         requestHandler.setResponseFuture(f);
         if (!channel.writeAndFlush(input).sync().isSuccess()) {
             throw new IllegalStateException("Failed to send data to python.");
         }
-        // TODO: make this configurable
-        return f.get(10, TimeUnit.MINUTES);
+        return f;
     }
 
     private String[] getPythonStartCmd(PyEnv pyEnv, Model model) {
@@ -147,6 +143,21 @@ class Connection {
         }
     }
 
+    void disconnect() {
+        try {
+            if (channel != null) {
+                channel.close().sync();
+            } else {
+                logger.warn("Connection channel is null.");
+            }
+        } catch (InterruptedException ignore) {
+            // ignore
+        }
+        if (uds) {
+            Utils.deleteQuietly(Paths.get(getSocketPath()));
+        }
+    }
+
     private String getSocketPath() {
         return System.getProperty("java.io.tmpdir") + "/djl_sock." + port;
     }
@@ -175,13 +186,6 @@ class Connection {
             return KQueueDomainSocketChannel.class;
         }
         return NioSocketChannel.class;
-    }
-
-    /** Cleans up the leftover resources. */
-    void clean() {
-        if (uds) {
-            Utils.deleteQuietly(Paths.get(getSocketPath()));
-        }
     }
 
     private static final class RequestHandler extends SimpleChannelInboundHandler<Output> {
