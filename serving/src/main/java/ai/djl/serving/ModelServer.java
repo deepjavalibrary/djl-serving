@@ -336,7 +336,6 @@ public class ModelServer implements AutoCloseable {
             String engineName = null;
             Device[] devices = {null};
             String modelName;
-            Engine engine = Engine.getInstance();
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
                 modelName = tokens[0];
@@ -345,12 +344,12 @@ public class ModelServer implements AutoCloseable {
                 }
                 if (tokens.length > 2) {
                     engineName = tokens[2].isEmpty() ? null : tokens[2];
-                    engine =
+                }
+                if (tokens.length > 3) {
+                    Engine engine =
                             engineName != null
                                     ? Engine.getEngine(engineName)
                                     : Engine.getInstance();
-                }
-                if (tokens.length > 3) {
                     devices = parseDevices(tokens[3], engine);
                 }
             } else {
