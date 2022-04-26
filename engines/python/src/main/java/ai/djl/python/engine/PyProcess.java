@@ -17,7 +17,6 @@ import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.translate.TranslateException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -52,7 +51,7 @@ class PyProcess {
         latch = new CountDownLatch(1);
     }
 
-    Output predict(Input inputs, int timeout, boolean restart) throws TranslateException {
+    Output predict(Input inputs, int timeout, boolean initialLoad) {
         try {
             if (inputs.getProperty("handler", null) == null) {
                 String handler = pyEnv.getHandler();
@@ -63,14 +62,18 @@ class PyProcess {
             Device device = model.getNDManager().getDevice();
             inputs.addProperty("device_id", String.valueOf(device.getDeviceId()));
             CompletableFuture<Output> future = connection.send(inputs);
-            return future.get(timeout, TimeUnit.SECONDS);
+            Output output = future.get(timeout, TimeUnit.SECONDS);
+            if (initialLoad && output.getCode() >= 300) {
+                logger.warn("Model doesn't support initialize." + output.getMessage());
+            }
+            return output;
         } catch (Exception e) {
-            if (restart) {
-                stopPythonProcess();
+            stopPythonProcess();
+            if (!initialLoad) {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
             }
-            throw new TranslateException(e);
+            throw new EngineException(e);
         }
     }
 
@@ -96,16 +99,17 @@ class PyProcess {
 
             connection.connect();
 
-            try {
-                // initialize model with an empty request
-                predict(new Input(), pyEnv.getModelLoadingTimeout(), false);
-            } catch (TranslateException e) {
-                throw new EngineException("Failed to load Python model.", e);
-            }
+            // initialize model with an empty request
+            predict(new Input(), pyEnv.getModelLoadingTimeout(), true);
         } catch (InterruptedException e) {
+            started = false;
             throw new EngineException("Worker startup cancelled.", e);
         } catch (IOException e) {
+            started = false;
             throw new EngineException("Failed connect to Python worker process.", e);
+        } catch (Exception e) {
+            started = false;
+            throw new EngineException("Failed to loaded model.", e);
         } finally {
             if (!started) {
                 stopPythonProcess();

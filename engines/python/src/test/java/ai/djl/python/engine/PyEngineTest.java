@@ -124,6 +124,26 @@ public class PyEngineTest {
         }
     }
 
+    @Test
+    public void testEchoModel() throws TranslateException, IOException, ModelException {
+        // Echo model doesn't support initialize
+        Criteria<NDList, NDList> criteria =
+                Criteria.builder()
+                        .setTypes(NDList.class, NDList.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optTranslator(new NoopTranslator())
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<NDList, NDList> model = criteria.loadModel();
+                Predictor<NDList, NDList> predictor = model.newPredictor()) {
+            NDArray x = model.getNDManager().create(new float[] {1});
+            NDList ret = predictor.predict(new NDList(x));
+            float[] expected = {1};
+            float[] actual = ret.head().toFloatArray();
+            Assert.assertEquals(actual, expected);
+        }
+    }
+
     @Test(enabled = false)
     public void testResnet18() throws TranslateException, IOException, ModelException {
         Criteria<Input, Output> criteria =

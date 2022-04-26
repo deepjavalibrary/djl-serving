@@ -48,6 +48,9 @@ class Accumulation(object):
             self.nd = self.nd + data[0]
             outputs.add_as_numpy([self.nd])
             time.sleep(2)
+            logging.info(
+                "[METRICS]Inference.milliseconds:311|#Level:Host,count:time|#hostname:localhost,1650953744320,request_id"
+            )
         except Exception as e:
             logging.error(e, exc_info=True)
             # error handling

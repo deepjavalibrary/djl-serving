@@ -47,7 +47,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         if (inputs.get(0) instanceof Input) {
             List<O> ret = new ArrayList<>(inputs.size());
             for (I input : inputs) {
-                ret.add((O) process.predict((Input) input, timeout, true));
+                ret.add((O) process.predict((Input) input, timeout, false));
             }
             return ret;
         }
@@ -61,10 +61,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         Input inputs = new Input();
         inputs.addProperty("Content-Type", "tensor/ndlist");
         inputs.add(ndList.encode());
-        Output output = process.predict(inputs, timeout, true);
-        if (output.getCode() != 200) {
-            throw new TranslateException(output.getMessage());
-        }
+        Output output = process.predict(inputs, timeout, false);
         NDManager manager = ndList.head().getManager();
         return output.getDataAsNDList(manager);
     }
