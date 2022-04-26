@@ -162,7 +162,7 @@ public class Metric {
      * @return a {@code Metric} object
      */
     public static Metric parse(String line) {
-        // DiskAvailable.Gigabytes:311|#Level:Host,hostname:localhost
+        // DiskAvailable.Gigabytes:311|#Level:Host|#hostname:localhost,1650953744320,request_id
         Matcher matcher = PATTERN.matcher(line);
         if (!matcher.matches()) {
             return null;
