@@ -12,6 +12,9 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.metric.Dimension;
+import ai.djl.metric.Metric;
+import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.serving.wlm.util.WorkerJob;
@@ -19,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * abstract class for all BatchAggregators. A batch aggregator check working queue and combines
@@ -28,6 +33,9 @@ import java.util.concurrent.TimeUnit;
  */
 abstract class BatchAggregator {
 
+    private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
+
+    private Dimension dimension;
     protected int batchSize;
     protected int maxBatchDelay;
     protected List<WorkerJob> wjs;
@@ -40,6 +48,7 @@ abstract class BatchAggregator {
      * @param jobQueue the job queue for polling data from.
      */
     public BatchAggregator(ModelInfo model, LinkedBlockingDeque<WorkerJob> jobQueue) {
+        this.dimension = new Dimension("Model", model.getModelId());
         this.batchSize = model.getBatchSize();
         this.maxBatchDelay = model.getMaxBatchDelay();
         this.jobQueue = jobQueue;
@@ -58,7 +67,8 @@ abstract class BatchAggregator {
         List<Input> list = new ArrayList<>(wjs.size());
         for (WorkerJob wj : wjs) {
             Job job = wj.getJob();
-            job.setScheduled();
+            long queueTime = job.getWaitingTime();
+            SERVER_METRIC.info("{}", new Metric("QueueTime", queueTime, Unit.MICROSECONDS));
             list.add(job.getInput());
         }
         return list;
@@ -78,6 +88,9 @@ abstract class BatchAggregator {
         for (Output output : outputs) {
             WorkerJob wj = wjs.get(i++);
             wj.getFuture().complete(output);
+            long latency = wj.getJob().getWaitingTime();
+            Metric metric = new Metric("ModelLatency", latency, Unit.MICROSECONDS, dimension);
+            SERVER_METRIC.info("{}", metric);
         }
         wjs.clear();
     }

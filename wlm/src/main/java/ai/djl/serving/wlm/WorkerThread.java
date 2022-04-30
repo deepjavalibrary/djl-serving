@@ -19,6 +19,7 @@ import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WorkerJob;
+import ai.djl.translate.TranslateException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,7 +78,7 @@ public final class WorkerThread implements Runnable {
                     try {
                         List<Output> reply = predictor.batchPredict(req);
                         aggregator.sendResponse(reply);
-                    } catch (Exception e) {
+                    } catch (TranslateException e) {
                         logger.warn("Failed to predict", e);
                         aggregator.sendError(e);
                     }
