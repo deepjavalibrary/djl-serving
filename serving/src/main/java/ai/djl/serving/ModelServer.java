@@ -22,6 +22,7 @@ import ai.djl.repository.Repository;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.models.ModelManager;
+import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
@@ -346,10 +347,13 @@ public class ModelServer implements AutoCloseable {
                     engineName = tokens[2].isEmpty() ? null : tokens[2];
                 }
                 if (tokens.length > 3) {
-                    Engine engine =
-                            engineName != null
-                                    ? Engine.getEngine(engineName)
-                                    : Engine.getInstance();
+                    Engine engine;
+                    if (engineName != null) {
+                        DependencyManager.getInstance().installEngine(engineName);
+                        engine = Engine.getInstance();
+                    } else {
+                        engine = Engine.getInstance();
+                    }
                     devices = parseDevices(tokens[3], engine);
                 }
             } else {
