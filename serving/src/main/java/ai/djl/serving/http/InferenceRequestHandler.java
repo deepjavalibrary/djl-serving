@@ -15,6 +15,7 @@ package ai.djl.serving.http;
 import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
+import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -44,6 +45,12 @@ import org.slf4j.LoggerFactory;
 public class InferenceRequestHandler extends HttpRequestHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(InferenceRequestHandler.class);
+    private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
+    private static final Metric RESPONSE_2_XX = new Metric("2XX", 1);
+    private static final Metric RESPONSE_4_XX = new Metric("4XX", 1);
+    private static final Metric RESPONSE_5_XX = new Metric("5XX", 1);
+    private static final Metric WLM_ERROR = new Metric("WlmError", 1);
+    private static final Metric SERVER_ERROR = new Metric("ServerError", 1);
 
     private RequestParser requestParser;
 
@@ -216,11 +223,21 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     void sendOutput(Output output, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
-        if (output.getCode() == 200) {
+        int code = output.getCode();
+        if (code == 200) {
             status = HttpResponseStatus.OK;
+            SERVER_METRIC.info("{}", RESPONSE_2_XX);
         } else {
-            status = new HttpResponseStatus(output.getCode(), output.getMessage());
+            if (code >= 500) {
+                SERVER_METRIC.info("{}", RESPONSE_5_XX);
+            } else if (code >= 400) {
+                SERVER_METRIC.info("{}", RESPONSE_4_XX);
+            } else {
+                SERVER_METRIC.info("{}", RESPONSE_2_XX);
+            }
+            status = new HttpResponseStatus(code, output.getMessage());
         }
+
         FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
             resp.headers().set(entry.getKey(), entry.getValue());
@@ -244,12 +261,17 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     void onException(Throwable t, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
         if (t instanceof TranslateException) {
+            SERVER_METRIC.info("{}", RESPONSE_4_XX);
             status = HttpResponseStatus.BAD_REQUEST;
         } else if (t instanceof WlmException) {
             logger.warn(t.getMessage(), t);
+            SERVER_METRIC.info("{}", RESPONSE_5_XX);
+            SERVER_METRIC.info("{}", WLM_ERROR);
             status = HttpResponseStatus.SERVICE_UNAVAILABLE;
         } else {
             logger.warn("Unexpected error", t);
+            SERVER_METRIC.info("{}", RESPONSE_5_XX);
+            SERVER_METRIC.info("{}", SERVER_ERROR);
             status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
         }
 

@@ -20,7 +20,6 @@ public class Job {
     private ModelInfo modelInfo;
     private Input input;
     private long begin;
-    private long scheduled;
 
     /**
      * Constructs a new {@code Job} instance.
@@ -32,8 +31,7 @@ public class Job {
         this.modelInfo = modelInfo;
         this.input = input;
 
-        begin = System.currentTimeMillis();
-        scheduled = begin;
+        begin = System.nanoTime();
     }
 
     /**
@@ -64,16 +62,11 @@ public class Job {
     }
 
     /**
-     * Returns the job scheduled time.
+     * Returns the wait time of this job.
      *
-     * @return the job scheduled time
+     * @return the wait time of this job in mirco seconds
      */
-    public long getScheduled() {
-        return scheduled;
-    }
-
-    /** Marks the job has been scheduled. */
-    public void setScheduled() {
-        scheduled = System.currentTimeMillis();
+    public long getWaitingTime() {
+        return (System.nanoTime() - begin) / 1000;
     }
 }

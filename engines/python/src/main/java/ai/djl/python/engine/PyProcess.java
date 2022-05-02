@@ -15,6 +15,7 @@ package ai.djl.python.engine;
 import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
+import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import java.io.IOException;
@@ -32,7 +33,7 @@ import org.slf4j.LoggerFactory;
 class PyProcess {
 
     static final Logger logger = LoggerFactory.getLogger(PyProcess.class);
-    static final Logger METRIC_LOGGER = LoggerFactory.getLogger("model_metrics");
+    static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private PyEnv pyEnv;
     private Model model;
@@ -184,7 +185,7 @@ class PyProcess {
                         lifeCycle.setStarted(true);
                     }
                     if (result.startsWith("[METRICS]")) {
-                        METRIC_LOGGER.info("{}", Metric.parse(result.substring(9)));
+                        MODEL_METRIC.info("{}", Metric.parse(result.substring(9)));
                         continue;
                     }
 

@@ -15,6 +15,9 @@ package ai.djl.serving;
 import ai.djl.Device;
 import ai.djl.MalformedModelException;
 import ai.djl.engine.Engine;
+import ai.djl.metric.Dimension;
+import ai.djl.metric.Metric;
+import ai.djl.metric.Unit;
 import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
@@ -75,6 +78,7 @@ import org.slf4j.LoggerFactory;
 public class ModelServer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelServer.class);
+    private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
 
     private static final Pattern MODEL_STORE_PATTERN = Pattern.compile("(\\[?(.+?)]?=)?(.+)");
 
@@ -166,7 +170,11 @@ public class ModelServer implements AutoCloseable {
                     ServerStartupException {
         stopped.set(false);
 
+        String version = Engine.class.getPackage().getSpecificationVersion();
+        logger.info("Starting djl-serving: {} ...", version);
         logger.info(configManager.dumpConfigurations());
+        Dimension dim = new Dimension("Version", version);
+        SERVER_METRIC.info("{}", new Metric("djl-serving", 1, Unit.COUNT, dim));
 
         try {
             initModelStore();
@@ -383,6 +391,11 @@ public class ModelServer implements AutoCloseable {
                             .exceptionally(
                                     t -> {
                                         logger.error("Failed register workflow", t);
+                                        Dimension dim = new Dimension("Model", workflow.getName());
+                                        SERVER_METRIC.info(
+                                                "{}",
+                                                new Metric(
+                                                        "ModelLoadingError", 1, Unit.COUNT, dim));
                                         // delay 3 seconds, allows REST API to send PING
                                         // response (health check)
                                         try {
