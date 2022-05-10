@@ -69,6 +69,13 @@ For Windows
 We are considering to create a `chocolatey` package for Windows. For the time being, you can 
 download djl-serving zip file from [here](https://publish.djl.ai/djl-serving/serving-0.16.0.zip).
 
+```
+curl -O https://publish.djl.ai/djl-serving/serving-0.16.0.zip
+unzip serving-0.16.0.zip
+# start djl-serving
+serving-0.16.0\bin\serving.bat
+```
+
 ### Docker
 
 You can also use docker to run DJL Serving:
