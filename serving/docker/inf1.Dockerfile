@@ -1,4 +1,4 @@
-ARG version=0.16.0
+ARG version=0.17.0
 FROM deepjavalibrary/djl-serving:$version
 
 RUN apt-get update -y \
