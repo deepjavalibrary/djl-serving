@@ -13,6 +13,7 @@ RUN curl -O https://publish.djl.ai/djl-serving/djl-serving_${djl_version}-1_all.
 
 RUN mkdir -p /opt/djl
 COPY config.properties /opt/djl/conf/
+RUN cp /usr/local/djl-serving-*/conf/log4j2.xml /opt/djl/conf/
 
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
