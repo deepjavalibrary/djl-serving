@@ -148,9 +148,14 @@ public class PyEnv {
                 file.toAbsolutePath().toString()
             };
             try {
+                logger.info("Found requirements.txt, start installing Python dependencies...");
                 Process process = Runtime.getRuntime().exec(cmd);
                 int ret = process.waitFor();
-                logger.info("pip install requirements finished: " + ret);
+                if (ret == 0) {
+                    logger.info("pip install requirements succeed!");
+                } else {
+                    logger.warn("requirements installation failed! With error code: {}", ret);
+                }
             } catch (IOException | InterruptedException e) {
                 logger.warn("pip install requirements failed.", e);
             }
