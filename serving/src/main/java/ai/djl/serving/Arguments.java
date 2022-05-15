@@ -79,6 +79,14 @@ public final class Arguments {
                         .argName("WORKFLOWS")
                         .desc("Workflows to be loaded at startup.")
                         .build());
+        options.addOption(
+                Option.builder("i")
+                        .longOpt("install")
+                        .hasArgs()
+                        .argName("DEPENDENCIES ...")
+                        .desc(
+                                "Maven dependencies (e.g. ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64)")
+                        .build());
         return options;
     }
 

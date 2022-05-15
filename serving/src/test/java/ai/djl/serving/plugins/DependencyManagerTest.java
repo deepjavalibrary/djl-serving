@@ -13,6 +13,7 @@
 package ai.djl.serving.plugins;
 
 import java.io.IOException;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class DependencyManagerTest {
@@ -21,5 +22,8 @@ public class DependencyManagerTest {
     public void testInstallDependency() throws IOException {
         DependencyManager dm = DependencyManager.getInstance();
         dm.installEngine("OnnxRuntime");
+        dm.installDependency("ai.djl.pytorch:pytorch-jni:1.11.0-0.17.0");
+
+        Assert.assertThrows(() -> dm.installDependency("ai.djl.pytorch:pytorch-jni"));
     }
 }

@@ -113,11 +113,23 @@ public class DependencyManager {
         }
     }
 
+    /**
+     * Installs the maven dependency.
+     *
+     * @param dependency the maven dependency
+     * @throws IOException if failed to download the dependency
+     */
+    public void installDependency(String dependency) throws IOException {
+        String serverHome = ConfigManager.getModelServerHome();
+        Path depDir = Paths.get(serverHome, "deps");
+        Files.createDirectories(depDir);
+        installDependency(depDir, dependency);
+    }
+
     private synchronized void installDependency(Path depDir, String dependency) throws IOException {
         String[] tokens = dependency.split(":");
         if (tokens.length < 3) {
-            logger.info("Invalid dependency: {}", dependency);
-            return;
+            throw new IllegalArgumentException("Invalid dependency: " + dependency);
         }
 
         logger.info("Loading dependency: {}", dependency);
@@ -155,7 +167,7 @@ public class DependencyManager {
         try (InputStream is = new URL(bom).openStream()) {
             String json = Utils.toString(is);
             Pom pom = JsonUtils.GSON.fromJson(json, Pom.class);
-            return pom.response.docs.get(0).latestVersion;
+            return pom.response.docs.get(0).getLatestVersion();
         } catch (IOException e) {
             logger.warn("Failed to query maven central.", e);
             return Package.getPackage("ai.djl.util").getSpecificationVersion();
@@ -223,13 +235,5 @@ public class DependencyManager {
     private static final class Pom {
 
         Response response;
-
-        public Response getResponse() {
-            return response;
-        }
-
-        public void setResponse(Response response) {
-            this.response = response;
-        }
     }
 }

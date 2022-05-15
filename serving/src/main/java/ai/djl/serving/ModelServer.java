@@ -80,7 +80,6 @@ public class ModelServer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelServer.class);
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
-
     private static final Pattern MODEL_STORE_PATTERN = Pattern.compile("(\\[?(.+?)]?=)?(.+)");
 
     private ServerGroups serverGroups;
@@ -115,6 +114,18 @@ public class ModelServer implements AutoCloseable {
             Arguments arguments = new Arguments(cmd);
             if (arguments.hasHelp()) {
                 printHelp("djl-serving [OPTIONS]", options);
+                return;
+            } else if (cmd.hasOption("install")) {
+                String[] dependencies = cmd.getOptionValues("install");
+                DependencyManager dm = DependencyManager.getInstance();
+                for (String dep : dependencies) {
+                    try {
+                        dm.installDependency(dep);
+                    } catch (Throwable t) {
+                        logger.error("Failed to install dependency: " + dep, t);
+                        System.exit(1); // NOPMD
+                    }
+                }
                 return;
             }
 
@@ -355,13 +366,10 @@ public class ModelServer implements AutoCloseable {
                     engineName = tokens[2].isEmpty() ? null : tokens[2];
                 }
                 if (tokens.length > 3) {
-                    Engine engine;
                     if (engineName != null) {
                         DependencyManager.getInstance().installEngine(engineName);
-                        engine = Engine.getInstance();
-                    } else {
-                        engine = Engine.getInstance();
                     }
+                    Engine engine = Engine.getInstance();
                     devices = parseDevices(tokens[3], engine);
                 }
             } else {
