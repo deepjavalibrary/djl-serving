@@ -41,12 +41,15 @@ class Output(object):
 
     def set_code(self, code):
         self.code = code
+        return self
 
     def set_message(self, message):
         self.message = message
+        return self
 
     def add_property(self, key, val):
         self.properties[key] = val
+        return self
 
     def add(self, value, key=None):
         if value is str:
@@ -57,13 +60,16 @@ class Output(object):
             self.add(key=key, value=bytearray(value))
         else:
             self.add_as_json(value, key=key)
+        return self
 
     def add_as_numpy(self, np_list, key=None):
         self.content.add(key=key, value=to_nd_list(np_list))
+        return self
 
     def add_as_json(self, val, key=None):
         json_value = json.dumps(val, indent=2).encode("utf-8")
         self.content.add(key=key, value=json_value)
+        return self
 
     @staticmethod
     def write_utf8(msg, val):

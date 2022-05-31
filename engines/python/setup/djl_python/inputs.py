@@ -109,6 +109,8 @@ class Input(object):
         content_type = self.get_property("content-type")
         if content_type == "tensor/ndlist":
             return self.get_as_numpy(key)
+        if content_type == "tensor/npz":
+            return self.get_as_npz(key)
         elif content_type == "application/json":
             return self.get_as_json(key)
         elif content_type is not None and content_type.startswith("text/"):
@@ -149,6 +151,12 @@ class Input(object):
         :return: list of numpy array
         """
         return from_nd_list(self.get_as_bytes(key=key))
+
+    def get_as_npz(self, key=None) -> list:
+        import numpy
+        npz = numpy.load(io.BytesIO(self.get_as_bytes(key=key)))
+        result = [npz[name] for name in npz.files]
+        return result
 
     def is_empty(self):
         return self.content.is_empty()
