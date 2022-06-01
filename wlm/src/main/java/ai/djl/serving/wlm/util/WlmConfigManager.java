@@ -13,7 +13,9 @@
 package ai.djl.serving.wlm.util;
 
 import ai.djl.Device;
+import ai.djl.Model;
 import ai.djl.ndarray.NDManager;
+import ai.djl.serving.wlm.ModelInfo;
 
 /** This manages some configurations used by the {@link ai.djl.serving.wlm.WorkLoadManager}. */
 public final class WlmConfigManager {
@@ -39,14 +41,38 @@ public final class WlmConfigManager {
     }
 
     /**
+     * Returns the default minimum number of workers for a new registered model.
+     *
+     * @param modelInfo the {@code ModelInfo}
+     * @param device the device that model loaded on
+     * @param minWorkers the minimum number of workers of a new registered model
+     * @param maxWorkers the maximum number of workers of a new registered model
+     * @return the calculated minimum number of workers for a new registered model
+     */
+    public int getDefaultMinWorkers(
+            ModelInfo modelInfo, Device device, int minWorkers, int maxWorkers) {
+        Model model = modelInfo.getModel(device);
+        NDManager manager = model.getNDManager();
+        if (Device.Type.GPU.equals(manager.getDevice().getDeviceType())) {
+            String defaultWorkers = model.getProperty("defaultGPUWorkers");
+            if (defaultWorkers != null) {
+                return Integer.parseInt(defaultWorkers);
+            }
+        }
+        return Math.min(minWorkers, maxWorkers);
+    }
+
+    /**
      * Returns the default number of workers for a new registered model.
      *
-     * @param manager the {@code NDManager} the model uses
+     * @param modelInfo the {@code ModelInfo}
      * @param device the device that model loaded on
      * @param target the target number of worker
      * @return the default number of workers for a new registered model
      */
-    public int getDefaultWorkers(NDManager manager, Device device, int target) {
+    public int getDefaultWorkers(ModelInfo modelInfo, Device device, int target) {
+        Model model = modelInfo.getModel(device);
+        NDManager manager = model.getNDManager();
         if (target == 0) {
             return 0;
         } else if (target == -1 && isDebug()) {
@@ -59,7 +85,10 @@ public final class WlmConfigManager {
             return 2; // default to max 2 workers for inferentia
         }
         if (Device.Type.GPU.equals(manager.getDevice().getDeviceType())) {
-            if ("MXNet".equals(manager.getEngine().getEngineName())) {
+            String defaultWorkers = model.getProperty("defaultGPUWorkers");
+            if (defaultWorkers != null) {
+                return Integer.parseInt(defaultWorkers);
+            } else if ("MXNet".equals(manager.getEngine().getEngineName())) {
                 // FIXME: MXNet GPU Model doesn't support multi-threading
                 return 1;
             } else if (target == -1) {
