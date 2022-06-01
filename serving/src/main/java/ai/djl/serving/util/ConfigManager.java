@@ -132,6 +132,11 @@ public final class ConfigManager {
                     "log4j2.contextSelector",
                     "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector");
         }
+
+        // Disable alternative engine for Python in djl-serving
+        if (System.getProperty("ai.djl.python.disable_alternative") == null) {
+            System.setProperty("ai.djl.python.disable_alternative", "true");
+        }
     }
 
     /**
