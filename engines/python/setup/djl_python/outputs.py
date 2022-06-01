@@ -52,12 +52,12 @@ class Output(object):
         return self
 
     def add(self, value, key=None):
-        if value is str:
-            self.add(key=key, value=value.encode("utf-8"))
-        elif value is bytearray:
-            self.add(key=key, value=value)
-        elif value is bytes:
-            self.add(key=key, value=bytearray(value))
+        if type(value) is str:
+            self.content.add(key=key, value=value.encode("utf-8"))
+        elif type(value) is bytearray:
+            self.content.add(key=key, value=value)
+        elif type(value) is bytes:
+            self.content.add(key=key, value=bytearray(value))
         else:
             self.add_as_json(value, key=key)
         return self
