@@ -55,9 +55,10 @@ def create_request(input_files):
         request.properties["content-type"] = "images/png"
     elif data_file.endswith(".jpeg") or data_file.endswith(".jpg"):
         request.properties["content-type"] = "images/jpeg"
-    elif data_file.endswith(".ndlist") or data_file.endswith(
-            ".npy") or data_file.endswith(".npz"):
+    elif data_file.endswith(".ndlist"):
         request.properties["content-type"] = "tensor/ndlist"
+    elif data_file.endswith(".npz"):
+        request.properties["content-type"] = "tensor/npz"
 
     return request
 
@@ -104,6 +105,10 @@ def extract_output_as_bytes(outputs: Output, key=None):
 
 def extract_output_as_numpy(outputs: Output, key=None):
     return _extract_output(outputs).get_as_numpy(key)
+
+
+def extract_output_as_npz(outputs: Output, key=None):
+    return _extract_output(outputs).get_as_npz(key)
 
 
 def extract_output_as_string(outputs: Output, key=None):
