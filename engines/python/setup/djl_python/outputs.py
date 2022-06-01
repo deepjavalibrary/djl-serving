@@ -66,6 +66,15 @@ class Output(object):
         self.content.add(key=key, value=to_nd_list(np_list))
         return self
 
+    def add_as_npz(self, np_list, key=None):
+        import numpy as np
+        import io
+        memory_file = io.BytesIO()
+        np.savez(memory_file, *np_list)
+        memory_file.seek(0)
+        self.content.add(key=key, value=memory_file.read(-1))
+        return self
+
     def add_as_json(self, val, key=None):
         json_value = json.dumps(val, indent=2).encode("utf-8")
         self.content.add(key=key, value=json_value)

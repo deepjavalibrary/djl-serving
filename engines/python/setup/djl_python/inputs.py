@@ -124,12 +124,16 @@ class Input(object):
         if self.content.is_empty():
             raise Exception("input is empty.")
 
-        if key is not None:
-            return self.content.get(key)
+        if key:
+            ret = self.content.get(key)
+            if ret is None:
+                raise KeyError("requested data for key:{} is not found!".format(key))
+            return ret
 
         ret = self.content.get("data")
+
         if ret is None:
-            return self.content.value_at(0)
+            ret = self.content.value_at(0)
         return ret
 
     def get_as_string(self, key=None):
