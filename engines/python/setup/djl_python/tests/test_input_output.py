@@ -4,7 +4,6 @@ from djl_python import test_model, Input, Output
 
 
 class TestInputOutput(unittest.TestCase):
-
     def test_empty_input(self):
         inputs = Input()
         with self.assertRaises(Exception):
@@ -30,14 +29,14 @@ class TestInputOutput(unittest.TestCase):
     def test_output(self):
         test_dict = {"Key": "Value"}
         nd = [np.ones((1, 3, 2))]
-        outputs = Output().add_as_json(test_dict, "dict").add_as_numpy(nd, "ndlist").add_as_npz(nd, "npz")
+        outputs = Output().add_as_json(test_dict, "dict").add_as_numpy(
+            nd, "ndlist").add_as_npz(nd, "npz")
         result = test_model.extract_output_as_string(outputs, "dict")
         self.assertTrue(result, test_dict)
         result = test_model.extract_output_as_numpy(outputs, "ndlist")
         self.assertTrue(np.array_equal(result[0], nd[0]))
         result = test_model.extract_output_as_npz(outputs, "npz")
         self.assertTrue(np.array_equal(result[0], nd[0]))
-
 
 
 if __name__ == '__main__':
