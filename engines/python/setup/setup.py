@@ -59,9 +59,7 @@ if __name__ == '__main__':
               'build_py': BuildPy,
           },
           install_requires=requirements,
-          extras_require={
-              'test': test_requirements + requirements
-          },
+          extras_require={'test': test_requirements + requirements},
           entry_points={
               'console_scripts': [
                   'djl-test-model=djl_python.test_model:run',

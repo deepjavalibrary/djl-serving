@@ -127,7 +127,8 @@ class Input(object):
         if key:
             ret = self.content.get(key)
             if ret is None:
-                raise KeyError("requested data for key:{} is not found!".format(key))
+                raise KeyError(
+                    "requested data for key:{} is not found!".format(key))
             return ret
 
         ret = self.content.get("data")
