@@ -52,43 +52,44 @@ public final class WlmConfigManager {
     public int getDefaultMinWorkers(
             ModelInfo modelInfo, Device device, int minWorkers, int maxWorkers) {
         Model model = modelInfo.getModel(device);
-        NDManager manager = model.getNDManager();
-        if (Device.Type.GPU.equals(manager.getDevice().getDeviceType())) {
-            String defaultWorkers = model.getProperty("defaultGPUWorkers");
-            if (defaultWorkers != null) {
-                return Integer.parseInt(defaultWorkers);
-            }
-        }
+        minWorkers = getWorkersProperty(model, device, "minWorkers", minWorkers);
         return Math.min(minWorkers, maxWorkers);
     }
 
     /**
-     * Returns the default number of workers for a new registered model.
+     * Returns the default maximum number of workers for a new registered model.
      *
      * @param modelInfo the {@code ModelInfo}
      * @param device the device that model loaded on
      * @param target the target number of worker
      * @return the default number of workers for a new registered model
      */
-    public int getDefaultWorkers(ModelInfo modelInfo, Device device, int target) {
+    public int getDefaultMaxWorkers(ModelInfo modelInfo, Device device, int target) {
         Model model = modelInfo.getModel(device);
-        NDManager manager = model.getNDManager();
         if (target == 0) {
-            return 0;
-        } else if (target == -1 && isDebug()) {
-            return 1;
+            return 0; // explicitly shutdown
+        } else if (target == -1) {
+            // auto detection
+            if (isDebug()) {
+                return 1;
+            }
+            // get from model's property
+            target = getWorkersProperty(model, device, "maxWorkers", -1);
+            if (target > 0) {
+                return target;
+            }
         }
+
+        NDManager manager = model.getNDManager();
         if (device != null && "nc".equals(device.getDeviceType())) {
             if ("Python".equals(manager.getEngine().getEngineName())) {
                 return 1;
             }
             return 2; // default to max 2 workers for inferentia
         }
+
         if (Device.Type.GPU.equals(manager.getDevice().getDeviceType())) {
-            String defaultWorkers = model.getProperty("defaultGPUWorkers");
-            if (defaultWorkers != null) {
-                return Integer.parseInt(defaultWorkers);
-            } else if ("MXNet".equals(manager.getEngine().getEngineName())) {
+            if ("MXNet".equals(manager.getEngine().getEngineName())) {
                 // FIXME: MXNet GPU Model doesn't support multi-threading
                 return 1;
             } else if (target == -1) {
@@ -101,5 +102,17 @@ public final class WlmConfigManager {
             return target;
         }
         return Runtime.getRuntime().availableProcessors();
+    }
+
+    private static int getWorkersProperty(Model model, Device device, String key, int def) {
+        String workers = model.getProperty(device.getDeviceType() + '.' + key);
+        if (workers != null) {
+            return Integer.parseInt(workers);
+        }
+        workers = model.getProperty(key);
+        if (workers != null) {
+            return Integer.parseInt(workers);
+        }
+        return def;
     }
 }

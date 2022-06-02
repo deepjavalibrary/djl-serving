@@ -270,7 +270,7 @@ public class WorkLoadManager implements AutoCloseable {
                 }
                 device = model.withDefaultDevice(device);
                 WlmConfigManager configManager = WlmConfigManager.getInstance();
-                newMaxWorkers = configManager.getDefaultWorkers(model, device, newMaxWorkers);
+                newMaxWorkers = configManager.getDefaultMaxWorkers(model, device, newMaxWorkers);
                 newMinWorkers =
                         configManager.getDefaultMinWorkers(
                                 model, device, newMinWorkers, newMaxWorkers);
