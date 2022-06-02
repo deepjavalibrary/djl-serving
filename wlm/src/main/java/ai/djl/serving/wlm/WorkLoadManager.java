@@ -15,7 +15,6 @@ package ai.djl.serving.wlm;
 import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.modality.Output;
-import ai.djl.ndarray.NDManager;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmException;
@@ -270,10 +269,11 @@ public class WorkLoadManager implements AutoCloseable {
                     return this;
                 }
                 device = model.withDefaultDevice(device);
-                NDManager manager = model.getModel(device).getNDManager();
                 WlmConfigManager configManager = WlmConfigManager.getInstance();
-                newMaxWorkers = configManager.getDefaultWorkers(manager, device, newMaxWorkers);
-                newMinWorkers = Math.min(newMinWorkers, newMaxWorkers);
+                newMaxWorkers = configManager.getDefaultMaxWorkers(model, device, newMaxWorkers);
+                newMinWorkers =
+                        configManager.getDefaultMinWorkers(
+                                model, device, newMinWorkers, newMaxWorkers);
 
                 WorkerPoolDevice wpd = new WorkerPoolDevice(device, newMinWorkers, newMaxWorkers);
                 devices.put(device, wpd);
