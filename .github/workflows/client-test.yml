@@ -12,7 +12,7 @@ on:
       - "**.css"
 
 jobs:
-  python_test:
+  client_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -38,7 +38,17 @@ jobs:
           sudo dpkg -i build/distributions/*.deb
           cd ../engines/python/setup
           pip install -e ".[test]"
-      - name: Run binary mode tests
+      - name: Run Java binary mode tests
+        run: |
+          cd tests/binary && python prepare.py pt && cd ..
+          djl-serving -m test::PyTorch=file://$PWD/binary/model.pt &> output.log &
+          sleep 30
+          cd java-client
+          ./gradlew build
+          cd ../binary && python prepare.py pt --clean && cd ..
+          jobs
+          kill %1
+      - name: Run Python binary mode tests
         run: |
           cd tests/binary && python prepare.py pt && cd ..
           djl-serving -m test::PyTorch=file://$PWD/binary/model.pt &> output.log &
@@ -47,7 +57,7 @@ jobs:
           cd binary && python prepare.py pt --clean && cd ..
           jobs
           kill %1
-      - name: Run python mode tests
+      - name: Run Python mode tests
         run: |
           cd tests
           djl-serving -m test::Python=file://$PWD/python &> output.log &

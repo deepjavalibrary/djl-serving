@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+}
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots/"
+    }
+}
+
+
+dependencies {
+    implementation "ai.djl:api:${djl_version}-SNAPSHOT"
+    implementation "ai.djl.java:java:${djl_version}-SNAPSHOT"
+    implementation "org.slf4j:slf4j-api:${slf4j_version}"
+
+    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    testImplementation "org.testng:testng:${testng_version}"
+}
+
+test {
+    useTestNG()
+}
+
