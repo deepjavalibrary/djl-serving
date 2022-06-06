@@ -131,6 +131,7 @@ public class ModelServerTest {
         Utils.deleteQuietly(modelStore);
         Files.createDirectories(modelStore);
         eventLoopGroups = new ArrayList<>();
+        ZipUtils.zip(Paths.get("build/classes/java/test/"), Paths.get("build/testTranslator.jar"), true);
     }
 
     @AfterMethod
@@ -467,6 +468,35 @@ public class ModelServerTest {
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
+    }
+
+    private void testRegisterModelTranslator(Channel channel)
+        throws InterruptedException, UnsupportedEncodingException {
+        String url =
+            "https://mlrepo.djl.ai/model/cv/image_classification/ai/djl/pytorch/resnet/0.0.1/traced_resnet18.pt.gz";
+        float threshold = 0.8f;
+        HttpRequest req =
+            new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1,
+                HttpMethod.POST,
+                "/models?model_name=res18&url="
+                    + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+        channel.writeAndFlush(req);
+        latch.await();
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Model \"res18\" registered.");
+        // send request
+        String imgUrl = "https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg";
+        DefaultFullHttpRequest req2 =
+            new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/res18");
+        req2.content().writeBytes(imgUrl.getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req2, req2.content().readableBytes());
+        req2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        channel.writeAndFlush(req2);
+        latch.await();
+
+        assertEquals(result, "Test succeeded " + threshold);
     }
 
     private void testRegisterWorkflow(Channel channel)
