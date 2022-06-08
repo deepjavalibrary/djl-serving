@@ -21,6 +21,7 @@ import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.util.ConfigManager;
+import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
@@ -182,6 +183,7 @@ public final class ModelManager {
      */
     public ModelInfo scaleWorkers(ModelInfo model, Device device, int minWorkers, int maxWorkers) {
         logger.debug("updateModel: {}", model);
+        Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
         wlm.getWorkerPoolForModel(model).scaleWorkers(device, minWorkers, maxWorkers);
         return model;
     }

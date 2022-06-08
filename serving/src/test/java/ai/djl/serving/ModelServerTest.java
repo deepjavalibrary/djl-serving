@@ -131,7 +131,10 @@ public class ModelServerTest {
         Utils.deleteQuietly(modelStore);
         Files.createDirectories(modelStore);
         eventLoopGroups = new ArrayList<>();
-        ZipUtils.zip(Paths.get("build/classes/java/test/"), Paths.get("build/testTranslator.jar"), true);
+        Path deps = Paths.get("deps");
+        Files.createDirectories(deps);
+        Path dest = deps.resolve("test.jar");
+        ZipUtils.zip(Paths.get("build/classes/java/test/"), dest, true);
     }
 
     @AfterMethod
@@ -247,6 +250,8 @@ public class ModelServerTest {
             assertNotNull(channel, "Failed to connect to inference port.");
 
             // inference API
+            testRegisterModelTranslator(channel);
+
             testPing(channel);
             testRoot(channel);
             testPredictionsModels(channel);
@@ -471,32 +476,38 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelTranslator(Channel channel)
-        throws InterruptedException, UnsupportedEncodingException {
+            throws InterruptedException, UnsupportedEncodingException {
+        reset();
+
         String url =
-            "https://mlrepo.djl.ai/model/cv/image_classification/ai/djl/pytorch/resnet/0.0.1/traced_resnet18.pt.gz";
-        float threshold = 0.8f;
-        HttpRequest req =
-            new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1,
-                HttpMethod.POST,
-                "/models?model_name=res18&url="
-                    + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                "https://resources.djl.ai/demo/pytorch/traced_resnet18.zip?"
+                        + "translator=ai.djl.serving.translator.TestTranslator"
+                        + "&topK=1";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=res18&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
         channel.writeAndFlush(req);
         latch.await();
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"res18\" registered.");
+
         // send request
-        String imgUrl = "https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg";
-        DefaultFullHttpRequest req2 =
-            new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/res18");
-        req2.content().writeBytes(imgUrl.getBytes(StandardCharsets.UTF_8));
-        HttpUtil.setContentLength(req2, req2.content().readableBytes());
-        req2.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
-        channel.writeAndFlush(req2);
+        reset();
+        String imgUrl = "https://resources.djl.ai/images/kitten.jpg";
+        req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/res18");
+        req.content().writeBytes(imgUrl.getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        channel.writeAndFlush(req);
         latch.await();
 
-        assertEquals(result, "Test succeeded " + threshold);
+        assertEquals(result, "topK: 1, best: n02124075 Egyptian cat");
     }
 
     private void testRegisterWorkflow(Channel channel)

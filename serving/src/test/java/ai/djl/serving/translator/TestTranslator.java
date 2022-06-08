@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.translator;
 
-import ai.djl.Model;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.modality.cv.Image;
@@ -20,34 +19,34 @@ import ai.djl.modality.cv.ImageFactory;
 import ai.djl.modality.cv.util.NDImageUtils;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
+import ai.djl.translate.ArgumentsUtil;
 import ai.djl.translate.ServingTranslator;
-import ai.djl.translate.TranslateException;
-import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorContext;
-import ai.djl.translate.TranslatorFactory;
-import ai.djl.util.Pair;
+import ai.djl.util.Utils;
+import java.io.IOException;
+import java.util.List;
 
-import org.testng.collections.Sets;
-import java.lang.reflect.Type;
-import java.util.Map;
-import java.util.Set;
+public class TestTranslator implements ServingTranslator {
 
-public class TestTranslator implements ServingTranslator, TranslatorFactory {
+    private int topK = 10;
+    private List<String> classes;
 
-    private float threshold = 0.2f;
+    @Override
+    public void prepare(TranslatorContext ctx) throws IOException {
+        classes = ctx.getModel().getArtifact("synset.txt", Utils::readLines);
+    }
 
     @Override
     public void setArguments(java.util.Map<String, ?> arguments) {
-        this.threshold = (float) arguments.get("threshold");
+        topK = ArgumentsUtil.intValue(arguments, "topK", topK);
     }
-
 
     @Override
     public Output processOutput(TranslatorContext ctx, NDList list) {
         NDArray probabilitiesNd = list.singletonOrThrow();
-        probabilitiesNd = probabilitiesNd.softmax(0);
+        NDArray max = probabilitiesNd.argMax();
         Output output = new Output();
-        output.add("Test succeeded " + threshold);
+        output.add("topK: " + topK + ", best: " + classes.get((int) max.getLong()));
         return output;
     }
 
@@ -59,16 +58,5 @@ public class TestTranslator implements ServingTranslator, TranslatorFactory {
         arr = NDImageUtils.resize(arr, 224);
         arr = NDImageUtils.toTensor(arr);
         return new NDList(arr);
-    }
-
-    @Override
-    public Set<Pair<Type, Type>> getSupportedTypes() {
-        return Sets.newHashSet(new Pair<>(Input.class, Output.class));
-    }
-
-    @Override
-    public Translator<?, ?> newInstance(Class<?> input, Class<?> output, Model model, Map<String, ?> arguments) {
-        this.setArguments(arguments);
-        return this;
     }
 }

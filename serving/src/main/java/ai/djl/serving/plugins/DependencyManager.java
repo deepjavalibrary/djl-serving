@@ -23,12 +23,14 @@ import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -46,7 +48,29 @@ public class DependencyManager {
 
     private static final DependencyManager INSTANCE = new DependencyManager();
 
-    DependencyManager() {}
+    private Path depDir;
+
+    DependencyManager() {
+        String serverHome = ConfigManager.getModelServerHome();
+        depDir = Paths.get(serverHome, "deps");
+        if (Files.isDirectory(depDir)) {
+            MutableClassLoader mc = MutableClassLoader.getInstance();
+            try (Stream<Path> stream = Files.list(depDir)) {
+                stream.forEach(
+                        p -> {
+                            if (p.toString().endsWith(".jar")) {
+                                try {
+                                    mc.addURL(p.toUri().toURL());
+                                } catch (MalformedURLException e) {
+                                    logger.warn("Invalid file system path: " + p, e);
+                                }
+                            }
+                        });
+            } catch (IOException e) {
+                logger.warn("Failed to load dependencies from deps folder.", e);
+            }
+        }
+    }
 
     /**
      * Returns the singleton instance of {@code DependencyManager}.
@@ -68,34 +92,30 @@ public class DependencyManager {
             return;
         }
 
-        String serverHome = ConfigManager.getModelServerHome();
-        Path depDir = Paths.get(serverHome, "deps");
         Files.createDirectories(depDir);
         String djlVersion = resolveDjlVersion();
 
         switch (engineName) {
             case "OnnxRuntime":
-                installDependency(depDir, "ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
+                installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
                 String ortVersion = getOrtVersion(djlVersion);
                 if (CudaUtils.hasCuda()) {
-                    installDependency(
-                            depDir, "com.microsoft.onnxruntime:onnxruntime_gpu:" + ortVersion);
+                    installDependency("com.microsoft.onnxruntime:onnxruntime_gpu:" + ortVersion);
                 } else {
-                    installDependency(
-                            depDir, "com.microsoft.onnxruntime:onnxruntime:" + ortVersion);
+                    installDependency("com.microsoft.onnxruntime:onnxruntime:" + ortVersion);
                 }
                 break;
             case "PaddlePaddle":
-                installDependency(depDir, "ai.djl.paddlepaddle:paddlepaddle-engine:" + djlVersion);
+                installDependency("ai.djl.paddlepaddle:paddlepaddle-engine:" + djlVersion);
                 break;
             case "TFLite":
-                installDependency(depDir, "ai.djl.tflite:tflite-engine:" + djlVersion);
+                installDependency("ai.djl.tflite:tflite-engine:" + djlVersion);
                 break;
             case "XGBoost":
-                installDependency(depDir, "ai.djl.ml.xgboost:xgboost-engine:" + djlVersion);
+                installDependency("ai.djl.ml.xgboost:xgboost-engine:" + djlVersion);
                 break;
             case "DLR":
-                installDependency(depDir, "ai.djl.dlr:dlr-engine:" + djlVersion);
+                installDependency("ai.djl.dlr:dlr-engine:" + djlVersion);
                 break;
             default:
                 break;
@@ -119,14 +139,7 @@ public class DependencyManager {
      * @param dependency the maven dependency
      * @throws IOException if failed to download the dependency
      */
-    public void installDependency(String dependency) throws IOException {
-        String serverHome = ConfigManager.getModelServerHome();
-        Path depDir = Paths.get(serverHome, "deps");
-        Files.createDirectories(depDir);
-        installDependency(depDir, dependency);
-    }
-
-    private synchronized void installDependency(Path depDir, String dependency) throws IOException {
+    public synchronized void installDependency(String dependency) throws IOException {
         String[] tokens = dependency.split(":");
         if (tokens.length < 3) {
             throw new IllegalArgumentException("Invalid dependency: " + dependency);
