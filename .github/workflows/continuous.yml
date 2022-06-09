@@ -34,7 +34,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Build with Gradle
-        run: ./gradlew build jRR jRV
+        run: ./gradlew --refresh-dependencies build jRR jRV
       - name: Upload test results
         uses: actions/upload-artifact@v1
         if: always()

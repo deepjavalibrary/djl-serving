@@ -131,6 +131,10 @@ public class ModelServerTest {
         Utils.deleteQuietly(modelStore);
         Files.createDirectories(modelStore);
         eventLoopGroups = new ArrayList<>();
+        Path deps = Paths.get("deps");
+        Files.createDirectories(deps);
+        Path dest = deps.resolve("test.jar");
+        ZipUtils.zip(Paths.get("build/classes/java/test/"), dest, true);
     }
 
     @AfterMethod
@@ -246,6 +250,8 @@ public class ModelServerTest {
             assertNotNull(channel, "Failed to connect to inference port.");
 
             // inference API
+            testRegisterModelTranslator(channel);
+
             testPing(channel);
             testRoot(channel);
             testPredictionsModels(channel);
@@ -467,6 +473,41 @@ public class ModelServerTest {
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
+    }
+
+    private void testRegisterModelTranslator(Channel channel)
+            throws InterruptedException, UnsupportedEncodingException {
+        reset();
+
+        String url =
+                "https://resources.djl.ai/demo/pytorch/traced_resnet18.zip?"
+                        + "translator=ai.djl.serving.translator.TestTranslator"
+                        + "&topK=1";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=res18&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+        channel.writeAndFlush(req);
+        latch.await();
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Model \"res18\" registered.");
+
+        // send request
+        reset();
+        String imgUrl = "https://resources.djl.ai/images/kitten.jpg";
+        req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/res18");
+        req.content().writeBytes(imgUrl.getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        channel.writeAndFlush(req);
+        latch.await();
+
+        assertEquals(result, "topK: 1, best: n02124075 Egyptian cat");
     }
 
     private void testRegisterWorkflow(Channel channel)
