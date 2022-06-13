@@ -22,7 +22,9 @@ curl http://localhost:8080/ping
 
 `POST /predictions/{model_name}`
 
-For each loaded model, user can make REST call to URI: /predictions/{model_name}/{version}
+`POST /predictions/{model_name}/{version}`
+
+For each loaded model, user can make REST call to run the prediction
 
 ```bash
 # Load PyTorch resent18 model:

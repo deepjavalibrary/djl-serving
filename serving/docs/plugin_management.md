@@ -1,6 +1,12 @@
 # DJL Serving plugin management
 
-## installing plug-ins
+## Available Plugins
+
+ - [Static File Plugin](../../plugins/static-file-plugin/README.md) - Allows DJL Serving to also serve static files
+ - [Plugin Management Plugin](../../plugins/plugin-management-plugin/README.md) - Adds plugin management to the management API
+ - [DJL Central](../../central/README.md) - DJL Central is added as a DJL Serving plugin
+
+## Installing plug-ins
 
 The model server looks for plug-ins during startup in the plugin folder and register this plug-ins.
 

@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A HTTP endpoint handler to return information about the loaded plugins.
  *
- * <p>This class is registered by the model-server as a HTTP endpoint handler.
+ * <p>This class is registered by the model-server as an HTTP endpoint handler.
  *
  * @author erik.bamberg@web.de
  */
