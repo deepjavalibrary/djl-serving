@@ -6,9 +6,7 @@ This module contains the DJLCentral web interface implementation.
 
 ## Documentation
 
-The latest javadocs can be found on the [djl.ai website](https://javadoc.io/doc/ai.djl/serving/central/latest/index.html).
-
-You can also build the latest javadocs locally using the following command:
+You can build the latest javadocs locally using the following command:
 
 ```sh
 # for Linux/macOS:
@@ -18,19 +16,6 @@ You can also build the latest javadocs locally using the following command:
 ..\..\gradlew javadoc
 ```
 The javadocs output is built in the `build/doc/javadoc` folder.
-
-
-## Installation
-You can pull the server from the central Maven repository by including the following dependency:
-
-```xml
-<dependency>
-    <groupId>ai.djl.serving</groupId>
-    <artifactId>central</artifactId>
-    <version>0.12.0</version>
-    <scope>runtime</scope>
-</dependency>
-```
 
 ## Run model server
 
@@ -48,7 +33,7 @@ cd serving/central
 
 The DJLCentral server will be listening on port 8080.
 
-open your browser an type in url 
+open your browser and type in url 
 
 ```ssh
 http://localhost:8080/

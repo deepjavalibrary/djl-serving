@@ -64,6 +64,7 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
 ### Register a workflow
 
 `POST /workflows`
+
 * url - Workflow url.
 * engine - the name of engine to load the model. The default is MXNet if the model doesn't define its engine.
 * gpu_id - the GPU device id to load the model. The default is CPU (`-1').
@@ -103,11 +104,11 @@ curl -v -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl
 ### Scale workers
 
 `PUT /models/{model_name}`
-or
+
 `PUT /models/{model_name}/{version}`
-or
+
 `PUT /workflows/{workflow_name}`
-or
+
 `PUT /workflows/{workflow_name}/{version}`
 
 * batch_size - the inference batch size. The default value is `1`.
@@ -139,7 +140,7 @@ curl -v -X PUT "http://localhost:8080/workflows/mlp?min_worker=3"
 ### Describe model or workflow
 
 `GET /models/{model_name}`
-or
+
 `GET /workflows/{workflow_name}`
 
 Use the Describe Model API to get detail runtime status of a model or workflow:
@@ -171,7 +172,7 @@ curl http://localhost:8080/models/mlp
 ### Unregister a model or workflow
 
 `DELETE /models/{model_name}`
-or
+
 `DELETE /workflows/{workflow_name}`
 
 Use the Unregister Model or workflow API to free up system resources:
@@ -187,7 +188,7 @@ curl -X DELETE http://localhost:8080/models/mlp
 ### List workflows
 
 `GET /models`
-or
+
 `GET /workflows`
 
 * limit - (optional) the maximum number of items to return. It is passed as a query parameter. The default value is `100`.

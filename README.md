@@ -2,8 +2,9 @@
 
 ## Overview
 
-DJL serving is a high performance universal model serving solution. You can use djl-serving serve the
-following models out of the box:
+DJL Serving is a high performance universal stand-alone model serving solution powered by [DJL](https://djl.ai).
+It takes a deep learning model, several models, or workflows and makes them available through an
+HTTP endpoint. It can serve the following model types out of the box:
 
 - PyTorch TorchScript model
 - TensorFlow SavedModel bundle
@@ -21,27 +22,16 @@ You can install extra extensions to enable the following models:
 - Sentencepiece model
 - fastText/BlazingText model
 
-## Architecture
-
-DJL serving is built on top of [Deep Java Library](https://djl.ai). You can visit
-[DJL github repository](https://github.com/deepjavalibrary/djl) to learn more about DJL. 
-
-It is also possible to leverage only the worker thread pool using the separate [WorkLoadManager](wlm) module.
-The separate WorkLoadManager can be used by customers who want to take advantage of DJL serving's model batching
-and threading but integrated into their own custom Java service.
-
-![Architecture Diagram](https://resources.djl.ai/images/djl-serving/architecture.png)
-
 ## Key features
 
-- Performance, DJL serving running multithreading inference in a single JVM. Our benchmark shows
-DJL serving has higher throughput than most of C++ based model server on the market.
-- Ease of use, DJL serving can serve most of the models out of box.
-- Easy to extend, DJL serving plugins make it easy for user to add their own extensions.
-- Auto-scale, DJL serving automatically scales up/down worker threads based on the load.
-- Dynamic batching, DJL serving supports dynamic batching to increase throughput.
-- Model versioning, DJL allows user to load different version of a model on a single endpoint.
-- Multi-engine support, DJL allows user to serve models from different engines at the same time.
+- **Performance** - DJL serving running multithreading inference in a single JVM. Our benchmark shows
+DJL serving has higher throughput than most C++ model servers on the market
+- **Ease of use** - DJL serving can serve most models out of the box
+- **Easy to extend** - DJL serving plugins make it easy to add custom extensions
+- **Auto-scale** - DJL serving automatically scales up/down worker threads based on the load
+- **Dynamic batching** - DJL serving supports dynamic batching to increase throughput
+- **Model versioning** - DJL allows users to load different versions of a model on a single endpoint
+- **Multi-engine support** - DJL allows users to serve models from different engines at the same time
 
 ## Installation
 
@@ -84,7 +74,9 @@ You can also use docker to run DJL Serving:
 docker run -itd -p 8080:8080 deepjavalibrary/djl-serving
 ```
 
-## Run DJL Serving
+## Usage
+
+### Sample Usage
 
 Use the following command to start model server locally:
 
@@ -132,7 +124,52 @@ curl -X POST http://localhost:8080/predictions/resnet18_v1 -F "data=@kitten.jpg"
 ]
 ```
 
-For more command line options:
+### Examples for loading models
+
+```shell
+# Load models from the DJL model zoo on startup
+djl-serving -m "djl://ai.djl.pytorch/resnet"
+
+# Load version v1 of a PyTorch model on GPU(0) from the local file system
+djl-serving -m "resnet:v1:PyTorch:0=file:$HOME/models/pytorch/resnet18/"
+
+# Load a TensorFlow model from TFHub
+djl-serving -m "resnet=https://tfhub.dev/tensorflow/resnet_50/classification/1"
+```
+
+### Examples for customizing data processing
+
+```shell
+# Use the default data processing for a well-known application
+djl-serving -m "file:/resnet?application=CV/image_classification"
+
+# Specify a custom data processing with a Translator
+djl-serving -m "file:/resnet?translatorFactory=MyFactory"
+
+## Pass parameters for data processing
+djl-serving -m "djl://ai.djl.pytorch/resnet?applySoftmax=false"
+```
+
+### Using DJL Extensions
+
+```shell
+# Load a model from an AWS S3 Bucket
+djl-serving -m "s3://djl-ai/demo/resnet/resnet18.zip"
+
+# Load a model from HDFS
+djl-serving -m "hdfs://localhost:50070/models/pytorch/resnet18/"
+
+# Use a HuggingFace tokenizer
+djl-serving -m "file:/resnet?transaltorFactory=ai.djl.huggingface.BertQATranslator"
+```
+
+### More examples
+
+- [Serving a Python model](https://github.com/deepjavalibrary/djl-demo/tree/master/huggingface/python)
+- [Serving on Inf1 EC2 instance](https://github.com/deepjavalibrary/djl-demo/tree/master/huggingface/inferentia)
+- [Serving with docker](https://github.com/deepjavalibrary/djl-serving/tree/master/serving/docker)
+
+### More command line options
 
 ```sh
 djl-serving --help
@@ -144,18 +181,30 @@ usage: djl-serving [OPTIONS]
  -w,--workflows <WORKFLOWS>   Workflows to be loaded at startup.
 ```
 
-See [configuration](serving/docs/configuration.md) for details on defining models, model-store, and workflows.
+See [configuration](serving/docs/configuration.md) for more details about defining models, model-store, and workflows.
 
 ## REST API
 
-DJL Serving use RESTful API for both inference and management calls.
+DJL Serving uses a RESTful API for both inference and management calls.
 
-When DJL Serving startup, it starts two web services:
-* [Inference API](serving/docs/inference_api.md)
-* [Management API](serving/docs/management_api.md)
+When DJL Serving starts up, it has two web services:
 
-By default, DJL Serving listening on 8080 port and only accessible from localhost.
-Please see [DJL Serving Configuration](serving/docs/configuration.md) for how to enable access from remote host.
+* [Inference API](serving/docs/inference_api.md) - Used by clients to query the server and run models
+* [Management API](serving/docs/management_api.md) - Used to add, remove, and scale models on the server
+
+By default, DJL Serving listens on port 8080 and is only accessible from localhost.
+Please see [DJL Serving Configuration](serving/docs/configuration.md) for how to enable access from a remote host.
+
+## Architecture
+
+DJL serving is built on top of [Deep Java Library](https://djl.ai). You can visit the
+[DJL github repository](https://github.com/deepjavalibrary/djl) to learn more.
+
+It is also possible to leverage only the worker thread pool using the separate [WorkLoadManager](wlm) module.
+The separate WorkLoadManager can be used to take advantage of DJL serving's model batching
+and threading and integrate it into a custom Java service.
+
+![Architecture Diagram](https://resources.djl.ai/images/djl-serving/architecture.png)
 
 # Plugin management
 
