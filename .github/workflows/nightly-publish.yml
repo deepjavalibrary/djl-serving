@@ -11,12 +11,13 @@ jobs:
         id: create_gpu
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" \
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_gpu $token
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_gpu_instance_id }}
 
   execute-runner:
     runs-on: [self-hosted, gpu]
@@ -26,15 +27,15 @@ jobs:
         run: |
           nvidia-smi
 
-  stop-ruuners:
+  stop-runners:
     if: always()
     runs-on: [self-hosted, scheduler]
-    needs: execute-runners
+    needs: [create-runners,execute-runner]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ create-runners.create_gpu.outputs.action_gpu_instance_id }}
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
           ./stop_instance.sh $instance_id
 
 
