@@ -1,0 +1,5 @@
+version: '3'
+services:
+  cpu:
+    build: .
+    image: deepjavalibrary/djl-serving:nightly
