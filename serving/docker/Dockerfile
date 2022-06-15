@@ -1,6 +1,6 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 ARG djl_version=0.17.0
-ARG build_type=release
+ARG build_type
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
@@ -8,15 +8,17 @@ RUN apt-get update && \
     openjdk-11-jdk-headless \
     curl
 
-RUN if [ "$build_type" = "nightly"]; then  \
-      COPY serving/build/distributions/*.deb . \
-      dpkg -i *.deb && \
-      rm *.deb \
-    else \
-      curl -O https://publish.djl.ai/djl-serving/djl-serving_${djl_version}-1_all.deb && \
-      dpkg -i djl-serving_${djl_version}-1_all.deb && \
-      rm djl-serving_${djl_version}-1_all.deb \
-    fi
+COPY *.deb .
+RUN dpkg -i *.deb && rm *.deb
+
+#RUN if [ "$build_type" = "nightly" ] ; then  \
+#      cp *.deb . && \
+#      dpkg -i *.deb && rm *.deb; \
+#    else \
+#      curl -O https://publish.djl.ai/djl-serving/djl-serving_${djl_version}-1_all.deb && \
+#      dpkg -i djl-serving_${djl_version}-1_all.deb && \
+#      rm djl-serving_${djl_version}-1_all.deb; \
+#    fi
 
 RUN mkdir -p /opt/djl
 COPY config.properties /opt/djl/conf/
