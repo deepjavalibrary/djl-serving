@@ -12,6 +12,8 @@
  */
 package ai.djl.serving.workflow;
 
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
@@ -54,7 +56,7 @@ public class WorkflowDefinition {
     String name;
     String version;
 
-    Map<String, ModelInfo> models;
+    Map<String, ModelInfo<Input, Output>> models;
 
     @SerializedName("workflow")
     Map<String, WorkflowExpression> expressions;
@@ -126,8 +128,8 @@ public class WorkflowDefinition {
     public Workflow toWorkflow() throws BadWorkflowException {
         if (models != null) {
             ConfigManager configManager = ConfigManager.getInstance();
-            for (Entry<String, ModelInfo> emd : models.entrySet()) {
-                ModelInfo md = emd.getValue();
+            for (Entry<String, ModelInfo<Input, Output>> emd : models.entrySet()) {
+                ModelInfo<Input, Output> md = emd.getValue();
                 md.setModelId(emd.getKey());
                 md.setQueueSize(
                         firstValid(md.getQueueSize(), queueSize, configManager.getJobQueueSize()));
@@ -172,16 +174,20 @@ public class WorkflowDefinition {
         return 0;
     }
 
-    private static final class ModelDefinitionDeserializer implements JsonDeserializer<ModelInfo> {
+    private static final class ModelDefinitionDeserializer
+            implements JsonDeserializer<ModelInfo<Input, Output>> {
 
         /** {@inheritDoc} */
+        @SuppressWarnings("unchecked")
         @Override
-        public ModelInfo deserialize(
+        public ModelInfo<Input, Output> deserialize(
                 JsonElement json, Type typeOfT, JsonDeserializationContext context) {
             if (json.isJsonObject()) {
-                return JsonUtils.GSON.fromJson(json, ModelInfo.class);
+                ModelInfo<Input, Output> model = JsonUtils.GSON.fromJson(json, ModelInfo.class);
+                model.hasInputOutputClass(Input.class, Output.class);
+                return model;
             } else if (json.isJsonPrimitive()) {
-                return new ModelInfo(json.getAsString());
+                return new ModelInfo<>(json.getAsString(), Input.class, Output.class);
             }
             throw new JsonParseException(
                     "Unexpected type of model definition: should be Criteria object or URI string");

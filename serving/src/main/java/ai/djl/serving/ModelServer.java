@@ -18,6 +18,8 @@ import ai.djl.engine.Engine;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
@@ -382,12 +384,14 @@ public class ModelServer implements AutoCloseable {
                 engineName = inferEngineFromUrl(modelUrl);
             }
 
-            ModelInfo modelInfo =
-                    new ModelInfo(
+            ModelInfo<Input, Output> modelInfo =
+                    new ModelInfo<>(
                             modelName,
                             modelUrl,
                             version,
                             engineName,
+                            Input.class,
+                            Output.class,
                             configManager.getJobQueueSize(),
                             configManager.getMaxIdleTime(),
                             configManager.getMaxBatchDelay(),

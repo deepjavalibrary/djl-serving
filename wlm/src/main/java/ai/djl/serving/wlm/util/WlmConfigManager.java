@@ -50,7 +50,7 @@ public final class WlmConfigManager {
      * @return the calculated minimum number of workers for a new registered model
      */
     public int getDefaultMinWorkers(
-            ModelInfo modelInfo, Device device, int minWorkers, int maxWorkers) {
+            ModelInfo<?, ?> modelInfo, Device device, int minWorkers, int maxWorkers) {
         Model model = modelInfo.getModel(device);
         minWorkers = getWorkersProperty(model, device, "minWorkers", minWorkers);
         return Math.min(minWorkers, maxWorkers);
@@ -64,7 +64,7 @@ public final class WlmConfigManager {
      * @param target the target number of worker
      * @return the default number of workers for a new registered model
      */
-    public int getDefaultMaxWorkers(ModelInfo modelInfo, Device device, int target) {
+    public int getDefaultMaxWorkers(ModelInfo<?, ?> modelInfo, Device device, int target) {
         Model model = modelInfo.getModel(device);
         if (target == 0) {
             return 0; // explicitly shutdown

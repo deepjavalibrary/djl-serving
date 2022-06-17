@@ -13,6 +13,7 @@
 package ai.djl.serving.workflow.function;
 
 import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.Workflow;
@@ -23,14 +24,14 @@ import java.util.concurrent.CompletableFuture;
 /** An internal {@link WorkflowFunction} that is used to execute models in the workflow. */
 public class ModelWorkflowFunction extends WorkflowFunction {
 
-    ModelInfo model;
+    ModelInfo<Input, Output> model;
 
     /**
      * Constructs a {@link ModelWorkflowFunction} with a given model.
      *
      * @param model the model to run
      */
-    public ModelWorkflowFunction(ModelInfo model) {
+    public ModelWorkflowFunction(ModelInfo<Input, Output> model) {
         this.model = model;
     }
 
@@ -51,7 +52,7 @@ public class ModelWorkflowFunction extends WorkflowFunction {
                 .thenComposeAsync(
                         processedArgs ->
                                 executor.getWlm()
-                                        .runJob(new Job(model, processedArgs.get(0)))
+                                        .runJob(new Job<>(model, processedArgs.get(0)))
                                         .thenApply(o -> o));
     }
 }

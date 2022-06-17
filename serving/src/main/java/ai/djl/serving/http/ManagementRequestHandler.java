@@ -15,6 +15,8 @@ package ai.djl.serving.http;
 import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
@@ -149,7 +151,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         for (int i = pagination.pageToken; i < pagination.last; ++i) {
             String workflowName = keys.get(i);
             for (Workflow workflow : endpoints.get(workflowName).getWorkflows()) {
-                for (ModelInfo m : workflow.getModels()) {
+                for (ModelInfo<Input, Output> m : workflow.getModels()) {
                     String status = m.getStatus().toString();
                     String id = m.getModelId();
                     String modelName;
@@ -231,12 +233,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
         Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
         Device device = Device.fromName(deviceName, engine);
-        ModelInfo modelInfo =
-                new ModelInfo(
+        ModelInfo<Input, Output> modelInfo =
+                new ModelInfo<>(
                         modelName,
                         modelUrl,
                         version,
                         engineName,
+                        Input.class,
+                        Output.class,
                         ConfigManager.getInstance().getJobQueueSize(),
                         maxIdleTime,
                         maxBatchDelay,
@@ -248,7 +252,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         .registerWorkflow(workflow)
                         .thenAccept(
                                 v -> {
-                                    for (ModelInfo m : workflow.getModels()) {
+                                    for (ModelInfo<Input, Output> m : workflow.getModels()) {
                                         m.configurePool(maxIdleTime)
                                                 .configureModelBatch(batchSize, maxBatchDelay);
                                         modelManager.scaleWorkers(
@@ -346,7 +350,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             }
 
             // make sure all models are loaded and ready
-            for (ModelInfo modelInfo : workflow.getModels()) {
+            for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
                 if (modelInfo.getStatus() != ModelInfo.Status.READY) {
                     throw new ServiceUnavailableException(
                             "Model or workflow is not ready: " + workflowName);
@@ -354,8 +358,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             }
 
             List<String> msgs = new ArrayList<>();
-            for (ModelInfo modelInfo : workflow.getModels()) {
-                WorkerPool pool =
+            for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
+                WorkerPool<Input, Output> pool =
                         modelManager.getWorkLoadManager().getWorkerPoolForModel(modelInfo);
                 int minWorkers =
                         NettyUtils.getIntParameter(
@@ -381,7 +385,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                     // scale all versions
                     Endpoint endpoint = modelManager.getEndpoints().get(workflowName);
                     for (Workflow p : endpoint.getWorkflows()) {
-                        for (ModelInfo m : p.getModels()) {
+                        for (ModelInfo<Input, Output> m : p.getModels()) {
                             m.configurePool(maxIdleTime)
                                     .configureModelBatch(batchSize, maxBatchDelay);
                             modelManager.scaleWorkers(m, null, minWorkers, maxWorkers);

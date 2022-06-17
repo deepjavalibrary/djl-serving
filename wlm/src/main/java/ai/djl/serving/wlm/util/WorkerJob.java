@@ -12,16 +12,15 @@
  */
 package ai.djl.serving.wlm.util;
 
-import ai.djl.modality.Output;
 import ai.djl.serving.wlm.Job;
 
 import java.util.concurrent.CompletableFuture;
 
 /** A {@link Job} containing metadata from the {@link ai.djl.serving.wlm.WorkLoadManager}. */
-public final class WorkerJob {
+public final class WorkerJob<I, O> {
 
-    private final Job job;
-    private final CompletableFuture<Output> future;
+    private final Job<I, O> job;
+    private final CompletableFuture<O> future;
 
     /**
      * Constructs a new {@link WorkerJob}.
@@ -29,7 +28,7 @@ public final class WorkerJob {
      * @param job the job to execute
      * @param future the future containing the job response
      */
-    public WorkerJob(Job job, CompletableFuture<Output> future) {
+    public WorkerJob(Job<I, O> job, CompletableFuture<O> future) {
         this.job = job;
         this.future = future;
     }
@@ -39,7 +38,7 @@ public final class WorkerJob {
      *
      * @return the {@link Job}
      */
-    public Job getJob() {
+    public Job<I, O> getJob() {
         return job;
     }
 
@@ -48,7 +47,7 @@ public final class WorkerJob {
      *
      * @return the future for the job
      */
-    public CompletableFuture<Output> getFuture() {
+    public CompletableFuture<O> getFuture() {
         return future;
     }
 }

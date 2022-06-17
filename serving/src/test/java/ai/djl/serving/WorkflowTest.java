@@ -84,7 +84,7 @@ public class WorkflowTest {
     public void testGlobalPerf() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/globalPerf.json");
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        ModelInfo m = workflow.getModels().stream().findFirst().get();
+        ModelInfo<Input, Output> m = workflow.getModels().stream().findFirst().get();
 
         Assert.assertEquals(m.getQueueSize(), 101);
         Assert.assertEquals(m.getMaxIdleTime(), 61);
@@ -96,7 +96,7 @@ public class WorkflowTest {
     public void testLocalPerf() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/localPerf.json");
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        ModelInfo m = workflow.getModels().stream().findFirst().get();
+        ModelInfo<Input, Output> m = workflow.getModels().stream().findFirst().get();
 
         Assert.assertEquals(m.getQueueSize(), 102);
         Assert.assertEquals(m.getMaxIdleTime(), 62);
@@ -108,7 +108,7 @@ public class WorkflowTest {
             throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         try (WorkLoadManager wlm = new WorkLoadManager()) {
-            for (ModelInfo model : workflow.getModels()) {
+            for (ModelInfo<Input, Output> model : workflow.getModels()) {
                 wlm.getWorkerPoolForModel(model).scaleWorkers(Device.cpu(), 1, 1);
             }
 

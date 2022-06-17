@@ -15,8 +15,6 @@ package ai.djl.serving.wlm;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
-import ai.djl.modality.Input;
-import ai.djl.modality.Output;
 import ai.djl.serving.wlm.util.WorkerJob;
 
 import org.slf4j.Logger;
@@ -33,15 +31,15 @@ import java.util.concurrent.TimeUnit;
  *
  * @author erik.bamberg@web.de
  */
-abstract class BatchAggregator {
+abstract class BatchAggregator<I, O> {
 
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
 
     private Dimension dimension;
     protected int batchSize;
     protected int maxBatchDelay;
-    protected List<WorkerJob> wjs;
-    protected LinkedBlockingDeque<WorkerJob> jobQueue;
+    protected List<WorkerJob<I, O>> wjs;
+    protected LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
 
     /**
      * Constructs a new {@code BbatchAggregator} instance.
@@ -49,7 +47,7 @@ abstract class BatchAggregator {
      * @param model the model to use.
      * @param jobQueue the job queue for polling data from.
      */
-    public BatchAggregator(ModelInfo model, LinkedBlockingDeque<WorkerJob> jobQueue) {
+    public BatchAggregator(ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
         this.dimension = new Dimension("Model", model.getModelId());
         this.batchSize = model.getBatchSize();
         this.maxBatchDelay = model.getMaxBatchDelay();
@@ -64,11 +62,11 @@ abstract class BatchAggregator {
      * @throws InterruptedException if thread gets interrupted while waiting for new data in the
      *     queue.
      */
-    public List<Input> getRequest() throws InterruptedException {
+    public List<I> getRequest() throws InterruptedException {
         wjs = pollBatch();
-        List<Input> list = new ArrayList<>(wjs.size());
-        for (WorkerJob wj : wjs) {
-            Job job = wj.getJob();
+        List<I> list = new ArrayList<>(wjs.size());
+        for (WorkerJob<I, O> wj : wjs) {
+            Job<I, O> job = wj.getJob();
             long queueTime = job.getWaitingTime();
             SERVER_METRIC.info("{}", new Metric("QueueTime", queueTime, Unit.MICROSECONDS));
             list.add(job.getInput());
@@ -81,14 +79,14 @@ abstract class BatchAggregator {
      *
      * @param outputs list of model-outputs in same order as the input objects.
      */
-    public void sendResponse(List<Output> outputs) {
+    public void sendResponse(List<O> outputs) {
         if (wjs.size() != outputs.size()) {
             throw new IllegalStateException("Not all jobs get response.");
         }
 
         int i = 0;
-        for (Output output : outputs) {
-            WorkerJob wj = wjs.get(i++);
+        for (O output : outputs) {
+            WorkerJob<I, O> wj = wjs.get(i++);
             wj.getFuture().complete(output);
             long latency = wj.getJob().getWaitingTime();
             Metric metric = new Metric("ModelLatency", latency, Unit.MICROSECONDS, dimension);
@@ -103,7 +101,7 @@ abstract class BatchAggregator {
      * @param error the exception
      */
     public void sendError(Throwable error) {
-        for (WorkerJob wj : wjs) {
+        for (WorkerJob<I, O> wj : wjs) {
             wj.getFuture().completeExceptionally(error);
         }
         wjs.clear();
@@ -115,7 +113,7 @@ abstract class BatchAggregator {
      * @return a list of jobs read by this batch interation.
      * @throws InterruptedException if interrupted
      */
-    protected abstract List<WorkerJob> pollBatch() throws InterruptedException;
+    protected abstract List<WorkerJob<I, O>> pollBatch() throws InterruptedException;
 
     /**
      * Checks if this {@code BatchAggregator} and the thread can be shutdown or if this aggregator
@@ -126,12 +124,12 @@ abstract class BatchAggregator {
      */
     public abstract boolean isFinished();
 
-    protected void drainTo(List<WorkerJob> list, int maxDelay) throws InterruptedException {
+    protected void drainTo(List<WorkerJob<I, O>> list, int maxDelay) throws InterruptedException {
         long begin = System.currentTimeMillis();
         jobQueue.drainTo(list, batchSize - 1);
         int remain = batchSize - list.size();
         for (int i = 0; i < remain; ++i) {
-            WorkerJob wj = jobQueue.poll(maxDelay, TimeUnit.MILLISECONDS);
+            WorkerJob<I, O> wj = jobQueue.poll(maxDelay, TimeUnit.MILLISECONDS);
             if (wj == null || wj.getJob() == null) {
                 break;
             }

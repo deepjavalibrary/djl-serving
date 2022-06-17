@@ -33,7 +33,9 @@ public class ModelInfoTest {
 
     @Test
     public void testQueueSizeIsSet() {
-        try (ModelInfo modelInfo = new ModelInfo("", null, null, "MXNet", 4711, 1, 300, 1)) {
+        try (ModelInfo<?, ?> modelInfo =
+                new ModelInfo<>(
+                        "", null, null, "MXNet", Input.class, Output.class, 4711, 1, 300, 1)) {
             Assert.assertEquals(4711, modelInfo.getQueueSize());
             Assert.assertEquals(1, modelInfo.getMaxIdleTime());
             Assert.assertEquals(300, modelInfo.getMaxBatchDelay());
@@ -49,7 +51,7 @@ public class ModelInfoTest {
                         .setTypes(Input.class, Output.class)
                         .optModelUrls(modelUrl)
                         .build();
-        try (ModelInfo modelInfo = new ModelInfo(criteria)) {
+        try (ModelInfo<Input, Output> modelInfo = new ModelInfo<>(criteria)) {
             modelInfo.load(Device.cpu());
             try (ZooModel<Input, Output> model = modelInfo.getModel(Device.cpu())) {
                 try (Predictor<Input, Output> predictor = model.newPredictor()) {
