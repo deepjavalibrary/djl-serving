@@ -9,9 +9,8 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG djl_version=0.18.0~SNAPSHOT
 FROM ubuntu:20.04
-
+ARG DJL_VERSION=0.18.0~SNAPSHOT
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -37,10 +36,10 @@ CMD ["serve"]
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf
+RUN mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
 
-COPY https://publish.djl.ai/djl-serving/djl-serving_${djl_version}-1_all.deb ./djl-serving_all.deb
-RUN scripts/install_djl_serving.sh
+RUN scripts/install_djl_serving.sh $DJL_VERSION
 RUN scripts/install_inferentia.sh
 RUN rm -rf scripts
 RUN apt-get clean -y && rm -rf /var/lib/apt/lists/*
