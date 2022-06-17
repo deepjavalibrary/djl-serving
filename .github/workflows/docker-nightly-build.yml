@@ -20,20 +20,6 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: '3.x'
-      - name: Install DJLServing dependencies
-        run: |
-          cd serving && ./gradlew createDeb
-      - name: Upload gradle dep to docker directory
-        uses: actions/upload-artifact@v3
-        with:
-          name: djl-serving-deb
-          path: serving/build/distributions/*.deb
-          if-no-files-found: error
-          retention-days: 0
-      - uses: actions/download-artifact@v3
-        with:
-          name: djl-serving-deb
-          path: serving/docker/
       - name: Build docker files
         run: cd serving/docker && docker-compose build --build-arg build_type=nighlty --build-arg djl_version=nightly
       - name: Login to Docker
