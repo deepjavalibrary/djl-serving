@@ -92,7 +92,6 @@ public class DependencyManager {
             return;
         }
 
-        Files.createDirectories(depDir);
         String djlVersion = resolveDjlVersion();
 
         switch (engineName) {
@@ -144,6 +143,7 @@ public class DependencyManager {
         if (tokens.length < 3) {
             throw new IllegalArgumentException("Invalid dependency: " + dependency);
         }
+        Files.createDirectories(depDir);
 
         logger.info("Loading dependency: {}", dependency);
         String groupId = tokens[0].replace('.', '/');
