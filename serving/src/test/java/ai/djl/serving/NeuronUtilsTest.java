@@ -13,6 +13,10 @@
 package ai.djl.serving;
 
 import ai.djl.serving.util.NeuronUtils;
+
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,8 +27,6 @@ import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
 import java.nio.charset.StandardCharsets;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 public class NeuronUtilsTest {
 

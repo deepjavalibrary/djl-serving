@@ -20,6 +20,10 @@ import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.IdentityWF;
 import ai.djl.serving.workflow.function.ModelWorkflowFunction;
 import ai.djl.serving.workflow.function.WorkflowFunction;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -30,8 +34,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** A flow of executing {@link ai.djl.Model}s and custom functions. */
 public class Workflow implements AutoCloseable {
@@ -252,8 +254,7 @@ public class Workflow implements AutoCloseable {
         public CompletableFuture<Input> executeExpression(WorkflowExpression expr) {
             WorkflowFunction workflowFunction = getExecutable(expr.getExecutableName());
             List<WorkflowArgument> args =
-                    expr.getExecutableArgs()
-                            .stream()
+                    expr.getExecutableArgs().stream()
                             .map(arg -> new WorkflowArgument(this, arg))
                             .collect(Collectors.toList());
             return workflowFunction.run(this, args);

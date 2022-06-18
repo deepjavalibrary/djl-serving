@@ -23,10 +23,13 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import java.security.cert.CertificateException;
-import javax.net.ssl.SSLException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.security.cert.CertificateException;
+
+import javax.net.ssl.SSLException;
 
 /**
  * a webserver to browse models in ModelZoo.

@@ -13,12 +13,14 @@
 package ai.djl.serving;
 
 import ai.djl.serving.util.ConfigManager;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /** A class represents parsed command line arguments. */
 public final class Arguments {
@@ -85,7 +87,8 @@ public final class Arguments {
                         .hasArgs()
                         .argName("DEPENDENCIES ...")
                         .desc(
-                                "Maven dependencies (e.g. ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64)")
+                                "Maven dependencies (e.g."
+                                        + " ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64)")
                         .build());
         return options;
     }

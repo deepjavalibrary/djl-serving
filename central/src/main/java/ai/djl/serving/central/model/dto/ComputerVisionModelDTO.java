@@ -13,9 +13,11 @@
 package ai.djl.serving.central.model.dto;
 
 import ai.djl.repository.Artifact;
-import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 /**
  * A ModelDTO with structure data-structures for computer vision models.

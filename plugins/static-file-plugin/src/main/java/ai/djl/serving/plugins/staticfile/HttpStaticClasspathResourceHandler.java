@@ -15,6 +15,7 @@ package ai.djl.serving.plugins.staticfile;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.http.ResourceNotFoundException;
 import ai.djl.serving.plugins.RequestHandler;
+
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,6 +32,10 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.stream.ChunkedNioStream;
 import io.netty.util.AsciiString;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.JarURLConnection;
@@ -44,8 +49,6 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.jar.JarEntry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * handler to publish file resources classpath.

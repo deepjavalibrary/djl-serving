@@ -14,6 +14,10 @@ package ai.djl.serving.central.model.dto;
 
 import ai.djl.repository.Artifact;
 import ai.djl.repository.License;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
@@ -26,8 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Transferring model-artifact-info.
@@ -85,10 +87,7 @@ public class ModelDTO extends ModelReferenceDTO {
 
         licenses =
                 Collections.unmodifiableMap(
-                        artifact.getMetadata()
-                                .getLicenses()
-                                .values()
-                                .stream()
+                        artifact.getMetadata().getLicenses().values().stream()
                                 .collect(Collectors.toMap(License::getName, License::getUrl)));
 
         this.resourceType = artifact.getMetadata().getResourceType();
@@ -117,9 +116,7 @@ public class ModelDTO extends ModelReferenceDTO {
 
         if (artifact.getFiles() != null) {
             files =
-                    artifact.getFiles()
-                            .entrySet()
-                            .stream()
+                    artifact.getFiles().entrySet().stream()
                             .map(e -> new FileResourceDTO(e.getKey(), e.getValue()))
                             .collect(Collectors.toList());
         } else {

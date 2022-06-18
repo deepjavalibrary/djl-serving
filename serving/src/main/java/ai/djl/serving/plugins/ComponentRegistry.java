@@ -13,6 +13,7 @@
 package ai.djl.serving.plugins;
 
 import ai.djl.serving.plugins.PluginMetaData.Lifecycle;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -68,9 +69,7 @@ public class ComponentRegistry {
     public <T> Set<T> findImplementations(Class<T> pluginInterface) {
         return (Set<T>)
                 Collections.unmodifiableSet(
-                        componentRegistry
-                                .getOrDefault(pluginInterface, new HashSet<>())
-                                .stream()
+                        componentRegistry.getOrDefault(pluginInterface, new HashSet<>()).stream()
                                 .filter(ComponentEntry::isPluginActive)
                                 .map(ComponentEntry::getComponent)
                                 .collect(Collectors.toSet()));

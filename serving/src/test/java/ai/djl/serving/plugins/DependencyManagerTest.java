@@ -12,9 +12,10 @@
  */
 package ai.djl.serving.plugins;
 
-import java.io.IOException;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import java.io.IOException;
 
 public class DependencyManagerTest {
 

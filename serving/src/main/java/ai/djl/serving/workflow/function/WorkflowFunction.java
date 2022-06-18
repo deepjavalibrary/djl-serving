@@ -14,6 +14,7 @@ package ai.djl.serving.workflow.function;
 
 import ai.djl.modality.Input;
 import ai.djl.serving.workflow.Workflow;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

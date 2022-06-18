@@ -28,6 +28,7 @@ import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
 import ai.djl.serving.wlm.WorkerThread;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.util.JsonUtils;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -36,6 +37,10 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,8 +52,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** A class that in charge of managing models. */
 public final class ModelManager {
@@ -203,9 +206,7 @@ public final class ModelManager {
      * @return all models in an endpoint
      */
     public Set<ModelInfo> getModels() {
-        return getEndpoints()
-                .values()
-                .stream()
+        return getEndpoints().values().stream()
                 .flatMap(e -> e.getWorkflows().stream())
                 .flatMap(w -> w.getModels().stream())
                 .collect(Collectors.toSet());

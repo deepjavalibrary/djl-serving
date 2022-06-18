@@ -15,7 +15,9 @@ package ai.djl.serving;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
+
 import io.netty.channel.local.LocalChannel;
+
 import org.apache.commons.cli.ParseException;
 import org.testng.annotations.Test;
 

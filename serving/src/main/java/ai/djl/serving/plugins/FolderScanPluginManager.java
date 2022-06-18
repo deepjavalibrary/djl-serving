@@ -14,6 +14,10 @@ package ai.djl.serving.plugins;
 
 import ai.djl.serving.plugins.PluginMetaData.Lifecycle;
 import ai.djl.serving.util.ConfigManager;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
@@ -34,8 +38,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The {@link PluginManager} is responsible to load and manage plugins from the file system.
@@ -82,8 +84,7 @@ public class FolderScanPluginManager implements PluginManager {
 
         // phase 1: collect plugin information
         pluginRegistry =
-                Collections.list(ucl.getResources("META-INF/plugin.definition"))
-                        .parallelStream()
+                Collections.list(ucl.getResources("META-INF/plugin.definition")).parallelStream()
                         .map(PropertyFilePluginMetaDataReader::new)
                         .map(PropertyFilePluginMetaDataReader::read)
                         .distinct()
@@ -110,9 +111,7 @@ public class FolderScanPluginManager implements PluginManager {
         }
 
         // phase 3: set active
-        pluginRegistry
-                .values()
-                .stream()
+        pluginRegistry.values().stream()
                 .filter(plugin -> plugin.getState() == Lifecycle.INITIALIZED)
                 .filter(this::checkAllRequiredPluginsInitialized)
                 .forEach(plugin -> plugin.changeState(Lifecycle.ACTIVE, "plugin ready"));
@@ -171,7 +170,8 @@ public class FolderScanPluginManager implements PluginManager {
                     method.invoke(component, this);
                 } else {
                     logger.warn(
-                            "no accessible setter for pluginManager found in plugin {}. skipping injecting",
+                            "no accessible setter for pluginManager found in plugin {}. skipping"
+                                    + " injecting",
                             component.getClass().getName());
                 }
             }

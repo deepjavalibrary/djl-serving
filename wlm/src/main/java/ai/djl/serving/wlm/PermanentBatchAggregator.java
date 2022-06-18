@@ -13,11 +13,13 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.serving.wlm.util.WorkerJob;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * a batch aggregator that never terminates by itself. the surrounding thread has to be interrupted

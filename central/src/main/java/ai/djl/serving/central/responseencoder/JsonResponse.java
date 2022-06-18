@@ -14,7 +14,9 @@ package ai.djl.serving.central.responseencoder;
 
 import ai.djl.repository.Metadata;
 import ai.djl.util.JsonUtils;
+
 import com.google.gson.Gson;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -28,6 +30,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.CharsetUtil;
+
 import java.lang.reflect.Modifier;
 
 /**

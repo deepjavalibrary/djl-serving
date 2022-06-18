@@ -13,6 +13,7 @@
 package ai.djl.serving.central.model.dto;
 
 import ai.djl.repository.Artifact;
+
 import java.net.URI;
 
 /**

@@ -16,7 +16,12 @@ import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.util.Platform;
 import ai.djl.util.Utils;
+
 import io.netty.channel.EventLoopGroup;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,8 +32,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Python engine environment. */
 public class PyEnv {
