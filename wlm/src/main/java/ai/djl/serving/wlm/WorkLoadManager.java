@@ -79,6 +79,23 @@ public class WorkLoadManager implements AutoCloseable {
     }
 
     /**
+     * Registers a model and returns the {@link WorkerPool} for it.
+     *
+     * <p>This operation is idempotent and will return the existing workerpool if the model was
+     * already registered.
+     *
+     * @param <I> the model input class
+     * @param <O> the model output class
+     * @param modelInfo the model to create the worker pool for
+     * @return the {@link WorkerPool}
+     */
+    @SuppressWarnings("unchecked")
+    public <I, O> WorkerPool<I, O> registerModel(ModelInfo<I, O> modelInfo) {
+        return (WorkerPool<I, O>)
+                workerPools.computeIfAbsent(modelInfo, k -> new WorkerPool<>(modelInfo));
+    }
+
+    /**
      * Removes a model from management.
      *
      * @param model the model to remove
@@ -184,8 +201,7 @@ public class WorkLoadManager implements AutoCloseable {
      */
     @SuppressWarnings("unchecked")
     public <I, O> WorkerPool<I, O> getWorkerPoolForModel(ModelInfo<I, O> modelInfo) {
-        return (WorkerPool<I, O>)
-                workerPools.computeIfAbsent(modelInfo, k -> new WorkerPool<>(modelInfo));
+        return (WorkerPool<I, O>) workerPools.get(modelInfo);
     }
 
     /** {@inheritDoc} */

@@ -102,6 +102,7 @@ public final class ModelManager {
                                 DependencyManager dm = DependencyManager.getInstance();
                                 dm.installEngine(engine);
                             }
+                            wlm.registerModel(model);
                         } catch (IOException e) {
                             throw new CompletionException(e);
                         }
