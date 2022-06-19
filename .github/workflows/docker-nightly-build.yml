@@ -33,4 +33,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Push to Dockerhub
-        run: cd serving/docker && docker-compose push
+        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        working-directory: serving/docker
+        run: |
+          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          docker-compose build --build-arg djl_version=${DJL_VERSION}~SNAPSHOT
+          docker-compose push
+        - name: Publish release docker image
+        if: ${{ github.event.inputs.mode == 'release' }}
+        working-directory: serving/docker
+        run: |
+          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          docker-compose build --build-arg djl_version=${DJL_VERSION}
+          docker-compose push
+        
