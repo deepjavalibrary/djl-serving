@@ -2,6 +2,11 @@ name: Build and push docker nightly
 
 on:
   workflow_dispatch:
+      inputs:
+      mode:
+        description: 'release/nightly, default is nightly'
+        required: true
+        default: 'nightly'
   # runs every day at 12:00 am
 #  schedule:
 #    - cron: '0 0 * * *'
