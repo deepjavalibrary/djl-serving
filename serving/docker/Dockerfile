@@ -2,8 +2,7 @@ FROM ubuntu:20.04
 ARG djl_version=0.17.0
 
 COPY scripts scripts/
-COPY https://publish.djl.ai/djl-serving/djl-serving_${djl_version}-1_all.deb ./djl-serving_all.deb
-RUN scripts/install_java.sh
+RUN scripts/install_djl_serving.sh $djl_version
 RUN scripts/install_python.sh
 RUN rm -rf scripts djl-serving_all.deb
 

@@ -9,27 +9,18 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-FROM ubuntu:20.04
+FROM arm64v8/ubuntu:20.04
 ARG DJL_VERSION=0.18.0~SNAPSHOT
-EXPOSE 8080
 
-# Sets up Path for Neuron tools
-ENV PATH="/opt/bin/:/opt/aws/neuron/bin:${PATH}"
+EXPOSE 8080
 
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
 ENV OMP_NUM_THREADS=1
 ENV JAVA_OPTS="-Dai.djl.pytorch.num_interop_threads=1"
 ENV MODEL_SERVER_HOME=/opt/djl
-ENV NEURON_SDK_PATH=/usr/local/lib/python3.6/dist-packages/torch_neuron/lib
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.6/dist-packages/torch/lib
-ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
-ENV PYTORCH_PRECXX11=true
-ENV PYTORCH_VERSION=1.11.0
-ENV JAVA_OPTS="-Dai.djl.pytorch.num_interop_threads=1 -Dai.djl.default_engine=PyTorch"
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
@@ -40,8 +31,9 @@ RUN mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
 
 RUN scripts/install_djl_serving.sh $DJL_VERSION
-RUN scripts/install_inferentia.sh
+RUN scripts/install_python.sh
 RUN rm -rf scripts
 RUN apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:1.11.0:linux-aarch64
 
 LABEL maintainer="djl-dev@amazon.com"
