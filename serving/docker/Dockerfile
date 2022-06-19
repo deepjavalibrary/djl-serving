@@ -2,13 +2,10 @@ FROM ubuntu:20.04
 ARG djl_version=0.17.0
 
 COPY scripts scripts/
-RUN scripts/install_djl_serving.sh $djl_version
-RUN scripts/install_python.sh
-RUN rm -rf scripts djl-serving_all.deb
-
-RUN mkdir -p /opt/djl
+RUN mkdir -p /opt/djl/conf
 COPY config.properties /opt/djl/conf/
-RUN cp /usr/local/djl-serving-*/conf/log4j2.xml /opt/djl/conf/
+RUN scripts/install_djl_serving.sh $djl_version
+RUN rm -rf scripts
 
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh

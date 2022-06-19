@@ -7,9 +7,6 @@ on:
         description: 'release/nightly, default is nightly'
         required: true
         default: 'nightly'
-  # runs every day at 12:00 am
-#  schedule:
-#    - cron: '0 0 * * *'
 
 jobs:
   nightly-build:
@@ -21,12 +18,6 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 11
-      - name: Set up Python3
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.x'
-      - name: Build docker files
-        run: cd serving/docker && docker-compose build --build-arg build_type=nighlty --build-arg djl_version=nightly
       - name: Login to Docker
         uses: docker/login-action@v2
         with:
@@ -39,7 +30,7 @@ jobs:
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
           docker-compose build --build-arg djl_version=${DJL_VERSION}~SNAPSHOT
           docker-compose push
-        - name: Publish release docker image
+      - name: Publish release docker image
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
