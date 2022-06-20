@@ -2,4 +2,19 @@ version: '3'
 services:
   cpu:
     build: .
-    image: deepjavalibrary/djl-serving:${TAG:-latest}
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION:-cpu}${NIGHTLY}"
+  aarch64:
+    build:
+      context: .
+      dockerfile: aarch64.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}aarch64${NIGHTLY}"
+  inferentia:
+    build:
+      context: .
+      dockerfile: inf1.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}inf1${NIGHTLY}"
+  deepspeed:
+    build:
+      context: .
+      dockerfile: deepspeed.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}deepspeed${NIGHTLY}"
