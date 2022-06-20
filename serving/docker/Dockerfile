@@ -1,19 +1,11 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 ARG djl_version=0.17.0
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-    fakeroot \
-    openjdk-11-jdk-headless \
-    curl
-
-RUN curl -O https://publish.djl.ai/djl-serving/djl-serving_${djl_version}-1_all.deb && \
-    dpkg -i djl-serving_${djl_version}-1_all.deb && \
-    rm djl-serving_${djl_version}-1_all.deb
-
-RUN mkdir -p /opt/djl
+COPY scripts scripts/
+RUN mkdir -p /opt/djl/conf
 COPY config.properties /opt/djl/conf/
-RUN cp /usr/local/djl-serving-*/conf/log4j2.xml /opt/djl/conf/
+RUN scripts/install_djl_serving.sh $djl_version
+RUN rm -rf scripts
 
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
