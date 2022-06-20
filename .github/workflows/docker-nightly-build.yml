@@ -36,7 +36,7 @@ jobs:
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
-          export TAG=minimal-release
+          export TAG=$DJL_VERSION
           docker-compose build --build-arg djl_version=${DJL_VERSION}
           docker-compose push
         
