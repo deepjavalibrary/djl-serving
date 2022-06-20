@@ -16,6 +16,7 @@ import ai.djl.modality.Input;
 import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.Workflow;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 

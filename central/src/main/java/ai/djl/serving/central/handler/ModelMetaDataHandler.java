@@ -18,16 +18,19 @@ import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.serving.central.model.dto.DataTransferObjectFactory;
 import ai.djl.serving.central.model.dto.ModelDTO;
 import ai.djl.serving.plugins.RequestHandler;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A handler to handler model meta data requests.
@@ -84,9 +87,7 @@ public class ModelMetaDataHandler implements RequestHandler<CompletableFuture<Mo
                                             .optArtifactId(artifactId)
                                             .optModelName(modelName)
                                             .build();
-                            return ModelZoo.listModels(criteria)
-                                    .values()
-                                    .stream()
+                            return ModelZoo.listModels(criteria).values().stream()
                                     .flatMap(Collection::stream)
                                     .filter(
                                             a ->

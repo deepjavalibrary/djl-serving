@@ -14,6 +14,7 @@ package ai.djl.serving.wlm.util;
 
 import ai.djl.modality.Output;
 import ai.djl.serving.wlm.Job;
+
 import java.util.concurrent.CompletableFuture;
 
 /** A {@link Job} containing metadata from the {@link ai.djl.serving.wlm.WorkLoadManager}. */

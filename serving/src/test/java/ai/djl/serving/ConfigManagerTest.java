@@ -14,7 +14,15 @@ package ai.djl.serving;
 
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
+
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.testng.Assert;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
@@ -28,11 +36,6 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Properties;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.testng.Assert;
 
 public final class ConfigManagerTest {
 

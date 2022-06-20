@@ -16,17 +16,20 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.serving.central.model.dto.ModelReferenceDTO;
 import ai.djl.serving.plugins.RequestHandler;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A handler to handler model meta data requests.
@@ -60,15 +63,12 @@ public class ModelListMetaDataHandler
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
-                        return ModelZoo.listModels()
-                                .entrySet()
-                                .stream()
+                        return ModelZoo.listModels().entrySet().stream()
                                 .collect(
                                         Collectors.toMap(
                                                 e -> e.getKey().getPath(),
                                                 e ->
-                                                        e.getValue()
-                                                                .stream()
+                                                        e.getValue().stream()
                                                                 .map(ModelReferenceDTO::new)
                                                                 .collect(Collectors.toList())));
                     } catch (IOException | ModelNotFoundException ex) {

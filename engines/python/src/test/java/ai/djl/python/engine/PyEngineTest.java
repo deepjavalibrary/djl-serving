@@ -28,7 +28,12 @@ import ai.djl.training.util.DownloadUtils;
 import ai.djl.translate.NoopTranslator;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
+
 import com.google.gson.reflect.TypeToken;
+
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -37,8 +42,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 public class PyEngineTest {
 

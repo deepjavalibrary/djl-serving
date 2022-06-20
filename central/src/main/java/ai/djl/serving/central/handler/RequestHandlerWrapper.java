@@ -14,13 +14,16 @@ package ai.djl.serving.central.handler;
 
 import ai.djl.serving.central.responseencoder.JsonResponse;
 import ai.djl.serving.plugins.RequestHandler;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import java.util.concurrent.CompletableFuture;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * wraps a Request-Handler into a SimpleChannelInboundHandler to use central as a stand-alone

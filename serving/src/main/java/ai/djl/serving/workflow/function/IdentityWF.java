@@ -14,12 +14,14 @@ package ai.djl.serving.workflow.function;
 
 import ai.djl.modality.Input;
 import ai.djl.serving.workflow.Workflow;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /** An identity function which passes back it's input. */
 public class IdentityWF extends WorkflowFunction {
 
+    /** {@inheritDoc} */
     @Override
     public CompletableFuture<Input> run(
             Workflow.WorkflowExecutor executor, List<Workflow.WorkflowArgument> args) {

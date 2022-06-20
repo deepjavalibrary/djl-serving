@@ -14,11 +14,13 @@ package ai.djl.serving.http;
 
 import ai.djl.ModelException;
 import ai.djl.serving.util.NettyUtils;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

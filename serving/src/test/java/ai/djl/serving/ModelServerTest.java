@@ -33,7 +33,9 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
 import ai.djl.util.cuda.CudaUtils;
+
 import com.google.gson.reflect.TypeToken;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -68,6 +70,14 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
+
+import org.apache.commons.cli.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeSuite;
+import org.testng.annotations.Test;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -84,14 +94,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import org.apache.commons.cli.ParseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeSuite;
-import org.testng.annotations.Test;
 
 public class ModelServerTest {
 
@@ -559,7 +564,8 @@ public class ModelServerTest {
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(
                 resp.getStatus(),
-                "Workflow \"mlp_2\" worker scaled. New Worker configuration min workers:2 max workers:4");
+                "Workflow \"mlp_2\" worker scaled. New Worker configuration min workers:2 max"
+                        + " workers:4");
     }
 
     private void testListModels(Channel channel) throws InterruptedException {
@@ -572,8 +578,7 @@ public class ModelServerTest {
         ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
         for (String expectedModel : new String[] {"mlp", "mlp_1", "mlp_2"}) {
             assertTrue(
-                    resp.getModels()
-                            .stream()
+                    resp.getModels().stream()
                             .anyMatch(w -> expectedModel.equals(w.getModelName())));
         }
     }
@@ -588,8 +593,7 @@ public class ModelServerTest {
         ListWorkflowsResponse resp = JsonUtils.GSON.fromJson(result, ListWorkflowsResponse.class);
         for (String expectedWorkflow : new String[] {"mlp", "mlp_1", "mlp_2", "BasicWorkflow"}) {
             assertTrue(
-                    resp.getWorkflows()
-                            .stream()
+                    resp.getWorkflows().stream()
                             .anyMatch(w -> expectedWorkflow.equals(w.getWorkflowName())));
         }
     }

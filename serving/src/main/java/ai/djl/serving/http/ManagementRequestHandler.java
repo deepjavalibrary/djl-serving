@@ -25,11 +25,15 @@ import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
+
+import org.apache.logging.log4j.util.Strings;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -39,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * A class handling inbound HTTP requests to the management API.

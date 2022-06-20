@@ -16,13 +16,16 @@ import ai.djl.ModelException;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.NettyUtils;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * HttpRequestHandler that tries to process a http-request using the configured RequestHandlers.
@@ -94,9 +97,7 @@ public class ConfigurableHttpRequestHandler extends HttpRequestHandler {
      */
     @SuppressWarnings("rawtypes")
     private Optional<RequestHandler> findRequestHandler(FullHttpRequest req) {
-        return pluginManager
-                .findImplementations(RequestHandler.class)
-                .stream()
+        return pluginManager.findImplementations(RequestHandler.class).stream()
                 .filter(h -> h.acceptInboundMessage(req))
                 .findFirst();
     }

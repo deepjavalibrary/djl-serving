@@ -23,6 +23,7 @@ import ai.djl.serving.http.ServiceUnavailableException;
 import ai.djl.serving.http.Session;
 import ai.djl.util.JsonSerializable;
 import ai.djl.util.JsonUtils;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -44,12 +45,14 @@ import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** A utility class that handling Netty request and response. */
 public final class NettyUtils {

@@ -20,6 +20,10 @@ import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WlmShutdownException;
 import ai.djl.serving.wlm.util.WorkerJob;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,8 +37,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * WorkLoadManager is responsible to manage the work load of worker thread. the manage scales
@@ -216,8 +218,7 @@ public class WorkLoadManager implements AutoCloseable {
          * @return the workers
          */
         public List<WorkerThread> getWorkers() {
-            return devices.values()
-                    .stream()
+            return devices.values().stream()
                     .flatMap(d -> d.workers.stream())
                     .collect(Collectors.toList());
         }
