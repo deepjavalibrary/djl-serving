@@ -23,18 +23,20 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Push to Dockerhub
+      - name: Build and push nightly docker image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          export TAG=minimal-nightly
           docker-compose build --build-arg djl_version=${DJL_VERSION}~SNAPSHOT
           docker-compose push
-      - name: Publish release docker image
+      - name: Build and push release docker image
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          export TAG=minimal-release
           docker-compose build --build-arg djl_version=${DJL_VERSION}
           docker-compose push
         
