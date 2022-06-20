@@ -2,4 +2,4 @@ version: '3'
 services:
   cpu:
     build: .
-    image: deepjavalibrary/djl-serving:${TAG}
+    image: deepjavalibrary/djl-serving:${TAG:-latest}
