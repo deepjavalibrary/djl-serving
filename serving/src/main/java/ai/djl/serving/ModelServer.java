@@ -34,6 +34,7 @@ import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.NeuronUtils;
 import ai.djl.serving.util.ServerGroups;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
@@ -386,6 +387,7 @@ public class ModelServer implements AutoCloseable {
                 engineName = inferEngineFromUrl(modelUrl);
             }
 
+            WlmConfigManager wlmc = WlmConfigManager.getInstance();
             ModelInfo<Input, Output> modelInfo =
                     new ModelInfo<>(
                             modelName,
@@ -394,10 +396,10 @@ public class ModelServer implements AutoCloseable {
                             engineName,
                             Input.class,
                             Output.class,
-                            configManager.getJobQueueSize(),
-                            configManager.getMaxIdleTime(),
-                            configManager.getMaxBatchDelay(),
-                            configManager.getBatchSize());
+                            wlmc.getJobQueueSize(),
+                            wlmc.getMaxIdleTime(),
+                            wlmc.getMaxBatchDelay(),
+                            wlmc.getBatchSize());
             Workflow workflow = new Workflow(modelInfo);
             Device[] finalDevices = devices;
             CompletableFuture<Void> f =

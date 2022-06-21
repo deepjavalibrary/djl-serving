@@ -51,7 +51,7 @@ public class ModelInfoTest {
                         .setTypes(Input.class, Output.class)
                         .optModelUrls(modelUrl)
                         .build();
-        try (ModelInfo<Input, Output> modelInfo = new ModelInfo<>(criteria)) {
+        try (ModelInfo<Input, Output> modelInfo = new ModelInfo<>("model", criteria)) {
             modelInfo.load(Device.cpu());
             try (ZooModel<Input, Output> model = modelInfo.getModel(Device.cpu())) {
                 try (Predictor<Input, Output> predictor = model.newPredictor()) {

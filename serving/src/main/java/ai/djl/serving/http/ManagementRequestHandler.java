@@ -20,10 +20,10 @@ import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
+import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
@@ -241,7 +241,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         engineName,
                         Input.class,
                         Output.class,
-                        ConfigManager.getInstance().getJobQueueSize(),
+                        WlmConfigManager.getInstance().getJobQueueSize(),
                         maxIdleTime,
                         maxBatchDelay,
                         batchSize);
