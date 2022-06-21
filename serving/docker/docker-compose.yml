@@ -18,3 +18,8 @@ services:
       context: .
       dockerfile: deepspeed.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}deepspeed${NIGHTLY}"
+  pytorch-cu113:
+    build:
+      context: .
+      dockerfile: pytorch-cu113.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu113${NIGHTLY}"
