@@ -28,12 +28,11 @@ ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
 COPY scripts scripts/
-RUN mkdir -p /opt/djl/conf
-RUN mkdir -p /opt/djl/deps
+RUN mkdir -p /opt/djl/conf && \
+    mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
-
-RUN scripts/install_djl_serving.sh $djl_version
-RUN scripts/install_python.sh
+RUN scripts/install_djl_serving.sh $djl_version && \
+    scripts/install_python.sh
 
 ### Deep Speed installations
 RUN apt-get update && \
@@ -41,7 +40,7 @@ RUN apt-get update && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
     pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} triton==1.0.0 mpi4py
 
-RUN rm -rf scripts
-RUN apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN rm -rf scripts && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
