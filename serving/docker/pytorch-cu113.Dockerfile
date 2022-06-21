@@ -1,4 +1,4 @@
-ARG version=11.3.0-cudnn8-devel-ubuntu20.04
+ARG version=11.3.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.18.0~SNAPSHOT
 ARG torch_version=1.11.0
