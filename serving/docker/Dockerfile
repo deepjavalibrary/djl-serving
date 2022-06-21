@@ -25,4 +25,4 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
-LABEL maintainer="frankfliu2000@gmail.com"
+LABEL maintainer="djl-dev@amazon.com"

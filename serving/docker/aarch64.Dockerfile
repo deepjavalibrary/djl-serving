@@ -31,7 +31,6 @@ RUN mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
 
 RUN scripts/install_djl_serving.sh $djl_version
-RUN scripts/install_python.sh
 RUN rm -rf scripts
 RUN apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:1.11.0:linux-aarch64
