@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
+set -e
+
 if [ -x "$(command -v docker)" ]; then
-    echo "Docker is installed! skipped..."
-    exit 0
+  echo "Docker is installed! skipped..."
+  exit 0
 fi
 
 curl -fsSL https://get.docker.com -o get-docker.sh
