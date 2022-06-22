@@ -71,8 +71,8 @@ jobs:
         working-directory: serving/docker
         run: |
           ./scripts/install_docker.sh
-          yes | docker system prune -a --volumes
           sudo chmod 666 /var/run/docker.sock
+          yes | docker system prune -a --volumes
       - name: Login to Docker
         uses: docker/login-action@v2
         with:
