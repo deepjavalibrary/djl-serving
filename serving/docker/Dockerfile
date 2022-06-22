@@ -40,7 +40,7 @@ LABEL maintainer="djl-dev@amazon.com"
 FROM base AS cpu-full
 
 COPY scripts scripts/
-RUN scripts/install_python.sh && rm -rf scripts && \
+RUN scripts/install_python.sh && rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.0:linux-x86_64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64 && \
