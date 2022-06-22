@@ -26,13 +26,13 @@ ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
 COPY scripts scripts/
-RUN mkdir -p /opt/djl/conf
-RUN mkdir -p /opt/djl/deps
+RUN mkdir -p /opt/djl/conf && \
+    mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
 
-RUN scripts/install_djl_serving.sh $djl_version
-RUN rm -rf scripts
-RUN apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN scripts/install_djl_serving.sh $djl_version && \
+    rm -rf scripts && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:1.11.0:linux-aarch64
 
 LABEL maintainer="djl-dev@amazon.com"

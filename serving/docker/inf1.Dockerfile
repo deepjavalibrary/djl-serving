@@ -34,13 +34,12 @@ ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
 COPY scripts scripts/
-RUN mkdir -p /opt/djl/conf
-RUN mkdir -p /opt/djl/deps
+RUN mkdir -p /opt/djl/conf && \
+    mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
-
-RUN scripts/install_djl_serving.sh $djl_version
-RUN scripts/install_inferentia.sh
-RUN rm -rf scripts
-RUN apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN scripts/install_djl_serving.sh $djl_version && \
+    scripts/install_inferentia.sh && \
+    rm -rf scripts
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"

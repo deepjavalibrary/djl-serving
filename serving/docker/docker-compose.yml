@@ -1,8 +1,17 @@
 version: '3'
 services:
   cpu:
-    build: .
+    build:
+      context: .
+      target: base
+      dockerfile: Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION:-cpu}${NIGHTLY}"
+  cpu-full:
+    build:
+      context: .
+      target: cpu-full
+      dockerfile: Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}cpu-full${NIGHTLY}"
   aarch64:
     build:
       context: .
