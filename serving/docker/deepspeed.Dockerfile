@@ -9,7 +9,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.3.0-cudnn8-devel-ubuntu20.04
+ARG version=11.3.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.17.0
 ARG torch_version=1.11.0
@@ -38,9 +38,9 @@ RUN scripts/install_djl_serving.sh $djl_version && \
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
-    pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} triton==1.0.0 mpi4py
-
-RUN rm -rf scripts && \
+    pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} triton==1.0.0 mpi4py && \
+    rm -rf scripts && \
+    pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
