@@ -39,7 +39,7 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_inferentia.sh && \
-    rm -rf scripts
+    rm -rf scripts && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
