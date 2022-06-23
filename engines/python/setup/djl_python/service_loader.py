@@ -33,6 +33,10 @@ def load_model_service(model_dir, entry_point, device_id):
             raise ValueError(
                 "entry-point file not found {}.".format(entry_point_file))
 
+        if os.getenv("DJL_SERVING_DEEPSPEED"):
+            from deepspeed.launcher import runner
+            return ModelService(runner.main(entry_point_file))
+
         entry_point = entry_point[:-3]
         module = importlib.import_module(entry_point)
         if module is None:
