@@ -17,16 +17,16 @@ services:
       context: .
       dockerfile: aarch64.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}aarch64${NIGHTLY}"
-  inferentia:
-    build:
-      context: .
-      dockerfile: inf1.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}inf1${NIGHTLY}"
   deepspeed:
     build:
       context: .
       dockerfile: deepspeed.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}deepspeed${NIGHTLY}"
+  pytorch-inf1:
+    build:
+      context: .
+      dockerfile: pytorch-inf1.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-inf1${NIGHTLY}"
   pytorch-cu113:
     build:
       context: .
