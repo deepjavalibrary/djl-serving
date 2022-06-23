@@ -57,6 +57,7 @@ final class NDListGenerator {
             String inputShapes = cmd.getOptionValue("input-shapes");
             String output = cmd.getOptionValue("output-file");
             boolean ones = cmd.hasOption("ones");
+            boolean npz = cmd.hasOption("npz");
             Path path = Paths.get(output);
 
             try (NDManager manager = NDManager.newBaseManager(Device.cpu(), "PyTorch")) {
@@ -71,7 +72,7 @@ final class NDListGenerator {
                     }
                 }
                 try (OutputStream os = new BufferedOutputStream(Files.newOutputStream(path))) {
-                    list.encode(os);
+                    list.encode(os, npz);
                 }
             }
             logger.info("NDList file created: {}", path.toAbsolutePath());
@@ -165,6 +166,13 @@ final class NDListGenerator {
                         .hasArg(false)
                         .argName("ones")
                         .desc("Use all ones instead of zeros.")
+                        .build());
+        options.addOption(
+                Option.builder("z")
+                        .longOpt("npz")
+                        .hasArg(false)
+                        .argName("npz")
+                        .desc("Output .npz format.")
                         .build());
         return options;
     }

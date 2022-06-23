@@ -15,6 +15,10 @@ package ai.djl.benchmark;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
 public class NDListGeneratorTest {
 
     @Test
@@ -42,5 +46,16 @@ public class NDListGeneratorTest {
         String[] args = {"ndlist-gen", "-s", "1", "-o", "build/ones.ndlist"};
         boolean success = NDListGenerator.generate(args);
         Assert.assertTrue(success);
+    }
+
+    @Test
+    public void testNpz() throws IOException {
+        String[] args = {"ndlist-gen", "-s", "1", "-z", "-o", "build/ones.npz"};
+        boolean success = NDListGenerator.generate(args);
+        Assert.assertTrue(success);
+        try (ZipFile zipFile = new ZipFile("build/ones.npz")) {
+            ZipEntry entry = zipFile.entries().nextElement();
+            Assert.assertEquals(entry.getName(), "arr_0.npy");
+        }
     }
 }
