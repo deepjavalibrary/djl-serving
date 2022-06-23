@@ -95,6 +95,10 @@ task createDeb(type: Deb, dependsOn: distTar) {
     link("/usr/bin/djl-bench", "/usr/local/djl-bench-${project.version}/bin/benchmark")
 }
 
+task installOnLinux(type: Exec, dependsOn: createDeb) {
+    commandLine "dpkg","-i","${project.buildDir}/distributions/*.deb";
+}
+
 startScripts {
     defaultJvmOpts = []
     doLast {
