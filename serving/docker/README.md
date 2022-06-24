@@ -8,6 +8,8 @@ is compatible with SageMaker hosting.
 Currently, we created docker compose to simplify the building experience. Just run
 
 ```shell
+cd serving/docker
+export DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
 docker compose build --build-arg djl_version=${DJL_VERSION} <compose-target>
 ```
 
@@ -34,6 +36,7 @@ docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-servi
 ```
 
 ### GPU
+
 ```shell
 mkdir models
 cd models
