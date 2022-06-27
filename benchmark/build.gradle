@@ -95,6 +95,15 @@ task createDeb(type: Deb, dependsOn: distTar) {
     link("/usr/bin/djl-bench", "/usr/local/djl-bench-${project.version}/bin/benchmark")
 }
 
+task installOnLinux(type: Exec, dependsOn: createDeb) {
+    if (System.properties['os.name'].startsWith("Linux")) {
+        String ver = "${project.version}".replaceAll("-", "~")
+        commandLine "sudo", "dpkg", "-i", "${project.buildDir}/distributions/djl-bench_${ver}-1_all.deb"
+    } else {
+        throw new GradleException("task installOnLinux Only supported on Linux.")
+    }
+}
+
 startScripts {
     defaultJvmOpts = []
     doLast {
