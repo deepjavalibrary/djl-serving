@@ -96,11 +96,13 @@ task createDeb(type: Deb, dependsOn: distTar) {
 }
 
 task installOnLinux(type: Exec, dependsOn: createDeb) {
-    if (System.properties['os.name'].startsWith("Linux")) {
-        String ver = "${project.version}".replaceAll("-", "~")
-        commandLine "sudo", "dpkg", "-i", "${project.buildDir}/distributions/djl-bench_${ver}-1_all.deb"
-    } else {
-        throw new GradleException("task installOnLinux Only supported on Linux.")
+    doFirst {
+        if (System.properties['os.name'].startsWith("Linux")) {
+            String ver = "${project.version}".replaceAll("-", "~")
+            commandLine "sudo", "dpkg", "-i", "${project.buildDir}/distributions/djl-bench_${ver}-1_all.deb"
+        } else {
+            throw new GradleException("task installOnLinux Only supported on Linux.")
+        }
     }
 }
 
