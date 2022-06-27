@@ -558,7 +558,7 @@ public class ModelServer implements AutoCloseable {
                 if (engine != null) {
                     return engine;
                 }
-                modelName = prop.getProperty("modelName");
+                modelName = prop.getProperty("modelName", modelName);
             } catch (IOException e) {
                 logger.warn("Failed read serving.properties file", e);
             }
