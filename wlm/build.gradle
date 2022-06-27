@@ -11,6 +11,9 @@ dependencies {
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
     }
+
+    testRuntimeOnly "ai.djl:model-zoo"
+    testRuntimeOnly "ai.djl.mxnet:mxnet-model-zoo"
 }
 
 java {

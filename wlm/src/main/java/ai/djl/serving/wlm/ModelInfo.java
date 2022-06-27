@@ -59,6 +59,7 @@ public final class ModelInfo implements AutoCloseable {
     private String translator;
     private transient Status status;
 
+    private transient Criteria<Input, Output> criteria;
     private transient Map<Device, ZooModel<Input, Output>> model;
 
     /**
@@ -68,6 +69,15 @@ public final class ModelInfo implements AutoCloseable {
      */
     public ModelInfo(String modelUrl) {
         this.modelUrl = modelUrl;
+    }
+
+    /**
+     * Constructs a {@link ModelInfo} based on a {@link Criteria}.
+     *
+     * @param criteria the model criteria
+     */
+    public ModelInfo(Criteria<Input, Output> criteria) {
+        this.criteria = criteria;
     }
 
     /**
@@ -113,31 +123,39 @@ public final class ModelInfo implements AutoCloseable {
         if (getModels().containsKey(device)) {
             return;
         }
-        Criteria.Builder<Input, Output> builder =
-                Criteria.builder()
-                        .setTypes(Input.class, Output.class)
-                        .optModelUrls(modelUrl)
-                        .optModelName(modelName)
-                        .optEngine(engineName)
-                        .optFilters(filters)
-                        .optArguments(arguments)
-                        .optOptions(options);
-        if (application != null) {
-            builder.optApplication(Application.of(application));
-        }
-        try {
-            if (translator != null) {
-                Class<? extends ServingTranslator> clazz =
-                        Class.forName(translator).asSubclass(ServingTranslator.class);
-                builder.optTranslator(clazz.getConstructor().newInstance());
+        Criteria.Builder<Input, Output> builder;
+        if (criteria != null) {
+            builder = criteria.toBuilder();
+        } else {
+            builder =
+                    Criteria.builder()
+                            .setTypes(Input.class, Output.class)
+                            .optModelUrls(modelUrl)
+                            .optModelName(modelName)
+                            .optEngine(engineName)
+                            .optFilters(filters)
+                            .optArguments(arguments)
+                            .optOptions(options);
+            if (application != null) {
+                builder.optApplication(Application.of(application));
             }
-            if (translatorFactory != null) {
-                Class<? extends TranslatorFactory> clazz =
-                        Class.forName(translator).asSubclass(TranslatorFactory.class);
-                builder.optTranslatorFactory(clazz.getConstructor().newInstance());
+            try {
+                if (translator != null) {
+                    Class<? extends ServingTranslator> clazz =
+                            Class.forName(translator).asSubclass(ServingTranslator.class);
+                    builder.optTranslator(clazz.getConstructor().newInstance());
+                }
+                if (translatorFactory != null) {
+                    Class<? extends TranslatorFactory> clazz =
+                            Class.forName(translator).asSubclass(TranslatorFactory.class);
+                    builder.optTranslatorFactory(clazz.getConstructor().newInstance());
+                }
+            } catch (ReflectiveOperationException e) {
+                throw new ModelException("Invalid criteria", e);
             }
-        } catch (ReflectiveOperationException e) {
-            throw new ModelException("Invalid criteria", e);
+            if (batchSize > 1) {
+                builder.optArgument("batchifier", "stack");
+            }
         }
         logger.info("Loading model {} on {}.", id, device);
         if ("nc".equals(device.getDeviceType())) {
@@ -145,9 +163,6 @@ public final class ModelInfo implements AutoCloseable {
             builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
         } else {
             builder.optDevice(device);
-        }
-        if (batchSize > 1) {
-            builder.optArgument("batchifier", "stack");
         }
 
         try {
