@@ -12,6 +12,41 @@ on:
 
 
 jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new GPU instance
+        id: create_gpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_gpu $token
+      - name: Create new Graviton instance
+        id: create_aarch64
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_graviton $token
+      - name: Create new Inferentia instance
+        id: create_inf
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_inf $token
+    outputs:
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_gpu_instance_id }}
+      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
+      inf_instance_id: ${{ steps.create_inf.outputs.action_inf_instance_id }}
+
   cpu-test:
     runs-on: ubuntu-latest
     strategy:
@@ -38,8 +73,7 @@ jobs:
         run: |
           docker pull deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly
           mkdir logs
-          mkdir models && cd models
-          ../download_models.sh ${{ matrix.arch }}
+          ./download_models.sh ${{ matrix.arch }}
       - name: Test Pytorch python mode
         if: ${{ matrix.arch != 'cpu' }}
         working-directory: tests/integration
@@ -65,3 +99,158 @@ jobs:
         with:
           name: ${{ matrix.arch }}-logs
           path: tests/integration/logs/
+
+  inferentia-test:
+    runs-on: [ self-hosted, inf ]
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: 11
+      - uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Install DJL-Bench
+        working-directory: benchmark
+        run: ./gradlew installOnLinux
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          sudo chmod 666 /var/run/docker.sock
+          yes | docker system prune -a --volumes
+          docker pull deepjavalibrary/djl-serving:pytorch-inf1-nightly
+          mkdir logs
+          ./download_models.sh pytorch-inf1
+      - name: Test Pytorch Binary mode
+        working-directory: tests/integration
+        run: |
+          ./launch_container.sh deepjavalibrary/djl-serving:pytorch-inf1-nightly $PWD/models pytorch-inf1 \
+          serve -m test::PyTorch=file:///opt/ml/model/resnet18_inf1.tar.gz?model_name=resnet18_inf1
+          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytorch-inf1-logs
+          path: tests/integration/logs/
+
+  gpu-test:
+    runs-on: [ self-hosted, gpu ]
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: 11
+      - uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Install DJL-Bench
+        working-directory: benchmark
+        run: ./gradlew installOnLinux
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          sudo chmod 666 /var/run/docker.sock
+          yes | docker system prune -a --volumes
+          docker pull deepjavalibrary/djl-serving:pytorch-cu113-nightly
+          mkdir logs
+          ./download_models.sh pytorch-cu113
+      - name: Test Pytorch python mode
+        working-directory: tests/integration
+        run: |
+          ./launch_container.sh deepjavalibrary/djl-serving:pytorch-cu113-nightly $PWD/models pytorch-cu113 \
+          serve -m test::Python=file:///opt/ml/model/resnet18_serving_all.zip
+          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytorch-gpu-logs
+          path: tests/integration/logs/
+
+  aarch64-test:
+    runs-on: [ self-hosted, aarch64 ]
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install docker and clean env
+        working-directory: serving/docker
+        run: |
+          ./scripts/install_docker.sh
+          sudo chmod 666 /var/run/docker.sock
+          yes | docker system prune -a --volumes
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: 11
+          architecture: aarch64
+      - uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Install DJL-Bench
+        working-directory: benchmark
+        run: ./gradlew installOnLinux
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:aarch64-nightly
+          mkdir logs
+          ./download_models.sh aarch64
+      - name: Test PyTorch Binary mode
+        working-directory: tests/integration
+        run: |
+          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
+          serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
+          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytorch-aarch64-logs
+          path: tests/integration/logs/
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, inferentia-test, aarch64-test, gpu-test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.inf_instance_id }}
+          ./stop_instance.sh $instance_id
