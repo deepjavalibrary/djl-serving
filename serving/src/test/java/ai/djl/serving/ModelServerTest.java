@@ -75,6 +75,7 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
@@ -140,6 +141,15 @@ public class ModelServerTest {
         Files.createDirectories(deps);
         Path dest = deps.resolve("test.jar");
         ZipUtils.zip(Paths.get("build/classes/java/test/"), dest, true);
+        String engineCacheDir = Utils.getEngineCacheDir().toString();
+        System.setProperty("DJL_CACHE_DIR", "build/cache");
+        System.setProperty("ENGINE_CACHE_DIR", engineCacheDir);
+    }
+
+    @AfterSuite
+    public void afterSuite() {
+        System.clearProperty("DJL_CACHE_DIR");
+        System.clearProperty("ENGINE_CACHE_DIR");
     }
 
     @AfterMethod
@@ -226,6 +236,7 @@ public class ModelServerTest {
             Path mar = modelStore.resolve("torchServe.mar");
             Path torchServe = modelStore.resolve("torchServe");
             Files.createDirectories(torchServe.resolve("MAR-INF"));
+            Files.createDirectories(torchServe.resolve("code"));
             ZipUtils.zip(torchServe, mar, false);
 
             url = server.mapModelUrl(mar);

@@ -35,6 +35,7 @@ import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
+import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -55,7 +56,6 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -77,6 +77,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /** The main entry point for model server. */
 public class ModelServer implements AutoCloseable {
@@ -337,11 +338,12 @@ public class ModelServer implements AutoCloseable {
             }
 
             // Check folders to see if they can be models as well
-            urls =
-                    Files.list(modelStore)
-                            .map(this::mapModelUrl)
-                            .filter(Objects::nonNull)
-                            .collect(Collectors.toList());
+            try (Stream<Path> stream = Files.list(modelStore)) {
+                urls =
+                        stream.map(this::mapModelUrl)
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+            }
         } else {
             String[] modelsUrls = loadModels.split("[, ]+");
             urls = Arrays.asList(modelsUrls);
@@ -504,12 +506,7 @@ public class ModelServer implements AutoCloseable {
                 return null;
             }
 
-            File[] files = path.toFile().listFiles();
-            if (files != null && files.length == 1 && files[0].isDirectory()) {
-                // handle archive file contains folder name case
-                path = files[0].toPath().toAbsolutePath();
-            }
-
+            path = Utils.getNestedModelDir(path);
             String url = path.toUri().toURL().toString();
             String modelName = ModelInfo.inferModelNameFromUrl(url);
             String engine;
@@ -549,6 +546,8 @@ public class ModelServer implements AutoCloseable {
     }
 
     private String inferEngine(Path modelDir, String modelName) {
+        modelDir = Utils.getNestedModelDir(modelDir);
+
         Path file = modelDir.resolve("serving.properties");
         if (Files.isRegularFile(file)) {
             Properties prop = new Properties();
