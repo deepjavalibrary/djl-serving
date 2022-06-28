@@ -2,6 +2,9 @@
 
 platform=$1 # expected values are "cpu" "cpu-full" "pytorch-cu113" "pytorch-inf1" "aarch64"
 
+rm -rf models
+mkdir models && cd models
+
 # all platform models except aarch
 general_platform_models_urls=(
 "https://resources.djl.ai/test-models/pytorch/resnet18_serving_all.zip"
