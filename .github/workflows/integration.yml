@@ -225,7 +225,7 @@ jobs:
       - name: Test PyTorch Binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:aarch64-nightly $PWD/models aarch64 \
           serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
