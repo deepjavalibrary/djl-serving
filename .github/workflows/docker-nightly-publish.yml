@@ -58,12 +58,13 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token
+          ./start_instance.sh action_graviton $token djl-serving
     outputs:
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
 
   nightly-aarch64:
     runs-on: [ self-hosted, aarch64 ]
+    timeout-minutes: 30
     needs: create-aarch64-runner
     steps:
       - uses: actions/checkout@v3
