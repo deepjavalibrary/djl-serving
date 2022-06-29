@@ -11,6 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
 ARG djl_version=0.18.0~SNAPSHOT
+ARG torch_version=1.11.0
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -38,6 +39,7 @@ RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
+    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_inferentia.sh && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
