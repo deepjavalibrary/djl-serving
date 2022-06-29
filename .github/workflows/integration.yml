@@ -23,7 +23,7 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_gpu $token
+          ./start_instance.sh action_gpu $token djl-serving
       - name: Create new Graviton instance
         id: create_aarch64
         run: |
@@ -32,7 +32,7 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token
+          ./start_instance.sh action_graviton $token djl-serving
       - name: Create new Inferentia instance
         id: create_inf
         run: |
@@ -41,7 +41,7 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_inf $token
+          ./start_instance.sh action_inf $token djl-serving
     outputs:
       gpu_instance_id: ${{ steps.create_gpu.outputs.action_gpu_instance_id }}
       aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
@@ -102,6 +102,7 @@ jobs:
 
   inferentia-test:
     runs-on: [ self-hosted, inf ]
+    timeout-minutes: 30
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
@@ -147,6 +148,7 @@ jobs:
 
   gpu-test:
     runs-on: [ self-hosted, gpu ]
+    timeout-minutes: 30
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
@@ -192,6 +194,7 @@ jobs:
 
   aarch64-test:
     runs-on: [ self-hosted, aarch64 ]
+    timeout-minutes: 30
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
