@@ -40,7 +40,7 @@ while true; do
     echo "DJL serving started"
     break
   fi
-  if [[ "$retry" -ge 5 ]]; then
+  if [[ "$retry" -ge 8 ]]; then
     echo "Max retry exceeded."
     exit 1
   fi
