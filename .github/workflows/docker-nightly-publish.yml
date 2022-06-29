@@ -68,11 +68,9 @@ jobs:
     needs: create-aarch64-runner
     steps:
       - uses: actions/checkout@v3
-      - name: Install docker and clean env
+      - name: Clean docker env
         working-directory: serving/docker
         run: |
-          ./scripts/install_docker.sh
-          sudo chmod 666 /var/run/docker.sock
           yes | docker system prune -a --volumes
       - name: Login to Docker
         uses: docker/login-action@v2
