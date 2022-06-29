@@ -26,9 +26,6 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN [ "$djl_version" != *SNAPSHOT ] \
-    djl-serving -i ai.djl.pytorch:pytorch-jni:${torch_version}-${djl_version}
-
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV OMP_NUM_THREADS=1
