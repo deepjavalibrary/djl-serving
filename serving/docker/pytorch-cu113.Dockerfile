@@ -20,12 +20,14 @@ COPY config.properties /opt/djl/conf/
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
+    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_python.sh && \
     pip3 install numpy && pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
+RUN [ "$djl_version" != *SNAPSHOT ] \
+    djl-serving -i ai.djl.pytorch:pytorch-jni:${torch_version}-${djl_version}
 
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64

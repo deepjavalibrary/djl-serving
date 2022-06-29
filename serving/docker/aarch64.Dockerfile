@@ -31,8 +31,9 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/
 
 RUN scripts/install_djl_serving.sh $djl_version && \
+    scripts/install_djl_serving.sh $djl_version 1.11.0 && \
+    djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:1.11.0:linux-aarch64 && \
     rm -rf scripts && \
-    apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
-    djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:1.11.0:linux-aarch64
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"

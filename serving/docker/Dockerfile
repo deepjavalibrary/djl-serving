@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04 AS base
-ARG djl_version=0.17.0
+ARG djl_version=0.18.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf
@@ -40,10 +40,12 @@ LABEL maintainer="djl-dev@amazon.com"
 FROM base AS cpu-full
 
 COPY scripts scripts/
-RUN scripts/install_python.sh && rm -rf scripts && pip3 cache purge && \
-    apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
+RUN scripts/install_python.sh && \
+    scripts/install_djl_serving.sh $djl_version 1.11.0 && \
     djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.0:linux-x86_64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64 && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.17.0 && \
-    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.11.0
+    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.11.0 && \
+    rm -rf scripts && pip3 cache purge && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
