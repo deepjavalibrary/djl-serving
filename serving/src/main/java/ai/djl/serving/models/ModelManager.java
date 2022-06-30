@@ -94,7 +94,7 @@ public final class ModelManager {
 
         return CompletableFuture.supplyAsync(
                 () -> {
-                    for (ModelInfo model : workflow.getModels()) {
+                    for (ModelInfo<Input, Output> model : workflow.getModels()) {
                         try {
                             // Install engine if necessary
                             String engine = model.getEngineName();
@@ -124,7 +124,7 @@ public final class ModelManager {
             logger.warn("Model not found: " + workflowName);
             return false;
         }
-        Set<ModelInfo> candidateModelsToUnregister = new HashSet<>();
+        Set<ModelInfo<Input, Output>> candidateModelsToUnregister = new HashSet<>();
         if (version == null) {
             // unregister all versions
             for (Workflow workflow : endpoint.getWorkflows()) {
@@ -150,7 +150,7 @@ public final class ModelManager {
 
         // Unregister candidate models if they are not used for a remaining endpoint
         candidateModelsToUnregister.removeAll(getModels());
-        for (ModelInfo model : candidateModelsToUnregister) {
+        for (ModelInfo<Input, Output> model : candidateModelsToUnregister) {
             wlm.unregisterModel(model);
         }
 
@@ -168,7 +168,7 @@ public final class ModelManager {
      * @see WorkerPool#scaleWorkers(Device, int, int)
      */
     public Workflow scaleWorkers(Workflow workflow, Device device, int minWorkers, int maxWorkers) {
-        for (ModelInfo model : workflow.getModels()) {
+        for (ModelInfo<Input, Output> model : workflow.getModels()) {
             scaleWorkers(model, device, minWorkers, maxWorkers);
         }
         return workflow;
@@ -184,7 +184,8 @@ public final class ModelManager {
      * @return the info about the scaled workflow
      * @see WorkerPool#scaleWorkers(Device, int, int)
      */
-    public ModelInfo scaleWorkers(ModelInfo model, Device device, int minWorkers, int maxWorkers) {
+    public ModelInfo<Input, Output> scaleWorkers(
+            ModelInfo<Input, Output> model, Device device, int minWorkers, int maxWorkers) {
         logger.debug("updateModel: {}", model);
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
         wlm.getWorkerPoolForModel(model).scaleWorkers(device, minWorkers, maxWorkers);
@@ -205,7 +206,7 @@ public final class ModelManager {
      *
      * @return all models in an endpoint
      */
-    public Set<ModelInfo> getModels() {
+    public Set<ModelInfo<Input, Output>> getModels() {
         return getEndpoints().values().stream()
                 .flatMap(e -> e.getWorkflows().stream())
                 .flatMap(w -> w.getModels().stream())
@@ -287,7 +288,7 @@ public final class ModelManager {
 
         List<DescribeWorkflowResponse> resps = new ArrayList<>();
         for (Workflow workflow : list) {
-            for (ModelInfo model : workflow.getModels()) {
+            for (ModelInfo<Input, Output> model : workflow.getModels()) {
                 DescribeWorkflowResponse resp = new DescribeWorkflowResponse();
                 resp.setWorkflowName(model.getModelId());
                 resp.setWorkflowUrl(model.getModelUrl());
@@ -297,7 +298,7 @@ public final class ModelManager {
                 resp.setQueueLength(wlm.getQueueLength(model));
                 resp.setLoadedAtStartup(startupWorkflows.contains(model.getModelId()));
 
-                WorkerPool wp = wlm.getWorkerPoolForModel(model);
+                WorkerPool<Input, Output> wp = wlm.getWorkerPoolForModel(model);
                 resp.setMaxWorkers(wp.getMaxWorkers());
                 resp.setMinWorkers(wp.getMinWorkers());
 
@@ -310,8 +311,8 @@ public final class ModelManager {
                     resp.setStatus(status.name());
                 }
 
-                List<WorkerThread> workers = wlm.getWorkers(model);
-                for (WorkerThread worker : workers) {
+                List<WorkerThread<Input, Output>> workers = wlm.getWorkers(model);
+                for (WorkerThread<Input, Output> worker : workers) {
                     int workerId = worker.getWorkerId();
                     long startTime = worker.getStartTime();
                     boolean isRunning = worker.isRunning();
@@ -339,7 +340,7 @@ public final class ModelManager {
                     for (Endpoint endpoint : endpoints.values()) {
                         for (Workflow p : endpoint.getWorkflows()) {
                             String workflowName = p.getName();
-                            for (ModelInfo m : p.getModels()) {
+                            for (ModelInfo<Input, Output> m : p.getModels()) {
                                 String modelName = m.getModelId();
                                 if (!modelName.equals(workflowName)) {
                                     modelName = workflowName + ':' + modelName; // NOPMD

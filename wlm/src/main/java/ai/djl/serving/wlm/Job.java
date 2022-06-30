@@ -12,13 +12,11 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.modality.Input;
-
 /** A class represents an inference job. */
-public class Job {
+public class Job<I, O> {
 
-    private ModelInfo modelInfo;
-    private Input input;
+    private ModelInfo<I, O> modelInfo;
+    private I input;
     private long begin;
 
     /**
@@ -27,7 +25,7 @@ public class Job {
      * @param modelInfo the model to run the job
      * @param input the input data
      */
-    public Job(ModelInfo modelInfo, Input input) {
+    public Job(ModelInfo<I, O> modelInfo, I input) {
         this.modelInfo = modelInfo;
         this.input = input;
 
@@ -39,7 +37,7 @@ public class Job {
      *
      * @return the model that associated with this job
      */
-    public ModelInfo getModel() {
+    public ModelInfo<I, O> getModel() {
         return modelInfo;
     }
 
@@ -48,7 +46,7 @@ public class Job {
      *
      * @return the input data
      */
-    public Input getInput() {
+    public I getInput() {
         return input;
     }
 

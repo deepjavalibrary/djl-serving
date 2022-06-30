@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author erik.bamberg@web.de
  */
-public class TemporaryBatchAggregator extends BatchAggregator {
+public class TemporaryBatchAggregator<I, O> extends BatchAggregator<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(TemporaryBatchAggregator.class);
 
@@ -40,7 +40,8 @@ public class TemporaryBatchAggregator extends BatchAggregator {
      * @param model the model to run for.
      * @param jobQueue reference to external job queue for polling.
      */
-    public TemporaryBatchAggregator(ModelInfo model, LinkedBlockingDeque<WorkerJob> jobQueue) {
+    public TemporaryBatchAggregator(
+            ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
         super(model, jobQueue);
         this.idleSince = System.currentTimeMillis();
         this.maxIdleTime = model.getMaxIdleTime();
@@ -48,9 +49,9 @@ public class TemporaryBatchAggregator extends BatchAggregator {
 
     /** {@inheritDoc} */
     @Override
-    protected List<WorkerJob> pollBatch() throws InterruptedException {
-        List<WorkerJob> list = new ArrayList<>(batchSize);
-        WorkerJob wj = jobQueue.poll(maxIdleTime, TimeUnit.SECONDS);
+    protected List<WorkerJob<I, O>> pollBatch() throws InterruptedException {
+        List<WorkerJob<I, O>> list = new ArrayList<>(batchSize);
+        WorkerJob<I, O> wj = jobQueue.poll(maxIdleTime, TimeUnit.SECONDS);
         if (wj != null && wj.getJob() != null) {
             list.add(wj);
             drainTo(list, maxBatchDelay);

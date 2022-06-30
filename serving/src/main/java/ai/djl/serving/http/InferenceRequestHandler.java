@@ -180,12 +180,14 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             Device device = Device.fromName(deviceName, engine);
 
             logger.info("Loading model {} from: {}", workflowName, modelUrl);
-            ModelInfo modelInfo =
-                    new ModelInfo(
+            ModelInfo<Input, Output> modelInfo =
+                    new ModelInfo<>(
                             workflowName,
                             modelUrl,
                             version,
                             engineName,
+                            Input.class,
+                            Output.class,
                             config.getJobQueueSize(),
                             config.getMaxIdleTime(),
                             config.getMaxBatchDelay(),

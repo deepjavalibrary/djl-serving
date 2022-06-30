@@ -14,8 +14,6 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Device;
 import ai.djl.inference.Predictor;
-import ai.djl.modality.Input;
-import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WorkerJob;
@@ -30,16 +28,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** The {@link WorkerThread} is the worker managed by the {@link WorkLoadManager}. */
-public final class WorkerThread implements Runnable {
+public final class WorkerThread<I, O> implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerThread.class);
 
     private String workerName;
-    private Predictor<Input, Output> predictor;
+    private Predictor<I, O> predictor;
 
     private AtomicBoolean running = new AtomicBoolean(true);
 
-    private BatchAggregator aggregator;
+    private BatchAggregator<I, O> aggregator;
     private Device device;
     private AtomicReference<Thread> currentThread = new AtomicReference<>();
     private WorkerState state;
@@ -52,14 +50,14 @@ public final class WorkerThread implements Runnable {
      *
      * @param builder build a new worker thread using this builder.
      */
-    private WorkerThread(Builder builder) {
+    private WorkerThread(Builder<I, O> builder) {
         this.workerName = buildWorkerName(builder.model);
         this.aggregator = builder.aggregator;
         this.workerId = new WorkerIdGenerator().generate();
         this.startTime = System.currentTimeMillis();
         this.fixPoolThread = builder.fixPoolThread;
         this.device = builder.device;
-        ZooModel<Input, Output> model = builder.model.getModel(device);
+        ZooModel<I, O> model = builder.model.getModel(device);
 
         predictor = model.newPredictor();
     }
@@ -71,14 +69,14 @@ public final class WorkerThread implements Runnable {
         thread.setName(workerName);
         currentThread.set(thread);
         this.state = WorkerState.WORKER_STARTED;
-        List<Input> req = null;
+        List<I> req = null;
         String errorMessage = "Worker shutting down";
         try {
             while (isRunning() && !aggregator.isFinished()) {
                 req = aggregator.getRequest();
                 if (req != null && !req.isEmpty()) {
                     try {
-                        List<Output> reply = predictor.batchPredict(req);
+                        List<O> reply = predictor.batchPredict(req);
                         aggregator.sendResponse(reply);
                     } catch (TranslateException e) {
                         logger.warn("Failed to predict", e);
@@ -165,7 +163,7 @@ public final class WorkerThread implements Runnable {
         predictor.close();
     }
 
-    private String buildWorkerName(ModelInfo model) {
+    private String buildWorkerName(ModelInfo<I, O> model) {
         String modelId = model.getModelId();
         if (modelId.length() > 25) {
             modelId = modelId.substring(0, 25);
@@ -195,19 +193,23 @@ public final class WorkerThread implements Runnable {
     /**
      * Creates a builder to build a {@code WorkerThread}.
      *
+     * @param <I> the model input class
+     * @param <O> the model output class
+     * @param i the model input class
+     * @param o the model output class
      * @return a new builder
      */
-    public static Builder builder() {
-        return new Builder();
+    public static <I, O> Builder<I, O> builder(Class<I> i, Class<O> o) {
+        return new Builder<>();
     }
 
     /** A Builder to construct a {@code WorkerThread}. */
-    public static class Builder {
+    public static class Builder<I, O> {
 
-        private ModelInfo model;
+        private ModelInfo<I, O> model;
         private Device device;
-        private BatchAggregator aggregator;
-        private LinkedBlockingDeque<WorkerJob> jobQueue;
+        private BatchAggregator<I, O> aggregator;
+        private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
         private boolean fixPoolThread;
 
         Builder() {
@@ -219,16 +221,16 @@ public final class WorkerThread implements Runnable {
          *
          * @return self reference to this builder
          */
-        protected Builder self() {
+        protected Builder<I, O> self() {
             return this;
         }
 
         protected void preBuildProcessing() {
             if (aggregator == null) {
                 if (fixPoolThread) {
-                    aggregator = new PermanentBatchAggregator(model, jobQueue);
+                    aggregator = new PermanentBatchAggregator<>(model, jobQueue);
                 } else {
-                    aggregator = new TemporaryBatchAggregator(model, jobQueue);
+                    aggregator = new TemporaryBatchAggregator<>(model, jobQueue);
                 }
             }
         }
@@ -251,10 +253,10 @@ public final class WorkerThread implements Runnable {
          *
          * @return an {@link WorkerThread}
          */
-        public WorkerThread build() {
+        public WorkerThread<I, O> build() {
             validate();
             preBuildProcessing();
-            return new WorkerThread(this);
+            return new WorkerThread<>(this);
         }
 
         /**
@@ -263,7 +265,7 @@ public final class WorkerThread implements Runnable {
          * @param model the model to set
          * @return self-reference to this builder.
          */
-        public Builder setModel(ModelInfo model) {
+        public Builder<I, O> setModel(ModelInfo<I, O> model) {
             this.model = model;
             return self();
         }
@@ -274,7 +276,7 @@ public final class WorkerThread implements Runnable {
          * @param device the device to run operations on
          * @return self-reference to this builder
          */
-        public Builder setDevice(Device device) {
+        public Builder<I, O> setDevice(Device device) {
             this.device = device;
             return self();
         }
@@ -286,7 +288,7 @@ public final class WorkerThread implements Runnable {
          * @param aggregator the {@code BatchAggregator} to set
          * @return self-reference to this builder.
          */
-        public Builder optAggregator(BatchAggregator aggregator) {
+        public Builder<I, O> optAggregator(BatchAggregator<I, O> aggregator) {
             this.aggregator = aggregator;
             return self();
         }
@@ -299,7 +301,7 @@ public final class WorkerThread implements Runnable {
          * @param jobQueue the jobQueue to set
          * @return self-reference to this builder.
          */
-        public Builder setJobQueue(LinkedBlockingDeque<WorkerJob> jobQueue) {
+        public Builder<I, O> setJobQueue(LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
             this.jobQueue = jobQueue;
             return self();
         }
@@ -311,7 +313,7 @@ public final class WorkerThread implements Runnable {
          * @param fixPoolThread the fixPoolThread to set
          * @return self-reference to this builder.
          */
-        public Builder optFixPoolThread(boolean fixPoolThread) {
+        public Builder<I, O> optFixPoolThread(boolean fixPoolThread) {
             this.fixPoolThread = fixPoolThread;
             return self();
         }

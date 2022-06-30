@@ -17,12 +17,11 @@ import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
-import ai.djl.modality.Input;
-import ai.djl.modality.Output;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.translate.ServingTranslator;
+import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
 
 import org.slf4j.Logger;
@@ -36,7 +35,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** A class represent a loaded model and it's metadata. */
-public final class ModelInfo implements AutoCloseable {
+public final class ModelInfo<I, O> implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
 
@@ -59,16 +58,22 @@ public final class ModelInfo implements AutoCloseable {
     private String translator;
     private transient Status status;
 
-    private transient Criteria<Input, Output> criteria;
-    private transient Map<Device, ZooModel<Input, Output>> model;
+    private transient Class<I> inputClass;
+    private transient Class<O> outputClass;
+    private transient Criteria<I, O> criteria;
+    private transient Map<Device, ZooModel<I, O>> model;
 
     /**
      * Constructs a new {@code ModelInfo} instance.
      *
+     * @param inputClass the model input class
+     * @param outputClass the model output class
      * @param modelUrl the model Url
      */
-    public ModelInfo(String modelUrl) {
+    public ModelInfo(String modelUrl, Class<I> inputClass, Class<O> outputClass) {
         this.modelUrl = modelUrl;
+        this.inputClass = inputClass;
+        this.outputClass = outputClass;
     }
 
     /**
@@ -76,8 +81,10 @@ public final class ModelInfo implements AutoCloseable {
      *
      * @param criteria the model criteria
      */
-    public ModelInfo(Criteria<Input, Output> criteria) {
+    public ModelInfo(Criteria<I, O> criteria) {
         this.criteria = criteria;
+        inputClass = criteria.getInputClass();
+        outputClass = criteria.getOutputClass();
     }
 
     /**
@@ -87,6 +94,8 @@ public final class ModelInfo implements AutoCloseable {
      * @param modelUrl the model url
      * @param version the version of the model
      * @param engineName the engine to load the model
+     * @param inputClass the model input class
+     * @param outputClass the model output class
      * @param queueSize the maximum request queue size
      * @param maxIdleTime the initial maximum idle time for workers.
      * @param maxBatchDelay the initial maximum delay when scaling up before giving up.
@@ -97,6 +106,8 @@ public final class ModelInfo implements AutoCloseable {
             String modelUrl,
             String version,
             String engineName,
+            Class<I> inputClass,
+            Class<O> outputClass,
             int queueSize,
             int maxIdleTime,
             int maxBatchDelay,
@@ -105,6 +116,8 @@ public final class ModelInfo implements AutoCloseable {
         this.modelUrl = modelUrl;
         this.version = version;
         this.engineName = engineName;
+        this.inputClass = inputClass;
+        this.outputClass = outputClass;
         this.maxBatchDelay = maxBatchDelay;
         this.maxIdleTime = maxIdleTime; // default max idle time 60s
         this.queueSize = queueSize;
@@ -118,18 +131,19 @@ public final class ModelInfo implements AutoCloseable {
      * @throws IOException if failed to read model file
      * @throws ModelException if failed to load the specified model
      */
+    @SuppressWarnings("unchecked")
     public void load(Device device) throws ModelException, IOException {
         device = withDefaultDevice(device);
         if (getModels().containsKey(device)) {
             return;
         }
-        Criteria.Builder<Input, Output> builder;
+        Criteria.Builder<I, O> builder;
         if (criteria != null) {
             builder = criteria.toBuilder();
         } else {
             builder =
                     Criteria.builder()
-                            .setTypes(Input.class, Output.class)
+                            .setTypes(inputClass, outputClass)
                             .optModelUrls(modelUrl)
                             .optModelName(modelName)
                             .optEngine(engineName)
@@ -143,7 +157,7 @@ public final class ModelInfo implements AutoCloseable {
                 if (translator != null) {
                     Class<? extends ServingTranslator> clazz =
                             Class.forName(translator).asSubclass(ServingTranslator.class);
-                    builder.optTranslator(clazz.getConstructor().newInstance());
+                    builder.optTranslator((Translator<I, O>) clazz.getConstructor().newInstance());
                 }
                 if (translatorFactory != null) {
                     Class<? extends TranslatorFactory> clazz =
@@ -184,7 +198,7 @@ public final class ModelInfo implements AutoCloseable {
      *     workers before giving up to offer the job to the queue.
      * @return new configured ModelInfo.
      */
-    public ModelInfo configureModelBatch(int batchSize, int maxBatchDelay) {
+    public ModelInfo<I, O> configureModelBatch(int batchSize, int maxBatchDelay) {
         this.batchSize = batchSize;
         this.maxBatchDelay = maxBatchDelay;
         return this;
@@ -198,12 +212,12 @@ public final class ModelInfo implements AutoCloseable {
      * @param maxIdleTime time a WorkerThread can be idle before scaling down this worker.
      * @return new configured ModelInfo.
      */
-    public ModelInfo configurePool(int maxIdleTime) {
+    public ModelInfo<I, O> configurePool(int maxIdleTime) {
         this.maxIdleTime = maxIdleTime;
         return this;
     }
 
-    private Map<Device, ZooModel<Input, Output>> getModels() {
+    private Map<Device, ZooModel<I, O>> getModels() {
         if (model == null) {
             model = new ConcurrentHashMap<>();
         }
@@ -216,7 +230,7 @@ public final class ModelInfo implements AutoCloseable {
      * @param device the device to return the model on
      * @return the loaded {@link ZooModel}
      */
-    public ZooModel<Input, Output> getModel(Device device) {
+    public ZooModel<I, O> getModel(Device device) {
         device = withDefaultDevice(device);
         if (getModels().get(device) == null) {
             throw new IllegalStateException("Model \"" + id + "\" has not been loaded yet.");
@@ -285,6 +299,41 @@ public final class ModelInfo implements AutoCloseable {
      */
     public Path getModelDir() {
         return getModels().values().iterator().next().getModelPath();
+    }
+
+    /**
+     * Returns the model input class.
+     *
+     * @return the model input class
+     */
+    public Class<I> getInputClass() {
+        return inputClass;
+    }
+
+    /**
+     * Returns the model output class.
+     *
+     * @return the model output class
+     */
+    public Class<O> getOutputClass() {
+        return outputClass;
+    }
+
+    /**
+     * Clarifies the input and output class when not specified.
+     *
+     * <p>Warning: This is intended for internal use with reflection.
+     *
+     * @param inputClass the model input class
+     * @param outputClass the model output class
+     */
+    public void hasInputOutputClass(Class<I> inputClass, Class<O> outputClass) {
+        if (this.inputClass != null || this.outputClass != null) {
+            throw new IllegalStateException(
+                    "hasInputOutputClass can only be used when input or output are not yet set");
+        }
+        this.inputClass = inputClass;
+        this.outputClass = outputClass;
     }
 
     /**
@@ -421,7 +470,7 @@ public final class ModelInfo implements AutoCloseable {
         if (!(o instanceof ModelInfo)) {
             return false;
         }
-        ModelInfo modelInfo = (ModelInfo) o;
+        ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) o;
         return id.equals(modelInfo.id) && Objects.equals(version, modelInfo.version);
     }
 

@@ -51,7 +51,7 @@ public class Workflow implements AutoCloseable {
 
     String name;
     String version;
-    Map<String, ModelInfo> models;
+    Map<String, ModelInfo<Input, Output>> models;
     Map<String, WorkflowExpression> expressions;
     Map<String, WorkflowFunction> funcs;
 
@@ -60,7 +60,7 @@ public class Workflow implements AutoCloseable {
      *
      * @param model the model for the workflow
      */
-    public Workflow(ModelInfo model) {
+    public Workflow(ModelInfo<Input, Output> model) {
         String modelName = "model";
         this.name = model.getModelId();
         this.version = model.getVersion();
@@ -84,7 +84,7 @@ public class Workflow implements AutoCloseable {
     public Workflow(
             String name,
             String version,
-            Map<String, ModelInfo> models,
+            Map<String, ModelInfo<Input, Output>> models,
             Map<String, WorkflowExpression> expressions,
             Map<String, WorkflowFunction> funcs) {
         this.name = name;
@@ -99,7 +99,7 @@ public class Workflow implements AutoCloseable {
      *
      * @return the models used in the workflow
      */
-    public Collection<ModelInfo> getModels() {
+    public Collection<ModelInfo<Input, Output>> getModels() {
         return models.values();
     }
 
@@ -170,7 +170,7 @@ public class Workflow implements AutoCloseable {
     /** {@inheritDoc} * */
     @Override
     public void close() {
-        for (ModelInfo m : getModels()) {
+        for (ModelInfo<Input, Output> m : getModels()) {
             m.close();
         }
     }
@@ -267,7 +267,7 @@ public class Workflow implements AutoCloseable {
          * @return the function to execute the found executable
          */
         public WorkflowFunction getExecutable(String name) {
-            ModelInfo model = models.get(name);
+            ModelInfo<Input, Output> model = models.get(name);
             if (model != null) {
                 return new ModelWorkflowFunction(model);
             }

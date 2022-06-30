@@ -14,7 +14,6 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Device;
 import ai.djl.ModelException;
-import ai.djl.modality.Output;
 import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmException;
@@ -49,7 +48,7 @@ public class WorkLoadManager implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(WorkLoadManager.class);
     private ExecutorService threadPool;
 
-    private ConcurrentHashMap<ModelInfo, WorkerPool> workerPools;
+    private ConcurrentHashMap<ModelInfo<?, ?>, WorkerPool<?, ?>> workerPools;
 
     /** Constructs a {@link WorkLoadManager} instance. */
     public WorkLoadManager() {
@@ -60,12 +59,14 @@ public class WorkLoadManager implements AutoCloseable {
     /**
      * Returns the workers for the specific model.
      *
+     * @param <I> the model input class
+     * @param <O> the model output class
      * @param modelInfo the name of the model we are looking for.
      * @return the list of workers responsible to handle predictions for this model.
      */
-    public List<WorkerThread> getWorkers(ModelInfo modelInfo) {
-        List<WorkerThread> list;
-        WorkerPool pool = workerPools.get(modelInfo);
+    public <I, O> List<WorkerThread<I, O>> getWorkers(ModelInfo<I, O> modelInfo) {
+        List<WorkerThread<I, O>> list;
+        WorkerPool<I, O> pool = getWorkerPoolForModel(modelInfo);
         if (pool == null) {
             list = Collections.emptyList();
         } else {
@@ -82,8 +83,8 @@ public class WorkLoadManager implements AutoCloseable {
      *
      * @param model the model to remove
      */
-    public void unregisterModel(ModelInfo model) {
-        WorkerPool pool = getWorkerPoolForModel(model);
+    public void unregisterModel(ModelInfo<?, ?> model) {
+        WorkerPool<?, ?> pool = getWorkerPoolForModel(model);
         pool.scaleWorkers(null, 0, 0);
         workerPools.remove(model);
     }
@@ -92,27 +93,29 @@ public class WorkLoadManager implements AutoCloseable {
      * Adds an inference job to the job queue of the next free worker. scales up worker if
      * necessary.
      *
+     * @param <I> the model input class
+     * @param <O> the model output class
      * @param job an inference job to be executed.
      * @return {@code true} if submit success, false otherwise.
      */
-    public CompletableFuture<Output> runJob(Job job) {
-        CompletableFuture<Output> result = new CompletableFuture<>();
-        ModelInfo modelInfo = job.getModel();
+    public <I, O> CompletableFuture<O> runJob(Job<I, O> job) {
+        CompletableFuture<O> result = new CompletableFuture<>();
+        ModelInfo<I, O> modelInfo = job.getModel();
         if (modelInfo.getStatus() != ModelInfo.Status.READY) {
             result.completeExceptionally(
                     new WlmException("Model is not ready: " + modelInfo.getStatus()));
             return result;
         }
 
-        WorkerPool pool = getWorkerPoolForModel(modelInfo);
+        WorkerPool<I, O> pool = getWorkerPoolForModel(modelInfo);
         int maxWorkers = pool.getMaxWorkers();
         if (maxWorkers == 0) {
             result.completeExceptionally(
                     new WlmShutdownException("All model workers has been shutdown: " + modelInfo));
             return result;
         }
-        LinkedBlockingDeque<WorkerJob> queue = pool.getJobQueue();
-        if (!queue.offer(new WorkerJob(job, result))) {
+        LinkedBlockingDeque<WorkerJob<I, O>> queue = pool.getJobQueue();
+        if (!queue.offer(new WorkerJob<>(job, result))) {
             result.completeExceptionally(
                     new WlmCapacityException(
                             "Worker queue capacity exceeded for model: " + modelInfo));
@@ -143,13 +146,13 @@ public class WorkLoadManager implements AutoCloseable {
      * @param modelInfo the model we are interested in.
      * @return number of running workers.
      */
-    public int getNumRunningWorkers(ModelInfo modelInfo) {
+    public int getNumRunningWorkers(ModelInfo<?, ?> modelInfo) {
         int numWorking = 0;
-        WorkerPool pool = workerPools.get(modelInfo);
+        WorkerPool<?, ?> pool = workerPools.get(modelInfo);
         if (pool != null) {
             pool.cleanup();
-            List<WorkerThread> threads = pool.getWorkers();
-            for (WorkerThread thread : threads) {
+            List<? extends WorkerThread<?, ?>> threads = pool.getWorkers();
+            for (WorkerThread<?, ?> thread : threads) {
                 if ((thread.getState() != WorkerState.WORKER_STOPPED)
                         && (thread.getState() != WorkerState.WORKER_ERROR)
                         && (thread.getState() != WorkerState.WORKER_SCALED_DOWN)) {
@@ -166,26 +169,30 @@ public class WorkLoadManager implements AutoCloseable {
      * @param modelInfo the model
      * @return the current number of request in the queue
      */
-    public int getQueueLength(ModelInfo modelInfo) {
-        WorkerPool pool = getWorkerPoolForModel(modelInfo);
+    public int getQueueLength(ModelInfo<?, ?> modelInfo) {
+        WorkerPool<?, ?> pool = getWorkerPoolForModel(modelInfo);
         return pool.getJobQueue().size();
     }
 
     /**
      * Returns the {@link WorkerPool} for a model.
      *
+     * @param <I> the model input class
+     * @param <O> the model output class
      * @param modelInfo the model to get the worker pool for
      * @return the {@link WorkerPool}
      */
-    public WorkerPool getWorkerPoolForModel(ModelInfo modelInfo) {
-        return workerPools.computeIfAbsent(modelInfo, k -> new WorkerPool(modelInfo));
+    @SuppressWarnings("unchecked")
+    public <I, O> WorkerPool<I, O> getWorkerPoolForModel(ModelInfo<I, O> modelInfo) {
+        return (WorkerPool<I, O>)
+                workerPools.computeIfAbsent(modelInfo, k -> new WorkerPool<>(modelInfo));
     }
 
     /** {@inheritDoc} */
     @Override
     public void close() {
         threadPool.shutdownNow();
-        for (WorkerPool wp : workerPools.values()) {
+        for (WorkerPool<?, ?> wp : workerPools.values()) {
             wp.close();
         }
     }
@@ -195,18 +202,18 @@ public class WorkLoadManager implements AutoCloseable {
      *
      * @author erik.bamberg@web.de
      */
-    public final class WorkerPool implements AutoCloseable {
+    public final class WorkerPool<I, O> implements AutoCloseable {
 
-        private final ModelInfo model;
+        private final ModelInfo<I, O> model;
         private Map<Device, WorkerPoolDevice> devices;
-        private LinkedBlockingDeque<WorkerJob> jobQueue;
+        private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
 
         /**
          * Construct and initial data structure.
          *
          * @param model the model this WorkerPool belongs to.
          */
-        public WorkerPool(ModelInfo model) {
+        public WorkerPool(ModelInfo<I, O> model) {
             this.model = model;
             devices = new ConcurrentHashMap<>();
             jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
@@ -217,7 +224,7 @@ public class WorkLoadManager implements AutoCloseable {
          *
          * @return the workers
          */
-        public List<WorkerThread> getWorkers() {
+        public List<WorkerThread<I, O>> getWorkers() {
             return devices.values().stream()
                     .flatMap(d -> d.workers.stream())
                     .collect(Collectors.toList());
@@ -228,7 +235,7 @@ public class WorkLoadManager implements AutoCloseable {
          *
          * @return the jobQueue
          */
-        public LinkedBlockingDeque<WorkerJob> getJobQueue() {
+        public LinkedBlockingDeque<WorkerJob<I, O>> getJobQueue() {
             return jobQueue;
         }
 
@@ -258,7 +265,7 @@ public class WorkLoadManager implements AutoCloseable {
          * @param newMaxWorkers maximum amount of workers.
          * @return this {@link ModelInfo}
          */
-        public WorkerPool scaleWorkers(Device device, int newMinWorkers, int newMaxWorkers) {
+        public WorkerPool<I, O> scaleWorkers(Device device, int newMinWorkers, int newMaxWorkers) {
             synchronized (model) {
                 try {
                     model.load(device);
@@ -281,10 +288,10 @@ public class WorkLoadManager implements AutoCloseable {
 
                 cleanup();
 
-                List<WorkerThread> threads;
+                List<WorkerThread<I, O>> threads;
 
                 threads = getWorkers();
-                List<WorkerThread> fixedPoolThread =
+                List<WorkerThread<I, O>> fixedPoolThread =
                         threads.stream()
                                 .filter(WorkerThread::isFixPoolThread)
                                 .collect(Collectors.toList());
@@ -357,11 +364,11 @@ public class WorkLoadManager implements AutoCloseable {
         public void close() {
             model.close();
             for (WorkerPoolDevice wpd : devices.values()) {
-                for (WorkerThread worker : wpd.workers) {
+                for (WorkerThread<I, O> worker : wpd.workers) {
                     worker.shutdown(WorkerState.WORKER_STOPPED);
                 }
             }
-            for (WorkerJob wj : jobQueue) {
+            for (WorkerJob<I, O> wj : jobQueue) {
                 wj.getFuture().cancel(true);
             }
         }
@@ -398,7 +405,7 @@ public class WorkLoadManager implements AutoCloseable {
             private Device device;
             private int minWorkers;
             private int maxWorkers;
-            private List<WorkerThread> workers;
+            private List<WorkerThread<I, O>> workers;
 
             private WorkerPoolDevice(Device device, int minWorkers, int maxWorkers) {
                 this.device = device;
@@ -429,8 +436,8 @@ public class WorkLoadManager implements AutoCloseable {
 
                 for (int i = 0; i < count; ++i) {
 
-                    WorkerThread thread =
-                            WorkerThread.builder()
+                    WorkerThread<I, O> thread =
+                            WorkerThread.builder(model.getInputClass(), model.getOutputClass())
                                     .setModel(model)
                                     .setDevice(device)
                                     .setJobQueue(jobQueue)

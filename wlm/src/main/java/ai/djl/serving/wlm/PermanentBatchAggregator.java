@@ -27,7 +27,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  *
  * @author erik.bamberg@web.de
  */
-public class PermanentBatchAggregator extends BatchAggregator {
+public class PermanentBatchAggregator<I, O> extends BatchAggregator<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(TemporaryBatchAggregator.class);
 
@@ -37,15 +37,16 @@ public class PermanentBatchAggregator extends BatchAggregator {
      * @param model the model to use.
      * @param jobQueue the job queue for polling data from.
      */
-    public PermanentBatchAggregator(ModelInfo model, LinkedBlockingDeque<WorkerJob> jobQueue) {
+    public PermanentBatchAggregator(
+            ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
         super(model, jobQueue);
     }
 
     /** {@inheritDoc} */
     @Override
-    protected List<WorkerJob> pollBatch() throws InterruptedException {
-        List<WorkerJob> list = new ArrayList<>(batchSize);
-        WorkerJob wj = jobQueue.take();
+    protected List<WorkerJob<I, O>> pollBatch() throws InterruptedException {
+        List<WorkerJob<I, O>> list = new ArrayList<>(batchSize);
+        WorkerJob<I, O> wj = jobQueue.take();
         list.add(wj);
         drainTo(list, maxBatchDelay);
         logger.trace("sending jobs, size: {}", list.size());
