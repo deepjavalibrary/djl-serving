@@ -31,8 +31,12 @@ COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
+### Install DJL Serving and remove general python executor
 RUN scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_python.sh
+    scripts/install_python.sh && \
+    cd /usr/local/djl-serving-*/lib/ && \
+    rm -rf python*.jar && \
+    curl -O https://djl-misc.s3.amazonaws.com/rubikon/rubikon-0.18.0-SNAPSHOT.jar
 
 ### Deep Speed installations
 RUN apt-get update && \
