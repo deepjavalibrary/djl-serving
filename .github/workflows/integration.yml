@@ -131,14 +131,14 @@ jobs:
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:pytorch-inf1-nightly $PWD/models pytorch-inf1 \
-          serve -m test::PyTorch=file:///opt/ml/model/resnet18_inf1.tar.gz?model_name=resnet18_inf1
+          serve -m test::PyTorch=file:///opt/ml/model/resnet18_inf1_1_11.tar.gz?model_name=resnet18_inf1_1_11
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test Pytorch Python mode
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:pytorch-inf1-nightly $PWD/models pytorch-inf1 \
-          serve -m test::Python=file:///opt/ml/model/resnet18_inf1.tar.gz
+          serve -m test::Python=file:///opt/ml/model/resnet18_inf1_1_11.tar.gz
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: On fail step
