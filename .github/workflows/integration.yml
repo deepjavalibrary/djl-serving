@@ -82,13 +82,6 @@ jobs:
           serve -m test::Python=file:///opt/ml/model/resnet18_serving_all.zip
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
-      - name: Test PyTorch Binary mode
-        working-directory: tests/integration
-        run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
-          serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
-          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
