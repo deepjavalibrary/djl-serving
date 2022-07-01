@@ -59,45 +59,64 @@ public class PyModel extends BaseModel {
             throw new UnsupportedOperationException(
                     "Python engine does not support dynamic blocks");
         }
-        Path modelFile = findModelFile(prefix);
-        if (modelFile == null) {
-            throw new FileNotFoundException(".py file not found in: " + modelPath);
-        }
-        pyEnv.setEntryPoint(modelFile.toFile().getName());
+        String entryPoint = null;
         if (options != null) {
-            String pythonExecutable = (String) options.get("pythonExecutable");
-            if (pythonExecutable != null) {
-                pyEnv.setPythonExecutable(pythonExecutable);
-            }
-            String env = (String) options.get("env");
-            if (env != null) {
-                String[] envs = env.split(",");
-                for (String e : envs) {
-                    String[] kv = e.split("=", 2);
-                    if (kv.length > 1) {
-                        pyEnv.addEnv(kv[0].trim(), kv[1].trim());
-                    }
-                }
-            }
-            String predictTimeout = (String) options.get("predict_timeout");
-            if (predictTimeout != null) {
-                try {
-                    int timeoutSeconds = Integer.parseInt(predictTimeout);
-                    pyEnv.setPredictTimeout(timeoutSeconds);
-                } catch (NumberFormatException ignore) {
-                    logger.warn("Invalid predict_timeout value: " + predictTimeout);
-                }
-            }
-            String modelLoadingTimeout = (String) options.get("model_loading_timeout");
-            if (modelLoadingTimeout != null) {
-                try {
-                    int timeoutSeconds = Integer.parseInt(modelLoadingTimeout);
-                    pyEnv.setModelLoadingTimeout(timeoutSeconds);
-                } catch (NumberFormatException ignore) {
-                    logger.warn("Invalid model_loading_timeout value: " + modelLoadingTimeout);
+            for (Map.Entry<String, ?> entry : options.entrySet()) {
+                String key = entry.getKey();
+                String value = (String) entry.getValue();
+                switch (key) {
+                    case "pythonExecutable":
+                        pyEnv.setPythonExecutable(value);
+                        break;
+                    case "env":
+                        String[] envs = value.split(",");
+                        for (String e : envs) {
+                            String[] kv = e.split("=", 2);
+                            if (kv.length > 1) {
+                                pyEnv.addEnv(kv[0].trim(), kv[1].trim());
+                            }
+                        }
+                        break;
+                    case "predict_timeout":
+                        try {
+                            int timeoutSeconds = Integer.parseInt(value);
+                            pyEnv.setPredictTimeout(timeoutSeconds);
+                        } catch (NumberFormatException ignore) {
+                            logger.warn("Invalid predict_timeout value: " + value);
+                        }
+                        break;
+                    case "model_loading_timeout":
+                        try {
+                            int timeoutSeconds = Integer.parseInt(value);
+                            pyEnv.setModelLoadingTimeout(timeoutSeconds);
+                        } catch (NumberFormatException ignore) {
+                            logger.warn("Invalid model_loading_timeout value: " + value);
+                        }
+                        break;
+                    case "entryPoint":
+                        entryPoint = value;
+                        break;
+                    case "handler":
+                        pyEnv.setHandler(value);
+                        break;
+                    default:
+                        pyEnv.addParameter(key, value);
+                        break;
                 }
             }
         }
+
+        if (entryPoint == null) {
+            entryPoint = System.getenv("DJL_ENTRY_POINT");
+            if (entryPoint == null) {
+                Path modelFile = findModelFile(prefix);
+                if (modelFile == null) {
+                    throw new FileNotFoundException(".py file not found in: " + modelPath);
+                }
+                entryPoint = modelFile.toFile().getName();
+            }
+        }
+        pyEnv.setEntryPoint(entryPoint);
     }
 
     /** {@inheritDoc} */

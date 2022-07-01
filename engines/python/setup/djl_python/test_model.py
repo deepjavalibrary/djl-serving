@@ -22,13 +22,19 @@ from .np_util import to_nd_list
 from .service_loader import load_model_service
 
 
-def create_request(input_files):
+def create_request(input_files, parameters):
     request = Input()
     request.properties["device_id"] = "-1"
 
+    for parameter in parameters:
+        pair = parameter.split("=", 2)
+        if len(pair) != 2:
+            raise ValueError(f"Invalid model parameter: {parameter}")
+        request.properties[pair[0]] = pair[1]
+
     data_file = None
     for file in input_files:
-        pair = file.split("=")
+        pair = file.split("=", 2)
         if len(pair) == 1:
             key = None
             val = pair[0]
@@ -40,10 +46,14 @@ def create_request(input_files):
             data_file = val
 
         if not os.path.exists(val):
-            raise ValueError("--input file not found {}.".format(val))
-
-        with open(val, "rb") as f:
-            request.content.add(key=key, value=f.read(-1))
+            request.content.add(key=key, value=val.encode("utf-8"))
+            if val.startswith("{") and val.endswith("}"):
+                request.properties["content-type"] = "application/json"
+            else:
+                request.properties["content-type"] = "text/plain"
+        else:
+            with open(val, "rb") as f:
+                request.content.add(key=key, value=f.read(-1))
 
     if data_file.endswith(".json"):
         request.properties["content-type"] = "application/json"
@@ -121,7 +131,7 @@ def run():
                         level=logging.INFO)
     args = ArgParser.test_model_args().parse_args()
 
-    inputs = create_request(args.input)
+    inputs = create_request(args.input, args.parameters)
     inputs.function_name = args.handler
 
     os.chdir(args.model_dir)

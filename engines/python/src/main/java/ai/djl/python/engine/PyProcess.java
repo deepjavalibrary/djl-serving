@@ -103,7 +103,9 @@ class PyProcess {
             connection.connect();
 
             // initialize model with an empty request
-            predict(new Input(), pyEnv.getModelLoadingTimeout(), true);
+            Input init = new Input();
+            init.setProperties(pyEnv.getInitParameters());
+            predict(init, pyEnv.getModelLoadingTimeout(), true);
         } catch (InterruptedException e) {
             started = false;
             throw new EngineException("Worker startup cancelled.", e);

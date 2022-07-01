@@ -48,6 +48,7 @@ public class PyEnv {
     private int predictTimeout;
     private int modelLoadingTimeout;
     private Map<String, String> envs;
+    private Map<String, String> initParameters;
     private boolean initialized;
 
     /** Constructs a new {@code PyEnv} instance. */
@@ -58,6 +59,7 @@ public class PyEnv {
         }
         handler = "handle";
         envs = new ConcurrentHashMap<>();
+        initParameters = new ConcurrentHashMap<>();
     }
 
     static void init() {
@@ -112,13 +114,32 @@ public class PyEnv {
     }
 
     /**
-     * Add an environment variable.
+     * Adds an environment variable.
      *
      * @param key the environment variable name
      * @param value the environment variable value
      */
     public void addEnv(String key, String value) {
         envs.put(key, value);
+    }
+
+    /**
+     * Adds a model initialization parameter.
+     *
+     * @param key the environment variable name
+     * @param value the environment variable value
+     */
+    public void addParameter(String key, String value) {
+        initParameters.put(key, value);
+    }
+
+    /**
+     * Returns the python model initialization parameters.
+     *
+     * @return the python model initialization parameters
+     */
+    public Map<String, String> getInitParameters() {
+        return initParameters;
     }
 
     /**
