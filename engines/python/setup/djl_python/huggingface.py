@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 import importlib
+import json
 import logging
 import os
 import sys
@@ -54,9 +55,9 @@ class HuggingFaceService(object):
                                                  model_dir=model_dir,
                                                  device=device_id)
         elif "config.json" in os.listdir(model_dir):
-            self.hf_task = infer_task_from_model_architecture(
+            task = self.infer_task_from_model_architecture(
                 f"{model_dir}/config.json")
-            self.hf_pipeline = self.get_pipeline(task=hf_task,
+            self.hf_pipeline = self.get_pipeline(task=task,
                                                  model_id=model_id,
                                                  model_dir=model_dir,
                                                  device=device_id)
@@ -98,7 +99,7 @@ class HuggingFaceService(object):
         return outputs
 
     @staticmethod
-    def get_pipeline(task: str, device: int, model_id, model_dir: str,
+    def get_pipeline(task: str, device: int, model_id: str, model_dir: str,
                      **kwargs):
         model = model_id if model_id else model_dir
 
@@ -148,12 +149,10 @@ class HuggingFaceService(object):
         return wrapped_pipeline
 
     @staticmethod
-    def infer_task_from_model_architecture(model_config_path: str,
-                                           architecture_index=0):
+    def infer_task_from_model_architecture(model_config_path: str):
         with open(model_config_path, "r+") as config_file:
             config = json.loads(config_file.read())
-            architecture = config.get("architectures",
-                                      [None])[architecture_index]
+            architecture = config.get("architectures", [None])[0]
 
         task = None
         for arch_options in ARCHITECTURES_2_TASK:

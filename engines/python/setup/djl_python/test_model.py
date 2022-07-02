@@ -26,11 +26,12 @@ def create_request(input_files, parameters):
     request = Input()
     request.properties["device_id"] = "-1"
 
-    for parameter in parameters:
-        pair = parameter.split("=", 2)
-        if len(pair) != 2:
-            raise ValueError(f"Invalid model parameter: {parameter}")
-        request.properties[pair[0]] = pair[1]
+    if parameters:
+        for parameter in parameters:
+            pair = parameter.split("=", 2)
+            if len(pair) != 2:
+                raise ValueError(f"Invalid model parameter: {parameter}")
+            request.properties[pair[0]] = pair[1]
 
     data_file = None
     for file in input_files:
