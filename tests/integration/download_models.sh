@@ -19,7 +19,7 @@ aarch_models_urls=(
 )
 
 inf_models_urls=(
-"https://djl-ai.s3.amazonaws.com/resources/test-models/pytorch/resnet18_inf1_1_11.tar.gz"
+"https://resources.djl.ai/test-models/pytorch/resnet18_inf1_1_11.tar.gz"
 )
 
 download()
