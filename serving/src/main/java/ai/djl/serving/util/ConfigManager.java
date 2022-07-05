@@ -13,6 +13,7 @@
 package ai.djl.serving.util;
 
 import ai.djl.serving.Arguments;
+import ai.djl.serving.wlm.util.WlmConfigManager;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.function.Consumer;
 
 /** A class that hold configuration information. */
 public final class ConfigManager {
@@ -139,6 +141,12 @@ public final class ConfigManager {
         if (System.getProperty("ai.djl.python.disable_alternative") == null) {
             System.setProperty("ai.djl.python.disable_alternative", "true");
         }
+
+        WlmConfigManager wlmc = new WlmConfigManager();
+        instance.withIntProperty(JOB_QUEUE_SIZE, wlmc::setJobQueueSize);
+        instance.withIntProperty(MAX_IDLE_TIME, wlmc::setMaxIdleTime);
+        instance.withIntProperty(BATCH_SIZE, wlmc::setBatchSize);
+        instance.withIntProperty(MAX_BATCH_DELAY, wlmc::setMaxBatchDelay);
     }
 
     /**
@@ -173,42 +181,6 @@ public final class ConfigManager {
      */
     public int getNettyThreads() {
         return getIntProperty(NUMBER_OF_NETTY_THREADS, 0);
-    }
-
-    /**
-     * Returns the default job queue size.
-     *
-     * @return the default job queue size
-     */
-    public int getJobQueueSize() {
-        return getIntProperty(JOB_QUEUE_SIZE, 100);
-    }
-
-    /**
-     * Returns the default max idle time for workers.
-     *
-     * @return the default max idle time
-     */
-    public int getMaxIdleTime() {
-        return getIntProperty(MAX_IDLE_TIME, 60);
-    }
-
-    /**
-     * Returns the default batchSize for workers.
-     *
-     * @return the default max idle time
-     */
-    public int getBatchSize() {
-        return getIntProperty(BATCH_SIZE, 1);
-    }
-
-    /**
-     * Returns the default maxBatchDelay for the working queue.
-     *
-     * @return the default max batch delay
-     */
-    public int getMaxBatchDelay() {
-        return getIntProperty(MAX_BATCH_DELAY, 300);
     }
 
     /**
@@ -474,6 +446,12 @@ public final class ConfigManager {
             return def;
         }
         return Integer.parseInt(value);
+    }
+
+    private void withIntProperty(String key, Consumer<Integer> f) {
+        if (prop.containsKey(key)) {
+            f.accept(Integer.parseInt(prop.getProperty(key)));
+        }
     }
 
     private Path getPathProperty(String key) {

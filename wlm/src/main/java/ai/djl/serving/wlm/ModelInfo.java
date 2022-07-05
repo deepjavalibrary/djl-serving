@@ -20,6 +20,7 @@ import ai.djl.engine.Engine;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
+import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.translate.ServingTranslator;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
@@ -71,6 +72,7 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      * @param modelUrl the model Url
      */
     public ModelInfo(String modelUrl, Class<I> inputClass, Class<O> outputClass) {
+        this.id = modelUrl;
         this.modelUrl = modelUrl;
         this.inputClass = inputClass;
         this.outputClass = outputClass;
@@ -79,12 +81,20 @@ public final class ModelInfo<I, O> implements AutoCloseable {
     /**
      * Constructs a {@link ModelInfo} based on a {@link Criteria}.
      *
+     * @param id the id for the created {@link ModelInfo}
      * @param criteria the model criteria
      */
-    public ModelInfo(Criteria<I, O> criteria) {
+    public ModelInfo(String id, Criteria<I, O> criteria) {
+        this.id = id;
         this.criteria = criteria;
         inputClass = criteria.getInputClass();
         outputClass = criteria.getOutputClass();
+
+        WlmConfigManager config = WlmConfigManager.getInstance();
+        queueSize = config.getJobQueueSize();
+        maxIdleTime = config.getMaxIdleTime();
+        batchSize = config.getBatchSize();
+        maxBatchDelay = config.getMaxBatchDelay();
     }
 
     /**

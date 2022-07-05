@@ -20,6 +20,11 @@ import ai.djl.serving.wlm.ModelInfo;
 /** This manages some configurations used by the {@link ai.djl.serving.wlm.WorkLoadManager}. */
 public final class WlmConfigManager {
 
+    private int jobQueueSize = 100;
+    private int maxIdleTime = 60;
+    private int batchSize = 1;
+    private int maxBatchDelay = 300;
+
     private static final WlmConfigManager INSTANCE = new WlmConfigManager();
 
     /**
@@ -38,6 +43,78 @@ public final class WlmConfigManager {
      */
     public boolean isDebug() {
         return Boolean.getBoolean("ai.djl.serving.debug");
+    }
+
+    /**
+     * Returns the default job queue size.
+     *
+     * @return the default job queue size
+     */
+    public int getJobQueueSize() {
+        return jobQueueSize;
+    }
+
+    /**
+     * Sets the default job queue size.
+     *
+     * @param jobQueueSize the new default job queue size
+     */
+    public void setJobQueueSize(int jobQueueSize) {
+        this.jobQueueSize = jobQueueSize;
+    }
+
+    /**
+     * Returns the default max idle time for workers.
+     *
+     * @return the default max idle time
+     */
+    public int getMaxIdleTime() {
+        return maxIdleTime;
+    }
+
+    /**
+     * Sets the default max idle time for workers.
+     *
+     * @param maxIdleTime the new default max idle time
+     */
+    public void setMaxIdleTime(int maxIdleTime) {
+        this.maxIdleTime = maxIdleTime;
+    }
+
+    /**
+     * Returns the default batchSize for workers.
+     *
+     * @return the default max idle time
+     */
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    /**
+     * Sets the default batchSize for workers.
+     *
+     * @param batchSize the new default batchSize
+     */
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
+    }
+
+    /**
+     * Returns the default maxBatchDelay for the working queue.
+     *
+     * @return the default max batch delay
+     */
+    public int getMaxBatchDelay() {
+        return maxBatchDelay;
+    }
+
+    /**
+     * Sets the default maxBatchDelay for the working queue.
+     *
+     * @param maxBatchDelay the new default maxBatchDelay
+     */
+    public void setMaxBatchDelay(int maxBatchDelay) {
+        this.maxBatchDelay = maxBatchDelay;
     }
 
     /**

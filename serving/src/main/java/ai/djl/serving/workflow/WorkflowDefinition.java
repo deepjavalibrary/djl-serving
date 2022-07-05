@@ -14,8 +14,8 @@ package ai.djl.serving.workflow;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.WorkflowFunction;
 import ai.djl.util.JsonUtils;
@@ -127,22 +127,16 @@ public class WorkflowDefinition {
      */
     public Workflow toWorkflow() throws BadWorkflowException {
         if (models != null) {
-            ConfigManager configManager = ConfigManager.getInstance();
+            WlmConfigManager wlmc = WlmConfigManager.getInstance();
             for (Entry<String, ModelInfo<Input, Output>> emd : models.entrySet()) {
                 ModelInfo<Input, Output> md = emd.getValue();
                 md.setModelId(emd.getKey());
-                md.setQueueSize(
-                        firstValid(md.getQueueSize(), queueSize, configManager.getJobQueueSize()));
+                md.setQueueSize(firstValid(md.getQueueSize(), queueSize, wlmc.getJobQueueSize()));
                 md.setMaxIdleTime(
-                        firstValid(
-                                md.getMaxIdleTime(), maxIdleTime, configManager.getMaxIdleTime()));
+                        firstValid(md.getMaxIdleTime(), maxIdleTime, wlmc.getMaxIdleTime()));
                 md.setMaxBatchDelay(
-                        firstValid(
-                                md.getMaxBatchDelay(),
-                                maxBatchDelay,
-                                configManager.getMaxBatchDelay()));
-                md.setBatchSize(
-                        firstValid(md.getBatchSize(), batchSize, configManager.getBatchSize()));
+                        firstValid(md.getMaxBatchDelay(), maxBatchDelay, wlmc.getMaxBatchDelay()));
+                md.setBatchSize(firstValid(md.getBatchSize(), batchSize, wlmc.getBatchSize()));
                 if (name == null) {
                     name = emd.getKey();
                 }
