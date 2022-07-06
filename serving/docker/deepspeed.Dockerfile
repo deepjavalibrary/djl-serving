@@ -23,6 +23,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV PYTHON_EXECUTABLE=/usr/bin/python
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
