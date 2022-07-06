@@ -18,10 +18,12 @@ import os
 
 
 class ModelService(object):
-    def __init__(self, module):
+    def __init__(self, module, model_dir):
         self.module = module
+        self.model_dir = model_dir
 
     def invoke_handler(self, function_name, inputs):
+        inputs.properties["model_dir"] = self.model_dir
         return getattr(self.module, function_name)(inputs)
 
 
@@ -29,16 +31,17 @@ def load_model_service(model_dir, entry_point, device_id):
     manifest_file = os.path.join(model_dir, "MAR-INF/MANIFEST.json")
     if not os.path.exists(manifest_file):
         entry_point_file = os.path.join(model_dir, entry_point)
-        if not os.path.exists(entry_point_file):
-            raise ValueError(
-                "entry-point file not found {}.".format(entry_point_file))
+        if entry_point_file.endswith(".py"):
+            entry_point = entry_point[:-3]
+            if not os.path.exists(entry_point_file):
+                raise ValueError(
+                    "entry-point file not found {}.".format(entry_point_file))
 
-        entry_point = entry_point[:-3]
         module = importlib.import_module(entry_point)
         if module is None:
             raise ValueError("Unable to load entry_point {}/{}.py".format(
                 model_dir, entry_point))
-        return ModelService(module)
+        return ModelService(module, model_dir)
 
     with open("MAR-INF/MANIFEST.json") as f:
         manifest = json.load(f)
@@ -57,4 +60,4 @@ def load_model_service(model_dir, entry_point, device_id):
     service = model_loader.load(model_name, model_dir, handler, gpu,
                                 batch_size, envelope)
 
-    return TorchServeService(service)
+    return TorchServeService(service, model_dir)

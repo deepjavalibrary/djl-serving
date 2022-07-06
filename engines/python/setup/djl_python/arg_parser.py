@@ -94,4 +94,10 @@ class ArgParser(object):
                             nargs='+',
                             default='input.txt',
                             help='Input file')
+        parser.add_argument('--parameters',
+                            type=str,
+                            dest='parameters',
+                            required=False,
+                            nargs='+',
+                            help='Model parameters')
         return parser

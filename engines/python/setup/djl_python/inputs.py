@@ -163,6 +163,11 @@ class Input(object):
         result = [npz[name] for name in npz.files]
         return result
 
+    def get_as_csv(self, key=None) -> list:
+        import csv
+        stream = io.StringIO(self.get_as_string(key=key))
+        request_list = list(csv.DictReader(stream))
+
     def is_empty(self):
         return self.content.is_empty()
 

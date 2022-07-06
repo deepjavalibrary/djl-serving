@@ -18,6 +18,24 @@ from .np_util import to_nd_list
 from .pair_list import PairList
 
 
+# https://github.com/automl/SMAC3/issues/453
+class _JSONEncoder(json.JSONEncoder):
+    """
+    custom `JSONEncoder` to make sure float and int64 ar converted
+    """
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, datetime.datetime):
+            return obj.__str__()
+        else:
+            return super(_JSONEncoder, self).default(obj)
+
+
 class Output(object):
     def __init__(self, code=200, message='OK'):
         self.code = code
@@ -76,7 +94,12 @@ class Output(object):
         return self
 
     def add_as_json(self, val, key=None):
-        json_value = json.dumps(val, indent=2).encode("utf-8")
+        json_value = json.dumps(val,
+                                ensure_ascii=False,
+                                allow_nan=False,
+                                indent=2,
+                                cls=_JSONEncoder,
+                                separators=(",", ":")).encode("utf-8")
         self.content.add(key=key, value=json_value)
         return self
 

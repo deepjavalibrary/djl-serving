@@ -57,8 +57,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
 
     /** {@inheritDoc} */
     @Override
-    protected NDList predictInternal(TranslatorContext ctx, NDList ndList)
-            throws TranslateException {
+    protected NDList predictInternal(TranslatorContext ctx, NDList ndList) {
         Input inputs = new Input();
         inputs.addProperty("Content-Type", "tensor/ndlist");
         inputs.add(ndList.encode());

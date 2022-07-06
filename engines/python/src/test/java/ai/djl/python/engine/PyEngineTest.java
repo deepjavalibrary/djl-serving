@@ -32,6 +32,8 @@ import ai.djl.util.JsonUtils;
 import com.google.gson.reflect.TypeToken;
 
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -44,6 +46,16 @@ import java.util.List;
 import java.util.Map;
 
 public class PyEngineTest {
+
+    @BeforeClass
+    public void setUp() {
+        System.setProperty("ENGINE_CACHE_DIR", "build/cache");
+    }
+
+    @AfterClass
+    public void tierDown() {
+        System.clearProperty("ENGINE_CACHE_DIR");
+    }
 
     @Test
     public void testPyEngine() {
@@ -73,7 +85,7 @@ public class PyEngineTest {
     }
 
     @Test
-    public void testModelLoadintTimeout() throws IOException, ModelException {
+    public void testModelLoadingTimeout() throws IOException, ModelException {
         Criteria<NDList, NDList> criteria =
                 Criteria.builder()
                         .setTypes(NDList.class, NDList.class)
@@ -147,8 +159,11 @@ public class PyEngineTest {
         }
     }
 
-    @Test(enabled = false)
+    @Test
     public void testResnet18() throws TranslateException, IOException, ModelException {
+        if (!Boolean.getBoolean("nightly")) {
+            return;
+        }
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
@@ -168,6 +183,31 @@ public class PyEngineTest {
             Type type = new TypeToken<List<Map<String, Double>>>() {}.getType();
             List<Map<String, Double>> list = JsonUtils.GSON.fromJson(classification, type);
             Assert.assertTrue(list.get(0).containsKey("tabby"));
+        }
+    }
+
+    @Test
+    public void testHuggingfaceModel() throws TranslateException, IOException, ModelException {
+        if (!Boolean.getBoolean("nightly")) {
+            return;
+        }
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optEngine("Python")
+                        .optModelPath(Paths.get("src/test/resources/huggingface"))
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add(
+                    "{\"question\": \"Why is model conversion important?\",\"context\": \"The"
+                        + " option to convert models between FARM and transformers gives freedom to"
+                        + " the user and let people easily switch between frameworks.\"}");
+            input.addProperty("Content-Type", "application/json");
+            Output output = predictor.predict(input);
+            String classification = output.getData().getAsString();
+            System.out.println(classification);
         }
     }
 }

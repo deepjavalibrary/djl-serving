@@ -21,8 +21,8 @@ from ts.service import Service
 
 
 class TorchServeService(ModelService):
-    def __init__(self, service):
-        super().__init__(None)
+    def __init__(self, service, model_dir):
+        super().__init__(None, model_dir)
         self.service = service
 
     def invoke_handler(self, function_name, inputs):
