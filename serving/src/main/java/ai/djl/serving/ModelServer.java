@@ -13,7 +13,6 @@
 package ai.djl.serving;
 
 import ai.djl.Device;
-import ai.djl.MalformedModelException;
 import ai.djl.engine.Engine;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
@@ -24,7 +23,6 @@ import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
-import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.DependencyManager;
@@ -39,7 +37,6 @@ import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
 import ai.djl.util.Utils;
-import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -198,10 +195,7 @@ public class ModelServer implements AutoCloseable {
         try {
             initModelStore();
             initWorkflows();
-        } catch (URISyntaxException
-                | ModelNotFoundException
-                | BadWorkflowException
-                | MalformedModelException e) {
+        } catch (URISyntaxException | BadWorkflowException e) {
             throw new ServerStartupException(
                     "Failed to initialize startup models and workflows", e);
         }
@@ -374,10 +368,13 @@ public class ModelServer implements AutoCloseable {
                     engineName = tokens[2].isEmpty() ? null : tokens[2];
                 }
                 if (tokens.length > 3) {
+                    Engine engine;
                     if (engineName != null) {
                         DependencyManager.getInstance().installEngine(engineName);
+                        engine = Engine.getEngine(engineName);
+                    } else {
+                        engine = Engine.getInstance();
                     }
-                    Engine engine = Engine.getInstance();
                     devices = parseDevices(tokens[3], engine);
                 }
             } else {
@@ -436,9 +433,7 @@ public class ModelServer implements AutoCloseable {
         }
     }
 
-    private void initWorkflows()
-            throws IOException, URISyntaxException, ModelNotFoundException, BadWorkflowException,
-                    MalformedModelException {
+    private void initWorkflows() throws IOException, URISyntaxException, BadWorkflowException {
         Set<String> startupWorkflows = ModelManager.getInstance().getStartupWorkflows();
         String loadWorkflows = configManager.getLoadWorkflows();
         if (loadWorkflows == null || loadWorkflows.isEmpty()) {
@@ -602,7 +597,7 @@ public class ModelServer implements AutoCloseable {
 
     private Device[] parseDevices(String devices, Engine engine) {
         if ("*".equals(devices)) {
-            int gpuCount = CudaUtils.getGpuCount();
+            int gpuCount = engine.getGpuCount();
             if (gpuCount > 0) {
                 return IntStream.range(0, gpuCount).mapToObj(Device::gpu).toArray(Device[]::new);
             } else if (NeuronUtils.hasNeuron()) {
@@ -611,7 +606,6 @@ public class ModelServer implements AutoCloseable {
                         .mapToObj(i -> Device.of("nc", i))
                         .toArray(Device[]::new);
             }
-
         } else if (!devices.isEmpty()) {
             return Arrays.stream(devices.split(";"))
                     .map(n -> Device.fromName(n, engine))
