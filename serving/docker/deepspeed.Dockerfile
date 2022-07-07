@@ -30,7 +30,7 @@ CMD ["serve"]
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
-COPY config.properties /opt/djl/conf/
+COPY deepspeed.config.properties /opt/djl/conf/config.properties
 ### Install DJL Serving and remove general python executor
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_python.sh && \
