@@ -14,7 +14,6 @@ dependencies {
     runtimeOnly "ai.djl.tensorflow:tensorflow-model-zoo"
     runtimeOnly "ai.djl.mxnet:mxnet-model-zoo"
     runtimeOnly "ai.djl.paddlepaddle:paddlepaddle-model-zoo"
-    runtimeOnly "ai.djl.onnxruntime:onnxruntime-engine"
     runtimeOnly "ai.djl.tflite:tflite-engine"
     runtimeOnly "ai.djl.dlr:dlr-engine"
     runtimeOnly "ai.djl.ml.xgboost:xgboost"
@@ -23,6 +22,23 @@ dependencies {
 
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
+    }
+
+    ProcessBuilder pb = new ProcessBuilder("nvidia-smi", "-L")
+    def hasGPU = false;
+    try {
+        Process process = pb.start()
+        hasGPU = process.waitFor() == 0
+    } catch (IOException ignore) {
+    }
+
+    if (hasGPU) {
+        runtimeOnly("ai.djl.onnxruntime:onnxruntime-engine") {
+            exclude group: "com.microsoft.onnxruntime", module: "onnxruntime"
+        }
+        runtimeOnly "com.microsoft.onnxruntime:onnxruntime_gpu:${onnxruntime_version}"
+    } else {
+        runtimeOnly "ai.djl.onnxruntime:onnxruntime-engine"
     }
 }
 
