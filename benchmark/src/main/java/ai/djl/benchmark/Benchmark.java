@@ -47,9 +47,12 @@ public final class Benchmark extends AbstractBenchmark {
             if (!list.isEmpty() && "ndlist-gen".equals(list.get(0))) {
                 success = NDListGenerator.generate(Arrays.copyOfRange(args, 1, args.length));
             } else {
-                boolean multithreading = list.contains("-t") || list.contains("--threads");
+                boolean wlm = list.contains("--wlm");
+                boolean multithreading = list.contains("-t") || list.contains("--threads") || wlm;
                 configEngines(multithreading);
-                if (multithreading) {
+                if (wlm) {
+                    success = new WlmBenchmark().runBenchmark(args);
+                } else if (multithreading) {
                     success = new MultithreadedBenchmark().runBenchmark(args);
                 } else {
                     success = new Benchmark().runBenchmark(args);
@@ -89,6 +92,11 @@ public final class Benchmark extends AbstractBenchmark {
             }
             return predictResult;
         }
+    }
+
+    @Override
+    protected boolean benchmarkUsesThreads() {
+        return false;
     }
 
     private static void configEngines(boolean multithreading) {

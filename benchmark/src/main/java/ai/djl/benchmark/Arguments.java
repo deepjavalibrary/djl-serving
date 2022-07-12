@@ -242,6 +242,8 @@ public class Arguments {
                         .argName("OUTPUT-DIR")
                         .desc("Directory for output logs.")
                         .build());
+        options.addOption(
+                Option.builder().longOpt("wlm").desc("Use a WorkLoad Manager benchmark").build());
         return options;
     }
 

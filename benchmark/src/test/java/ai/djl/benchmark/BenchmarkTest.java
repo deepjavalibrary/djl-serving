@@ -120,4 +120,33 @@ public class BenchmarkTest {
             System.clearProperty("collect-memory");
         }
     }
+
+    @Test
+    public void testWlmBenchmark() {
+        System.setProperty("collect-memory", "true");
+        try {
+            String[] args = {
+                "--wlm",
+                "-e",
+                "PyTorch",
+                "-u",
+                "djl://ai.djl.pytorch/resnet/0.0.1/traced_resnet18",
+                "-s",
+                "(1,3,224,224)f",
+                "-d",
+                "1",
+                "-l",
+                "3",
+                "-c",
+                "2",
+                "-t",
+                "-1",
+                "-g",
+                "-1"
+            };
+            Benchmark.main(args);
+        } finally {
+            System.clearProperty("collect-memory");
+        }
+    }
 }
