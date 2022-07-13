@@ -36,6 +36,7 @@ jobs:
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
@@ -90,6 +91,7 @@ jobs:
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} aarch64
           docker compose push aarch64
