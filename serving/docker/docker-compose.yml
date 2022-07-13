@@ -5,7 +5,7 @@ services:
       context: .
       target: base
       dockerfile: Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION:-cpu}${NIGHTLY}"
+    image: "deepjavalibrary/djl-serving:${BASE_RELEASE_VERSION:-cpu}${NIGHTLY}"
   cpu-full:
     build:
       context: .
