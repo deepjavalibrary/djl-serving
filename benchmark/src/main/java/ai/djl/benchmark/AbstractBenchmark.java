@@ -92,7 +92,7 @@ public abstract class AbstractBenchmark {
                             engineName, version, (loaded - init) / 1_000_000f));
             Duration duration = Duration.ofSeconds(arguments.getDuration());
             Object devices;
-            if (this instanceof MultithreadedBenchmark) {
+            if (benchmarkUsesThreads()) {
                 devices = engine.getDevices(arguments.getMaxGpus());
             } else {
                 devices = engine.defaultDevice();
@@ -109,7 +109,7 @@ public abstract class AbstractBenchmark {
             }
             int numOfThreads = arguments.getThreads();
             int iteration = arguments.getIteration();
-            if (this instanceof MultithreadedBenchmark) {
+            if (benchmarkUsesThreads()) {
                 int expected = 10 * numOfThreads;
                 if (iteration < expected) {
                     iteration = expected;
@@ -239,21 +239,8 @@ public abstract class AbstractBenchmark {
     protected ZooModel<Void, float[]> loadModel(Arguments arguments, Metrics metrics, Device device)
             throws ModelException, IOException {
         long begin = System.nanoTime();
-        PairList<DataType, Shape> shapes = arguments.getInputShapes();
-        BenchmarkTranslator translator = new BenchmarkTranslator(shapes);
 
-        Criteria<Void, float[]> criteria =
-                Criteria.builder()
-                        .setTypes(Void.class, float[].class)
-                        .optModelUrls(arguments.getModelUrl())
-                        .optModelName(arguments.getModelName())
-                        .optEngine(arguments.getEngine())
-                        .optOptions(arguments.getModelOptions())
-                        .optArguments(arguments.getModelArguments())
-                        .optDevice(device)
-                        .optTranslator(translator)
-                        .optProgress(new ProgressBar())
-                        .build();
+        Criteria<Void, float[]> criteria = loadModelCriteria(arguments, device);
 
         ZooModel<Void, float[]> model = criteria.loadModel();
         if (device == Device.cpu() || device == Device.gpu()) {
@@ -266,6 +253,30 @@ public abstract class AbstractBenchmark {
         }
         return model;
     }
+
+    protected Criteria<Void, float[]> loadModelCriteria(Arguments arguments, Device device) {
+        PairList<DataType, Shape> shapes = arguments.getInputShapes();
+        BenchmarkTranslator translator = new BenchmarkTranslator(shapes);
+
+        return Criteria.builder()
+                .setTypes(Void.class, float[].class)
+                .optModelUrls(arguments.getModelUrl())
+                .optModelName(arguments.getModelName())
+                .optEngine(arguments.getEngine())
+                .optOptions(arguments.getModelOptions())
+                .optArguments(arguments.getModelArguments())
+                .optDevice(device)
+                .optTranslator(translator)
+                .optProgress(new ProgressBar())
+                .build();
+    }
+
+    /**
+     * Returns whether the benchmark uses threading.
+     *
+     * @return whether the benchmark uses threading
+     */
+    protected abstract boolean benchmarkUsesThreads();
 
     private static final class BenchmarkTranslator implements NoBatchifyTranslator<Void, float[]> {
 

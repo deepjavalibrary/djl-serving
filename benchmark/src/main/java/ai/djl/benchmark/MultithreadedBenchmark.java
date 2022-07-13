@@ -125,6 +125,11 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
         return result;
     }
 
+    @Override
+    protected boolean benchmarkUsesThreads() {
+        return true;
+    }
+
     private static class PredictorCallable implements Callable<float[]> {
 
         private Predictor<Void, float[]> predictor;
