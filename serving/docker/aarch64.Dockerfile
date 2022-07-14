@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM arm64v8/ubuntu:20.04
-ARG djl_version=0.18.0~SNAPSHOT
+ARG djl_version=0.19.0~SNAPSHOT
 
 EXPOSE 8080
 
