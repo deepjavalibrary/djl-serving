@@ -34,7 +34,7 @@ apps:
 parts:
   djlbench:
     plugin: gradle
-    source: https://github.com/deepjavalibrary/djl.git
+    source: https://github.com/deepjavalibrary/djl-serving.git
     source-tag: v$SNAPCRAFT_PROJECT_VERSION
     gradle-output-dir: benchmark/build/libs
     gradle-options: [ -Pstaging, ':benchmark:dT' ]
@@ -42,3 +42,6 @@ parts:
       snapcraftctl build
       tar xvf $SNAPCRAFT_PART_BUILD/benchmark/build/distributions/benchmark-*.tar -C $SNAPCRAFT_PART_INSTALL/
       rm -rf $SNAPCRAFT_PART_INSTALL/jar
+    override-prime: |
+      snapcraftctl prime
+      rm -vf usr/lib/jvm/java-11-openjdk-*/lib/security/blacklisted.certs
