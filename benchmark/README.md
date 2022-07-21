@@ -30,12 +30,6 @@ You can build djl-bench from source if you need to benchmark fastText/BlazingTex
 
 ## Installation
 
-For macOS
-
-```
-brew install cask djl-bench
-```
-
 For Ubuntu
 
 - Install using snap
@@ -52,7 +46,7 @@ curl -O https://publish.djl.ai/djl-bench/0.18.0/djl-bench_0.18.0-1_all.deb
 sudo dpkg -i djl-bench_0.18.0-1_all.deb
 ```
 
-For centOS or Amazon Linux 2
+For macOS, centOS or Amazon Linux 2
 
 You can download djl-bench zip file from [here](https://publish.djl.ai/djl-bench/0.18.0/benchmark-0.18.0.zip).
 
