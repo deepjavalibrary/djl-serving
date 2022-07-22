@@ -78,6 +78,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
     private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?].*)?");
     private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
+    private static final Pattern KSERVEV2_PATTERN = Pattern.compile("^/v2([/?].*)?");
 
     /** {@inheritDoc} */
     @Override
@@ -85,7 +86,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         if (super.acceptInboundMessage(msg)) {
             FullHttpRequest req = (FullHttpRequest) msg;
             return WORKFLOWS_PATTERN.matcher(req.uri()).matches()
-                    || MODELS_PATTERN.matcher(req.uri()).matches();
+                    || MODELS_PATTERN.matcher(req.uri()).matches()
+                    || KSERVEV2_PATTERN.matcher(req.uri()).matches();
         }
         return false;
     }
@@ -98,6 +100,9 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String[] segments)
             throws ModelException {
+
+
+
         HttpMethod method = req.method();
         if (segments.length < 3) {
             if (HttpMethod.GET.equals(method)) {
@@ -133,6 +138,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         } else {
             throw new MethodNotAllowedException();
         }
+
+    }
+
+    private boolean isKFV2InferenceReq(String[] segments) {
+        return segments.length == 5
+                && "v2".equals(segments[1])
+                && "models".equals(segments[2])
+                && (segments[4].equals("infer") || segments[4].equals("explain"));
     }
 
     private void handleListModels(ChannelHandlerContext ctx, QueryStringDecoder decoder) {
