@@ -79,7 +79,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?].*)?");
     private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
     private static final Pattern KSERVEV2_PATTERN = Pattern.compile("^/v2([/?].*)?");
-
+    private static final String[] TYPES = {"FOR_KSERVE" , "FOR_DJL_SERVING"};
     /** {@inheritDoc} */
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
@@ -100,45 +100,68 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String[] segments)
             throws ModelException {
+        for(String segment:segments){
+            System.out.println("segment:" + segment);
+        }
 
-
-
-        HttpMethod method = req.method();
-        if (segments.length < 3) {
-            if (HttpMethod.GET.equals(method)) {
-                if (MODELS_PATTERN.matcher(req.uri()).matches()) {
-                    handleListModels(ctx, decoder);
-                } else {
-                    handleListWorkflows(ctx, decoder);
+        if (KSERVEV2_PATTERN.matcher(req.uri()).matches()){
+            System.out.println("KSERVEV2_PATTERN");
+            // request /v2/health
+            if (segments[2].equals("health")){
+                switch (segments[3]) {
+                    // request /v2/health/live
+                    case "live":
+                        System.out.println("live");
+                        ModelManager.getInstance()
+                                .workerStatus(TYPES[0])
+                                .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
+                        break;
+                    // request /v2/health/ready
+                    case "ready":
+                        System.out.println("ready");
+                        break;
+                    default:
+                        throw new AssertionError("Invalid request uri: " + req.uri());
                 }
-                return;
-            } else if (HttpMethod.POST.equals(method)) {
-                if (MODELS_PATTERN.matcher(req.uri()).matches()) {
-                    handleRegisterModel(ctx, decoder);
-                } else {
-                    handleRegisterWorkflow(ctx, decoder);
-                }
-                return;
             }
-            throw new MethodNotAllowedException();
         }
+        else{
+            HttpMethod method = req.method();
+            if (segments.length < 3) {
+                if (HttpMethod.GET.equals(method)) {
+                    if (MODELS_PATTERN.matcher(req.uri()).matches()) {
+                        handleListModels(ctx, decoder);
+                    } else {
+                        handleListWorkflows(ctx, decoder);
+                    }
+                    return;
+                } else if (HttpMethod.POST.equals(method)) {
+                    if (MODELS_PATTERN.matcher(req.uri()).matches()) {
+                        handleRegisterModel(ctx, decoder);
+                    } else {
+                        handleRegisterWorkflow(ctx, decoder);
+                    }
+                    return;
+                }
+                throw new MethodNotAllowedException();
+            }
 
-        String modelName = segments[2];
-        String version = null;
-        if (segments.length > 3) {
-            version = segments[3];
+            String modelName = segments[2];
+            String version = null;
+            if (segments.length > 3) {
+                version = segments[3];
+            }
+
+            if (HttpMethod.GET.equals(method)) {
+                handleDescribeWorkflow(ctx, modelName, version);
+            } else if (HttpMethod.PUT.equals(method)) {
+                handleScaleWorkflow(ctx, decoder, modelName, version);
+            } else if (HttpMethod.DELETE.equals(method)) {
+                handleUnregisterWorkflow(ctx, modelName, version);
+            } else {
+                throw new MethodNotAllowedException();
+            }
         }
-
-        if (HttpMethod.GET.equals(method)) {
-            handleDescribeWorkflow(ctx, modelName, version);
-        } else if (HttpMethod.PUT.equals(method)) {
-            handleScaleWorkflow(ctx, decoder, modelName, version);
-        } else if (HttpMethod.DELETE.equals(method)) {
-            handleUnregisterWorkflow(ctx, modelName, version);
-        } else {
-            throw new MethodNotAllowedException();
-        }
-
     }
 
     private boolean isKFV2InferenceReq(String[] segments) {

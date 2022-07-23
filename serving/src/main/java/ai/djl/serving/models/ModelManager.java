@@ -332,7 +332,7 @@ public final class ModelManager {
      *
      * @return completableFuture with eventually result in the future after async execution
      */
-    public CompletableFuture<FullHttpResponse> workerStatus() {
+    public CompletableFuture<FullHttpResponse> workerStatus(String type) {
         return CompletableFuture.supplyAsync(
                 () -> {
                     boolean hasFailure = false;
@@ -388,7 +388,14 @@ public final class ModelManager {
                     resp.headers()
                             .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                     ByteBuf content = resp.content();
-                    String body = JsonUtils.GSON_PRETTY.toJson(data);
+                    String body = null;
+                    if(type.equals("FOR_KSERVE")){
+                        // empty response
+                        body = JsonUtils.GSON_PRETTY.toJson(new LinkedHashMap<>());
+                    }
+                    else if(type.equals("FOR_DJL_SERVING")){
+                        body = JsonUtils.GSON_PRETTY.toJson(data);
+                    }
                     content.writeCharSequence(body, CharsetUtil.UTF_8);
                     content.writeByte('\n');
                     return resp;
