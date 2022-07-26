@@ -199,6 +199,9 @@ public class DependencyManager {
                         + ".pom";
         try (InputStream is = new URL(maven).openStream()) {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            dbf.setXIncludeAware(false);
+            dbf.setExpandEntityReferences(false);
             DocumentBuilder db = dbf.newDocumentBuilder();
             Document doc = db.parse(is);
             NodeList nl = doc.getElementsByTagName("dependency");
