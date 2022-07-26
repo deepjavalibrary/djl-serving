@@ -21,6 +21,7 @@ import static org.testng.Assert.assertTrue;
 import ai.djl.modality.Classifications.Classification;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.ErrorResponse;
+import ai.djl.serving.http.KServeDescribeModelResponse;
 import ai.djl.serving.http.ListModelsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse.WorkflowItem;
@@ -92,7 +93,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -284,6 +288,7 @@ public class ModelServerTest {
             testListModels(channel);
             testListWorkflows(channel);
             testDescribeModel(channel);
+            testKServeDescribeModel(channel);
             testUnregisterModel(channel);
 
             testPredictionsInvalidRequestSize(channel);
@@ -299,6 +304,7 @@ public class ModelServerTest {
             testInvalidPredictionsMethod();
             testPredictionsModelNotFound();
             testInvalidDescribeModel();
+            testInvalidKServeDescribeModel();
             testDescribeModelNotFound();
             testInvalidManagementUri();
             testInvalidManagementMethod();
@@ -609,6 +615,20 @@ public class ModelServerTest {
         }
     }
 
+    private void testKServeDescribeModel(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp");
+        channel.writeAndFlush(req);
+        latch.await();
+
+        KServeDescribeModelResponse resp =
+                JsonUtils.GSON.fromJson(result, KServeDescribeModelResponse.class);
+        assertEquals(resp.getName(), "mlp");
+        assertEquals(resp.getVersions(), Collections.singletonList("v1"));
+        assertEquals(resp.getPlatform(), "MXNet_mxnet");
+    }
+
     private void testDescribeModel(Channel channel) throws InterruptedException {
         reset();
         HttpRequest req =
@@ -702,6 +722,29 @@ public class ModelServerTest {
             assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
             assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
         }
+    }
+
+    private void testInvalidKServeDescribeModel() throws InterruptedException {
+        Channel channel = connect(Connector.ConnectorType.INFERENCE);
+        assertNotNull(channel);
+
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp_2");
+        channel.writeAndFlush(req);
+        latch.await();
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        Map<String, String> map =
+                JsonUtils.GSON.fromJson(
+                        result, new TypeToken<HashMap<String, String>>() {}.getType());
+        assertEquals(httpStatus.code(), HttpResponseStatus.NOT_FOUND.code());
+        String errorMsg =
+                "Input/Output shapes are unknown, "
+                        + "please run predict or forward once and call describe model again";
+        assertEquals(map.get("error"), errorMsg);
     }
 
     private void testInvalidDescribeModel() throws InterruptedException {
