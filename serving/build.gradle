@@ -91,7 +91,17 @@ task createDeb(type: Deb, dependsOn: distTar) {
 startScripts {
     defaultJvmOpts = []
     doLast {
-        String text = unixScript.text.replace('exec "$JAVACMD" "$@"', 'exec env OMP_NUM_THREADS="1" MXNET_ENGINE_TYPE="NaiveEngine" TF_CPP_MIN_LOG_LEVEL=1 TF_NUM_INTRAOP_THREADS=1 "$JAVACMD" "$@"')
+        String text = unixScript.text.replace('exec "$JAVACMD" "$@"',
+                'if [ "${OMP_NUM_THREADS}" = "" ] && [ "${NO_OMP_NUM_THREADS}" = "" ] ; then\n' +
+                '    export OMP_NUM_THREADS=1\n' +
+                'fi\n' +
+                'if [ "${TF_CPP_MIN_LOG_LEVEL}" = "" ] ; then\n' +
+                '    export TF_CPP_MIN_LOG_LEVEL=1\n' +
+                'fi\n' +
+                'if [ "${TF_NUM_INTRAOP_THREADS}" = "" ] ; then\n' +
+                '    export TF_NUM_INTRAOP_THREADS=1\n' +
+                'fi\n' +
+                'exec env MXNET_ENGINE_TYPE="NaiveEngine" "$JAVACMD" "$@"')
         text = text.replace('DEFAULT_JVM_OPTS=""', 'if [ "${MODEL_SERVER_HOME}" = "" ] ; then\n' +
                 '    export MODEL_SERVER_HOME=${APP_HOME}\n' +
                 'fi\n' +
