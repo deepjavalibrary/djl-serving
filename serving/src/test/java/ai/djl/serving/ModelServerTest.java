@@ -269,6 +269,7 @@ public class ModelServerTest {
             testRegisterModelTranslator(channel);
 
             testPing(channel);
+            testV2HealthLive(channel);
             testRoot(channel);
             testPredictionsModels(channel);
             testInvocations(channel);
@@ -380,6 +381,18 @@ public class ModelServerTest {
         assertNotNull(resp);
         assertTrue(headers.contains("x-request-id"));
     }
+
+    private void testV2HealthLive(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertNotNull(resp);
+        assertTrue(headers.contains("x-request-id"));
+    }
+
 
     private void testPredictionsModels(Channel channel) throws InterruptedException {
         String[] targets = new String[] {"/predictions/mlp"};

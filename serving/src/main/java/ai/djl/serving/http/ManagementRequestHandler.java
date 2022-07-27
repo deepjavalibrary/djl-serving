@@ -100,25 +100,16 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String[] segments)
             throws ModelException {
-        for(String segment:segments){
-            System.out.println("segment:" + segment);
-        }
-
         if (KSERVEV2_PATTERN.matcher(req.uri()).matches()){
-            System.out.println("KSERVEV2_PATTERN");
             // request /v2/health
-            if (segments[2].equals("health")){
+            if ("health".equals(segments[2])){
                 switch (segments[3]) {
-                    // request /v2/health/live
+                    // request /v2/health/live and request /v2/health/ready should return the same
+                    case "ready":
                     case "live":
-                        System.out.println("live");
                         ModelManager.getInstance()
                                 .workerStatus(TYPES[0])
                                 .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
-                        break;
-                    // request /v2/health/ready
-                    case "ready":
-                        System.out.println("ready");
                         break;
                     default:
                         throw new AssertionError("Invalid request uri: " + req.uri());
@@ -162,13 +153,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 throw new MethodNotAllowedException();
             }
         }
-    }
-
-    private boolean isKFV2InferenceReq(String[] segments) {
-        return segments.length == 5
-                && "v2".equals(segments[1])
-                && "models".equals(segments[2])
-                && (segments[4].equals("infer") || segments[4].equals("explain"));
     }
 
     private void handleListModels(ChannelHandlerContext ctx, QueryStringDecoder decoder) {

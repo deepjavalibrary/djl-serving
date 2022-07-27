@@ -59,7 +59,7 @@ public final class ModelManager {
     private static final Logger logger = LoggerFactory.getLogger(ModelManager.class);
 
     private static ModelManager modelManager = new ModelManager();
-
+    private static final String[] TYPES = {"FOR_KSERVE" , "FOR_DJL_SERVING"};
     private WorkLoadManager wlm;
     private Map<String, Endpoint> endpoints;
     private Set<String> startupWorkflows;
@@ -329,7 +329,7 @@ public final class ModelManager {
 
     /**
      * Sends model server health status to client.
-     *
+     * @param type of request, from v2 protocol or the normal one.
      * @return completableFuture with eventually result in the future after async execution
      */
     public CompletableFuture<FullHttpResponse> workerStatus(String type) {
@@ -389,17 +389,17 @@ public final class ModelManager {
                             .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                     ByteBuf content = resp.content();
                     String body = null;
-                    if(type.equals("FOR_KSERVE")){
+                    if(type.equals(TYPES[0])){
                         // empty response
                         body = JsonUtils.GSON_PRETTY.toJson(new LinkedHashMap<>());
                     }
-                    else if(type.equals("FOR_DJL_SERVING")){
+                    else if(type.equals(TYPES[1])){
                         body = JsonUtils.GSON_PRETTY.toJson(data);
                     }
                     content.writeCharSequence(body, CharsetUtil.UTF_8);
                     content.writeByte('\n');
                     return resp;
-                });
+                 });
     }
 
     /**
