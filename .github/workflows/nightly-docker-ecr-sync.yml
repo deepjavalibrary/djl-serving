@@ -36,6 +36,10 @@ jobs:
         working-directory: serving/docker
         run: |
           yes | docker system prune -a --volumes
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
       - name: Pull and sync nightly docker image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
