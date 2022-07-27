@@ -41,10 +41,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install awscli -y
       - name: Pull and sync nightly docker image
-        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           version=${{ github.event.inputs.mode }}
+          [ -z "$version" ] && version="nightly"
           repo="125045733377.dkr.ecr.us-east-1.amazonaws.com"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           ./scripts/pull_and_retag.sh $version $repo
