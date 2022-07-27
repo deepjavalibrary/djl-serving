@@ -127,7 +127,8 @@ public final class ConfigManager {
         if (System.getProperty("ai.djl.pytorch.num_interop_threads") == null) {
             System.setProperty("ai.djl.pytorch.num_interop_threads", "1");
         }
-        if (System.getProperty("ai.djl.pytorch.num_threads") == null) {
+        if (System.getProperty("ai.djl.pytorch.num_threads") == null
+                && System.getenv("OMP_NUM_THREADS") == null) {
             System.setProperty("ai.djl.pytorch.num_threads", "1");
         }
         if (System.getProperty("log4j2.contextSelector") == null) {
