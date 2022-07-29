@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -102,7 +103,7 @@ public class WorkLoadManager implements AutoCloseable {
      */
     public void unregisterModel(ModelInfo<?, ?> model) {
         WorkerPool<?, ?> pool = getWorkerPoolForModel(model);
-        pool.scaleWorkers(null, 0, 0);
+        pool.shutdownWorkers();
         workerPools.remove(model);
     }
 
@@ -274,14 +275,38 @@ public class WorkLoadManager implements AutoCloseable {
         }
 
         /**
-         * Sets new worker capcities for this model.
+         * Initializes new worker capacities for this model.
          *
-         * @param device the device for the model or cpu if null
-         * @param newMinWorkers minimum amount of workers.
-         * @param newMaxWorkers maximum amount of workers.
-         * @return this {@link ModelInfo}
+         * @param deviceName the device for the model, null for default devices
+         * @param minWorkers minimum amount of workers.
+         * @param maxWorkers maximum amount of workers.
          */
-        public WorkerPool<I, O> scaleWorkers(Device device, int newMinWorkers, int newMaxWorkers) {
+        public void initWorkers(String deviceName, int minWorkers, int maxWorkers) {
+            Device device = model.withDefaultDevice(deviceName);
+            scaleWorkers(device, minWorkers, maxWorkers);
+        }
+
+        /**
+         * Sets new worker capacities for this model.
+         *
+         * @param deviceName the device for the model, null for all devices
+         * @param minWorkers minimum amount of workers.
+         * @param maxWorkers maximum amount of workers.
+         */
+        public void scaleWorkers(String deviceName, int minWorkers, int maxWorkers) {
+            if (deviceName != null) {
+                Device device = model.withDefaultDevice(deviceName);
+                scaleWorkers(device, minWorkers, maxWorkers);
+                return;
+            }
+
+            // scale for all devices
+            for (Device device : devices.keySet()) {
+                scaleWorkers(device, minWorkers, maxWorkers);
+            }
+        }
+
+        private void scaleWorkers(Device device, int newMinWorkers, int newMaxWorkers) {
             synchronized (model) {
                 try {
                     model.load(device);
@@ -290,9 +315,9 @@ public class WorkLoadManager implements AutoCloseable {
                 }
                 if (model.getStatus() != ModelInfo.Status.READY) {
                     logger.warn("Cannot scale workers while model is not READY: {}", model);
-                    return this;
+                    return;
                 }
-                device = model.withDefaultDevice(device);
+
                 WlmConfigManager configManager = WlmConfigManager.getInstance();
                 newMaxWorkers = configManager.getDefaultMaxWorkers(model, device, newMaxWorkers);
                 newMinWorkers =
@@ -304,9 +329,7 @@ public class WorkLoadManager implements AutoCloseable {
 
                 cleanup();
 
-                List<WorkerThread<I, O>> threads;
-
-                threads = getWorkers();
+                List<WorkerThread<I, O>> threads = getWorkers();
                 List<WorkerThread<I, O>> fixedPoolThread =
                         threads.stream()
                                 .filter(WorkerThread::isFixPoolThread)
@@ -323,13 +346,21 @@ public class WorkLoadManager implements AutoCloseable {
                             .subList(newMinWorkers, numberOfCurrentFixedWorkers)
                             .forEach(
                                     t -> {
-                                        threads.remove(t);
                                         t.shutdown(WorkerState.WORKER_SCALED_DOWN);
                                     });
                 }
                 log();
+            }
+        }
 
-                return this;
+        /** Shutdown all works. */
+        public void shutdownWorkers() {
+            synchronized (model) {
+                List<WorkerThread<I, O>> threads = getWorkers();
+                for (WorkerThread<I, O> thread : threads) {
+                    thread.shutdown(WorkerState.WORKER_SCALED_DOWN);
+                }
+                threads.clear();
             }
         }
 
@@ -398,9 +429,9 @@ public class WorkLoadManager implements AutoCloseable {
          * @param count number of threads to add
          */
         private void addThreads(int count) {
-            // Add threads to devices in a random order for now
-            List<WorkerPoolDevice> shuffled = new ArrayList<>(devices.values());
-            Collections.shuffle(shuffled);
+            // Add threads to devices which has most room to grow
+            List<WorkerPoolDevice> sorted = new ArrayList<>(devices.values());
+            sorted.sort(Comparator.comparingInt(p -> p.getMaxWorkers() - p.getMinWorkers()));
 
             for (WorkerPoolDevice wpd : devices.values()) {
                 int toAdd = Math.min(count, wpd.getMaxWorkers() - wpd.workers.size());
@@ -449,9 +480,7 @@ public class WorkLoadManager implements AutoCloseable {
             }
 
             private void addThreads(int count, boolean permanent) {
-
                 for (int i = 0; i < count; ++i) {
-
                     WorkerThread<I, O> thread =
                             WorkerThread.builder(model.getInputClass(), model.getOutputClass())
                                     .setModel(model)

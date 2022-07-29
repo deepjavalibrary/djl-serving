@@ -143,7 +143,6 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      */
     @SuppressWarnings("unchecked")
     public void load(Device device) throws ModelException, IOException {
-        device = withDefaultDevice(device);
         if (getModels().containsKey(device)) {
             return;
         }
@@ -181,7 +180,7 @@ public final class ModelInfo<I, O> implements AutoCloseable {
                 builder.optArgument("batchifier", "stack");
             }
         }
-        logger.info("Loading model {} on {}.", id, device);
+        logger.info("Loading model {} on {}", id, device);
         if ("nc".equals(device.getDeviceType())) {
             String ncs = String.valueOf(device.getDeviceId());
             builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
@@ -241,7 +240,6 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      * @return the loaded {@link ZooModel}
      */
     public ZooModel<I, O> getModel(Device device) {
-        device = withDefaultDevice(device);
         if (getModels().get(device) == null) {
             throw new IllegalStateException("Model \"" + id + "\" has not been loaded yet.");
         }
@@ -422,7 +420,7 @@ public final class ModelInfo<I, O> implements AutoCloseable {
     @Override
     public void close() {
         if (!getModels().isEmpty()) {
-            logger.debug("closing model {}", modelName);
+            logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
             for (Model m : model.values()) {
                 m.close();
             }
@@ -459,16 +457,15 @@ public final class ModelInfo<I, O> implements AutoCloseable {
     /**
      * Returns the default device for this model if device is null.
      *
-     * @param device the device to use if it is not null
+     * @param deviceName the device to use if it is not null
      * @return a non-null device
      */
-    public Device withDefaultDevice(Device device) {
-        if (device != null) {
-            return device;
-        }
-
+    public Device withDefaultDevice(String deviceName) {
         Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
-        return engine.defaultDevice();
+        if (deviceName == null) {
+            return engine.defaultDevice();
+        }
+        return Device.fromName(deviceName, engine);
     }
 
     /** {@inheritDoc} */

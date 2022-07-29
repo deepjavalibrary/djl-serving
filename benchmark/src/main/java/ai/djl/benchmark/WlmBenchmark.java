@@ -41,28 +41,41 @@ public class WlmBenchmark extends AbstractBenchmark {
         MemoryTrainingListener.collectMemoryInfo(metrics); // Measure memory before loading model
 
         Engine engine = Engine.getEngine(arguments.getEngine());
-        Device[] devices = engine.getDevices(arguments.getMaxGpus());
+        String[] devices;
         int numOfWorkers = arguments.getThreads();
         int neuronCores = arguments.getNeuronCores();
         if (neuronCores > 0) {
-            devices = new Device[neuronCores];
-            Arrays.fill(devices, Device.cpu());
+            devices = new String[neuronCores];
+            for (int i = 0; i < neuronCores; ++i) {
+                devices[i] = "nc" + i;
+            }
             if (numOfWorkers > 1) {
                 numOfWorkers = 2 * neuronCores;
+            }
+        } else {
+            int gpuCount = engine.getGpuCount();
+            if (gpuCount > 0) {
+                devices = new String[gpuCount];
+                for (int i = 0; i < gpuCount; ++i) {
+                    devices[i] = String.valueOf(i);
+                }
+            } else {
+                devices = new String[] {"-1"};
             }
         }
 
         int delay = arguments.getDelay();
         logger.info("WorkLoad Manager inference with {} workers.", numOfWorkers);
 
+        Device device = Device.fromName(devices[0], engine);
         try (WorkLoadManager wlm = new WorkLoadManager();
                 ModelInfo<Void, float[]> modelInfo =
-                        new ModelInfo<>("model", loadModelCriteria(arguments, devices[0]))) {
+                        new ModelInfo<>("model", loadModelCriteria(arguments, device))) {
 
             WorkerPool<Void, float[]> wp = wlm.registerModel(modelInfo);
             int workersPerDevice = numOfWorkers / devices.length;
-            for (Device device : devices) {
-                wp.scaleWorkers(device, workersPerDevice, workersPerDevice);
+            for (String deviceName : devices) {
+                wp.initWorkers(deviceName, workersPerDevice, workersPerDevice);
             }
 
             MemoryTrainingListener.collectMemoryInfo(

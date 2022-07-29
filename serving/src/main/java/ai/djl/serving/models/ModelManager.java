@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.models;
 
-import ai.djl.Device;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -42,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -159,38 +157,55 @@ public final class ModelManager {
     }
 
     /**
-     * Scales the workers for each model in a workflow.
+     * Initializes the workers for each model in a workflow.
      *
      * @param workflow the workflow to scale workers for
-     * @param device the device for the model
+     * @param deviceName the device for the model
      * @param minWorkers the min workers
      * @param maxWorkers the max workers
      * @return the info about the scaled workflow
-     * @see WorkerPool#scaleWorkers(Device, int, int)
+     * @see WorkerPool#initWorkers(String, int, int)
      */
-    public Workflow scaleWorkers(Workflow workflow, Device device, int minWorkers, int maxWorkers) {
+    public Workflow initWorkers(
+            Workflow workflow, String deviceName, int minWorkers, int maxWorkers) {
         for (ModelInfo<Input, Output> model : workflow.getModels()) {
-            scaleWorkers(model, device, minWorkers, maxWorkers);
+            initWorkers(model, deviceName, minWorkers, maxWorkers);
         }
         return workflow;
+    }
+
+    /**
+     * Initializes the workers for a model.
+     *
+     * @param model the model to scale workers for
+     * @param deviceName the device for the model
+     * @param minWorkers the min workers, -1 for auto-scale
+     * @param maxWorkers the max workers, -1 for auto-scale
+     * @see WorkerPool#initWorkers(String, int, int)
+     */
+    public void initWorkers(
+            ModelInfo<Input, Output> model, String deviceName, int minWorkers, int maxWorkers) {
+        logger.info(
+                "initWorkers for {} (dev: {}): {}, {}", model, deviceName, minWorkers, maxWorkers);
+        Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
+        wlm.getWorkerPoolForModel(model).initWorkers(deviceName, minWorkers, maxWorkers);
     }
 
     /**
      * Scales the workers for a model.
      *
      * @param model the model to scale workers for
-     * @param device the device for the model
-     * @param minWorkers the min workers
-     * @param maxWorkers the max workers
-     * @return the info about the scaled workflow
-     * @see WorkerPool#scaleWorkers(Device, int, int)
+     * @param deviceName the device for the model
+     * @param minWorkers the min workers, -1 for auto-scale
+     * @param maxWorkers the max workers, -1 for auto-scale
+     * @see WorkerPool#scaleWorkers(String, int, int)
      */
-    public ModelInfo<Input, Output> scaleWorkers(
-            ModelInfo<Input, Output> model, Device device, int minWorkers, int maxWorkers) {
-        logger.debug("updateModel: {}", model);
+    public void scaleWorkers(
+            ModelInfo<Input, Output> model, String deviceName, int minWorkers, int maxWorkers) {
+        logger.info(
+                "scaleWorkers for {} (dev: {}): {}, {}", model, deviceName, minWorkers, maxWorkers);
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
-        wlm.getWorkerPoolForModel(model).scaleWorkers(device, minWorkers, maxWorkers);
-        return model;
+        wlm.getWorkerPoolForModel(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
     }
 
     /**
@@ -276,7 +291,7 @@ public final class ModelManager {
      * @return a list of worker information for specified workflow
      * @throws ModelNotFoundException if specified workflow not found
      */
-    public List<DescribeWorkflowResponse> describeWorkflow(String workflowName, String version)
+    public DescribeWorkflowResponse describeWorkflow(String workflowName, String version)
             throws ModelNotFoundException {
         Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
@@ -287,10 +302,9 @@ public final class ModelManager {
             throw new ModelNotFoundException("Workflow not found: " + workflowName);
         }
 
-        List<DescribeWorkflowResponse> resps = new ArrayList<>();
+        DescribeWorkflowResponse resp = new DescribeWorkflowResponse();
         for (Workflow workflow : list) {
             for (ModelInfo<Input, Output> model : workflow.getModels()) {
-                DescribeWorkflowResponse resp = new DescribeWorkflowResponse();
                 resp.setWorkflowName(model.getModelId());
                 resp.setWorkflowUrl(model.getModelUrl());
                 resp.setBatchSize(model.getBatchSize());
@@ -320,11 +334,10 @@ public final class ModelManager {
                     resp.addWorker(
                             model.getVersion(), workerId, startTime, isRunning, worker.getDevice());
                 }
-                resps.add(resp);
             }
         }
 
-        return resps;
+        return resp;
     }
 
     /**

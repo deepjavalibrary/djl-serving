@@ -12,9 +12,7 @@
  */
 package ai.djl.serving.http;
 
-import ai.djl.Device;
 import ai.djl.ModelException;
-import ai.djl.engine.Engine;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -195,17 +193,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             ChannelHandlerContext ctx, String workflowName, String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
-        List<DescribeWorkflowResponse> resps = modelManager.describeWorkflow(workflowName, version);
-
-        if (resps.size() != 1) {
-            NettyUtils.sendError(
-                    ctx,
-                    new IllegalArgumentException(
-                            workflowName + " describes a full workflow, not just a model"));
-            return;
-        }
-
-        DescribeWorkflowResponse resp = resps.get(0);
+        DescribeWorkflowResponse resp = modelManager.describeWorkflow(workflowName, version);
         NettyUtils.sendJsonResponse(ctx, resp);
     }
 
@@ -220,7 +208,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
         }
         String version = NettyUtils.getParameter(decoder, MODEL_VERSION_PARAMETER, null);
-        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, "-1");
+        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
         String engineName = NettyUtils.getParameter(decoder, ENGINE_NAME_PARAMETER, null);
         int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, 1);
         int maxBatchDelay = NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, 100);
@@ -231,8 +219,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 Boolean.parseBoolean(
                         NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
-        Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
-        Device device = Device.fromName(deviceName, engine);
         ModelInfo<Input, Output> modelInfo =
                 new ModelInfo<>(
                         modelName,
@@ -255,8 +241,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                                     for (ModelInfo<Input, Output> m : workflow.getModels()) {
                                         m.configurePool(maxIdleTime)
                                                 .configureModelBatch(batchSize, maxBatchDelay);
-                                        modelManager.scaleWorkers(
-                                                m, device, minWorkers, maxWorkers);
+                                        modelManager.initWorkers(
+                                                m, deviceName, minWorkers, maxWorkers);
                                     }
                                 })
                         .exceptionally(
@@ -293,15 +279,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                     WorkflowDefinition.parse(url.toURI(), url.openStream()).toWorkflow();
             String workflowName = workflow.getName();
 
-            Device device = Device.fromName(deviceName);
             final ModelManager modelManager = ModelManager.getInstance();
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
                             .thenAccept(
                                     v ->
-                                            modelManager.scaleWorkers(
-                                                    workflow, device, minWorkers, maxWorkers))
+                                            modelManager.initWorkers(
+                                                    workflow, deviceName, minWorkers, maxWorkers))
                             .exceptionally(
                                     t -> {
                                         NettyUtils.sendError(ctx, t.getCause());
@@ -357,6 +342,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 }
             }
 
+            String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
+
             List<String> msgs = new ArrayList<>();
             for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
                 WorkerPool<Input, Output> pool =
@@ -388,14 +375,14 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         for (ModelInfo<Input, Output> m : p.getModels()) {
                             m.configurePool(maxIdleTime)
                                     .configureModelBatch(batchSize, maxBatchDelay);
-                            modelManager.scaleWorkers(m, null, minWorkers, maxWorkers);
+                            modelManager.scaleWorkers(m, deviceName, minWorkers, maxWorkers);
                         }
                     }
                 } else {
                     modelInfo
                             .configurePool(maxIdleTime)
                             .configureModelBatch(batchSize, maxBatchDelay);
-                    modelManager.scaleWorkers(modelInfo, null, minWorkers, maxWorkers);
+                    modelManager.scaleWorkers(modelInfo, deviceName, minWorkers, maxWorkers);
                 }
 
                 String msg =
