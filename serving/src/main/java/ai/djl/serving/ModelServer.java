@@ -83,7 +83,7 @@ public class ModelServer implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelServer.class);
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
-    private static final Pattern MODEL_STORE_PATTERN = Pattern.compile("(\\[?(.+?)]?=)?(.+)");
+    private static final Pattern MODEL_STORE_PATTERN = Pattern.compile("(\\[?([^?]+?)]?=)?(.+)");
 
     private ServerGroups serverGroups;
     private List<ChannelFuture> futures = new ArrayList<>(2);

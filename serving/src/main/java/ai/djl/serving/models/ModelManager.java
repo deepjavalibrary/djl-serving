@@ -23,8 +23,7 @@ import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
-import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
-import ai.djl.serving.wlm.WorkerThread;
+import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.util.JsonUtils;
 
@@ -41,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -185,10 +185,8 @@ public final class ModelManager {
      */
     public void initWorkers(
             ModelInfo<Input, Output> model, String deviceName, int minWorkers, int maxWorkers) {
-        logger.info(
-                "initWorkers for {} (dev: {}): {}, {}", model, deviceName, minWorkers, maxWorkers);
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
-        wlm.getWorkerPoolForModel(model).initWorkers(deviceName, minWorkers, maxWorkers);
+        wlm.getWorkerPool(model).initWorkers(deviceName, minWorkers, maxWorkers);
     }
 
     /**
@@ -205,7 +203,7 @@ public final class ModelManager {
         logger.info(
                 "scaleWorkers for {} (dev: {}): {}, {}", model, deviceName, minWorkers, maxWorkers);
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
-        wlm.getWorkerPoolForModel(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
+        wlm.getWorkerPool(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
     }
 
     /**
@@ -288,56 +286,40 @@ public final class ModelManager {
      *
      * @param workflowName the workflow name to be queried
      * @param version the model version to be queried
-     * @return a list of worker information for specified workflow
+     * @return model and workers information for specified workflow
      * @throws ModelNotFoundException if specified workflow not found
      */
-    public DescribeWorkflowResponse describeWorkflow(String workflowName, String version)
+    public DescribeWorkflowResponse[] describeWorkflow(String workflowName, String version)
             throws ModelNotFoundException {
         Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
             throw new ModelNotFoundException("Workflow not found: " + workflowName);
         }
-        List<Workflow> list = endpoint.getWorkflows();
-        if (list.isEmpty()) {
-            throw new ModelNotFoundException("Workflow not found: " + workflowName);
-        }
-
-        DescribeWorkflowResponse resp = new DescribeWorkflowResponse();
-        for (Workflow workflow : list) {
-            for (ModelInfo<Input, Output> model : workflow.getModels()) {
-                resp.setWorkflowName(model.getModelId());
-                resp.setWorkflowUrl(model.getModelUrl());
-                resp.setBatchSize(model.getBatchSize());
-                resp.setMaxBatchDelay(model.getMaxBatchDelay());
-                resp.setMaxIdleTime(model.getMaxIdleTime());
-                resp.setQueueLength(wlm.getQueueLength(model));
-                resp.setLoadedAtStartup(startupWorkflows.contains(model.getModelId()));
-
-                WorkerPool<Input, Output> wp = wlm.getWorkerPoolForModel(model);
-                resp.setMaxWorkers(wp.getMaxWorkers());
-                resp.setMinWorkers(wp.getMinWorkers());
-
-                ModelInfo.Status status = model.getStatus();
-                if (status == ModelInfo.Status.READY) {
-                    int activeWorker = wlm.getNumRunningWorkers(model);
-                    int targetWorker = wp.getMinWorkers();
-                    resp.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
-                } else {
-                    resp.setStatus(status.name());
-                }
-
-                List<WorkerThread<Input, Output>> workers = wlm.getWorkers(model);
-                for (WorkerThread<Input, Output> worker : workers) {
-                    int workerId = worker.getWorkerId();
-                    long startTime = worker.getStartTime();
-                    boolean isRunning = worker.isRunning();
-                    resp.addWorker(
-                            model.getVersion(), workerId, startTime, isRunning, worker.getDevice());
-                }
+        List<Workflow> list = null;
+        if (version == null) {
+            list = endpoint.getWorkflows();
+        } else {
+            Workflow wf = endpoint.get(version);
+            if (wf != null) {
+                list = Collections.singletonList(wf);
             }
         }
+        if (list == null || list.isEmpty()) {
+            StringBuilder sb = new StringBuilder("Workflow not found: ");
+            sb.append(workflowName);
+            if (version != null) {
+                sb.append('/').append(version);
+            }
+            throw new ModelNotFoundException("Workflow not found: " + sb);
+        }
 
-        return resp;
+        DescribeWorkflowResponse[] array = new DescribeWorkflowResponse[list.size()];
+        int index = 0;
+        for (Workflow workflow : list) {
+            array[index++] = new DescribeWorkflowResponse(workflow);
+        }
+
+        return array;
     }
 
     /**
@@ -352,9 +334,9 @@ public final class ModelManager {
                     boolean hasPending = false;
                     Map<String, StatusResponse> data = new LinkedHashMap<>(); // NOPMD
                     for (Endpoint endpoint : endpoints.values()) {
-                        for (Workflow p : endpoint.getWorkflows()) {
-                            String workflowName = p.getName();
-                            for (ModelInfo<Input, Output> m : p.getModels()) {
+                        for (Workflow wf : endpoint.getWorkflows()) {
+                            String workflowName = wf.getName();
+                            for (ModelInfo<Input, Output> m : wf.getModels()) {
                                 String modelName = m.getModelId();
                                 if (!modelName.equals(workflowName)) {
                                     modelName = workflowName + ':' + modelName; // NOPMD
@@ -370,12 +352,10 @@ public final class ModelManager {
                                         hasPending = true;
                                         break;
                                     default:
-                                        int min = wlm.getWorkerPoolForModel(m).getMinWorkers();
-                                        int actual = wlm.getNumRunningWorkers(m);
-                                        if (actual < min) {
-                                            data.put(modelName, new StatusResponse("Unhealthy"));
-                                        } else {
+                                        if (wlm.getWorkerPool(m).isFullyScaled()) {
                                             data.put(modelName, new StatusResponse("Healthy"));
+                                        } else {
+                                            data.put(modelName, new StatusResponse("Unhealthy"));
                                         }
                                         break;
                                 }

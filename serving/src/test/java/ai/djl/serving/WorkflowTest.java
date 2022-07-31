@@ -108,7 +108,7 @@ public class WorkflowTest {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         try (WorkLoadManager wlm = new WorkLoadManager()) {
             for (ModelInfo<Input, Output> model : workflow.getModels()) {
-                wlm.registerModel(model).initWorkers(null, 1, 1);
+                wlm.registerModel(model).initWorkers(null, -1, 1);
             }
 
             Output output = workflow.execute(wlm, input).join();

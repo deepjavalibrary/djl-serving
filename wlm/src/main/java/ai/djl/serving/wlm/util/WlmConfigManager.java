@@ -15,7 +15,6 @@ package ai.djl.serving.wlm.util;
 import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.ndarray.NDManager;
-import ai.djl.serving.wlm.ModelInfo;
 
 /** This manages some configurations used by the {@link ai.djl.serving.wlm.WorkLoadManager}. */
 public final class WlmConfigManager {
@@ -120,73 +119,50 @@ public final class WlmConfigManager {
     /**
      * Returns the default minimum number of workers for a new registered model.
      *
-     * @param modelInfo the {@code ModelInfo}
-     * @param device the device that model loaded on
-     * @param minWorkers the minimum number of workers of a new registered model
-     * @param maxWorkers the maximum number of workers of a new registered model
+     * @param model the loaded {@code Model}
      * @return the calculated minimum number of workers for a new registered model
      */
-    public int getDefaultMinWorkers(
-            ModelInfo<?, ?> modelInfo, Device device, int minWorkers, int maxWorkers) {
-        if (minWorkers == 0) {
-            return 0;
-        }
-        Model model = modelInfo.getModel(device);
-        minWorkers = getWorkersProperty(model, device, "minWorkers", minWorkers);
-        return Math.min(minWorkers, maxWorkers);
+    public int getDefaultMinWorkers(Model model) {
+        return getWorkersProperty(model, "minWorkers", 1);
     }
 
     /**
      * Returns the default maximum number of workers for a new registered model.
      *
-     * @param modelInfo the {@code ModelInfo}
-     * @param device the device that model loaded on
-     * @param target the target number of worker
+     * @param model the loaded {@code Model}
      * @return the default number of workers for a new registered model
      */
-    public int getDefaultMaxWorkers(ModelInfo<?, ?> modelInfo, Device device, int target) {
-        if (target == 0) {
-            return 0; // explicitly shutdown
+    public int getDefaultMaxWorkers(Model model) {
+        if (isDebug()) {
+            return 1;
         }
-
-        Model model = modelInfo.getModel(device);
-        if (target == -1) {
-            // auto detection
-            if (isDebug()) {
-                return 1;
-            }
-            // get from model's property
-            target = getWorkersProperty(model, device, "maxWorkers", -1);
-            if (target > 0) {
-                return target;
-            }
+        // get from model's property
+        int maxWorkers = getWorkersProperty(model, "maxWorkers", -1);
+        if (maxWorkers > 0) {
+            return maxWorkers;
         }
 
         NDManager manager = model.getNDManager();
-        if (device != null && "nc".equals(device.getDeviceType())) {
+        Device device = manager.getDevice();
+        if ("nc".equals(device.getDeviceType())) {
             if ("Python".equals(manager.getEngine().getEngineName())) {
                 return 1;
             }
             return 2; // default to max 2 workers for inferentia
         }
 
-        if (Device.Type.GPU.equals(manager.getDevice().getDeviceType())) {
+        if (Device.Type.GPU.equals(device.getDeviceType())) {
             if ("MXNet".equals(manager.getEngine().getEngineName())) {
                 // FIXME: MXNet GPU Model doesn't support multi-threading
                 return 1;
-            } else if (target == -1) {
-                target = 2; // default to max 2 workers per GPU
             }
-            return target;
-        }
-
-        if (target > 0) {
-            return target;
+            return 2;
         }
         return Runtime.getRuntime().availableProcessors();
     }
 
-    private static int getWorkersProperty(Model model, Device device, String key, int def) {
+    private static int getWorkersProperty(Model model, String key, int def) {
+        Device device = model.getNDManager().getDevice();
         String workers = model.getProperty(device.getDeviceType() + '.' + key);
         if (workers != null) {
             return Integer.parseInt(workers);

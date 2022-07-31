@@ -195,16 +195,15 @@ public final class WorkerThread<I, O> implements Runnable {
      *
      * @param <I> the model input class
      * @param <O> the model output class
-     * @param i the model input class
-     * @param o the model output class
+     * @param model the {@code ModelInfo} the thread will be responsible for
      * @return a new builder
      */
-    public static <I, O> Builder<I, O> builder(Class<I> i, Class<O> o) {
-        return new Builder<>();
+    public static <I, O> Builder<I, O> builder(ModelInfo<I, O> model) {
+        return new Builder<>(model);
     }
 
     /** A Builder to construct a {@code WorkerThread}. */
-    public static class Builder<I, O> {
+    public static final class Builder<I, O> {
 
         private ModelInfo<I, O> model;
         private Device device;
@@ -212,62 +211,9 @@ public final class WorkerThread<I, O> implements Runnable {
         private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
         private boolean fixPoolThread;
 
-        Builder() {
-            this.fixPoolThread = true;
-        }
-
-        /**
-         * Returns self reference to this builder.
-         *
-         * @return self reference to this builder
-         */
-        protected Builder<I, O> self() {
-            return this;
-        }
-
-        protected void preBuildProcessing() {
-            if (aggregator == null) {
-                if (fixPoolThread) {
-                    aggregator = new PermanentBatchAggregator<>(model, jobQueue);
-                } else {
-                    aggregator = new TemporaryBatchAggregator<>(model, jobQueue);
-                }
-            }
-        }
-
-        protected void validate() {
-            if (device == null) {
-                throw new IllegalArgumentException("Must set device for worker thread");
-            }
-            if (model == null) {
-                throw new IllegalArgumentException("Must set model for worker thread");
-            }
-            if (jobQueue == null && aggregator == null) {
-                throw new IllegalArgumentException(
-                        "one of jobQueue or BatchAggregator have to be set.");
-            }
-        }
-
-        /**
-         * Builds the {@link WorkerThread} with the provided data.
-         *
-         * @return an {@link WorkerThread}
-         */
-        public WorkerThread<I, O> build() {
-            validate();
-            preBuildProcessing();
-            return new WorkerThread<>(this);
-        }
-
-        /**
-         * Sets the {@code ModelInfo} the thread will be responsible for.
-         *
-         * @param model the model to set
-         * @return self-reference to this builder.
-         */
-        public Builder<I, O> setModel(ModelInfo<I, O> model) {
+        Builder(ModelInfo<I, O> model) {
             this.model = model;
-            return self();
+            this.fixPoolThread = true;
         }
 
         /**
@@ -278,32 +224,18 @@ public final class WorkerThread<I, O> implements Runnable {
          */
         public Builder<I, O> setDevice(Device device) {
             this.device = device;
-            return self();
+            return this;
         }
 
         /**
-         * Sets a {@code BatchAggregator} which overrides the instantiated default {@code
-         * BatchAggregator}.
-         *
-         * @param aggregator the {@code BatchAggregator} to set
-         * @return self-reference to this builder.
-         */
-        public Builder<I, O> optAggregator(BatchAggregator<I, O> aggregator) {
-            this.aggregator = aggregator;
-            return self();
-        }
-
-        /**
-         * Sets the jobQueue used to poll for new jobs. The jobQueue is passed to the created
-         * standard BatchAggregators if the Batch-Aggregator is not override using {@link
-         * #optAggregator(BatchAggregator) optAggregator(BatchAggregator)}
+         * Sets the jobQueue used to poll for new jobs.
          *
          * @param jobQueue the jobQueue to set
          * @return self-reference to this builder.
          */
         public Builder<I, O> setJobQueue(LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
             this.jobQueue = jobQueue;
-            return self();
+            return this;
         }
 
         /**
@@ -315,7 +247,27 @@ public final class WorkerThread<I, O> implements Runnable {
          */
         public Builder<I, O> optFixPoolThread(boolean fixPoolThread) {
             this.fixPoolThread = fixPoolThread;
-            return self();
+            return this;
+        }
+
+        /**
+         * Builds the {@link WorkerThread} with the provided data.
+         *
+         * @return an {@link WorkerThread}
+         */
+        public WorkerThread<I, O> build() {
+            if (device == null) {
+                throw new IllegalArgumentException("Must set device for worker thread");
+            }
+            if (jobQueue == null) {
+                throw new IllegalArgumentException("jobQueue has to be set.");
+            }
+            if (fixPoolThread) {
+                aggregator = new PermanentBatchAggregator<>(model, jobQueue);
+            } else {
+                aggregator = new TemporaryBatchAggregator<>(model, jobQueue);
+            }
+            return new WorkerThread<>(this);
         }
     }
 }

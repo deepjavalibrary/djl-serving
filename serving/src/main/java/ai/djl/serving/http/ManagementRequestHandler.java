@@ -20,7 +20,6 @@ import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
@@ -193,7 +192,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             ChannelHandlerContext ctx, String workflowName, String version)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
-        DescribeWorkflowResponse resp = modelManager.describeWorkflow(workflowName, version);
+        DescribeWorkflowResponse[] resp = modelManager.describeWorkflow(workflowName, version);
         NettyUtils.sendJsonResponse(ctx, resp);
     }
 
@@ -239,8 +238,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         .thenAccept(
                                 v -> {
                                     for (ModelInfo<Input, Output> m : workflow.getModels()) {
-                                        m.configurePool(maxIdleTime)
-                                                .configureModelBatch(batchSize, maxBatchDelay);
+                                        m.configureModelBatch(
+                                                batchSize, maxBatchDelay, maxIdleTime);
                                         modelManager.initWorkers(
                                                 m, deviceName, minWorkers, maxWorkers);
                                     }
@@ -328,73 +327,56 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             String version)
             throws ModelNotFoundException {
         try {
+            String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
+            int maxIdleTime = NettyUtils.getIntParameter(decoder, MAX_IDLE_TIME_PARAMETER, -1);
+            int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, -1);
+            int maxBatchDelay = NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, -1);
+            int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
+            int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
+
             ModelManager modelManager = ModelManager.getInstance();
-            Workflow workflow = modelManager.getWorkflow(workflowName, version, false);
-            if (workflow == null) {
+            Endpoint endpoint = modelManager.getEndpoints().get(workflowName);
+            List<Workflow> workflows = null;
+            if (endpoint != null) {
+                if (version == null) {
+                    // scale all versions
+                    workflows = endpoint.getWorkflows();
+                } else {
+                    Workflow wf = modelManager.getWorkflow(workflowName, version, false);
+                    if (wf != null) {
+                        workflows = Collections.singletonList(wf);
+                    }
+                }
+            }
+            if (workflows == null || workflows.isEmpty()) {
                 throw new ModelNotFoundException("Model or workflow not found: " + workflowName);
             }
 
-            // make sure all models are loaded and ready
-            for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
-                if (modelInfo.getStatus() != ModelInfo.Status.READY) {
-                    throw new ServiceUnavailableException(
-                            "Model or workflow is not ready: " + workflowName);
-                }
-            }
-
-            String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
-
-            List<String> msgs = new ArrayList<>();
-            for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
-                WorkerPool<Input, Output> pool =
-                        modelManager.getWorkLoadManager().getWorkerPoolForModel(modelInfo);
-                int minWorkers =
-                        NettyUtils.getIntParameter(
-                                decoder, MIN_WORKER_PARAMETER, pool.getMinWorkers());
-                int maxWorkers =
-                        NettyUtils.getIntParameter(
-                                decoder, MAX_WORKER_PARAMETER, pool.getMaxWorkers());
-                if (maxWorkers < minWorkers) {
-                    throw new BadRequestException("max_worker cannot be less than min_worker.");
-                }
-
-                int maxIdleTime =
-                        NettyUtils.getIntParameter(
-                                decoder, MAX_IDLE_TIME_PARAMETER, modelInfo.getMaxIdleTime());
-                int batchSize =
-                        NettyUtils.getIntParameter(
-                                decoder, BATCH_SIZE_PARAMETER, modelInfo.getBatchSize());
-                int maxBatchDelay =
-                        NettyUtils.getIntParameter(
-                                decoder, MAX_BATCH_DELAY_PARAMETER, modelInfo.getMaxBatchDelay());
-
-                if (version == null) {
-                    // scale all versions
-                    Endpoint endpoint = modelManager.getEndpoints().get(workflowName);
-                    for (Workflow p : endpoint.getWorkflows()) {
-                        for (ModelInfo<Input, Output> m : p.getModels()) {
-                            m.configurePool(maxIdleTime)
-                                    .configureModelBatch(batchSize, maxBatchDelay);
-                            modelManager.scaleWorkers(m, deviceName, minWorkers, maxWorkers);
-                        }
+            List<String> messages = new ArrayList<>();
+            for (Workflow workflow : workflows) {
+                // make sure all models are loaded and ready
+                for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
+                    if (modelInfo.getStatus() != ModelInfo.Status.READY) {
+                        throw new ServiceUnavailableException(
+                                "Model or workflow is not ready: " + workflow.getName());
                     }
-                } else {
-                    modelInfo
-                            .configurePool(maxIdleTime)
-                            .configureModelBatch(batchSize, maxBatchDelay);
-                    modelManager.scaleWorkers(modelInfo, deviceName, minWorkers, maxWorkers);
                 }
 
-                String msg =
-                        "Workflow \""
-                                + workflowName
-                                + "\" worker scaled. New Worker configuration min workers:"
-                                + pool.getMinWorkers()
-                                + " max workers:"
-                                + pool.getMaxWorkers();
-                msgs.add(msg);
+                for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
+                    modelInfo.configureModelBatch(batchSize, maxBatchDelay, maxIdleTime);
+                    modelManager.scaleWorkers(modelInfo, deviceName, minWorkers, maxWorkers);
+                    String msg =
+                            "Workflow \""
+                                    + workflow.getName()
+                                    + "\" worker scaled. New Worker configuration min workers:"
+                                    + minWorkers
+                                    + " max workers:"
+                                    + maxWorkers;
+                    messages.add(msg);
+                }
             }
-            String combinedMsg = Strings.join(msgs, '\n');
+
+            String combinedMsg = Strings.join(messages, '\n');
             NettyUtils.sendJsonResponse(ctx, new StatusResponse(combinedMsg));
         } catch (NumberFormatException ex) {
             throw new BadRequestException("parameter is invalid number." + ex.getMessage(), ex);
@@ -402,6 +384,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     }
 
     private static final class ListPagination {
+
         private int pageToken;
         private int last;
 

@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -205,25 +204,18 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      * @param batchSize the batchSize to set
      * @param maxBatchDelay maximum time to wait for a free space in worker queue after scaling up
      *     workers before giving up to offer the job to the queue.
-     * @return new configured ModelInfo.
-     */
-    public ModelInfo<I, O> configureModelBatch(int batchSize, int maxBatchDelay) {
-        this.batchSize = batchSize;
-        this.maxBatchDelay = maxBatchDelay;
-        return this;
-    }
-
-    /**
-     * Sets new configuration for the workerPool backing this model and returns a new configured
-     * ModelInfo object. You have to triggerUpdates in the {@code ModelManager} using this new
-     * model.
-     *
      * @param maxIdleTime time a WorkerThread can be idle before scaling down this worker.
-     * @return new configured ModelInfo.
      */
-    public ModelInfo<I, O> configurePool(int maxIdleTime) {
-        this.maxIdleTime = maxIdleTime;
-        return this;
+    public void configureModelBatch(int batchSize, int maxBatchDelay, int maxIdleTime) {
+        if (batchSize > 0) {
+            this.batchSize = batchSize;
+        }
+        if (maxBatchDelay >= 0) {
+            this.maxBatchDelay = maxBatchDelay;
+        }
+        if (maxIdleTime > 0) {
+            this.maxIdleTime = maxIdleTime;
+        }
     }
 
     private Map<Device, ZooModel<I, O>> getModels() {
@@ -298,15 +290,6 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      */
     public Status getStatus() {
         return status == null ? Status.PENDING : status;
-    }
-
-    /**
-     * Returns the model cache directory.
-     *
-     * @return the model cache directory
-     */
-    public Path getModelDir() {
-        return getModels().values().iterator().next().getModelPath();
     }
 
     /**
@@ -424,6 +407,7 @@ public final class ModelInfo<I, O> implements AutoCloseable {
             for (Model m : model.values()) {
                 m.close();
             }
+            model.clear();
         }
     }
 

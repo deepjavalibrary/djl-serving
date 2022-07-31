@@ -303,7 +303,6 @@ public class ModelServerTest {
             testInvalidManagementUri();
             testInvalidManagementMethod();
             testUnregisterModelNotFound();
-            testInvalidScaleModel();
             testScaleModelNotFound();
             testRegisterModelMissingUrl();
             testRegisterModelNotFound();
@@ -616,22 +615,35 @@ public class ModelServerTest {
         channel.writeAndFlush(req);
         latch.await();
 
-        DescribeWorkflowResponse resp =
-                JsonUtils.GSON.fromJson(result, DescribeWorkflowResponse.class);
-        assertTrue(resp.getWorkers().size() > 1);
+        Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
+        DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
+        DescribeWorkflowResponse wf = resp[0];
+        assertEquals(wf.getWorkflowName(), "mlp_2");
+        assertNull(wf.getVersion());
 
-        assertEquals(resp.getWorkflowName(), "mlp_2");
-        assertNotNull(resp.getWorkflowUrl());
-        assertEquals(resp.getMinWorkers(), 2);
-        assertEquals(resp.getMaxWorkers(), 4);
-        assertEquals(resp.getBatchSize(), 1);
-        assertEquals(resp.getMaxBatchDelay(), 100);
-        assertEquals(resp.getStatus(), "Healthy");
-        DescribeWorkflowResponse.Worker worker = resp.getWorkers().get(0);
+        List<DescribeWorkflowResponse.Model> models = wf.getModels();
+        DescribeWorkflowResponse.Model model = models.get(0);
+        assertEquals(model.getModelName(), "mlp_2");
+        assertNotNull(model.getModelUrl());
+        assertEquals(model.getBatchSize(), 1);
+        assertEquals(model.getMaxBatchDelay(), 100);
+        assertEquals(model.getMaxIdleTime(), 60);
+        assertEquals(model.getQueueSize(), 100);
+        assertTrue(model.getRequestInQueue() >= 0);
+        assertEquals(model.getStatus(), "Healthy");
+        assertFalse(model.isLoadedAtStartup());
+
+        DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
+        assertEquals(group.getDevice().isGpu(), CudaUtils.hasCuda());
+        assertEquals(group.getMinWorkers(), 2);
+        assertEquals(group.getMaxWorkers(), 4);
+        List<DescribeWorkflowResponse.Worker> workers = group.getWorkers();
+        assertTrue(workers.size() > 1);
+
+        DescribeWorkflowResponse.Worker worker = workers.get(0);
         assertTrue(worker.getId() > 0);
         assertNotNull(worker.getStartTime());
         assertNotNull(worker.getStatus());
-        assertEquals(worker.isGpu(), CudaUtils.hasCuda());
     }
 
     private void testUnregisterModel(Channel channel) throws InterruptedException {
@@ -902,28 +914,6 @@ public class ModelServerTest {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
             assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
             assertEquals(resp.getMessage(), "Workflow mlp_2 is already registered.");
-        }
-    }
-
-    private void testInvalidScaleModel() throws InterruptedException {
-        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        assertNotNull(channel);
-
-        reset();
-        DefaultFullHttpRequest req =
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.PUT,
-                        "/models/mlp?min_worker=10&max_worker=1");
-        channel.writeAndFlush(req).sync();
-        latch.await();
-        channel.closeFuture().sync();
-        channel.close().sync();
-
-        if (!System.getProperty("os.name").startsWith("Win")) {
-            ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            assertEquals(httpStatus, HttpResponseStatus.BAD_REQUEST);
-            assertEquals(resp.getMessage(), "max_worker cannot be less than min_worker.");
         }
     }
 

@@ -172,7 +172,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 }
             }
             String engineName = input.getProperty("engine_name", null);
-            String deviceName = input.getProperty("device", "-1");
+            String deviceName = input.getProperty("device", null);
 
             logger.info("Loading model {} from: {}", workflowName, modelUrl);
 

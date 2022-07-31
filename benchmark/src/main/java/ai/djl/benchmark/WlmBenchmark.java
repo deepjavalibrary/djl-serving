@@ -19,7 +19,7 @@ import ai.djl.metric.Unit;
 import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
-import ai.djl.serving.wlm.WorkLoadManager.WorkerPool;
+import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.training.listener.MemoryTrainingListener;
 
 import org.slf4j.Logger;
@@ -37,7 +37,6 @@ public class WlmBenchmark extends AbstractBenchmark {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public float[] predict(Arguments arguments, Metrics metrics, int iteration) {
-
         MemoryTrainingListener.collectMemoryInfo(metrics); // Measure memory before loading model
 
         Engine engine = Engine.getEngine(arguments.getEngine());
