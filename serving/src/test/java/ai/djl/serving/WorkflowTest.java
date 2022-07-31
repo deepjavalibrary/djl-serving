@@ -106,14 +106,15 @@ public class WorkflowTest {
     private Input runWorkflow(Path workflowFile, Input input)
             throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        try (WorkLoadManager wlm = new WorkLoadManager()) {
-            for (ModelInfo<Input, Output> model : workflow.getModels()) {
-                wlm.registerModel(model).initWorkers(null, -1, 1);
-            }
-
-            Output output = workflow.execute(wlm, input).join();
-            Assert.assertNotNull(output.getData());
-            return output;
+        WorkLoadManager wlm = new WorkLoadManager();
+        for (ModelInfo<Input, Output> model : workflow.getModels()) {
+            wlm.registerModel(model).initWorkers(null, -1, 1);
         }
+
+        Output output = workflow.execute(wlm, input).join();
+        workflow.stop();
+        wlm.close();
+        Assert.assertNotNull(output.getData());
+        return output;
     }
 }

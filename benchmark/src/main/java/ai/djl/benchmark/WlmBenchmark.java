@@ -16,6 +16,7 @@ import ai.djl.Device;
 import ai.djl.engine.Engine;
 import ai.djl.metric.Metrics;
 import ai.djl.metric.Unit;
+import ai.djl.repository.zoo.Criteria;
 import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
@@ -67,47 +68,47 @@ public class WlmBenchmark extends AbstractBenchmark {
         logger.info("WorkLoad Manager inference with {} workers.", numOfWorkers);
 
         Device device = Device.fromName(devices[0], engine);
-        try (WorkLoadManager wlm = new WorkLoadManager();
-                ModelInfo<Void, float[]> modelInfo =
-                        new ModelInfo<>("model", loadModelCriteria(arguments, device))) {
+        WorkLoadManager wlm = new WorkLoadManager();
+        Criteria<Void, float[]> criteria = loadModelCriteria(arguments, device);
+        ModelInfo<Void, float[]> modelInfo = new ModelInfo<>("model", criteria);
 
-            WorkerPool<Void, float[]> wp = wlm.registerModel(modelInfo);
-            int workersPerDevice = numOfWorkers / devices.length;
-            for (String deviceName : devices) {
-                wp.initWorkers(deviceName, workersPerDevice, workersPerDevice);
-            }
-
-            MemoryTrainingListener.collectMemoryInfo(
-                    metrics); // Measure memory before worker kickoff
-
-            metrics.addMetric("start", System.currentTimeMillis(), Unit.MILLISECONDS);
-            CompletableFuture<float[]>[] results = new CompletableFuture[iteration];
-            for (int i = 0; i < iteration; i++) {
-                try {
-                    results[i] = wlm.runJob(new Job<>(modelInfo, null));
-                    if (delay > 0) {
-                        Thread.sleep(delay);
-                    }
-                } catch (InterruptedException e) {
-                    logger.error("", e);
-                }
-            }
-
-            CompletableFuture.allOf(results).join();
-
-            metrics.addMetric("end", System.currentTimeMillis(), Unit.MILLISECONDS);
-
-            long successsfulResults =
-                    Arrays.stream(results).mapToInt(f -> f.join() != null ? 1 : 0).count();
-
-            if (successsfulResults != iteration) {
-                logger.error(
-                        "Only {}/{} results successfully finished.", successsfulResults, iteration);
-                return null;
-            }
-
-            return results[0].join();
+        WorkerPool<Void, float[]> wp = wlm.registerModel(modelInfo);
+        int workersPerDevice = numOfWorkers / devices.length;
+        for (String deviceName : devices) {
+            wp.initWorkers(deviceName, workersPerDevice, workersPerDevice);
         }
+
+        // Measure memory before worker kickoff
+        MemoryTrainingListener.collectMemoryInfo(metrics);
+
+        metrics.addMetric("start", System.currentTimeMillis(), Unit.MILLISECONDS);
+        CompletableFuture<float[]>[] results = new CompletableFuture[iteration];
+        for (int i = 0; i < iteration; i++) {
+            try {
+                results[i] = wlm.runJob(new Job<>(modelInfo, null));
+                if (delay > 0) {
+                    Thread.sleep(delay);
+                }
+            } catch (InterruptedException e) {
+                logger.error("", e);
+            }
+        }
+
+        CompletableFuture.allOf(results).join();
+        modelInfo.close();
+        wlm.close();
+
+        metrics.addMetric("end", System.currentTimeMillis(), Unit.MILLISECONDS);
+
+        long successfulResults =
+                Arrays.stream(results).mapToInt(f -> f.join() != null ? 1 : 0).count();
+
+        if (successfulResults != iteration) {
+            logger.error("Only {}/{} results successfully finished.", successfulResults, iteration);
+            return null;
+        }
+
+        return results[0].join();
     }
 
     @Override

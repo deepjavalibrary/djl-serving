@@ -35,7 +35,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** A class represent a loaded model and it's metadata. */
-public final class ModelInfo<I, O> implements AutoCloseable {
+public final class ModelInfo<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
 
@@ -399,8 +399,7 @@ public final class ModelInfo<I, O> implements AutoCloseable {
         return queueSize;
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Close all loaded models. */
     public void close() {
         if (!getModels().isEmpty()) {
             logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);

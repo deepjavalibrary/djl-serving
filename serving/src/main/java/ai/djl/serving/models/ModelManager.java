@@ -128,7 +128,7 @@ public final class ModelManager {
             // unregister all versions
             for (Workflow workflow : endpoint.getWorkflows()) {
                 candidateModelsToUnregister.addAll(workflow.getModels());
-                workflow.close();
+                workflow.stop();
             }
             startupWorkflows.remove(workflowName);
             endpoint.getWorkflows().clear();
@@ -140,7 +140,7 @@ public final class ModelManager {
                 return false;
             }
             candidateModelsToUnregister.addAll(workflow.getModels());
-            workflow.close();
+            workflow.stop();
             startupWorkflows.remove(workflowName);
         }
         if (endpoint.getWorkflows().isEmpty()) {

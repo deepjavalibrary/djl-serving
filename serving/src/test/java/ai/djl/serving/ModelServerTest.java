@@ -166,7 +166,8 @@ public class ModelServerTest {
     public void testModelStore()
             throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
                     InterruptedException {
-        try (ModelServer server = initTestServer("src/test/resources/config.properties")) {
+        ModelServer server = initTestServer("src/test/resources/config.properties");
+        try {
             Path modelStore = Paths.get("build/models");
             Path modelDir = modelStore.resolve("test_model");
             Files.createDirectories(modelDir);
@@ -241,6 +242,8 @@ public class ModelServerTest {
 
             url = server.mapModelUrl(mar);
             assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
+        } finally {
+            server.stop();
         }
     }
 
@@ -258,8 +261,8 @@ public class ModelServerTest {
             throws InterruptedException, HttpPostRequestEncoder.ErrorDataEncoderException,
                     IOException, ParseException, GeneralSecurityException,
                     ReflectiveOperationException, ServerStartupException {
-
-        try (ModelServer server = initTestServer("src/test/resources/config.properties")) {
+        ModelServer server = initTestServer("src/test/resources/config.properties");
+        try {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
@@ -310,6 +313,8 @@ public class ModelServerTest {
             testServiceUnavailable();
 
             ConfigManagerTest.testSsl();
+        } finally {
+            server.stop();
         }
     }
 
@@ -317,7 +322,8 @@ public class ModelServerTest {
     public void testWorkflows()
             throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
                     InterruptedException, ReflectiveOperationException {
-        try (ModelServer server = initTestServer("src/test/resources/workflow.config.properties")) {
+        ModelServer server = initTestServer("src/test/resources/workflow.config.properties");
+        try {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
@@ -327,6 +333,8 @@ public class ModelServerTest {
             channel.close().sync();
 
             ConfigManagerTest.testSsl();
+        } finally {
+            server.stop();
         }
     }
 
