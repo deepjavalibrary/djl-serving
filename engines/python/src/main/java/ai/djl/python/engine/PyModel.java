@@ -19,6 +19,7 @@ import ai.djl.inference.Predictor;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.translate.Translator;
+import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,7 +108,7 @@ public class PyModel extends BaseModel {
         }
 
         if (entryPoint == null) {
-            entryPoint = System.getenv("DJL_ENTRY_POINT");
+            entryPoint = Utils.getenv("DJL_ENTRY_POINT");
             if (entryPoint == null) {
                 Path modelFile = findModelFile(prefix);
                 if (modelFile == null) {
