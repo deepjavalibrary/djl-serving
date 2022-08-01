@@ -59,7 +59,7 @@ public final class ModelManager {
     private static final Logger logger = LoggerFactory.getLogger(ModelManager.class);
 
     private static ModelManager modelManager = new ModelManager();
-    private static final String[] TYPES = {"FOR_KSERVE" , "FOR_DJL_SERVING"};
+    private static final String[] TYPES = {"FOR_KSERVE", "FOR_DJL_SERVING"};
     private WorkLoadManager wlm;
     private Map<String, Endpoint> endpoints;
     private Set<String> startupWorkflows;
@@ -329,6 +329,7 @@ public final class ModelManager {
 
     /**
      * Sends model server health status to client.
+     *
      * @param type of request, from v2 protocol or the normal one.
      * @return completableFuture with eventually result in the future after async execution
      */
@@ -389,17 +390,90 @@ public final class ModelManager {
                             .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                     ByteBuf content = resp.content();
                     String body = null;
-                    if(type.equals(TYPES[0])){
+                    if (type.equals(TYPES[0])) {
                         // empty response
                         body = JsonUtils.GSON_PRETTY.toJson(new LinkedHashMap<>());
-                    }
-                    else if(type.equals(TYPES[1])){
+                    } else if (type.equals(TYPES[1])) {
                         body = JsonUtils.GSON_PRETTY.toJson(data);
                     }
                     content.writeCharSequence(body, CharsetUtil.UTF_8);
                     content.writeByte('\n');
                     return resp;
-                 });
+                });
+    }
+
+    /**
+     * Sends model server health status to client.
+     *
+     * @param modelName of certain modelName, modelVersion of certain version of param.
+     * @return completableFuture with eventually result in the future after async execution
+     */
+    public CompletableFuture<FullHttpResponse> modelStatu(String modelName, String modelVersion) {
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    boolean hasFailure = false;
+                    boolean hasPending = false;
+                    Map<String, StatusResponse> data = new LinkedHashMap<>(); // NOPMD
+                    Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
+
+                    // TODO: Search all workflows if model is not found here.
+                    ModelInfo<Input, Output> modelInfo =
+                            workflow.getModels().stream()
+                                    .filter(
+                                            model ->
+                                                    modelName.equals(
+                                                            model.getModel(
+                                                                            model.withDefaultDevice(
+                                                                                    null))
+                                                                    .getName()))
+                                    .findAny()
+                                    .get();
+                    ModelInfo.Status status = modelInfo.getStatus();
+                    switch (status) {
+                        case FAILED:
+                            data.put(modelName, new StatusResponse(status.name()));
+                            hasFailure = true;
+                            break;
+                        case PENDING:
+                            data.put(modelName, new StatusResponse(status.name()));
+                            hasPending = true;
+                            break;
+                        default:
+                            int min = wlm.getWorkerPoolForModel(modelInfo).getMinWorkers();
+                            int actual = wlm.getNumRunningWorkers(modelInfo);
+                            if (actual < min) {
+                                data.put(modelName, new StatusResponse("Unhealthy"));
+                            } else {
+                                data.put(modelName, new StatusResponse("Healthy"));
+                            }
+                            break;
+                    }
+
+                    HttpResponseStatus httpResponseStatus;
+                    if (hasFailure) {
+                        httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+                    } else if (hasPending) {
+                        if (ConfigManager.getInstance().allowsMultiStatus()) {
+                            httpResponseStatus = HttpResponseStatus.MULTI_STATUS;
+                        } else {
+                            httpResponseStatus = HttpResponseStatus.OK;
+                        }
+                    } else {
+                        httpResponseStatus = HttpResponseStatus.OK;
+                    }
+
+                    FullHttpResponse resp =
+                            new DefaultFullHttpResponse(
+                                    HttpVersion.HTTP_1_1, httpResponseStatus, false);
+                    resp.headers()
+                            .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+                    ByteBuf content = resp.content();
+                    String body = JsonUtils.GSON_PRETTY.toJson(new LinkedHashMap<>());
+
+                    content.writeCharSequence(body, CharsetUtil.UTF_8);
+                    content.writeByte('\n');
+                    return resp;
+                });
     }
 
     /**
