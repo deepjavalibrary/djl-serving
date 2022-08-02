@@ -53,7 +53,7 @@ public class PyEnv {
 
     /** Constructs a new {@code PyEnv} instance. */
     public PyEnv() {
-        pythonExecutable = System.getenv("PYTHON_EXECUTABLE");
+        pythonExecutable = Utils.getenv("PYTHON_EXECUTABLE");
         if (pythonExecutable == null) {
             pythonExecutable = "python3";
         }
@@ -277,9 +277,9 @@ public class PyEnv {
     String[] getEnvironmentVars(Model model) {
         ArrayList<String> envList = new ArrayList<>();
         StringBuilder pythonPath = new StringBuilder();
-        HashMap<String, String> environment = new HashMap<>(System.getenv());
-        if (System.getenv("PYTHONPATH") != null) {
-            pythonPath.append(System.getenv("PYTHONPATH")).append(File.pathSeparatorChar);
+        HashMap<String, String> environment = new HashMap<>(Utils.getenv());
+        if (Utils.getenv("PYTHONPATH") != null) {
+            pythonPath.append(Utils.getenv("PYTHONPATH")).append(File.pathSeparatorChar);
         }
         pythonPath.append(engineCacheDir).append(File.pathSeparatorChar);
         pythonPath.append(model.getModelPath().toAbsolutePath());
@@ -294,7 +294,7 @@ public class PyEnv {
     }
 
     private static int getDefaultTimeout(String key, int def) {
-        String timeout = System.getenv(key);
+        String timeout = Utils.getenv(key);
         if (timeout == null) {
             return def;
         }
