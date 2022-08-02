@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  *
  * @author erik.bamberg@web.de
  */
-public class WorkerPool<I, O> implements AutoCloseable {
+public class WorkerPool<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerPool.class);
 
@@ -211,15 +211,15 @@ public class WorkerPool<I, O> implements AutoCloseable {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public void close() {
+    /** Shuts down all the worker threads in the work pool. */
+    public void shutdown() {
         model.close();
         for (WorkerGroup<I, O> group : workerGroups.values()) {
             for (WorkerThread<I, O> worker : group.workers) {
                 worker.shutdown(WorkerState.WORKER_STOPPED);
             }
         }
+        workerGroups.clear();
         for (WorkerJob<I, O> wj : jobQueue) {
             wj.getFuture().cancel(true);
         }

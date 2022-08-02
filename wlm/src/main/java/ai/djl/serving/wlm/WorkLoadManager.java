@@ -33,7 +33,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  *
  * @author erik.bamberg@web.de
  */
-public class WorkLoadManager implements AutoCloseable {
+public class WorkLoadManager {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkLoadManager.class);
 
@@ -162,12 +162,12 @@ public class WorkLoadManager implements AutoCloseable {
         return (WorkerPool<I, O>) workerPools.get(modelInfo);
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Close all models related to the {@code WorkloadManager}. */
     public void close() {
         threadPool.shutdownNow();
         for (WorkerPool<?, ?> wp : workerPools.values()) {
-            wp.close();
+            wp.shutdown();
         }
+        workerPools.clear();
     }
 }

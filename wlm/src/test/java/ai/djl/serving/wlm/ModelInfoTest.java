@@ -33,14 +33,13 @@ public class ModelInfoTest {
 
     @Test
     public void testQueueSizeIsSet() {
-        try (ModelInfo<?, ?> modelInfo =
+        ModelInfo<?, ?> modelInfo =
                 new ModelInfo<>(
-                        "", null, null, "MXNet", Input.class, Output.class, 4711, 1, 300, 1)) {
-            Assert.assertEquals(4711, modelInfo.getQueueSize());
-            Assert.assertEquals(1, modelInfo.getMaxIdleTime());
-            Assert.assertEquals(300, modelInfo.getMaxBatchDelay());
-            Assert.assertEquals(1, modelInfo.getBatchSize());
-        }
+                        "", null, null, "MXNet", Input.class, Output.class, 4711, 1, 300, 1);
+        Assert.assertEquals(4711, modelInfo.getQueueSize());
+        Assert.assertEquals(1, modelInfo.getMaxIdleTime());
+        Assert.assertEquals(300, modelInfo.getMaxBatchDelay());
+        Assert.assertEquals(1, modelInfo.getBatchSize());
     }
 
     @Test
@@ -51,18 +50,16 @@ public class ModelInfoTest {
                         .setTypes(Input.class, Output.class)
                         .optModelUrls(modelUrl)
                         .build();
-        try (ModelInfo<Input, Output> modelInfo = new ModelInfo<>("model", criteria)) {
-            modelInfo.load(Device.cpu());
-            try (ZooModel<Input, Output> model = modelInfo.getModel(Device.cpu())) {
-                try (Predictor<Input, Output> predictor = model.newPredictor()) {
-                    Input input = new Input();
-                    URL url = new URL("https://resources.djl.ai/images/0.png");
-                    try (InputStream is = url.openStream()) {
-                        input.add(Utils.toByteArray(is));
-                    }
-                    predictor.predict(input);
-                }
+        ModelInfo<Input, Output> modelInfo = new ModelInfo<>("model", criteria);
+        modelInfo.load(Device.cpu());
+        try (ZooModel<Input, Output> model = modelInfo.getModel(Device.cpu());
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            URL url = new URL("https://resources.djl.ai/images/0.png");
+            try (InputStream is = url.openStream()) {
+                input.add(Utils.toByteArray(is));
             }
+            predictor.predict(input);
         }
     }
 }

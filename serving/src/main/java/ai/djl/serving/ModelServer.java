@@ -79,7 +79,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /** The main entry point for model server. */
-public class ModelServer implements AutoCloseable {
+public class ModelServer {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelServer.class);
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
@@ -616,11 +616,5 @@ public class ModelServer implements AutoCloseable {
         formatter.setLeftPadding(1);
         formatter.setWidth(120);
         formatter.printHelp(msg, options);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void close() {
-        stop();
     }
 }
