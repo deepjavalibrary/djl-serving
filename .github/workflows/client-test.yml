@@ -1,7 +1,6 @@
 name: DJLServing client tests
 
 on:
-  push:
   pull_request:
     paths-ignore:
       - "**.md"
@@ -10,6 +9,7 @@ on:
       - "**.html"
       - "**.js"
       - "**.css"
+  workflow_dispatch:
 
 jobs:
   client_test:
