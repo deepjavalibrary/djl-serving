@@ -277,6 +277,7 @@ public class ModelServerTest {
 
             // management API
             testRegisterModel(channel);
+            testPerModelWorkers(channel);
             testRegisterModelAsync(channel);
             testRegisterWorkflow(channel);
             testRegisterWorkflowAsync(channel);
@@ -488,6 +489,45 @@ public class ModelServerTest {
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
+    }
+
+    private void testPerModelWorkers(Channel channel) throws InterruptedException, IOException {
+        reset();
+
+        String url = "file:src/test/resources/identity";
+        HttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
+        reset();
+
+        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/identity");
+        channel.writeAndFlush(req);
+        latch.await();
+
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
+        DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
+        DescribeWorkflowResponse wf = resp[0];
+        DescribeWorkflowResponse.Model model = wf.getModels().get(0);
+        DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
+
+        assertEquals(group.getMinWorkers(), 2);
+        assertEquals(group.getMaxWorkers(), CudaUtils.hasCuda() ? 3 : 4);
+
+        // unregister identity model
+        reset();
+        req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testRegisterModelTranslator(Channel channel)

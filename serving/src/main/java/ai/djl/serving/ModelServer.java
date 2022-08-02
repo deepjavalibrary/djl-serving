@@ -404,7 +404,7 @@ public class ModelServer implements AutoCloseable {
                             .thenAccept(
                                     v -> {
                                         for (String deviceName : finalDevices) {
-                                            modelManager.initWorkers(workflow, deviceName, 1, -1);
+                                            modelManager.initWorkers(workflow, deviceName, -1, -1);
                                         }
                                     })
                             .exceptionally(
@@ -474,7 +474,7 @@ public class ModelServer implements AutoCloseable {
                             .thenAccept(
                                     v -> {
                                         for (String deviceName : finalDevices) {
-                                            modelManager.initWorkers(workflow, deviceName, 1, -1);
+                                            modelManager.initWorkers(workflow, deviceName, -1, -1);
                                         }
                                     })
                             .exceptionally(

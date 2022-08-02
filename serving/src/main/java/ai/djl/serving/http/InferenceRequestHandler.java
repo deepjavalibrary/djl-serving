@@ -193,7 +193,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
             modelManager
                     .registerWorkflow(wf)
-                    .thenApply(p -> modelManager.initWorkers(wf, deviceName, 1, -1))
+                    .thenApply(p -> modelManager.initWorkers(wf, deviceName, -1, -1))
                     .thenAccept(p -> runJob(modelManager, ctx, p, input));
             return;
         }
