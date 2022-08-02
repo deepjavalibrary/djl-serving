@@ -212,7 +212,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, 1);
         int maxBatchDelay = NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, 100);
         int maxIdleTime = NettyUtils.getIntParameter(decoder, MAX_IDLE_TIME_PARAMETER, 60);
-        int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, 1);
+        int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
         int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
         boolean synchronous =
                 Boolean.parseBoolean(
@@ -265,8 +265,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("Parameter url is required.");
         }
 
-        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, "-1");
-        int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, 1);
+        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
+        int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
         int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
         boolean synchronous =
                 Boolean.parseBoolean(

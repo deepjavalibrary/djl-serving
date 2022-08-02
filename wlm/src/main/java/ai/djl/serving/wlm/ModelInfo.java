@@ -420,6 +420,9 @@ public final class ModelInfo<I, O> implements AutoCloseable {
     public static String inferModelNameFromUrl(String url) {
         URI uri = URI.create(url);
         String path = uri.getPath();
+        if (path == null) {
+            path = uri.getSchemeSpecificPart();
+        }
         boolean isDirectory = path.endsWith("/");
         if (isDirectory) {
             path = path.substring(0, path.length() - 1);
