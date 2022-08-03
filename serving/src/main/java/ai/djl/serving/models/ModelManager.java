@@ -333,7 +333,7 @@ public final class ModelManager {
      * @param type of request, from v2 protocol or the normal one.
      * @return completableFuture with eventually result in the future after async execution
      */
-    public CompletableFuture<FullHttpResponse> workerStatus(String type) {
+    public CompletableFuture<FullHttpResponse> workerStatus() {
         return CompletableFuture.supplyAsync(
                 () -> {
                     boolean hasFailure = false;
@@ -389,13 +389,7 @@ public final class ModelManager {
                     resp.headers()
                             .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                     ByteBuf content = resp.content();
-                    String body = null;
-                    if (type.equals(TYPES[0])) {
-                        // empty response
-                        body = JsonUtils.GSON_PRETTY.toJson(new LinkedHashMap<>());
-                    } else if (type.equals(TYPES[1])) {
-                        body = JsonUtils.GSON_PRETTY.toJson(data);
-                    }
+                    String body = JsonUtils.GSON_PRETTY.toJson(data);
                     content.writeCharSequence(body, CharsetUtil.UTF_8);
                     content.writeByte('\n');
                     return resp;
@@ -408,15 +402,11 @@ public final class ModelManager {
      * @param modelName of certain modelName, modelVersion of certain version of param.
      * @return completableFuture with eventually result in the future after async execution
      */
-    public CompletableFuture<FullHttpResponse> modelStatu(String modelName, String modelVersion) {
+    public CompletableFuture<FullHttpResponse> modelStatus(String modelName, String modelVersion) {
         return CompletableFuture.supplyAsync(
                 () -> {
-                    boolean hasFailure = false;
-                    boolean hasPending = false;
-                    Map<String, StatusResponse> data = new LinkedHashMap<>(); // NOPMD
+                    boolean hasFailureOrPending = false;
                     Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-
-                    // TODO: Search all workflows if model is not found here.
                     ModelInfo<Input, Output> modelInfo =
                             workflow.getModels().stream()
                                     .filter(
@@ -429,53 +419,60 @@ public final class ModelManager {
                                     .findAny()
                                     .get();
                     ModelInfo.Status status = modelInfo.getStatus();
+                    HttpResponseStatus httpResponseStatus;
                     switch (status) {
                         case FAILED:
-                            data.put(modelName, new StatusResponse(status.name()));
-                            hasFailure = true;
-                            break;
                         case PENDING:
-                            data.put(modelName, new StatusResponse(status.name()));
-                            hasPending = true;
-                            break;
-                        default:
-                            int min = wlm.getWorkerPoolForModel(modelInfo).getMinWorkers();
-                            int actual = wlm.getNumRunningWorkers(modelInfo);
-                            if (actual < min) {
-                                data.put(modelName, new StatusResponse("Unhealthy"));
-                            } else {
-                                data.put(modelName, new StatusResponse("Healthy"));
-                            }
+                            hasFailureOrPending = true;
                             break;
                     }
-
-                    HttpResponseStatus httpResponseStatus;
-                    if (hasFailure) {
+                    if (hasFailureOrPending) {
                         httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-                    } else if (hasPending) {
-                        if (ConfigManager.getInstance().allowsMultiStatus()) {
-                            httpResponseStatus = HttpResponseStatus.MULTI_STATUS;
-                        } else {
-                            httpResponseStatus = HttpResponseStatus.OK;
-                        }
                     } else {
                         httpResponseStatus = HttpResponseStatus.OK;
+                        int min = wlm.getWorkerPoolForModel(modelInfo).getMinWorkers();
+                        int actual = wlm.getNumRunningWorkers(modelInfo);
+                        if (actual < min) {
+                            httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+                        }
                     }
-
                     FullHttpResponse resp =
                             new DefaultFullHttpResponse(
                                     HttpVersion.HTTP_1_1, httpResponseStatus, false);
-                    resp.headers()
-                            .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-                    ByteBuf content = resp.content();
-                    String body = JsonUtils.GSON_PRETTY.toJson(new LinkedHashMap<>());
-
-                    content.writeCharSequence(body, CharsetUtil.UTF_8);
-                    content.writeByte('\n');
                     return resp;
                 });
     }
 
+    public CompletableFuture<FullHttpResponse> healthStatus() {
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    boolean hasFailureOrPending = false;
+                    // check all the models status
+                    for (Endpoint endpoint : endpoints.values()) {
+                        for (Workflow p : endpoint.getWorkflows()) {
+                            for (ModelInfo<Input, Output> m : p.getModels()) {
+                                ModelInfo.Status status = m.getStatus();
+                                switch (status) {
+                                    case FAILED:
+                                    case PENDING:
+                                        hasFailureOrPending = true;
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                    HttpResponseStatus httpResponseStatus;
+                    if (hasFailureOrPending) {
+                        httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+                    } else {
+                        httpResponseStatus = HttpResponseStatus.OK;
+                    }
+                    FullHttpResponse resp =
+                            new DefaultFullHttpResponse(
+                                    HttpVersion.HTTP_1_1, httpResponseStatus, false);
+                    return resp;
+                });
+    }
     /**
      * Clears everything in the {@link ModelManager}.
      *

@@ -12,42 +12,33 @@
  */
 package ai.djl.serving.http;
 
-import ai.djl.Device;
 import ai.djl.ModelException;
-import ai.djl.engine.Engine;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
-import ai.djl.ndarray.NDArray;
-import ai.djl.ndarray.NDList;
-import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
-import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.Pair;
-
 import ai.djl.util.PairList;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
 import com.google.gson.reflect.TypeToken;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Array;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +49,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(InferenceRequestHandler.class);
     private static final Pattern PATTERN = Pattern.compile("^/v2([/?].*)?");
-    private static final String[] TYPES = {"FOR_KSERVE", "FOR_DJL_SERVING"};
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
     private static final Metric RESPONSE_2_XX = new Metric("2XX", 1);
     private static final Metric RESPONSE_4_XX = new Metric("4XX", 1);
@@ -88,17 +78,19 @@ public class KServeRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String[] segments)
             throws ModelException {
-        for (String segment : segments) {
-            System.out.println(segment);
-        }
-        System.out.println("segments.length" + segments.length);
         HttpMethod method = req.method();
+        if (!(HttpMethod.GET.equals(method) || HttpMethod.POST.equals(method))) {
+            sendOutput(new Output(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), ""), ctx);
+            return;
+        }
         if (HttpMethod.GET.equals(method) && isKServeDescribeModelReq(segments, method)) {
             handleKServeDescribeModel(ctx, segments);
-        } else if (isKServeDescribeHealthReq(segments, method)) {
-            handleKServeDescribeHealth(ctx, segments);
-        } else if (isKserveDescribeInferenceReq(segments,method)) {
+        } else if (isKServeDescribeHealthReq(segments)) {
+            handleKServeDescribeHealth(ctx, segments, method);
+        } else if (isKserveDescribeInferenceReq(segments, method)) {
             handleKServeDescribeInfer(ctx, req, decoder, segments);
+        } else {
+            throw new AssertionError("Invalid request uri: " + req.uri());
         }
     }
 
@@ -109,20 +101,20 @@ public class KServeRequestHandler extends HttpRequestHandler {
                 && "models".equals(segments[2]);
     }
 
-    private boolean isKServeDescribeHealthReq(String[] segments, HttpMethod method) {
+    private boolean isKServeDescribeHealthReq(String[] segments) {
         return "v2".equals(segments[1])
-                && HttpMethod.GET.equals(method)
                 && ((segments.length == 4 && "health".equals(segments[2]))
                         || ("models".equals(segments[2])
                                 && "ready".equals(segments[segments.length - 1])));
     }
 
-    private boolean isKserveDescribeInferenceReq(String[] segments, HttpMethod method){
+    private boolean isKserveDescribeInferenceReq(String[] segments, HttpMethod method) {
         return "v2".equals(segments[1])
                 && "models".equals(segments[2])
                 && HttpMethod.POST.equals(method)
                 && "infer".equals(segments[segments.length - 1]);
     }
+
     private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments) {
         String modelName = segments[3];
         String modelVersion = null;
@@ -131,7 +123,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
         }
         ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-        System.out.println("workflow:" + workflow + "in model");
         // TODO: Search all workflows if model is not found here.
         ModelInfo<Input, Output> modelInfo =
                 workflow.getModels().stream()
@@ -166,7 +157,12 @@ public class KServeRequestHandler extends HttpRequestHandler {
         NettyUtils.sendJsonResponse(ctx, response);
     }
 
-    private void handleKServeDescribeHealth(ChannelHandlerContext ctx, String[] segments) {
+    private void handleKServeDescribeHealth(
+            ChannelHandlerContext ctx, String[] segments, HttpMethod method) {
+        if (!HttpMethod.GET.equals(method)) {
+            sendOutput(new Output(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), ""), ctx);
+            return;
+        }
         if ("models".equals(segments[2])) {
             String modelName = segments[3];
             String modelVersion = null;
@@ -174,91 +170,117 @@ public class KServeRequestHandler extends HttpRequestHandler {
                 modelVersion = segments[5];
             }
             ModelManager modelManager = ModelManager.getInstance();
+            Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
+            if (workflow == null) {
+                sendOutput(new Output(HttpResponseStatus.BAD_REQUEST.code(), ""), ctx);
+                return;
+            }
             modelManager
-                    .modelStatu(modelName, modelVersion)
+                    .modelStatus(modelName, modelVersion)
                     .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
         } else {
             switch (segments[3]) {
                 case "ready":
                 case "live":
                     ModelManager.getInstance()
-                            .workerStatus(TYPES[0])
+                            .healthStatus()
                             .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
                     break;
+                    // if the string is not ready or live, send badrequest code
+                default:
+                    sendOutput(new Output(HttpResponseStatus.BAD_REQUEST.code(), ""), ctx);
             }
         }
     }
-    private void handleKServeDescribeInfer(ChannelHandlerContext ctx,
-                                           FullHttpRequest req,
-                                           QueryStringDecoder decoder,
-                                           String[] segments) throws ModelNotFoundException {
-        System.out.println("handle Infer req");
+
+    private void handleKServeDescribeInfer(
+            ChannelHandlerContext ctx,
+            FullHttpRequest req,
+            QueryStringDecoder decoder,
+            String[] segments) {
         String modelName = segments[3];
         String modelVersion = null;
         if (segments.length > 5) {
             modelVersion = segments[5];
         }
-        req.content();
-        Input input = requestParser.parseRequest(req, decoder);
-        infer(ctx, input, modelName, modelVersion);
+        Input inferenceRequest = requestParser.parseRequest(req, decoder);
+        infer(ctx, inferenceRequest, modelName, modelVersion);
     }
 
     private void infer(
             ChannelHandlerContext ctx,
             Input inferenceRequest,
             String workflowName,
-            String version)
-     {
+            String version) {
         ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(workflowName, version, true);
-//        System.out.println("workflow:" + workflow);
+
         PairList<String, BytesSupplier> Body = inferenceRequest.getContent();
-        System.out.println(Body.toMap());
-        System.out.println(Body.get("inputs").getAsString());
-         GsonBuilder builder = new GsonBuilder();
-         builder.setPrettyPrinting();
 
-         Gson gson = builder.create();
-         ArrayList<RequestInput> inputArrayList = new Gson().fromJson(Body.get("inputs").getAsString(),
-                 new TypeToken<ArrayList<RequestInput>>() {}.getType());
+        GsonBuilder builder = new GsonBuilder();
+        builder.setPrettyPrinting();
+        Gson gson = builder.create();
+        ArrayList<RequestInput> inputArrayList =
+                gson.fromJson(
+                        Body.get("inputs").getAsString(),
+                        new TypeToken<ArrayList<RequestInput>>() {}.getType());
+        ArrayList<RequestOutput> outputArrayList =
+                gson.fromJson(
+                        Body.get("outputs").getAsString(),
+                        new TypeToken<ArrayList<RequestOutput>>() {}.getType());
 
-//         Array ndList = gson.fromJson(Body.get("inputs").getAsString(), Array.class);
-         System.out.println(inputArrayList);
-//         jsonString = gson.toJson(student);
-//         System.out.println(jsonString);
+        //        byte[] buf = Body.get("inputs").getAsBytes();
+        //        System.out.println("buf: " + buf);
+        //        try (NDManager manger = NDManager.newBaseManager()) {
+        //            NDList ndList = NDList.decode(manger, buf);
+        //            for (NDArray array : ndList) {
+        //                String name = array.getName();
+        //                if (name == null) {
+        //                    name = "output__" + ndList.iterator();
+        //                }
+        //                Shape shape = array.getShape();
+        //                DataType type = array.getDataType();
+        //                ByteBuffer bb = array.toByteBuffer();
+        //
+        //            }
+        //        }
 
-
-         System.out.println(Body.get("outputs").getAsString());
-         System.out.println(Body.get("inputs"));
-
-         BytesSupplier data = Body.get("data");
-         byte[] buf = data.getAsBytes();
-//         try (NDManager manger = NDManager.newBaseManager()) {
-//             NDList list = NDList.decode(manger, buf);
-//             for (NDArray array : list) {
-//                 String name = array.getName();
-//                 if (name == null) {
-//                     name = "output__" + list.iterator();
-//                 }
-//                 Shape shape = array.getShape();
-//                 DataType type = array.getDataType();
-//                 ByteBuffer bb = array.toByteBuffer();
-//                 if (type == DataType.FLOAT32) {
-//                 }
-//             }
-//         }
-
-//         inferenceRequest.add("data", input);
         if (workflow == null) {
-            //TODO: send error msg
+            // TODO: send error msg
         }
-        runJob(modelManager, ctx, workflow, inferenceRequest);
+        for (int i = 0; i < inputArrayList.size(); i++) {
+            // remove the data in request_input which is not the Kserve-needed data
+            // then put the real data in that.
+
+            //            Body.remove("data");
+            // TODO: the value of data should be NDlist so that it will be accepted by the
+            // no-translator model
+            //            Body.add("data", BytesSupplier.wrapAsJson(inputArrayList.get(i)));
+
+            //            inferenceRequest.setContent(Body);
+
+            runJob(
+                    modelManager,
+                    ctx,
+                    workflow,
+                    inferenceRequest,
+                    inputArrayList.get(i),
+                    outputArrayList.get(i));
+
+            //            System.out.println("inferenceRequest.get(\"data\")" +
+            // inferenceRequest.get("data").getAsString());
+        }
     }
 
     void runJob(
-            ModelManager modelManager, ChannelHandlerContext ctx, Workflow workflow, Input input) {
+            ModelManager modelManager,
+            ChannelHandlerContext ctx,
+            Workflow workflow,
+            Input inferenceRequest,
+            RequestInput input,
+            RequestOutput output) {
         modelManager
-                .runJob(workflow, input)
+                .runJob(workflow, inferenceRequest)
                 .whenComplete(
                         (o, t) -> {
                             if (o != null) {
@@ -336,42 +358,73 @@ public class KServeRequestHandler extends HttpRequestHandler {
             NettyUtils.sendError(ctx, status, t);
         }
     }
-
 }
+
 class RequestInput {
     private String name;
     private List<Long> shape;
     private String datatype;
     private List<?> data;
-    public RequestInput(){}
+
+    public RequestInput() {}
 
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
+
     public List<Long> getShape() {
         return shape;
     }
+
     public void setShape(List<Long> data) {
         this.shape = shape;
     }
+
     public String getDatatype() {
         return datatype;
     }
-    public  void setDatatype(String datatype){ this.datatype = datatype; }
+
+    public void setDatatype(String datatype) {
+        this.datatype = datatype;
+    }
+
     public List<?> getData() {
         return data;
     }
+
     public void setData(List<?> data) {
         this.data = data;
     }
+
     public String toString() {
-        return "Input [ name: "+name+", datatype: "+ datatype+ ", shape: "+ shape +", data " + data + " ]";
+        return "Input [ name: "
+                + name
+                + ", datatype: "
+                + datatype
+                + ", shape: "
+                + shape
+                + ", data "
+                + data
+                + " ]";
     }
-
-
 }
 
+class RequestOutput {
+    private String name;
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String toString() {
+        return "Output [ name: " + name + " ]";
+    }
+}
