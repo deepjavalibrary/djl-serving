@@ -23,6 +23,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -393,6 +394,8 @@ public final class ConfigManager {
                 + getCanonicalPath(".")
                 + "\nTemp directory: "
                 + System.getProperty("java.io.tmpdir")
+                + "\nCommand line: "
+                + String.join(" ", ManagementFactory.getRuntimeMXBean().getInputArguments())
                 + "\nNumber of CPUs: "
                 + runtime.availableProcessors()
                 + "\nMax heap size: "

@@ -28,7 +28,7 @@ ENV OMP_NUM_THREADS=1
 ENV TF_NUM_INTEROP_THREADS=1
 ENV TF_NUM_INTRAOP_THREADS=1
 ENV TF_CPP_MIN_LOG_LEVEL=1
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:+ExitOnOutOfMemoryError"
+ENV JAVA_OPTS="-XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
@@ -45,6 +45,6 @@ RUN scripts/install_python.sh && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64 && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.18.0 && \
-    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.11.0 && \
+    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.12.0 && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*

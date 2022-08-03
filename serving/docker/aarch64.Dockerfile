@@ -19,7 +19,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
 ENV OMP_NUM_THREADS=1
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:+ExitOnOutOfMemoryError"
+ENV JAVA_OPTS="-XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
