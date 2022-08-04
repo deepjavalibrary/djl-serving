@@ -94,7 +94,7 @@ public class KServeDescribeModelResponse {
     public void addOutput(String name, DataType dataType, Shape shape) {
         List<Long> shapeList = Arrays.stream(shape.getShape()).boxed().collect(Collectors.toList());
         KServeDataType kdt = KServeDataType.getKServeDtForNDArrayDT(dataType);
-        this.inputs.add(new KServeIO(name, kdt.name(), shapeList));
+        this.outputs.add(new KServeIO(name, kdt.name(), shapeList));
     }
 
     /**

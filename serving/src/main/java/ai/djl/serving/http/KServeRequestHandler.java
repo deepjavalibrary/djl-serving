@@ -17,6 +17,7 @@ import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
+import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
@@ -31,6 +32,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,7 +45,9 @@ import java.util.stream.Collectors;
 /** A class handling inbound HTTP requests for the KServe API. */
 public class KServeRequestHandler extends HttpRequestHandler {
 
-    private static final Pattern PATTERN = Pattern.compile("^/v2([/?].*)?");
+    private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
+
+    private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
 
     /** {@inheritDoc} */
     @Override
@@ -63,7 +69,13 @@ public class KServeRequestHandler extends HttpRequestHandler {
         HttpMethod method = req.method();
 
         if (HttpMethod.GET.equals(method) && isKServeDescribeModelReq(segments, method)) {
-            handleKServeDescribeModel(ctx, segments);
+            try {
+                handleKServeDescribeModel(ctx, segments);
+            } catch (Exception exception) {
+                onException(exception, ctx);
+            }
+        } else {
+            throw new ResourceNotFoundException();
         }
     }
 
@@ -74,7 +86,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
                         && "models".equals(segments[2]);
     }
 
-    private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments) {
+    private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments)
+            throws ModelNotFoundException {
         String modelName = segments[3];
         String modelVersion = null;
         if (segments.length > 4) {
@@ -86,14 +99,20 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
         Endpoint endpoint = endpoints.get(modelName);
         if (endpoint == null) {
-            sendModelNotFoundError(modelName, modelVersion, ctx);
-            return;
+            throw new ModelNotFoundException(
+                    "Model not found for the given model: "
+                            + modelName
+                            + " and model version "
+                            + modelVersion);
         }
 
         List<Workflow> workflows = endpoint.getWorkflows();
         if (workflows.isEmpty()) {
-            sendModelNotFoundError(modelName, modelVersion, ctx);
-            return;
+            throw new ModelNotFoundException(
+                    "Model not found for the given model: "
+                            + modelName
+                            + " and model version "
+                            + modelVersion);
         }
 
         List<ModelInfo<Input, Output>> models =
@@ -117,39 +136,33 @@ public class KServeRequestHandler extends HttpRequestHandler {
         response.setName(model.getName());
         DataType dataType = model.getDataType();
 
-        if (model.describeInput() == null || model.describeOutput() == null) {
-            String errorMsg =
-                    "Input/Output shapes are unknown, "
-                            + "please run predict or forward once and call describe model again";
-
-            Map<String, String> content = new ConcurrentHashMap<>();
-            content.put("error", errorMsg);
-
-            NettyUtils.sendJsonResponse(ctx, content, HttpResponseStatus.NOT_FOUND);
-            return;
+        if (model.describeInput() != null) {
+            for (Pair<String, Shape> input : model.describeInput()) {
+                response.addInput(input.getKey(), dataType, input.getValue());
+            }
         }
 
-        for (Pair<String, Shape> input : model.describeInput()) {
-            response.addInput(input.getKey(), dataType, input.getValue());
-        }
-
-        for (Pair<String, Shape> output : model.describeOutput()) {
-            response.addOutput(output.getKey(), dataType, output.getValue());
+        if (model.describeOutput() != null) {
+            for (Pair<String, Shape> output : model.describeOutput()) {
+                response.addOutput(output.getKey(), dataType, output.getValue());
+            }
         }
 
         NettyUtils.sendJsonResponse(ctx, response);
     }
 
-    private void sendModelNotFoundError(
-            String modelName, String modelVersion, ChannelHandlerContext ctx) {
-        String errorMsg =
-                "Model not found for the given modelname "
-                        + modelName
-                        + " and model version "
-                        + modelVersion;
-        Map<String, String> content = new ConcurrentHashMap<>();
-        content.put("error", errorMsg);
+    void onException(Exception ex, ChannelHandlerContext ctx) {
+        HttpResponseStatus status;
+        if (ex instanceof ModelNotFoundException) {
+            status = HttpResponseStatus.NOT_FOUND;
+        } else {
+            logger.warn("Unexpected error", ex);
+            status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+        }
 
-        NettyUtils.sendJsonResponse(ctx, content, HttpResponseStatus.NOT_FOUND);
+        Map<String, String> content = new ConcurrentHashMap<>();
+        content.put("error", ex.getMessage());
+
+        NettyUtils.sendJsonResponse(ctx, content, status);
     }
 }

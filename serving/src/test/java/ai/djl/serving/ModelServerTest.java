@@ -790,8 +790,7 @@ public class ModelServerTest {
 
         reset();
         HttpRequest req =
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp_2");
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/res");
         channel.writeAndFlush(req);
         latch.await();
         channel.closeFuture().sync();
@@ -801,9 +800,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(
                         result, new TypeToken<HashMap<String, String>>() {}.getType());
         assertEquals(httpStatus.code(), HttpResponseStatus.NOT_FOUND.code());
-        String errorMsg =
-                "Input/Output shapes are unknown, "
-                        + "please run predict or forward once and call describe model again";
+        String errorMsg = "Model not found for the given model: res" + " and model version null";
         assertEquals(map.get("error"), errorMsg);
     }
 
