@@ -218,7 +218,12 @@ public final class ModelInfo<I, O> {
         }
     }
 
-    private Map<Device, ZooModel<I, O>> getModels() {
+    /**
+     * Returns all loaded models.
+     *
+     * @return all loaded models
+     */
+    public Map<Device, ZooModel<I, O>> getModels() {
         if (model == null) {
             model = new ConcurrentHashMap<>();
         }
