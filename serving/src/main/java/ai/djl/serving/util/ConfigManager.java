@@ -387,6 +387,7 @@ public final class ConfigManager {
      * @return a string representation of this configuration
      */
     public String dumpConfigurations() {
+        WlmConfigManager wlmc = WlmConfigManager.getInstance();
         Runtime runtime = Runtime.getRuntime();
         return "\nModel server home: "
                 + getModelServerHome()
@@ -406,6 +407,14 @@ public final class ConfigManager {
                 + getConnector(Connector.ConnectorType.INFERENCE)
                 + "\nManagement address: "
                 + getConnector(Connector.ConnectorType.MANAGEMENT)
+                + "\nDefault job_queue_size: "
+                + wlmc.getJobQueueSize()
+                + "\nDefault batch_size: "
+                + wlmc.getBatchSize()
+                + "\nDefault max_batch_delay: "
+                + wlmc.getMaxBatchDelay()
+                + "\nDefault max_idle_time: "
+                + wlmc.getMaxIdleTime()
                 + "\nModel Store: "
                 + (getModelStore() == null ? "N/A" : getModelStore())
                 + "\nInitial Models: "

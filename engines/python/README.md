@@ -49,7 +49,7 @@ and test your python model locally. You can easily use IDE to debug your model.
 
 ```
 cd engines/python/setup
-pip install -U .
+pip install -U -e .
 ```
 
 2. You can use command line tool or python to run djl model testing. The following command is
