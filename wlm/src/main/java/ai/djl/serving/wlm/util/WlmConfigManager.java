@@ -19,7 +19,7 @@ import ai.djl.ndarray.NDManager;
 /** This manages some configurations used by the {@link ai.djl.serving.wlm.WorkLoadManager}. */
 public final class WlmConfigManager {
 
-    private int jobQueueSize = 100;
+    private int jobQueueSize = 1000;
     private int maxIdleTime = 60;
     private int batchSize = 1;
     private int maxBatchDelay = 300;

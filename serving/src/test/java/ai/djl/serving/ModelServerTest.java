@@ -696,7 +696,7 @@ public class ModelServerTest {
         assertEquals(model.getBatchSize(), 1);
         assertEquals(model.getMaxBatchDelay(), 100);
         assertEquals(model.getMaxIdleTime(), 60);
-        assertEquals(model.getQueueSize(), 100);
+        assertEquals(model.getQueueSize(), 1000);
         assertTrue(model.getRequestInQueue() >= 0);
         assertEquals(model.getStatus(), "Healthy");
         assertFalse(model.isLoadedAtStartup());
