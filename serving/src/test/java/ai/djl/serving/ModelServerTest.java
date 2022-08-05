@@ -800,7 +800,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(
                         result, new TypeToken<HashMap<String, String>>() {}.getType());
         assertEquals(httpStatus.code(), HttpResponseStatus.NOT_FOUND.code());
-        String errorMsg = "Model not found for the given model: res" + " and model version null";
+        String errorMsg = "Model not found: res";
         assertEquals(map.get("error"), errorMsg);
     }
 

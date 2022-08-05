@@ -191,8 +191,8 @@ public class KServeDescribeModelResponse {
         TORCHSCRIPT("torchscript", "PyTorch"),
         MXNET("mxnet", "MXNet");
 
-        private String modelType; // model_type supported by engine.
-        private String engineName; // engine name in DJL format.
+        private final String modelType; // model_type supported by engine.
+        private final String engineName; // engine name in DJL format.
 
         Platform(String modelType, String engineName) {
             this.modelType = modelType;
@@ -228,7 +228,7 @@ public class KServeDescribeModelResponse {
         BOOL(DataType.BOOLEAN),
         BYTES(DataType.UNKNOWN);
 
-        private DataType dataType;
+        private final DataType dataType;
 
         KServeDataType(DataType dataType) {
             this.dataType = dataType;

@@ -12,13 +12,14 @@
  */
 package ai.djl.serving.http;
 
+import ai.djl.Device;
+import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.ModelNotFoundException;
-import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
@@ -35,12 +36,12 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /** A class handling inbound HTTP requests for the KServe API. */
 public class KServeRequestHandler extends HttpRequestHandler {
@@ -68,7 +69,10 @@ public class KServeRequestHandler extends HttpRequestHandler {
             throws ModelException {
         HttpMethod method = req.method();
 
-        if (HttpMethod.GET.equals(method) && isKServeDescribeModelReq(segments, method)) {
+        if (isKServeDescribeModelReq(segments)) {
+            if (!HttpMethod.GET.equals(method)) {
+                throw new MethodNotAllowedException();
+            }
             try {
                 handleKServeDescribeModel(ctx, segments);
             } catch (Exception exception) {
@@ -79,10 +83,9 @@ public class KServeRequestHandler extends HttpRequestHandler {
         }
     }
 
-    private boolean isKServeDescribeModelReq(String[] segments, HttpMethod method) {
-        return HttpMethod.GET.equals(method) && segments.length == 4
+    private boolean isKServeDescribeModelReq(String[] segments) {
+        return segments.length == 4
                 || (segments.length == 6 && "version".equals(segments[4]))
-                        && "v2".equals(segments[1])
                         && "models".equals(segments[2]);
     }
 
@@ -98,60 +101,66 @@ public class KServeRequestHandler extends HttpRequestHandler {
         Map<String, Endpoint> endpoints = modelManager.getEndpoints();
 
         Endpoint endpoint = endpoints.get(modelName);
-        if (endpoint == null) {
-            throw new ModelNotFoundException(
-                    "Model not found for the given model: "
-                            + modelName
-                            + " and model version "
-                            + modelVersion);
+        List<Workflow> workflows;
+        if (endpoint != null) {
+            workflows = endpoint.getWorkflows();
+        } else {
+            workflows = Collections.emptyList();
         }
 
-        List<Workflow> workflows = endpoint.getWorkflows();
-        if (workflows.isEmpty()) {
-            throw new ModelNotFoundException(
-                    "Model not found for the given model: "
-                            + modelName
-                            + " and model version "
-                            + modelVersion);
-        }
-
-        List<ModelInfo<Input, Output>> models =
-                workflows.stream()
-                        .flatMap(w -> w.getModels().stream())
-                        .collect(Collectors.toList());
-
-        List<String> versions =
-                models.stream()
-                        .map(ModelInfo::getVersion)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toList());
-
-        ModelInfo<Input, Output> modelInfo = models.get(0);
-
+        // TODO: How to handle multiple models and version?
         KServeDescribeModelResponse response = new KServeDescribeModelResponse();
+        List<String> versions = new ArrayList<>();
         response.setVersions(versions);
-        response.setPlatformForEngineName(modelInfo.getEngineName());
+        Model model = null;
+        for (Workflow wf : workflows) {
+            String version = wf.getVersion();
+            if (modelVersion != null && !modelVersion.equals(version)) {
+                continue;
+            }
+            if (version != null) {
+                // TODO: null is a valid version in DJL
+                versions.add(version);
+            }
+            if (model != null) {
+                // only add one model
+                continue;
+            }
 
-        ZooModel<Input, Output> model = modelInfo.getModel(modelInfo.withDefaultDevice(null));
-        response.setName(model.getName());
-        DataType dataType = model.getDataType();
+            for (ModelInfo<Input, Output> modelInfo : wf.getModels()) {
+                if (modelInfo.getStatus() == ModelInfo.Status.READY) {
+                    response.setName(wf.getName());
+                    response.setPlatformForEngineName(modelInfo.getEngineName());
+                    Device device = modelInfo.getModels().keySet().iterator().next();
+                    model = modelInfo.getModel(device);
 
-        if (model.describeInput() != null) {
-            for (Pair<String, Shape> input : model.describeInput()) {
-                response.addInput(input.getKey(), dataType, input.getValue());
+                    DataType dataType = model.getDataType();
+                    if (model.describeInput() != null) {
+                        for (Pair<String, Shape> input : model.describeInput()) {
+                            response.addInput(input.getKey(), dataType, input.getValue());
+                        }
+                    }
+
+                    if (model.describeOutput() != null) {
+                        for (Pair<String, Shape> output : model.describeOutput()) {
+                            response.addOutput(output.getKey(), dataType, output.getValue());
+                        }
+                    }
+                    break;
+                }
             }
         }
-
-        if (model.describeOutput() != null) {
-            for (Pair<String, Shape> output : model.describeOutput()) {
-                response.addOutput(output.getKey(), dataType, output.getValue());
-            }
+        if (model == null) {
+            throw new ModelNotFoundException(
+                    "Model not found: "
+                            + modelName
+                            + (modelVersion == null ? "" : '/' + modelVersion));
         }
 
         NettyUtils.sendJsonResponse(ctx, response);
     }
 
-    void onException(Exception ex, ChannelHandlerContext ctx) {
+    private void onException(Exception ex, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
         if (ex instanceof ModelNotFoundException) {
             status = HttpResponseStatus.NOT_FOUND;
