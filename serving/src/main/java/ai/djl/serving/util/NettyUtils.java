@@ -78,7 +78,7 @@ public final class NettyUtils {
         SocketAddress address = channel.remoteAddress();
         String remoteIp;
         if (address == null) {
-            // This is can be null on UDS, or on certain case in Windows
+            // This can be null on UDS, or on certain case in Windows
             remoteIp = "0.0.0.0";
         } else {
             remoteIp = address.toString();
@@ -209,14 +209,18 @@ public final class NettyUtils {
         HttpHeaders headers = resp.headers();
 
         ConfigManager configManager = ConfigManager.getInstance();
-        int code = resp.status().code();
+        HttpResponseStatus status = resp.status();
+        int code = status.code();
+        if (code != 200) {
+            logger.debug("HTTP {}", status);
+        }
         if (session != null) {
             // session might be recycled if channel is closed already.
             session.setCode(code);
             headers.set(REQUEST_ID, session.getRequestId());
             ACCESS_LOG.info(session.toString());
         } else {
-            ACCESS_LOG.info("HTTP " + code);
+            ACCESS_LOG.info("HTTP {}", status);
         }
 
         String allowedOrigin = configManager.getCorsAllowedOrigin();
