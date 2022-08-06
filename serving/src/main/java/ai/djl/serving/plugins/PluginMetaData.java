@@ -98,7 +98,7 @@ public class PluginMetaData {
      */
     public void changeState(Lifecycle state) {
         this.state = state;
-        logger.debug("plugin {} changed state to {}", name, state);
+        logger.info("plugin {} changed state to {}", name, state);
     }
 
     /**
@@ -114,7 +114,7 @@ public class PluginMetaData {
             error = logMessage;
             logger.warn("plugin {} changed state to {} reason: {}", name, state, logMessage);
         } else {
-            logger.debug("plugin {} changed state to {} reason: {}", name, state, logMessage);
+            logger.info("plugin {} changed state to {} reason: {}", name, state, logMessage);
         }
     }
 
