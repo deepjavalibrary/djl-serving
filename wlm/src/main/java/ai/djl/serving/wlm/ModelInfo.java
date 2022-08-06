@@ -30,13 +30,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** A class represent a loaded model and it's metadata. */
-public final class ModelInfo<I, O> implements AutoCloseable {
+public final class ModelInfo<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
 
@@ -143,7 +142,6 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      */
     @SuppressWarnings("unchecked")
     public void load(Device device) throws ModelException, IOException {
-        device = withDefaultDevice(device);
         if (getModels().containsKey(device)) {
             return;
         }
@@ -181,7 +179,7 @@ public final class ModelInfo<I, O> implements AutoCloseable {
                 builder.optArgument("batchifier", "stack");
             }
         }
-        logger.info("Loading model {} on {}.", id, device);
+        logger.info("Loading model {} on {}", id, device);
         if ("nc".equals(device.getDeviceType())) {
             String ncs = String.valueOf(device.getDeviceId());
             builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
@@ -206,28 +204,26 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      * @param batchSize the batchSize to set
      * @param maxBatchDelay maximum time to wait for a free space in worker queue after scaling up
      *     workers before giving up to offer the job to the queue.
-     * @return new configured ModelInfo.
+     * @param maxIdleTime time a WorkerThread can be idle before scaling down this worker.
      */
-    public ModelInfo<I, O> configureModelBatch(int batchSize, int maxBatchDelay) {
-        this.batchSize = batchSize;
-        this.maxBatchDelay = maxBatchDelay;
-        return this;
+    public void configureModelBatch(int batchSize, int maxBatchDelay, int maxIdleTime) {
+        if (batchSize > 0) {
+            this.batchSize = batchSize;
+        }
+        if (maxBatchDelay >= 0) {
+            this.maxBatchDelay = maxBatchDelay;
+        }
+        if (maxIdleTime > 0) {
+            this.maxIdleTime = maxIdleTime;
+        }
     }
 
     /**
-     * Sets new configuration for the workerPool backing this model and returns a new configured
-     * ModelInfo object. You have to triggerUpdates in the {@code ModelManager} using this new
-     * model.
+     * Returns all loaded models.
      *
-     * @param maxIdleTime time a WorkerThread can be idle before scaling down this worker.
-     * @return new configured ModelInfo.
+     * @return all loaded models
      */
-    public ModelInfo<I, O> configurePool(int maxIdleTime) {
-        this.maxIdleTime = maxIdleTime;
-        return this;
-    }
-
-    private Map<Device, ZooModel<I, O>> getModels() {
+    public Map<Device, ZooModel<I, O>> getModels() {
         if (model == null) {
             model = new ConcurrentHashMap<>();
         }
@@ -241,7 +237,6 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      * @return the loaded {@link ZooModel}
      */
     public ZooModel<I, O> getModel(Device device) {
-        device = withDefaultDevice(device);
         if (getModels().get(device) == null) {
             throw new IllegalStateException("Model \"" + id + "\" has not been loaded yet.");
         }
@@ -300,15 +295,6 @@ public final class ModelInfo<I, O> implements AutoCloseable {
      */
     public Status getStatus() {
         return status == null ? Status.PENDING : status;
-    }
-
-    /**
-     * Returns the model cache directory.
-     *
-     * @return the model cache directory
-     */
-    public Path getModelDir() {
-        return getModels().values().iterator().next().getModelPath();
     }
 
     /**
@@ -418,14 +404,14 @@ public final class ModelInfo<I, O> implements AutoCloseable {
         return queueSize;
     }
 
-    /** {@inheritDoc} */
-    @Override
+    /** Close all loaded models. */
     public void close() {
         if (!getModels().isEmpty()) {
-            logger.debug("closing model {}", modelName);
+            logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
             for (Model m : model.values()) {
                 m.close();
             }
+            model.clear();
         }
     }
 
@@ -438,6 +424,9 @@ public final class ModelInfo<I, O> implements AutoCloseable {
     public static String inferModelNameFromUrl(String url) {
         URI uri = URI.create(url);
         String path = uri.getPath();
+        if (path == null) {
+            path = uri.getSchemeSpecificPart();
+        }
         boolean isDirectory = path.endsWith("/");
         if (isDirectory) {
             path = path.substring(0, path.length() - 1);
@@ -459,16 +448,15 @@ public final class ModelInfo<I, O> implements AutoCloseable {
     /**
      * Returns the default device for this model if device is null.
      *
-     * @param device the device to use if it is not null
+     * @param deviceName the device to use if it is not null
      * @return a non-null device
      */
-    public Device withDefaultDevice(Device device) {
-        if (device != null) {
-            return device;
-        }
-
+    public Device withDefaultDevice(String deviceName) {
         Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
-        return engine.defaultDevice();
+        if (deviceName == null) {
+            return engine.defaultDevice();
+        }
+        return Device.fromName(deviceName, engine);
     }
 
     /** {@inheritDoc} */

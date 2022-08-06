@@ -12,7 +12,6 @@
  */
 package ai.djl.serving;
 
-import ai.djl.Device;
 import ai.djl.engine.Engine;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
@@ -80,11 +79,11 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /** The main entry point for model server. */
-public class ModelServer implements AutoCloseable {
+public class ModelServer {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelServer.class);
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
-    private static final Pattern MODEL_STORE_PATTERN = Pattern.compile("(\\[?(.+?)]?=)?(.+)");
+    private static final Pattern MODEL_STORE_PATTERN = Pattern.compile("(\\[?([^?]+?)]?=)?(.+)");
 
     private ServerGroups serverGroups;
     private List<ChannelFuture> futures = new ArrayList<>(2);
@@ -356,7 +355,7 @@ public class ModelServer implements AutoCloseable {
             String modelUrl = matcher.group(3);
             String version = null;
             String engineName = null;
-            Device[] devices = {null};
+            String[] devices = {null};
             String modelName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
@@ -398,14 +397,14 @@ public class ModelServer implements AutoCloseable {
                             wlmc.getMaxBatchDelay(),
                             wlmc.getBatchSize());
             Workflow workflow = new Workflow(modelInfo);
-            Device[] finalDevices = devices;
+            String[] finalDevices = devices;
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
                             .thenAccept(
                                     v -> {
-                                        for (Device device : finalDevices) {
-                                            modelManager.scaleWorkers(workflow, device, 1, -1);
+                                        for (String deviceName : finalDevices) {
+                                            modelManager.initWorkers(workflow, deviceName, -1, -1);
                                         }
                                     })
                             .exceptionally(
@@ -451,7 +450,7 @@ public class ModelServer implements AutoCloseable {
             }
             String endpoint = matcher.group(2);
             String workflowUrlString = matcher.group(3);
-            Device[] devices = {null};
+            String[] devices = {null};
             String workflowName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
@@ -468,14 +467,14 @@ public class ModelServer implements AutoCloseable {
                     WorkflowDefinition.parse(workflowUrl.toURI(), workflowUrl.openStream())
                             .toWorkflow();
 
-            Device[] finalDevices = devices;
+            String[] finalDevices = devices;
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
                             .thenAccept(
                                     v -> {
-                                        for (Device device : finalDevices) {
-                                            modelManager.scaleWorkers(workflow, device, 1, -1);
+                                        for (String deviceName : finalDevices) {
+                                            modelManager.initWorkers(workflow, deviceName, -1, -1);
                                         }
                                     })
                             .exceptionally(
@@ -595,23 +594,21 @@ public class ModelServer implements AutoCloseable {
         return null;
     }
 
-    private Device[] parseDevices(String devices, Engine engine) {
+    private String[] parseDevices(String devices, Engine engine) {
         if ("*".equals(devices)) {
             int gpuCount = engine.getGpuCount();
             if (gpuCount > 0) {
-                return IntStream.range(0, gpuCount).mapToObj(Device::gpu).toArray(Device[]::new);
+                return IntStream.range(0, gpuCount)
+                        .mapToObj(String::valueOf)
+                        .toArray(String[]::new);
             } else if (NeuronUtils.hasNeuron()) {
                 int neurons = NeuronUtils.getNeuronCores();
-                return IntStream.range(0, neurons)
-                        .mapToObj(i -> Device.of("nc", i))
-                        .toArray(Device[]::new);
+                return IntStream.range(0, neurons).mapToObj(i -> "nc" + i).toArray(String[]::new);
             }
         } else if (!devices.isEmpty()) {
-            return Arrays.stream(devices.split(";"))
-                    .map(n -> Device.fromName(n, engine))
-                    .toArray(Device[]::new);
+            return devices.split(";");
         }
-        return new Device[] {null};
+        return new String[] {null};
     }
 
     private static void printHelp(String msg, Options options) {
@@ -619,11 +616,5 @@ public class ModelServer implements AutoCloseable {
         formatter.setLeftPadding(1);
         formatter.setWidth(120);
         formatter.printHelp(msg, options);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void close() {
-        stop();
     }
 }

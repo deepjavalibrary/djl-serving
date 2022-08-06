@@ -12,7 +12,6 @@
  */
 package ai.djl.serving;
 
-import ai.djl.Device;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.serving.util.ConfigManager;
@@ -107,14 +106,15 @@ public class WorkflowTest {
     private Input runWorkflow(Path workflowFile, Input input)
             throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        try (WorkLoadManager wlm = new WorkLoadManager()) {
-            for (ModelInfo<Input, Output> model : workflow.getModels()) {
-                wlm.registerModel(model).scaleWorkers(Device.cpu(), 1, 1);
-            }
-
-            Output output = workflow.execute(wlm, input).join();
-            Assert.assertNotNull(output.getData());
-            return output;
+        WorkLoadManager wlm = new WorkLoadManager();
+        for (ModelInfo<Input, Output> model : workflow.getModels()) {
+            wlm.registerModel(model).initWorkers(null, -1, 1);
         }
+
+        Output output = workflow.execute(wlm, input).join();
+        workflow.stop();
+        wlm.close();
+        Assert.assertNotNull(output.getData());
+        return output;
     }
 }

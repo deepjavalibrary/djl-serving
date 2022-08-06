@@ -13,30 +13,83 @@
 package ai.djl.serving.http;
 
 import ai.djl.Device;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
+import ai.djl.serving.models.ModelManager;
+import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkLoadManager;
+import ai.djl.serving.wlm.WorkerGroup;
+import ai.djl.serving.wlm.WorkerPool;
+import ai.djl.serving.wlm.WorkerThread;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 /** A class that holds information about workflow status. */
 public class DescribeWorkflowResponse {
 
     private String workflowName;
-    private String workflowUrl;
-    private int minWorkers;
-    private int maxWorkers;
-    private int batchSize;
-    private int maxBatchDelay;
-    private int maxIdleTime;
-    private int queueLength;
-    private String status;
-    private boolean loadedAtStartup;
+    private String version;
+    private List<Model> models;
 
-    private List<Worker> workers;
+    /**
+     * Constructs a new {@code DescribeWorkflowResponse} instance.
+     *
+     * @param workflow the workflow
+     */
+    public DescribeWorkflowResponse(ai.djl.serving.workflow.Workflow workflow) {
+        this.workflowName = workflow.getName();
+        this.version = workflow.getVersion();
+        models = new ArrayList<>();
 
-    /** Constructs a {@code DescribeWorkflowResponse} instance. */
-    public DescribeWorkflowResponse() {
-        workers = new ArrayList<>();
+        ModelManager manager = ModelManager.getInstance();
+        WorkLoadManager wlm = manager.getWorkLoadManager();
+        Set<String> startupWorkflows = manager.getStartupWorkflows();
+
+        for (ModelInfo<Input, Output> model : workflow.getModels()) {
+            ModelInfo.Status status = model.getStatus();
+            int activeWorker = 0;
+            int targetWorker = 0;
+
+            Model m = new Model();
+            models.add(m);
+            WorkerPool<Input, Output> pool = wlm.getWorkerPool(model);
+            if (pool != null) {
+                m.setModelName(model.getModelId());
+                m.setModelUrl(model.getModelUrl());
+                m.setBatchSize(model.getBatchSize());
+                m.setMaxBatchDelay(model.getMaxBatchDelay());
+                m.setMaxIdleTime(model.getMaxIdleTime());
+                m.setQueueSize(model.getQueueSize());
+                m.setRequestInQueue(pool.getJobQueue().size());
+                m.setLoadedAtStartup(startupWorkflows.contains(model.getModelId()));
+
+                for (WorkerGroup<Input, Output> group : pool.getWorkerGroups().values()) {
+                    Device device = group.getDevice();
+                    Group g = new Group(device, group.getMinWorkers(), group.getMaxWorkers());
+                    m.addGroup(g);
+
+                    List<WorkerThread<Input, Output>> workers = group.getWorkers();
+                    activeWorker += workers.size();
+                    targetWorker += group.getMinWorkers();
+
+                    for (WorkerThread<Input, Output> worker : workers) {
+                        int workerId = worker.getWorkerId();
+                        long startTime = worker.getStartTime();
+                        boolean isRunning = worker.isRunning();
+                        g.addWorker(workerId, startTime, isRunning);
+                    }
+                }
+            }
+
+            if (status == ModelInfo.Status.READY) {
+                m.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
+            } else {
+                m.setStatus(status.name());
+            }
+        }
     }
 
     /**
@@ -49,231 +102,295 @@ public class DescribeWorkflowResponse {
     }
 
     /**
-     * Sets the workflow name.
+     * Returns the workflow version.
      *
-     * @param workflowName the workflow name
+     * @return the workflow version
      */
-    public void setWorkflowName(String workflowName) {
-        this.workflowName = workflowName;
+    public String getVersion() {
+        return version;
     }
 
     /**
-     * Returns if the workflows was loaded at startup.
+     * Returns a list of models.
      *
-     * @return {@code true} if the workflows was loaded at startup
+     * @return a list of models
      */
-    public boolean isLoadedAtStartup() {
-        return loadedAtStartup;
+    public List<Model> getModels() {
+        return models;
     }
 
-    /**
-     * Sets the load at startup status.
-     *
-     * @param loadedAtStartup {@code true} if the workflows was loaded at startup
-     */
-    public void setLoadedAtStartup(boolean loadedAtStartup) {
-        this.loadedAtStartup = loadedAtStartup;
+    /** A class represents model information. */
+    public static final class Model {
+
+        private String modelName;
+        private String modelUrl;
+        private int batchSize;
+        private int maxBatchDelay;
+        private int maxIdleTime;
+        private int queueSize;
+        private int requestInQueue;
+        private String status;
+        private boolean loadedAtStartup;
+
+        private List<Group> workerGroups = new ArrayList<>();
+
+        /**
+         * Returns the model name.
+         *
+         * @return the model name
+         */
+        public String getModelName() {
+            return modelName;
+        }
+
+        /**
+         * Sets the model name.
+         *
+         * @param modelName the model name
+         */
+        public void setModelName(String modelName) {
+            this.modelName = modelName;
+        }
+
+        /**
+         * Returns the model URL.
+         *
+         * @return the model URL
+         */
+        public String getModelUrl() {
+            return modelUrl;
+        }
+
+        /**
+         * Sets the model URL.
+         *
+         * @param modelUrl the model URL
+         */
+        public void setModelUrl(String modelUrl) {
+            this.modelUrl = modelUrl;
+        }
+
+        /**
+         * Returns if the workflows was loaded at startup.
+         *
+         * @return {@code true} if the workflows was loaded at startup
+         */
+        public boolean isLoadedAtStartup() {
+            return loadedAtStartup;
+        }
+
+        /**
+         * Sets the load at startup status.
+         *
+         * @param loadedAtStartup {@code true} if the workflows was loaded at startup
+         */
+        public void setLoadedAtStartup(boolean loadedAtStartup) {
+            this.loadedAtStartup = loadedAtStartup;
+        }
+
+        /**
+         * Returns the batch size.
+         *
+         * @return the batch size
+         */
+        public int getBatchSize() {
+            return batchSize;
+        }
+
+        /**
+         * Sets the batch size.
+         *
+         * @param batchSize the batch size
+         */
+        public void setBatchSize(int batchSize) {
+            this.batchSize = batchSize;
+        }
+
+        /**
+         * Returns the maximum delay in milliseconds to aggregate a batch.
+         *
+         * @return the maximum delay in milliseconds to aggregate a batch
+         */
+        public int getMaxBatchDelay() {
+            return maxBatchDelay;
+        }
+
+        /**
+         * Sets the maximum delay in milliseconds to aggregate a batch.
+         *
+         * @param maxBatchDelay the maximum delay in milliseconds to aggregate a batch
+         */
+        public void setMaxBatchDelay(int maxBatchDelay) {
+            this.maxBatchDelay = maxBatchDelay;
+        }
+
+        /**
+         * Returns the job queue size.
+         *
+         * @return the job queue size
+         */
+        public int getQueueSize() {
+            return queueSize;
+        }
+
+        /**
+         * Sets the job queue size.
+         *
+         * @param queueSize the job queue size
+         */
+        public void setQueueSize(int queueSize) {
+            this.queueSize = queueSize;
+        }
+
+        /**
+         * Returns the number of request in the queue.
+         *
+         * @return the number of request in the queue
+         */
+        public int getRequestInQueue() {
+            return requestInQueue;
+        }
+
+        /**
+         * Sets the number of request in the queue.
+         *
+         * @param requestInQueue the number of request in the queue
+         */
+        public void setRequestInQueue(int requestInQueue) {
+            this.requestInQueue = requestInQueue;
+        }
+
+        /**
+         * Returns the workflow's status.
+         *
+         * @return the workflow's status
+         */
+        public String getStatus() {
+            return status;
+        }
+
+        /**
+         * Sets the workflow's status.
+         *
+         * @param status the workflow's status
+         */
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        /**
+         * Sets the max idle time for worker threads.
+         *
+         * @param maxIdleTime the time a worker thread can be idle before scaling down.
+         */
+        public void setMaxIdleTime(int maxIdleTime) {
+            this.maxIdleTime = maxIdleTime;
+        }
+
+        /**
+         * Returns the maximum idle time for worker threads.
+         *
+         * @return the maxIdleTime
+         */
+        public int getMaxIdleTime() {
+            return maxIdleTime;
+        }
+
+        /**
+         * Returns all workerPools of the workflow.
+         *
+         * @return all workerPools of the workflow
+         */
+        public List<Group> getWorkGroups() {
+            return workerGroups;
+        }
+
+        void addGroup(Group group) {
+            workerGroups.add(group);
+        }
     }
 
-    /**
-     * Returns the workflow URL.
-     *
-     * @return the workflow URL
-     */
-    public String getWorkflowUrl() {
-        return workflowUrl;
-    }
+    /** A class represents worker group. */
+    public static final class Group {
 
-    /**
-     * Sets the workflow URL.
-     *
-     * @param workflowUrl the workflow URL
-     */
-    public void setWorkflowUrl(String workflowUrl) {
-        this.workflowUrl = workflowUrl;
-    }
+        private Device device;
+        private int minWorkers;
+        private int maxWorkers;
 
-    /**
-     * Returns the desired minimum number of workers.
-     *
-     * @return the desired minimum number of workers
-     */
-    public int getMinWorkers() {
-        return minWorkers;
-    }
+        private List<Worker> workers;
 
-    /**
-     * Sets the desired minimum number of workers.
-     *
-     * @param minWorkers the desired minimum number of workers
-     */
-    public void setMinWorkers(int minWorkers) {
-        this.minWorkers = minWorkers;
-    }
+        /**
+         * Constructs a new instance of {@code Group}.
+         *
+         * @param device the device
+         * @param minWorkers the minimum number of workers
+         * @param maxWorkers the maximum number of workers
+         */
+        public Group(Device device, int minWorkers, int maxWorkers) {
+            this.device = device;
+            this.minWorkers = minWorkers;
+            this.maxWorkers = maxWorkers;
+            workers = new ArrayList<>();
+        }
 
-    /**
-     * Returns the desired maximum number of workers.
-     *
-     * @return the desired maximum number of workers
-     */
-    public int getMaxWorkers() {
-        return maxWorkers;
-    }
+        /**
+         * Returns the worker device.
+         *
+         * @return the worker device
+         */
+        public Device getDevice() {
+            return device;
+        }
 
-    /**
-     * Sets the desired maximum number of workers.
-     *
-     * @param maxWorkers the desired maximum number of workers
-     */
-    public void setMaxWorkers(int maxWorkers) {
-        this.maxWorkers = maxWorkers;
-    }
+        /**
+         * Returns the minimum number of workers.
+         *
+         * @return the minimum number of workers
+         */
+        public int getMinWorkers() {
+            return minWorkers;
+        }
 
-    /**
-     * Returns the batch size.
-     *
-     * @return the batch size
-     */
-    public int getBatchSize() {
-        return batchSize;
-    }
+        /**
+         * Returns the maximum number of workers.
+         *
+         * @return the maximum number of workers
+         */
+        public int getMaxWorkers() {
+            return maxWorkers;
+        }
 
-    /**
-     * Sets the batch size.
-     *
-     * @param batchSize the batch size
-     */
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-    }
+        /**
+         * Adds worker to the worker list.
+         *
+         * @param id the worker's ID
+         * @param startTime the worker's start time
+         * @param isRunning {@code true} if worker is running
+         */
+        public void addWorker(int id, long startTime, boolean isRunning) {
+            Worker worker = new Worker();
+            worker.setId(id);
+            worker.setStartTime(new Date(startTime));
+            worker.setStatus(isRunning ? "READY" : "UNLOADING");
+            workers.add(worker);
+        }
 
-    /**
-     * Returns the maximum delay in milliseconds to aggregate a batch.
-     *
-     * @return the maximum delay in milliseconds to aggregate a batch
-     */
-    public int getMaxBatchDelay() {
-        return maxBatchDelay;
-    }
-
-    /**
-     * Sets the maximum delay in milliseconds to aggregate a batch.
-     *
-     * @param maxBatchDelay the maximum delay in milliseconds to aggregate a batch
-     */
-    public void setMaxBatchDelay(int maxBatchDelay) {
-        this.maxBatchDelay = maxBatchDelay;
-    }
-
-    /**
-     * Returns the number of request in the queue.
-     *
-     * @return the number of request in the queue
-     */
-    public int getQueueLength() {
-        return queueLength;
-    }
-
-    /**
-     * Sets the number of request in the queue.
-     *
-     * @param queueLength the number of request in the queue
-     */
-    public void setQueueLength(int queueLength) {
-        this.queueLength = queueLength;
-    }
-
-    /**
-     * Returns the workflow's status.
-     *
-     * @return the workflow's status
-     */
-    public String getStatus() {
-        return status;
-    }
-
-    /**
-     * Sets the workflow's status.
-     *
-     * @param status the workflow's status
-     */
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    /**
-     * Sets the max idle time for worker threads.
-     *
-     * @param maxIdleTime the time a worker thread can be idle before scaling down.
-     */
-    public void setMaxIdleTime(int maxIdleTime) {
-        this.maxIdleTime = maxIdleTime;
-    }
-
-    /**
-     * Returns the maximum idle time for worker threads.
-     *
-     * @return the maxIdleTime
-     */
-    public int getMaxIdleTime() {
-        return maxIdleTime;
-    }
-
-    /**
-     * Returns all workers information of the workflow.
-     *
-     * @return all workers information of the workflow
-     */
-    public List<Worker> getWorkers() {
-        return workers;
-    }
-
-    /**
-     * Adds worker to the worker list.
-     *
-     * @param version the workflow version
-     * @param id the worker's ID
-     * @param startTime the worker's start time
-     * @param isRunning {@code true} if worker is running
-     * @param device the device assigned to the worker
-     */
-    public void addWorker(
-            String version, int id, long startTime, boolean isRunning, Device device) {
-        Worker worker = new Worker();
-        worker.setVersion(version);
-        worker.setId(id);
-        worker.setStartTime(new Date(startTime));
-        worker.setStatus(isRunning ? "READY" : "UNLOADING");
-        worker.setDevice(device);
-        workers.add(worker);
+        /**
+         * Returns a list of workers.
+         *
+         * @return a list of workers
+         */
+        public List<Worker> getWorkers() {
+            return workers;
+        }
     }
 
     /** A class that holds workers information. */
     public static final class Worker {
 
-        private String version;
         private int id;
         private Date startTime;
         private String status;
-        private Device device;
-
-        /**
-         * Returns the model version.
-         *
-         * @return the model version
-         */
-        public String getVersion() {
-            return version;
-        }
-
-        /**
-         * Sets the model version.
-         *
-         * @param version the model version
-         */
-        public void setVersion(String version) {
-            this.version = version;
-        }
 
         /**
          * Returns the worker's ID.
@@ -327,24 +444,6 @@ public class DescribeWorkflowResponse {
          */
         public void setStatus(String status) {
             this.status = status;
-        }
-
-        /**
-         * Return if the worker using GPU.
-         *
-         * @return {@code true} if the worker using GPU
-         */
-        public boolean isGpu() {
-            return device.isGpu();
-        }
-
-        /**
-         * Sets the worker device.
-         *
-         * @param device the worker device
-         */
-        public void setDevice(Device device) {
-            this.device = device;
         }
     }
 }

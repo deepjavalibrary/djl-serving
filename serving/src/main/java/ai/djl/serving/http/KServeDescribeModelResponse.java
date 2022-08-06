@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
  * with the License. A copy of the License is located at
@@ -63,12 +63,12 @@ public class KServeDescribeModelResponse {
     }
 
     /**
-     * Adds the model version to the list of versions.
+     * Sets the list of a model's versions.
      *
-     * @param modelVersion version of te model.
+     * @param versions versions of a model.
      */
-    public void addModelVersion(String modelVersion) {
-        this.versions.add(modelVersion);
+    public void setVersions(List<String> versions) {
+        this.versions = versions;
     }
 
     /**
@@ -191,8 +191,8 @@ public class KServeDescribeModelResponse {
         TORCHSCRIPT("torchscript", "PyTorch"),
         MXNET("mxnet", "MXNet");
 
-        private String modelType; // model_type supported by engine.
-        private String engineName; // engine name in DJL format.
+        private final String modelType; // model_type supported by engine.
+        private final String engineName; // engine name in DJL format.
 
         Platform(String modelType, String engineName) {
             this.modelType = modelType;
@@ -228,7 +228,7 @@ public class KServeDescribeModelResponse {
         BOOL(DataType.BOOLEAN),
         BYTES(DataType.UNKNOWN);
 
-        private DataType dataType;
+        private final DataType dataType;
 
         KServeDataType(DataType dataType) {
             this.dataType = dataType;

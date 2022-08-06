@@ -14,6 +14,7 @@ package ai.djl.serving.util;
 
 import ai.djl.serving.Arguments;
 import ai.djl.serving.wlm.util.WlmConfigManager;
+import ai.djl.util.Utils;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -22,6 +23,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -108,7 +110,7 @@ public final class ConfigManager {
         if (workflows != null) {
             prop.setProperty(LOAD_WORKFLOWS, String.join(",", workflows));
         }
-        for (Map.Entry<String, String> env : System.getenv().entrySet()) {
+        for (Map.Entry<String, String> env : Utils.getenv().entrySet()) {
             String key = env.getKey();
             if (key.startsWith("SERVING_")) {
                 prop.put(key.substring(8).toLowerCase(Locale.ROOT), env.getValue());
@@ -128,7 +130,7 @@ public final class ConfigManager {
             System.setProperty("ai.djl.pytorch.num_interop_threads", "1");
         }
         if (System.getProperty("ai.djl.pytorch.num_threads") == null
-                && System.getenv("OMP_NUM_THREADS") == null) {
+                && Utils.getenv("OMP_NUM_THREADS") == null) {
             System.setProperty("ai.djl.pytorch.num_threads", "1");
         }
         if (System.getProperty("log4j2.contextSelector") == null) {
@@ -190,7 +192,7 @@ public final class ConfigManager {
      * @return the model server home directory
      */
     public static String getModelServerHome() {
-        String home = System.getenv("MODEL_SERVER_HOME");
+        String home = Utils.getenv("MODEL_SERVER_HOME");
         if (home == null) {
             home = System.getProperty("MODEL_SERVER_HOME");
             if (home == null) {
@@ -392,6 +394,8 @@ public final class ConfigManager {
                 + getCanonicalPath(".")
                 + "\nTemp directory: "
                 + System.getProperty("java.io.tmpdir")
+                + "\nCommand line: "
+                + String.join(" ", ManagementFactory.getRuntimeMXBean().getInputArguments())
                 + "\nNumber of CPUs: "
                 + runtime.availableProcessors()
                 + "\nMax heap size: "

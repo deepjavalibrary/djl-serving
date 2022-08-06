@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /** A flow of executing {@link ai.djl.Model}s and custom functions. */
-public class Workflow implements AutoCloseable {
+public class Workflow {
 
     private static final Logger logger = LoggerFactory.getLogger(Workflow.class);
 
@@ -167,9 +167,8 @@ public class Workflow implements AutoCloseable {
         return name;
     }
 
-    /** {@inheritDoc} * */
-    @Override
-    public void close() {
+    /** Stops the workflow and unloads all the models in the workflow. */
+    public void stop() {
         for (ModelInfo<Input, Output> m : getModels()) {
             m.close();
         }

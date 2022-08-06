@@ -37,7 +37,7 @@ public class JavaEngine extends Engine {
     /** {@inheritDoc} */
     @Override
     public Engine getAlternativeEngine() {
-        if (!initialized && !Boolean.getBoolean("ai.djl.python.disable_alternative")) {
+        if (!initialized && !Boolean.getBoolean("ai.djl.java.disable_alternative")) {
             Engine engine = Engine.getInstance();
             if (engine.getRank() < getRank()) {
                 // alternativeEngine should not have the same rank as OnnxRuntime

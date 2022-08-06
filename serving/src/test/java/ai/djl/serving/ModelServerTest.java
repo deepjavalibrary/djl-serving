@@ -21,6 +21,7 @@ import static org.testng.Assert.assertTrue;
 import ai.djl.modality.Classifications.Classification;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.ErrorResponse;
+import ai.djl.serving.http.KServeDescribeModelResponse;
 import ai.djl.serving.http.ListModelsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse.WorkflowItem;
@@ -92,7 +93,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -166,7 +170,8 @@ public class ModelServerTest {
     public void testModelStore()
             throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
                     InterruptedException {
-        try (ModelServer server = initTestServer("src/test/resources/config.properties")) {
+        ModelServer server = initTestServer("src/test/resources/config.properties");
+        try {
             Path modelStore = Paths.get("build/models");
             Path modelDir = modelStore.resolve("test_model");
             Files.createDirectories(modelDir);
@@ -241,6 +246,8 @@ public class ModelServerTest {
 
             url = server.mapModelUrl(mar);
             assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
+        } finally {
+            server.stop();
         }
     }
 
@@ -258,8 +265,8 @@ public class ModelServerTest {
             throws InterruptedException, HttpPostRequestEncoder.ErrorDataEncoderException,
                     IOException, ParseException, GeneralSecurityException,
                     ReflectiveOperationException, ServerStartupException {
-
-        try (ModelServer server = initTestServer("src/test/resources/config.properties")) {
+        ModelServer server = initTestServer("src/test/resources/config.properties");
+        try {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
@@ -278,6 +285,7 @@ public class ModelServerTest {
 
             // management API
             testRegisterModel(channel);
+            testPerModelWorkers(channel);
             testRegisterModelAsync(channel);
             testRegisterWorkflow(channel);
             testRegisterWorkflowAsync(channel);
@@ -285,6 +293,7 @@ public class ModelServerTest {
             testListModels(channel);
             testListWorkflows(channel);
             testDescribeModel(channel);
+            testKServeDescribeModel(channel);
             testUnregisterModel(channel);
 
             testPredictionsInvalidRequestSize(channel);
@@ -300,11 +309,11 @@ public class ModelServerTest {
             testInvalidPredictionsMethod();
             testPredictionsModelNotFound();
             testInvalidDescribeModel();
+            testInvalidKServeDescribeModel();
             testDescribeModelNotFound();
             testInvalidManagementUri();
             testInvalidManagementMethod();
             testUnregisterModelNotFound();
-            testInvalidScaleModel();
             testScaleModelNotFound();
             testRegisterModelMissingUrl();
             testRegisterModelNotFound();
@@ -312,6 +321,8 @@ public class ModelServerTest {
             testServiceUnavailable();
 
             ConfigManagerTest.testSsl();
+        } finally {
+            server.stop();
         }
     }
 
@@ -319,7 +330,8 @@ public class ModelServerTest {
     public void testWorkflows()
             throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
                     InterruptedException, ReflectiveOperationException {
-        try (ModelServer server = initTestServer("src/test/resources/workflow.config.properties")) {
+        ModelServer server = initTestServer("src/test/resources/workflow.config.properties");
+        try {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
@@ -329,6 +341,8 @@ public class ModelServerTest {
             channel.close().sync();
 
             ConfigManagerTest.testSsl();
+        } finally {
+            server.stop();
         }
     }
 
@@ -504,6 +518,45 @@ public class ModelServerTest {
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
     }
 
+    private void testPerModelWorkers(Channel channel) throws InterruptedException, IOException {
+        reset();
+
+        String url = "file:src/test/resources/identity";
+        HttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
+        reset();
+
+        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/identity");
+        channel.writeAndFlush(req);
+        latch.await();
+
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
+        DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
+        DescribeWorkflowResponse wf = resp[0];
+        DescribeWorkflowResponse.Model model = wf.getModels().get(0);
+        DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
+
+        assertEquals(group.getMinWorkers(), 2);
+        assertEquals(group.getMaxWorkers(), CudaUtils.hasCuda() ? 3 : 4);
+
+        // unregister identity model
+        reset();
+        req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+    }
+
     private void testRegisterModelTranslator(Channel channel)
             throws InterruptedException, UnsupportedEncodingException {
         reset();
@@ -622,6 +675,20 @@ public class ModelServerTest {
         }
     }
 
+    private void testKServeDescribeModel(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp");
+        channel.writeAndFlush(req);
+        latch.await();
+
+        KServeDescribeModelResponse resp =
+                JsonUtils.GSON.fromJson(result, KServeDescribeModelResponse.class);
+        assertEquals(resp.getName(), "mlp");
+        assertEquals(resp.getVersions(), Collections.singletonList("v1"));
+        assertEquals(resp.getPlatform(), "MXNet_mxnet");
+    }
+
     private void testDescribeModel(Channel channel) throws InterruptedException {
         reset();
         HttpRequest req =
@@ -629,22 +696,35 @@ public class ModelServerTest {
         channel.writeAndFlush(req);
         latch.await();
 
-        DescribeWorkflowResponse resp =
-                JsonUtils.GSON.fromJson(result, DescribeWorkflowResponse.class);
-        assertTrue(resp.getWorkers().size() > 1);
+        Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
+        DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
+        DescribeWorkflowResponse wf = resp[0];
+        assertEquals(wf.getWorkflowName(), "mlp_2");
+        assertNull(wf.getVersion());
 
-        assertEquals(resp.getWorkflowName(), "mlp_2");
-        assertNotNull(resp.getWorkflowUrl());
-        assertEquals(resp.getMinWorkers(), 2);
-        assertEquals(resp.getMaxWorkers(), 4);
-        assertEquals(resp.getBatchSize(), 1);
-        assertEquals(resp.getMaxBatchDelay(), 100);
-        assertEquals(resp.getStatus(), "Healthy");
-        DescribeWorkflowResponse.Worker worker = resp.getWorkers().get(0);
+        List<DescribeWorkflowResponse.Model> models = wf.getModels();
+        DescribeWorkflowResponse.Model model = models.get(0);
+        assertEquals(model.getModelName(), "mlp_2");
+        assertNotNull(model.getModelUrl());
+        assertEquals(model.getBatchSize(), 1);
+        assertEquals(model.getMaxBatchDelay(), 100);
+        assertEquals(model.getMaxIdleTime(), 60);
+        assertEquals(model.getQueueSize(), 1000);
+        assertTrue(model.getRequestInQueue() >= 0);
+        assertEquals(model.getStatus(), "Healthy");
+        assertFalse(model.isLoadedAtStartup());
+
+        DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
+        assertEquals(group.getDevice().isGpu(), CudaUtils.hasCuda());
+        assertEquals(group.getMinWorkers(), 2);
+        assertEquals(group.getMaxWorkers(), 4);
+        List<DescribeWorkflowResponse.Worker> workers = group.getWorkers();
+        assertTrue(workers.size() > 1);
+
+        DescribeWorkflowResponse.Worker worker = workers.get(0);
         assertTrue(worker.getId() > 0);
         assertNotNull(worker.getStartTime());
         assertNotNull(worker.getStatus());
-        assertEquals(worker.isGpu(), CudaUtils.hasCuda());
     }
 
     private void testUnregisterModel(Channel channel) throws InterruptedException {
@@ -715,6 +795,26 @@ public class ModelServerTest {
             assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
             assertEquals(resp.getMessage(), ERROR_NOT_FOUND);
         }
+    }
+
+    private void testInvalidKServeDescribeModel() throws InterruptedException {
+        Channel channel = connect(Connector.ConnectorType.INFERENCE);
+        assertNotNull(channel);
+
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/res");
+        channel.writeAndFlush(req);
+        latch.await();
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        Map<String, String> map =
+                JsonUtils.GSON.fromJson(
+                        result, new TypeToken<HashMap<String, String>>() {}.getType());
+        assertEquals(httpStatus.code(), HttpResponseStatus.NOT_FOUND.code());
+        String errorMsg = "Model not found: res";
+        assertEquals(map.get("error"), errorMsg);
     }
 
     private void testInvalidDescribeModel() throws InterruptedException {
@@ -915,28 +1015,6 @@ public class ModelServerTest {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
             assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
             assertEquals(resp.getMessage(), "Workflow mlp_2 is already registered.");
-        }
-    }
-
-    private void testInvalidScaleModel() throws InterruptedException {
-        Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
-        assertNotNull(channel);
-
-        reset();
-        DefaultFullHttpRequest req =
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.PUT,
-                        "/models/mlp?min_worker=10&max_worker=1");
-        channel.writeAndFlush(req).sync();
-        latch.await();
-        channel.closeFuture().sync();
-        channel.close().sync();
-
-        if (!System.getProperty("os.name").startsWith("Win")) {
-            ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            assertEquals(httpStatus, HttpResponseStatus.BAD_REQUEST);
-            assertEquals(resp.getMessage(), "max_worker cannot be less than min_worker.");
         }
     }
 
