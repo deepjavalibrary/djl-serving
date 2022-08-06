@@ -26,6 +26,8 @@ public final class WlmConfigManager {
 
     private static final WlmConfigManager INSTANCE = new WlmConfigManager();
 
+    private WlmConfigManager() {}
+
     /**
      * Returns the singleton {@code ConfigManager} instance.
      *

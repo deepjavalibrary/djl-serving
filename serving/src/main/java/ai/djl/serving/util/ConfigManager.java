@@ -145,7 +145,7 @@ public final class ConfigManager {
             System.setProperty("ai.djl.python.disable_alternative", "true");
         }
 
-        WlmConfigManager wlmc = new WlmConfigManager();
+        WlmConfigManager wlmc = WlmConfigManager.getInstance();
         instance.withIntProperty(JOB_QUEUE_SIZE, wlmc::setJobQueueSize);
         instance.withIntProperty(MAX_IDLE_TIME, wlmc::setMaxIdleTime);
         instance.withIntProperty(BATCH_SIZE, wlmc::setBatchSize);
