@@ -198,10 +198,10 @@ public class FolderScanPluginManager implements PluginManager {
     private URL[] listPluginJars() throws IOException {
         Path pluginsFolder = configManager.getPluginFolder();
         if (pluginsFolder == null || !Files.isDirectory(pluginsFolder)) {
-            logger.warn("scanning in plug-in folder :{}....folder does not exists", pluginsFolder);
+            logger.info("plug-in folder not exists:{}", pluginsFolder);
             return new URL[0];
         }
-        logger.debug("scanning in plug-in folder :{}", pluginsFolder);
+        logger.info("scanning in plug-in folder :{}", pluginsFolder);
 
         try (Stream<Path> stream = Files.walk(pluginsFolder, Integer.MAX_VALUE)) {
             return stream.filter(file -> !Files.isDirectory(file))

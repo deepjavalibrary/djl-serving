@@ -236,7 +236,7 @@ public class Workflow {
                         }
 
                         targetStack.remove(target);
-                        logger.debug(
+                        logger.trace(
                                 "Workflow computed target "
                                         + target
                                         + " with value:\n"
