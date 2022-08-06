@@ -325,7 +325,6 @@ public final class ModelManager {
     /**
      * Sends model server health status to client.
      *
-     * @param type of request, from v2 protocol or the normal one.
      * @return completableFuture with eventually result in the future after async execution
      */
     public CompletableFuture<FullHttpResponse> workerStatus() {
@@ -392,7 +391,8 @@ public final class ModelManager {
     /**
      * Sends model server health status to client.
      *
-     * @param modelName of certain modelName, modelVersion of certain version of param.
+     * @param modelName of certain modelName
+     * @param modelVersion certain version of param
      * @return completableFuture with eventually result in the future after async execution
      */
     public CompletableFuture<FullHttpResponse> modelStatus(String modelName, String modelVersion) {
@@ -418,6 +418,8 @@ public final class ModelManager {
                         case PENDING:
                             hasFailureOrPending = true;
                             break;
+                        default:
+                            break;
                     }
                     if (hasFailureOrPending) {
                         httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
@@ -435,7 +437,11 @@ public final class ModelManager {
                     return resp;
                 });
     }
-
+    /**
+     * Sends model server health status to client.
+     *
+     * @return completableFuture with eventually result in the future after async execution
+     */
     public CompletableFuture<FullHttpResponse> healthStatus() {
         return CompletableFuture.supplyAsync(
                 () -> {
@@ -449,6 +455,8 @@ public final class ModelManager {
                                     case FAILED:
                                     case PENDING:
                                         hasFailureOrPending = true;
+                                        break;
+                                    default:
                                         break;
                                 }
                             }

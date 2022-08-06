@@ -276,7 +276,7 @@ public class ModelServerTest {
             testRegisterModelTranslator(channel);
 
             testPing(channel);
-            testV2HealthLive(channel);
+            testV2HealthLiveAndReady(channel);
             testRoot(channel);
             testPredictionsModels(channel);
             testInvocations(channel);
@@ -396,15 +396,22 @@ public class ModelServerTest {
         assertTrue(headers.contains("x-request-id"));
     }
 
-    private void testV2HealthLive(Channel channel) throws InterruptedException {
+    private void testV2HealthLiveAndReady(Channel channel) throws InterruptedException {
         reset();
-        HttpRequest req =
+        HttpRequest req1 =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live");
-        channel.writeAndFlush(req);
+        channel.writeAndFlush(req1);
         latch.await();
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
-        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
-        assertNotNull(resp);
+        assertTrue(headers.contains("x-request-id"));
+
+        reset();
+        HttpRequest req2 =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/v2/health/live");
+        channel.writeAndFlush(req2);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.METHOD_NOT_ALLOWED.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
