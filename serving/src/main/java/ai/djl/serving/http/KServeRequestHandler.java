@@ -63,7 +63,9 @@ public class KServeRequestHandler extends HttpRequestHandler {
         this.requestParser = new RequestParser();
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
@@ -106,14 +108,14 @@ public class KServeRequestHandler extends HttpRequestHandler {
     private boolean isKServeDescribeModelReq(String[] segments) {
         return segments.length == 4
                 || (segments.length == 6 && "version".equals(segments[4]))
-                        && "models".equals(segments[2]);
+                && "models".equals(segments[2]);
     }
 
     private boolean isKServeDescribeHealthReq(String[] segments) {
         return "v2".equals(segments[1])
                 && ((segments.length == 4 && "health".equals(segments[2]))
-                        || ("models".equals(segments[2])
-                                && "ready".equals(segments[segments.length - 1])));
+                || ("models".equals(segments[2])
+                && "ready".equals(segments[segments.length - 1])));
     }
 
     private boolean isKserveDescribeInferenceReq(String[] segments, HttpMethod method) {
@@ -223,7 +225,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
                             .healthStatus()
                             .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
                     break;
-                    // if the string is not ready or live, send badrequest code
+                // if the string is not ready or live, send badrequest code
                 default:
                     sendOutput(new Output(HttpResponseStatus.BAD_REQUEST.code(), ""), ctx);
             }
@@ -260,11 +262,13 @@ public class KServeRequestHandler extends HttpRequestHandler {
         ArrayList<RequestInput> inputArrayList =
                 gson.fromJson(
                         Body.get("inputs").getAsString(),
-                        new TypeToken<ArrayList<RequestInput>>() {}.getType());
+                        new TypeToken<ArrayList<RequestInput>>() {
+                        }.getType());
         ArrayList<RequestOutput> outputArrayList =
                 gson.fromJson(
                         Body.get("outputs").getAsString(),
-                        new TypeToken<ArrayList<RequestOutput>>() {}.getType());
+                        new TypeToken<ArrayList<RequestOutput>>() {
+                        }.getType());
 
         //        byte[] buf = Body.get("inputs").getAsBytes();
         //        System.out.println("buf: " + buf);
@@ -326,7 +330,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
                         })
                 .exceptionally(
                         t -> {
-                            onException(t.getCause(), ctx);
+                            onModelException(t.getCause(), ctx);
                             return null;
                         });
     }
@@ -336,14 +340,10 @@ public class KServeRequestHandler extends HttpRequestHandler {
         int code = output.getCode();
         if (code == 200) {
             status = HttpResponseStatus.OK;
-            SERVER_METRIC.info("{}", RESPONSE_2_XX);
         } else {
             if (code >= 500) {
-                SERVER_METRIC.info("{}", RESPONSE_5_XX);
             } else if (code >= 400) {
-                SERVER_METRIC.info("{}", RESPONSE_4_XX);
             } else {
-                SERVER_METRIC.info("{}", RESPONSE_2_XX);
             }
             status = new HttpResponseStatus(code, output.getMessage());
         }
@@ -382,6 +382,22 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
         NettyUtils.sendJsonResponse(ctx, content, status);
     }
+
+    void onModelException(Throwable t, ChannelHandlerContext ctx) {
+        HttpResponseStatus status;
+        if (t instanceof TranslateException) {
+            status = HttpResponseStatus.BAD_REQUEST;
+        } else if (t instanceof WlmException) {
+            logger.warn(t.getMessage(), t);
+            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
+        } else {
+            logger.warn("Unexpected error", t);
+            status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+        }
+        if (ctx != null) {
+            NettyUtils.sendError(ctx, status, t);
+        }
+    }
 }
 
 class RequestInput {
@@ -389,8 +405,6 @@ class RequestInput {
     private List<Long> shape;
     private String datatype;
     private List<?> data;
-
-    public RequestInput() {}
 
     public String getName() {
         return name;
@@ -452,3 +466,4 @@ class RequestOutput {
         return "Output [ name: " + name + " ]";
     }
 }
+

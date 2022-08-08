@@ -425,9 +425,7 @@ public final class ModelManager {
                         httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                     } else {
                         httpResponseStatus = HttpResponseStatus.OK;
-                        int min = wlm.getWorkerPoolForModel(modelInfo).getMinWorkers();
-                        int actual = wlm.getNumRunningWorkers(modelInfo);
-                        if (actual < min) {
+                        if (wlm.getWorkerPool(modelInfo).isFullyScaled()) {
                             httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                         }
                     }
