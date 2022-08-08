@@ -15,14 +15,15 @@ package ai.djl.serving.http;
 import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.ModelException;
-import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
+import ai.djl.ndarray.NDArray;
+import ai.djl.ndarray.NDList;
+import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.ModelNotFoundException;
-import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
@@ -31,7 +32,6 @@ import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.Pair;
-import ai.djl.util.PairList;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -43,6 +43,7 @@ import io.netty.handler.codec.http.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -63,9 +64,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
         this.requestParser = new RequestParser();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
@@ -108,14 +107,14 @@ public class KServeRequestHandler extends HttpRequestHandler {
     private boolean isKServeDescribeModelReq(String[] segments) {
         return segments.length == 4
                 || (segments.length == 6 && "version".equals(segments[4]))
-                && "models".equals(segments[2]);
+                        && "models".equals(segments[2]);
     }
 
     private boolean isKServeDescribeHealthReq(String[] segments) {
         return "v2".equals(segments[1])
                 && ((segments.length == 4 && "health".equals(segments[2]))
-                || ("models".equals(segments[2])
-                && "ready".equals(segments[segments.length - 1])));
+                        || ("models".equals(segments[2])
+                                && "ready".equals(segments[segments.length - 1])));
     }
 
     private boolean isKserveDescribeInferenceReq(String[] segments, HttpMethod method) {
@@ -225,7 +224,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
                             .healthStatus()
                             .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
                     break;
-                // if the string is not ready or live, send badrequest code
+                    // if the string is not ready or live, send badrequest code
                 default:
                     sendOutput(new Output(HttpResponseStatus.BAD_REQUEST.code(), ""), ctx);
             }
@@ -246,6 +245,25 @@ public class KServeRequestHandler extends HttpRequestHandler {
         infer(ctx, inferenceRequest, modelName, modelVersion);
     }
 
+    private ArrayList<RequestInput> getInputListFromString(String requestString) {
+        GsonBuilder builder = new GsonBuilder();
+        builder.setPrettyPrinting();
+        Gson gson = builder.create();
+        ArrayList<RequestInput> arrayList =
+                gson.fromJson(requestString, new TypeToken<ArrayList<RequestInput>>() {}.getType());
+        return arrayList;
+    }
+
+    private ArrayList<RequestOutput> getOutputListFromString(String requestString) {
+        GsonBuilder builder = new GsonBuilder();
+        builder.setPrettyPrinting();
+        Gson gson = builder.create();
+        ArrayList<RequestOutput> arrayList =
+                gson.fromJson(
+                        requestString, new TypeToken<ArrayList<RequestOutput>>() {}.getType());
+        return arrayList;
+    }
+
     private void infer(
             ChannelHandlerContext ctx,
             Input inferenceRequest,
@@ -253,79 +271,51 @@ public class KServeRequestHandler extends HttpRequestHandler {
             String version) {
         ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(workflowName, version, true);
-
-        PairList<String, BytesSupplier> Body = inferenceRequest.getContent();
-
-        GsonBuilder builder = new GsonBuilder();
-        builder.setPrettyPrinting();
-        Gson gson = builder.create();
-        ArrayList<RequestInput> inputArrayList =
-                gson.fromJson(
-                        Body.get("inputs").getAsString(),
-                        new TypeToken<ArrayList<RequestInput>>() {
-                        }.getType());
-        ArrayList<RequestOutput> outputArrayList =
-                gson.fromJson(
-                        Body.get("outputs").getAsString(),
-                        new TypeToken<ArrayList<RequestOutput>>() {
-                        }.getType());
-
-        //        byte[] buf = Body.get("inputs").getAsBytes();
-        //        System.out.println("buf: " + buf);
-        //        try (NDManager manger = NDManager.newBaseManager()) {
-        //            NDList ndList = NDList.decode(manger, buf);
-        //            for (NDArray array : ndList) {
-        //                String name = array.getName();
-        //                if (name == null) {
-        //                    name = "output__" + ndList.iterator();
-        //                }
-        //                Shape shape = array.getShape();
-        //                DataType type = array.getDataType();
-        //                ByteBuffer bb = array.toByteBuffer();
-        //
-        //            }
-        //        }
-
         if (workflow == null) {
-            // TODO: send error msg
+            sendOutput(new Output(HttpResponseStatus.BAD_REQUEST.code(), ""), ctx);
         }
-        for (int i = 0; i < inputArrayList.size(); i++) {
-            // remove the data in request_input which is not the Kserve-needed data
-            // then put the real data in that.
 
-            //            Body.remove("data");
-            // TODO: the value of data should be NDlist so that it will be accepted by the
-            // no-translator model
-            //            Body.add("data", BytesSupplier.wrapAsJson(inputArrayList.get(i)));
+        String requestID = inferenceRequest.get("id").getAsString();
+        String requestInputsString = inferenceRequest.get("inputs").getAsString();
+        String requestOutputsString = inferenceRequest.get("outputs").getAsString();
 
-            //            inferenceRequest.setContent(Body);
+        ArrayList<RequestInput> inputsArrayList = getInputListFromString(requestInputsString);
+        ArrayList<RequestOutput> outputsArrayList = getOutputListFromString(requestOutputsString);
 
-            runJob(
-                    modelManager,
-                    ctx,
-                    workflow,
-                    inferenceRequest,
-                    inputArrayList.get(i),
-                    outputArrayList.get(i));
+        Input input = new Input();
+        NDManager manager = NDManager.newBaseManager();
+        NDList list = new NDList();
+        for (int i = 0; i < inputsArrayList.size(); i++) {
+            List<Double> dataList = inputsArrayList.get(i).getData();
+            double[] dataArray = dataList.stream().mapToDouble(j -> j).toArray();
 
-            //            System.out.println("inferenceRequest.get(\"data\")" +
-            // inferenceRequest.get("data").getAsString());
+            Shape shape = new Shape(inputsArrayList.get(i).getShape());
+            NDArray shapeNDArray = manager.create(shape);
+            shapeNDArray.setName("shape");
+            NDArray dataNDArray = manager.create(dataArray);
+            dataNDArray.setName("data");
+
+            list.add(shapeNDArray);
+            list.add(dataNDArray);
         }
+        //            input.add("data", list.encode());
+        input.add("data", inferenceRequest.getData());
+        runJob(modelManager, ctx, workflow, input, outputsArrayList, requestID);
     }
 
     void runJob(
             ModelManager modelManager,
             ChannelHandlerContext ctx,
             Workflow workflow,
-            Input inferenceRequest,
-            RequestInput input,
-            RequestOutput output) {
+            Input input,
+            ArrayList<RequestOutput> outputs,
+            String requestID) {
         modelManager
-                .runJob(workflow, inferenceRequest)
+                .runJob(workflow, input)
                 .whenComplete(
                         (o, t) -> {
                             if (o != null) {
-                                sendOutput(o, ctx);
+                                responseOutput(outputs, requestID, o, ctx);
                             }
                         })
                 .exceptionally(
@@ -335,17 +325,23 @@ public class KServeRequestHandler extends HttpRequestHandler {
                         });
     }
 
-    void sendOutput(Output output, ChannelHandlerContext ctx) {
+    void responseOutput(
+            ArrayList<RequestOutput> requestOutputs,
+            String requestID,
+            Output output,
+            ChannelHandlerContext ctx) {
         HttpResponseStatus status;
         int code = output.getCode();
         if (code == 200) {
             status = HttpResponseStatus.OK;
         } else {
             if (code >= 500) {
+                status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
             } else if (code >= 400) {
+                status = HttpResponseStatus.BAD_REQUEST;
             } else {
+                status = new HttpResponseStatus(code, output.getMessage());
             }
-            status = new HttpResponseStatus(code, output.getMessage());
         }
 
         FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
@@ -353,6 +349,62 @@ public class KServeRequestHandler extends HttpRequestHandler {
             resp.headers().set(entry.getKey(), entry.getValue());
         }
         BytesSupplier data = output.getData();
+        String datatype = output.get("datatype")!= null ? output.get("datatype").getAsString() : "null";
+        String shape = output.get("shape")!= null ? output.get("shape").getAsString() : "null";
+        String responseData = output.get("data")!= null ? output.get("data").getAsString() : "null";
+
+        ArrayList<ResponseOutput> responseOutputList = new ArrayList<>();
+        for (RequestOutput requestOutput : requestOutputs) {
+            ResponseOutput responseOutput = new ResponseOutput();
+            responseOutput.setName(requestOutput.getName());
+            responseOutput.setDatatype(datatype);
+            responseOutput.setShape(shape);
+            responseOutput.setData(responseData);
+
+            responseOutputList.add(responseOutput);
+        }
+        InferenceResponse inferenceResponse = new InferenceResponse();
+        inferenceResponse.setId(requestID);
+        inferenceResponse.setList(responseOutputList);
+
+        String json = new Gson().toJson(inferenceResponse);
+
+        if (data != null) {
+            resp.content().writeBytes(json.getBytes());
+        }
+
+        /*
+         * We can load the models based on the configuration file.Since this Job is
+         * not driven by the external connections, we could have a empty context for
+         * this job. We shouldn't try to send a response to ctx if this is not triggered
+         * by external clients.
+         */
+        if (ctx != null) {
+            NettyUtils.sendHttpResponse(ctx, resp, true);
+        }
+    }
+
+    void sendOutput(Output output, ChannelHandlerContext ctx) {
+        HttpResponseStatus status;
+        int code = output.getCode();
+        if (code == 200) {
+            status = HttpResponseStatus.OK;
+        } else {
+            if (code >= 500) {
+                status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+            } else if (code >= 400) {
+                status = HttpResponseStatus.BAD_REQUEST;
+            } else {
+                status = new HttpResponseStatus(code, output.getMessage());
+            }
+        }
+
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
+        for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
+            resp.headers().set(entry.getKey(), entry.getValue());
+        }
+        BytesSupplier data = output.getData();
+
         if (data != null) {
             resp.content().writeBytes(data.getAsBytes());
         }
@@ -404,7 +456,8 @@ class RequestInput {
     private String name;
     private List<Long> shape;
     private String datatype;
-    private List<?> data;
+    // TODO: accept all types of data
+    private List<Double> data;
 
     public String getName() {
         return name;
@@ -418,7 +471,7 @@ class RequestInput {
         return shape;
     }
 
-    public void setShape(List<Long> data) {
+    public void setShape(List<Long> shape) {
         this.shape = shape;
     }
 
@@ -430,11 +483,11 @@ class RequestInput {
         this.datatype = datatype;
     }
 
-    public List<?> getData() {
+    public List<Double> getData() {
         return data;
     }
 
-    public void setData(List<?> data) {
+    public void setData(List<Double> data) {
         this.data = data;
     }
 
@@ -467,3 +520,38 @@ class RequestOutput {
     }
 }
 
+class InferenceResponse {
+    private ArrayList<ResponseOutput> outputs;
+    private String id;
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public void setList(ArrayList<ResponseOutput> responseOutput) {
+        this.outputs = responseOutput;
+    }
+}
+
+class ResponseOutput {
+    private String name;
+    private String shape;
+    private String datatype;
+    private String data;
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setShape(String shape) {
+        this.shape = shape;
+    }
+
+    public void setDatatype(String datatype) {
+        this.datatype = datatype;
+    }
+
+    public void setData(String data) {
+        this.data = data;
+    }
+}
