@@ -57,7 +57,7 @@ public final class ModelManager {
     private static final Logger logger = LoggerFactory.getLogger(ModelManager.class);
 
     private static ModelManager modelManager = new ModelManager();
-    private static final String[] TYPES = {"FOR_KSERVE", "FOR_DJL_SERVING"};
+
     private WorkLoadManager wlm;
     private Map<String, Endpoint> endpoints;
     private Set<String> startupWorkflows;
@@ -413,9 +413,6 @@ public final class ModelManager {
                         httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                     } else {
                         httpResponseStatus = HttpResponseStatus.OK;
-                        if (wlm.getWorkerPool(modelInfo).isFullyScaled()) {
-                            httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-                        }
                     }
                     return new DefaultFullHttpResponse(
                             HttpVersion.HTTP_1_1, httpResponseStatus, false);

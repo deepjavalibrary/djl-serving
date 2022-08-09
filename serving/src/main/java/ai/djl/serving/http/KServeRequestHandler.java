@@ -213,7 +213,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
     }
 
     private void handleKServeDescribeModelReady(
-            ChannelHandlerContext ctx, String[] segments, HttpMethod method) throws ModelNotFoundException {
+            ChannelHandlerContext ctx, String[] segments, HttpMethod method)
+            throws ModelNotFoundException {
         if (!HttpMethod.GET.equals(method)) {
             sendHttpCode(HttpResponseStatus.METHOD_NOT_ALLOWED, ctx);
             return;
@@ -226,7 +227,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
         ModelManager modelManager = ModelManager.getInstance();
 
         ModelInfo<Input, Output> modelInfo = getModelInfo(modelManager, modelName, modelVersion);
-        System.out.println(modelInfo);
         if (modelInfo == null) {
             throw new ModelNotFoundException(
                     "Model not found: "
@@ -238,7 +238,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
                 .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
     }
 
-    private ModelInfo<Input, Output> getModelInfo(ModelManager modelManager, String modelName, String modelVersion){
+    private ModelInfo<Input, Output> getModelInfo(
+            ModelManager modelManager, String modelName, String modelVersion) {
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
 
         ModelInfo<Input, Output> modelInfo =
@@ -246,16 +247,14 @@ public class KServeRequestHandler extends HttpRequestHandler {
                         .filter(
                                 model ->
                                         modelName.equals(
-                                                model.getModel(
-                                                                model.withDefaultDevice(
-                                                                        null))
+                                                model.getModel(model.withDefaultDevice(null))
                                                         .getName()))
                         .findAny()
                         .get();
         return modelInfo;
     }
 
-    /**  To meet the 'empty body' requirements of Kserve health protocol */
+    /** To meet the 'empty body' requirements of Kserve health protocol */
     private void sendHttpCode(HttpResponseStatus status, ChannelHandlerContext ctx) {
         FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
         if (ctx != null) {
@@ -269,7 +268,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
             status = HttpResponseStatus.NOT_FOUND;
         } else {
             logger.warn("Unexpected error", ex);
-            System.out.println("sb");
             status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
         }
 
