@@ -97,7 +97,7 @@ public class HttpStaticClasspathResourceHandler implements RequestHandler<Void> 
             FullHttpRequest request,
             QueryStringDecoder decoder,
             String[] segments) {
-        logger.debug("processing static resource request");
+        logger.trace("processing static resource request");
         String uri = request.uri();
 
         uri = mapToPathInResourceFolder(uri);
@@ -106,8 +106,6 @@ public class HttpStaticClasspathResourceHandler implements RequestHandler<Void> 
             URL resource = getClass().getResource(uri);
             if (resource != null) {
                 ResourceInfo resourceInfo = getResourceInfo(resource);
-                logger.debug(resourceInfo.toString());
-
                 sendHeader(ctx, request, resourceInfo);
 
                 try (InputStream resourceInputStream = resource.openStream()) {
@@ -125,11 +123,9 @@ public class HttpStaticClasspathResourceHandler implements RequestHandler<Void> 
                         sendFileFuture.addListener(ChannelFutureListener.CLOSE);
                     }
                 }
-
             } else {
                 throw new ResourceNotFoundException();
             }
-
         } catch (IOException ex) {
             logger.error("error reading requested resource", ex);
             throw new ResourceNotFoundException(ex);

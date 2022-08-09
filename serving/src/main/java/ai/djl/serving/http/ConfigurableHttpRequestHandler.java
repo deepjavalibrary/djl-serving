@@ -64,7 +64,7 @@ public class ConfigurableHttpRequestHandler extends HttpRequestHandler {
                 findRequestHandler(req)
                         .orElseThrow(
                                 () -> new BadRequestException("request handler no longer valid"));
-        logger.debug(
+        logger.trace(
                 "Request handler {} processes request", requestHandler.getClass().getSimpleName());
         try {
             Object result = requestHandler.handleRequest(ctx, req, decoder, segments);
