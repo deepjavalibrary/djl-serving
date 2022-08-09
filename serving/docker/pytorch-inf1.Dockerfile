@@ -41,7 +41,9 @@ COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_inferentia.sh && \
+    scripts/patch_oss_dlc.sh python && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
+
