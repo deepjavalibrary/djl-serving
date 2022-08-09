@@ -53,6 +53,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final Metric RESPONSE_5_XX = new Metric("5XX", 1);
     private static final Metric WLM_ERROR = new Metric("WlmError", 1);
     private static final Metric SERVER_ERROR = new Metric("ServerError", 1);
+
     private RequestParser requestParser;
 
     private static final Pattern PATTERN =

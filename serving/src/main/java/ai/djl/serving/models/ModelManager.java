@@ -391,26 +391,14 @@ public final class ModelManager {
     /**
      * Sends model server health status to client.
      *
-     * @param modelName of certain modelName
-     * @param modelVersion certain version of param
+     * @param modelInfo model's info
      * @return completableFuture with eventually result in the future after async execution
      */
-    public CompletableFuture<FullHttpResponse> modelStatus(String modelName, String modelVersion) {
+    public CompletableFuture<FullHttpResponse> modelStatus(ModelInfo<Input, Output> modelInfo) {
         return CompletableFuture.supplyAsync(
                 () -> {
                     boolean hasFailureOrPending = false;
-                    Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-                    ModelInfo<Input, Output> modelInfo =
-                            workflow.getModels().stream()
-                                    .filter(
-                                            model ->
-                                                    modelName.equals(
-                                                            model.getModel(
-                                                                            model.withDefaultDevice(
-                                                                                    null))
-                                                                    .getName()))
-                                    .findAny()
-                                    .get();
+
                     ModelInfo.Status status = modelInfo.getStatus();
                     HttpResponseStatus httpResponseStatus;
                     switch (status) {
@@ -429,10 +417,8 @@ public final class ModelManager {
                             httpResponseStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                         }
                     }
-                    FullHttpResponse resp =
-                            new DefaultFullHttpResponse(
-                                    HttpVersion.HTTP_1_1, httpResponseStatus, false);
-                    return resp;
+                    return new DefaultFullHttpResponse(
+                            HttpVersion.HTTP_1_1, httpResponseStatus, false);
                 });
     }
     /**
@@ -466,10 +452,8 @@ public final class ModelManager {
                     } else {
                         httpResponseStatus = HttpResponseStatus.OK;
                     }
-                    FullHttpResponse resp =
-                            new DefaultFullHttpResponse(
-                                    HttpVersion.HTTP_1_1, httpResponseStatus, false);
-                    return resp;
+                    return new DefaultFullHttpResponse(
+                            HttpVersion.HTTP_1_1, httpResponseStatus, false);
                 });
     }
     /**

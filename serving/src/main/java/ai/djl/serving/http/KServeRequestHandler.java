@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
  * with the License. A copy of the License is located at
@@ -17,7 +17,6 @@ import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.ndarray.BytesSupplier;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -29,7 +28,13 @@ import ai.djl.serving.workflow.Workflow;
 import ai.djl.util.Pair;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.QueryStringDecoder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,10 +77,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
             String[] segments)
             throws ModelException {
         HttpMethod method = req.method();
-        if (!(HttpMethod.GET.equals(method) || HttpMethod.POST.equals(method))) {
-            sendOutput(new Output(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), ""), ctx);
-            return;
-        }
+
         if (isKServeDescribeModelReq(segments)) {
             if (!HttpMethod.GET.equals(method)) {
                 throw new MethodNotAllowedException();
@@ -85,8 +87,15 @@ public class KServeRequestHandler extends HttpRequestHandler {
             } catch (Exception exception) {
                 onException(exception, ctx);
             }
-        } else if (isKServeDescribeHealthReq(segments)) {
-            handleKServeDescribeHealth(ctx, segments, method);
+        } else if (isKServeDescribeHealthReadyReq(segments)
+                || isKServeDescribeHealthLiveReq(segments)) {
+            handleKServeDescribeHealths(ctx, segments, method);
+        } else if (isKServeDescribeModelReadyReq(segments)) {
+            try {
+                handleKServeDescribeModelReady(ctx, segments, method);
+            } catch (Exception exception) {
+                onException(exception, ctx);
+            }
         } else {
             throw new ResourceNotFoundException();
         }
@@ -97,11 +106,20 @@ public class KServeRequestHandler extends HttpRequestHandler {
                 && "models".equals(segments[2]);
     }
 
-    private boolean isKServeDescribeHealthReq(String[] segments) {
-        return "v2".equals(segments[1])
-                && ((segments.length == 4 && "health".equals(segments[2]))
-                        || ("models".equals(segments[2])
-                                && "ready".equals(segments[segments.length - 1])));
+    private boolean isKServeDescribeHealthLiveReq(String[] segments) {
+        return segments.length == 4 && "health".equals(segments[2]) && "live".equals((segments[3]));
+    }
+
+    private boolean isKServeDescribeHealthReadyReq(String[] segments) {
+        return segments.length == 4
+                && "health".equals(segments[2])
+                && "ready".equals((segments[3]));
+    }
+
+    private boolean isKServeDescribeModelReadyReq(String[] segments) {
+        return (segments.length == 5 || (segments.length == 7 && "version".equals(segments[4])))
+                && "models".equals(segments[2])
+                && "ready".equals(segments[segments.length - 1]);
     }
 
     private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments)
@@ -175,73 +193,71 @@ public class KServeRequestHandler extends HttpRequestHandler {
         NettyUtils.sendJsonResponse(ctx, response);
     }
 
-    private void handleKServeDescribeHealth(
+    private void handleKServeDescribeHealths(
             ChannelHandlerContext ctx, String[] segments, HttpMethod method) {
         if (!HttpMethod.GET.equals(method)) {
-            sendOutput(new Output(HttpResponseStatus.METHOD_NOT_ALLOWED.code(), ""), ctx);
+            sendHttpCode(HttpResponseStatus.METHOD_NOT_ALLOWED, ctx);
             return;
         }
-        if ("models".equals(segments[2])) {
-            String modelName = segments[3];
-            String modelVersion = null;
-            if (segments.length > 5) {
-                modelVersion = segments[5];
-            }
-            ModelManager modelManager = ModelManager.getInstance();
-            Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-            if (workflow == null) {
-                sendOutput(new Output(HttpResponseStatus.BAD_REQUEST.code(), ""), ctx);
-                return;
-            }
-            modelManager
-                    .modelStatus(modelName, modelVersion)
-                    .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
-        } else {
-            switch (segments[3]) {
-                case "ready":
-                case "live":
-                    ModelManager.getInstance()
-                            .healthStatus()
-                            .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
-                    break;
-                    // if the string is not ready or live, send badrequest code
-                default:
-                    sendOutput(new Output(HttpResponseStatus.BAD_REQUEST.code(), ""), ctx);
-            }
+        switch (segments[3]) {
+            case "ready":
+            case "live":
+                ModelManager.getInstance()
+                        .healthStatus()
+                        .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
+                break;
+                // if the string is not ready or live, send badrequest code
+            default:
+                sendHttpCode(HttpResponseStatus.BAD_REQUEST, ctx);
         }
     }
 
-    void sendOutput(Output output, ChannelHandlerContext ctx) {
-        HttpResponseStatus status;
-        int code = output.getCode();
-        if (code == 200) {
-            status = HttpResponseStatus.OK;
-        } else {
-            if (code >= 500) {
-                status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-            } else if (code >= 400) {
-                status = HttpResponseStatus.BAD_REQUEST;
-            } else {
-                status = new HttpResponseStatus(code, output.getMessage());
-            }
+    private void handleKServeDescribeModelReady(
+            ChannelHandlerContext ctx, String[] segments, HttpMethod method) throws ModelNotFoundException {
+        if (!HttpMethod.GET.equals(method)) {
+            sendHttpCode(HttpResponseStatus.METHOD_NOT_ALLOWED, ctx);
+            return;
         }
+        String modelName = segments[3];
+        String modelVersion = null;
+        if (segments.length > 5) {
+            modelVersion = segments[5];
+        }
+        ModelManager modelManager = ModelManager.getInstance();
 
+        ModelInfo<Input, Output> modelInfo = getModelInfo(modelManager, modelName, modelVersion);
+        System.out.println(modelInfo);
+        if (modelInfo == null) {
+            throw new ModelNotFoundException(
+                    "Model not found: "
+                            + modelName
+                            + (modelVersion == null ? "" : '/' + modelVersion));
+        }
+        modelManager
+                .modelStatus(modelInfo)
+                .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
+    }
+
+    private ModelInfo<Input, Output> getModelInfo(ModelManager modelManager, String modelName, String modelVersion){
+        Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
+
+        ModelInfo<Input, Output> modelInfo =
+                workflow.getModels().stream()
+                        .filter(
+                                model ->
+                                        modelName.equals(
+                                                model.getModel(
+                                                                model.withDefaultDevice(
+                                                                        null))
+                                                        .getName()))
+                        .findAny()
+                        .get();
+        return modelInfo;
+    }
+
+    /**  To meet the 'empty body' requirements of Kserve health protocol */
+    private void sendHttpCode(HttpResponseStatus status, ChannelHandlerContext ctx) {
         FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
-        for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
-            resp.headers().set(entry.getKey(), entry.getValue());
-        }
-        BytesSupplier data = output.getData();
-
-        if (data != null) {
-            resp.content().writeBytes(data.getAsBytes());
-        }
-
-        /*
-         * We can load the models based on the configuration file.Since this Job is
-         * not driven by the external connections, we could have a empty context for
-         * this job. We shouldn't try to send a response to ctx if this is not triggered
-         * by external clients.
-         */
         if (ctx != null) {
             NettyUtils.sendHttpResponse(ctx, resp, true);
         }
@@ -253,6 +269,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
             status = HttpResponseStatus.NOT_FOUND;
         } else {
             logger.warn("Unexpected error", ex);
+            System.out.println("sb");
             status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
         }
 
