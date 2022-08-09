@@ -54,6 +54,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private static final String SYNCHRONOUS_PARAMETER = "synchronous";
     /** HTTP Parameter "url". */
     private static final String URL_PARAMETER = "url";
+    /** HTTP Parameter "job_queue_size". */
+    private static final String JOB_QUEUE_SIZE = "job_queue_size";
     /** HTTP Parameter "batch_size". */
     private static final String BATCH_SIZE_PARAMETER = "batch_size";
     /** HTTP Parameter "model_name". */
@@ -209,6 +211,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         String version = NettyUtils.getParameter(decoder, MODEL_VERSION_PARAMETER, null);
         String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
         String engineName = NettyUtils.getParameter(decoder, ENGINE_NAME_PARAMETER, null);
+        int defJobQueueSize = WlmConfigManager.getInstance().getJobQueueSize();
+        int jobQueueSize = NettyUtils.getIntParameter(decoder, JOB_QUEUE_SIZE, defJobQueueSize);
         int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, 1);
         int maxBatchDelay = NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, 100);
         int maxIdleTime = NettyUtils.getIntParameter(decoder, MAX_IDLE_TIME_PARAMETER, 60);
@@ -226,7 +230,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         engineName,
                         Input.class,
                         Output.class,
-                        WlmConfigManager.getInstance().getJobQueueSize(),
+                        jobQueueSize,
                         maxIdleTime,
                         maxBatchDelay,
                         batchSize);
