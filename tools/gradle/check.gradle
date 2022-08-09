@@ -1,19 +1,22 @@
-apply plugin: "com.github.spotbugs"
-spotbugs {
-    excludeFilter = file("${rootProject.projectDir}/tools/conf/findbugs-exclude.xml")
-    ignoreFailures = false
-    spotbugsTest.enabled = true
-}
-spotbugsMain {
-    reports {
-        xml.enabled false
-        html.enabled true
+// TODO: Remove this once spotbugs support Java18
+if (JavaVersion.current() < JavaVersion.VERSION_18) {
+    apply plugin: "com.github.spotbugs"
+    spotbugs {
+        excludeFilter = file("${rootProject.projectDir}/tools/conf/findbugs-exclude.xml")
+        ignoreFailures = false
+        spotbugsTest.enabled = true
     }
-}
-spotbugsTest {
-    reports {
-        xml.enabled false
-        html.enabled true
+    spotbugsMain {
+        reports {
+            xml.enabled false
+            html.enabled true
+        }
+    }
+    spotbugsTest {
+        reports {
+            xml.enabled false
+            html.enabled true
+        }
     }
 }
 
