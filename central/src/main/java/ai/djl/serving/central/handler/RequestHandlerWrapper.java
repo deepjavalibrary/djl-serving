@@ -13,6 +13,7 @@
 package ai.djl.serving.central.handler;
 
 import ai.djl.serving.central.responseencoder.JsonResponse;
+import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.plugins.RequestHandler;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -70,7 +71,7 @@ public class RequestHandlerWrapper extends SimpleChannelInboundHandler<FullHttpR
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) {
         try {
             if (!request.decoderResult().isSuccess()) {
-                throw new ai.djl.serving.http.BadRequestException("Invalid HTTP message.");
+                throw new BadRequestException("Invalid HTTP message.");
             }
 
             QueryStringDecoder decoder = new QueryStringDecoder(request.uri());

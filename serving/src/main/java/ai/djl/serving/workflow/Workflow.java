@@ -111,12 +111,12 @@ public class Workflow {
      * @return a future of the result of the execution
      */
     public CompletableFuture<Output> execute(WorkLoadManager wlm, Input input) {
-        logger.debug("Beginning execution of workflow");
+        logger.trace("Beginning execution of workflow: {}", name);
         WorkflowExecutor ex = new WorkflowExecutor(wlm, input);
         return ex.execute(OUT)
                 .thenApply(
                         i -> {
-                            logger.debug("Ending execution of workflow");
+                            logger.trace("Ending execution of workflow: {}", name);
                             return (Output) i;
                         });
     }
