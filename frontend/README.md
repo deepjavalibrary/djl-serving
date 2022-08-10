@@ -1,7 +1,7 @@
 DJLServing background management system
 # djl-serving-web
 
-## Project setup
+## Project setup 
 ```
 npm install
 ```
