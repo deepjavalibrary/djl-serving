@@ -127,6 +127,10 @@ jobs:
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
       - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
@@ -144,7 +148,6 @@ jobs:
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          yes | docker system prune -a --volumes
           docker pull deepjavalibrary/djl-serving:pytorch-inf1-nightly
           mkdir logs
           ./download_models.sh pytorch-inf1
@@ -179,6 +182,10 @@ jobs:
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
       - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:
@@ -196,7 +203,6 @@ jobs:
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          yes | docker system prune -a --volumes
           docker pull deepjavalibrary/djl-serving:pytorch-cu113-nightly
           mkdir logs
           ./download_models.sh pytorch-cu113
@@ -231,10 +237,10 @@ jobs:
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
-      - name: Clean docker env
-        working-directory: serving/docker
+      - name: Clean env
         run: |
           yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
       - name: Set up JDK 11
         uses: actions/setup-java@v3
         with:

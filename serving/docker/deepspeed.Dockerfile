@@ -44,7 +44,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
     pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} triton==1.0.0 mpi4py && \
-    RUN scripts/patch_oss_dlc.sh python \
+    RUN scripts/patch_oss_dlc.sh python &&\
     rm -rf scripts && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
