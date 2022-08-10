@@ -11,7 +11,8 @@ if [ -z "$PYTORCH_JNI" ]; then
   DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     fakeroot \
     openjdk-11-jdk-headless \
-    curl
+    curl \
+    unzip
 
   # install DJLServing
   curl https://publish.djl.ai/djl-serving/djl-serving_${DJL_VERSION}-1_all.deb -o djl-serving_all.deb
