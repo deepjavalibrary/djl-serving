@@ -14,7 +14,8 @@ export const delModel = (name,version="") =>{
   return http.requestDelete('/models/'+name+"/"+version);
 }
 export const modifyModel = (name,version="",param) =>{
-  return http.requestPut('/models/'+name+"/"+version,param);
+  let query= "?"+Object.keys(param).map(v => v+"="+param[v]).join("&")
+  return http.requestPut('/workflows/'+name+"/"+version+query);
 }
 export const predictions = (name,version="",param,header) =>{
   if(param instanceof FormData){

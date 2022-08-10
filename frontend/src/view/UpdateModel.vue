@@ -119,42 +119,29 @@ export default {
       version: "",
       versionList: "",
       form: {
-        modelName: "res18",
-        modelUrl: "file:/D:/DeepLearning/traced_resnet18",
+        modelName: "",
+        modelUrl: "",
 
         batchSize: 1,
         maxBatchDelay: 100,
         maxIdleTime: 60,
         queueLength: 0,
-        status: "Healthy",
+        status: "",
         loadedAtStartup: false,
         workerGroups: [
           {
             workers: [{
-              "id": 1,
-              "startTime": "2022-07-29T16:10:20.445Z",
-              "status": "READY"
+              "id": 0,
+              "startTime": "",
+              "status": ""
             }],
             "device": {
               "deviceType": "cpu",
               "deviceId": -1
             },
             minWorkers: 1,
-            maxWorkers: 10,
+            maxWorkers: 1,
           },
-          {
-            workers: [{
-              "id": 1,
-              "startTime": "2022-07-29T16:10:20.445Z",
-              "status": "READY"
-            }],
-            "device": {
-              "deviceType": "gpu",
-              "deviceId": 0
-            },
-            minWorkers: 1,
-            maxWorkers: 16,
-          }
         ],
 
       },
@@ -207,8 +194,14 @@ export default {
       if (!flag) {
         throw Error('Valid failed')
       }
-
-
+      let model = {...this.form}
+      let params = { batch_size: model.batchSize, max_batch_delay: model.maxBatchDelay,max_idle_time: model.maxIdleTime,}
+      params.device = model.workerGroups[this.activeDevice].device.deviceId
+      params.min_worker =  model.workerGroups[this.activeDevice].minWorkers
+      params.max_worker =  model.workerGroups[this.activeDevice].maxWorkers
+      let res = await modelApi.modifyModel(model.modelName,this.version||"",params)
+      console.log(res);
+      this.$message.success(res.status)
     },
     selectVersion(ver) {
       this.version = ver
