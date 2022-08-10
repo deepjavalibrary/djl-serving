@@ -19,11 +19,6 @@ axiosInst.interceptors.request.use(
     if(!data.cancelLoading){
       loadingInstance = Loading.service();
     }
-    // if(req.myHeader&&Object.keys(req.myHeader).length>0){
-
-    //   req.headers = {...req.headers,...req.myHeader}
-    // }
-    // req.headers['content-type']='image/jpeg'
     console.log("req",req);
     console.log("headers",req.headers);
     return req

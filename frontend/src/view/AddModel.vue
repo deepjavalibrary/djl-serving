@@ -134,10 +134,10 @@ export default {
   data() {
     return {
       form: {
-        url: "file:/D:/DeepLearning/traced_resnet18",
-        model_name: 'res',
+        url: "",
+        model_name: '',
         model_version: '0.0.1',
-        engine: 'MXNet',
+        engine: '',
         device: -1,
         synchronous: true,
         batch_size: 1,
