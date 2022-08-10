@@ -127,7 +127,7 @@ export default {
     this.modelName = modelName.split(":")[0]
     let version = modelName.split(":")[1]
     let res = await modelApi.modelInfo(this.modelName)
-    this.versionList = res.models.map(v => v.version)
+    this.versionList = res.map(v => v.version)
     this.activeVersion = version
     console.log(res);
   },
