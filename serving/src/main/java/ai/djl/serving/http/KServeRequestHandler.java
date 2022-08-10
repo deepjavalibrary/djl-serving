@@ -14,7 +14,6 @@ package ai.djl.serving.http;
 
 import ai.djl.Device;
 import ai.djl.Model;
-import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.types.DataType;
@@ -28,12 +27,9 @@ import ai.djl.serving.workflow.Workflow;
 import ai.djl.util.Pair;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import org.slf4j.Logger;
@@ -52,6 +48,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
     private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
 
     private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
+
+    private static final String EMPTY_BODY = "";
 
     private RequestParser requestParser;
 
@@ -74,30 +72,30 @@ public class KServeRequestHandler extends HttpRequestHandler {
             ChannelHandlerContext ctx,
             FullHttpRequest req,
             QueryStringDecoder decoder,
-            String[] segments)
-            throws ModelException {
+            String[] segments) {
         HttpMethod method = req.method();
-
-        if (isKServeDescribeModelReq(segments)) {
-            if (!HttpMethod.GET.equals(method)) {
-                throw new MethodNotAllowedException();
-            }
-            try {
+        try {
+            if (isKServeDescribeModelReq(segments)) {
+                isHttpGetRequestOrThrowException(method);
                 handleKServeDescribeModel(ctx, segments);
-            } catch (Exception exception) {
-                onException(exception, ctx);
+            } else if (isKServeDescribeHealthReadyReq(segments)
+                    || isKServeDescribeHealthLiveReq(segments)) {
+                isHttpGetRequestOrThrowException(method);
+                handleKServeDescribeHealth(ctx);
+            } else if (isKServeDescribeModelReadyReq(segments)) {
+                isHttpGetRequestOrThrowException(method);
+                handleKServeDescribeModelReady(ctx, segments);
+            } else {
+                throw new ResourceNotFoundException();
             }
-        } else if (isKServeDescribeHealthReadyReq(segments)
-                || isKServeDescribeHealthLiveReq(segments)) {
-            handleKServeDescribeHealths(ctx, segments, method);
-        } else if (isKServeDescribeModelReadyReq(segments)) {
-            try {
-                handleKServeDescribeModelReady(ctx, segments, method);
-            } catch (Exception exception) {
-                onException(exception, ctx);
-            }
-        } else {
-            throw new ResourceNotFoundException();
+        } catch (Exception exception) {
+            onException(exception, ctx);
+        }
+    }
+
+    private void isHttpGetRequestOrThrowException(HttpMethod method) {
+        if (!HttpMethod.GET.equals(method)) {
+            throw new MethodNotAllowedException();
         }
     }
 
@@ -193,39 +191,35 @@ public class KServeRequestHandler extends HttpRequestHandler {
         NettyUtils.sendJsonResponse(ctx, response);
     }
 
-    private void handleKServeDescribeHealths(
-            ChannelHandlerContext ctx, String[] segments, HttpMethod method) {
-        if (!HttpMethod.GET.equals(method)) {
-            sendHttpCode(HttpResponseStatus.METHOD_NOT_ALLOWED, ctx);
-            return;
-        }
-        switch (segments[3]) {
-            case "ready":
-            case "live":
-                ModelManager.getInstance()
-                        .healthStatus()
-                        .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
-                break;
-                // if the string is not ready or live, send badrequest code
-            default:
-                sendHttpCode(HttpResponseStatus.BAD_REQUEST, ctx);
-        }
+    private void handleKServeDescribeHealth(ChannelHandlerContext ctx) {
+        ModelManager.getInstance()
+                .workerStatus()
+                .thenAccept(
+                        workerInfo -> {
+                            Boolean hasFailure = (Boolean) workerInfo.get("hasFailure");
+                            Boolean hasPending = (Boolean) workerInfo.get("hasPending");
+
+                            HttpResponseStatus httpResponseStatus;
+                            if (hasFailure) {
+                                httpResponseStatus = HttpResponseStatus.EXPECTATION_FAILED;
+                            } else if (hasPending) {
+                                httpResponseStatus = HttpResponseStatus.REQUEST_TIMEOUT;
+                            } else {
+                                httpResponseStatus = HttpResponseStatus.OK;
+                            }
+                            // TODO: will return two rows of response body
+                            NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
+                        });
     }
 
-    private void handleKServeDescribeModelReady(
-            ChannelHandlerContext ctx, String[] segments, HttpMethod method)
+    private void handleKServeDescribeModelReady(ChannelHandlerContext ctx, String[] segments)
             throws ModelNotFoundException {
-        if (!HttpMethod.GET.equals(method)) {
-            sendHttpCode(HttpResponseStatus.METHOD_NOT_ALLOWED, ctx);
-            return;
-        }
         String modelName = segments[3];
         String modelVersion = null;
         if (segments.length > 5) {
             modelVersion = segments[5];
         }
         ModelManager modelManager = ModelManager.getInstance();
-
         ModelInfo<Input, Output> modelInfo = getModelInfo(modelManager, modelName, modelVersion);
         if (modelInfo == null) {
             throw new ModelNotFoundException(
@@ -233,9 +227,21 @@ public class KServeRequestHandler extends HttpRequestHandler {
                             + modelName
                             + (modelVersion == null ? "" : '/' + modelVersion));
         }
-        modelManager
-                .modelStatus(modelInfo)
-                .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
+
+        ModelInfo.Status status = modelInfo.getStatus();
+        HttpResponseStatus httpResponseStatus;
+        switch (status) {
+            case FAILED:
+                httpResponseStatus = HttpResponseStatus.EXPECTATION_FAILED;
+                break;
+            case PENDING:
+                httpResponseStatus = HttpResponseStatus.REQUEST_TIMEOUT;
+                break;
+            default:
+                httpResponseStatus = HttpResponseStatus.OK;
+                break;
+        }
+        NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
     }
 
     private ModelInfo<Input, Output> getModelInfo(
@@ -252,14 +258,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
                         .findAny()
                         .get();
         return modelInfo;
-    }
-
-    /** To meet the 'empty body' requirements of Kserve health protocol */
-    private void sendHttpCode(HttpResponseStatus status, ChannelHandlerContext ctx) {
-        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
-        if (ctx != null) {
-            NettyUtils.sendHttpResponse(ctx, resp, true);
-        }
     }
 
     private void onException(Exception ex, ChannelHandlerContext ctx) {
