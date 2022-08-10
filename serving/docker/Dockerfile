@@ -28,7 +28,7 @@ ENV OMP_NUM_THREADS=1
 ENV TF_NUM_INTEROP_THREADS=1
 ENV TF_NUM_INTRAOP_THREADS=1
 ENV TF_CPP_MIN_LOG_LEVEL=1
-ENV JAVA_OPTS="-XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
+ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
