@@ -1,14 +1,14 @@
 
 import axios from 'axios'
+import * as env from '../env'
 
-axios.defaults.baseURL = '/api'//root path
+axios.defaults.baseURL = env.baseUrl //root path
 axios.defaults.withCredentials = true //cross
 axios.defaults.timeout = 600000
 axios.defaults.headers.post['Content-Type'] = 'application/x-www=form-urlencoded'
 
 import { Loading } from 'element-ui';
 import { Message } from 'element-ui';
-import md5 from 'js-md5'
 let axiosInst = axios.create({});//axios instance
 var loadingInstance;
 // request interceptors
