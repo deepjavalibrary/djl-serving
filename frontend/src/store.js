@@ -1,4 +1,4 @@
-// 注册 vuex
+// register vuex
 import Vuex from 'vuex'
 import Vue from 'vue'
 
@@ -8,7 +8,7 @@ var store = new Vuex.Store({
   state: { // this.$store.state.***
    
   },
-  mutations: { // this.$store.commit('方法的名称', '按需传递唯一的参数')
+  mutations: { // this.$store.commit('method name', 'provide if necessary')
     
   },
   getters: { // this.$store.getters.***  

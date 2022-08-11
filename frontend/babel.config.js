@@ -1,4 +1,4 @@
-// 这是项目发布阶段需要用到的 babel 插件
+// This is the necessary babel plugin for project publishing
 const prodPlugins = []
 if (process.env.NODE_ENV === 'production') {
   prodPlugins.push('transform-remove-console')

@@ -137,7 +137,7 @@ export default {
         url: "",
         model_name: '',
         model_version: '0.0.1',
-        engine: '',
+        engine: 'MXNet',
         device: -1,
         synchronous: true,
         batch_size: 1,

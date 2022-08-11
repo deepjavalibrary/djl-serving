@@ -1,6 +1,6 @@
-// 导入格式化时间的插件
+// time formatter plugin
 import moment from 'moment'
-// 定义全局的过滤器
+// Global filter on time
 export function dateFormat (dataStr, pattern = "YYYY-MM-DD HH:mm:ss") {
   if(dataStr ==-1 ||!dataStr) return ""
   return moment(dataStr).format(pattern)

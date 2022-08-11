@@ -66,27 +66,31 @@
     </div>
     <div class="worker-list">
       <div class="title">Worker Groups</div>
+      <div class="add-group-btn" @click="addGroupShow = true">
+        <i class="el-icon-circle-plus"></i>
+        <span>Add Group</span>
+      </div>
       <el-tabs v-model="activeDevice">
-        <el-tab-pane :label="item.device.deviceType+':'+item.device.deviceId" :name="index+''" v-for="(item,index) in form.workerGroups" :key="index">
+        <el-tab-pane :label="item.device.deviceType=='cpu'?'cpu':item.device.deviceType+':'+item.device.deviceId" :name="index+''" v-for="(item,index) in form.workerGroups" :key="index">
           <el-row :gutter="20">
             <el-col :span="8">
               min_worker:
-              <el-input-number v-model="form.workerGroups[activeDevice].minWorkers" size="small" :min="1" :max="100"></el-input-number>
+              <el-input-number v-model="form.workerGroups[activeDevice].minWorkers" size="small" :min="1" :max="100" @change="workerChange('min')"></el-input-number>
             </el-col>
             <el-col :span="8">
               max_worker:
-              <el-input-number v-model="form.workerGroups[activeDevice].maxWorkers" size="small" :min="1" :max="100"></el-input-number>
+              <el-input-number v-model="form.workerGroups[activeDevice].maxWorkers" size="small" :min="1" :max="100" @change="workerChange('max')"></el-input-number>
             </el-col>
           </el-row>
         </el-tab-pane>
 
       </el-tabs>
       <ul>
-        <li :class="['worker-item', {'active':activeIndex==index}]" v-for="(item,index) in form.workerGroups[0].workers" :key="index" @click="activeIndex=index"><img src="../assets/img/worker.png" alt="" srcset=""> worker</li>
+        <li :class="['worker-item', {'active':activeIndex==index}]" v-for="(item,index) in form.workerGroups[activeDevice].workers" :key="index" @click="activeIndex=index"><img src="../assets/img/worker.png" alt="" srcset=""> worker</li>
 
       </ul>
       <div class="worker-info">
-        <el-row :gutter="20">
+        <el-row :gutter="20" v-if="form.workerGroups[activeDevice].workers.length">
 
           <el-col :span="9">id: {{form.workerGroups[activeDevice].workers[activeIndex].id}}</el-col>
           <el-col :span="9">deviceType: {{form.workerGroups[activeDevice].device.deviceType}}</el-col>
@@ -100,6 +104,20 @@
         <el-button type="primary" size="medium" @click="submit">submit</el-button>
       </div>
     </div>
+    <el-dialog title="Add Group" :visible.sync="addGroupShow" width="30%" :close-on-click-modal="false">
+      <el-row :gutter="20">
+        <el-col>
+
+          <label>device:</label>
+          <el-input v-model.number="newDeviceId" size="small"></el-input>
+        </el-col>
+      </el-row>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="addGroupShow = false" size="medium">cancel</el-button>
+        <el-button type="primary" @click="addGroup" size="medium">sure</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -152,7 +170,9 @@ export default {
         maxIdleTime: [{ type: 'number', message: 'Max idle time must be a number' }],
       },
       models: [],
-      activeDevice: '0'
+      activeDevice: '0',
+      addGroupShow: false,
+      newDeviceId: -1,
     };
   },
   computed: {
@@ -165,19 +185,22 @@ export default {
 
   },
   async mounted() {
-    let modelName = this.$route.params.name
-    let name = modelName.split(":")[0]
-    let version = modelName.split(":")[1]
-    let res = await modelApi.modelInfo(name)
-    this.models = res
-    let model = res.find(v => v.version == version || (!version && !v.version))
-    console.log('model',model);
-    this.versionList = res.map(v => v.version)
-    this.form = model.models[0]
-    this.version = model.version
-    console.log(res);
+    await this.init()
   },
   methods: {
+    async init() {
+      let modelName = this.$route.params.name
+      let name = modelName.split(":")[0]
+      let version = modelName.split(":")[1]
+      let res = await modelApi.modelInfo(name)
+      this.models = res
+      let model = res.find(v => v.version == version || (!version && !v.version))
+      console.log('model', model);
+      this.versionList = res.map(v => v.version)
+      this.form = model.models[0]
+      this.version = model.version
+      console.log(res);
+    },
     async submit() {
       let flag = true
       await this.$refs.form.validate(async (valid, rules) => {
@@ -194,14 +217,15 @@ export default {
       if (!flag) {
         throw Error('Valid failed')
       }
-      let model = {...this.form}
-      let params = { batch_size: model.batchSize, max_batch_delay: model.maxBatchDelay,max_idle_time: model.maxIdleTime,}
+      let model = { ...this.form }
+      let params = { batch_size: model.batchSize, max_batch_delay: model.maxBatchDelay, max_idle_time: model.maxIdleTime, }
       params.device = model.workerGroups[this.activeDevice].device.deviceId
-      params.min_worker =  model.workerGroups[this.activeDevice].minWorkers
-      params.max_worker =  model.workerGroups[this.activeDevice].maxWorkers
-      let res = await modelApi.modifyModel(model.modelName,this.version||"",params)
+      params.min_worker = model.workerGroups[this.activeDevice].minWorkers
+      params.max_worker = model.workerGroups[this.activeDevice].maxWorkers
+      let res = await modelApi.modifyModel(model.modelName, this.version || "", params)
       console.log(res);
       this.$message.success(res.status)
+      this.init()
     },
     selectVersion(ver) {
       this.version = ver
@@ -212,6 +236,37 @@ export default {
     cancel() {
       this.$router.go(-1)
     },
+    workerChange(type) {
+      console.log("workerChange", type);
+      if (type == 'min') {
+        if (this.form.workerGroups[this.activeDevice].maxWorkers < this.form.workerGroups[this.activeDevice].minWorkers) {
+          this.form.workerGroups[this.activeDevice].maxWorkers = this.form.workerGroups[this.activeDevice].minWorkers
+        }
+      }
+      if (type == 'max') {
+        if (this.form.workerGroups[this.activeDevice].maxWorkers < this.form.workerGroups[this.activeDevice].minWorkers) {
+          this.form.workerGroups[this.activeDevice].minWorkers = this.form.workerGroups[this.activeDevice].maxWorkers
+        }
+      }
+    },
+    addGroup() {
+      let find = this.form.workerGroups.find(v => v.device.deviceId == this.newDeviceId)
+      if (find) {
+        this.$message.error('Device already exists')
+        return
+      }
+      this.form.workerGroups.push({
+        workers: [],
+        "device": {
+          "deviceType": this.newDeviceId < 0 ? "cpu" : "gpu",
+          "deviceId": this.newDeviceId
+        },
+        minWorkers: 1,
+        maxWorkers: 1,
+      })
+      this.activeDevice = this.form.workerGroups.length - 1 + ""
+      this.addGroupShow = false
+    }
   },
 };
 </script>
@@ -250,9 +305,6 @@ export default {
   }
   .update-model-form {
     background: #fff;
-    // padding: 20px 40px;
-    // padding-bottom: 20px;
-    // height: calc(100vh - 160px);
 
     .el-form {
       padding: 20px 40px;
@@ -283,17 +335,32 @@ export default {
         }
       }
     }
-    
   }
   .worker-list {
     margin-top: 20px;
     background: #fff;
-    // padding: 20px 40px;
+    position: relative;
+    .add-group-btn {
+      font-size: @textSize;
+      position: absolute;
+      right: 40px;
+      top: 60px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      justify-content: flex-end;
+      z-index: 200;
+      i {
+        margin-right: 10px;
+        font-size: @titleSize2;
+        color: @themeColor;
+      }
+    }
     .el-tabs {
       font-size: @textSize;
       padding: 10px 40px;
       padding-bottom: 0;
-      .el-input-number{
+      .el-input-number {
         margin-left: 10px;
       }
     }
@@ -329,15 +396,25 @@ export default {
         margin-bottom: 20px;
       }
     }
-    
   }
   .submit-btns {
-      text-align: right;
-      margin-right: 40px;
-      button {
-        width: 240px;
-        border-radius: 10px;
+    text-align: right;
+    margin-right: 40px;
+    margin-bottom: 20px;
+    button {
+      width: 240px;
+      border-radius: 10px;
+    }
+  }
+  .el-dialog__wrapper {
+    .el-col {
+      display: flex;
+      align-items: center;
+      label {
+        white-space: nowrap;
+        margin-right: 10px;
       }
     }
+  }
 }
 </style>
