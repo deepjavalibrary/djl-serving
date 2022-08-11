@@ -1,5 +1,4 @@
-DJLServing background management system
-# djl-serving-web
+# DJLServing management console
 
 ## Project setup 
 ```
