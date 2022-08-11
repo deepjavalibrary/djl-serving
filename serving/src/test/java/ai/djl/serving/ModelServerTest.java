@@ -272,9 +272,14 @@ public class ModelServerTest {
 
             assertNotNull(channel, "Failed to connect to inference port.");
 
+            // KServe v2 tests
+            testKServeDescribeModel(channel);
+            testKServeV2HealthLive(channel);
+            testKServeV2HealthReady(channel);
+            testKServeV2ModelReady(channel);
+
             // inference API
             testRegisterModelTranslator(channel);
-
             testPing(channel);
             testRoot(channel);
             testPredictionsModels(channel);
@@ -292,7 +297,6 @@ public class ModelServerTest {
             testListModels(channel);
             testListWorkflows(channel);
             testDescribeModel(channel);
-            testKServeDescribeModel(channel);
             testUnregisterModel(channel);
 
             testPredictionsInvalidRequestSize(channel);
@@ -796,12 +800,13 @@ public class ModelServerTest {
         channel.closeFuture().sync();
         channel.close().sync();
 
-        Map<String, String> map =
-                JsonUtils.GSON.fromJson(
-                        result, new TypeToken<HashMap<String, String>>() {}.getType());
-        assertEquals(httpStatus.code(), HttpResponseStatus.NOT_FOUND.code());
-        String errorMsg = "Model not found: res";
-        assertEquals(map.get("error"), errorMsg);
+        if (!System.getProperty("os.name").startsWith("Win")) {
+            Type type = new TypeToken<HashMap<String, String>>() {}.getType();
+            Map<String, String> map = JsonUtils.GSON.fromJson(result, type);
+            assertEquals(httpStatus.code(), HttpResponseStatus.NOT_FOUND.code());
+            String errorMsg = "Model not found: res";
+            assertEquals(map.get("error"), errorMsg);
+        }
     }
 
     private void testInvalidDescribeModel() throws InterruptedException {
@@ -1073,6 +1078,38 @@ public class ModelServerTest {
             assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
             assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2");
         }
+    }
+
+    private void testKServeV2HealthReady(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/ready");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertTrue(headers.contains("x-request-id"));
+    }
+
+    private void testKServeV2HealthLive(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertTrue(headers.contains("x-request-id"));
+    }
+
+    private void testKServeV2ModelReady(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp/ready");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertTrue(headers.contains("x-request-id"));
     }
 
     private boolean checkWorkflowRegistered(Channel channel, String workflowName)

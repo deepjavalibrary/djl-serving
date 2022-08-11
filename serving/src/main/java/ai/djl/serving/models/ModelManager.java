@@ -19,22 +19,11 @@ import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.StatusResponse;
 import ai.djl.serving.plugins.DependencyManager;
-import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.serving.workflow.Workflow;
-import ai.djl.util.JsonUtils;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.CharsetUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -327,7 +316,7 @@ public final class ModelManager {
      *
      * @return completableFuture with eventually result in the future after async execution
      */
-    public CompletableFuture<FullHttpResponse> workerStatus() {
+    public CompletableFuture<Map<String, Object>> workerStatus() {
         return CompletableFuture.supplyAsync(
                 () -> {
                     boolean hasFailure = false;
@@ -362,29 +351,11 @@ public final class ModelManager {
                             }
                         }
                     }
-
-                    HttpResponseStatus status;
-                    if (hasFailure) {
-                        status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-                    } else if (hasPending) {
-                        if (ConfigManager.getInstance().allowsMultiStatus()) {
-                            status = HttpResponseStatus.MULTI_STATUS;
-                        } else {
-                            status = HttpResponseStatus.OK;
-                        }
-                    } else {
-                        status = HttpResponseStatus.OK;
-                    }
-
-                    FullHttpResponse resp =
-                            new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
-                    resp.headers()
-                            .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-                    ByteBuf content = resp.content();
-                    String body = JsonUtils.GSON_PRETTY.toJson(data);
-                    content.writeCharSequence(body, CharsetUtil.UTF_8);
-                    content.writeByte('\n');
-                    return resp;
+                    Map<String, Object> modelInfos = new LinkedHashMap<>(); // NOPMD
+                    modelInfos.put("hasFailure", hasFailure);
+                    modelInfos.put("hasPending", hasPending);
+                    modelInfos.put("data", data);
+                    return modelInfos;
                 });
     }
 

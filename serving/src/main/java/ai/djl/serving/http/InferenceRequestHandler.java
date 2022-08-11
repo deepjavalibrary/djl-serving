@@ -86,7 +86,25 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             case "ping":
                 ModelManager.getInstance()
                         .workerStatus()
-                        .thenAccept(r -> NettyUtils.sendHttpResponse(ctx, r, true));
+                        .thenAccept(
+                                w -> {
+                                    boolean hasFailure = (boolean) w.get("hasFailure");
+                                    boolean hasPending = (boolean) w.get("hasPending");
+
+                                    HttpResponseStatus status;
+                                    if (hasFailure) {
+                                        status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+                                    } else if (hasPending) {
+                                        if (ConfigManager.getInstance().allowsMultiStatus()) {
+                                            status = HttpResponseStatus.MULTI_STATUS;
+                                        } else {
+                                            status = HttpResponseStatus.OK;
+                                        }
+                                    } else {
+                                        status = HttpResponseStatus.OK;
+                                    }
+                                    NettyUtils.sendJsonResponse(ctx, w.get("data"), status);
+                                });
                 break;
             case "invocations":
                 handleInvocations(ctx, req, decoder);

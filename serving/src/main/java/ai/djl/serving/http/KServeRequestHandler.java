@@ -14,7 +14,6 @@ package ai.djl.serving.http;
 
 import ai.djl.Device;
 import ai.djl.Model;
-import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.types.DataType;
@@ -37,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -46,9 +46,10 @@ import java.util.regex.Pattern;
 /** A class handling inbound HTTP requests for the KServe API. */
 public class KServeRequestHandler extends HttpRequestHandler {
 
-    private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
-
     private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
+
+    private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
+    private static final String EMPTY_BODY = "";
 
     /** {@inheritDoc} */
     @Override
@@ -60,33 +61,58 @@ public class KServeRequestHandler extends HttpRequestHandler {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void handleRequest(
             ChannelHandlerContext ctx,
             FullHttpRequest req,
             QueryStringDecoder decoder,
-            String[] segments)
-            throws ModelException {
+            String[] segments) {
         HttpMethod method = req.method();
-
-        if (isKServeDescribeModelReq(segments)) {
-            if (!HttpMethod.GET.equals(method)) {
-                throw new MethodNotAllowedException();
-            }
-            try {
+        try {
+            if (isKServeDescribeModelReq(segments)) {
+                isHttpGetRequestOrThrowException(method);
                 handleKServeDescribeModel(ctx, segments);
-            } catch (Exception exception) {
-                onException(exception, ctx);
+            } else if (isKServeDescribeHealthReadyReq(segments)
+                    || isKServeDescribeHealthLiveReq(segments)) {
+                isHttpGetRequestOrThrowException(method);
+                handleKServeDescribeHealth(ctx);
+            } else if (isKServeDescribeModelReadyReq(segments)) {
+                isHttpGetRequestOrThrowException(method);
+                handleKServeDescribeModelReady(ctx, segments);
+            } else {
+                throw new ResourceNotFoundException();
             }
-        } else {
-            throw new ResourceNotFoundException();
+        } catch (Exception exception) {
+            onException(exception, ctx);
+        }
+    }
+
+    private void isHttpGetRequestOrThrowException(HttpMethod method) {
+        if (!HttpMethod.GET.equals(method)) {
+            throw new MethodNotAllowedException();
         }
     }
 
     private boolean isKServeDescribeModelReq(String[] segments) {
+        return (segments.length == 4 || (segments.length == 6 && "version".equals(segments[4])))
+                && "models".equals(segments[2]);
+    }
+
+    private boolean isKServeDescribeHealthLiveReq(String[] segments) {
+        return segments.length == 4 && "health".equals(segments[2]) && "live".equals((segments[3]));
+    }
+
+    private boolean isKServeDescribeHealthReadyReq(String[] segments) {
         return segments.length == 4
-                || (segments.length == 6 && "version".equals(segments[4]))
-                        && "models".equals(segments[2]);
+                && "health".equals(segments[2])
+                && "ready".equals((segments[3]));
+    }
+
+    private boolean isKServeDescribeModelReadyReq(String[] segments) {
+        return (segments.length == 5 || (segments.length == 7 && "version".equals(segments[4])))
+                && "models".equals(segments[2])
+                && "ready".equals(segments[segments.length - 1]);
     }
 
     private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments)
@@ -160,10 +186,68 @@ public class KServeRequestHandler extends HttpRequestHandler {
         NettyUtils.sendJsonResponse(ctx, response);
     }
 
+    private void handleKServeDescribeHealth(ChannelHandlerContext ctx) {
+        ModelManager.getInstance()
+                .workerStatus()
+                .thenAccept(
+                        w -> {
+                            boolean hasFailure = (boolean) w.get("hasFailure");
+                            boolean hasPending = (boolean) w.get("hasPending");
+
+                            HttpResponseStatus httpResponseStatus;
+                            if (hasFailure || hasPending) {
+                                httpResponseStatus = HttpResponseStatus.FAILED_DEPENDENCY;
+                            } else {
+                                httpResponseStatus = HttpResponseStatus.OK;
+                            }
+                            NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
+                        });
+    }
+
+    private void handleKServeDescribeModelReady(ChannelHandlerContext ctx, String[] segments)
+            throws ModelNotFoundException {
+        String modelName = segments[3];
+        String modelVersion = null;
+        if (segments.length > 5) {
+            modelVersion = segments[5];
+        }
+        ModelInfo<Input, Output> modelInfo = getModelInfo(modelName, modelVersion);
+
+        ModelInfo.Status status = modelInfo.getStatus();
+        HttpResponseStatus httpResponseStatus;
+        if (status == ModelInfo.Status.READY) {
+            httpResponseStatus = HttpResponseStatus.OK;
+        } else {
+            httpResponseStatus = HttpResponseStatus.FAILED_DEPENDENCY;
+        }
+        NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
+    }
+
+    private ModelInfo<Input, Output> getModelInfo(String modelName, String modelVersion)
+            throws ModelNotFoundException {
+        ModelManager modelManager = ModelManager.getInstance();
+        Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
+        Collection<ModelInfo<Input, Output>> models;
+        if (workflow != null) {
+            models = workflow.getModels();
+        } else {
+            models = Collections.emptyList();
+        }
+        if (models.isEmpty()) {
+            throw new ModelNotFoundException(
+                    "Model not found: "
+                            + modelName
+                            + (modelVersion == null ? "" : '/' + modelVersion));
+        }
+        return models.iterator().next();
+    }
+
     private void onException(Exception ex, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
         if (ex instanceof ModelNotFoundException) {
             status = HttpResponseStatus.NOT_FOUND;
+        } else if (ex instanceof MethodNotAllowedException) {
+            status = HttpResponseStatus.METHOD_NOT_ALLOWED;
         } else {
             logger.warn("Unexpected error", ex);
             status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
