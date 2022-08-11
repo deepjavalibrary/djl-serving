@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,17 +46,10 @@ import java.util.regex.Pattern;
 /** A class handling inbound HTTP requests for the KServe API. */
 public class KServeRequestHandler extends HttpRequestHandler {
 
-    private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
-
     private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
 
+    private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
     private static final String EMPTY_BODY = "";
-
-    private RequestParser requestParser;
-
-    public KServeRequestHandler() {
-        this.requestParser = new RequestParser();
-    }
 
     /** {@inheritDoc} */
     @Override
@@ -67,6 +61,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void handleRequest(
             ChannelHandlerContext ctx,
@@ -195,19 +190,16 @@ public class KServeRequestHandler extends HttpRequestHandler {
         ModelManager.getInstance()
                 .workerStatus()
                 .thenAccept(
-                        workerInfo -> {
-                            boolean hasFailure = (boolean) workerInfo.get("hasFailure");
-                            boolean hasPending = (boolean) workerInfo.get("hasPending");
+                        w -> {
+                            boolean hasFailure = (boolean) w.get("hasFailure");
+                            boolean hasPending = (boolean) w.get("hasPending");
 
                             HttpResponseStatus httpResponseStatus;
-                            if (hasFailure) {
-                                httpResponseStatus = HttpResponseStatus.EXPECTATION_FAILED;
-                            } else if (hasPending) {
-                                httpResponseStatus = HttpResponseStatus.REQUEST_TIMEOUT;
+                            if (hasFailure || hasPending) {
+                                httpResponseStatus = HttpResponseStatus.FAILED_DEPENDENCY;
                             } else {
                                 httpResponseStatus = HttpResponseStatus.OK;
                             }
-                            // TODO: will return two rows of response body
                             NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
                         });
     }
@@ -219,57 +211,43 @@ public class KServeRequestHandler extends HttpRequestHandler {
         if (segments.length > 5) {
             modelVersion = segments[5];
         }
-        ModelManager modelManager = ModelManager.getInstance();
-        ModelInfo<Input, Output> modelInfo = getModelInfo(modelManager, modelName, modelVersion);
+        ModelInfo<Input, Output> modelInfo = getModelInfo(modelName, modelVersion);
 
         ModelInfo.Status status = modelInfo.getStatus();
         HttpResponseStatus httpResponseStatus;
-        switch (status) {
-            case FAILED:
-                httpResponseStatus = HttpResponseStatus.EXPECTATION_FAILED;
-                break;
-            case PENDING:
-                httpResponseStatus = HttpResponseStatus.REQUEST_TIMEOUT;
-                break;
-            default:
-                httpResponseStatus = HttpResponseStatus.OK;
-                break;
+        if (status == ModelInfo.Status.READY) {
+            httpResponseStatus = HttpResponseStatus.OK;
+        } else {
+            httpResponseStatus = HttpResponseStatus.FAILED_DEPENDENCY;
         }
         NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
     }
 
-    private ModelInfo<Input, Output> getModelInfo(
-            ModelManager modelManager, String modelName, String modelVersion)
+    private ModelInfo<Input, Output> getModelInfo(String modelName, String modelVersion)
             throws ModelNotFoundException {
+        ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-        if (workflow == null) {
-            throw new ModelNotFoundException(
-                    "Workflow not found: "
-                            + modelName
-                            + (modelVersion == null ? "" : '/' + modelVersion));
+        Collection<ModelInfo<Input, Output>> models;
+        if (workflow != null) {
+            models = workflow.getModels();
+        } else {
+            models = Collections.emptyList();
         }
-        ModelInfo<Input, Output> modelInfo =
-                workflow.getModels().stream()
-                        .filter(
-                                model ->
-                                        modelName.equals(
-                                                model.getModel(model.withDefaultDevice(null))
-                                                        .getName()))
-                        .findAny()
-                        .get();
-        if (modelInfo == null) {
+        if (models.isEmpty()) {
             throw new ModelNotFoundException(
                     "Model not found: "
                             + modelName
                             + (modelVersion == null ? "" : '/' + modelVersion));
         }
-        return modelInfo;
+        return models.iterator().next();
     }
 
     private void onException(Exception ex, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
         if (ex instanceof ModelNotFoundException) {
             status = HttpResponseStatus.NOT_FOUND;
+        } else if (ex instanceof MethodNotAllowedException) {
+            status = HttpResponseStatus.METHOD_NOT_ALLOWED;
         } else {
             logger.warn("Unexpected error", ex);
             status = HttpResponseStatus.INTERNAL_SERVER_ERROR;

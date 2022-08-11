@@ -351,7 +351,7 @@ public final class ModelManager {
                             }
                         }
                     }
-                    Map<String, Object> modelInfos = new LinkedHashMap<>();
+                    Map<String, Object> modelInfos = new LinkedHashMap<>(); // NOPMD
                     modelInfos.put("hasFailure", hasFailure);
                     modelInfos.put("hasPending", hasPending);
                     modelInfos.put("data", data);

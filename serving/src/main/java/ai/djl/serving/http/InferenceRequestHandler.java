@@ -87,9 +87,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 ModelManager.getInstance()
                         .workerStatus()
                         .thenAccept(
-                                workerInfo -> {
-                                    boolean hasFailure = (boolean) workerInfo.get("hasFailure");
-                                    boolean hasPending = (boolean) workerInfo.get("hasPending");
+                                w -> {
+                                    boolean hasFailure = (boolean) w.get("hasFailure");
+                                    boolean hasPending = (boolean) w.get("hasPending");
 
                                     HttpResponseStatus status;
                                     if (hasFailure) {
@@ -103,8 +103,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                                     } else {
                                         status = HttpResponseStatus.OK;
                                     }
-                                    NettyUtils.sendJsonResponse(
-                                            ctx, workerInfo.get("data"), status);
+                                    NettyUtils.sendJsonResponse(ctx, w.get("data"), status);
                                 });
                 break;
             case "invocations":
