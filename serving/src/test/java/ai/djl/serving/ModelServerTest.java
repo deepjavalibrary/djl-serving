@@ -274,9 +274,7 @@ public class ModelServerTest {
 
             // inference API
             testRegisterModelTranslator(channel);
-
             testPing(channel);
-            testV2HealthLiveAndReady(channel);
             testRoot(channel);
             testPredictionsModels(channel);
             testInvocations(channel);
@@ -293,7 +291,6 @@ public class ModelServerTest {
             testListModels(channel);
             testListWorkflows(channel);
             testDescribeModel(channel);
-            testKServeDescribeModel(channel);
             testUnregisterModel(channel);
 
             testPredictionsInvalidRequestSize(channel);
@@ -319,6 +316,12 @@ public class ModelServerTest {
             testRegisterModelNotFound();
             testRegisterModelConflict();
             testServiceUnavailable();
+
+            // KServe v2 tests
+            testKServeDescribeModel(channel);
+            testKServeV2HealthLive(channel);
+            testKServeV2HealthReady(channel);
+            testKServeV2ModelReady(channel);
 
             ConfigManagerTest.testSsl();
         } finally {
@@ -393,25 +396,6 @@ public class ModelServerTest {
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertNotNull(resp);
-        assertTrue(headers.contains("x-request-id"));
-    }
-
-    private void testV2HealthLiveAndReady(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req1 =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live");
-        channel.writeAndFlush(req1);
-        latch.await();
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
-        assertTrue(headers.contains("x-request-id"));
-
-        reset();
-        HttpRequest req2 =
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/v2/health/live");
-        channel.writeAndFlush(req2);
-        latch.await();
-        assertEquals(httpStatus.code(), HttpResponseStatus.METHOD_NOT_ALLOWED.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
@@ -1093,6 +1077,37 @@ public class ModelServerTest {
             assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
             assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2");
         }
+    }
+
+
+    private void testKServeV2HealthReady(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/ready");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertTrue(headers.contains("x-request-id"));
+    }
+
+    private void testKServeV2HealthLive(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertTrue(headers.contains("x-request-id"));
+    }
+
+    private void testKServeV2ModelReady(Channel channel) throws InterruptedException {
+        reset();
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/resnet18_v1/ready");
+        channel.writeAndFlush(req);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertTrue(headers.contains("x-request-id"));
     }
 
     private boolean checkWorkflowRegistered(Channel channel, String workflowName)
