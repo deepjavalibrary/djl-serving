@@ -1,5 +1,5 @@
 // TODO: Remove this once spotbugs support Java18
-if (JavaVersion.current() < JavaVersion.VERSION_18) {
+if (JavaVersion.current() < JavaVersion.VERSION_19) {
     apply plugin: "com.github.spotbugs"
     spotbugs {
         excludeFilter = file("${rootProject.projectDir}/tools/conf/findbugs-exclude.xml")
