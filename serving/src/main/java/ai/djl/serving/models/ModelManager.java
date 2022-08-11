@@ -25,11 +25,6 @@ import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.serving.workflow.Workflow;
 
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -196,8 +196,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
                 .workerStatus()
                 .thenAccept(
                         workerInfo -> {
-                            Boolean hasFailure = (Boolean) workerInfo.get("hasFailure");
-                            Boolean hasPending = (Boolean) workerInfo.get("hasPending");
+                            boolean hasFailure = (boolean) workerInfo.get("hasFailure");
+                            boolean hasPending = (boolean) workerInfo.get("hasPending");
 
                             HttpResponseStatus httpResponseStatus;
                             if (hasFailure) {
@@ -221,12 +221,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
         }
         ModelManager modelManager = ModelManager.getInstance();
         ModelInfo<Input, Output> modelInfo = getModelInfo(modelManager, modelName, modelVersion);
-        if (modelInfo == null) {
-            throw new ModelNotFoundException(
-                    "Model not found: "
-                            + modelName
-                            + (modelVersion == null ? "" : '/' + modelVersion));
-        }
 
         ModelInfo.Status status = modelInfo.getStatus();
         HttpResponseStatus httpResponseStatus;
@@ -245,9 +239,15 @@ public class KServeRequestHandler extends HttpRequestHandler {
     }
 
     private ModelInfo<Input, Output> getModelInfo(
-            ModelManager modelManager, String modelName, String modelVersion) {
+            ModelManager modelManager, String modelName, String modelVersion)
+            throws ModelNotFoundException {
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-
+        if (workflow == null) {
+            throw new ModelNotFoundException(
+                    "Workflow not found: "
+                            + modelName
+                            + (modelVersion == null ? "" : '/' + modelVersion));
+        }
         ModelInfo<Input, Output> modelInfo =
                 workflow.getModels().stream()
                         .filter(
@@ -257,6 +257,12 @@ public class KServeRequestHandler extends HttpRequestHandler {
                                                         .getName()))
                         .findAny()
                         .get();
+        if (modelInfo == null) {
+            throw new ModelNotFoundException(
+                    "Model not found: "
+                            + modelName
+                            + (modelVersion == null ? "" : '/' + modelVersion));
+        }
         return modelInfo;
     }
 

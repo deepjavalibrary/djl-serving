@@ -26,20 +26,15 @@ import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
-import ai.djl.util.JsonUtils;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.util.CharsetUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,8 +88,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                         .workerStatus()
                         .thenAccept(
                                 workerInfo -> {
-                                    Boolean hasFailure = (Boolean) workerInfo.get("hasFailure");
-                                    Boolean hasPending = (Boolean) workerInfo.get("hasPending");
+                                    boolean hasFailure = (boolean) workerInfo.get("hasFailure");
+                                    boolean hasPending = (boolean) workerInfo.get("hasPending");
 
                                     HttpResponseStatus status;
                                     if (hasFailure) {
@@ -108,20 +103,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                                     } else {
                                         status = HttpResponseStatus.OK;
                                     }
-
-                                    FullHttpResponse resp =
-                                            new DefaultFullHttpResponse(
-                                                    HttpVersion.HTTP_1_1, status, false);
-                                    resp.headers()
-                                            .set(
-                                                    HttpHeaderNames.CONTENT_TYPE,
-                                                    HttpHeaderValues.APPLICATION_JSON);
-                                    ByteBuf content = resp.content();
-                                    String body =
-                                            JsonUtils.GSON_PRETTY.toJson(workerInfo.get("data"));
-                                    content.writeCharSequence(body, CharsetUtil.UTF_8);
-                                    content.writeByte('\n');
-                                    NettyUtils.sendHttpResponse(ctx, resp, true);
+                                    NettyUtils.sendJsonResponse(
+                                            ctx, workerInfo.get("data"), status);
                                 });
                 break;
             case "invocations":
