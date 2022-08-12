@@ -95,8 +95,9 @@ public class LogRequestHandler extends HttpRequestHandler {
                                     return false;
                                 });
         if (files.length == 0) throw new ModelException("File does not exist");
+        FileInputStream input = null;
         try {
-            FileInputStream input = new FileInputStream(files[0]);
+            input = new FileInputStream(files[0]);
             int size = (int) files[0].length();
             byte[] data = new byte[size];
             if (size > 0) {
@@ -120,6 +121,12 @@ public class LogRequestHandler extends HttpRequestHandler {
         } catch (IOException e) {
             logger.error("Failed to read log file", e);
             throw new ModelException("Failed to read log file");
+        } finally {
+            try {
+                input.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
