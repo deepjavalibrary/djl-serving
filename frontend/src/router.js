@@ -8,7 +8,8 @@ const ModelList = () => import('@/view/ModelList.vue')
 const AddModel = () => import('@/view/AddModel.vue')
 const UpdateModel = () => import('@/view/UpdateModel.vue')
 const Inference = () => import('@/view/Inference.vue')
-const Log = () => import('@/view/Log.vue')
+const Log = () => import('@/view/LogInfo.vue')
+const LogList = () => import('@/view/LogList.vue')
 
 
 Vue.use(Router)
@@ -25,7 +26,8 @@ const router = new Router({
         { path: '/add-model', component: AddModel, },
         { path: '/update-model/:name', component: UpdateModel, },
         { path: '/inference/:name', component: Inference, },
-        { path: '/log', component: Log, },
+        { path: '/log/:name', component: Log, },
+        { path: '/log-list', component: LogList, },
       ]
     }
   ]

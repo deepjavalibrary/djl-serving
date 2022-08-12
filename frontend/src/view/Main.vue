@@ -10,7 +10,7 @@
             <!-- <el-menu-item index="/home">Home</el-menu-item> -->
 
             <el-menu-item index="/model-list">Model</el-menu-item>
-            <el-menu-item index="/log">log</el-menu-item>
+            <el-menu-item index="/log-list">log</el-menu-item>
           </el-menu>
         </div>
       </el-header>
