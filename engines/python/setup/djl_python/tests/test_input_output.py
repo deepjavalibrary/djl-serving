@@ -38,6 +38,16 @@ class TestInputOutput(unittest.TestCase):
         result = test_model.extract_output_as_npz(outputs, "npz")
         self.assertTrue(np.array_equal(result[0], nd[0]))
 
+    def test_print_message(self):
+        nd = [np.ones((1, 3, 2))]
+        inputs = test_model.create_numpy_request(nd, "mydata")
+        result = inputs.__str__()
+        expected = '''properties: {'device_id': '-1', 'content-type': 'tensor/ndlist'}
+mydata: [array([[[1., 1.],
+        [1., 1.],
+        [1., 1.]]])]'''
+        self.assertEqual(result, expected)
+
 
 if __name__ == '__main__':
     unittest.main()
