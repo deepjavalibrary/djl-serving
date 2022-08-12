@@ -3,7 +3,7 @@ import App from './App.vue'
 import router from './router'
 import '@/plugins/element.js'
 //filter
-import * as filters from "./fliter"
+import * as filters from "./filter"
 // vuex
 import store from './store'
 
