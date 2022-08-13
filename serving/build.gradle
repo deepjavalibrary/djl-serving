@@ -118,7 +118,7 @@ tasks.test.dependsOn(
         ":central:jar",
         ":plugins:plugin-management-plugin:jar",
         ":plugins:static-file-plugin:jar")
-tasks.run.dependsOn(":central:jar", ":plugins:static-file-plugin:jar")
+tasks.run.dependsOn(":plugins:management-console:jar", ":plugins:static-file-plugin:jar")
 
 test {
     workingDir projectDir

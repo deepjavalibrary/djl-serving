@@ -1,17 +1,16 @@
 const path = require("path");
 
 module.exports = {
+  publicPath: '/console',
   devServer: {
     port: 8082,
     proxy: {
 
       '/api': {
-        // target: 'http://18.138.254.160/api/',
-        // target: 'http://54.255.165.231/api/',
         target: 'http://127.0.0.1:8080/',
         changeOrigin: true,
         pathRewrite: {
-        '^/api': ''    
+        '^/api': ''
         }
       }
     }

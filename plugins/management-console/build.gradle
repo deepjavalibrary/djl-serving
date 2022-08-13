@@ -1,0 +1,43 @@
+plugins {
+    id "java-library"
+    id "com.github.node-gradle.node" version "3.4.0"
+}
+
+dependencies {
+    api project(":serving")
+}
+
+node {
+    nodeProjectDir = file("${project.projectDir}/webapp")
+}
+
+clean {
+    doFirst {
+        delete "webapp/dist"
+        delete "src/main/resources/static/console"
+    }
+}
+
+task buildConsoleApp(type: NpmTask, dependsOn: "npmInstall") {
+    project.logger.info("Build the DJL Management console application")
+    npmCommand = ["run", "build"]
+    doLast {
+        copy {
+            from "webapp/dist"
+            into "src/main/resources/static/console"
+        }
+    }
+}
+
+task copyJar(type: Copy) {
+    from jar // here it automatically reads jar file produced from jar task
+    into "../../serving/plugins"
+}
+
+if (project.getProjectDir().toString() == System.properties["user.dir"] ||
+        !(new File("${project.projectDir}/src/main/resources/static/console").exists()) &&
+        !System.properties['os.name'].contains("Win")) {
+    // Run npm task only when running gradle in current directory on Windows
+    processResources.dependsOn buildConsoleApp
+}
+jar.finalizedBy(copyJar)

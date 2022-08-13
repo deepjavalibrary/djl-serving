@@ -10,26 +10,24 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package ai.djl.serving.http;
+package ai.djl.serving.console;
 
-import ai.djl.ModelException;
+import ai.djl.serving.http.BadRequestException;
+import ai.djl.serving.http.InternalServerException;
+import ai.djl.serving.http.MethodNotAllowedException;
+import ai.djl.serving.http.ResourceNotFoundException;
+import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -42,28 +40,28 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /** A class handling inbound HTTP requests for the log API. */
-public class LogRequestHandler extends HttpRequestHandler {
+public class LogRequestHandler implements RequestHandler<Void> {
 
     private static final Pattern PATTERN = Pattern.compile("^/logs([/?].*)?");
 
     /** {@inheritDoc} */
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
-        if (super.acceptInboundMessage(msg)) {
-            FullHttpRequest req = (FullHttpRequest) msg;
-            return PATTERN.matcher(req.uri()).matches();
+    public boolean acceptInboundMessage(Object msg) {
+        if (!(msg instanceof FullHttpRequest)) {
+            return false;
         }
-        return false;
+
+        FullHttpRequest req = (FullHttpRequest) msg;
+        return PATTERN.matcher(req.uri()).matches();
     }
 
     /** {@inheritDoc} */
     @Override
-    protected void handleRequest(
+    public Void handleRequest(
             ChannelHandlerContext ctx,
             FullHttpRequest req,
             QueryStringDecoder decoder,
-            String[] segments)
-            throws ModelException {
+            String[] segments) {
         if (!HttpMethod.GET.equals(req.method())) {
             throw new MethodNotAllowedException();
         }
@@ -82,6 +80,7 @@ public class LogRequestHandler extends HttpRequestHandler {
         } else {
             throw new ResourceNotFoundException();
         }
+        return null;
     }
 
     private void downloadLog(ChannelHandlerContext ctx, Path dir, String fileName) {
@@ -92,25 +91,7 @@ public class LogRequestHandler extends HttpRequestHandler {
         if (!Files.isRegularFile(file)) {
             throw new BadRequestException("File does not exist");
         }
-        try (InputStream is = Files.newInputStream(file)) {
-            HttpResponseStatus status = HttpResponseStatus.OK;
-            FullHttpResponse resp =
-                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
-            String name = URLEncoder.encode(fileName, "UTF-8");
-            String contentDisposition = "attachment;fileName=" + name + ";fileName*=UTF-8''" + name;
-            resp.headers()
-                    .set("Content-Type", "text/plain")
-                    .set("Content-Disposition", contentDisposition);
-
-            byte[] buf = new byte[8192];
-            int read;
-            while ((read = is.read(buf)) != -1) {
-                resp.content().writeBytes(buf, 0, read);
-            }
-            NettyUtils.sendHttpResponse(ctx, resp, true);
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to read log file: " + fileName, e);
-        }
+        NettyUtils.sendFile(ctx, file, true);
     }
 
     private void listLogs(ChannelHandlerContext ctx, Path dir) {
