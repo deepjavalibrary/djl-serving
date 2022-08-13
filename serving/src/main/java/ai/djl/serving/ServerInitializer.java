@@ -12,7 +12,12 @@
  */
 package ai.djl.serving;
 
-import ai.djl.serving.http.*;
+import ai.djl.serving.http.ConfigurableHttpRequestHandler;
+import ai.djl.serving.http.InferenceRequestHandler;
+import ai.djl.serving.http.InvalidRequestHandler;
+import ai.djl.serving.http.KServeRequestHandler;
+import ai.djl.serving.http.LogRequestHandler;
+import ai.djl.serving.http.ManagementRequestHandler;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
