@@ -16,7 +16,6 @@ import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
@@ -31,11 +30,10 @@ import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Pair;
-import ai.djl.util.PairList;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.annotations.SerializedName;
 
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -45,6 +43,10 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -60,13 +62,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
     private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
     private static final String EMPTY_BODY = "";
-
-    private final RequestParser requestParser;
-
-    /** Constructs a {@code KServeRequestHandler} instance. */
-    public KServeRequestHandler() {
-        this.requestParser = new RequestParser();
-    }
 
     /** {@inheritDoc} */
     @Override
@@ -88,17 +83,18 @@ public class KServeRequestHandler extends HttpRequestHandler {
         HttpMethod method = req.method();
         try {
             if (isKServeDescribeModelReq(segments)) {
-                isHttpGetRequestOrThrowException(method);
+                requireGet(method);
                 handleKServeDescribeModel(ctx, segments);
             } else if (isKServeDescribeHealthReadyReq(segments)
                     || isKServeDescribeHealthLiveReq(segments)) {
-                isHttpGetRequestOrThrowException(method);
+                requireGet(method);
                 handleKServeDescribeHealth(ctx);
             } else if (isKServeDescribeModelReadyReq(segments)) {
-                isHttpGetRequestOrThrowException(method);
+                requireGet(method);
                 handleKServeDescribeModelReady(ctx, segments);
-            } else if (isKserveDescribeInferenceReq(segments, method)) {
-                handleKServeDescribeInfer(ctx, req, decoder, segments);
+            } else if (isKServeDescribeInferenceReq(segments)) {
+                requirePost(method);
+                inference(ctx, req, segments);
             } else {
                 throw new ResourceNotFoundException();
             }
@@ -107,8 +103,14 @@ public class KServeRequestHandler extends HttpRequestHandler {
         }
     }
 
-    private void isHttpGetRequestOrThrowException(HttpMethod method) {
+    private void requireGet(HttpMethod method) {
         if (!HttpMethod.GET.equals(method)) {
+            throw new MethodNotAllowedException();
+        }
+    }
+
+    private void requirePost(HttpMethod method) {
+        if (!HttpMethod.POST.equals(method)) {
             throw new MethodNotAllowedException();
         }
     }
@@ -134,10 +136,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
                 && "ready".equals(segments[segments.length - 1]);
     }
 
-    private boolean isKserveDescribeInferenceReq(String[] segments, HttpMethod method) {
-        return "models".equals(segments[2])
-                && HttpMethod.POST.equals(method)
-                && "infer".equals(segments[segments.length - 1]);
+    private boolean isKServeDescribeInferenceReq(String[] segments) {
+        return "models".equals(segments[2]) && "infer".equals(segments[segments.length - 1]);
     }
 
     private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments)
@@ -161,8 +161,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
         // TODO: How to handle multiple models and version?
         KServeDescribeModelResponse response = new KServeDescribeModelResponse();
-        List<String> versions = new ArrayList<>();
-        response.setVersions(versions);
+        response.versions = new ArrayList<>();
         Model model = null;
         for (Workflow wf : workflows) {
             String version = wf.getVersion();
@@ -171,7 +170,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
             }
             if (version != null) {
                 // TODO: null is a valid version in DJL
-                versions.add(version);
+                response.versions.add(version);
             }
             if (model != null) {
                 // only add one model
@@ -180,8 +179,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
             for (ModelInfo<Input, Output> modelInfo : wf.getModels()) {
                 if (modelInfo.getStatus() == ModelInfo.Status.READY) {
-                    response.setName(wf.getName());
-                    response.setPlatformForEngineName(modelInfo.getEngineName());
+                    response.name = wf.getName();
+                    response.setPlatform(modelInfo.getEngineName());
                     Device device = modelInfo.getModels().keySet().iterator().next();
                     model = modelInfo.getModel(device);
 
@@ -267,142 +266,67 @@ public class KServeRequestHandler extends HttpRequestHandler {
         return models.iterator().next();
     }
 
-    private void handleKServeDescribeInfer(
-            ChannelHandlerContext ctx,
-            FullHttpRequest req,
-            QueryStringDecoder decoder,
-            String[] segments)
-            throws ModelNotFoundException {
+    private void inference(ChannelHandlerContext ctx, FullHttpRequest req, String[] segments)
+            throws ModelNotFoundException, IOException {
         String modelName = segments[3];
         String modelVersion = null;
         if (segments.length > 5) {
             modelVersion = segments[5];
         }
-        Input inferenceRequest = requestParser.parseRequest(req, decoder);
-        infer(ctx, inferenceRequest, modelName, modelVersion);
-    }
 
-    private List<KServeIO> getObjectFromString(String requestString) {
-        Gson gson = JsonUtils.GSON_PRETTY;
-        return gson.fromJson(requestString, new TypeToken<List<KServeIO>>() {}.getType());
-    }
-
-    private void infer(
-            ChannelHandlerContext ctx,
-            Input inferenceRequest,
-            String modelName,
-            String modelVersion)
-            throws ModelNotFoundException {
-        String requestInputsString = inferenceRequest.get("inputs").getAsString();
-        String requestOutputsString = inferenceRequest.get("outputs").getAsString();
-
-        // transform string to json object
-        List<KServeIO> requestInputsArrayList = getObjectFromString(requestInputsString);
-        List<KServeIO> requestOutputsArrayList = getObjectFromString(requestOutputsString);
-
-        Input input = new Input();
-        // construct the input
-        try (NDManager manager = NDManager.newBaseManager()) {
-            NDList list = new NDList();
-            for (KServeIO requestInput : requestInputsArrayList) {
-                List<Double> dataList = requestInput.getData();
-                double[] dataArray = dataList.stream().mapToDouble(j -> j).toArray();
-
-                NDArray dataNDArray = manager.create(dataArray);
-                dataNDArray.setName("data");
-
-                list.add(dataNDArray);
-            }
-            // here must be getAsBytes because list will die after the lifecycle
-            input.add("data", list.getAsBytes());
-        }
-
-        // construct the output
-        KServeDescribeModelResponse response = new KServeDescribeModelResponse();
         ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-
-        ModelInfo<Input, Output> modelInfo = getModelInfo(modelName, modelVersion);
-        Device device = modelInfo.getModels().keySet().iterator().next();
-        Model model = modelInfo.getModel(device);
-        Collection<ModelInfo<Input, Output>> models;
-        if (workflow != null) {
-            models = workflow.getModels();
-        } else {
-            models = Collections.emptyList();
-        }
-        if (models.isEmpty()) {
-            throw new ModelNotFoundException(
-                    "Model not found: "
-                            + modelName
-                            + (modelVersion == null ? "" : '/' + modelVersion));
+        if (workflow == null) {
+            throw new ModelNotFoundException("Parameter model_url is required.");
         }
 
-        if (model.describeOutput() != null) {
-            PairList<String, Shape> modelDescribeOutput = model.describeOutput();
-            for (int i = 0; i < model.describeOutput().size(); i++) {
-                response.addOutput(
-                        requestOutputsArrayList.get(i).getName(),
-                        model.getDataType(),
-                        modelDescribeOutput.get(i).getValue());
-            }
+        try (Reader reader =
+                new InputStreamReader(
+                        new ByteBufInputStream(req.content()), StandardCharsets.UTF_8)) {
+            InferenceRequest request = JsonUtils.GSON.fromJson(reader, InferenceRequest.class);
+            Input input = request.toInput();
+
+            InferenceResponse response = new InferenceResponse(request.id, modelName, modelVersion);
+
+            modelManager
+                    .runJob(workflow, input)
+                    .whenComplete(
+                            (o, t) -> {
+                                if (o != null) {
+                                    responseOutput(response, o, ctx);
+                                }
+                            })
+                    .exceptionally(
+                            t -> {
+                                onException((Exception) t, ctx);
+                                return null;
+                            });
         }
-
-        response.setModelName(modelName);
-        response.setVersion(modelVersion);
-        String requestID = inferenceRequest.get("id").getAsString();
-        response.setId(requestID);
-
-        runJob(modelManager, ctx, workflow, input, response);
-    }
-
-    void runJob(
-            ModelManager modelManager,
-            ChannelHandlerContext ctx,
-            Workflow workflow,
-            Input input,
-            KServeDescribeModelResponse response) {
-        modelManager
-                .runJob(workflow, input)
-                .whenComplete(
-                        (o, t) -> {
-                            if (o != null) {
-                                responseOutput(response, o, ctx);
-                            }
-                        })
-                .exceptionally(
-                        t -> {
-                            onException((Exception) t, ctx);
-                            return null;
-                        });
     }
 
     private void responseOutput(
-            KServeDescribeModelResponse response,
-            Output outputFromModel,
-            ChannelHandlerContext ctx) {
+            InferenceResponse response, Output output, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
-        int code = outputFromModel.getCode();
+        int code = output.getCode();
         if (code == 200) {
             status = HttpResponseStatus.OK;
+
+            byte[] data = output.getAsBytes(0);
+            try (NDManager manager = NDManager.newBaseManager()) {
+                NDList list = NDList.decode(manager, data);
+                response.outputs = new KServeTensor[list.size()];
+                for (int i = 0; i < response.outputs.length; ++i) {
+                    response.outputs[i] = KServeTensor.fromTensor(list.get(i));
+                }
+            }
         } else {
             if (code >= 500) {
                 status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
             } else if (code >= 400) {
                 status = HttpResponseStatus.BAD_REQUEST;
             } else {
-                status = new HttpResponseStatus(code, outputFromModel.getMessage());
+                status = new HttpResponseStatus(code, output.getMessage());
             }
-        }
-
-        List<Double> data =
-                JsonUtils.GSON_PRETTY.fromJson(
-                        outputFromModel.getData().getAsString(),
-                        new TypeToken<List<Double>>() {}.getType());
-
-        List<KServeIO> outputs = response.getOutputs();
-        for (KServeIO output : outputs) {
-            output.setData(data);
         }
 
         NettyUtils.sendJsonResponse(ctx, response, status);
@@ -427,5 +351,54 @@ public class KServeRequestHandler extends HttpRequestHandler {
         content.put("error", ex.getMessage());
 
         NettyUtils.sendJsonResponse(ctx, content, status);
+    }
+
+    private static final class InferenceRequest {
+
+        String id;
+        KServeTensor[] inputs;
+
+        Input toInput() {
+            Input input = new Input();
+            try (NDManager manager = NDManager.newBaseManager();
+                    NDList list = new NDList()) {
+                for (KServeTensor tensor : inputs) {
+                    list.add(tensor.toTensor(manager));
+                }
+                // here must be getAsBytes because list will die after the lifecycle
+                input.add("data", list.getAsBytes());
+            }
+            return input;
+        }
+    }
+
+    private static final class InferenceResponse {
+
+        @SerializedName("model_name")
+        String modelName;
+
+        @SerializedName("model_version")
+        String modelVersion;
+
+        String id;
+        KServeTensor[] outputs;
+
+        public InferenceResponse(String id, String modelName, String modelVersion) {
+            this.id = id;
+            this.modelName = modelName;
+            this.modelVersion = modelVersion;
+        }
+
+        public String getModelName() {
+            return modelName;
+        }
+
+        public String getModelVersion() {
+            return modelVersion;
+        }
+
+        public String getId() {
+            return id;
+        }
     }
 }

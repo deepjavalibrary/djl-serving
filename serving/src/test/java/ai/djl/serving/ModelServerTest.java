@@ -677,7 +677,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, KServeDescribeModelResponse.class);
         assertEquals(resp.getName(), "mlp");
         assertEquals(resp.getVersions(), Collections.singletonList("v1"));
-        assertEquals(resp.getPlatform(), "MXNet_mxnet");
+        assertEquals(resp.getPlatform(), "mxnet_mxnet");
     }
 
     private void testDescribeModel(Channel channel) throws InterruptedException {
