@@ -1,13 +1,13 @@
 plugins {
     // Apply the java-library plugin to add support for Java Library
     id 'java-library'
-    id "com.github.node-gradle.node" version "2.2.4"
+    id "com.github.node-gradle.node" version "3.4.0"
     id 'application'
 }
 
 node {
-    version = '14.15.3'
-    npmVersion = '6.14.9'
+    version = '18.7.0'
+    npmVersion = '8.17.0'
     download = true
 }
 
@@ -21,7 +21,7 @@ task buildReactApp(type: NodeTask, dependsOn: 'npmInstall') {
     args = [
             '--mode', 'development',
             '--entry', './src/main/webapp/Main.jsx',
-            '-o', './src/main/resources/static/dist/modelzoo-frontend.js'
+            '-o', './src/main/resources/static/central'
     ]
 }
 
@@ -37,8 +37,8 @@ if (project.getProjectDir().toString() == System.getProperty("user.dir")) {
 }
 
 clean.delete << file('node_modules')
-clean.delete << file('src/main/resources/static/dist')
-
+clean.delete << file('src/main/resources/static/central/main.js')
+clean.delete << file('src/main/resources/static/central/main.js.map')
 
 jar {
     manifest {
