@@ -178,6 +178,7 @@ public class DependencyManager {
         mcl.addURL(file.toUri().toURL());
     }
 
+    @SuppressWarnings("PMD.UseProperClassLoader")
     private static String resolveDjlVersion() {
         String bom = "https://search.maven.org/solrsearch/select?q=ai.djl.bom";
         try (InputStream is = new URL(bom).openStream()) {
@@ -186,7 +187,8 @@ public class DependencyManager {
             return pom.response.docs.get(0).getLatestVersion();
         } catch (IOException e) {
             logger.warn("Failed to query maven central.", e);
-            return Package.getPackage("ai.djl.util").getSpecificationVersion();
+            Package pkg = DependencyManager.class.getClassLoader().getDefinedPackage("ai.djl.util");
+            return pkg.getSpecificationVersion();
         }
     }
 
