@@ -13,6 +13,7 @@
 package ai.djl.serving.central.model.dto;
 
 import ai.djl.repository.Artifact;
+import ai.djl.translate.ArgumentsUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,8 @@ public class ComputerVisionModelDTO extends ModelDTO {
 
     private static final Logger logger = LoggerFactory.getLogger(ComputerVisionModelDTO.class);
 
-    private double width;
-    private double height;
+    private float width;
+    private float height;
     private boolean resize;
     private boolean rescale;
 
@@ -57,10 +58,10 @@ public class ComputerVisionModelDTO extends ModelDTO {
         Map<String, Object> arguments = artifact.getArguments(null);
         if (arguments != null) {
             try {
-                this.width = (double) arguments.getOrDefault("width", 0.0d);
-                this.height = (double) arguments.getOrDefault("height", 0.0d);
-                this.resize = (boolean) arguments.getOrDefault("resize", false);
-                this.rescale = (boolean) arguments.getOrDefault("rescale", false);
+                width = ArgumentsUtil.floatValue(arguments, "width", 0.0f);
+                height = ArgumentsUtil.floatValue(arguments, "height", 0.0f);
+                resize = ArgumentsUtil.booleanValue(arguments, "resize", false);
+                rescale = ArgumentsUtil.booleanValue(arguments, "rescale", false);
             } catch (ClassCastException ex) {
                 logger.error("Argument in model is not of expected type.", ex);
             }
