@@ -1,0 +1,3 @@
+name=console
+export=ai.djl.serving.console.LogRequestHandler
+requires=static-file-plugin

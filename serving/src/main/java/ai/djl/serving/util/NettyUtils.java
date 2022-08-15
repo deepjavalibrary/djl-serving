@@ -14,9 +14,11 @@ package ai.djl.serving.util;
 
 import ai.djl.ModelException;
 import ai.djl.modality.Input;
+import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.ErrorResponse;
+import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.MethodNotAllowedException;
 import ai.djl.serving.http.ResourceNotFoundException;
 import ai.djl.serving.http.ServiceUnavailableException;
@@ -43,16 +45,26 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
+import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 /** A utility class that handling Netty request and response. */
 public final class NettyUtils {
@@ -62,6 +74,9 @@ public final class NettyUtils {
 
     private static final String REQUEST_ID = "x-request-id";
     private static final AttributeKey<Session> SESSION_KEY = AttributeKey.valueOf("session");
+    private static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
+    private static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
+    private static final int HTTP_CACHE_SECONDS = 86400;
 
     private NettyUtils() {}
 
@@ -156,6 +171,67 @@ public final class NettyUtils {
     }
 
     /**
+     * Sends the file to client.
+     *
+     * @param ctx the connection context
+     * @param path the file to download
+     * @param keepAlive if keep the connection
+     */
+    public static void sendFile(ChannelHandlerContext ctx, Path path, boolean keepAlive) {
+        File file = path.toFile();
+        String name = file.getName();
+        long lastModified = file.lastModified();
+        try (InputStream is = Files.newInputStream(path)) {
+            sendFile(ctx, is, name, lastModified, keepAlive);
+        } catch (IOException e) {
+            throw new InternalServerException("Failed read file: " + name, e);
+        }
+    }
+
+    /**
+     * Sends the file to client.
+     *
+     * @param ctx the connection context
+     * @param is the {@code InputStream} to read file from
+     * @param name the file name
+     * @param lastModified the time that the file last modified
+     * @param keepAlive if keep the connection
+     * @throws IOException if read file fails
+     */
+    public static void sendFile(
+            ChannelHandlerContext ctx,
+            InputStream is,
+            String name,
+            long lastModified,
+            boolean keepAlive)
+            throws IOException {
+        AsciiString contentType = MimeUtils.getContentType(FilenameUtils.getFileExtension(name));
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.ROOT);
+        dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+        Calendar time = Calendar.getInstance();
+        time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
+
+        byte[] buf = is.readAllBytes();
+
+        FullHttpResponse resp =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, true);
+        resp.headers()
+                .set(HttpHeaderNames.CONTENT_TYPE, contentType)
+                .set(HttpHeaderNames.CONTENT_LENGTH, buf.length)
+                .set(HttpHeaderNames.DATE, dateFormatter.format(time.getTime()))
+                .set(HttpHeaderNames.EXPIRES, dateFormatter.format(time.getTime()))
+                .set(HttpHeaderNames.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS)
+                .set(HttpHeaderNames.LAST_MODIFIED, dateFormatter.format(new Date(lastModified)));
+        if (!HttpHeaderValues.TEXT_HTML.contentEqualsIgnoreCase(contentType)) {
+            String contentDisposition = "attachment;fileName=" + name + ";fileName*=UTF-8''" + name;
+            resp.headers().set(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition);
+        }
+        resp.content().writeBytes(buf);
+
+        sendHttpResponse(ctx, resp, keepAlive, false);
+    }
+
+    /**
      * Sends error to client with exception.
      *
      * @param ctx the connection context
@@ -203,6 +279,11 @@ public final class NettyUtils {
      */
     public static void sendHttpResponse(
             ChannelHandlerContext ctx, FullHttpResponse resp, boolean keepAlive) {
+        sendHttpResponse(ctx, resp, keepAlive, true);
+    }
+
+    private static void sendHttpResponse(
+            ChannelHandlerContext ctx, FullHttpResponse resp, boolean keepAlive, boolean noCache) {
         // Send the response and close the connection if necessary.
         Channel channel = ctx.channel();
         Session session = channel.attr(SESSION_KEY).getAndSet(null);
@@ -243,10 +324,12 @@ public final class NettyUtils {
             headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, allowedHeaders);
         }
 
-        // Add cache-control headers to avoid browser cache response
-        headers.set("Pragma", "no-cache");
-        headers.set("Cache-Control", "no-cache; no-store, must-revalidate, private");
-        headers.set("Expires", "Thu, 01 Jan 1970 00:00:00 UTC");
+        if (noCache) {
+            // Add cache-control headers to avoid browser cache response
+            headers.set("Pragma", "no-cache");
+            headers.set("Cache-Control", "no-cache; no-store, must-revalidate, private");
+            headers.set("Expires", "Thu, 01 Jan 1970 00:00:00 UTC");
+        }
 
         HttpUtil.setContentLength(resp, resp.content().readableBytes());
         if (!keepAlive || code >= 400) {

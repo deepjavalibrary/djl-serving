@@ -258,7 +258,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             status = new HttpResponseStatus(code, output.getMessage());
         }
 
-        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, false);
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, true);
         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
             resp.headers().set(entry.getKey(), entry.getValue());
         }
