@@ -5,7 +5,7 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "build:test": "NODE_ENV='test' vue-cli-service build"
+    "build:test": "cross-env NODE_ENV='test' vue-cli-service build"
   },
   "dependencies": {
     "axios": "^0.21.0",
@@ -20,11 +20,12 @@
   },
   "devDependencies": {
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
-    "@vue/cli-plugin-babel": "~4.5.0",
-    "@vue/cli-plugin-router": "~4.5.0",
-    "@vue/cli-service": "~4.5.0",
+    "@vue/cli-plugin-babel": "^5.0.8",
+    "@vue/cli-plugin-router": "^5.0.8",
+    "@vue/cli-service": "^5.0.8",
     "babel-plugin-component": "^1.1.1",
     "babel-plugin-transform-remove-console": "^6.9.4",
+    "cross-env": "^7.0.3",
     "less": "^3.0.4",
     "less-loader": "^5.0.0",
     "style-resources-loader": "^1.4.1",
