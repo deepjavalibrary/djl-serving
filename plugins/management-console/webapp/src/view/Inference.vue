@@ -214,6 +214,8 @@ export default {
       })
       // console.log("header", header);
       // console.log(fileData instanceof FormData)
+      let url = await this.$store.getters.getPredictionUrl
+      header.updateBaseURL = url
       let res = await modelApi.predictions(this.modelName, this.activeVersion, fileData, header)
       if (res.headers && res.headers['content-type']) {
         let contentType = res.headers['content-type']

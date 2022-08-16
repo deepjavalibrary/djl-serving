@@ -42,7 +42,7 @@ import java.util.stream.Stream;
 /** A class handling inbound HTTP requests for the log API. */
 public class LogRequestHandler implements RequestHandler<Void> {
 
-    private static final Pattern PATTERN = Pattern.compile("^/logs([/?].*)?");
+    private static final Pattern PATTERN = Pattern.compile("^(/logs|/inferenceAddress)([/?].*)?");
 
     /** {@inheritDoc} */
     @Override
@@ -68,10 +68,19 @@ public class LogRequestHandler implements RequestHandler<Void> {
         String modelServerHome = ConfigManager.getModelServerHome();
         Path dir = Paths.get(modelServerHome, "logs");
         if (segments.length < 3) {
-            listLogs(ctx, dir);
+            String path = segments[1];
+            if ("logs".equals(path)) {
+                listLogs(ctx, dir);
+            } else if ("inferenceAddress".equals(path)) {
+                ConfigManager configManager = ConfigManager.getInstance();
+                String inferenceAddress =
+                        configManager.getProperty("inference_address", "http://127.0.0.1:8080");
+                NettyUtils.sendJsonResponse(ctx, inferenceAddress);
+            }
         } else if (segments.length <= 4) {
             String fileName = segments[2];
-            if (segments.length == 4 && "download".equals(segments[3])) {
+            if (segments.length == 4 && "download".equals(segments[2])) {
+                fileName = segments[3];
                 downloadLog(ctx, dir, fileName);
             } else {
                 int lines = NettyUtils.getIntParameter(decoder, "lines", 200);

@@ -38,6 +38,7 @@
                 <el-option label="PyTorch" value="PyTorch"></el-option>
                 <el-option label="TensorFlow" value="TensorFlow"></el-option>
                 <el-option label="PaddlePaddle" value="PaddlePaddle"></el-option>
+                <el-option label="Python" value="Python"></el-option>
               </el-select>
             </el-form-item>
           </el-col>
