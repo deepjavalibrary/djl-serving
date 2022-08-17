@@ -277,6 +277,7 @@ public class ModelServerTest {
             testKServeV2HealthLive(channel);
             testKServeV2HealthReady(channel);
             testKServeV2ModelReady(channel);
+            testKServeV2Infer(channel);
 
             // inference API
             testRegisterModelTranslator(channel);
@@ -1110,6 +1111,61 @@ public class ModelServerTest {
         latch.await();
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertTrue(headers.contains("x-request-id"));
+    }
+
+    private void testKServeV2Infer(Channel channel)
+            throws InterruptedException, UnsupportedEncodingException {
+        reset();
+        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        HttpRequest registerReq =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=mlp_test_infer&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name())
+                                + "&translatorFactory=&application=undefined");
+        channel.writeAndFlush(registerReq);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
+        reset();
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "v2/models/mlp/infer");
+        String testInput =
+                "{\n"
+                    + "  \"id\" : \"42\",\n"
+                    + "  \"inputs\" : [\n"
+                    + "    {\n"
+                    + "      \"name\" : \"input0\",\n"
+                    + "      \"shape\" : [ 28 ],\n"
+                    + "      \"dataType\" : \"INT8\",\n"
+                    + "      \"data\" : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,"
+                    + " 0, 0, 0, 0, 0, 0, 0, 0, 0 ]\n"
+                    + "    }\n"
+                    + "  ],\n"
+                    + "  \"outputs\" : [\n"
+                    + "    {\n"
+                    + "      \"name\" : \"output0\"\n"
+                    + "    }\n"
+                    + "  ]\n"
+                    + "}";
+        req.content().writeBytes(testInput.getBytes());
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+        channel.writeAndFlush(req);
+
+        latch.await();
+
+        System.out.println("1231214451" + result);
+
+        reset();
+        HttpRequest unregisterReq =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/mlp_test_infer");
+        channel.writeAndFlush(unregisterReq);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private boolean checkWorkflowRegistered(Channel channel, String workflowName)

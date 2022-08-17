@@ -293,7 +293,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
                     .whenComplete(
                             (o, t) -> {
                                 if (o != null) {
-                                    responseOutput(response, o, ctx);
+                                    responseOutput(response, o, ctx, request.outputs);
                                 }
                             })
                     .exceptionally(
@@ -305,7 +305,10 @@ public class KServeRequestHandler extends HttpRequestHandler {
     }
 
     private void responseOutput(
-            InferenceResponse response, Output output, ChannelHandlerContext ctx) {
+            InferenceResponse response,
+            Output output,
+            ChannelHandlerContext ctx,
+            KServeTensor[] requestOutputs) {
         HttpResponseStatus status;
         int code = output.getCode();
         if (code == 200) {
@@ -316,7 +319,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
                 NDList list = NDList.decode(manager, data);
                 response.outputs = new KServeTensor[list.size()];
                 for (int i = 0; i < response.outputs.length; ++i) {
-                    response.outputs[i] = KServeTensor.fromTensor(list.get(i));
+                    response.outputs[i] =
+                            KServeTensor.fromTensor(list.get(i), requestOutputs[i].name);
                 }
             }
         } else {
@@ -357,6 +361,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
         String id;
         KServeTensor[] inputs;
+
+        KServeTensor[] outputs;
 
         Input toInput() {
             Input input = new Input();

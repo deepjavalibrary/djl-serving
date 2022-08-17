@@ -42,9 +42,20 @@ class KServeTensor {
         switch (type) {
             case "BOOL":
                 return DataType.BOOLEAN;
-            case "INT8":
+            case "UINT8":
                 return DataType.UINT8;
-                // TODO:
+            case "INT8":
+                return DataType.INT8;
+            case "INT32":
+                return DataType.INT32;
+            case "INT64":
+                return DataType.INT64;
+            case "FLOAT16":
+                return DataType.FLOAT16;
+            case "FLOAT32":
+                return DataType.FLOAT32;
+            case "FLOAT64":
+                return DataType.FLOAT64;
             default:
                 throw new IllegalArgumentException("Invalid KServe data type: " + type);
         }
@@ -54,9 +65,20 @@ class KServeTensor {
         switch (type) {
             case BOOLEAN:
                 return "BOOL";
+            case UINT8:
+                return "UINT8";
             case INT8:
                 return "INT8";
-                // TODO:
+            case INT32:
+                return "INT32";
+            case INT64:
+                return "INT64";
+            case FLOAT16:
+                return "FP16";
+            case FLOAT32:
+                return "FP32";
+            case FLOAT64:
+                return "FP64";
             default:
                 return type.toString();
         }
@@ -68,13 +90,13 @@ class KServeTensor {
 
         ByteBuffer bb = toByteBuffer(manager, tensorShape, type);
         NDArray array = manager.create(bb, tensorShape, type);
-        array.setName(name);
+        //        array.setName(name);
         return array;
     }
 
-    static KServeTensor fromTensor(NDArray array) {
+    static KServeTensor fromTensor(NDArray array, String name) {
         KServeTensor tensor = new KServeTensor();
-        tensor.name = array.getName();
+        tensor.name = name;
         tensor.dataType = toKServeDataType(array.getDataType());
         tensor.shape = array.getShape().getShape();
         Number[] values = array.toArray();
