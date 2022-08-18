@@ -9,7 +9,7 @@
           <template slot="label">
             <el-tooltip class="item" effect="dark" content="Model url." placement="top"><span>url:</span></el-tooltip>
           </template>
-          <el-input v-model="form.url"></el-input>
+          <el-input v-model="form.url" > <el-upload slot="append" :show-file-list="false"  :action="baseURL+'upload'" :on-success="uploadSuccess"> <el-button slot="trigger"   icon="el-icon-upload2" ></el-button></el-upload> </el-button></el-input>
         </el-form-item>
         <el-row :gutter="20">
           <el-col :span="8">
@@ -123,6 +123,7 @@
 
 <script>
 import * as modelApi from "@/api/modelAPI"
+import * as env from '../env'
 
 export default {
   name: "AddModel",
@@ -156,6 +157,7 @@ export default {
         max_idle_time: [{ type: 'number', message: 'Max idle time must be a number' }],
       },
       isDown: true,
+      baseURL:"",
     };
   },
   computed: {
@@ -168,7 +170,7 @@ export default {
 
   },
   mounted() {
-
+    this.baseURL = window.location.origin + env.baseUrl
   },
   methods: {
     async submit() {
@@ -198,6 +200,10 @@ export default {
     },
     cancel(){
       this.$router.go(-1)
+    },
+    uploadSuccess(response, file, fileList){
+      console.log(response,file,fileList);
+      this.form.url = response.replace("\n", "")
     }
   },
 };
@@ -237,6 +243,12 @@ export default {
       padding: 20px 40px;
       .el-select {
         width: 100%;
+      }
+      .el-input-group__append{
+        background: @themeColor;
+        color: #fff;
+        border: 0;
+        font-size: 14px;
       }
       .el-collapse {
         border: none;

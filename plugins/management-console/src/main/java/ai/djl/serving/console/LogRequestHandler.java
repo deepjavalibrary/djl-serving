@@ -22,8 +22,14 @@ import ai.djl.serving.util.NettyUtils;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.FileUpload;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
+import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,20 +37,26 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/** A class handling inbound HTTP requests for the log API. */
+/**
+ * A class handling inbound HTTP requests for the log API.
+ */
 public class LogRequestHandler implements RequestHandler<Void> {
 
-    private static final Pattern PATTERN = Pattern.compile("^(/logs|/inferenceAddress)([/?].*)?");
+    private static final Pattern PATTERN = Pattern.compile("^(/logs|/inferenceAddress|/upload)([/?].*)?");
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean acceptInboundMessage(Object msg) {
         if (!(msg instanceof FullHttpRequest)) {
@@ -55,16 +67,18 @@ public class LogRequestHandler implements RequestHandler<Void> {
         return PATTERN.matcher(req.uri()).matches();
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Void handleRequest(
             ChannelHandlerContext ctx,
             FullHttpRequest req,
             QueryStringDecoder decoder,
             String[] segments) {
-        if (!HttpMethod.GET.equals(req.method())) {
+        /*if (!HttpMethod.GET.equals(req.method())) {
             throw new MethodNotAllowedException();
-        }
+        }*/
         String modelServerHome = ConfigManager.getModelServerHome();
         Path dir = Paths.get(modelServerHome, "logs");
         if (segments.length < 3) {
@@ -76,6 +90,8 @@ public class LogRequestHandler implements RequestHandler<Void> {
                 String inferenceAddress =
                         configManager.getProperty("inference_address", "http://127.0.0.1:8080");
                 NettyUtils.sendJsonResponse(ctx, inferenceAddress);
+            } else if ("upload".equals(path)) {
+                upload(ctx, req);
             }
         } else if (segments.length <= 4) {
             String fileName = segments[2];
@@ -91,6 +107,38 @@ public class LogRequestHandler implements RequestHandler<Void> {
         }
         return null;
     }
+
+    private void upload(ChannelHandlerContext ctx, FullHttpRequest req) {
+        if (HttpPostRequestDecoder.isMultipart(req)) {
+            int sizeLimit = ConfigManager.getInstance().getMaxRequestSize();
+            HttpDataFactory factory = new DefaultHttpDataFactory(sizeLimit);
+            HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
+            try {
+                String modelServerHome = ConfigManager.getModelServerHome();
+                Path dir = Paths.get(modelServerHome, "upload");
+                if (!Files.isDirectory(dir)) {
+                    Files.createDirectory(dir);
+                }
+                List<InterfaceHttpData> bodyHttpDatas = form.getBodyHttpDatas();
+                InterfaceHttpData data = bodyHttpDatas.get(0);
+                FileUpload fileUpload = (FileUpload) data;
+                byte[] bytes = fileUpload.get();
+                String filename = fileUpload.getFilename();
+                Path write = Files.write(Paths.get(dir.toString(), filename), bytes, StandardOpenOption.CREATE);
+
+                NettyUtils.sendJsonResponse(ctx, write.toUri().toString());
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                form.cleanFiles();
+                form.destroy();
+            }
+        }
+
+    }
+
 
     private void downloadLog(ChannelHandlerContext ctx, Path dir, String fileName) {
         if (fileName.contains("..")) {
@@ -144,7 +192,7 @@ public class LogRequestHandler implements RequestHandler<Void> {
 
     private String getLastLineText(File file, int lines) {
         long fileLength = file.length() - 1;
-        if (file.length() < 0) {
+        if (fileLength < 0) {
             return "";
         }
 

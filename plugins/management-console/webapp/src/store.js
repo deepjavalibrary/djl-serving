@@ -23,7 +23,11 @@ var store = new Vuex.Store({
         try {
           predictionUrl = await logAPI.inferenceAddress()
           let port = getPort(predictionUrl)
-          predictionUrl = window.location.protocol+"//"+window.location.hostname+":"+port
+          if(port == window.location.port){
+            predictionUrl = env.baseUrl
+          }else{
+            predictionUrl = window.location.protocol+"//"+window.location.hostname+":"+port
+          }
         } catch (error) {
           predictionUrl = env.baseUrl
           console.log("getPredictionUrl", error);

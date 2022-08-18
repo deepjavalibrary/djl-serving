@@ -57,6 +57,10 @@ export default {
   }
   .log-box {
     background: #fff;
+    .log-content {
+      height: calc(100vh - 200px);
+      overflow: auto;
+    }
   }
   .title {
     background: #e5ffee;

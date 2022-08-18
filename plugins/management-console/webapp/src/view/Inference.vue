@@ -36,7 +36,7 @@
           </el-radio-group>
         </el-form-item>
         <div class="upload-area" v-show='dataType=="file"'>
-          <el-upload ref='upload' multiple :show-file-list="false" action="/api/file/importFile" :on-change="onChange" :auto-upload="false" name="data">
+          <el-upload ref='upload' multiple :show-file-list="false"  :on-change="onChange" :auto-upload="false" name="data">
             <el-button size="medium" type="success">upload file</el-button>
           </el-upload>
           <div class="file-list">

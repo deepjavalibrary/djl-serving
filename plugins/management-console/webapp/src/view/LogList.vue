@@ -56,7 +56,9 @@ export default {
   },
   async mounted() {
     let res = await logApi.logs()
-    this.logList = res
+    this.logList = res.map(v => {
+      return {...v,lastModified:parseInt(v.lastModified)}
+    })
   },
   methods: {
     detail(val) {
