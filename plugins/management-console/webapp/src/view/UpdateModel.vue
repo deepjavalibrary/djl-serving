@@ -16,8 +16,8 @@
         </el-dropdown>
       </div>
 
-      <el-form ref="form" :rules="rules" :model="form" label-width="120px" size="mini" label-position='left'>
-        <el-form-item label="modelUrl:" prop="modelUrl">
+      <el-form ref="form" :rules="rules" :model="form" label-width="150px" size="mini" label-position='left'>
+        <el-form-item label="Model url:" prop="modelUrl">
           <el-input v-model="form.modelUrl" disabled></el-input>
         </el-form-item>
         <el-row :gutter="20">
@@ -33,29 +33,29 @@
           </el-col> -->
 
           <el-col :span="8">
-            <el-form-item label="status:" prop="status">
+            <el-form-item label="Status:" prop="status">
               <el-input v-model="form.status" disabled></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="loadedAtStartup:" prop="loadedAtStartup">
+            <el-form-item label="Loaded at startup:" prop="loadedAtStartup">
               <el-switch v-model="form.loadedAtStartup" disabled></el-switch>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="8">
-            <el-form-item label="batch_size:" prop="batchSize">
+            <el-form-item label="Batch size:" prop="batchSize">
               <el-input v-model.number="form.batchSize"></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="max_batch_delay:" prop="maxBatchDelay">
+            <el-form-item label="Max batch delay:" prop="maxBatchDelay">
               <el-input v-model.number="form.maxBatchDelay"></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="max_idle_time:" prop="maxIdleTime">
+            <el-form-item label="Max idle time:" prop="maxIdleTime">
               <el-input v-model.number="form.maxIdleTime"></el-input>
             </el-form-item>
           </el-col>
@@ -74,11 +74,11 @@
         <el-tab-pane :label="item.device.deviceType=='cpu'?'cpu':item.device.deviceType+':'+item.device.deviceId" :name="index+''" v-for="(item,index) in form.workerGroups" :key="index">
           <el-row :gutter="20">
             <el-col :span="8">
-              min_worker:
+              Min worker:
               <el-input-number v-model="form.workerGroups[activeDevice].minWorkers" size="small" :min="1" :max="100" @change="workerChange('min')"></el-input-number>
             </el-col>
             <el-col :span="8">
-              max_worker:
+              Max worker:
               <el-input-number v-model="form.workerGroups[activeDevice].maxWorkers" size="small" :min="1" :max="100" @change="workerChange('max')"></el-input-number>
             </el-col>
           </el-row>
@@ -92,30 +92,30 @@
       <div class="worker-info">
         <el-row :gutter="20" v-if="form.workerGroups[activeDevice].workers.length">
 
-          <el-col :span="9">id: {{form.workerGroups[activeDevice].workers[activeIndex].id}}</el-col>
-          <el-col :span="9">deviceType: {{form.workerGroups[activeDevice].device.deviceType}}</el-col>
-          <el-col :span="9">deviceId: {{form.workerGroups[activeDevice].device.deviceId}}</el-col>
-          <el-col :span="9">status: {{form.workerGroups[activeDevice].workers[activeIndex].status}}</el-col>
-          <el-col :span="9">startTime: {{form.workerGroups[activeDevice].workers[activeIndex].startTime|dateFormat}}</el-col>
+          <el-col :span="9">Id: {{form.workerGroups[activeDevice].workers[activeIndex].id}}</el-col>
+          <el-col :span="9">Device type: {{form.workerGroups[activeDevice].device.deviceType}}</el-col>
+          <el-col :span="9">Device id: {{form.workerGroups[activeDevice].device.deviceId}}</el-col>
+          <el-col :span="9">Status: {{form.workerGroups[activeDevice].workers[activeIndex].status}}</el-col>
+          <el-col :span="9">Start time: {{form.workerGroups[activeDevice].workers[activeIndex].startTime|dateFormat}}</el-col>
         </el-row>
       </div>
       <div class="submit-btns">
-        <el-button type="info" size="medium" @click="cancel">cancel</el-button>
-        <el-button type="primary" size="medium" @click="submit">submit</el-button>
+        <el-button type="info" size="medium" @click="cancel">Cancel</el-button>
+        <el-button type="primary" size="medium" @click="submit">Submit</el-button>
       </div>
     </div>
     <el-dialog title="Add Group" :visible.sync="addGroupShow" width="30%" :close-on-click-modal="false">
       <el-row :gutter="20">
         <el-col>
 
-          <label>device:</label>
+          <label>Device:</label>
           <el-input v-model.number="newDeviceId" size="small"></el-input>
         </el-col>
       </el-row>
 
       <span slot="footer" class="dialog-footer">
-        <el-button @click="addGroupShow = false" size="medium">cancel</el-button>
-        <el-button type="primary" @click="addGroup" size="medium">sure</el-button>
+        <el-button @click="addGroupShow = false" size="medium">Cancel</el-button>
+        <el-button type="primary" @click="addGroup" size="medium">Sure</el-button>
       </span>
     </el-dialog>
   </div>
@@ -414,6 +414,13 @@ export default {
         white-space: nowrap;
         margin-right: 10px;
       }
+    }
+  }
+  .el-dialog__header{
+    background: #e5ffee;
+    padding: 12px 20px;
+    .el-dialog__headerbtn{
+      top:16px
     }
   }
 }

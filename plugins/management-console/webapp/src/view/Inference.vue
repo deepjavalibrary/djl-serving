@@ -29,15 +29,15 @@
           <i class="el-icon-close" @click="deleteHeader(index)" v-if="index != headers.length-1"></i>
         </el-row>
         <div class="header">Body</div>
-        <el-form-item label="data-type:">
+        <el-form-item label="Data type:">
           <el-radio-group v-model="dataType" @change="dataTypeChange">
-            <el-radio label="file">file</el-radio>
-            <el-radio label="text">text</el-radio>
+            <el-radio label="file">File</el-radio>
+            <el-radio label="text">Text</el-radio>
           </el-radio-group>
         </el-form-item>
         <div class="upload-area" v-show='dataType=="file"'>
-          <el-upload ref='upload' multiple :show-file-list="false" action="/api/file/importFile" :on-change="onChange" :auto-upload="false" name="data">
-            <el-button size="medium" type="success">upload file</el-button>
+          <el-upload ref='upload' multiple :show-file-list="false" :on-change="onChange" :auto-upload="false" name="data" action="">
+            <el-button size="medium" type="success">Click to upload</el-button>
           </el-upload>
           <div class="file-list">
 
@@ -73,15 +73,15 @@
           </el-input>
         </div>
         <div class="submit-btns">
-          <el-button type="info" size="medium" @click="cancel">cancel</el-button>
-          <el-button type="primary" class="predict" size="medium" @click="predict">predict</el-button>
+          <el-button type="info" size="medium" @click="cancel">Cancel</el-button>
+          <el-button type="primary" class="predict" size="medium" @click="predict">Predict</el-button>
         </div>
       </el-form>
     </div>
     <div class="result-box">
-      <div class="title">Result</div>
+      <div :class="['title',{'error':resultError}]">Result</div>
       <div class="result-content">
-        {{resultText}}
+        <pre>{{resultText}}</pre>
         <img :src="imgSrc">
       </div>
     </div>
@@ -111,7 +111,8 @@ export default {
       activeVersion: '',
       resultText: "",
       imgSrc: "",
-      bodyDatas: [{ key: '', value: '', checked: true }]
+      bodyDatas: [{ key: '', value: '', checked: true }],
+      resultError: false
 
     };
   },
@@ -163,8 +164,8 @@ export default {
     },
     removeFile(file) {
       return this.$confirm(`Are you sure to delete  ${file.fileName}？`, 'Warning', {
-        confirmButtonText: 'sure',
-        cancelButtonText: 'cancel',
+        confirmButtonText: 'Sure',
+        cancelButtonText: 'Cancel',
         type: 'warning',
       }).then(() => {
 
@@ -183,6 +184,7 @@ export default {
       })
     },
     async predict() {
+      this.resultError = false
       this.imgSrc = ""
       this.resultText = ''
       let fileData = new FormData()
@@ -212,16 +214,38 @@ export default {
           header[v.key] = v.value
         }
       })
-      // console.log("header", header);
-      // console.log(fileData instanceof FormData)
-      let url = await this.$store.getters.getPredictionUrl
-      header.updateBaseURL = url
-      let res = await modelApi.predictions(this.modelName, this.activeVersion, fileData, header)
+   
+      if (process.env.NODE_ENV != 'development') {
+        let url = await this.$store.getters.getPredictionUrl
+        let inferenceFlag = this.$store.getters.getInferenceFlag
+        if (!inferenceFlag) {
+          let str = "Since 'inference_address' is inconsistent with 'management_address', please confirm whether cors_allowed configuration is enabled"
+          this.$message.error(str)
+          return
+        }
+        header.updateBaseURL = url
+      }
+      let res
+      try {
+        res = await modelApi.predictions(this.modelName, this.activeVersion, fileData, header)
+      } catch (error) {
+        this.resultError = true
+        if (error.code) {
+          this.resultText = error.message
+        } else if (error instanceof Blob) {
+          let blob = new Blob([error])
+          var reader = new FileReader()
+          reader.onload = e => {
+            this.resultText = JSON.parse(reader.result).message
+          }
+          reader.readAsText(blob)
+        }
+        return
+      }
       if (res.headers && res.headers['content-type']) {
         let contentType = res.headers['content-type']
         console.log("contentType", contentType);
         if (contentType.startsWith("text/") || contentType == 'application/json') {
-
           if (res.data instanceof Blob) {
             let blob = new Blob([res.data])
             var reader = new FileReader()
@@ -229,46 +253,23 @@ export default {
               this.resultText = e.target.result
             }
             reader.readAsText(blob)
-
-
           } else {
-
             this.resultText = res.data
           }
         } else if (['tensor/ndlist', 'tensor/npz', "multipart/form-data"].includes(contentType)) {
-
-
           const link = document.createElement('a');
           let blob = new Blob([res.data]);
           link.style.display = 'none';
           link.href = URL.createObjectURL(blob);
-
           link.setAttribute('download', contentType.replace('/', "."));
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link)
-
-
         } else if (contentType.startsWith("image/")) {
           let blob = new Blob([res.data])
           this.imgSrc = window.URL.createObjectURL(blob)
         }
       }
-
-      // var reader = new FileReader()
-      // reader.onload = e => {
-      //   this.resultText = e.target.result
-      // }
-      // if (this.dataType == 'file') {
-      //   if ("application/json" == res.type) {
-      //     reader.readAsText(blob)
-      //   }else{
-      //     this.imgSrc = window.URL.createObjectURL(blob)
-      //   }
-      // } else {
-      //   this.resultText = res
-      // }
-
       console.log(res);
     },
     cancel() {
@@ -443,6 +444,12 @@ export default {
       background: #e5ffee;
       &::before {
         background: #02f21a;
+      }
+    }
+    .title.error {
+      background: #ffd5d7;
+      &::before {
+        background: #fd444e;
       }
     }
     .result-content {

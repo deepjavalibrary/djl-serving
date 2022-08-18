@@ -5,7 +5,7 @@
       <i class="el-icon-circle-plus"></i>
       <span>Add Model</span>
     </div>
-   
+
     <ul class="models">
       <li class="model" v-for="(model,index) in  models " :key="index">
         <div class="bg">
@@ -70,8 +70,8 @@ export default {
     },
     async del(model) {
       const confirmResult = await this.$confirm('Are you sure to delete ' + name, 'Warning', {
-        confirmButtonText: 'sure',
-        cancelButtonText: 'cancel',
+        confirmButtonText: 'Sure',
+        cancelButtonText: 'Cancel',
         type: 'warning',
       }).catch((err) => err)
       if (confirmResult == 'confirm') {
@@ -92,6 +92,8 @@ export default {
 <style  lang="less">
 .model-list {
   // padding: 0px 80px;
+  // width: 1200px;
+  margin: 0 auto;
   position: relative;
 
   h3 {
@@ -129,17 +131,20 @@ export default {
   }
   .models {
     display: flex;
+    align-content: flex-start;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
+    column-gap: 20px;
     .model {
       height: 270px;
-      width: 32%;
+      width: 386px;
       background: #fff;
       border: 2px solid #f5f5f5;
       border-radius: 10px;
       margin-bottom: 20px;
-      margin-right: 20px;
+      // margin-right: 20px;
+      
       .bg {
         height: 140px;
         background: url("../assets/img/model-bg.png") no-repeat;
@@ -220,8 +225,9 @@ export default {
       }
     }
   }
-  .model:nth-child(3n) {
-    margin-right: 0;
-  }
+  // .model:nth-child(3n) {
+  //   margin-right: 0;
+  // }
+
 }
 </style>

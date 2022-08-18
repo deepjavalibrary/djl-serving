@@ -43,9 +43,19 @@ axiosInst.interceptors.response.use(response => {
 }, error => {
   loadingInstance.close();
     console.log("error",error.response);
-    Message.error({ message: error.response.data.message, customClass: 'error-toast' });
+    if(error.response.data instanceof Blob){
+      var reader = new FileReader();
+      reader.readAsText(error.response.data, 'utf-8');
+      reader.onload = function (e) {
+        Message.error({ message: JSON.parse( reader.result).message, customClass: 'error-toast' });
+          // console.info(reader.result);
+      }
+    }else{
+      Message.error({ message: error.response.data.message, customClass: 'error-toast' });
+    }
  
   return Promise.reject(error);
+  // return error;
 });
 
 
@@ -101,7 +111,8 @@ export default {
       }).then(res => {
         resolve(res)
       }).catch(error => {
-        reject(error)
+        // console.log("requestPost-error",error.response);
+        reject(error.response.data)
       })
     })
   },
@@ -116,10 +127,11 @@ export default {
         },
         // myHeader:header
       }).then(res => {
-        console.log("requestPostForm",res);
+        // console.log("requestPostForm",res);
         resolve(res)
       }).catch(error => {
-        reject(error)
+        console.log("requestPostForm-error",error.response);
+        reject(error.response.data)
       })
     })
   },
