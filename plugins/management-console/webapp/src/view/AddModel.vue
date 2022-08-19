@@ -9,7 +9,11 @@
           <template slot="label">
             <el-tooltip class="item" effect="dark" content="Model url." placement="top"><span>url:</span></el-tooltip>
           </template>
-          <el-input v-model="form.url" > <el-upload slot="append" :show-file-list="false"  :action="baseURL+'upload'" :on-success="uploadSuccess"> <el-button slot="trigger"   icon="el-icon-upload2" ></el-button></el-upload> </el-button></el-input>
+          <el-input v-model="form.url">
+            <el-upload slot="append" :show-file-list="false" :action="baseURL+'upload'" :on-error="uploadFailed" :on-success="uploadSuccess" :before-upload="beforeUpload" >
+              <el-button slot="trigger" icon="el-icon-upload2"></el-button>
+            </el-upload>
+          </el-input>
         </el-form-item>
         <el-row :gutter="20">
           <el-col :span="8">
@@ -70,9 +74,9 @@
               </el-col>
               <el-col :span="8">
                 <el-form-item label="max_batch_delay:" v-if="form.batch_size>1" prop="max_batch_delay">
-                <template slot="label">
-                  <el-tooltip class="item" effect="dark" content="the maximum delay for batch aggregation. The default value is 100 milliseconds." placement="top"><span>max_batch_delay:</span></el-tooltip>
-                </template>
+                  <template slot="label">
+                    <el-tooltip class="item" effect="dark" content="the maximum delay for batch aggregation. The default value is 100 milliseconds." placement="top"><span>max_batch_delay:</span></el-tooltip>
+                  </template>
                   <el-input v-model.number="form.max_batch_delay"></el-input>
                 </el-form-item>
               </el-col>
@@ -86,7 +90,7 @@
               </el-col>
               <el-col :span="8">
                 <el-form-item label="min_worker:">
-                   <template slot="label">
+                  <template slot="label">
                     <el-tooltip class="item" effect="dark" content="the minimum number of worker processes. The default value is `1`." placement="top"><span>min_worker:</span></el-tooltip>
                   </template>
                   <el-input-number v-model="form.min_worker" :min="1" :max="10" label="min_worker"></el-input-number>
@@ -94,7 +98,7 @@
               </el-col>
               <el-col :span="8">
                 <el-form-item label="max_worker:">
-                    <template slot="label">
+                  <template slot="label">
                     <el-tooltip class="item" effect="dark" content="the maximum number of worker processes. The default is the same as the setting for `min_worker`." placement="top"><span>max_worker:</span></el-tooltip>
                   </template>
                   <el-input-number v-model="form.max_worker" :min="1" :max="10" label="max_worker"></el-input-number>
@@ -102,7 +106,7 @@
               </el-col>
               <el-col :span="8">
                 <el-form-item label="synchronous:" prop="synchronous">
-                    <template slot="label">
+                  <template slot="label">
                     <el-tooltip class="item" effect="dark" content="whether or not the creation of worker is synchronous. The default value is true." placement="top"><span>synchronous:</span></el-tooltip>
                   </template>
                   <el-switch v-model="form.synchronous"></el-switch>
@@ -157,7 +161,7 @@ export default {
         max_idle_time: [{ type: 'number', message: 'Max idle time must be a number' }],
       },
       isDown: true,
-      baseURL:"",
+      baseURL: "",
     };
   },
   computed: {
@@ -170,7 +174,7 @@ export default {
 
   },
   mounted() {
-    this.baseURL = window.location.origin + env.baseUrl
+    this.baseURL = window.location.origin + env.baseUrl+(env.baseUrl.endsWith("/")?"":"/")
   },
   methods: {
     async submit() {
@@ -189,21 +193,35 @@ export default {
       if (!flag) {
         throw Error('Valid failed')
       }
-      let param  = {...this.form}
-      if(this.isDown) param = (({url, model_name,model_version,engine,device}) =>({url, model_name,model_version,engine,device}))(this.form)
+      let param = { ...this.form }
+      if (this.isDown) param = (({ url, model_name, model_version, engine, device }) => ({ url, model_name, model_version, engine, device }))(this.form)
       let res = await modelApi.addModel(param)
       this.$message.success('Model "' + this.form.model_name + '" registered.')
     },
-    settingClick(){
+    settingClick() {
       this.isDown = !this.isDown
-      
+
     },
-    cancel(){
+    cancel() {
       this.$router.go(-1)
     },
-    uploadSuccess(response, file, fileList){
-      console.log(response,file,fileList);
+    uploadSuccess(response, file, fileList) {
+      console.log(response, file, fileList);
       this.form.url = response.replace("\n", "")
+      this.loading.close()
+    },
+    beforeUpload(file){
+      this.loading = this.$loading()
+    },
+    uploadFailed(err, file, fileList){
+      
+      console.log("uploadFailed",err);
+      if(err instanceof Error){
+        this.$message.error( err)
+      }else if(err instanceof ProgressEvent){
+         this.$message.error( "Make sure the 'max_request_size' value is greater than the current file size")
+      }
+      this.loading.close()
     }
   },
 };
@@ -244,7 +262,7 @@ export default {
       .el-select {
         width: 100%;
       }
-      .el-input-group__append{
+      .el-input-group__append {
         background: @themeColor;
         color: #fff;
         border: 0;
