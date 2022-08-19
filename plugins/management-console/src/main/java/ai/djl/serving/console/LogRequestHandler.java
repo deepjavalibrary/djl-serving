@@ -14,7 +14,6 @@ package ai.djl.serving.console;
 
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.InternalServerException;
-import ai.djl.serving.http.MethodNotAllowedException;
 import ai.djl.serving.http.ResourceNotFoundException;
 import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.ConfigManager;
@@ -22,8 +21,6 @@ import ai.djl.serving.util.NettyUtils;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.FileUpload;
@@ -44,19 +41,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * A class handling inbound HTTP requests for the log API.
- */
+/** A class handling inbound HTTP requests for the log API. */
 public class LogRequestHandler implements RequestHandler<Void> {
 
-    private static final Pattern PATTERN = Pattern.compile("^(/logs|/inferenceAddress|/upload)([/?].*)?");
+    private static final Pattern PATTERN =
+            Pattern.compile("^(/logs|/inferenceAddress|/upload)([/?].*)?");
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public boolean acceptInboundMessage(Object msg) {
         if (!(msg instanceof FullHttpRequest)) {
@@ -67,9 +60,7 @@ public class LogRequestHandler implements RequestHandler<Void> {
         return PATTERN.matcher(req.uri()).matches();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public Void handleRequest(
             ChannelHandlerContext ctx,
@@ -124,21 +115,22 @@ public class LogRequestHandler implements RequestHandler<Void> {
                 FileUpload fileUpload = (FileUpload) data;
                 byte[] bytes = fileUpload.get();
                 String filename = fileUpload.getFilename();
-                Path write = Files.write(Paths.get(dir.toString(), filename), bytes, StandardOpenOption.CREATE);
+                Path write =
+                        Files.write(
+                                Paths.get(dir.toString(), filename),
+                                bytes,
+                                StandardOpenOption.CREATE);
 
                 NettyUtils.sendJsonResponse(ctx, write.toUri().toString());
 
-
             } catch (IOException e) {
-                e.printStackTrace();
+                throw new InternalServerException("Failed to upload file", e);
             } finally {
                 form.cleanFiles();
                 form.destroy();
             }
         }
-
     }
-
 
     private void downloadLog(ChannelHandlerContext ctx, Path dir, String fileName) {
         if (fileName.contains("..")) {
