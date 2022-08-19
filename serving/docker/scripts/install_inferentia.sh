@@ -17,7 +17,7 @@ curl -L https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB
 
 # Installing Neuron Tools
 apt-get update
-apt-get install -y aws-neuron-tools python3.7 python3.7-distutils
+apt-get install -y aws-neuron-tools python3.7 python3.7-distutils pciutils
 ln -sf /usr/bin/python3.7 /usr/bin/python3
 ln -sf /usr/bin/python3.7 /usr/bin/python
 
