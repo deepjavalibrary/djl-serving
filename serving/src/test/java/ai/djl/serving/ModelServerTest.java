@@ -19,9 +19,12 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 import ai.djl.modality.Classifications.Classification;
+import ai.djl.ndarray.types.DataType;
+import ai.djl.ndarray.types.Shape;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.KServeDescribeModelResponse;
+import ai.djl.serving.http.KServeTensorTest;
 import ai.djl.serving.http.ListModelsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse.WorkflowItem;
@@ -97,6 +100,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -277,6 +281,7 @@ public class ModelServerTest {
             testKServeV2HealthLive(channel);
             testKServeV2HealthReady(channel);
             testKServeV2ModelReady(channel);
+            testKServeV2Infer(channel);
 
             // inference API
             testRegisterModelTranslator(channel);
@@ -677,7 +682,7 @@ public class ModelServerTest {
                 JsonUtils.GSON.fromJson(result, KServeDescribeModelResponse.class);
         assertEquals(resp.getName(), "mlp");
         assertEquals(resp.getVersions(), Collections.singletonList("v1"));
-        assertEquals(resp.getPlatform(), "MXNet_mxnet");
+        assertEquals(resp.getPlatform(), "mxnet_mxnet");
     }
 
     private void testDescribeModel(Channel channel) throws InterruptedException {
@@ -1112,6 +1117,50 @@ public class ModelServerTest {
         assertTrue(headers.contains("x-request-id"));
     }
 
+    private void testKServeV2Infer(Channel channel)
+            throws InterruptedException, UnsupportedEncodingException {
+        reset();
+        String url = "file:src/test/resources/identity";
+        HttpRequest registerReq =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=identity&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+        channel.writeAndFlush(registerReq);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
+        reset();
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/v2/models/identity/infer");
+
+        Map<String, String> outputs = new ConcurrentHashMap<>();
+        outputs.put("name", "output0");
+        Map<String, Object> data = new ConcurrentHashMap<>();
+        data.put("id", "42");
+        Object tensor = KServeTensorTest.getKServeTensor(new Shape(1, 10), DataType.INT8);
+        data.put("inputs", new Object[] {tensor});
+        data.put("outputs", new Object[] {outputs});
+
+        req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+        channel.writeAndFlush(req);
+
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
+        reset();
+        HttpRequest unregisterReq =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity");
+        channel.writeAndFlush(unregisterReq);
+        latch.await();
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+    }
+
     private boolean checkWorkflowRegistered(Channel channel, String workflowName)
             throws InterruptedException {
         for (int i = 0; i < 5; ++i) {
@@ -1156,7 +1205,7 @@ public class ModelServerTest {
                     .channel(connector.getClientChannel())
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .handler(
-                            new ChannelInitializer<Channel>() {
+                            new ChannelInitializer<>() {
 
                                 /** {@inheritDoc} */
                                 @Override
