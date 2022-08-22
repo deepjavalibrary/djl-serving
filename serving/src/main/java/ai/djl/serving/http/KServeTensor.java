@@ -50,11 +50,11 @@ class KServeTensor {
                 return DataType.INT32;
             case "INT64":
                 return DataType.INT64;
-            case "FLOAT16":
+            case "FP16":
                 return DataType.FLOAT16;
-            case "FLOAT32":
+            case "FP32":
                 return DataType.FLOAT32;
-            case "FLOAT64":
+            case "FP64":
                 return DataType.FLOAT64;
             default:
                 throw new IllegalArgumentException("Invalid KServe data type: " + type);
@@ -90,7 +90,7 @@ class KServeTensor {
 
         ByteBuffer bb = toByteBuffer(manager, tensorShape, type);
         NDArray array = manager.create(bb, tensorShape, type);
-        //        array.setName(name);
+        array.setName(name);
         return array;
     }
 
@@ -111,26 +111,10 @@ class KServeTensor {
     private ByteBuffer toByteBuffer(NDManager manager, Shape tensorShape, DataType type) {
         int size = Math.toIntExact(tensorShape.size()) * type.getNumOfBytes();
         ByteBuffer bb = manager.allocateDirect(size);
-        append(bb, data, type);
+        for (double d : data) {
+            bb.put((byte) d);
+        }
         bb.rewind();
         return bb;
-    }
-
-    private void append(ByteBuffer bb, double[] values, DataType type) {
-        for (double d : values) {
-            switch (type) {
-                case INT8:
-                    bb.put((byte) d);
-                    break;
-                case INT32:
-                    bb.putInt((int) d);
-                    break;
-                case INT64:
-                    bb.putLong((long) d);
-                    break;
-                default:
-                    throw new AssertionError("Unsupported dataType: " + type);
-            }
-        }
     }
 }

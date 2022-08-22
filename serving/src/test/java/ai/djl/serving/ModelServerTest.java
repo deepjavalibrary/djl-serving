@@ -19,9 +19,12 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 import ai.djl.modality.Classifications.Classification;
+import ai.djl.ndarray.types.DataType;
+import ai.djl.ndarray.types.Shape;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.KServeDescribeModelResponse;
+import ai.djl.serving.http.KServeTensorTest;
 import ai.djl.serving.http.ListModelsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse.WorkflowItem;
@@ -97,6 +100,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -1116,14 +1120,13 @@ public class ModelServerTest {
     private void testKServeV2Infer(Channel channel)
             throws InterruptedException, UnsupportedEncodingException {
         reset();
-        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        String url = "file:src/test/resources/identity";
         HttpRequest registerReq =
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
-                        "/models?model_name=mlp_test_infer&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name())
-                                + "&translatorFactory=&application=undefined");
+                        "/models?model_name=identity&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
         channel.writeAndFlush(registerReq);
         latch.await();
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
@@ -1131,38 +1134,28 @@ public class ModelServerTest {
         reset();
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.POST, "v2/models/mlp/infer");
-        String testInput =
-                "{\n"
-                    + "  \"id\" : \"42\",\n"
-                    + "  \"inputs\" : [\n"
-                    + "    {\n"
-                    + "      \"name\" : \"input0\",\n"
-                    + "      \"shape\" : [ 28 ],\n"
-                    + "      \"dataType\" : \"INT8\",\n"
-                    + "      \"data\" : [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,"
-                    + " 0, 0, 0, 0, 0, 0, 0, 0, 0 ]\n"
-                    + "    }\n"
-                    + "  ],\n"
-                    + "  \"outputs\" : [\n"
-                    + "    {\n"
-                    + "      \"name\" : \"output0\"\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
-        req.content().writeBytes(testInput.getBytes());
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/v2/models/identity/infer");
+
+        Map<String, String> outputs = new ConcurrentHashMap<>();
+        outputs.put("name", "output0");
+        Map<String, Object> data = new ConcurrentHashMap<>();
+        data.put("id", "42");
+        Object tensor = KServeTensorTest.getKServeTensor(new Shape(1, 10), DataType.INT8);
+        data.put("inputs", new Object[] {tensor});
+        data.put("outputs", new Object[] {outputs});
+
+        req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         channel.writeAndFlush(req);
 
         latch.await();
-
-        System.out.println("1231214451" + result);
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
         reset();
         HttpRequest unregisterReq =
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/mlp_test_infer");
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity");
         channel.writeAndFlush(unregisterReq);
         latch.await();
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
@@ -1212,7 +1205,7 @@ public class ModelServerTest {
                     .channel(connector.getClientChannel())
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .handler(
-                            new ChannelInitializer<Channel>() {
+                            new ChannelInitializer<>() {
 
                                 /** {@inheritDoc} */
                                 @Override

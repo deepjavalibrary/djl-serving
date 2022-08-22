@@ -31,6 +31,7 @@ import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Pair;
 
+import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 
 import io.netty.buffer.ByteBufInputStream;
@@ -60,7 +61,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
 
-    private static final Pattern PATTERN = Pattern.compile("^/v2/.+");
+    private static final Pattern PATTERN = Pattern.compile("/v2/.+");
     private static final String EMPTY_BODY = "";
 
     /** {@inheritDoc} */
@@ -301,6 +302,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
                                 onException((Exception) t, ctx);
                                 return null;
                             });
+        } catch (JsonParseException e) {
+            throw new BadRequestException("Invalid JSON input", e);
         }
     }
 
@@ -342,7 +345,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
             status = HttpResponseStatus.NOT_FOUND;
         } else if (ex instanceof MethodNotAllowedException) {
             status = HttpResponseStatus.METHOD_NOT_ALLOWED;
-        } else if (ex instanceof TranslateException) {
+        } else if (ex instanceof TranslateException || ex instanceof IllegalArgumentException) {
             status = HttpResponseStatus.BAD_REQUEST;
         } else if (ex instanceof WlmException) {
             status = HttpResponseStatus.SERVICE_UNAVAILABLE;
@@ -361,7 +364,6 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
         String id;
         KServeTensor[] inputs;
-
         KServeTensor[] outputs;
 
         Input toInput() {
