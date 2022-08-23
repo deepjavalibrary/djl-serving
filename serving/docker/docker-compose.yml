@@ -30,5 +30,12 @@ services:
   pytorch-cu113:
     build:
       context: .
+      target: base
       dockerfile: pytorch-cu113.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu113${NIGHTLY}"
+  parallelformers:
+    build:
+      context: .
+      target: parallelformers
+      dockerfile: pytorch-cu113.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}parallelformers${NIGHTLY}"
