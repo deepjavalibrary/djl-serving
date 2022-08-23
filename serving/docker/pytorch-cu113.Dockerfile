@@ -10,10 +10,11 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 ARG version=11.3.1-cudnn8-runtime-ubuntu20.04
-ARG djl_version=0.19.0~SNAPSHOT
-ARG torch_version=1.11.0
 
 FROM nvidia/cuda:$version as base
+
+ARG djl_version=0.19.0~SNAPSHOT
+ARG torch_version=1.11.0
 
 RUN mkdir -p /opt/djl/conf
 COPY scripts scripts/
@@ -49,8 +50,10 @@ FROM base as parallelformers
 ARG transformers_version=4.21.1
 ARG parallelformers_version=1.2.6
 
+COPY scripts scripts/
 RUN pip3 install transformers==${transformers_version} parallelformers==${parallelformers_version} && \
-    pip cache purge
+    scripts/patch_oss_dlc.sh python && \
+    pip cache purge && rm -rf scripts
 
 ENV MODEL_LOADING_TIMEOUT=2400
 ENV SERVING_LOAD_ON_DEVICES=0
