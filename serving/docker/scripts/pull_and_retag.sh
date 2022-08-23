@@ -2,7 +2,7 @@
 
 version=$1
 repo=$2
-images="cpu aarch cpu-full pytorch-inf1 pytorch-cu113 deepspeed"
+images="cpu aarch cpu-full pytorch-inf1 pytorch-cu113 deepspeed parallelformers"
 
 for image in $images; do
     if [[ ! "$version" == "nightly" ]]; then
