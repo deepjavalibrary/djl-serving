@@ -48,6 +48,10 @@ jobs:
           repo="125045733377.dkr.ecr.us-east-1.amazonaws.com"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           ./scripts/pull_and_retag.sh $version $repo
+      - name: Clean docker env
+        working-directory: serving/docker
+        run: |
+          yes | docker system prune -a --volumes
 
   stop-aarch64-runner:
     if: always()
