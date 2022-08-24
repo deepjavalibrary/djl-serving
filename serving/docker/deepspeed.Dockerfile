@@ -12,9 +12,9 @@
 ARG version=11.3.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.19.0~SNAPSHOT
-ARG torch_version=1.11.0
-ARG deepspeed_version=0.6.7
-ARG transformers_version=4.19.2
+ARG torch_version=1.12.1
+ARG deepspeed_version=0.7.1
+ARG transformers_version=4.21.1
 
 EXPOSE 8080
 
