@@ -9,23 +9,31 @@ Vue.use(Vuex)
 
 var store = new Vuex.Store({
   state: { // this.$store.state.***
-    predictionUrl: ""
+    predictionUrl: "",
+    inferenceFlag: true,
   },
   mutations: { // this.$store.commit('method name', 'provide if necessary')
     savePredictionUrl(state, predictionUrl) {
       state.predictionUrl = predictionUrl;
-    }
+    },
+    saveInferenceFlag(state, inferenceFlag) {
+      state.inferenceFlag = inferenceFlag;
+    },
   },
   getters: { // this.$store.getters.***  
     getPredictionUrl: async (state) => {
       var predictionUrl = state.predictionUrl;
       if (!predictionUrl) {
         try {
-          predictionUrl = await logAPI.inferenceAddress()
-          let port = getPort(predictionUrl)
+          let res = await logAPI.inferenceAddress()
+          let corsAllowed = res.corsAllowed
+          let port = getPort(res.inferenceAddress)
           if(port == window.location.port){
             predictionUrl = env.baseUrl
           }else{
+            if(corsAllowed !="1"){
+              store.commit("saveInferenceFlag", false)
+            }
             predictionUrl = window.location.protocol+"//"+window.location.hostname+":"+port
           }
         } catch (error) {
@@ -39,6 +47,9 @@ var store = new Vuex.Store({
         return predictionUrl;
       }
     },
+    getInferenceFlag:  (state) => {
+      return state.inferenceFlag
+    }
   },
   actions: {}
 })

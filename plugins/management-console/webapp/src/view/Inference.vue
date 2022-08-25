@@ -36,7 +36,7 @@
           </el-radio-group>
         </el-form-item>
         <div class="upload-area" v-show='dataType=="file"'>
-          <el-upload ref='upload' multiple :show-file-list="false"  :on-change="onChange" :auto-upload="false" name="data">
+          <el-upload ref='upload' multiple :show-file-list="false" :on-change="onChange" :auto-upload="false" name="data">
             <el-button size="medium" type="success">upload file</el-button>
           </el-upload>
           <div class="file-list">
@@ -215,6 +215,11 @@ export default {
       // console.log("header", header);
       // console.log(fileData instanceof FormData)
       let url = await this.$store.getters.getPredictionUrl
+      let inferenceFlag =   this.$store.getters.getInferenceFlag
+      if(!inferenceFlag){
+        this.$message.error("Since 'inference_address' is inconsistent with 'management_address', please confirm whether cors_allowed configuration is enabled")
+        return
+      }
       header.updateBaseURL = url
       let res = await modelApi.predictions(this.modelName, this.activeVersion, fileData, header)
       if (res.headers && res.headers['content-type']) {

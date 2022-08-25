@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
+import io.netty.util.internal.StringUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,7 +81,20 @@ public class LogRequestHandler implements RequestHandler<Void> {
                 ConfigManager configManager = ConfigManager.getInstance();
                 String inferenceAddress =
                         configManager.getProperty("inference_address", "http://127.0.0.1:8080");
-                NettyUtils.sendJsonResponse(ctx, inferenceAddress);
+                String origin = configManager.getProperty("cors_allowed_origin", "");
+                String methods = configManager.getProperty("cors_allowed_methods", "");
+                String headers = configManager.getProperty("cors_allowed_headers", "");
+                Map<String, String> map = new ConcurrentHashMap<>(2);
+                map.put("inferenceAddress", inferenceAddress);
+                map.put("corsAllowed", "0");
+                if (!StringUtil.isNullOrEmpty(origin)
+                        && !StringUtil.isNullOrEmpty(headers)
+                        && (!StringUtil.isNullOrEmpty(methods))) {
+                    if ("*".equals(methods) || methods.toUpperCase().contains("POST")) {
+                        map.put("corsAllowed", "1");
+                    }
+                }
+                NettyUtils.sendJsonResponse(ctx, map);
             } else if ("upload".equals(path)) {
                 upload(ctx, req);
             }

@@ -1,8 +1,8 @@
 const path = require("path");
 
 module.exports = {
-  // publicPath: '/console',
-  // outputDir: '../src/main/resources/static/console',
+  publicPath: '/console',
+  outputDir: '../src/main/resources/static/console',
   devServer: {
     port: 8082,
     proxy: {
