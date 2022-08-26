@@ -21,7 +21,7 @@
               <template slot="label">
                 <el-tooltip class="item" effect="dark" content="the name of the model and workflow; this name will be used as {workflow_name} in other API as path. If this parameter is not present, modelName will be inferred by url." placement="top"><span>model_name:</span></el-tooltip>
               </template>
-              <el-input v-model="form.model_name"></el-input>
+              <el-input v-model="form.model_name" @blur="nameBlur"></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -196,7 +196,9 @@ export default {
       let param = { ...this.form }
       if (this.isDown) param = (({ url, model_name, model_version, engine, device }) => ({ url, model_name, model_version, engine, device }))(this.form)
       let res = await modelApi.addModel(param)
+      console.log("submit",res);
       this.$message.success('Model "' + this.form.model_name + '" registered.')
+      this.$router.go(-1)
     },
     settingClick() {
       this.isDown = !this.isDown
@@ -222,6 +224,9 @@ export default {
          this.$message.error( "Make sure the 'max_request_size' value is greater than the current file size")
       }
       this.loading.close()
+    },
+    nameBlur(){
+      this.form.model_name = this.form.model_name.replace(/\s/g,"")
     }
   },
 };

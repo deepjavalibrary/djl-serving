@@ -9,6 +9,10 @@ body,
   min-width: 1366px;
   background-color: #f5f5f5;
 }
+.w1200{
+  width: 1200px;
+  margin: 0 auto;
+}
 *{
   box-sizing: border-box;
 }
@@ -49,3 +53,4 @@ li{
   font-size: 30px;
   background-color: rgba(255,255,255,.4);
 }
+

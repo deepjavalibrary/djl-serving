@@ -36,7 +36,7 @@
           </el-radio-group>
         </el-form-item>
         <div class="upload-area" v-show='dataType=="file"'>
-          <el-upload ref='upload' multiple :show-file-list="false" :on-change="onChange" :auto-upload="false" name="data">
+          <el-upload ref='upload' multiple :show-file-list="false" :on-change="onChange" :auto-upload="false" name="data" action="">
             <el-button size="medium" type="success">upload file</el-button>
           </el-upload>
           <div class="file-list">
@@ -79,7 +79,7 @@
       </el-form>
     </div>
     <div class="result-box">
-      <div class="title">Result</div>
+      <div :class="['title',{'error':resultError}]">Result</div>
       <div class="result-content">
         {{resultText}}
         <img :src="imgSrc">
@@ -111,7 +111,8 @@ export default {
       activeVersion: '',
       resultText: "",
       imgSrc: "",
-      bodyDatas: [{ key: '', value: '', checked: true }]
+      bodyDatas: [{ key: '', value: '', checked: true }],
+      resultError: false
 
     };
   },
@@ -183,6 +184,7 @@ export default {
       })
     },
     async predict() {
+      this.resultError = false
       this.imgSrc = ""
       this.resultText = ''
       let fileData = new FormData()
@@ -215,18 +217,36 @@ export default {
       // console.log("header", header);
       // console.log(fileData instanceof FormData)
       let url = await this.$store.getters.getPredictionUrl
-      let inferenceFlag =   this.$store.getters.getInferenceFlag
-      if(!inferenceFlag){
-        this.$message.error("Since 'inference_address' is inconsistent with 'management_address', please confirm whether cors_allowed configuration is enabled")
+      let inferenceFlag = this.$store.getters.getInferenceFlag
+      if (!inferenceFlag) {
+        // this.resultError = true
+        let str = "Since 'inference_address' is inconsistent with 'management_address', please confirm whether cors_allowed configuration is enabled"
+        // this.resultText = str
+        this.$message.error(str)
         return
       }
       header.updateBaseURL = url
-      let res = await modelApi.predictions(this.modelName, this.activeVersion, fileData, header)
+      let res
+      try {
+        res = await modelApi.predictions(this.modelName, this.activeVersion, fileData, header)
+      } catch (error) {
+        this.resultError = true
+        if (error.code) {
+          this.resultText = error.message
+        } else if (error instanceof Blob) {
+          let blob = new Blob([error])
+          var reader = new FileReader()
+          reader.onload = e => {
+            this.resultText = JSON.parse( reader.result).message
+          }
+          reader.readAsText(blob)
+        }
+        return
+      }
       if (res.headers && res.headers['content-type']) {
         let contentType = res.headers['content-type']
         console.log("contentType", contentType);
         if (contentType.startsWith("text/") || contentType == 'application/json') {
-
           if (res.data instanceof Blob) {
             let blob = new Blob([res.data])
             var reader = new FileReader()
@@ -234,31 +254,26 @@ export default {
               this.resultText = e.target.result
             }
             reader.readAsText(blob)
-
-
           } else {
-
             this.resultText = res.data
           }
         } else if (['tensor/ndlist', 'tensor/npz', "multipart/form-data"].includes(contentType)) {
-
-
           const link = document.createElement('a');
           let blob = new Blob([res.data]);
           link.style.display = 'none';
           link.href = URL.createObjectURL(blob);
-
           link.setAttribute('download', contentType.replace('/', "."));
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link)
-
-
         } else if (contentType.startsWith("image/")) {
           let blob = new Blob([res.data])
           this.imgSrc = window.URL.createObjectURL(blob)
         }
       }
+
+
+
 
       // var reader = new FileReader()
       // reader.onload = e => {
@@ -448,6 +463,11 @@ export default {
       background: #e5ffee;
       &::before {
         background: #02f21a;
+      }
+    }
+    .title.error {
+      &::before {
+        background: #fd444e;
       }
     }
     .result-content {

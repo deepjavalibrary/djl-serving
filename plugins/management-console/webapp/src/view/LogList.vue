@@ -4,7 +4,7 @@
     <div class="log-box">
       <div class="title">Running Log</div>
       <div class="log-content">
-        <el-table :data="logList" stripe style="width: 100%">
+        <el-table :data="logList" stripe style="width: 100%" empty-text="No data">
           <el-table-column prop="name" label="Name">
           </el-table-column>
           <el-table-column prop="length" label="Length">

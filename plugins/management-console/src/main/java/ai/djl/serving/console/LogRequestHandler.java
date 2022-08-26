@@ -15,12 +15,16 @@ package ai.djl.serving.console;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.ResourceNotFoundException;
+import ai.djl.serving.http.StatusResponse;
+import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.ConfigManager;
+import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.util.NettyUtils;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.FileUpload;
@@ -32,6 +36,7 @@ import io.netty.util.internal.StringUtil;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,13 +49,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/** A class handling inbound HTTP requests for the log API. */
+/**
+ * A class handling inbound HTTP requests for the log API.
+ */
 public class LogRequestHandler implements RequestHandler<Void> {
 
     private static final Pattern PATTERN =
-            Pattern.compile("^(/logs|/inferenceAddress|/upload)([/?].*)?");
+            Pattern.compile("^(/logs|/inferenceAddress|/upload|/dependency)([/?].*)?");
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean acceptInboundMessage(Object msg) {
         if (!(msg instanceof FullHttpRequest)) {
@@ -61,7 +70,9 @@ public class LogRequestHandler implements RequestHandler<Void> {
         return PATTERN.matcher(req.uri()).matches();
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Void handleRequest(
             ChannelHandlerContext ctx,
@@ -78,25 +89,15 @@ public class LogRequestHandler implements RequestHandler<Void> {
             if ("logs".equals(path)) {
                 listLogs(ctx, dir);
             } else if ("inferenceAddress".equals(path)) {
-                ConfigManager configManager = ConfigManager.getInstance();
-                String inferenceAddress =
-                        configManager.getProperty("inference_address", "http://127.0.0.1:8080");
-                String origin = configManager.getProperty("cors_allowed_origin", "");
-                String methods = configManager.getProperty("cors_allowed_methods", "");
-                String headers = configManager.getProperty("cors_allowed_headers", "");
-                Map<String, String> map = new ConcurrentHashMap<>(2);
-                map.put("inferenceAddress", inferenceAddress);
-                map.put("corsAllowed", "0");
-                if (!StringUtil.isNullOrEmpty(origin)
-                        && !StringUtil.isNullOrEmpty(headers)
-                        && (!StringUtil.isNullOrEmpty(methods))) {
-                    if ("*".equals(methods) || methods.toUpperCase().contains("POST")) {
-                        map.put("corsAllowed", "1");
-                    }
-                }
-                NettyUtils.sendJsonResponse(ctx, map);
+                getInferenceAddress(ctx, req);
             } else if ("upload".equals(path)) {
                 upload(ctx, req);
+            } else if ("dependency".equals(path)) {
+                if (HttpMethod.GET.equals(req.method())){
+                    listDependency(ctx, req);
+                }else if(HttpMethod.POST.equals(req.method())){
+                    addDependency(ctx, req,decoder);
+                }
             }
         } else if (segments.length <= 4) {
             String fileName = segments[2];
@@ -111,6 +112,69 @@ public class LogRequestHandler implements RequestHandler<Void> {
             throw new ResourceNotFoundException();
         }
         return null;
+    }
+
+    private void listDependency(ChannelHandlerContext ctx, FullHttpRequest req) {
+        String serverHome = ConfigManager.getModelServerHome();
+        Path depDir = Paths.get(serverHome, "deps");
+        List<Map<String, String>> list = new ArrayList<>();
+        MutableClassLoader mcl = MutableClassLoader.getInstance();
+
+        try (Stream<Path> stream = Files.walk(depDir)) {
+            stream.forEach(
+                    f -> {
+                        File file = f.toFile();
+                        String fileName = file.getName();
+                        if (fileName.endsWith(".jar")) {
+                            Map<String, String> m = new ConcurrentHashMap<>(4);
+                            m.put("name", fileName);
+                            String[] arr = fileName.split("_");
+                            if(arr.length==3){
+                                m.put("groupId",arr[0]);
+                                m.put("artifactId",arr[1]);
+                                m.put("version",arr[2].replace(".jar",""));
+                            }
+//                            m.put("lastModified", String.valueOf(file.lastModified()));
+                            list.add(m);
+                        }
+                    });
+        } catch (IOException e) {
+            throw new InternalServerException("Failed to list dependency files", e);
+        }
+        NettyUtils.sendJsonResponse(ctx, list);
+    }
+
+    private void addDependency(ChannelHandlerContext ctx, FullHttpRequest req, QueryStringDecoder decoder) {
+        String coordinate = NettyUtils.getParameter(decoder, "coordinate", "");
+        DependencyManager dm = DependencyManager.getInstance();
+        try {
+            dm.installDependency(coordinate);
+            String msg = "Dependency added successfully";
+            NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
+        } catch (IOException e) {
+            throw new InternalServerException("Failed to install dependency", e);
+        }
+    }
+
+
+    private void getInferenceAddress(ChannelHandlerContext ctx, FullHttpRequest req) {
+        ConfigManager configManager = ConfigManager.getInstance();
+        String inferenceAddress =
+                configManager.getProperty("inference_address", "http://127.0.0.1:8080");
+        String origin = configManager.getProperty("cors_allowed_origin", "");
+        String methods = configManager.getProperty("cors_allowed_methods", "");
+        String headers = configManager.getProperty("cors_allowed_headers", "");
+        Map<String, String> map = new ConcurrentHashMap<>(2);
+        map.put("inferenceAddress", inferenceAddress);
+        map.put("corsAllowed", "0");
+        if (!StringUtil.isNullOrEmpty(origin)
+                && !StringUtil.isNullOrEmpty(headers)
+                && (!StringUtil.isNullOrEmpty(methods))) {
+            if ("*".equals(methods) || methods.toUpperCase().contains("POST")) {
+                map.put("corsAllowed", "1");
+            }
+        }
+        NettyUtils.sendJsonResponse(ctx, map);
     }
 
     private void upload(ChannelHandlerContext ctx, FullHttpRequest req) {
