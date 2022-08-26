@@ -1,0 +1,14 @@
+plugins {
+    id "java-library"
+}
+
+dependencies {
+    api project(":serving")
+}
+
+task copyJar(type: Copy) {
+    from jar // here it automatically reads jar file produced from jar task
+    into "../../serving/plugins"
+}
+
+jar.finalizedBy(copyJar)

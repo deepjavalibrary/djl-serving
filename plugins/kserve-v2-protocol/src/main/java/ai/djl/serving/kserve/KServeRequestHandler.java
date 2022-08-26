@@ -10,7 +10,7 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package ai.djl.serving.http;
+package ai.djl.serving.kserve;
 
 import ai.djl.Device;
 import ai.djl.Model;
@@ -21,8 +21,12 @@ import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.http.BadRequestException;
+import ai.djl.serving.http.MethodNotAllowedException;
+import ai.djl.serving.http.ResourceNotFoundException;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
+import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.WlmException;
@@ -57,7 +61,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /** A class handling inbound HTTP requests for the KServe API. */
-public class KServeRequestHandler extends HttpRequestHandler {
+//public class KServeRequestHandler extends HttpRequestHandler {
+public class KServeRequestHandler implements RequestHandler<Void> {
 
     private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
 
@@ -66,17 +71,23 @@ public class KServeRequestHandler extends HttpRequestHandler {
 
     /** {@inheritDoc} */
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
-        if (super.acceptInboundMessage(msg)) {
-            FullHttpRequest req = (FullHttpRequest) msg;
-            return PATTERN.matcher(req.uri()).matches();
+    public boolean acceptInboundMessage(Object msg) {
+        if (!(msg instanceof FullHttpRequest)) {
+            return false;
         }
-        return false;
+
+        FullHttpRequest req = (FullHttpRequest) msg;
+        return PATTERN.matcher(req.uri()).matches();
     }
 
-    /** {@inheritDoc} */
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return
+     */
     @Override
-    protected void handleRequest(
+    public Void handleRequest(
             ChannelHandlerContext ctx,
             FullHttpRequest req,
             QueryStringDecoder decoder,
@@ -102,6 +113,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
         } catch (Exception exception) {
             onException(exception, ctx);
         }
+        return null;
     }
 
     private void requireGet(HttpMethod method) {
@@ -282,8 +294,8 @@ public class KServeRequestHandler extends HttpRequestHandler {
         }
 
         try (Reader reader =
-                new InputStreamReader(
-                        new ByteBufInputStream(req.content()), StandardCharsets.UTF_8)) {
+                     new InputStreamReader(
+                             new ByteBufInputStream(req.content()), StandardCharsets.UTF_8)) {
             InferenceRequest request = JsonUtils.GSON.fromJson(reader, InferenceRequest.class);
             Input input = request.toInput();
 
@@ -369,7 +381,7 @@ public class KServeRequestHandler extends HttpRequestHandler {
         Input toInput() {
             Input input = new Input();
             try (NDManager manager = NDManager.newBaseManager();
-                    NDList list = new NDList()) {
+                 NDList list = new NDList()) {
                 for (KServeTensor tensor : inputs) {
                     list.add(tensor.toTensor(manager));
                 }
