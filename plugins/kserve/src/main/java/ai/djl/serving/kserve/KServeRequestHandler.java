@@ -61,7 +61,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /** A class handling inbound HTTP requests for the KServe API. */
-//public class KServeRequestHandler extends HttpRequestHandler {
 public class KServeRequestHandler implements RequestHandler<Void> {
 
     private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
@@ -79,7 +78,6 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         FullHttpRequest req = (FullHttpRequest) msg;
         return PATTERN.matcher(req.uri()).matches();
     }
-
 
     /**
      * {@inheritDoc}
@@ -294,8 +292,8 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         }
 
         try (Reader reader =
-                     new InputStreamReader(
-                             new ByteBufInputStream(req.content()), StandardCharsets.UTF_8)) {
+                new InputStreamReader(
+                        new ByteBufInputStream(req.content()), StandardCharsets.UTF_8)) {
             InferenceRequest request = JsonUtils.GSON.fromJson(reader, InferenceRequest.class);
             Input input = request.toInput();
 
@@ -381,7 +379,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         Input toInput() {
             Input input = new Input();
             try (NDManager manager = NDManager.newBaseManager();
-                 NDList list = new NDList()) {
+                    NDList list = new NDList()) {
                 for (KServeTensor tensor : inputs) {
                     list.add(tensor.toTensor(manager));
                 }

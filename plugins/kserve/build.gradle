@@ -4,6 +4,10 @@ plugins {
 
 dependencies {
     api project(":serving")
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
 }
 
 task copyJar(type: Copy) {

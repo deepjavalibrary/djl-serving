@@ -116,12 +116,13 @@ applicationDistribution.from("src/main/conf/") {
 }
 tasks.test.dependsOn(
         ":central:jar",
+        ":plugins:kserve:jar",
         ":plugins:plugin-management-plugin:jar",
-        ":plugins:static-file-plugin:jar",
-        ":plugins:kserve-v2-protocol:jar")
-tasks.run.dependsOn(":plugins:management-console:jar",
-        ":plugins:static-file-plugin:jar",
-        ":plugins:kserve-v2-protocol:jar")
+        ":plugins:static-file-plugin:jar")
+tasks.run.dependsOn(
+        ":plugins:kserve:jar",
+        ":plugins:management-console:jar",
+        ":plugins:static-file-plugin:jar")
 
 test {
     workingDir projectDir
