@@ -19,12 +19,8 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 import ai.djl.modality.Classifications.Classification;
-import ai.djl.ndarray.types.DataType;
-import ai.djl.ndarray.types.Shape;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.ErrorResponse;
-import ai.djl.serving.http.KServeDescribeModelResponse;
-import ai.djl.serving.http.KServeTensorTest;
 import ai.djl.serving.http.ListModelsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse.WorkflowItem;
@@ -38,6 +34,8 @@ import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
 import ai.djl.util.cuda.CudaUtils;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 
 import io.netty.bootstrap.Bootstrap;
@@ -96,7 +94,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -678,11 +675,10 @@ public class ModelServerTest {
         channel.writeAndFlush(req);
         latch.await();
 
-        KServeDescribeModelResponse resp =
-                JsonUtils.GSON.fromJson(result, KServeDescribeModelResponse.class);
-        assertEquals(resp.getName(), "mlp");
-        assertEquals(resp.getVersions(), Collections.singletonList("v1"));
-        assertEquals(resp.getPlatform(), "mxnet_mxnet");
+        JsonElement json = JsonUtils.GSON.fromJson(result, JsonElement.class);
+        JsonObject resp = json.getAsJsonObject();
+        assertEquals(resp.get("name").getAsString(), "mlp");
+        assertEquals(resp.get("platform").getAsString(), "mxnet_mxnet");
     }
 
     private void testDescribeModel(Channel channel) throws InterruptedException {
@@ -1136,13 +1132,17 @@ public class ModelServerTest {
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1, HttpMethod.POST, "/v2/models/identity/infer");
 
-        Map<String, String> outputs = new ConcurrentHashMap<>();
-        outputs.put("name", "output0");
+        Map<String, String> output = new ConcurrentHashMap<>();
+        output.put("name", "output0");
+        Map<String, Object> input = new ConcurrentHashMap<>();
+        input.put("name", "input0");
+        input.put("dataType", "INT8");
+        input.put("shape", new long[] {1, 10});
+        input.put("data", new double[10]);
         Map<String, Object> data = new ConcurrentHashMap<>();
         data.put("id", "42");
-        Object tensor = KServeTensorTest.getKServeTensor(new Shape(1, 10), DataType.INT8);
-        data.put("inputs", new Object[] {tensor});
-        data.put("outputs", new Object[] {outputs});
+        data.put("inputs", new Object[] {input});
+        data.put("outputs", new Object[] {output});
 
         req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
         HttpUtil.setContentLength(req, req.content().readableBytes());

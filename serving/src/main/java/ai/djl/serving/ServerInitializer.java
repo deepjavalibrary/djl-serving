@@ -15,7 +15,6 @@ package ai.djl.serving;
 import ai.djl.serving.http.ConfigurableHttpRequestHandler;
 import ai.djl.serving.http.InferenceRequestHandler;
 import ai.djl.serving.http.InvalidRequestHandler;
-import ai.djl.serving.http.KServeRequestHandler;
 import ai.djl.serving.http.ManagementRequestHandler;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
@@ -82,7 +81,6 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
                 pipeline.addLast("management", new ManagementRequestHandler());
                 break;
         }
-        pipeline.addLast("kserve", new KServeRequestHandler());
         pipeline.addLast("badRequest", new InvalidRequestHandler());
     }
 }
