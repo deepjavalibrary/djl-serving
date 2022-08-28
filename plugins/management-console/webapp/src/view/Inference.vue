@@ -29,15 +29,15 @@
           <i class="el-icon-close" @click="deleteHeader(index)" v-if="index != headers.length-1"></i>
         </el-row>
         <div class="header">Body</div>
-        <el-form-item label="data-type:">
+        <el-form-item label="Data type:">
           <el-radio-group v-model="dataType" @change="dataTypeChange">
-            <el-radio label="file">file</el-radio>
-            <el-radio label="text">text</el-radio>
+            <el-radio label="file">File</el-radio>
+            <el-radio label="text">Text</el-radio>
           </el-radio-group>
         </el-form-item>
         <div class="upload-area" v-show='dataType=="file"'>
           <el-upload ref='upload' multiple :show-file-list="false" :on-change="onChange" :auto-upload="false" name="data" action="">
-            <el-button size="medium" type="success">upload file</el-button>
+            <el-button size="medium" type="success">Click to upload</el-button>
           </el-upload>
           <div class="file-list">
 
@@ -73,15 +73,15 @@
           </el-input>
         </div>
         <div class="submit-btns">
-          <el-button type="info" size="medium" @click="cancel">cancel</el-button>
-          <el-button type="primary" class="predict" size="medium" @click="predict">predict</el-button>
+          <el-button type="info" size="medium" @click="cancel">Cancel</el-button>
+          <el-button type="primary" class="predict" size="medium" @click="predict">Predict</el-button>
         </div>
       </el-form>
     </div>
     <div class="result-box">
       <div :class="['title',{'error':resultError}]">Result</div>
       <div class="result-content">
-        {{resultText}}
+        <pre>{{resultText}}</pre>
         <img :src="imgSrc">
       </div>
     </div>
@@ -237,7 +237,7 @@ export default {
           let blob = new Blob([error])
           var reader = new FileReader()
           reader.onload = e => {
-            this.resultText = JSON.parse( reader.result).message
+            this.resultText =  JSON.parse( reader.result).message
           }
           reader.readAsText(blob)
         }

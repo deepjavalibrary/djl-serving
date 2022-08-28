@@ -70,8 +70,8 @@ export default {
     },
     async del(model) {
       const confirmResult = await this.$confirm('Are you sure to delete ' + name, 'Warning', {
-        confirmButtonText: 'sure',
-        cancelButtonText: 'cancel',
+        confirmButtonText: 'Sure',
+        cancelButtonText: 'Cancel',
         type: 'warning',
       }).catch((err) => err)
       if (confirmResult == 'confirm') {
