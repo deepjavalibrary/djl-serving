@@ -11,6 +11,7 @@ const Inference = () => import('@/view/Inference.vue')
 const Log = () => import('@/view/LogInfo.vue')
 const LogList = () => import('@/view/LogList.vue')
 const Dependency = () => import('@/view/Dependency.vue')
+const Config = () => import('@/view/Config.vue')
 
 
 Vue.use(Router)
@@ -30,6 +31,7 @@ const router = new Router({
         { path: '/log/:name', component: Log, },
         { path: '/log-list', component: LogList, },
         { path: '/dependency', component: Dependency, },
+        { path: '/config', component: Config, },
       ]
     }
   ]

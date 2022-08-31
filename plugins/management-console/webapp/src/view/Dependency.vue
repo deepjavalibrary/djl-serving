@@ -100,6 +100,7 @@
 import * as dependencyApi from "@/api/dependencyAPI.js"
 
 export default {
+  name: 'Dependency',
   components: {
 
   },
@@ -172,14 +173,14 @@ export default {
         }
       }
       let res = await dependencyApi.addDependency(params)
-      console.log("addDependency",res);
+      console.log("addDependency", res);
       this.$message.success(res.data.status)
       this.addFlag = false
       await this.qryDependencies()
 
     },
     async del(val) {
-      console.log("delete",val);
+      console.log("delete", val);
       this.$confirm(`Are you sure to delete  ${val.name}？`, 'Warning', {
         confirmButtonText: 'Sure',
         cancelButtonText: 'Cancel',

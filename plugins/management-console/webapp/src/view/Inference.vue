@@ -164,8 +164,8 @@ export default {
     },
     removeFile(file) {
       return this.$confirm(`Are you sure to delete  ${file.fileName}？`, 'Warning', {
-        confirmButtonText: 'sure',
-        cancelButtonText: 'cancel',
+        confirmButtonText: 'Sure',
+        cancelButtonText: 'Cancel',
         type: 'warning',
       }).then(() => {
 
@@ -214,18 +214,17 @@ export default {
           header[v.key] = v.value
         }
       })
-      // console.log("header", header);
-      // console.log(fileData instanceof FormData)
-      let url = await this.$store.getters.getPredictionUrl
-      let inferenceFlag = this.$store.getters.getInferenceFlag
-      if (!inferenceFlag) {
-        // this.resultError = true
-        let str = "Since 'inference_address' is inconsistent with 'management_address', please confirm whether cors_allowed configuration is enabled"
-        // this.resultText = str
-        this.$message.error(str)
-        return
+   
+      if (process.env.NODE_ENV != 'development') {
+        let url = await this.$store.getters.getPredictionUrl
+        let inferenceFlag = this.$store.getters.getInferenceFlag
+        if (!inferenceFlag) {
+          let str = "Since 'inference_address' is inconsistent with 'management_address', please confirm whether cors_allowed configuration is enabled"
+          this.$message.error(str)
+          return
+        }
+        header.updateBaseURL = url
       }
-      header.updateBaseURL = url
       let res
       try {
         res = await modelApi.predictions(this.modelName, this.activeVersion, fileData, header)
@@ -237,7 +236,7 @@ export default {
           let blob = new Blob([error])
           var reader = new FileReader()
           reader.onload = e => {
-            this.resultText =  JSON.parse( reader.result).message
+            this.resultText = JSON.parse(reader.result).message
           }
           reader.readAsText(blob)
         }
@@ -271,24 +270,6 @@ export default {
           this.imgSrc = window.URL.createObjectURL(blob)
         }
       }
-
-
-
-
-      // var reader = new FileReader()
-      // reader.onload = e => {
-      //   this.resultText = e.target.result
-      // }
-      // if (this.dataType == 'file') {
-      //   if ("application/json" == res.type) {
-      //     reader.readAsText(blob)
-      //   }else{
-      //     this.imgSrc = window.URL.createObjectURL(blob)
-      //   }
-      // } else {
-      //   this.resultText = res
-      // }
-
       console.log(res);
     },
     cancel() {

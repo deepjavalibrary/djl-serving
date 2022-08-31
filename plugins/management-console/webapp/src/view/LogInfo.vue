@@ -3,7 +3,7 @@
     <h3>Log Info</h3>
     <div class="log-box">
       <div class="title">{{logName}}</div>
-      <div class="log-content">
+      <div class="log-content" ref="logContent">
         <pre>{{logText}}</pre>
       </div>
     </div>
@@ -14,7 +14,7 @@
 import * as logApi from "@/api/logAPI"
 
 export default {
-  name: "Log",
+  name: "LogInfo",
   components: {
 
   },
@@ -40,7 +40,10 @@ export default {
     this.logName = this.$route.params.name
     let res = await logApi.logInfo(this.logName)
     this.logText = res
-
+    this.$nextTick(() => {
+      let middle = this.$refs["logContent"];
+      middle.scrollTop = middle.scrollHeight;
+    })
   },
   methods: {
 

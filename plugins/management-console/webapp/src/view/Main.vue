@@ -14,8 +14,8 @@
               <!-- <el-menu-item index="/log-list">System</el-menu-item> -->
               <el-submenu index="">
                 <template slot="title">System</template>
-                <el-menu-item index="dependency">Dependency</el-menu-item>
-                <el-menu-item index="config">Config</el-menu-item>
+                <el-menu-item index="/dependency">Dependency</el-menu-item>
+                <el-menu-item index="/config">Config</el-menu-item>
               </el-submenu>
             </el-menu>
           </div>
