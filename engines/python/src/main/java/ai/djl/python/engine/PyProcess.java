@@ -18,6 +18,7 @@ import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.translate.TranslateException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +55,7 @@ class PyProcess {
         latch = new CountDownLatch(1);
     }
 
-    Output predict(Input inputs, int timeout, boolean initialLoad) {
+    Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
         try {
             if (inputs.getProperty("handler", null) == null) {
                 String handler = pyEnv.getHandler();
@@ -76,7 +77,7 @@ class PyProcess {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
             }
-            throw new EngineException(e);
+            throw new TranslateException(e);
         }
     }
 
