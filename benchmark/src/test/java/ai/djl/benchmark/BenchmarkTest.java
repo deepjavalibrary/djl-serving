@@ -90,7 +90,7 @@ public class BenchmarkTest {
             "-c",
             "2"
         };
-        new Benchmark().runBenchmark(args);
+        Assert.assertTrue(new Benchmark().runBenchmark(args));
     }
 
     @Test
