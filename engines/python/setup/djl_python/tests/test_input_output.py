@@ -4,6 +4,7 @@ from djl_python import test_model, Input, Output
 
 
 class TestInputOutput(unittest.TestCase):
+
     def test_empty_input(self):
         inputs = Input()
         with self.assertRaises(Exception):

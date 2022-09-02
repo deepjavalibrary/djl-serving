@@ -18,6 +18,7 @@ import os
 
 
 class ModelService(object):
+
     def __init__(self, module, model_dir):
         self.module = module
         self.model_dir = model_dir
