@@ -8,7 +8,7 @@
       </div>
     </div>
     <div class="submit-btns">
-      <el-button type="info" size="medium" @click="cancel">Cancel</el-button>
+      <el-button type="info" size="medium" @click="discard">Discard</el-button>
       <el-button type="primary" size="medium" @click="submit">Save</el-button>
     </div>
   </div>
@@ -16,6 +16,7 @@
 
 <script>
 import * as monaco from 'monaco-editor'
+import * as configApi from "@/api/configAPI"
 
 export default {
   name: "Config",
@@ -49,10 +50,10 @@ export default {
 
   },
   async mounted() {
-    this.init()
+    await this.init()
   },
   methods: {
-    init() {
+    async init() {
       // Initialize the contents of the container and destroy the previously generated editor
       this.$refs.container.innerHTML = ''
       // Build editor configuration
@@ -64,16 +65,33 @@ export default {
       this.monacoEditor.onDidChangeModelContent(() => {
         // this.$emit('change', this.monacoEditor.getValue())
       })
-      let text = ''
+     
+      await this.getConfig()
+
+    },
+
+    async discard() {
+      await this.getConfig()
+    },
+    async submit() {
+      let prop = this.monacoEditor.getValue()
+      console.log(escape(prop));
+      const confirmResult = await this.$confirm('The server needs to be restarted for the configuration to take effect. Are you sure to restart' , 'Warning', {
+        confirmButtonText: 'Sure',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+      }).catch((err) => err)
+      if (confirmResult == 'confirm') {
+        let res = await configApi.modifyConfig({prop})
+        this.$message.success(res.data.status)
+        
+      }
+    },
+    async getConfig(){
+      let res =await configApi.getConfig()
+      let text = res.status
       this.monacoEditor.setValue(`${text}`)
 
-    },
-
-    cancel() {
-      this.$router.go(-1)
-    },
-    submit() {
-      console.log(this.monacoEditor.getValue());
     }
 
   },

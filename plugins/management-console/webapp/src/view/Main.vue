@@ -19,7 +19,7 @@
               </el-submenu>
             </el-menu>
           </div>
-          <div class="right">0.19.0</div>
+          <div class="right">{{version}}</div>
         </div>
       </el-header>
       <el-main >
@@ -33,6 +33,8 @@
 </template>
 
 <script>
+  import * as configApi from "@/api/configAPI"
+
 export default {
   name: "Main",
   components: {
@@ -43,7 +45,8 @@ export default {
   },
   data() {
     return {
-      activeIndex: '/home',
+      activeIndex: '/model-list',
+      version:''
     };
   },
   computed: {
@@ -55,8 +58,9 @@ export default {
   created() {
 
   },
-  mounted() {
-
+  async mounted() {
+   let res = await configApi.getVersion()
+   this.version = res.status
   },
   methods: {
 
