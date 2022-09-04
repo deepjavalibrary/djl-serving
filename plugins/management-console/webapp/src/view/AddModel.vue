@@ -9,7 +9,7 @@
           <template slot="label">
             <el-tooltip class="item" effect="dark" content="Model url." placement="top"><span>Url:</span></el-tooltip>
           </template>
-          <el-input v-model="form.url">
+          <el-input v-model="form.url" @blur="nameBlur">
             <el-upload slot="append" :show-file-list="false" :action="baseURL+'upload'" :on-error="uploadFailed" :on-success="uploadSuccess" :before-upload="beforeUpload">
               <el-button slot="trigger" icon="el-icon-upload2"></el-button>
             </el-upload>
@@ -234,6 +234,7 @@ export default {
     },
     nameBlur() {
       this.form.model_name = this.form.model_name.replace(/\s/g, "")
+      this.form.url = this.form.url.replace(/\s/g, "")
     }
   },
 };
