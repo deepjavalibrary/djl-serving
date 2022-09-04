@@ -70,7 +70,7 @@ public class JavaNDManager extends BaseNDManager {
     @Override
     public NDArray create(Buffer data, Shape shape, DataType dataType) {
         int size = Math.toIntExact(shape.size());
-        BaseNDManager.validateBufferSize(data, dataType, size);
+        BaseNDManager.validateBuffer(data, dataType, size);
         if (data instanceof ByteBuffer) {
             return new JavaNDArray(this, alternativeManager, (ByteBuffer) data, shape, dataType);
         }
