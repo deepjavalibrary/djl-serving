@@ -23,6 +23,9 @@ dependencies {
     runtimeOnly "ai.djl.tensorflow:tensorflow-model-zoo"
     runtimeOnly "ai.djl.pytorch:pytorch-model-zoo"
     runtimeOnly "ai.djl.tensorrt:tensorrt"
+    if (project.hasProperty("snapshot")) {
+        runtimeOnly "ai.djl.onnxruntime:onnxruntime-engine"
+    }
     if (JavaVersion.current() >= JavaVersion.VERSION_15) {
         testRuntimeOnly "org.bouncycastle:bcpkix-jdk15on:1.70"
         testRuntimeOnly "org.bouncycastle:bcprov-jdk15on:1.70"
