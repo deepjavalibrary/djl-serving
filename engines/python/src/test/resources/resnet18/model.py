@@ -32,6 +32,7 @@ class Resnet18(object):
     """
     Resnet18 Model implementation.
     """
+
     def __init__(self):
         self.device = None
         self.model = None
@@ -90,11 +91,9 @@ class Resnet18(object):
             outputs.add_as_json(
                 self.map_class_to_label(probs, self.mapping, classes))
         except Exception as e:
-            logging.error(e, exc_info=True)
+            logging.exception("accumulate failed")
             # error handling
-            outputs.set_code(500)
-            outputs.set_message(str(e))
-            outputs.add("inference failed", key="data")
+            outputs = Output().error(str(e))
 
         return outputs
 

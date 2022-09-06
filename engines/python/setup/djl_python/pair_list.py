@@ -13,6 +13,7 @@
 
 
 class PairList(object):
+
     def __init__(self, keys=None, values=None, pair_list=None, pair_map=None):
         if keys and values:
             if len(keys) != len(values):

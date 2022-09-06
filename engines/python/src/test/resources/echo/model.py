@@ -14,7 +14,6 @@
 Test Python model example.
 """
 
-import numpy as np
 from djl_python import Input
 from djl_python import Output
 
@@ -23,8 +22,15 @@ def handle(inputs: Input):
     """
     Default handler function
     """
-    data = inputs.get_as_numpy()
+    if inputs.contains_key("exception"):
+        ex = inputs.get_as_string("exception")
+        raise ValueError(ex)
+
+    data = inputs.get_as_bytes()
+    content_type = inputs.get_property("content-type")
     outputs = Output()
-    outputs.add_as_numpy([data[0]])
+    outputs.add(data, key="data")
+    if content_type:
+        outputs.add_property("content-type", content_type)
 
     return outputs

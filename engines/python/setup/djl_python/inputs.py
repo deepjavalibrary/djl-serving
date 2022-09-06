@@ -69,6 +69,7 @@ def retrieve_utf8(conn):
 
 
 class Input(object):
+
     def __init__(self):
         self.function_name = None
         self.properties = dict()
@@ -111,7 +112,10 @@ class Input(object):
              for k, v in self.properties.items() if k.lower() == key.lower()),
             None)
 
-    def get_data(self, key=None) -> list:
+    def contains_key(self, key) -> bool:
+        return self.content.get(key) is not None
+
+    def get_data(self, key=None):
         content_type = self.get_property("content-type")
         if content_type == "tensor/ndlist":
             return self.get_as_numpy(key)
@@ -123,12 +127,14 @@ class Input(object):
             return self.get_as_string(key)
         elif content_type is not None and content_type.startswith("image/"):
             return self.get_as_image(key)
+        elif self.content.is_empty():
+            return None
         else:
             return self.get_as_bytes(key=key)
 
     def get_as_bytes(self, key=None):
         if self.content.is_empty():
-            raise Exception("input is empty.")
+            return None
 
         if key:
             ret = self.content.get(key)
@@ -143,13 +149,13 @@ class Input(object):
             ret = self.content.value_at(0)
         return ret
 
-    def get_as_string(self, key=None):
+    def get_as_string(self, key=None) -> str:
         return self.get_as_bytes(key=key).decode("utf-8")
 
-    def get_as_json(self, key=None) -> list:
+    def get_as_json(self, key=None):
         return ast.literal_eval(self.get_as_bytes(key=key).decode("utf-8"))
 
-    def get_as_image(self, key=None) -> list:
+    def get_as_image(self, key=None):
         from PIL import Image
         return Image.open(io.BytesIO(self.get_as_bytes(key=key)))
 
@@ -172,7 +178,7 @@ class Input(object):
     def get_as_csv(self, key=None) -> list:
         import csv
         stream = io.StringIO(self.get_as_string(key=key))
-        request_list = list(csv.DictReader(stream))
+        return list(csv.DictReader(stream))
 
     def is_empty(self):
         return self.content.is_empty()

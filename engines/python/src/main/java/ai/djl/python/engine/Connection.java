@@ -24,6 +24,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -78,6 +79,8 @@ class Connection {
         String[] args = getPythonStartCmd(pyEnv, model);
         String[] envp = pyEnv.getEnvironmentVars(model);
 
+        logger.debug("cmd: {}", (Object) args);
+
         return Runtime.getRuntime().exec(args, envp, modelPath);
     }
 
@@ -122,7 +125,7 @@ class Connection {
                     .channel(getClientChannel())
                     .remoteAddress(getSocketAddress())
                     .handler(
-                            new ChannelInitializer<Channel>() {
+                            new ChannelInitializer<>() {
 
                                 @Override
                                 protected void initChannel(Channel ch) {
@@ -191,6 +194,7 @@ class Connection {
         return NioSocketChannel.class;
     }
 
+    @ChannelHandler.Sharable
     private static final class RequestHandler extends SimpleChannelInboundHandler<Output> {
 
         private CompletableFuture<Output> future;

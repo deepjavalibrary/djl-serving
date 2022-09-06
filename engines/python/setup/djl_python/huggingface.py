@@ -11,16 +11,15 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import importlib
 import json
 import logging
 import os
-import sys
-import time
+
+from transformers import pipeline, Conversation
+
+from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.encode_decode import encode, decode
-from transformers import pipeline
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -40,6 +39,7 @@ ARCHITECTURES_2_TASK = {
 
 
 class HuggingFaceService(object):
+
     def __init__(self):
         self.hf_pipeline = None
         self.initialized = False
@@ -67,7 +67,6 @@ class HuggingFaceService(object):
         self.initialized = True
 
     def inference(self, inputs):
-        outputs = Output()
         try:
             content_type = inputs.get_property("Content-Type")
             accept = inputs.get_property("Accept")
@@ -87,20 +86,17 @@ class HuggingFaceService(object):
             else:
                 prediction = self.hf_pipeline(data)
 
+            outputs = Output()
             encode(outputs, prediction, accept)
-            return outputs
         except Exception as e:
-            logging.error(e, exc_info=True)
+            logging.exception("Huggingface inference failed")
             # error handling
-            outputs.set_code(500)
-            outputs.set_message(str(e))
-            outputs.add("inference failed", key="data")
+            outputs = Output().error(str(e))
 
         return outputs
 
-    @staticmethod
-    def get_pipeline(task: str, device: int, model_id: str, model_dir: str,
-                     **kwargs):
+    def get_pipeline(self, task: str, device: int, model_id: str,
+                     model_dir: str, **kwargs):
         model = model_id if model_id else model_dir
 
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
@@ -125,19 +121,20 @@ class HuggingFaceService(object):
 
         # wrapp specific pipeline to support better ux
         if task == "conversational":
-            hf_pipeline = wrap_conversation_pipeline(hf_pipeline)
+            hf_pipeline = self.wrap_conversation_pipeline(hf_pipeline)
 
         return hf_pipeline
 
     @staticmethod
-    def wrap_conversation_pipeline(pipeline):
+    def wrap_conversation_pipeline(hf_pipeline):
+
         def wrapped_pipeline(inputs, *args, **kwargs):
             converted_input = Conversation(
                 inputs["text"],
                 past_user_inputs=inputs.get("past_user_inputs", []),
                 generated_responses=inputs.get("generated_responses", []),
             )
-            prediction = pipeline(converted_input, *args, **kwargs)
+            prediction = hf_pipeline(converted_input, *args, **kwargs)
             return {
                 "generated_text": prediction.generated_responses[-1],
                 "conversation": {
@@ -161,7 +158,7 @@ class HuggingFaceService(object):
 
         if task is None:
             raise ValueError(
-                f"Task couldn't be inferenced from {architecture}. Please manually set `task` option."
+                f"Task couldn't be inferred from {architecture}. Please manually set `task` option."
             )
         return task
 
