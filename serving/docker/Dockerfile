@@ -46,7 +46,7 @@ RUN scripts/install_python.sh && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
     if [[ ! "$djl_version" == *SNAPSHOT ]] ; then \
      djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.18.0 && \
-     djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.12.1 \
+     djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.12.1; \
     fi && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.18.0 && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.12.1 && \
