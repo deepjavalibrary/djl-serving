@@ -22,7 +22,8 @@ import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.util.NettyUtils;
-
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -34,8 +35,8 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.handler.codec.http.multipart.MixedAttribute;
-import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.internal.StringUtil;
+import org.apache.commons.compress.utils.Charsets;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,12 +52,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
-import org.apache.commons.compress.utils.Charsets;
-
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 /** A class handling inbound HTTP requests for the log API. */
 public class LogRequestHandler implements RequestHandler<Void> {
@@ -130,7 +125,6 @@ public class LogRequestHandler implements RequestHandler<Void> {
 		String jsonStr = req.content().toString(Charsets.toCharset("UTF-8"));
 		JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
 		String prop = json.get("prop").getAsString();
-		System.out.println(prop);
 		ConfigManager configManager = ConfigManager.getInstance();
 		String configFile = configManager.getProperty("configFile", "");
 		if (!"".equals(configFile)) {
