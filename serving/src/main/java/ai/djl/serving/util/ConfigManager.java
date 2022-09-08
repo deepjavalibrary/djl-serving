@@ -80,6 +80,8 @@ public final class ConfigManager {
     private static final String USE_NATIVE_IO = "use_native_io";
     private static final String IO_RATIO = "io_ratio";
 
+    private static final int DEF_MAX_REQUEST_SIZE = 64 * 1024 * 1024;
+
     private static ConfigManager instance;
 
     private Properties prop;
@@ -424,7 +426,7 @@ public final class ConfigManager {
                 + "\nNetty threads: "
                 + getNettyThreads()
                 + "\nMaximum Request Size: "
-                + prop.getProperty(MAX_REQUEST_SIZE, "6553500");
+                + prop.getProperty(MAX_REQUEST_SIZE, String.valueOf(getMaxRequestSize()));
     }
 
     /**
@@ -451,7 +453,7 @@ public final class ConfigManager {
      * @return the maximum allowed request size in bytes
      */
     public int getMaxRequestSize() {
-        return getIntProperty(MAX_REQUEST_SIZE, 6553500);
+        return getIntProperty(MAX_REQUEST_SIZE, DEF_MAX_REQUEST_SIZE);
     }
 
     private int getIntProperty(String key, int def) {
