@@ -447,6 +447,7 @@ export default {
       }
     }
     .title.error {
+      background: #ffd5d7;
       &::before {
         background: #fd444e;
       }
