@@ -1,6 +1,5 @@
 import http from '../common/http'
 
-
 export const models = () =>{
   return http.requestGet('/models');
 }

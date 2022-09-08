@@ -34,7 +34,7 @@ export default {
         theme: 'vs-dark', // Editor theme：vs, hc-black, or vs-dark
         roundedSelection: true, // The editor preview box is not displayed on the right
         autoIndent: true, // Auto indent
-        language: 'ini' 
+        language: 'ini'
       },
       // Editor object
       monacoEditor: {},
@@ -65,7 +65,7 @@ export default {
       this.monacoEditor.onDidChangeModelContent(() => {
         // this.$emit('change', this.monacoEditor.getValue())
       })
-     
+
       await this.getConfig()
 
     },
@@ -76,15 +76,15 @@ export default {
     async submit() {
       let prop = this.monacoEditor.getValue()
       console.log(escape(prop));
-      const confirmResult = await this.$confirm('The server needs to be restarted for the configuration to take effect. Are you sure to restart' , 'Warning', {
-        confirmButtonText: 'Sure',
+      const confirmResult = await this.$confirm('You may need to restart server for the configuration to take effect. Are you sure to continue?' , 'Warning', {
+        confirmButtonText: 'OK',
         cancelButtonText: 'Cancel',
         type: 'warning',
       }).catch((err) => err)
       if (confirmResult == 'confirm') {
         let res = await configApi.modifyConfig({prop})
         this.$message.success(res.data.status)
-        
+
       }
     },
     async getConfig(){

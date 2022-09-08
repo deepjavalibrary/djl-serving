@@ -132,7 +132,7 @@ export default {
   },
   methods: {
     async qryDependencies() {
-      let res = await dependencyApi.dependencics()
+      let res = await dependencyApi.dependencies()
       this.dependencies = res
     },
     async addDependency() {

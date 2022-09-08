@@ -1,11 +1,11 @@
 import http from '../common/http'
 
 export const getConfig = () =>{
-  return http.requestGet('/config');
+  return http.requestGet('/console/api/config');
 }
 export const getVersion = () =>{
-  return http.requestGet('/version');
+  return http.requestGet('/console/api/version');
 }
 export const modifyConfig = (param) =>{
-  return http.requestPost('/config',param);
+  return http.requestPost('/console/api/config', param);
 }

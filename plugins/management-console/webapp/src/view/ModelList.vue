@@ -144,7 +144,7 @@ export default {
       border-radius: 10px;
       margin-bottom: 20px;
       // margin-right: 20px;
-      
+
       .bg {
         height: 140px;
         background: url("../assets/img/model-bg.png") no-repeat;

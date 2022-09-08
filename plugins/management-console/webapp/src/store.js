@@ -20,7 +20,7 @@ var store = new Vuex.Store({
       state.inferenceFlag = inferenceFlag;
     },
   },
-  getters: { // this.$store.getters.***  
+  getters: { // this.$store.getters.***
     getPredictionUrl: async (state) => {
       var predictionUrl = state.predictionUrl;
       if (!predictionUrl) {

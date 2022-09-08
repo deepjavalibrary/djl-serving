@@ -214,7 +214,7 @@ export default {
           header[v.key] = v.value
         }
       })
-   
+
       if (process.env.NODE_ENV != 'development') {
         let url = await this.$store.getters.getPredictionUrl
         let inferenceFlag = this.$store.getters.getInferenceFlag

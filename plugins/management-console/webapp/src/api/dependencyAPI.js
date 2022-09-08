@@ -1,11 +1,11 @@
 import http from '../common/http'
 
-export const dependencics = () =>{
-  return http.requestGet('/dependency');
+export const dependencies = () =>{
+  return http.requestGet('/console/api/dependency');
 }
 export const addDependency = (params) =>{
-  return http.requestPostForm('/dependency',params);
+  return http.requestPostForm('/console/api/dependency', params);
 }
 export const delDependency = (name) =>{
-  return http.requestDelete('/dependency/'+name);
+  return http.requestDelete('/console/api/dependency/' + name);
 }
