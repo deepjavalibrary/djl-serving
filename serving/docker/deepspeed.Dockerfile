@@ -12,9 +12,9 @@
 ARG version=11.3.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.19.0~SNAPSHOT
-ARG torch_version=1.11.0
-ARG deepspeed_version=0.6.7
-ARG transformers_version=4.19.2
+ARG torch_version=1.12.1
+ARG deepspeed_version=0.7.1
+ARG transformers_version=4.21.1
 
 EXPOSE 8080
 
@@ -37,7 +37,7 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_python.sh && \
     cd /usr/local/djl-serving-*/lib/ && \
     rm -rf python*.jar && \
-    curl -O https://djl-misc.s3.amazonaws.com/rubikon/rubikon-0.18.0-SNAPSHOT.jar
+    curl -O https://djl-misc.s3.amazonaws.com/rubikon/rubikon-0.19.0-SNAPSHOT.jar
 
 ### Deep Speed installations
 RUN apt-get update && \

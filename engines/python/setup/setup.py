@@ -34,6 +34,7 @@ def pypi_description():
 
 
 class BuildPy(setuptools.command.build_py.build_py):
+
     def run(self):
         setuptools.command.build_py.build_py.run(self)
 

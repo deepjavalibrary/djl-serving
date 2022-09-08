@@ -44,9 +44,8 @@ RUN scripts/install_python.sh && \
     djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.0:linux-x86_64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64 && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
-    djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.18.0 && \
-    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.12.1 && \
     scripts/patch_oss_dlc.sh python && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
+RUN if [ ! "$djl_version" = *SNAPSHOT ] ; then djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.18.0 && djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.12.1; fi

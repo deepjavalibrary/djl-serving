@@ -32,6 +32,7 @@ class PythonEngine(object):
     """
     Backend engine to run python code
     """
+
     def __init__(self, socket_type, socket_name, port, service):
         self.socket_type = socket_type
         self.sock_name = socket_name
@@ -87,9 +88,8 @@ class PythonEngine(object):
                 if outputs is None:
                     outputs = Output(code=204, message="No content")
             except Exception as e:
-                logging.error(e, exc_info=True)
-                _, ex_value, _ = sys.exc_info()
-                outputs = Output(code=500, message=str(ex_value))
+                logging.exception("Failed invoke service.invoke_handler()")
+                outputs = Output().error(str(e))
 
             if not cl_socket.sendall(outputs.encode()):
                 logging.debug("Outputs is sent to DJL engine.")
@@ -119,7 +119,7 @@ def main():
         logging.error("Python engine did not receive connection in: %d s.",
                       SOCKET_ACCEPT_TIMEOUT)
     except Exception:  # pylint: disable=broad-except
-        logging.error("Python engine process died", exc_info=True)
+        logging.exception("Python engine process died")
     finally:
         if sock_type == 'unix' and os.path.exists(sock_name):
             os.remove(sock_name)

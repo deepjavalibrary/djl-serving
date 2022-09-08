@@ -56,7 +56,7 @@ public class PyNDManager extends BaseNDManager {
     @Override
     public PyNDArray create(Buffer data, Shape shape, DataType dataType) {
         int size = Math.toIntExact(shape.size());
-        BaseNDManager.validateBufferSize(data, dataType, size);
+        BaseNDManager.validateBuffer(data, dataType, size);
         if (data instanceof ByteBuffer) {
             return new PyNDArray(this, alternativeManager, (ByteBuffer) data, shape, dataType);
         }

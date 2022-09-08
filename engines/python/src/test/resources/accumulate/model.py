@@ -25,6 +25,7 @@ class Accumulation(object):
     """
     Accumulation Model implementation.
     """
+
     def __init__(self):
         self.nd = np.zeros(1, dtype='float32')
         self.initialized = False
@@ -42,20 +43,19 @@ class Accumulation(object):
         :param inputs: the Input object holds a list of numpy array
         :return: the Output object to be send back
         """
-        outputs = Output()
         try:
             data = inputs.get_as_numpy()
             self.nd = self.nd + data[0]
+            outputs = Output()
             outputs.add_as_numpy([self.nd])
             time.sleep(2)
             logging.info(
                 "[METRICS]Inference.milliseconds:311|#Level:Host,count:time|#hostname:localhost,1650953744320,request_id"
             )
         except Exception as e:
-            logging.error(e, exc_info=True)
+            logging.exception("accumulate failed")
             # error handling
-            outputs.set_code(500)
-            outputs.set_message(str(e))
+            outputs = Output().error(str(e))
 
         return outputs
 

@@ -2,7 +2,7 @@
 <Configuration status="INFO">
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
-            <PatternLayout pattern="[%-5level] - %msg%n"/>
+            <PatternLayout pattern="[%-5level] %c{1} - %msg%n"/>
         </Console>
         <RollingFile
                 name="application"
@@ -10,7 +10,7 @@
                 filePattern="${env:MODEL_SERVER_HOME}/logs/serving.%d{dd-MMM}.log.gz"
                 ignoreExceptions="false">
             <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %m%n</Pattern>
+                <Pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss} %c{1} - %m%n</Pattern>
             </PatternLayout>
             <Policies>
                 <OnStartupTriggeringPolicy/>
@@ -25,7 +25,7 @@
                 filePattern="${env:MODEL_SERVER_HOME}/logs/access.%d{dd-MMM}.log.gz"
                 ignoreExceptions="false">
             <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %m%n</Pattern>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %m%n</Pattern>
             </PatternLayout>
             <Policies>
                 <OnStartupTriggeringPolicy/>
@@ -40,7 +40,7 @@
                 filePattern="${env:MODEL_SERVER_HOME}/logs/server_metric.%d{dd-MMM}.log.gz"
                 ignoreExceptions="false">
             <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %m%n</Pattern>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %m%n</Pattern>
             </PatternLayout>
             <Policies>
                 <OnStartupTriggeringPolicy/>
@@ -55,7 +55,7 @@
                 filePattern="${env:MODEL_SERVER_HOME}/logs/model_metric.%d{dd-MMM}.log.gz"
                 ignoreExceptions="false">
             <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %m%n</Pattern>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %m%n</Pattern>
             </PatternLayout>
             <Policies>
                 <OnStartupTriggeringPolicy/>

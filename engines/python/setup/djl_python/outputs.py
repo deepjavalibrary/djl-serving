@@ -13,6 +13,7 @@
 
 import json
 import struct
+import logging
 
 from .np_util import to_nd_list
 from .pair_list import PairList
@@ -23,20 +24,28 @@ class _JSONEncoder(json.JSONEncoder):
     """
     custom `JSONEncoder` to make sure float and int64 ar converted
     """
+
     def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, datetime.datetime):
+        import datetime
+        if isinstance(obj, datetime.datetime):
             return obj.__str__()
-        else:
-            return super(_JSONEncoder, self).default(obj)
+
+        try:
+            import numpy as np
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+        except ImportError:
+            pass
+
+        return super(_JSONEncoder, self).default(obj)
 
 
 class Output(object):
+
     def __init__(self, code=200, message='OK'):
         self.code = code
         self.message = message
@@ -57,12 +66,20 @@ class Output(object):
             },
             indent=2)
 
-    def set_code(self, code):
+    def set_code(self, code: int):
         self.code = code
         return self
 
-    def set_message(self, message):
+    def set_message(self, message: str):
         self.message = message
+        return self
+
+    def error(self, error: str, code=424, message="prediction failure"):
+        self.code = code
+        self.message = message
+        body = {"code": self.code, "message": self.message, "error": error}
+        self.add_property("content-type", "application/json")
+        self.add_as_json(body)
         return self
 
     def add_property(self, key, val):
@@ -70,6 +87,10 @@ class Output(object):
         return self
 
     def add(self, value, key=None):
+        if key is not None and type(key) is not str:
+            logging.warning(f"Output key should be str type, got {type(key)}")
+            key = str(key)
+
         if type(value) is str:
             self.content.add(key=key, value=value.encode("utf-8"))
         elif type(value) is bytearray:

@@ -18,6 +18,7 @@ import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.translate.TranslateException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,10 +52,9 @@ class PyProcess {
         this.model = model;
         this.pyEnv = pyEnv;
         connection = new Connection();
-        latch = new CountDownLatch(1);
     }
 
-    Output predict(Input inputs, int timeout, boolean initialLoad) {
+    Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
         try {
             if (inputs.getProperty("handler", null) == null) {
                 String handler = pyEnv.getHandler();
@@ -66,8 +66,12 @@ class PyProcess {
             inputs.addProperty("device_id", String.valueOf(device.getDeviceId()));
             CompletableFuture<Output> future = connection.send(inputs);
             Output output = future.get(timeout, TimeUnit.SECONDS);
-            if (initialLoad && output.getCode() >= 300) {
-                logger.warn("Model doesn't support initialize." + output.getMessage());
+            if (initialLoad) {
+                if (output.getCode() >= 300) {
+                    logger.warn("Model doesn't support initialize: {}", output.getMessage());
+                } else {
+                    logger.info("Model [{}] initialized.", model.getName());
+                }
             }
             return output;
         } catch (Exception e) {
@@ -76,12 +80,13 @@ class PyProcess {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
             }
-            throw new EngineException(e);
+            throw new TranslateException(e);
         }
     }
 
     synchronized void startPythonProcess() {
         try {
+            latch = new CountDownLatch(1);
             pyEnv.installDependency(model.getModelPath());
             process = connection.startPython(pyEnv, model);
 
@@ -183,6 +188,7 @@ class PyProcess {
                 while (isRunning.get() && scanner.hasNext()) {
                     String result = scanner.nextLine();
                     if (result == null) {
+                        logger.warn("Got EOF: {}", getName());
                         break;
                     }
                     if ("Python engine started.".equals(result)) {

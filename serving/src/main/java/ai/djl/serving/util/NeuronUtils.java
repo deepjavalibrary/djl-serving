@@ -14,6 +14,9 @@ package ai.djl.serving.util;
 
 import ai.djl.util.Utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -23,6 +26,9 @@ import java.net.URL;
 /** A utility class to detect number of nueron cores. */
 public final class NeuronUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(NeuronUtils.class);
+
+    private static final String TOKEN_URL = "http://169.254.169.254/latest/api/token";
     private static final String EC2_METADATA =
             "http://169.254.169.254/latest/meta-data/instance-type";
 
@@ -60,29 +66,57 @@ public final class NeuronUtils {
         }
     }
 
-    private static String readMetadata() {
+    private static String getToken() {
         try {
-            HttpURLConnection conn = openConnection(new URL(EC2_METADATA));
+            String header = "X-aws-ec2-metadata-token-ttl-seconds";
+            HttpURLConnection conn = openConnection(new URL(TOKEN_URL), "PUT", header, "21600");
             int statusCode = conn.getResponseCode();
             if (statusCode == HttpURLConnection.HTTP_OK) {
                 try (InputStream is = conn.getInputStream()) {
                     return Utils.toString(is);
                 }
+            } else {
+                logger.debug("EC2 IMDSv2: {} {}", statusCode, conn.getResponseMessage());
             }
             return null;
         } catch (IOException e) {
+            logger.debug("Failed retrieve IMDSv2 token", e);
             return null;
         }
     }
 
-    private static HttpURLConnection openConnection(URL url) throws IOException {
+    private static String readMetadata() {
+        try {
+            String header = "X-aws-ec2-metadata-token";
+            String token = getToken();
+            HttpURLConnection conn = openConnection(new URL(EC2_METADATA), "GET", header, token);
+            int statusCode = conn.getResponseCode();
+            if (statusCode == HttpURLConnection.HTTP_OK) {
+                try (InputStream is = conn.getInputStream()) {
+                    return Utils.toString(is);
+                }
+            } else {
+                logger.debug("EC2 metadata: {} {}", statusCode, conn.getResponseMessage());
+            }
+            return null;
+        } catch (IOException e) {
+            logger.debug("Failed read ec2 metadata", e);
+            return null;
+        }
+    }
+
+    private static HttpURLConnection openConnection(
+            URL url, String method, String header, String value) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection(Proxy.NO_PROXY);
         conn.setConnectTimeout(1000);
         conn.setReadTimeout(1000);
-        conn.setRequestMethod("GET");
+        conn.setRequestMethod(method);
         conn.setDoOutput(true);
         conn.addRequestProperty("Accept", "*/*");
         conn.addRequestProperty("User-Agent", "djl");
+        if (value != null) {
+            conn.addRequestProperty(header, value);
+        }
         conn.setInstanceFollowRedirects(false);
         conn.connect();
         return conn;
