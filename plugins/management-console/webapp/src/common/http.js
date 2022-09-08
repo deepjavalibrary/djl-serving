@@ -3,9 +3,9 @@ import axios from 'axios'
 import * as env from '../env'
 
 axios.defaults.baseURL = env.baseUrl //root path
-axios.defaults.withCredentials = true //cross
+axios.defaults.withCredentials = false //cross
 axios.defaults.timeout = 600000
-axios.defaults.headers.post['Content-Type'] = 'application/x-www=form-urlencoded'
+// axios.defaults.headers.post['Content-Type'] = 'application/x-www=form-urlencoded'
 
 import { Loading } from 'element-ui';
 import { Message } from 'element-ui';
@@ -19,8 +19,14 @@ axiosInst.interceptors.request.use(
     if(!data.cancelLoading){
       loadingInstance = Loading.service();
     }
+    if(req.headers.updateBaseURL){
+      req.baseURL = req.headers.updateBaseURL
+    }else{
+      req.baseURL =  env.baseUrl
+    }
+    delete req.headers.updateBaseURL
     console.log("req",req);
-    console.log("headers",req.headers);
+    // console.log("headers",req.headers);
     return req
   },
   err => {
@@ -31,23 +37,33 @@ axiosInst.interceptors.request.use(
 axiosInst.interceptors.response.use(response => {
   
   loadingInstance.close();
-  console.log("response",response);
+  // console.log("response",response);
 
   return response;
 }, error => {
   loadingInstance.close();
     console.log("error",error.response);
-    Message.error({ message: error.response.data.message, customClass: 'error-toast' });
+    if(error.response.data instanceof Blob){
+      var reader = new FileReader();
+      reader.readAsText(error.response.data, 'utf-8');
+      reader.onload = function (e) {
+        Message.error({ message: JSON.parse( reader.result).message, customClass: 'error-toast' });
+          // console.info(reader.result);
+      }
+    }else{
+      Message.error({ message: error.response.data.message, customClass: 'error-toast' });
+    }
  
   return Promise.reject(error);
+  // return error;
 });
 
 
 export default {
   //get
-  requestGet(url, params = {}) {
+  requestGet(url, params = {},headers) {
     return new Promise((resolve, reject) => {
-      axiosInst.get(url, params).then(res => {
+      axiosInst.get(url,{ params, headers}).then(res => {
         resolve(res.data)
       }).catch(error => {
         reject(error)
@@ -95,24 +111,27 @@ export default {
       }).then(res => {
         resolve(res)
       }).catch(error => {
-        reject(error)
+        // console.log("requestPost-error",error.response);
+        reject(error.response.data)
       })
     })
   },
   //post
-  requestPostForm(url, params = {},responseType="") {
+  requestPostForm(url, params = {},responseType="",header) {
     return new Promise((resolve, reject) => {
       axiosInst.post(url, params, {
         responseType: responseType,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          ...header
         },
         // myHeader:header
       }).then(res => {
-        console.log("requestPostForm",res);
+        // console.log("requestPostForm",res);
         resolve(res)
       }).catch(error => {
-        reject(error)
+        console.log("requestPostForm-error",error.response);
+        reject(error.response.data)
       })
     })
   },

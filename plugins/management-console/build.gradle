@@ -22,12 +22,6 @@ clean {
 task buildConsoleApp(type: NpmTask, dependsOn: "npmInstall") {
     project.logger.info("Build the DJL Management console application")
     npmCommand = ["run", "build"]
-    doLast {
-        copy {
-            from "webapp/dist"
-            into "src/main/resources/static/console"
-        }
-    }
 }
 
 task copyJar(type: Copy) {
