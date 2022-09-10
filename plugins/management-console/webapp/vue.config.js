@@ -1,6 +1,7 @@
 const path = require("path");
 
 module.exports = {
+  productionSourceMap: false,
   publicPath: '/console',
   outputDir: '../src/main/resources/static/console',
   devServer: {
@@ -29,5 +30,4 @@ module.exports = {
       patterns: [path.resolve(__dirname, "src/assets/css/common.less")]
     }
   }
-
 }
