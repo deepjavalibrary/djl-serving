@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.console;
 
-import ai.djl.engine.Engine;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.MethodNotAllowedException;
@@ -173,7 +172,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     private void getVersion(ChannelHandlerContext ctx, HttpMethod method) {
         requiresGet(method);
-        String version = Engine.class.getPackage().getSpecificationVersion();
+        String version = ConfigManager.getVersion();
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(version));
     }
 

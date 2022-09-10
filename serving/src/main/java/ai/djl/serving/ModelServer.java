@@ -185,7 +185,7 @@ public class ModelServer {
                     ServerStartupException {
         stopped.set(false);
 
-        String version = Engine.class.getPackage().getSpecificationVersion();
+        String version = ConfigManager.getVersion();
         logger.info("Starting djl-serving: {} ...", version);
         logger.info(configManager.dumpConfigurations());
         Dimension dim = new Dimension("Version", version);
