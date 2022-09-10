@@ -14,6 +14,7 @@
 Test Python model example.
 """
 
+import sys
 from djl_python import Input
 from djl_python import Output
 
@@ -25,6 +26,8 @@ def handle(inputs: Input):
     if inputs.contains_key("exception"):
         ex = inputs.get_as_string("exception")
         raise ValueError(ex)
+    elif inputs.contains_key("exit"):
+        sys.exit()
 
     data = inputs.get_as_bytes()
     content_type = inputs.get_property("content-type")
