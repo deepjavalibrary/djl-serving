@@ -217,7 +217,7 @@ class Connection {
         public void channelInactive(ChannelHandlerContext ctx) {
             ctx.fireChannelInactive();
             if (future != null) {
-                future.completeExceptionally(new IOException("Connection dropped."));
+                future.completeExceptionally(new IOException("Python worker disconnected."));
             }
         }
 

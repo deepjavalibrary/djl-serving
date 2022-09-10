@@ -265,8 +265,13 @@ public final class NettyUtils {
      */
     public static void sendError(
             ChannelHandlerContext ctx, HttpResponseStatus status, Throwable t) {
-        ErrorResponse error =
-                new ErrorResponse(status.code(), t.getClass().getSimpleName(), t.getMessage());
+        String type = t.getClass().getSimpleName();
+        Throwable cause = t.getCause();
+        while (cause != null) {
+            t = cause;
+            cause = cause.getCause();
+        }
+        ErrorResponse error = new ErrorResponse(status.code(), type, t.getMessage());
         sendJsonResponse(ctx, error, status);
     }
 
