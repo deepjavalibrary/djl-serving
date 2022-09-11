@@ -47,5 +47,3 @@ RUN scripts/install_python.sh && \
     scripts/patch_oss_dlc.sh python && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
-RUN if [ ! "$djl_version" = *SNAPSHOT ] ; then djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:0.18.0 && djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.12.1; fi
