@@ -139,7 +139,7 @@ public class ModelServer {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
             new ModelServer(configManager).startAndWait();
         } catch (IllegalArgumentException e) {
-            logger.error("Invalid configuration: " + e.getMessage());
+            logger.error("Invalid configuration: {}", e.getMessage());
             System.exit(1); // NOPMD
         } catch (ParseException e) {
             printHelp(e.getMessage(), options);
@@ -590,7 +590,7 @@ public class ModelServer {
                 || Files.isRegularFile(modelDir.resolve(modelName + ".so"))) {
             return "DLR";
         }
-        logger.warn("Failed to detect engine of the model: " + modelDir);
+        logger.warn("Failed to detect engine of the model: {}", modelDir);
         return null;
     }
 

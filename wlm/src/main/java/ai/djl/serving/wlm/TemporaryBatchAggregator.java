@@ -64,10 +64,8 @@ public class TemporaryBatchAggregator<I, O> extends BatchAggregator<I, O> {
     /** {@inheritDoc} */
     @Override
     public boolean isFinished() {
-        logger.trace(
-                "check temporary batch aggregator idle time idle since {}ms - max idle time:{}ms",
-                System.currentTimeMillis() - idleSince,
-                maxIdleTime * 1000);
-        return System.currentTimeMillis() - idleSince > maxIdleTime * 1000;
+        long idle = System.currentTimeMillis() - idleSince;
+        logger.trace("Temporary batch aggregator idle time (max {}s): {}ms", maxIdleTime, idle);
+        return idle > maxIdleTime * 1000;
     }
 }

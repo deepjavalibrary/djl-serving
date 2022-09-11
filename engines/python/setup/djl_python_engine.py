@@ -17,6 +17,7 @@ Communication message format: binary encoding
 
 import logging
 import os
+import signal
 import socket
 import sys
 
@@ -40,27 +41,39 @@ class PythonEngine(object):
         self.service = service
         if socket_type == "unix":
             if socket_name is None:
-                raise ValueError(
-                    "Wrong arguments passed. No socket name given.")
-            try:
-                os.remove(socket_name)
-            except OSError:
-                if os.path.exists(socket_name):
-                    raise RuntimeError(
-                        "socket already in use: {}.".format(socket_name))
+                raise ValueError("Missing sock-name argument.")
 
+            self.clean_up()
         elif socket_type == "tcp":
             self.sock_name = "127.0.0.1"
             if port is None:
-                raise ValueError(
-                    "Wrong arguments passed. No socket port given.")
+                raise ValueError("Missing port argument.")
         else:
-            raise ValueError("Invalid socket type provided")
+            raise ValueError(f"Invalid socket-type: {socket_type}.")
 
         socket_family = socket.AF_INET if socket_type == "tcp" else socket.AF_UNIX
         self.sock = socket.socket(socket_family, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(SOCKET_ACCEPT_TIMEOUT)
+
+    def clean_up(self):
+        pid_file = f"{self.sock_name}.pid"
+        if os.path.exists(pid_file):
+            with open(pid_file, "r") as f:
+                pid = f.readline()
+                if pid:
+                    try:
+                        os.kill(int(pid), signal.SIGKILL)
+                        logging.warning(
+                            f"{self.sock_name} - kill dangling process: {pid}")
+                    except ProcessLookupError:
+                        pass
+
+        with open(pid_file, "w") as f:
+            f.write(str(os.getpid()))
+
+        if os.path.exists(self.sock_name):
+            os.remove(self.sock_name)
 
     def run_server(self):
         """
@@ -104,8 +117,7 @@ def main():
         logging.basicConfig(stream=sys.stdout,
                             format="%(message)s",
                             level=logging.INFO)
-        logging.info("djl_python_engine started with args: %s",
-                     " ".join(sys.argv[1:]))
+        logging.info(f"djl_python_engine started with args: {sys.argv[1:]}")
         args = ArgParser.python_engine_args().parse_args()
         sock_name = args.sock_name
         sock_type = args.sock_type
@@ -116,13 +128,16 @@ def main():
 
         engine.run_server()
     except socket.timeout:
-        logging.error("Python engine did not receive connection in: %d s.",
-                      SOCKET_ACCEPT_TIMEOUT)
+        logging.error(f"Listener timed out in: {SOCKET_ACCEPT_TIMEOUT} s.")
     except Exception:  # pylint: disable=broad-except
         logging.exception("Python engine process died")
     finally:
+        logging.info("Python process finished")
         if sock_type == 'unix' and os.path.exists(sock_name):
             os.remove(sock_name)
+        pid_file = f"{sock_name}.pid"
+        if sock_type == 'unix' and os.path.exists(pid_file):
+            os.remove(pid_file)
 
 
 if __name__ == "__main__":
