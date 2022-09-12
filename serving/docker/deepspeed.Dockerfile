@@ -24,6 +24,8 @@ WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV MODEL_LOADING_TIMEOUT=1200
+ENV PREDICT_TIMEOUT=240
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
