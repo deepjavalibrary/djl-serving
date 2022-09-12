@@ -115,38 +115,33 @@ class Connection {
         return args;
     }
 
-    void connect() {
+    void connect() throws InterruptedException {
         EventLoopGroup group = PyEnv.getEventLoopGroup();
 
-        try {
-            Bootstrap clientBootstrap = new Bootstrap();
-            clientBootstrap
-                    .group(group)
-                    .channel(getClientChannel())
-                    .remoteAddress(getSocketAddress())
-                    .handler(
-                            new ChannelInitializer<>() {
+        Bootstrap clientBootstrap = new Bootstrap();
+        clientBootstrap
+                .group(group)
+                .channel(getClientChannel())
+                .remoteAddress(getSocketAddress())
+                .handler(
+                        new ChannelInitializer<>() {
 
-                                @Override
-                                protected void initChannel(Channel ch) {
-                                    ch.pipeline()
-                                            .addLast("encoder", new RequestEncoder())
-                                            .addLast(
-                                                    "decoder",
-                                                    new OutputDecoder(CodecUtils.MAX_BUFFER_SIZE))
-                                            .addLast("handler", requestHandler);
-                                }
-                            });
+                            @Override
+                            protected void initChannel(Channel ch) {
+                                ch.pipeline()
+                                        .addLast("encoder", new RequestEncoder())
+                                        .addLast(
+                                                "decoder",
+                                                new OutputDecoder(CodecUtils.MAX_BUFFER_SIZE))
+                                        .addLast("handler", requestHandler);
+                            }
+                        });
 
-            ChannelFuture future = clientBootstrap.connect().sync();
-            if (!future.isSuccess()) {
-                throw new EngineException("Connection to Python process is failed.");
-            }
-            channel = future.awaitUninterruptibly().channel();
-        } catch (InterruptedException e) {
-            logger.error("Exception occurred while creating netty client", e);
-            throw new EngineException("Connection to Python process is interrupted.", e);
+        ChannelFuture future = clientBootstrap.connect().sync();
+        if (!future.isSuccess()) {
+            throw new EngineException("Connection to worker process is failed.");
         }
+        channel = future.awaitUninterruptibly().channel();
     }
 
     void disconnect() {

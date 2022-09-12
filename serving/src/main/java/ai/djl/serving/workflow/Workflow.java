@@ -236,11 +236,7 @@ public class Workflow {
                         }
 
                         targetStack.remove(target);
-                        logger.trace(
-                                "Workflow computed target "
-                                        + target
-                                        + " with value:\n"
-                                        + o.toString());
+                        logger.trace("Workflow computed target {} with value:\n{}", target, o);
                     });
         }
 

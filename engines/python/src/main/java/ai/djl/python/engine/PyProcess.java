@@ -90,6 +90,7 @@ class PyProcess {
     synchronized void startPythonProcess() {
         try {
             int id = processId.get();
+            logger.info("Start process: {}:{}", id, connection.getPort());
             pyEnv.installDependency(model.getModelPath());
             process = connection.startPython(pyEnv, model);
 
@@ -105,8 +106,7 @@ class PyProcess {
                 throw new EngineException("Python process startup time out.");
             }
             if (!started) {
-                throw new EngineException(
-                        "Python stream closed unexpectedly, exit code: " + process.exitValue());
+                throw new EngineException("Python stream closed unexpectedly.");
             }
 
             connection.connect();
@@ -115,6 +115,9 @@ class PyProcess {
             Input init = new Input();
             init.setProperties(pyEnv.getInitParameters());
             predict(init, pyEnv.getModelLoadingTimeout(), true);
+        } catch (EngineException e) {
+            started = false;
+            throw e;
         } catch (InterruptedException e) {
             started = false;
             throw new EngineException("Worker startup cancelled.", e);
@@ -132,7 +135,8 @@ class PyProcess {
     }
 
     synchronized void stopPythonProcess() {
-        processId.incrementAndGet();
+        int id = processId.getAndIncrement();
+        logger.info("Stop process: {}:{}", id, connection.getPort());
         if (restartFuture != null) {
             try {
                 if (!restartFuture.isDone()) {
@@ -218,14 +222,14 @@ class PyProcess {
                     }
                 }
             } catch (Exception e) {
-                logger.error("Couldn't create scanner - {}", getName(), e);
+                logger.error("Couldn't create scanner - " + getName(), e);
             } finally {
-                logger.info("Stopped Scanner - {}", getName());
+                logger.info("ReaderThread({}) stopped - {}", processId, getName());
                 lifeCycle.setStarted(false, processId);
                 try {
                     is.close();
                 } catch (IOException e) {
-                    logger.error("Failed to close stream for thread {}", this.getName(), e);
+                    logger.warn("Failed to close stream for thread - " + getName(), e);
                 }
             }
         }
