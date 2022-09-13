@@ -520,7 +520,7 @@ public final class ConfigManager {
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             Files.copy(keyFile, os);
-            String content = os.toString(StandardCharsets.UTF_8.name());
+            String content = os.toString(StandardCharsets.UTF_8);
             content = content.replaceAll("-----(BEGIN|END)( RSA)? PRIVATE KEY-----\\s*", "");
             byte[] buf = Base64.getMimeDecoder().decode(content);
             try {
