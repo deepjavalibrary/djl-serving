@@ -92,19 +92,11 @@ public class PyNDManager extends BaseNDManager {
     }
 
     /** The SystemManager is the root {@link PyNDManager} of which all others are children. */
-    private static final class SystemManager extends PyNDManager {
+    private static final class SystemManager extends PyNDManager implements SystemNDManager {
 
         SystemManager() {
             super(null, null);
         }
-
-        /** {@inheritDoc} */
-        @Override
-        public void attachInternal(String resourceId, AutoCloseable resource) {}
-
-        /** {@inheritDoc} */
-        @Override
-        public void detachInternal(String resourceId) {}
 
         /** {@inheritDoc} */
         @Override
