@@ -57,7 +57,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-/** A class handling inbound HTTP requests for the log API. */
+/** A class handling inbound HTTP requests for the console API. */
 public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     /** {@inheritDoc} */
@@ -152,6 +152,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         }
         NettyUtils.sendJsonResponse(
                 ctx, new StatusResponse("Configuration modification succeeded"));
+        System.exit(333);
     }
 
     private void getConfig(ChannelHandlerContext ctx) {
@@ -178,6 +179,9 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
     }
 
     private void deleteDependency(ChannelHandlerContext ctx, String name) {
+        if (name.contains("..")) {
+            throw new BadRequestException("Invalid dependency file name:" + name);
+        }
         String serverHome = ConfigManager.getModelServerHome();
         Path path = Paths.get(serverHome, "deps", name);
         try {
@@ -298,7 +302,6 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     private void upload(ChannelHandlerContext ctx, FullHttpRequest req) {
         if (HttpPostRequestDecoder.isMultipart(req)) {
-            // int sizeLimit = ConfigManager.getInstance().getMaxRequestSize();
             HttpDataFactory factory = new DefaultHttpDataFactory();
             HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
             try {
