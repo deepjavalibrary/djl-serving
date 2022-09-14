@@ -4,7 +4,7 @@ if(process.env.NODE_ENV == 'production'){//production
 baseUrl = '/';
 
 } else if (process.env.NODE_ENV == 'development') {//development
-baseUrl = '/api'
+baseUrl = '/'
 } else if (process.env.NODE_ENV == 'test') {//test
 baseUrl = '/api'
 

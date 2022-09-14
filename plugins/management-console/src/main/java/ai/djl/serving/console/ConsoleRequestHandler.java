@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.console;
 
+
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.MethodNotAllowedException;
@@ -56,7 +57,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-/** A class handling inbound HTTP requests for the log API. */
+import javax.naming.ServiceUnavailableException;
+
+/** A class handling inbound HTTP requests for the console API. */
 public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     /** {@inheritDoc} */
@@ -99,6 +102,9 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
             case "version":
                 getVersion(ctx, req.method());
                 return null;
+            case "restart":
+                restart(ctx, req.method());
+                return null;
             case "config":
                 if (HttpMethod.GET.equals(req.method())) {
                     getConfig(ctx);
@@ -127,6 +133,21 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
                 throw new ResourceNotFoundException();
         }
     }
+
+    private void restart(ChannelHandlerContext ctx, HttpMethod method) {
+        requiresGet(method);
+        Path path = Paths.get("/.dockerenv");
+        if (Files.exists(path)) {
+            NettyUtils.sendJsonResponse(
+                    ctx, new StatusResponse("Restart successfully, please wait a moment"));
+            			System.exit(333);
+        }
+        NettyUtils.sendError(
+                ctx,
+                new ServiceUnavailableException(
+                        "Currently, only the Docker environment can be restarted"));
+    }
+
 
     private void modifyConfig(ChannelHandlerContext ctx, FullHttpRequest req) {
         String jsonStr = req.content().toString(Charsets.toCharset("UTF-8"));
@@ -177,6 +198,9 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
     }
 
     private void deleteDependency(ChannelHandlerContext ctx, String name) {
+        if (name.contains("..")) {
+            throw new BadRequestException("Invalid dependency file name:" + name);
+        }
         String serverHome = ConfigManager.getModelServerHome();
         Path path = Paths.get(serverHome, "deps", name);
         try {
