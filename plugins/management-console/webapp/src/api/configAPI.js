@@ -9,3 +9,6 @@ export const getVersion = () =>{
 export const modifyConfig = (param) =>{
   return http.requestPost('/console/api/config', param);
 }
+export const restart = () =>{
+  return http.requestGet('/console/api/restart');
+}

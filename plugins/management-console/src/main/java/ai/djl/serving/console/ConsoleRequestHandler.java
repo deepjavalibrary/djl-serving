@@ -31,6 +31,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.FileUpload;
@@ -57,373 +58,374 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import javax.naming.ServiceUnavailableException;
+
 /** A class handling inbound HTTP requests for the console API. */
 public class ConsoleRequestHandler implements RequestHandler<Void> {
 
-    /** {@inheritDoc} */
-    @Override
-    public boolean acceptInboundMessage(Object msg) {
-        if (!(msg instanceof HttpRequest)) {
-            return false;
-        }
+	/** {@inheritDoc} */
+	@Override
+	public boolean acceptInboundMessage(Object msg) {
+		if (!(msg instanceof HttpRequest)) {
+			return false;
+		}
 
-        HttpRequest req = (HttpRequest) msg;
-        return req.uri().startsWith("/console/api/");
-    }
+		HttpRequest req = (HttpRequest) msg;
+		return req.uri().startsWith("/console/api/");
+	}
 
-    /** {@inheritDoc} */
-    @Override
-    public Void handleRequest(
-            ChannelHandlerContext ctx,
-            FullHttpRequest req,
-            QueryStringDecoder decoder,
-            String[] segments) {
-        switch (segments[3]) {
-            case "logs":
-                if (segments.length == 4) {
-                    listLogs(ctx, req.method());
-                } else if (segments.length == 5) {
-                    int lines = NettyUtils.getIntParameter(decoder, "lines", 200);
-                    showLog(ctx, segments[4], lines, req.method());
-                } else if (segments.length == 6 && "download".equals(segments[4])) {
-                    downloadLog(ctx, segments[5], req.method());
-                } else {
-                    throw new ResourceNotFoundException();
-                }
-                return null;
-            case "inferenceAddress":
-                getInferenceAddress(ctx, req.method());
-                return null;
-            case "upload":
-                upload(ctx, req);
-                return null;
-            case "version":
-                getVersion(ctx, req.method());
-                return null;
-            case "config":
-                if (HttpMethod.GET.equals(req.method())) {
-                    getConfig(ctx);
-                } else if (HttpMethod.POST.equals(req.method())) {
-                    modifyConfig(ctx, req);
-                } else {
-                    throw new MethodNotAllowedException();
-                }
-                return null;
-            case "dependency":
-                if (HttpMethod.GET.equals(req.method())) {
-                    listDependency(ctx);
-                } else if (HttpMethod.POST.equals(req.method())) {
-                    addDependency(ctx, req);
-                } else if (HttpMethod.DELETE.equals(req.method())) {
-                    if (segments.length == 5) {
-                        deleteDependency(ctx, segments[4]);
-                    } else {
-                        throw new BadRequestException("Invalid url");
-                    }
-                } else {
-                    throw new MethodNotAllowedException();
-                }
-                return null;
-            default:
-                throw new ResourceNotFoundException();
-        }
-    }
+	/** {@inheritDoc} */
+	@Override
+	public Void handleRequest(ChannelHandlerContext ctx, FullHttpRequest req, QueryStringDecoder decoder,
+			String[] segments) {
+		switch (segments[3]) {
+		case "logs":
+			if (segments.length == 4) {
+				listLogs(ctx, req.method());
+			} else if (segments.length == 5) {
+				int lines = NettyUtils.getIntParameter(decoder, "lines", 200);
+				showLog(ctx, segments[4], lines, req.method());
+			} else if (segments.length == 6 && "download".equals(segments[4])) {
+				downloadLog(ctx, segments[5], req.method());
+			} else {
+				throw new ResourceNotFoundException();
+			}
+			return null;
+		case "inferenceAddress":
+			getInferenceAddress(ctx, req.method());
+			return null;
+		case "upload":
+			upload(ctx, req);
+			return null;
+		case "version":
+			getVersion(ctx, req.method());
+			return null;
+		case "restart":
+			restart(ctx, req.method());
+			return null;
+		case "config":
+			if (HttpMethod.GET.equals(req.method())) {
+				getConfig(ctx);
+			} else if (HttpMethod.POST.equals(req.method())) {
+				modifyConfig(ctx, req);
+			} else {
+				throw new MethodNotAllowedException();
+			}
+			return null;
+		case "dependency":
+			if (HttpMethod.GET.equals(req.method())) {
+				listDependency(ctx);
+			} else if (HttpMethod.POST.equals(req.method())) {
+				addDependency(ctx, req);
+			} else if (HttpMethod.DELETE.equals(req.method())) {
+				if (segments.length == 5) {
+					deleteDependency(ctx, segments[4]);
+				} else {
+					throw new BadRequestException("Invalid url");
+				}
+			} else {
+				throw new MethodNotAllowedException();
+			}
+			return null;
+		default:
+			throw new ResourceNotFoundException();
+		}
+	}
 
-    private void modifyConfig(ChannelHandlerContext ctx, FullHttpRequest req) {
-        String jsonStr = req.content().toString(Charsets.toCharset("UTF-8"));
-        JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
-        String prop = json.get("prop").getAsString();
-        ConfigManager configManager = ConfigManager.getInstance();
-        String configFile = configManager.getProperty("configFile", "");
-        try {
-            Path path;
-            if (!configFile.isEmpty()) {
-                path = Paths.get(configFile);
-            } else {
-                String serverHome = ConfigManager.getModelServerHome();
-                Path conf = Paths.get(serverHome, "conf");
-                Files.createDirectories(conf);
-                path = conf.resolve("config.properties");
-            }
+	private void restart(ChannelHandlerContext ctx, HttpMethod method){
+		requiresGet(method);
+		Path path = Paths.get("/.dockerenv");
+		if(Files.exists(path)) {
+			NettyUtils.sendJsonResponse(ctx, new StatusResponse("Restart successfully, please wait a moment"));
+			System.exit(333);
+		}
+		NettyUtils.sendError(ctx, new ServiceUnavailableException("Currently, only the Docker environment can be restarted"));
 
-            Files.writeString(path, prop);
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to write configuration file", e);
-        }
-        NettyUtils.sendJsonResponse(
-                ctx, new StatusResponse("Configuration modification succeeded"));
-        System.exit(333);
-    }
+	}
 
-    private void getConfig(ChannelHandlerContext ctx) {
-        ConfigManager configManager = ConfigManager.getInstance();
-        String configFile = configManager.getProperty("configFile", null);
-        if (configFile == null || configFile.isEmpty()) {
-            NettyUtils.sendJsonResponse(ctx, new StatusResponse(""));
-            return;
-        }
+	private void modifyConfig(ChannelHandlerContext ctx, FullHttpRequest req) {
+		String jsonStr = req.content().toString(Charsets.toCharset("UTF-8"));
+		JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
+		String prop = json.get("prop").getAsString();
+		ConfigManager configManager = ConfigManager.getInstance();
+		String configFile = configManager.getProperty("configFile", "");
+		try {
+			Path path;
+			if (!configFile.isEmpty()) {
+				path = Paths.get(configFile);
+			} else {
+				String serverHome = ConfigManager.getModelServerHome();
+				Path conf = Paths.get(serverHome, "conf");
+				Files.createDirectories(conf);
+				path = conf.resolve("config.properties");
+			}
 
-        Path path = Paths.get(configFile);
-        try {
-            String config = Files.readString(path);
-            NettyUtils.sendJsonResponse(ctx, new StatusResponse(config));
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to read configuration file", e);
-        }
-    }
+			Files.writeString(path, prop);
+		} catch (IOException e) {
+			throw new InternalServerException("Failed to write configuration file", e);
+		}
+		NettyUtils.sendJsonResponse(ctx, new StatusResponse("Configuration modification succeeded"));
+		System.exit(333);
+	}
 
-    private void getVersion(ChannelHandlerContext ctx, HttpMethod method) {
-        requiresGet(method);
-        String version = Engine.class.getPackage().getSpecificationVersion();
-        NettyUtils.sendJsonResponse(ctx, new StatusResponse(version));
-    }
+	private void getConfig(ChannelHandlerContext ctx) {
+		ConfigManager configManager = ConfigManager.getInstance();
+		String configFile = configManager.getProperty("configFile", null);
+		if (configFile == null || configFile.isEmpty()) {
+			NettyUtils.sendJsonResponse(ctx, new StatusResponse(""));
+			return;
+		}
 
-    private void deleteDependency(ChannelHandlerContext ctx, String name) {
-        if (name.contains("..")) {
-            throw new BadRequestException("Invalid dependency file name:" + name);
-        }
-        String serverHome = ConfigManager.getModelServerHome();
-        Path path = Paths.get(serverHome, "deps", name);
-        try {
-            Files.delete(path);
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to delete " + name, e);
-        }
-        String msg = "Dependency deleted  successfully";
-        NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
-    }
+		Path path = Paths.get(configFile);
+		try {
+			String config = Files.readString(path);
+			NettyUtils.sendJsonResponse(ctx, new StatusResponse(config));
+		} catch (IOException e) {
+			throw new InternalServerException("Failed to read configuration file", e);
+		}
+	}
 
-    private void listDependency(ChannelHandlerContext ctx) {
-        String serverHome = ConfigManager.getModelServerHome();
-        Path depDir = Paths.get(serverHome, "deps");
-        if (!Files.isDirectory(depDir)) {
-            NettyUtils.sendJsonResponse(ctx, Collections.emptyList());
-            return;
-        }
+	private void getVersion(ChannelHandlerContext ctx, HttpMethod method) {
+		requiresGet(method);
+		String version = Engine.class.getPackage().getSpecificationVersion();
+		NettyUtils.sendJsonResponse(ctx, new StatusResponse(version));
+	}
 
-        List<Map<String, String>> list = new ArrayList<>();
-        try (Stream<Path> stream = Files.walk(depDir)) {
-            stream.forEach(
-                    f -> {
-                        File file = f.toFile();
-                        String fileName = file.getName();
-                        if (fileName.endsWith(".jar")) {
-                            Map<String, String> m = new ConcurrentHashMap<>(4);
-                            m.put("name", fileName);
-                            String[] arr = fileName.split("_");
-                            if (arr.length == 3) {
-                                m.put("groupId", arr[0]);
-                                m.put("artifactId", arr[1]);
-                                m.put("version", arr[2].replace(".jar", ""));
-                            }
-                            list.add(m);
-                        }
-                    });
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to list dependency files", e);
-        }
-        NettyUtils.sendJsonResponse(ctx, list);
-    }
+	private void deleteDependency(ChannelHandlerContext ctx, String name) {
+		if (name.contains("..")) {
+			throw new BadRequestException("Invalid dependency file name:" + name);
+		}
+		String serverHome = ConfigManager.getModelServerHome();
+		Path path = Paths.get(serverHome, "deps", name);
+		try {
+			Files.delete(path);
+		} catch (IOException e) {
+			throw new InternalServerException("Failed to delete " + name, e);
+		}
+		String msg = "Dependency deleted  successfully";
+		NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
+	}
 
-    private void addDependency(ChannelHandlerContext ctx, FullHttpRequest req) {
-        HttpDataFactory factory = new DefaultHttpDataFactory();
-        HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
-        DependencyManager dm = DependencyManager.getInstance();
-        try {
-            List<FileUpload> fileList = new ArrayList<>();
-            Map<String, String> params = new ConcurrentHashMap<>();
-            List<InterfaceHttpData> bodyHttpDatas = form.getBodyHttpDatas();
-            for (InterfaceHttpData data : bodyHttpDatas) {
-                if (data.getHttpDataType() == HttpDataType.Attribute) {
-                    MixedAttribute m = (MixedAttribute) data;
-                    params.put(data.getName(), m.getValue());
-                } else if (data.getHttpDataType() == HttpDataType.FileUpload) {
-                    fileList.add((FileUpload) data);
-                }
-            }
-            String type = params.getOrDefault("type", "");
-            if ("engine".equals(type)) {
-                String engine = params.getOrDefault("engine", "");
-                dm.installEngine(engine);
-            } else {
-                String from = params.getOrDefault("from", "");
-                if ("maven".equals(from)) {
-                    String groupId = params.getOrDefault("groupId", "");
-                    String artifactId = params.getOrDefault("artifactId", "");
-                    String version = params.getOrDefault("version", "");
-                    String dependency = groupId + ":" + artifactId + ":" + version;
-                    dm.installDependency(dependency);
-                } else {
-                    String serverHome = ConfigManager.getModelServerHome();
-                    Path depDir = Paths.get(serverHome, "deps");
-                    for (FileUpload file : fileList) {
-                        byte[] bytes = file.get();
-                        String filename = file.getFilename();
-                        Path write =
-                                Files.write(
-                                        Paths.get(depDir.toString(), filename),
-                                        bytes,
-                                        StandardOpenOption.CREATE);
-                        MutableClassLoader mcl = MutableClassLoader.getInstance();
-                        mcl.addURL(write.toUri().toURL());
-                    }
-                }
-            }
-            String msg = "Dependency added successfully";
-            NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to install dependency", e);
-        } finally {
-            form.cleanFiles();
-            form.destroy();
-        }
-    }
+	private void listDependency(ChannelHandlerContext ctx) {
+		String serverHome = ConfigManager.getModelServerHome();
+		Path depDir = Paths.get(serverHome, "deps");
+		if (!Files.isDirectory(depDir)) {
+			NettyUtils.sendJsonResponse(ctx, Collections.emptyList());
+			return;
+		}
 
-    private void getInferenceAddress(ChannelHandlerContext ctx, HttpMethod method) {
-        requiresGet(method);
-        ConfigManager configManager = ConfigManager.getInstance();
-        String inferenceAddress =
-                configManager.getProperty("inference_address", "http://127.0.0.1:8080");
-        String origin = configManager.getProperty("cors_allowed_origin", "");
-        String methods = configManager.getProperty("cors_allowed_methods", "");
-        String headers = configManager.getProperty("cors_allowed_headers", "");
-        Map<String, String> map = new ConcurrentHashMap<>(2);
-        map.put("inferenceAddress", inferenceAddress);
-        map.put("corsAllowed", "0");
-        if (!StringUtil.isNullOrEmpty(origin)
-                && !StringUtil.isNullOrEmpty(headers)
-                && (!StringUtil.isNullOrEmpty(methods))) {
-            if ("*".equals(methods) || methods.toUpperCase().contains("POST")) {
-                map.put("corsAllowed", "1");
-            }
-        }
-        NettyUtils.sendJsonResponse(ctx, map);
-    }
+		List<Map<String, String>> list = new ArrayList<>();
+		try (Stream<Path> stream = Files.walk(depDir)) {
+			stream.forEach(f -> {
+				File file = f.toFile();
+				String fileName = file.getName();
+				if (fileName.endsWith(".jar")) {
+					Map<String, String> m = new ConcurrentHashMap<>(4);
+					m.put("name", fileName);
+					String[] arr = fileName.split("_");
+					if (arr.length == 3) {
+						m.put("groupId", arr[0]);
+						m.put("artifactId", arr[1]);
+						m.put("version", arr[2].replace(".jar", ""));
+					}
+					list.add(m);
+				}
+			});
+		} catch (IOException e) {
+			throw new InternalServerException("Failed to list dependency files", e);
+		}
+		NettyUtils.sendJsonResponse(ctx, list);
+	}
 
-    private void upload(ChannelHandlerContext ctx, FullHttpRequest req) {
-        if (HttpPostRequestDecoder.isMultipart(req)) {
-            HttpDataFactory factory = new DefaultHttpDataFactory();
-            HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
-            try {
-                String modelServerHome = ConfigManager.getModelServerHome();
-                Path dir = Paths.get(modelServerHome, "upload");
-                if (!Files.isDirectory(dir)) {
-                    Files.createDirectory(dir);
-                }
-                List<InterfaceHttpData> bodyHttpDatas = form.getBodyHttpDatas();
-                InterfaceHttpData data = bodyHttpDatas.get(0);
-                FileUpload fileUpload = (FileUpload) data;
-                byte[] bytes = fileUpload.get();
-                String filename = fileUpload.getFilename();
-                Path write =
-                        Files.write(
-                                Paths.get(dir.toString(), filename),
-                                bytes,
-                                StandardOpenOption.CREATE);
+	private void addDependency(ChannelHandlerContext ctx, FullHttpRequest req) {
+		HttpDataFactory factory = new DefaultHttpDataFactory();
+		HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
+		DependencyManager dm = DependencyManager.getInstance();
+		try {
+			List<FileUpload> fileList = new ArrayList<>();
+			Map<String, String> params = new ConcurrentHashMap<>();
+			List<InterfaceHttpData> bodyHttpDatas = form.getBodyHttpDatas();
+			for (InterfaceHttpData data : bodyHttpDatas) {
+				if (data.getHttpDataType() == HttpDataType.Attribute) {
+					MixedAttribute m = (MixedAttribute) data;
+					params.put(data.getName(), m.getValue());
+				} else if (data.getHttpDataType() == HttpDataType.FileUpload) {
+					fileList.add((FileUpload) data);
+				}
+			}
+			String type = params.getOrDefault("type", "");
+			if ("engine".equals(type)) {
+				String engine = params.getOrDefault("engine", "");
+				dm.installEngine(engine);
+			} else {
+				String from = params.getOrDefault("from", "");
+				if ("maven".equals(from)) {
+					String groupId = params.getOrDefault("groupId", "");
+					String artifactId = params.getOrDefault("artifactId", "");
+					String version = params.getOrDefault("version", "");
+					String dependency = groupId + ":" + artifactId + ":" + version;
+					dm.installDependency(dependency);
+				} else {
+					String serverHome = ConfigManager.getModelServerHome();
+					Path depDir = Paths.get(serverHome, "deps");
+					for (FileUpload file : fileList) {
+						byte[] bytes = file.get();
+						String filename = file.getFilename();
+						Path write = Files.write(Paths.get(depDir.toString(), filename), bytes,
+								StandardOpenOption.CREATE);
+						MutableClassLoader mcl = MutableClassLoader.getInstance();
+						mcl.addURL(write.toUri().toURL());
+					}
+				}
+			}
+			String msg = "Dependency added successfully";
+			NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
+		} catch (IOException e) {
+			throw new InternalServerException("Failed to install dependency", e);
+		} finally {
+			form.cleanFiles();
+			form.destroy();
+		}
+	}
 
-                NettyUtils.sendJsonResponse(ctx, write.toUri().toString());
+	private void getInferenceAddress(ChannelHandlerContext ctx, HttpMethod method) {
+		requiresGet(method);
+		ConfigManager configManager = ConfigManager.getInstance();
+		String inferenceAddress = configManager.getProperty("inference_address", "http://127.0.0.1:8080");
+		String origin = configManager.getProperty("cors_allowed_origin", "");
+		String methods = configManager.getProperty("cors_allowed_methods", "");
+		String headers = configManager.getProperty("cors_allowed_headers", "");
+		Map<String, String> map = new ConcurrentHashMap<>(2);
+		map.put("inferenceAddress", inferenceAddress);
+		map.put("corsAllowed", "0");
+		if (!StringUtil.isNullOrEmpty(origin) && !StringUtil.isNullOrEmpty(headers)
+				&& (!StringUtil.isNullOrEmpty(methods))) {
+			if ("*".equals(methods) || methods.toUpperCase().contains("POST")) {
+				map.put("corsAllowed", "1");
+			}
+		}
+		NettyUtils.sendJsonResponse(ctx, map);
+	}
 
-            } catch (IOException e) {
-                throw new InternalServerException("Failed to upload file", e);
-            } finally {
-                form.cleanFiles();
-                form.destroy();
-            }
-        }
-    }
+	private void upload(ChannelHandlerContext ctx, FullHttpRequest req) {
+		if (HttpPostRequestDecoder.isMultipart(req)) {
+			HttpDataFactory factory = new DefaultHttpDataFactory();
+			HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
+			try {
+				String modelServerHome = ConfigManager.getModelServerHome();
+				Path dir = Paths.get(modelServerHome, "upload");
+				if (!Files.isDirectory(dir)) {
+					Files.createDirectory(dir);
+				}
+				List<InterfaceHttpData> bodyHttpDatas = form.getBodyHttpDatas();
+				InterfaceHttpData data = bodyHttpDatas.get(0);
+				FileUpload fileUpload = (FileUpload) data;
+				byte[] bytes = fileUpload.get();
+				String filename = fileUpload.getFilename();
+				Path write = Files.write(Paths.get(dir.toString(), filename), bytes, StandardOpenOption.CREATE);
 
-    private void downloadLog(ChannelHandlerContext ctx, String fileName, HttpMethod method) {
-        requiresGet(method);
-        String modelServerHome = ConfigManager.getModelServerHome();
-        Path dir = Paths.get(modelServerHome, "logs");
-        if (fileName.contains("..")) {
-            throw new BadRequestException("Invalid log file name:" + fileName);
-        }
-        Path file = dir.resolve(fileName);
-        if (!Files.isRegularFile(file)) {
-            throw new BadRequestException("File does not exist");
-        }
-        NettyUtils.sendFile(ctx, file, true);
-    }
+				NettyUtils.sendJsonResponse(ctx, write.toUri().toString());
 
-    private void listLogs(ChannelHandlerContext ctx, HttpMethod method) {
-        requiresGet(method);
-        String modelServerHome = ConfigManager.getModelServerHome();
-        Path dir = Paths.get(modelServerHome, "logs");
-        if (!Files.isDirectory(dir)) {
-            NettyUtils.sendJsonResponse(ctx, Collections.emptyList());
-            return;
-        }
+			} catch (IOException e) {
+				throw new InternalServerException("Failed to upload file", e);
+			} finally {
+				form.cleanFiles();
+				form.destroy();
+			}
+		}
+	}
 
-        List<Map<String, String>> list = new ArrayList<>();
-        try (Stream<Path> stream = Files.walk(dir)) {
-            stream.forEach(
-                    f -> {
-                        File file = f.toFile();
-                        String fileName = file.getName();
-                        if (fileName.endsWith(".log")) {
-                            Map<String, String> m = new ConcurrentHashMap<>(3);
-                            m.put("name", fileName);
-                            m.put("lastModified", String.valueOf(file.lastModified()));
-                            m.put("length", String.valueOf(file.length()));
-                            list.add(m);
-                        }
-                    });
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to list log files", e);
-        }
-        NettyUtils.sendJsonResponse(ctx, list);
-    }
+	private void downloadLog(ChannelHandlerContext ctx, String fileName, HttpMethod method) {
+		requiresGet(method);
+		String modelServerHome = ConfigManager.getModelServerHome();
+		Path dir = Paths.get(modelServerHome, "logs");
+		if (fileName.contains("..")) {
+			throw new BadRequestException("Invalid log file name:" + fileName);
+		}
+		Path file = dir.resolve(fileName);
+		if (!Files.isRegularFile(file)) {
+			throw new BadRequestException("File does not exist");
+		}
+		NettyUtils.sendFile(ctx, file, true);
+	}
 
-    private void showLog(ChannelHandlerContext ctx, String fileName, int lines, HttpMethod method) {
-        requiresGet(method);
-        String modelServerHome = ConfigManager.getModelServerHome();
-        Path dir = Paths.get(modelServerHome, "logs");
-        if (fileName.contains("..")) {
-            throw new BadRequestException("Invalid log file name:" + fileName);
-        }
-        Path file = dir.resolve(fileName);
-        if (!Files.isRegularFile(file)) {
-            throw new BadRequestException("File does not exist");
-        }
+	private void listLogs(ChannelHandlerContext ctx, HttpMethod method) {
+		requiresGet(method);
+		String modelServerHome = ConfigManager.getModelServerHome();
+		Path dir = Paths.get(modelServerHome, "logs");
+		if (!Files.isDirectory(dir)) {
+			NettyUtils.sendJsonResponse(ctx, Collections.emptyList());
+			return;
+		}
 
-        String lastLineText = getLastLineText(file.toFile(), lines);
-        NettyUtils.sendJsonResponse(ctx, lastLineText);
-    }
+		List<Map<String, String>> list = new ArrayList<>();
+		try (Stream<Path> stream = Files.walk(dir)) {
+			stream.forEach(f -> {
+				File file = f.toFile();
+				String fileName = file.getName();
+				if (fileName.endsWith(".log")) {
+					Map<String, String> m = new ConcurrentHashMap<>(3);
+					m.put("name", fileName);
+					m.put("lastModified", String.valueOf(file.lastModified()));
+					m.put("length", String.valueOf(file.length()));
+					list.add(m);
+				}
+			});
+		} catch (IOException e) {
+			throw new InternalServerException("Failed to list log files", e);
+		}
+		NettyUtils.sendJsonResponse(ctx, list);
+	}
 
-    private String getLastLineText(File file, int lines) {
-        long fileLength = file.length() - 1;
-        if (fileLength < 0) {
-            return "";
-        }
+	private void showLog(ChannelHandlerContext ctx, String fileName, int lines, HttpMethod method) {
+		requiresGet(method);
+		String modelServerHome = ConfigManager.getModelServerHome();
+		Path dir = Paths.get(modelServerHome, "logs");
+		if (fileName.contains("..")) {
+			throw new BadRequestException("Invalid log file name:" + fileName);
+		}
+		Path file = dir.resolve(fileName);
+		if (!Files.isRegularFile(file)) {
+			throw new BadRequestException("File does not exist");
+		}
 
-        StringBuilder builder = new StringBuilder();
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            int readLines = 0;
-            raf.seek(fileLength);
-            for (long pointer = fileLength; pointer >= 0; pointer--) {
-                raf.seek(pointer);
-                char c;
-                c = (char) raf.read();
-                if (c == '\n') {
-                    readLines++;
-                    if (readLines == lines) {
-                        break;
-                    }
-                }
-                builder.append(c);
-                fileLength = fileLength - pointer;
-            }
-            builder.reverse();
-        } catch (IOException e) {
-            throw new InternalServerException("Failed to read log file.", e);
-        }
-        return builder.toString();
-    }
+		String lastLineText = getLastLineText(file.toFile(), lines);
+		NettyUtils.sendJsonResponse(ctx, lastLineText);
+	}
 
-    private static void requiresGet(HttpMethod method) {
-        if (method != HttpMethod.GET) {
-            throw new MethodNotAllowedException();
-        }
-    }
+	private String getLastLineText(File file, int lines) {
+		long fileLength = file.length() - 1;
+		if (fileLength < 0) {
+			return "";
+		}
+
+		StringBuilder builder = new StringBuilder();
+		try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+			int readLines = 0;
+			raf.seek(fileLength);
+			for (long pointer = fileLength; pointer >= 0; pointer--) {
+				raf.seek(pointer);
+				char c;
+				c = (char) raf.read();
+				if (c == '\n') {
+					readLines++;
+					if (readLines == lines) {
+						break;
+					}
+				}
+				builder.append(c);
+				fileLength = fileLength - pointer;
+			}
+			builder.reverse();
+		} catch (IOException e) {
+			throw new InternalServerException("Failed to read log file.", e);
+		}
+		return builder.toString();
+	}
+
+	private static void requiresGet(HttpMethod method) {
+		if (method != HttpMethod.GET) {
+			throw new MethodNotAllowedException();
+		}
+	}
 }

@@ -19,10 +19,19 @@
               </el-submenu>
             </el-menu>
           </div>
-          <div class="right">{{version}}</div>
+          <!-- <div class="right"> {{version}}</div> -->
+          <el-dropdown class="right"  @command="handleCommand">
+            <span class="el-dropdown-link">
+              {{version}}<i class="el-icon-arrow-down el-icon--right"></i>
+            </span>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item  command="restart">Restart</el-dropdown-item>
+             
+            </el-dropdown-menu>
+          </el-dropdown>
         </div>
       </el-header>
-      <el-main >
+      <el-main>
         <div class="w1200">
 
           <router-view></router-view>
@@ -33,7 +42,7 @@
 </template>
 
 <script>
-  import * as configApi from "@/api/configAPI"
+import * as configApi from "@/api/configAPI"
 
 export default {
   name: "Main",
@@ -46,7 +55,7 @@ export default {
   data() {
     return {
       activeIndex: '/model-list',
-      version:''
+      version: ''
     };
   },
   computed: {
@@ -59,11 +68,17 @@ export default {
 
   },
   async mounted() {
-   let res = await configApi.getVersion()
-   this.version = res.status
+    let res = await configApi.getVersion()
+    this.version = res.status
   },
   methods: {
+    async handleCommand(command){
+      if(command == 'restart'){
+        let res = await configApi.restart()
+        this.$message.success(res.status)
+      }
 
+    }
   },
 };
 </script>
@@ -98,14 +113,14 @@ export default {
           height: 60px;
         }
         .el-submenu__title {
-           font-size: @titleSize3;
-           opacity: 0.7;
+          font-size: @titleSize3;
+          opacity: 0.7;
           i {
             color: #fff;
           }
         }
-        .el-submenu.is-active{
-          .el-submenu__title{
+        .el-submenu.is-active {
+          .el-submenu__title {
             border-bottom: 0 !important;
           }
         }
@@ -119,6 +134,14 @@ export default {
           background-color: rgba(2, 166, 242, 0) !important;
           opacity: 1;
         }
+      }
+    }
+    .right{
+      cursor: pointer;
+      color: #fff;
+      font-size: 16px;
+      i{
+        font-size: 14px;
       }
     }
   }
