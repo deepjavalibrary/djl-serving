@@ -24,6 +24,8 @@ WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV MODEL_LOADING_TIMEOUT=1200
+ENV PREDICT_TIMEOUT=240
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
@@ -43,7 +45,8 @@ RUN scripts/install_djl_serving.sh $djl_version && \
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
-    pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} triton==1.0.0 mpi4py && \
+    pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} && \
+    pip3 install triton==1.0.0 mpi4py sentencepiece && \
     scripts/patch_oss_dlc.sh python && \
     rm -rf scripts && \
     pip3 cache purge && \

@@ -114,9 +114,13 @@ configure(javaProjects()) {
 
     jar {
         manifest {
-            attributes("Automatic-Module-Name": "ai.djl.${project.name.replace('-', '_')}")
+            attributes(
+                    "Automatic-Module-Name": "ai.djl.${project.name.replace('-', '_')}",
+                    "Specification-Version": "${serving_version}"
+            )
         }
     }
 }
 
+apply from: file("${rootProject.projectDir}/tools/gradle/publish.gradle")
 apply from: file("${rootProject.projectDir}/tools/gradle/jacoco.gradle")

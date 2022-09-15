@@ -12,7 +12,7 @@
  */
 package ai.djl.serving.console;
 
-import ai.djl.engine.Engine;
+
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.MethodNotAllowedException;
@@ -148,6 +148,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
                         "Currently, only the Docker environment can be restarted"));
     }
 
+
     private void modifyConfig(ChannelHandlerContext ctx, FullHttpRequest req) {
         String jsonStr = req.content().toString(Charsets.toCharset("UTF-8"));
         JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
@@ -192,7 +193,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     private void getVersion(ChannelHandlerContext ctx, HttpMethod method) {
         requiresGet(method);
-        String version = Engine.class.getPackage().getSpecificationVersion();
+        String version = ConfigManager.getVersion();
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(version));
     }
 
@@ -320,6 +321,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     private void upload(ChannelHandlerContext ctx, FullHttpRequest req) {
         if (HttpPostRequestDecoder.isMultipart(req)) {
+            // int sizeLimit = ConfigManager.getInstance().getMaxRequestSize();
             HttpDataFactory factory = new DefaultHttpDataFactory();
             HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
             try {

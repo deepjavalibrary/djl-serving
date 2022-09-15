@@ -81,22 +81,10 @@ public class JavaNDManager extends BaseNDManager {
     }
 
     /** The SystemManager is the root {@link JavaNDManager} of which all others are children. */
-    private static final class SystemManager extends JavaNDManager {
+    private static final class SystemManager extends JavaNDManager implements SystemNDManager {
 
         SystemManager() {
             super(null, null);
         }
-
-        /** {@inheritDoc} */
-        @Override
-        public void attachInternal(String resourceId, AutoCloseable resource) {}
-
-        /** {@inheritDoc} */
-        @Override
-        public void detachInternal(String resourceId) {}
-
-        /** {@inheritDoc} */
-        @Override
-        public void close() {}
     }
 }

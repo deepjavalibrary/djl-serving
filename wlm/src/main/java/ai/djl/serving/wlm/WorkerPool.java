@@ -13,6 +13,7 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.Device;
+import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.serving.wlm.util.WorkerJob;
 
@@ -143,6 +144,11 @@ public class WorkerPool<I, O> {
                 workerGroups.computeIfAbsent(device, d -> new WorkerGroup<>(this, d));
         group.configureWorkers(minWorkers, maxWorkers);
         doScaleWorker(group);
+        Model zooModel = model.getModel(device);
+        String queue = zooModel.getProperty("job_queue_size");
+        if (queue != null && !queue.isEmpty()) {
+            model.setQueueSize(Integer.parseInt(queue));
+        }
         log();
     }
 

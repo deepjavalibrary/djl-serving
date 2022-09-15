@@ -33,13 +33,13 @@ class PairList(object):
             self.values = []
 
     def add(self, key=None, value=None, index=None, pair=None):
-        if index and value:
+        if index is not None and value is not None:
             self.keys.insert(index, key)
             self.values.insert(index, value)
         elif pair:
             self.keys.append(pair[0])
             self.values.append(pair[1])
-        elif value:
+        elif value is not None:  # ignore None value
             self.keys.append(key)
             self.values.append(value)
 
