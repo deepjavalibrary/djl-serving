@@ -16,13 +16,13 @@ import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.zoo.ModelNotFoundException;
-import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.MethodNotAllowedException;
 import ai.djl.serving.http.ResourceNotFoundException;
 import ai.djl.serving.http.ServiceUnavailableException;
 import ai.djl.serving.http.Session;
+import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonSerializable;
 import ai.djl.util.JsonUtils;
 
@@ -241,7 +241,9 @@ public final class NettyUtils {
         if (t instanceof ResourceNotFoundException || t instanceof ModelNotFoundException) {
             logger.trace("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.NOT_FOUND, t);
-        } else if (t instanceof BadRequestException || t instanceof ModelException) {
+        } else if (t instanceof IllegalArgumentException
+                || t instanceof ModelException
+                || t instanceof TranslateException) {
             logger.trace("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.BAD_REQUEST, t);
         } else if (t instanceof MethodNotAllowedException) {

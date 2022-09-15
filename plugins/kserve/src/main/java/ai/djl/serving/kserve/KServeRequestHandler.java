@@ -20,7 +20,6 @@ import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
-import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.MethodNotAllowedException;
 import ai.djl.serving.http.ResourceNotFoundException;
@@ -29,9 +28,7 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
-import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Pair;
 
@@ -45,9 +42,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -57,13 +51,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /** A class handling inbound HTTP requests for the KServe API. */
 public class KServeRequestHandler implements RequestHandler<Void> {
-
-    private static final Logger logger = LoggerFactory.getLogger(KServeRequestHandler.class);
 
     private static final Pattern PATTERN = Pattern.compile("/v2/.+");
     private static final String EMPTY_BODY = "";
@@ -91,25 +82,21 @@ public class KServeRequestHandler implements RequestHandler<Void> {
             QueryStringDecoder decoder,
             String[] segments) {
         HttpMethod method = req.method();
-        try {
-            if (isKServeDescribeModelReq(segments)) {
-                requireGet(method);
-                handleKServeDescribeModel(ctx, segments);
-            } else if (isKServeDescribeHealthReadyReq(segments)
-                    || isKServeDescribeHealthLiveReq(segments)) {
-                requireGet(method);
-                handleKServeDescribeHealth(ctx);
-            } else if (isKServeDescribeModelReadyReq(segments)) {
-                requireGet(method);
-                handleKServeDescribeModelReady(ctx, segments);
-            } else if (isKServeDescribeInferenceReq(segments)) {
-                requirePost(method);
-                inference(ctx, req, segments);
-            } else {
-                throw new ResourceNotFoundException();
-            }
-        } catch (Exception exception) {
-            onException(exception, ctx);
+        if (isKServeDescribeModelReq(segments)) {
+            requireGet(method);
+            handleKServeDescribeModel(ctx, segments);
+        } else if (isKServeDescribeHealthReadyReq(segments)
+                || isKServeDescribeHealthLiveReq(segments)) {
+            requireGet(method);
+            handleKServeDescribeHealth(ctx);
+        } else if (isKServeDescribeModelReadyReq(segments)) {
+            requireGet(method);
+            handleKServeDescribeModelReady(ctx, segments);
+        } else if (isKServeDescribeInferenceReq(segments)) {
+            requirePost(method);
+            inference(ctx, req, segments);
+        } else {
+            throw new ResourceNotFoundException();
         }
         return null;
     }
@@ -151,8 +138,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         return "models".equals(segments[2]) && "infer".equals(segments[segments.length - 1]);
     }
 
-    private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments)
-            throws ModelNotFoundException {
+    private void handleKServeDescribeModel(ChannelHandlerContext ctx, String[] segments) {
         String modelName = segments[3];
         String modelVersion = null;
         if (segments.length > 4) {
@@ -212,7 +198,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
             }
         }
         if (model == null) {
-            throw new ModelNotFoundException(
+            throw new BadRequestException(
                     "Model not found: "
                             + modelName
                             + (modelVersion == null ? "" : '/' + modelVersion));
@@ -239,8 +225,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
                         });
     }
 
-    private void handleKServeDescribeModelReady(ChannelHandlerContext ctx, String[] segments)
-            throws ModelNotFoundException {
+    private void handleKServeDescribeModelReady(ChannelHandlerContext ctx, String[] segments) {
         String modelName = segments[3];
         String modelVersion = null;
         if (segments.length > 5) {
@@ -258,8 +243,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
     }
 
-    private ModelInfo<Input, Output> getModelInfo(String modelName, String modelVersion)
-            throws ModelNotFoundException {
+    private ModelInfo<Input, Output> getModelInfo(String modelName, String modelVersion) {
         ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
         Collection<ModelInfo<Input, Output>> models;
@@ -269,7 +253,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
             models = Collections.emptyList();
         }
         if (models.isEmpty()) {
-            throw new ModelNotFoundException(
+            throw new BadRequestException(
                     "Model not found: "
                             + modelName
                             + (modelVersion == null ? "" : '/' + modelVersion));
@@ -277,8 +261,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         return models.iterator().next();
     }
 
-    private void inference(ChannelHandlerContext ctx, FullHttpRequest req, String[] segments)
-            throws ModelNotFoundException, IOException {
+    private void inference(ChannelHandlerContext ctx, FullHttpRequest req, String[] segments) {
         String modelName = segments[3];
         String modelVersion = null;
         if (segments.length > 5) {
@@ -288,7 +271,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
         if (workflow == null) {
-            throw new ModelNotFoundException("Parameter model_url is required.");
+            throw new BadRequestException("Parameter model_url is required.");
         }
 
         try (Reader reader =
@@ -309,10 +292,10 @@ public class KServeRequestHandler implements RequestHandler<Void> {
                             })
                     .exceptionally(
                             t -> {
-                                onException((Exception) t, ctx);
+                                NettyUtils.sendError(ctx, t);
                                 return null;
                             });
-        } catch (JsonParseException e) {
+        } catch (IOException | JsonParseException e) {
             throw new BadRequestException("Invalid JSON input", e);
         }
     }
@@ -347,27 +330,6 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         }
 
         NettyUtils.sendJsonResponse(ctx, response, status);
-    }
-
-    private void onException(Exception ex, ChannelHandlerContext ctx) {
-        HttpResponseStatus status;
-        if (ex instanceof ModelNotFoundException) {
-            status = HttpResponseStatus.NOT_FOUND;
-        } else if (ex instanceof MethodNotAllowedException) {
-            status = HttpResponseStatus.METHOD_NOT_ALLOWED;
-        } else if (ex instanceof TranslateException || ex instanceof IllegalArgumentException) {
-            status = HttpResponseStatus.BAD_REQUEST;
-        } else if (ex instanceof WlmException) {
-            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
-        } else {
-            logger.warn("Unexpected error", ex);
-            status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        }
-
-        Map<String, String> content = new ConcurrentHashMap<>();
-        content.put("error", ex.getMessage());
-
-        NettyUtils.sendJsonResponse(ctx, content, status);
     }
 
     private static final class InferenceRequest {
