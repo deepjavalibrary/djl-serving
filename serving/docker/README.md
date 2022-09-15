@@ -10,7 +10,7 @@ Currently, we created docker compose to simplify the building experience. Just r
 ```shell
 cd serving/docker
 export DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
-docker compose build --build-arg djl_version=${DJL_VERSION} <compose-target>
+docker-compose build --build-arg djl_version=${DJL_VERSION} <compose-target>
 ```
 
 You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `pytorch-cu113`...
