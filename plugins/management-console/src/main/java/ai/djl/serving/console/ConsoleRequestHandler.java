@@ -56,7 +56,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-/** A class handling inbound HTTP requests for the log API. */
+/** A class handling inbound HTTP requests for the console API. */
 public class ConsoleRequestHandler implements RequestHandler<Void> {
 
     /** {@inheritDoc} */
@@ -99,6 +99,9 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
             case "version":
                 getVersion(ctx, req.method());
                 return null;
+            case "restart":
+                restart(ctx, req.method());
+                return null;
             case "config":
                 if (HttpMethod.GET.equals(req.method())) {
                     getConfig(ctx);
@@ -126,6 +129,17 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
             default:
                 throw new ResourceNotFoundException();
         }
+    }
+
+    private void restart(ChannelHandlerContext ctx, HttpMethod method) {
+        requiresGet(method);
+        Path path = Paths.get("/.dockerenv");
+        if (!Files.exists(path)) {
+            throw new BadRequestException("Restart is supported on Docker environment only");
+        }
+        NettyUtils.sendJsonResponse(
+                ctx, new StatusResponse("Restart successfully, please wait a moment"));
+        System.exit(333); // NOPMD
     }
 
     private void modifyConfig(ChannelHandlerContext ctx, FullHttpRequest req) {
@@ -177,6 +191,9 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
     }
 
     private void deleteDependency(ChannelHandlerContext ctx, String name) {
+        if (name.contains("..")) {
+            throw new BadRequestException("Invalid dependency file name:" + name);
+        }
         String serverHome = ConfigManager.getModelServerHome();
         Path path = Paths.get(serverHome, "deps", name);
         try {
