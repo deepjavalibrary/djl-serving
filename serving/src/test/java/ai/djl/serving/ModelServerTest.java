@@ -483,7 +483,7 @@ public class ModelServerTest {
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=mlp_1&synchronous=false&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(req);
         latch.await();
 
@@ -503,7 +503,7 @@ public class ModelServerTest {
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=mlp_2&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(req);
         latch.await();
 
@@ -519,7 +519,7 @@ public class ModelServerTest {
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
-                        "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                        "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(req);
         latch.await();
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
@@ -535,6 +535,7 @@ public class ModelServerTest {
         DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
         DescribeWorkflowResponse wf = resp[0];
         DescribeWorkflowResponse.Model model = wf.getModels().get(0);
+        assertEquals(model.getQueueSize(), 10);
         DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
 
         assertEquals(group.getMinWorkers(), 2);
@@ -563,7 +564,7 @@ public class ModelServerTest {
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=res18&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(req);
         latch.await();
 
@@ -594,7 +595,7 @@ public class ModelServerTest {
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
-                        "/workflows?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                        "/workflows?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(req);
         latch.await();
 
@@ -611,7 +612,7 @@ public class ModelServerTest {
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/workflows?synchronous=false&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(req);
         latch.await();
 
@@ -998,7 +999,7 @@ public class ModelServerTest {
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=mlp_2&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(req);
         latch.await();
         channel.closeFuture().sync();
@@ -1122,7 +1123,7 @@ public class ModelServerTest {
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=identity&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8.name()));
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
         channel.writeAndFlush(registerReq);
         latch.await();
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());

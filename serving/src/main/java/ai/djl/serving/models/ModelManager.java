@@ -109,7 +109,7 @@ public final class ModelManager {
     public boolean unregisterWorkflow(String workflowName, String version) {
         Endpoint endpoint = endpoints.get(workflowName);
         if (endpoint == null) {
-            logger.warn("Model not found: " + workflowName);
+            logger.warn("Model not found: {}", workflowName);
             return false;
         }
         Set<ModelInfo<Input, Output>> candidateModelsToUnregister = new HashSet<>();
@@ -125,7 +125,7 @@ public final class ModelManager {
         } else {
             Workflow workflow = endpoint.remove(version);
             if (workflow == null) {
-                logger.warn("Workflow not found: " + workflowName + ':' + version);
+                logger.warn("Workflow not found: {}:{}", workflowName, version);
                 return false;
             }
             candidateModelsToUnregister.addAll(workflow.getModels());

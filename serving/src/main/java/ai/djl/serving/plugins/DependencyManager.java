@@ -18,7 +18,6 @@ import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.repository.zoo.ZooProvider;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.MutableClassLoader;
-import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
@@ -32,11 +31,9 @@ import org.xml.sax.SAXException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.ServiceLoader;
 import java.util.stream.Stream;
 
@@ -50,6 +47,8 @@ public class DependencyManager {
     private static final Logger logger = LoggerFactory.getLogger(DependencyManager.class);
 
     private static final DependencyManager INSTANCE = new DependencyManager();
+    private static final String OSS_URL =
+            "https://oss.sonatype.org/service/local/repositories/snapshots/content/";
 
     private Path depDir;
 
@@ -95,7 +94,7 @@ public class DependencyManager {
             return;
         }
 
-        String djlVersion = resolveDjlVersion();
+        String djlVersion = ConfigManager.getVersion();
 
         switch (engineName) {
             case "OnnxRuntime":
@@ -163,11 +162,16 @@ public class DependencyManager {
         if (Files.isRegularFile(file)) {
             logger.info("Found existing dependency: {}", name);
         } else {
-            String maven = "https://search.maven.org/remotecontent?filepath=";
-            String link = maven + groupId + '/' + artifactId + '/' + version + '/' + name;
+            String link;
+            if (version.endsWith("-SNAPSHOT")) {
+                link = getSnapshotUrl(groupId, artifactId, version) + ".jar";
+            } else {
+                String maven = "https://search.maven.org/remotecontent?filepath=";
+                link = maven + groupId + '/' + artifactId + '/' + version + '/' + name;
+            }
             logger.info("Downloading dependency: {}.", link);
             Path tmp = depDir.resolve(name + ".tmp");
-            try (InputStream is = new URL(link).openStream()) {
+            try (InputStream is = Utils.openUrl(link)) {
                 Files.copy(is, tmp);
                 Utils.moveQuietly(tmp, file);
             } finally {
@@ -178,34 +182,49 @@ public class DependencyManager {
         mcl.addURL(file.toUri().toURL());
     }
 
-    @SuppressWarnings("PMD.UseProperClassLoader")
-    private static String resolveDjlVersion() {
-        String bom = "https://search.maven.org/solrsearch/select?q=ai.djl.bom";
-        try (InputStream is = new URL(bom).openStream()) {
-            String json = Utils.toString(is);
-            Pom pom = JsonUtils.GSON.fromJson(json, Pom.class);
-            return pom.response.docs.get(0).getLatestVersion();
-        } catch (IOException e) {
-            logger.warn("Failed to query maven central.", e);
-            Package pkg = DependencyManager.class.getClassLoader().getDefinedPackage("ai.djl.util");
-            return pkg.getSpecificationVersion();
+    private static String getSnapshotUrl(String groupId, String artifactId, String version)
+            throws IOException {
+        String groupPath = groupId.replace('.', '/');
+        String url = OSS_URL + groupPath + '/' + artifactId + '/' + version + '/';
+        try (InputStream is = Utils.openUrl(url + "maven-metadata.xml")) {
+            Document doc = parseXml(is);
+            NodeList nl = doc.getElementsByTagName("snapshot");
+            Element element = (Element) nl.item(0);
+            String timestamp = getElementValue(element, "timestamp");
+            String buildNumber = getElementValue(element, "buildNumber");
+            String v = version.substring(0, version.length() - 9);
+            return url + artifactId + '-' + v + '-' + timestamp + '-' + buildNumber;
         }
     }
 
-    private String getOrtVersion(String djlVersion) throws IOException {
-        String maven =
-                "https://search.maven.org/remotecontent?filepath=ai/djl/onnxruntime/onnxruntime-engine/"
-                        + djlVersion
-                        + "/onnxruntime-engine-"
-                        + djlVersion
-                        + ".pom";
-        try (InputStream is = new URL(maven).openStream()) {
+    private static Document parseXml(InputStream is) throws IOException {
+        try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             dbf.setXIncludeAware(false);
             dbf.setExpandEntityReferences(false);
             DocumentBuilder db = dbf.newDocumentBuilder();
-            Document doc = db.parse(is);
+            return db.parse(is);
+        } catch (SAXException | ParserConfigurationException e) {
+            throw new AssertionError("Failed to parse maven metadata", e);
+        }
+    }
+
+    private String getOrtVersion(String djlVersion) throws IOException {
+        String pom;
+        if (djlVersion.endsWith("-SNAPSHOT")) {
+            String groupId = "ai.djl.onnxruntime";
+            pom = getSnapshotUrl(groupId, "onnxruntime-engine", djlVersion) + ".pom";
+        } else {
+            pom =
+                    "https://search.maven.org/remotecontent?filepath=ai/djl/onnxruntime/onnxruntime-engine/"
+                            + djlVersion
+                            + "/onnxruntime-engine-"
+                            + djlVersion
+                            + ".pom";
+        }
+        try (InputStream is = Utils.openUrl(pom)) {
+            Document doc = parseXml(is);
             NodeList nl = doc.getElementsByTagName("dependency");
             int len = nl.getLength();
             for (int i = 0; i < len; ++i) {
@@ -215,8 +234,6 @@ public class DependencyManager {
                     return getElementValue(element, "version");
                 }
             }
-        } catch (ParserConfigurationException | SAXException e) {
-            throw new AssertionError("Failed to parse bom", e);
         }
         throw new AssertionError("Failed to find onnxruntime version.");
     }
@@ -225,36 +242,5 @@ public class DependencyManager {
         NodeList nl = element.getElementsByTagName(name);
         Element node = (Element) nl.item(0);
         return node.getChildNodes().item(0).getTextContent();
-    }
-
-    private static final class Response {
-
-        List<Doc> docs;
-
-        public List<Doc> getDocs() {
-            return docs;
-        }
-
-        public void setDocs(List<Doc> docs) {
-            this.docs = docs;
-        }
-    }
-
-    private static final class Doc {
-
-        String latestVersion;
-
-        public String getLatestVersion() {
-            return latestVersion;
-        }
-
-        public void setLatestVersion(String latestVersion) {
-            this.latestVersion = latestVersion;
-        }
-    }
-
-    private static final class Pom {
-
-        Response response;
     }
 }

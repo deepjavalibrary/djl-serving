@@ -43,6 +43,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     @SuppressWarnings("unchecked")
     public List<O> batchPredict(List<I> inputs) throws TranslateException {
         if (process.isStopped()) {
+            // TODO: wait for restart
             throw new TranslateException("Backend Python process is stopped.");
         }
         if (inputs.get(0) instanceof Input) {

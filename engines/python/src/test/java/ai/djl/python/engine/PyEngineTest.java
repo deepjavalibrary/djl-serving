@@ -29,6 +29,7 @@ import ai.djl.translate.NoopTranslator;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 
+import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
 import org.testng.Assert;
@@ -207,7 +208,70 @@ public class PyEngineTest {
             input.addProperty("Content-Type", "application/json");
             Output output = predictor.predict(input);
             String classification = output.getData().getAsString();
-            System.out.println(classification);
+            JsonElement json = JsonUtils.GSON.fromJson(classification, JsonElement.class);
+            String answer = json.getAsJsonObject().get("answer").getAsString();
+            Assert.assertEquals(
+                    answer,
+                    "gives freedom to the user and let people easily switch between frameworks");
+        }
+    }
+
+    @Test
+    public void testModelException() throws TranslateException, IOException, ModelException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("exception", "model error");
+            Output output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 424);
+            String ret = output.getData().getAsString();
+            JsonElement json = JsonUtils.GSON.fromJson(ret, JsonElement.class);
+            String error = json.getAsJsonObject().get("error").getAsString();
+            Assert.assertEquals(error, "model error");
+
+            // Test empty input
+            input = new Input();
+            input.add("exception", "");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 424);
+        }
+    }
+
+    @Test
+    public void testRestartProcess()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("exit", "true");
+            Assert.assertThrows(TranslateException.class, () -> predictor.predict(input));
+
+            Input input2 = new Input();
+            input2.add("data", "input");
+            Output output = null;
+            for (int i = 0; i < 5; ++i) {
+                Thread.sleep(1000);
+                try {
+                    output = predictor.predict(input2);
+                    break;
+                } catch (TranslateException ignore) {
+                    // ignore
+                }
+            }
+            Assert.assertNotNull(output);
+            Assert.assertEquals(output.getCode(), 200);
         }
     }
 }

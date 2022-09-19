@@ -20,20 +20,19 @@
             </el-menu>
           </div>
           <!-- <div class="right"> {{version}}</div> -->
-          <el-dropdown class="right"  @command="handleCommand">
+          <el-dropdown class="right" @command="handleCommand">
             <span class="el-dropdown-link">
               {{version}}<i class="el-icon-arrow-down el-icon--right"></i>
             </span>
             <el-dropdown-menu slot="dropdown">
-              <el-dropdown-item  command="restart">Restart</el-dropdown-item>
-             
+              <el-dropdown-item command="restart">Restart</el-dropdown-item>
+
             </el-dropdown-menu>
           </el-dropdown>
         </div>
       </el-header>
       <el-main>
         <div class="w1200">
-
           <router-view></router-view>
         </div>
       </el-main>
@@ -43,7 +42,6 @@
 
 <script>
 import * as configApi from "@/api/configAPI"
-
 export default {
   name: "Main",
   components: {
@@ -56,6 +54,7 @@ export default {
     return {
       activeIndex: '/model-list',
       version: ''
+
     };
   },
   computed: {
@@ -72,14 +71,14 @@ export default {
     this.version = res.status
   },
   methods: {
-    async handleCommand(command){
-      if(command == 'restart'){
+    async handleCommand(command) {
+      if (command == 'restart') {
         let res = await configApi.restart()
         this.$message.success(res.status)
       }
 
     }
-  },
+  }
 };
 </script>
 
@@ -136,11 +135,11 @@ export default {
         }
       }
     }
-    .right{
+    .right {
       cursor: pointer;
       color: #fff;
       font-size: 16px;
-      i{
+      i {
         font-size: 14px;
       }
     }

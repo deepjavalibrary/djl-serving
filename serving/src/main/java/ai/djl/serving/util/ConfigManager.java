@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.util;
 
+import ai.djl.engine.Engine;
 import ai.djl.serving.Arguments;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.util.Utils;
@@ -209,6 +210,20 @@ public final class ConfigManager {
         }
         home = getCanonicalPath(dir);
         return home;
+    }
+
+    /**
+     * Returns model server version.
+     *
+     * @return Returns model server version
+     */
+    public static String getVersion() {
+        String version = ConfigManager.class.getPackage().getSpecificationVersion();
+        if (version == null) {
+            // development mode
+            version = Engine.class.getPackage().getSpecificationVersion() + "-SNAPSHOT";
+        }
+        return version;
     }
 
     /**
@@ -505,7 +520,7 @@ public final class ConfigManager {
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             Files.copy(keyFile, os);
-            String content = os.toString(StandardCharsets.UTF_8.name());
+            String content = os.toString(StandardCharsets.UTF_8);
             content = content.replaceAll("-----(BEGIN|END)( RSA)? PRIVATE KEY-----\\s*", "");
             byte[] buf = Base64.getMimeDecoder().decode(content);
             try {

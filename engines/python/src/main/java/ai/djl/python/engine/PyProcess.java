@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 class PyProcess {
 
@@ -44,6 +45,7 @@ class PyProcess {
     private Connection connection;
     private CountDownLatch latch;
     private boolean started;
+    private AtomicInteger processId;
     private ReaderThread err;
     private ReaderThread out;
     private CompletableFuture<Void> restartFuture;
@@ -52,6 +54,7 @@ class PyProcess {
         this.model = model;
         this.pyEnv = pyEnv;
         connection = new Connection();
+        processId = new AtomicInteger(0);
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
@@ -86,23 +89,24 @@ class PyProcess {
 
     synchronized void startPythonProcess() {
         try {
-            latch = new CountDownLatch(1);
+            int id = processId.get();
+            logger.info("Start process: {}:{}", id, connection.getPort());
             pyEnv.installDependency(model.getModelPath());
             process = connection.startPython(pyEnv, model);
 
             String modelName = model.getName();
             modelName = modelName.substring(0, Math.min(modelName.length(), 15));
             String threadName = "W-" + connection.getPort() + '-' + modelName;
-            err = new ReaderThread(threadName, process.getErrorStream(), true, this);
-            out = new ReaderThread(threadName, process.getInputStream(), false, this);
+            err = new ReaderThread(threadName, process.getErrorStream(), true, this, id);
+            out = new ReaderThread(threadName, process.getInputStream(), false, this, id);
+            latch = new CountDownLatch(1);
             err.start();
             out.start();
             if (!latch.await(2, TimeUnit.MINUTES)) {
                 throw new EngineException("Python process startup time out.");
             }
             if (!started) {
-                throw new EngineException(
-                        "Python stream closed unexpectedly, exit code: " + process.exitValue());
+                throw new EngineException("Python stream closed unexpectedly.");
             }
 
             connection.connect();
@@ -111,6 +115,9 @@ class PyProcess {
             Input init = new Input();
             init.setProperties(pyEnv.getInitParameters());
             predict(init, pyEnv.getModelLoadingTimeout(), true);
+        } catch (EngineException e) {
+            started = false;
+            throw e;
         } catch (InterruptedException e) {
             started = false;
             throw new EngineException("Worker startup cancelled.", e);
@@ -128,11 +135,15 @@ class PyProcess {
     }
 
     synchronized void stopPythonProcess() {
+        int id = processId.getAndIncrement();
+        logger.info("Stop process: {}:{}", id, connection.getPort());
         if (restartFuture != null) {
             try {
                 if (!restartFuture.isDone()) {
                     if (!restartFuture.cancel(true)) {
                         logger.warn("Failed to cancel restart python process task.");
+                    } else {
+                        logger.info("Python process restart is cancelled.");
                     }
                 }
             } catch (CancellationException ignore) {
@@ -154,9 +165,11 @@ class PyProcess {
         }
     }
 
-    void setStarted(boolean started) {
-        this.started = started;
-        latch.countDown();
+    void setStarted(boolean started, int id) {
+        if (processId.get() == id) {
+            this.started = started;
+            latch.countDown();
+        }
     }
 
     boolean isStopped() {
@@ -169,12 +182,15 @@ class PyProcess {
         private boolean error;
         private PyProcess lifeCycle;
         private AtomicBoolean isRunning = new AtomicBoolean(true);
+        private int processId;
 
-        public ReaderThread(String name, InputStream is, boolean error, PyProcess lifeCycle) {
+        public ReaderThread(
+                String name, InputStream is, boolean error, PyProcess lifeCycle, int processId) {
             super(name + (error ? "-stderr" : "-stdout"));
             this.is = is;
             this.error = error;
             this.lifeCycle = lifeCycle;
+            this.processId = processId;
         }
 
         public void shutdown() {
@@ -184,7 +200,7 @@ class PyProcess {
         @Override
         @SuppressWarnings("PMD.UseTryWithResources")
         public void run() {
-            try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8.name())) {
+            try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8)) {
                 while (isRunning.get() && scanner.hasNext()) {
                     String result = scanner.nextLine();
                     if (result == null) {
@@ -192,7 +208,7 @@ class PyProcess {
                         break;
                     }
                     if ("Python engine started.".equals(result)) {
-                        lifeCycle.setStarted(true);
+                        lifeCycle.setStarted(true, processId);
                     }
                     if (result.startsWith("[METRICS]")) {
                         MODEL_METRIC.info("{}", Metric.parse(result.substring(9)));
@@ -206,14 +222,14 @@ class PyProcess {
                     }
                 }
             } catch (Exception e) {
-                logger.error("Couldn't create scanner - {}", getName(), e);
+                logger.error("Couldn't create scanner - " + getName(), e);
             } finally {
-                logger.info("Stopped Scanner - {}", getName());
-                lifeCycle.setStarted(false);
+                logger.info("ReaderThread({}) stopped - {}", processId, getName());
+                lifeCycle.setStarted(false, processId);
                 try {
                     is.close();
                 } catch (IOException e) {
-                    logger.error("Failed to close stream for thread {}", this.getName(), e);
+                    logger.warn("Failed to close stream for thread - " + getName(), e);
                 }
             }
         }

@@ -83,7 +83,7 @@ public class PyModel extends BaseModel {
                             int timeoutSeconds = Integer.parseInt(value);
                             pyEnv.setPredictTimeout(timeoutSeconds);
                         } catch (NumberFormatException ignore) {
-                            logger.warn("Invalid predict_timeout value: " + value);
+                            logger.warn("Invalid predict_timeout value: {}", value);
                         }
                         break;
                     case "model_loading_timeout":
@@ -91,7 +91,7 @@ public class PyModel extends BaseModel {
                             int timeoutSeconds = Integer.parseInt(value);
                             pyEnv.setModelLoadingTimeout(timeoutSeconds);
                         } catch (NumberFormatException ignore) {
-                            logger.warn("Invalid model_loading_timeout value: " + value);
+                            logger.warn("Invalid model_loading_timeout value: {}", value);
                         }
                         break;
                     case "entryPoint":
