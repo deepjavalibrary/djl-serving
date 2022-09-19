@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.console;
 
-
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.MethodNotAllowedException;
@@ -56,8 +55,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
-
-import javax.naming.ServiceUnavailableException;
 
 /** A class handling inbound HTTP requests for the console API. */
 public class ConsoleRequestHandler implements RequestHandler<Void> {
@@ -137,17 +134,13 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
     private void restart(ChannelHandlerContext ctx, HttpMethod method) {
         requiresGet(method);
         Path path = Paths.get("/.dockerenv");
-        if (Files.exists(path)) {
-            NettyUtils.sendJsonResponse(
-                    ctx, new StatusResponse("Restart successfully, please wait a moment"));
-            			System.exit(333);
+        if (!Files.exists(path)) {
+            throw new BadRequestException("Restart is supported on Docker environment only");
         }
-        NettyUtils.sendError(
-                ctx,
-                new ServiceUnavailableException(
-                        "Currently, only the Docker environment can be restarted"));
+        NettyUtils.sendJsonResponse(
+                ctx, new StatusResponse("Restart successfully, please wait a moment"));
+        System.exit(333); // NOPMD
     }
-
 
     private void modifyConfig(ChannelHandlerContext ctx, FullHttpRequest req) {
         String jsonStr = req.content().toString(Charsets.toCharset("UTF-8"));

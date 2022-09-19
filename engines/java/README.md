@@ -14,7 +14,7 @@ For more information, see [Hybrid Engine](https://docs.djl.ai/docs/hybrid_engine
 
 ## Documentation
 
-The latest javadocs can be found on the [djl.ai website](https://javadoc.io/doc/ai.djl.python/python/latest/index.html).
+The latest javadocs can be found on the [javadoc.io](https://javadoc.io/doc/ai.djl.java/java/latest/index.html).
 
 You can also build the latest javadocs locally using the following command:
 
