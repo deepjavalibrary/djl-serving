@@ -14,7 +14,7 @@ ARG version=11.3.1-cudnn8-runtime-ubuntu20.04
 FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.19.0~SNAPSHOT
-ARG torch_version=1.11.0
+ARG torch_version=1.12.1
 
 RUN mkdir -p /opt/djl/conf
 COPY scripts scripts/
