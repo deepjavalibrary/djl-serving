@@ -11,6 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 FROM arm64v8/ubuntu:20.04
 ARG djl_version=0.19.0~SNAPSHOT
+ARG torch_version=1.12.1
 
 EXPOSE 8080
 
@@ -31,8 +32,8 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/
 
 RUN scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_djl_serving.sh $djl_version 1.11.0 && \
-    djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:1.11.0:linux-aarch64 && \
+    scripts/install_djl_serving.sh $djl_version $torch_version && \
+    djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \
     rm -rf scripts && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
