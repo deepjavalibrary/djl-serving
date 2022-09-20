@@ -13,9 +13,10 @@ general_platform_models_urls=(
 "https://resources.djl.ai/test-models/mxnet/ssd_resnet50.zip"
 )
 
-# only pytorch models
+# only pytorch and onnx models
 aarch_models_urls=(
 "https://resources.djl.ai/test-models/pytorch/resnet18_serving_all.zip"
+"https://resources.djl.ai/test-models/onnxruntime/resnet18-v1-7.zip"
 )
 
 inf_models_urls=(
