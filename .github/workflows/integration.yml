@@ -68,45 +68,47 @@ jobs:
       - name: Install DJL-Bench
         working-directory: benchmark
         run: ./gradlew installOnLinux
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh ${{ matrix.arch }}
       - name: Test Pytorch python mode
         if: ${{ matrix.arch != 'cpu' }}
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
           serve -m test::Python=file:///opt/ml/model/resnet18_serving_all.zip
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test PyTorch Binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
           serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test MxNet binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
           serve -m test::MXNet=file:///opt/ml/model/ssd_resnet50.zip?model_name=ssd_resnet50
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test ONNX binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
           serve -m test::OnnxRuntime=file:///opt/ml/model/resnet18-v1-7.zip?model_name=resnet18-v1-7
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test Tensorflow binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $PWD/models ${{ matrix.arch }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
           serve -m test::TensorFlow=file:///opt/ml/model/resnet50v1.zip?model_name=resnet50
           ./test_client.sh http://127.0.0.1:8080/predictions/test tensor/ndlist 1,224,224,3
           docker rm -f $(docker ps -aq)
@@ -147,23 +149,25 @@ jobs:
       - name: Install DJL-Bench
         working-directory: benchmark
         run: ./gradlew installOnLinux
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf1 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:pytorch-inf1-nightly
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh pytorch-inf1
       - name: Test Pytorch Binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:pytorch-inf1-nightly $PWD/models pytorch-inf1 \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf1 \
           serve -m test::PyTorch=file:///opt/ml/model/resnet18_inf1_1_11.tar.gz?model_name=resnet18_inf1_1_11
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test Pytorch Python mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:pytorch-inf1-nightly $PWD/models pytorch-inf1 \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf1 \
           serve -m test::Python=file:///opt/ml/model/resnet18_inf1_1_11.tar.gz
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
@@ -204,23 +208,25 @@ jobs:
       - name: Install DJL-Bench
         working-directory: benchmark
         run: ./gradlew installOnLinux
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-cu113 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:pytorch-cu113-nightly
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh pytorch-cu113
       - name: Test Pytorch python mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:pytorch-cu113-nightly $PWD/models pytorch-cu113 \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu113 \
           serve -m test::Python=file:///opt/ml/model/resnet18_serving_all.zip
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test Pytorch Binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:pytorch-cu113-nightly $PWD/models pytorch-cu113 \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu113 \
           serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
@@ -260,17 +266,26 @@ jobs:
       - name: Install DJL-Bench
         working-directory: benchmark
         run: ./gradlew installOnLinux
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh aarch64 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:aarch64-nightly
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh aarch64
       - name: Test PyTorch Binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:aarch64-nightly $PWD/models aarch64 \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models aarch64 \
           serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
+          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          docker rm -f $(docker ps -aq)
+      - name: Test ONNX binary mode
+        working-directory: tests/integration
+        run: |
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
+          serve -m test::OnnxRuntime=file:///opt/ml/model/resnet18-v1-7.zip?model_name=resnet18-v1-7
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: On fail step
