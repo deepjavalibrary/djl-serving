@@ -36,6 +36,7 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.8/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
+ENV PYTORCH_FLAVOR=cu116-precxx11
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 
 EXPOSE 8080
