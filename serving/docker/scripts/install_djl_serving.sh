@@ -22,6 +22,7 @@ if [ -z "$PYTORCH_JNI" ]; then
   cp -r /usr/local/djl-serving-*/plugins /opt/djl/plugins
 else
   if [[ ! "$DJL_VERSION" == *SNAPSHOT ]]; then
+    mkdir -p /root/.djl.ai/pytorch/${PYTORCH_JNI}-cpu-precxx11-linux-x86_64/
     djl-serving -i ai.djl.pytorch:pytorch-jni:${PYTORCH_JNI}-${DJL_VERSION}
   fi
 fi
