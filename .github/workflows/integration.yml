@@ -284,7 +284,7 @@ jobs:
       - name: Test ONNX binary mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models aarch64 \
           serve -m test::OnnxRuntime=file:///opt/ml/model/resnet18-v1-7.zip?model_name=resnet18-v1-7
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
