@@ -34,6 +34,9 @@ COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \
+    rm -f /usr/local/djl-serving-*/lib/mxnet-* && \
+    rm -f /usr/local/djl-serving-*/lib/tensorflow-* && \
+    rm -f /usr/local/djl-serving-*/lib/tensorrt-* && \
     rm -rf scripts && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
