@@ -17,7 +17,6 @@ ARG djl_version=0.19.0~SNAPSHOT
 ARG torch_version=1.12.1
 
 RUN mkdir -p /opt/djl/conf
-COPY scripts scripts/
 COPY config.properties /opt/djl/conf/
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 
@@ -31,6 +30,7 @@ ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu116-precxx11
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 
+COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
