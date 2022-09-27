@@ -24,12 +24,14 @@ import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.translate.ServingTranslator;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
+import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -408,10 +410,16 @@ public final class ModelInfo<I, O> {
     public void close() {
         if (!getModels().isEmpty()) {
             logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
+            Path path = null;
             for (Model m : model.values()) {
                 m.close();
+                path = m.getModelPath();
             }
             model.clear();
+            Path cacheDir = Utils.getCacheDir().toAbsolutePath();
+            if (Objects.requireNonNull(path).startsWith(cacheDir)) {
+                Utils.deleteQuietly(path);
+            }
         }
     }
 
