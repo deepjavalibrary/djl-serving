@@ -49,7 +49,7 @@ LABEL maintainer="djl-dev@amazon.com"
 
 FROM base as parallelformers
 
-ARG transformers_version=4.21.1
+ARG transformers_version=4.22.1
 ARG parallelformers_version=1.2.6
 
 COPY scripts scripts/
