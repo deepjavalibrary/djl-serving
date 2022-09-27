@@ -19,6 +19,8 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 import ai.djl.modality.Classifications.Classification;
+import ai.djl.repository.MRL;
+import ai.djl.repository.Repository;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.ListModelsResponse;
@@ -76,6 +78,7 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
@@ -84,7 +87,6 @@ import org.testng.annotations.Test;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -474,8 +476,7 @@ public class ModelServerTest {
         assertEquals(classifications.get(0).getClassName(), "0");
     }
 
-    private void testRegisterModelAsync(Channel channel)
-            throws InterruptedException, UnsupportedEncodingException {
+    private void testRegisterModelAsync(Channel channel) throws InterruptedException {
         reset();
         String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
         HttpRequest req =
@@ -493,8 +494,7 @@ public class ModelServerTest {
         assertTrue(checkWorkflowRegistered(channel, "mlp_1"));
     }
 
-    private void testRegisterModel(Channel channel)
-            throws InterruptedException, UnsupportedEncodingException {
+    private void testRegisterModel(Channel channel) throws InterruptedException {
         reset();
 
         String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
@@ -511,7 +511,7 @@ public class ModelServerTest {
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
     }
 
-    private void testPerModelWorkers(Channel channel) throws InterruptedException, IOException {
+    private void testPerModelWorkers(Channel channel) throws InterruptedException {
         reset();
 
         String url = "file:src/test/resources/identity";
@@ -552,7 +552,7 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelTranslator(Channel channel)
-            throws InterruptedException, UnsupportedEncodingException {
+            throws InterruptedException, IOException {
         reset();
 
         String url =
@@ -584,10 +584,26 @@ public class ModelServerTest {
         latch.await();
 
         assertEquals(result, "topK: 1, best: n02124075 Egyptian cat");
+
+        Repository repo = Repository.newInstance("tmp", url);
+        MRL mrl = repo.getResources().get(0);
+        Path modelDir = repo.getResourceDirectory(mrl.getDefaultArtifact());
+        Assert.assertTrue(Files.exists(modelDir));
+
+        // Unregister model
+        reset();
+        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/res18");
+        channel.writeAndFlush(req);
+        latch.await();
+
+        resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Model or workflow \"res18\" unregistered");
+
+        // make sure cache directory is removed
+        Assert.assertFalse(Files.exists(modelDir));
     }
 
-    private void testRegisterWorkflow(Channel channel)
-            throws InterruptedException, UnsupportedEncodingException {
+    private void testRegisterWorkflow(Channel channel) throws InterruptedException {
         reset();
 
         String url = "https://resources.djl.ai/test-models/basic-serving-workflow.json";
@@ -603,8 +619,7 @@ public class ModelServerTest {
         assertEquals(resp.getStatus(), "Workflow \"BasicWorkflow\" registered.");
     }
 
-    private void testRegisterWorkflowAsync(Channel channel)
-            throws InterruptedException, UnsupportedEncodingException {
+    private void testRegisterWorkflowAsync(Channel channel) throws InterruptedException {
         reset();
         String url = "https://resources.djl.ai/test-models/basic-serving-workflow2.json";
         HttpRequest req =
@@ -987,8 +1002,7 @@ public class ModelServerTest {
         }
     }
 
-    private void testRegisterModelConflict()
-            throws InterruptedException, UnsupportedEncodingException {
+    private void testRegisterModelConflict() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
@@ -1114,8 +1128,7 @@ public class ModelServerTest {
         assertTrue(headers.contains("x-request-id"));
     }
 
-    private void testKServeV2Infer(Channel channel)
-            throws InterruptedException, UnsupportedEncodingException {
+    private void testKServeV2Infer(Channel channel) throws InterruptedException {
         reset();
         String url = "file:src/test/resources/identity";
         HttpRequest registerReq =
