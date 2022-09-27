@@ -38,11 +38,13 @@ LABEL maintainer="djl-dev@amazon.com"
 
 FROM base AS cpu-full
 
+ARG torch_version=1.12.1
+
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
-    scripts/install_djl_serving.sh $djl_version 1.11.0 && \
-    djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.0:linux-x86_64 && \
-    djl-serving -i ai.djl.pytorch:pytorch-native-cpu:1.11.0:linux-x86_64 && \
+    scripts/install_djl_serving.sh $djl_version $torch_version && \
+    djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.1:linux-x86_64 && \
+    djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
     scripts/patch_oss_dlc.sh python && \
     rm -rf scripts && pip3 cache purge && \
