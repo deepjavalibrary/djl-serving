@@ -103,9 +103,10 @@ export default {
     })
   },
   //post
-  requestPost(url, params = {},header={}) {
+  requestPost(url, params = {},header={},responseType="") {
     return new Promise((resolve, reject) => {
       axiosInst.post(url, params,{
+        responseType: responseType,
         headers:{...header},
         // myHeader:header
       }).then(res => {
