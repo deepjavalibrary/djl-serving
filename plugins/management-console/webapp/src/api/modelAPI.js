@@ -20,6 +20,6 @@ export const predictions = (name,version="",param,header) =>{
   if(param instanceof FormData){
     return http.requestPostForm('/predictions/'+name+"/"+version,param,"blob",header);
   }else{
-    return http.requestPost('/predictions/'+name+"/"+version,param,header);
+    return http.requestPost('/predictions/'+name+"/"+version,param,header,"blob");
   }
 }
