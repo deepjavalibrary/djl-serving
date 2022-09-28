@@ -207,11 +207,14 @@ class PyProcess {
                         logger.warn("Got EOF: {}", getName());
                         break;
                     }
-                    if ("Python engine started.".equals(result)) {
+                    if (result.contains("Python engine started.")) {
+                        logger.info(result);
                         lifeCycle.setStarted(true, processId);
+                        continue;
                     }
-                    if (result.startsWith("[METRICS]")) {
-                        MODEL_METRIC.info("{}", Metric.parse(result.substring(9)));
+                    int metricLoc = result.indexOf("[METRICS]");
+                    if (metricLoc != -1) {
+                        MODEL_METRIC.info("{}", Metric.parse(result.substring(metricLoc + 9)));
                         continue;
                     }
 
