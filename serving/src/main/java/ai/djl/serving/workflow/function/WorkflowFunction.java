@@ -12,8 +12,8 @@
  */
 package ai.djl.serving.workflow.function;
 
-import ai.djl.modality.Input;
 import ai.djl.serving.workflow.Workflow;
+import ai.djl.serving.workflow.WorkflowExpression.Item;
 
 import java.util.Arrays;
 import java.util.List;
@@ -34,7 +34,7 @@ public abstract class WorkflowFunction {
      * @param args the list of function arguments
      * @return a future containing the input
      */
-    public abstract CompletableFuture<Input> run(
+    public abstract CompletableFuture<Item> run(
             Workflow.WorkflowExecutor executor, List<Workflow.WorkflowArgument> args);
 
     /**
@@ -44,8 +44,8 @@ public abstract class WorkflowFunction {
      * @return a future with the list of evaluated arguments
      */
     @SuppressWarnings("unchecked")
-    protected CompletableFuture<List<Input>> evaluateArgs(List<Workflow.WorkflowArgument> args) {
-        CompletableFuture<Input>[] processedArgs =
+    protected CompletableFuture<List<Item>> evaluateArgs(List<Workflow.WorkflowArgument> args) {
+        CompletableFuture<Item>[] processedArgs =
                 args.stream()
                         .map(Workflow.WorkflowArgument::evaluate)
                         .toArray(CompletableFuture[]::new);

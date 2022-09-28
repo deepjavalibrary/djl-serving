@@ -17,6 +17,9 @@ import ai.djl.modality.Output;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
+import ai.djl.serving.workflow.WorkflowExpression.Item.ItemType;
+import ai.djl.serving.workflow.function.EnsembleMerge;
+import ai.djl.serving.workflow.function.FunctionsApply;
 import ai.djl.serving.workflow.function.IdentityWF;
 import ai.djl.serving.workflow.function.ModelWorkflowFunction;
 import ai.djl.serving.workflow.function.WorkflowFunction;
@@ -46,7 +49,9 @@ public class Workflow {
     private static final Map<String, WorkflowFunction> BUILT_INS = new ConcurrentHashMap<>();
 
     static {
-        BUILT_INS.put("id", new IdentityWF());
+        BUILT_INS.put(IdentityWF.NAME, new IdentityWF());
+        BUILT_INS.put(EnsembleMerge.NAME, new EnsembleMerge());
+        BUILT_INS.put(FunctionsApply.NAME, new FunctionsApply());
     }
 
     String name;
@@ -117,7 +122,13 @@ public class Workflow {
                 .thenApply(
                         i -> {
                             logger.trace("Ending execution of workflow: {}", name);
-                            return (Output) i;
+                            if (i.getItemType() != ItemType.INPUT) {
+                                throw new IllegalArgumentException(
+                                        "The workflow did not return an output. Instead it returned"
+                                                + " an "
+                                                + i.getItemType());
+                            }
+                            return (Output) i.getInput();
                         });
     }
 
@@ -177,7 +188,7 @@ public class Workflow {
     /** An executor is a session for a running {@link Workflow}. */
     public final class WorkflowExecutor {
         private WorkLoadManager wlm;
-        private Map<String, CompletableFuture<Input>> vars;
+        private Map<String, CompletableFuture<Item>> vars;
         private Set<String> targetStack;
 
         private WorkflowExecutor(WorkLoadManager wlm, Input input) {
@@ -185,7 +196,7 @@ public class Workflow {
 
             // Construct variable map to contain each expression and the input
             vars = new ConcurrentHashMap<>(expressions.size() + 1);
-            vars.put(IN, CompletableFuture.completedFuture(input));
+            vars.put(IN, CompletableFuture.completedFuture(new Item(input)));
 
             targetStack = new HashSet<>();
         }
@@ -207,9 +218,9 @@ public class Workflow {
          * @param target the target to compute
          * @return a future that contains the target value
          */
-        public CompletableFuture<Input> execute(String target) {
+        public CompletableFuture<Item> execute(String target) {
             if (vars.containsKey(target)) {
-                return vars.get(target).thenApply(i -> i);
+                return vars.get(target);
             }
 
             // Use targetStack, the set of targets in the "call stack" to detect cycles
@@ -226,8 +237,8 @@ public class Workflow {
                         "Expected to find variable but it is not defined: " + target);
             }
 
-            CompletableFuture<Input> result = executeExpression(expr);
-            vars.put(target, result.thenApply(o -> o));
+            CompletableFuture<Item> result = executeExpression(expr);
+            vars.put(target, result);
             return result.whenComplete(
                     (o, e) -> {
                         if (e != null) {
@@ -246,7 +257,7 @@ public class Workflow {
          * @param expr the expression to compute
          * @return the computed value
          */
-        public CompletableFuture<Input> executeExpression(WorkflowExpression expr) {
+        public CompletableFuture<Item> executeExpression(WorkflowExpression expr) {
             WorkflowFunction workflowFunction = getExecutable(expr.getExecutableName());
             List<WorkflowArgument> args =
                     expr.getExecutableArgs().stream()
@@ -310,11 +321,17 @@ public class Workflow {
          *
          * @return the result of evaluating the argument
          */
-        public CompletableFuture<Input> evaluate() {
-            if (item.getString() != null) {
-                return executor.execute(item.getString());
-            } else {
-                return executor.executeExpression(item.getExpression());
+        public CompletableFuture<Item> evaluate() {
+            switch (item.getItemType()) {
+                case STRING:
+                    return executor.execute(item.getString());
+                case EXPRESSION:
+                    return executor.executeExpression(item.getExpression());
+                case INPUT:
+                    return CompletableFuture.completedFuture(item);
+                default:
+                    throw new IllegalStateException(
+                            "Found unexpected item type in workflow evaluate");
             }
         }
     }

@@ -12,6 +12,8 @@
  */
 package ai.djl.serving.workflow;
 
+import ai.djl.modality.Input;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -44,7 +46,7 @@ public class WorkflowExpression {
     /**
      * Returns the executable name (the first argument).
      *
-     * @return the executable name or null if it is an expression
+     * @return the executable name or throws an exception if it is not an executable name
      */
     public String getExecutableName() {
         return args.get(0).getString();
@@ -75,6 +77,8 @@ public class WorkflowExpression {
     public static class Item {
         private String string;
         private WorkflowExpression expression;
+        private Input input;
+        private ItemType itemType;
 
         /**
          * Constructs an {@link Item} containing a string.
@@ -83,6 +87,7 @@ public class WorkflowExpression {
          */
         public Item(String string) {
             this.string = string;
+            itemType = ItemType.STRING;
         }
 
         /**
@@ -92,24 +97,85 @@ public class WorkflowExpression {
          */
         public Item(WorkflowExpression expression) {
             this.expression = expression;
+            itemType = ItemType.EXPRESSION;
         }
 
         /**
-         * Returns the string value or null if it does not contain a string.
+         * Constructs an {@link Item} containing an {@link Input}.
          *
-         * @return the string value or null if it does not contain a string.
+         * @param input the input
+         */
+        public Item(Input input) {
+            this.input = input;
+            itemType = ItemType.INPUT;
+        }
+
+        /**
+         * Returns the string value or throws an exception if it does not contain a string.
+         *
+         * @return the string value or throws an exception if it does not contain a string
          */
         public String getString() {
+            if (itemType != ItemType.STRING) {
+                throw new IllegalArgumentException(
+                        "Expected a string workflow item, but found " + itemType);
+            }
             return string;
         }
 
         /**
-         * Returns the expression value or null if it does not contain an expression.
+         * Returns the expression value or throws an exception if it does not contain an expression.
          *
-         * @return the expression value or null if it does not contain an expression
+         * @return the expression value or throws an exception if it does not contain an expression
          */
         public WorkflowExpression getExpression() {
+            if (itemType != ItemType.EXPRESSION) {
+                throw new IllegalArgumentException(
+                        "Expected an expression workflow item, but found " + itemType);
+            }
             return expression;
+        }
+
+        /**
+         * Returns the input value or throws an exception if it does not contain an input.
+         *
+         * @return the input value or throws an exception if it does not contain an input
+         */
+        public Input getInput() {
+            if (itemType != ItemType.INPUT) {
+                throw new IllegalArgumentException(
+                        "Expected an input workflow item, but found " + itemType);
+            }
+            return input;
+        }
+
+        /**
+         * Returns the type of item.
+         *
+         * @return the type of item
+         */
+        public ItemType getItemType() {
+            return itemType;
+        }
+
+        /**
+         * Returns the expression value as a list.
+         *
+         * @return the expression value as a list.
+         */
+        public List<Item> getList() {
+            if (itemType != ItemType.EXPRESSION) {
+                throw new IllegalArgumentException(
+                        "Expected an expression/list workflow item, but found " + itemType);
+            }
+            return expression.getArgs();
+        }
+
+        /** The type of contents stored in the item. */
+        public enum ItemType {
+            STRING,
+            EXPRESSION,
+            INPUT
         }
     }
 }

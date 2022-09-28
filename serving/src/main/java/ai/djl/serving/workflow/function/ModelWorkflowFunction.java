@@ -17,6 +17,7 @@ import ai.djl.modality.Output;
 import ai.djl.serving.wlm.Job;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.Workflow;
+import ai.djl.serving.workflow.WorkflowExpression.Item;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -38,7 +39,7 @@ public class ModelWorkflowFunction extends WorkflowFunction {
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override
-    public CompletableFuture<Input> run(
+    public CompletableFuture<Item> run(
             Workflow.WorkflowExecutor executor, List<Workflow.WorkflowArgument> args) {
         if (args.size() != 1) {
             throw new IllegalArgumentException(
@@ -52,7 +53,7 @@ public class ModelWorkflowFunction extends WorkflowFunction {
                 .thenComposeAsync(
                         processedArgs ->
                                 executor.getWlm()
-                                        .runJob(new Job<>(model, processedArgs.get(0)))
-                                        .thenApply(o -> o));
+                                        .runJob(new Job<>(model, processedArgs.get(0).getInput()))
+                                        .thenApply(Item::new));
     }
 }
