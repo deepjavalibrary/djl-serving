@@ -53,7 +53,7 @@ ARG transformers_version=4.22.1
 ARG parallelformers_version=1.2.6
 
 COPY scripts scripts/
-RUN pip3 install transformers==${transformers_version} parallelformers==${parallelformers_version} accelerate && \
+RUN pip3 install transformers==${transformers_version} parallelformers==${parallelformers_version} accelerate bitsandbytes && \
     scripts/patch_oss_dlc.sh python && \
     pip cache purge && rm -rf scripts
 
