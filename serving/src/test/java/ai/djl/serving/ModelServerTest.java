@@ -60,7 +60,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -384,19 +383,14 @@ public class ModelServerTest {
     }
 
     private void testRoot(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/"));
 
         assertEquals(result, "{}\n");
     }
 
     private void testPing(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/ping");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/ping"));
+
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertNotNull(resp);
@@ -415,16 +409,13 @@ public class ModelServerTest {
 
     private void testPredictions(Channel channel, String[] targets) throws InterruptedException {
         for (String target : targets) {
-            reset();
             DefaultFullHttpRequest req =
                     new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, target);
             req.content().writeBytes(testImage);
             HttpUtil.setContentLength(req, req.content().readableBytes());
             req.headers()
                     .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
-            channel.writeAndFlush(req);
-
-            latch.await();
+            request(channel, req);
 
             Type type = new TypeToken<List<Classification>>() {}.getType();
             List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
@@ -433,14 +424,12 @@ public class ModelServerTest {
     }
 
     private void testInvocations(Channel channel) throws InterruptedException {
-        reset();
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/invocations");
         req.content().writeBytes(testImage);
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
-        channel.writeAndFlush(req);
-        latch.await();
+        request(channel, req);
 
         Type type = new TypeToken<List<Classification>>() {}.getType();
         List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
@@ -477,16 +466,14 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelAsync(Channel channel) throws InterruptedException {
-        reset();
         String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=mlp_1&synchronous=false&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(req);
-        latch.await();
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(statusResp.getStatus(), "Model \"mlp_1\" registration scheduled.");
@@ -495,40 +482,33 @@ public class ModelServerTest {
     }
 
     private void testRegisterModel(Channel channel) throws InterruptedException {
-        reset();
-
         String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=mlp_2&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(req);
-        latch.await();
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
     }
 
     private void testPerModelWorkers(Channel channel) throws InterruptedException {
-        reset();
-
         String url = "file:src/test/resources/identity";
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
-                        "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(req);
-        latch.await();
+                        "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8)));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
-        reset();
-
-        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/identity");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/identity"));
 
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
@@ -542,46 +522,39 @@ public class ModelServerTest {
         assertEquals(group.getMaxWorkers(), CudaUtils.hasCuda() ? 3 : 4);
 
         // unregister identity model
-        reset();
-        req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity");
-        channel.writeAndFlush(req);
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity"));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testRegisterModelTranslator(Channel channel)
             throws InterruptedException, IOException {
-        reset();
-
         String url =
                 "https://resources.djl.ai/demo/pytorch/traced_resnet18.zip?"
                         + "translator=ai.djl.serving.translator.TestTranslator"
                         + "&topK=1";
-        DefaultFullHttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=res18&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(req);
-        latch.await();
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"res18\" registered.");
 
         // send request
-        reset();
         String imgUrl = "https://resources.djl.ai/images/kitten.jpg";
-        req =
+        DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/res18");
         req.content().writeBytes(imgUrl.getBytes(StandardCharsets.UTF_8));
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
-        channel.writeAndFlush(req);
-        latch.await();
+        request(channel, req);
 
         assertEquals(result, "topK: 1, best: n02124075 Egyptian cat");
 
@@ -591,10 +564,10 @@ public class ModelServerTest {
         Assert.assertTrue(Files.exists(modelDir));
 
         // Unregister model
-        reset();
-        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/res18");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/res18"));
 
         resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model or workflow \"res18\" unregistered");
@@ -604,32 +577,27 @@ public class ModelServerTest {
     }
 
     private void testRegisterWorkflow(Channel channel) throws InterruptedException {
-        reset();
-
         String url = "https://resources.djl.ai/test-models/basic-serving-workflow.json";
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
-                        "/workflows?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(req);
-        latch.await();
+                        "/workflows?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8)));
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Workflow \"BasicWorkflow\" registered.");
     }
 
     private void testRegisterWorkflowAsync(Channel channel) throws InterruptedException {
-        reset();
         String url = "https://resources.djl.ai/test-models/basic-serving-workflow2.json";
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/workflows?synchronous=false&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(req);
-        latch.await();
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(statusResp.getStatus(), "Workflow \"BasicWorkflow2\" registration scheduled.");
@@ -638,14 +606,12 @@ public class ModelServerTest {
     }
 
     private void testScaleModel(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.PUT,
-                        "/models/mlp_2?min_worker=2&max_worker=4");
-        channel.writeAndFlush(req);
-        latch.await();
+                        "/models/mlp_2?min_worker=2&max_worker=4"));
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(
@@ -655,11 +621,9 @@ public class ModelServerTest {
     }
 
     private void testListModels(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models"));
 
         ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
         for (String expectedModel : new String[] {"mlp", "mlp_1", "mlp_2"}) {
@@ -670,11 +634,9 @@ public class ModelServerTest {
     }
 
     private void testListWorkflows(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/workflows");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/workflows"));
 
         ListWorkflowsResponse resp = JsonUtils.GSON.fromJson(result, ListWorkflowsResponse.class);
         for (String expectedWorkflow : new String[] {"mlp", "mlp_1", "mlp_2", "BasicWorkflow"}) {
@@ -685,11 +647,9 @@ public class ModelServerTest {
     }
 
     private void testKServeDescribeModel(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp"));
 
         JsonElement json = JsonUtils.GSON.fromJson(result, JsonElement.class);
         JsonObject resp = json.getAsJsonObject();
@@ -698,11 +658,9 @@ public class ModelServerTest {
     }
 
     private void testDescribeModel(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/mlp_2");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/mlp_2"));
 
         Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
         DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
@@ -736,24 +694,20 @@ public class ModelServerTest {
     }
 
     private void testUnregisterModel(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/mlp_1");
-        channel.writeAndFlush(req);
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/mlp_1"));
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model or workflow \"mlp_1\" unregistered");
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/predictions/mlp");
-        channel.writeAndFlush(req);
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/predictions/mlp"));
 
         assertEquals(result, "{}\n");
     }
@@ -762,16 +716,12 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testPredictionsInvalidRequestSize(Channel channel) throws InterruptedException {
-        reset();
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/mlp");
@@ -779,9 +729,7 @@ public class ModelServerTest {
         req.content().writeZero(11485760);
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
-        channel.writeAndFlush(req);
-
-        latch.await();
+        request(channel, req);
 
         assertEquals(httpStatus, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
     }
@@ -790,11 +738,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/InvalidUrl");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/InvalidUrl"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -809,11 +755,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/res");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/res"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -830,12 +774,10 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/predictions/InvalidModel");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/predictions/InvalidModel"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -850,11 +792,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -869,12 +809,10 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions/InvalidModel");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions/InvalidModel"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -889,11 +827,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/InvalidUrl");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/InvalidUrl"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -908,11 +844,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/models");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/models"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -927,11 +861,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models/noop");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models/noop"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -946,12 +878,10 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/InvalidModel");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/InvalidModel"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -966,11 +896,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -984,13 +912,10 @@ public class ModelServerTest {
     private void testRegisterModelNotFound() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
-
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/models?url=InvalidUrl");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/models?url=InvalidUrl"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1006,16 +931,14 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
         String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
-        DefaultFullHttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=mlp_2&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(req);
-        latch.await();
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1030,11 +953,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/models/fake");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/models/fake"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1049,11 +970,10 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/fake");
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/fake"));
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1068,24 +988,20 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        reset();
-        DefaultFullHttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.PUT,
-                        "/models/mlp_2?min_worker=0&max_worker=0");
-        channel.writeAndFlush(req);
-        latch.await();
+                        "/models/mlp_2?min_worker=0&max_worker=0"));
 
-        reset();
-        req =
+        DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/mlp_2");
         req.content().writeBytes(testImage);
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
-        channel.writeAndFlush(req).sync();
-        latch.await();
+        request(channel, req);
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1097,51 +1013,43 @@ public class ModelServerTest {
     }
 
     private void testKServeV2HealthReady(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/ready");
-        channel.writeAndFlush(req);
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/ready"));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2HealthLive(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live");
-        channel.writeAndFlush(req);
-        latch.await();
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live"));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2ModelReady(Channel channel) throws InterruptedException {
-        reset();
-        HttpRequest req =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp/ready");
-        channel.writeAndFlush(req);
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp/ready"));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2Infer(Channel channel) throws InterruptedException {
-        reset();
         String url = "file:src/test/resources/identity";
-        HttpRequest registerReq =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
                         "/models?model_name=identity&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8));
-        channel.writeAndFlush(registerReq);
-        latch.await();
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
-        reset();
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1, HttpMethod.POST, "/v2/models/identity/infer");
@@ -1161,17 +1069,13 @@ public class ModelServerTest {
         req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-        channel.writeAndFlush(req);
-
-        latch.await();
+        request(channel, req);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
-        reset();
-        HttpRequest unregisterReq =
+        request(
+                channel,
                 new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity");
-        channel.writeAndFlush(unregisterReq);
-        latch.await();
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity"));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
@@ -1180,14 +1084,12 @@ public class ModelServerTest {
         for (int i = 0; i < 5; ++i) {
             String token = "";
             while (token != null) {
-                reset();
-                HttpRequest req =
+                request(
+                        channel,
                         new DefaultFullHttpRequest(
                                 HttpVersion.HTTP_1_1,
                                 HttpMethod.GET,
-                                "/workflows?limit=1&next_page_token=" + token);
-                channel.writeAndFlush(req);
-                latch.await();
+                                "/workflows?limit=1&next_page_token=" + token));
 
                 ListWorkflowsResponse resp =
                         JsonUtils.GSON.fromJson(result, ListWorkflowsResponse.class);
@@ -1201,6 +1103,12 @@ public class ModelServerTest {
             Thread.sleep(100);
         }
         return false;
+    }
+
+    private void request(Channel channel, DefaultFullHttpRequest req) throws InterruptedException {
+        reset();
+        channel.writeAndFlush(req).sync();
+        latch.await();
     }
 
     private Channel connect(Connector.ConnectorType type) {
