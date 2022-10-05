@@ -48,6 +48,7 @@ RUN apt-get update && \
     pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} && \
     pip3 install triton==1.0.0 mpi4py sentencepiece accelerate bitsandbytes && \
     scripts/patch_oss_dlc.sh python && \
+    scripts/security_patch.sh deepspeed && \
     rm -rf scripts && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
