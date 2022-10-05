@@ -51,6 +51,7 @@ jobs:
           kill %1
       - name: Run Python binary mode tests
         run: |
+          ./gradlew :engines:java:pTML
           cd tests/binary && python prepare.py pt && cd ..
           djl-serving -m test::PyTorch=file://$PWD/binary/model.pt &> output.log &
           sleep 30
