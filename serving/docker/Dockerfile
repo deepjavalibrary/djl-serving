@@ -15,7 +15,10 @@ ARG djl_version=0.19.0~SNAPSHOT
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf
 COPY config.properties /opt/djl/conf/
-RUN scripts/install_djl_serving.sh $djl_version && rm -rf scripts
+RUN scripts/install_djl_serving.sh $djl_version && \
+    scripts/security_patch.sh cpu && \
+    apt-get clean -y && \
+    rm -rf scripts
 
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
@@ -35,6 +38,7 @@ ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
 LABEL maintainer="djl-dev@amazon.com"
+LABEL dlc_major_version="1"
 
 FROM base AS cpu-full
 
