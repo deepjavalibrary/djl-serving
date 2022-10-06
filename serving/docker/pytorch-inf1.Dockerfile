@@ -46,4 +46,4 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
-
+LABEL dlc_major_version="1"
