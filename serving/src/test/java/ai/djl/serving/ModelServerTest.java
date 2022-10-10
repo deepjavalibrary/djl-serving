@@ -248,6 +248,11 @@ public class ModelServerTest {
 
             url = server.mapModelUrl(mar);
             assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
+
+            Path root = modelStore.resolve("models.pt");
+            Files.createFile(root);
+            url = server.mapModelUrl(modelStore);
+            assertEquals(url, "models::PyTorch:*=" + modelStore.toUri().toURL());
         } finally {
             server.stop();
         }
