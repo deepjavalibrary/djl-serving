@@ -113,7 +113,7 @@ public class DependencyManager {
                 installDependency("ai.djl.tflite:tflite-engine:" + djlVersion);
                 break;
             case "XGBoost":
-                installDependency("ai.djl.ml.xgboost:xgboost-engine:" + djlVersion);
+                installDependency("ai.djl.ml.xgboost:xgboost:" + djlVersion);
                 break;
             case "DLR":
                 installDependency("ai.djl.dlr:dlr-engine:" + djlVersion);

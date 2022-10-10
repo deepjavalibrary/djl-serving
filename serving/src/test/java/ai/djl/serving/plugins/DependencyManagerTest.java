@@ -23,6 +23,8 @@ public class DependencyManagerTest {
     public void testInstallDependency() throws IOException {
         DependencyManager dm = DependencyManager.getInstance();
         dm.installEngine("OnnxRuntime");
+        dm.installEngine("XGBoost");
+
         dm.installDependency("ai.djl.pytorch:pytorch-jni:1.12.1-0.19.0");
 
         Assert.assertThrows(() -> dm.installDependency("ai.djl.pytorch:pytorch-jni"));
