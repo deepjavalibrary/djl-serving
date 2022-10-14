@@ -91,7 +91,7 @@ class Resnet18(object):
             outputs.add_as_json(
                 self.map_class_to_label(probs, self.mapping, classes))
         except Exception as e:
-            logging.exception("accumulate failed")
+            logging.exception("resnet18 failed")
             # error handling
             outputs = Output().error(str(e))
 

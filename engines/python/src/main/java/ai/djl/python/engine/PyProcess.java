@@ -12,7 +12,6 @@
  */
 package ai.djl.python.engine;
 
-import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
@@ -26,6 +25,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -41,20 +43,30 @@ class PyProcess {
 
     private PyEnv pyEnv;
     private Model model;
+    private int workerId;
     private Process process;
-    private Connection connection;
+    private List<Connection> connections;
     private CountDownLatch latch;
-    private boolean started;
-    private AtomicInteger processId;
+    private volatile boolean started; // NOPMD
     private ReaderThread err;
     private ReaderThread out;
+    private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
 
-    PyProcess(Model model, PyEnv pyEnv) {
+    PyProcess(Model model, PyEnv pyEnv, int workerId) {
         this.model = model;
         this.pyEnv = pyEnv;
-        connection = new Connection();
-        processId = new AtomicInteger(0);
+        this.workerId = workerId;
+        if (pyEnv.isMpiMode()) {
+            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+            connections = new ArrayList<>(tensorParallelDegree);
+            for (int i = 0; i < tensorParallelDegree; ++i) {
+                connections.add(new Connection(pyEnv, workerId, i));
+            }
+        } else {
+            connections = Collections.singletonList(new Connection(pyEnv, workerId, -1));
+        }
+        restartCount = new AtomicInteger(0);
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
@@ -65,19 +77,31 @@ class PyProcess {
                     inputs.addProperty("handler", handler);
                 }
             }
-            Device device = model.getNDManager().getDevice();
-            inputs.addProperty("device_id", String.valueOf(device.getDeviceId()));
-            CompletableFuture<Output> future = connection.send(inputs);
-            Output output = future.get(timeout, TimeUnit.SECONDS);
-            if (initialLoad) {
-                if (output.getCode() >= 300) {
-                    logger.warn("Model doesn't support initialize: {}", output.getMessage());
-                } else {
-                    logger.info("Model [{}] initialized.", model.getName());
+
+            List<CompletableFuture<Output>> futures = new ArrayList<>(connections.size());
+            for (Connection conn : connections) {
+                futures.add(conn.send(inputs));
+            }
+
+            Output output = null;
+            for (CompletableFuture<Output> future : futures) {
+                output = future.get(timeout, TimeUnit.SECONDS);
+                if (initialLoad) {
+                    if (output.getCode() >= 300) {
+                        if (pyEnv.isMpiMode()) {
+                            throw new TranslateException(
+                                    "Failed to initialize model: " + output.getMessage());
+                        }
+                        logger.warn("Model doesn't support initialize: {}", output.getMessage());
+                    } else {
+                        logger.info("Model [{}] initialized.", model.getName());
+                    }
                 }
             }
+
             return output;
         } catch (Exception e) {
+            logger.debug("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
             stopPythonProcess();
             if (!initialLoad) {
                 logger.info("Restart python process ...");
@@ -89,27 +113,33 @@ class PyProcess {
 
     synchronized void startPythonProcess() {
         try {
-            int id = processId.get();
-            logger.info("Start process: {}:{}", id, connection.getPort());
+            int id = restartCount.get();
+            int port = connections.get(0).getPort();
+            logger.info("Start process: {} - retry: {}", port, id);
             pyEnv.installDependency(model.getModelPath());
-            process = connection.startPython(pyEnv, model);
+            process = Connection.startPython(pyEnv, model, workerId, port);
 
             String modelName = model.getName();
             modelName = modelName.substring(0, Math.min(modelName.length(), 15));
-            String threadName = "W-" + connection.getPort() + '-' + modelName;
+            String threadName = "W-" + port + '-' + modelName;
             err = new ReaderThread(threadName, process.getErrorStream(), true, this, id);
             out = new ReaderThread(threadName, process.getInputStream(), false, this, id);
-            latch = new CountDownLatch(1);
+            latch = new CountDownLatch(connections.size());
             err.start();
             out.start();
             if (!latch.await(2, TimeUnit.MINUTES)) {
                 throw new EngineException("Python process startup time out.");
             }
             if (!started) {
-                throw new EngineException("Python stream closed unexpectedly.");
+                logger.warn("Process not started, waiting for process end ...");
+                int exitCode = process.waitFor();
+                throw new IllegalThreadStateException(
+                        "Python stream closed unexpectedly, exit code: " + exitCode);
             }
 
-            connection.connect();
+            for (Connection conn : connections) {
+                conn.connect();
+            }
 
             // initialize model with an empty request
             Input init = new Input();
@@ -135,8 +165,8 @@ class PyProcess {
     }
 
     synchronized void stopPythonProcess() {
-        int id = processId.getAndIncrement();
-        logger.info("Stop process: {}:{}", id, connection.getPort());
+        int id = restartCount.getAndIncrement();
+        logger.info("Stop process: {}:{}", workerId, id);
         if (restartFuture != null) {
             try {
                 if (!restartFuture.isDone()) {
@@ -151,6 +181,9 @@ class PyProcess {
             }
             restartFuture = null;
         }
+        for (Connection conn : connections) {
+            conn.disconnect();
+        }
         if (process != null) {
             started = false;
             if (err != null) {
@@ -159,16 +192,21 @@ class PyProcess {
             if (out != null) {
                 out.shutdown();
             }
-            connection.disconnect();
             process.destroyForcibly();
             process = null;
         }
     }
 
     void setStarted(boolean started, int id) {
-        if (processId.get() == id) {
-            this.started = started;
-            latch.countDown();
+        if (restartCount.get() == id) {
+            if (started) {
+                latch.countDown();
+                this.started = latch.getCount() == 0;
+            } else {
+                while (latch.getCount() > 0) {
+                    latch.countDown();
+                }
+            }
         }
     }
 
@@ -176,7 +214,7 @@ class PyProcess {
         return !started;
     }
 
-    private static final class ReaderThread extends Thread {
+    static final class ReaderThread extends Thread {
 
         private InputStream is;
         private boolean error;

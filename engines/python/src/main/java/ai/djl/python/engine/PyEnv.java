@@ -16,6 +16,7 @@ import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.util.Platform;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.channel.EventLoopGroup;
 
@@ -42,17 +43,25 @@ public class PyEnv {
     private static String version;
     private static EventLoopGroup eventLoopGroup;
 
+    private boolean mpiMode;
     private String pythonExecutable;
     private String entryPoint;
     private String handler;
     private int predictTimeout;
     private int modelLoadingTimeout;
+    private int tensorParallelDegree;
+    private int mpiProcesses;
     private Map<String, String> envs;
     private Map<String, String> initParameters;
     private boolean initialized;
 
-    /** Constructs a new {@code PyEnv} instance. */
-    public PyEnv() {
+    /**
+     * Constructs a new {@code PyEnv} instance.
+     *
+     * @param mpiMode true to use MPI launcher
+     */
+    public PyEnv(boolean mpiMode) {
+        this.mpiMode = mpiMode;
         pythonExecutable = Utils.getenv("PYTHON_EXECUTABLE");
         if (pythonExecutable == null) {
             pythonExecutable = "python3";
@@ -62,7 +71,11 @@ public class PyEnv {
         initParameters = new ConcurrentHashMap<>();
     }
 
-    static void init() {
+    static synchronized void init() {
+        if (eventLoopGroup != null) {
+            return;
+        }
+
         eventLoopGroup = Connection.newEventLoopGroup();
 
         Path tmp = null;
@@ -143,15 +156,6 @@ public class PyEnv {
     }
 
     /**
-     * Returns the python executable path.
-     *
-     * @return the python executable path
-     */
-    public String getPythonExecutable() {
-        return pythonExecutable;
-    }
-
-    /**
      * Installs model dependencies if needed.
      *
      * @param modelDir the model directory
@@ -187,6 +191,19 @@ public class PyEnv {
         initialized = true;
     }
 
+    boolean isMpiMode() {
+        return mpiMode;
+    }
+
+    /**
+     * Returns the python executable path.
+     *
+     * @return the python executable path
+     */
+    public String getPythonExecutable() {
+        return pythonExecutable;
+    }
+
     /**
      * Sets the python executable path.
      *
@@ -194,6 +211,30 @@ public class PyEnv {
      */
     public void setPythonExecutable(String pythonExecutable) {
         this.pythonExecutable = pythonExecutable;
+    }
+
+    /**
+     * Returns the tensor parallel degree.
+     *
+     * @return the tensor parallel degree
+     */
+    public int getTensorParallelDegree() {
+        return tensorParallelDegree;
+    }
+
+    /**
+     * Sets the tensor parallel degree.
+     *
+     * @param tensorParallelDegree the tensor parallel degree
+     */
+    public void setTensorParallelDegree(int tensorParallelDegree) {
+        this.tensorParallelDegree = tensorParallelDegree;
+        int gpuCount = CudaUtils.getGpuCount();
+        mpiProcesses = gpuCount / tensorParallelDegree;
+    }
+
+    int getMpiWorkers() {
+        return mpiProcesses;
     }
 
     /**
