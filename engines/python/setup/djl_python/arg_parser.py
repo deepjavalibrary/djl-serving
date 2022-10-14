@@ -66,6 +66,11 @@ class ArgParser(object):
             help=
             'If \'sock-type\' is \'tcp\' this is expected to have the host port to bind on'
         )
+        parser.add_argument('--tensor-parallel-degree',
+                            required=False,
+                            dest="tensor_parallel_degree",
+                            type=int,
+                            help='The tensor parallel degree')
         return parser
 
     @staticmethod

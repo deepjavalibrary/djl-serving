@@ -46,7 +46,7 @@ class HuggingFaceService(object):
 
     def initialize(self, properties: dict):
         model_dir = properties.get("model_dir")
-        device_id = int(properties.get("device_id"))
+        device_id = int(properties.get("device_id", "-1"))
         model_id = properties.get("model_id")
         task = properties.get("task")
         if task:
