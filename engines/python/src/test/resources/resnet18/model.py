@@ -45,7 +45,7 @@ class Resnet18(object):
         """
         Initialize model.
         """
-        device_id = properties.get("device_id")
+        device_id = properties.get("device_id", "-1")
         device_id = "cpu" if device_id == "-1" else "cuda:" + device_id
         self.device = torch.device(device_id)
         self.model = models.resnet18(pretrained=True).to(self.device)

@@ -36,12 +36,12 @@ def load_model_service(model_dir, entry_point, device_id):
             entry_point = entry_point[:-3]
             if not os.path.exists(entry_point_file):
                 raise ValueError(
-                    "entry-point file not found {}.".format(entry_point_file))
+                    f"entry-point file not found {entry_point_file}.")
 
         module = importlib.import_module(entry_point)
         if module is None:
-            raise ValueError("Unable to load entry_point {}/{}.py".format(
-                model_dir, entry_point))
+            raise ValueError(
+                f"Unable to load entry_point {model_dir}/{entry_point}.py")
         return ModelService(module, model_dir)
 
     with open("MAR-INF/MANIFEST.json") as f:
