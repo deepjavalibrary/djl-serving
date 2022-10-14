@@ -59,26 +59,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 class Connection {
 
     private static final Logger logger = LoggerFactory.getLogger(Connection.class);
+    private static final String MASTER_ADDR = "127.0.0.1";
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
     private int port;
-    private boolean uds;
+    private SocketAddress socketAddress;
     private Channel channel;
     private RequestHandler requestHandler;
 
-    Connection() {
-        this.port = 19000 + counter.getAndIncrement();
-        uds = Epoll.isAvailable() || KQueue.isAvailable();
+    Connection(PyEnv pyEnv, int workerId, int rank) {
         requestHandler = new RequestHandler();
+        if (pyEnv.isMpiMode()) {
+            port = 128 * workerId + 29761;
+        } else {
+            port = 19000 + counter.getAndIncrement();
+        }
+        socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank);
     }
 
-    Process startPython(PyEnv pyEnv, Model model) throws IOException {
+    static Process startPython(PyEnv pyEnv, Model model, int workerId, int port)
+            throws IOException {
         File modelPath = model.getModelPath().toFile();
-
-        String[] args = getPythonStartCmd(pyEnv, model);
+        String[] args = getPythonStartCmd(pyEnv, model, workerId, port);
         String[] envp = pyEnv.getEnvironmentVars(model);
-
         logger.debug("cmd: {}", (Object) args);
 
         return Runtime.getRuntime().exec(args, envp, modelPath);
@@ -97,22 +101,76 @@ class Connection {
         return f;
     }
 
-    private String[] getPythonStartCmd(PyEnv pyEnv, Model model) {
+    static String[] getPythonStartCmd(PyEnv pyEnv, Model model, int workerId, int port) {
+        if (pyEnv.isMpiMode()) {
+            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+            String[] args = new String[36];
+            args[0] = "mpirun";
+            args[1] = "-N";
+            // TODO: When we support multi nodes, change it to the product of tensor parallel value
+            // and
+            // pipeline parallel value.
+            args[2] = String.valueOf(tensorParallelDegree);
+            args[3] = "--allow-run-as-root";
+            args[4] = "--mca";
+            args[5] = "btl_vader_single_copy_mechanism";
+            args[6] = "none";
+            args[7] = "--tag-output";
+            args[8] = "-x";
+            args[9] = "FI_PROVIDER=efa";
+            args[10] = "-x";
+            args[11] = "RDMAV_FORK_SAFE=1";
+            args[12] = "-x";
+            args[13] = "FI_EFA_USE_DEVICE_RDMA=1";
+            args[14] = "-x";
+            args[15] = "LD_LIBRARY_PATH";
+            args[16] = "-x";
+            args[17] = "PYTHONPATH";
+            args[18] = "-x";
+            args[19] = "CUDA_VISIBLE_DEVICES=" + getVisibleDevices(workerId, tensorParallelDegree);
+            args[20] = "-x";
+            args[21] = "MASTER_ADDR=" + MASTER_ADDR;
+            args[22] = "-x";
+            args[23] = "MASTER_PORT=" + port;
+            args[24] = pyEnv.getPythonExecutable();
+            args[25] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
+            args[26] = "--model-dir";
+            args[27] = model.getModelPath().toAbsolutePath().toString();
+            args[28] = "--entry-point";
+            args[29] = pyEnv.getEntryPoint();
+            args[30] = "--sock-type";
+            args[31] = "unix";
+            args[32] = "--sock-name";
+            args[33] = getSocketPath(port);
+            args[34] = "--tensor-parallel-degree";
+            args[35] = String.valueOf(tensorParallelDegree);
+            return args;
+        }
+
+        boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
         args[0] = pyEnv.getPythonExecutable();
         args[1] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
         args[2] = "--sock-type";
         args[3] = uds ? "unix" : "tcp";
         args[4] = uds ? "--sock-name" : "--port";
-        args[5] = uds ? getSocketPath() : String.valueOf(port);
+        args[5] = uds ? getSocketPath(port) : String.valueOf(port);
         args[6] = "--model-dir";
         args[7] = model.getModelPath().toAbsolutePath().toString();
         args[8] = "--entry-point";
         args[9] = pyEnv.getEntryPoint();
         args[10] = "--device-id";
         args[11] = String.valueOf(model.getNDManager().getDevice().getDeviceId());
-
         return args;
+    }
+
+    private static String getVisibleDevices(int workerId, int tensorParallelDegree) {
+        StringBuilder sb = new StringBuilder(20);
+        sb.append(workerId * tensorParallelDegree);
+        for (int i = 1; i < tensorParallelDegree; ++i) {
+            sb.append(',').append(workerId * tensorParallelDegree + i);
+        }
+        return sb.toString();
     }
 
     void connect() throws InterruptedException {
@@ -122,7 +180,7 @@ class Connection {
         clientBootstrap
                 .group(group)
                 .channel(getClientChannel())
-                .remoteAddress(getSocketAddress())
+                .remoteAddress(socketAddress)
                 .handler(
                         new ChannelInitializer<>() {
 
@@ -154,18 +212,23 @@ class Connection {
         } catch (InterruptedException ignore) {
             // ignore
         }
-        if (uds) {
-            Utils.deleteQuietly(Paths.get(getSocketPath()));
+        if (socketAddress instanceof DomainSocketAddress) {
+            String path = ((DomainSocketAddress) socketAddress).path();
+            Utils.deleteQuietly(Paths.get(path));
         }
     }
 
-    private String getSocketPath() {
+    private static String getSocketPath(int port) {
         return System.getProperty("java.io.tmpdir") + "/djl_sock." + port;
     }
 
-    private SocketAddress getSocketAddress() {
+    private SocketAddress getSocketAddress(boolean mpiMode, int rank) {
+        if (mpiMode) {
+            return new DomainSocketAddress(getSocketPath(port) + '.' + rank);
+        }
+        boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         if (uds) {
-            return new DomainSocketAddress(getSocketPath());
+            return new DomainSocketAddress(getSocketPath(port));
         }
         return new InetSocketAddress("127.0.0.1", port);
     }
@@ -203,7 +266,7 @@ class Connection {
         /** {@inheritDoc} */
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            logger.error("Exception occurred during reading Output from python process", cause);
+            logger.error("Exception reading Output from python process", cause);
             ctx.close();
         }
 

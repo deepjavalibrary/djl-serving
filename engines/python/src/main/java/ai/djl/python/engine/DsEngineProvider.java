@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
  * with the License. A copy of the License is located at
@@ -12,37 +12,30 @@
  */
 package ai.djl.python.engine;
 
-import ai.djl.engine.Engine;
 import ai.djl.engine.EngineProvider;
 
-/** {@code PyEngineProvider} is the Python implementation of {@link EngineProvider}. */
-public class PyEngineProvider implements EngineProvider {
-
-    private static final String ENGINE_NAME = "Python";
-
-    private static volatile Engine engine; // NOPMD
+/** {@code DsEngineProvider} is the DeepSpeed implementation of {@link EngineProvider}. */
+public class DsEngineProvider extends PyEngineProvider {
 
     /** {@inheritDoc} */
     @Override
     public String getEngineName() {
-        return ENGINE_NAME;
+        return "DeepSpeed";
     }
 
     /** {@inheritDoc} */
     @Override
     public int getEngineRank() {
-        return PyEngine.RANK;
+        return PyEngine.RANK + 1;
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public Engine getEngine() {
-        if (engine == null) {
-            synchronized (this) {
-                PyEnv.init();
-                engine = new PyEngine(getEngineName(), false);
-            }
+    /** {@code RbEngineProvider} is the alias of {@link DsEngineProvider}. */
+    public static final class RbEngineProvider extends DsEngineProvider {
+
+        /** {@inheritDoc} */
+        @Override
+        public String getEngineName() {
+            return "Rubikon";
         }
-        return engine;
     }
 }

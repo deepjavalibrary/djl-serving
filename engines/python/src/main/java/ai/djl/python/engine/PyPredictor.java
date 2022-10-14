@@ -31,11 +31,15 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     private PyProcess process;
     private int timeout;
 
-    public PyPredictor(Model model, Translator<I, O> translator, PyEnv pyEnv, Device device) {
+    public PyPredictor(
+            Model model,
+            PyProcess process,
+            int timeout,
+            Translator<I, O> translator,
+            Device device) {
         super(model, translator, device, false);
-        timeout = pyEnv.getPredictTimeout();
-        process = new PyProcess(model, pyEnv);
-        process.startPythonProcess();
+        this.process = process;
+        this.timeout = timeout;
     }
 
     /** {@inheritDoc} */

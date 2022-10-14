@@ -47,7 +47,7 @@ public class PyNDArray extends NDArrayAdapter {
     @Override
     public void detach() {
         manager.detachInternal(getUid());
-        manager = PyNDManager.getSystemManager();
+        manager = PyNDManager.getSystemManager(manager.getEngine());
     }
 
     /** {@inheritDoc} */
