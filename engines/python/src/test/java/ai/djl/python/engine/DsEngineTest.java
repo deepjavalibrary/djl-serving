@@ -13,26 +13,25 @@
 package ai.djl.python.engine;
 
 import ai.djl.ModelException;
-import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
-import ai.djl.ndarray.NDManager;
-import ai.djl.ndarray.types.Shape;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.training.util.DownloadUtils;
 import ai.djl.translate.NoopTranslator;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
+import ai.djl.util.cuda.CudaUtils;
 
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -46,10 +45,20 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
-public class PyEngineTest {
+public class DsEngineTest {
 
     @BeforeClass
     public void setUp() {
+        int gpuCount = CudaUtils.getGpuCount();
+        if (gpuCount < 2) {
+            throw new SkipException("Large model test requires at least 2 GPUs.");
+        }
+        if (!System.getProperty("os.name").startsWith("Linux")) {
+            throw new SkipException("Large model test only support on Linux.");
+        }
+        if (!Files.exists(Paths.get("/usr/bin/mpirun"))) {
+            throw new SkipException("Large model test requires /usr/bin/mpirun");
+        }
         System.setProperty("ENGINE_CACHE_DIR", "build/cache");
     }
 
@@ -59,46 +68,17 @@ public class PyEngineTest {
     }
 
     @Test
-    public void testPyEngine() {
-        Engine engine = Engine.getInstance();
-        Assert.assertNotNull(engine.getVersion());
-        Assert.assertTrue(engine.toString().startsWith("Python:"));
-        Assert.assertThrows(UnsupportedOperationException.class, () -> engine.setRandomSeed(1));
-        Assert.assertThrows(UnsupportedOperationException.class, engine::newGradientCollector);
-        Assert.assertThrows(UnsupportedOperationException.class, () -> engine.newSymbolBlock(null));
-    }
-
-    @Test
-    public void testNDArray() {
-        try (NDManager manager = NDManager.newBaseManager()) {
-            NDArray zeros = manager.zeros(new Shape(1, 2));
-            float[] data = zeros.toFloatArray();
-            Assert.assertEquals(data[0], 0);
-
-            NDArray ones = manager.ones(new Shape(1, 2));
-            data = ones.toFloatArray();
-            Assert.assertEquals(data[0], 1);
-
-            float[] buf = {0f, 1f, 2f, 3f};
-            NDArray array = manager.create(buf);
-            Assert.assertEquals(array.toFloatArray(), buf);
-        }
-    }
-
-    @Test
-    public void testModelLoadingTimeout() throws IOException, ModelException {
+    public void testModelLoadingTimeout() {
         Criteria<NDList, NDList> criteria =
                 Criteria.builder()
                         .setTypes(NDList.class, NDList.class)
                         .optModelPath(Paths.get("src/test/resources/accumulate"))
                         .optTranslator(new NoopTranslator())
                         .optOption("model_loading_timeout", "1")
-                        .optEngine("Python")
+                        .optEngine("DeepSpeed")
                         .build();
 
-        try (ZooModel<NDList, NDList> model = criteria.loadModel()) {
-            Assert.assertThrows(EngineException.class, model::newPredictor);
-        }
+        Assert.assertThrows(EngineException.class, criteria::loadModel);
     }
 
     @Test
@@ -109,7 +89,7 @@ public class PyEngineTest {
                         .optModelPath(Paths.get("src/test/resources/accumulate"))
                         .optTranslator(new NoopTranslator())
                         .optOption("predict_timeout", "1")
-                        .optEngine("Python")
+                        .optEngine("DeepSpeed")
                         .build();
 
         try (ZooModel<NDList, NDList> model = criteria.loadModel();
@@ -127,7 +107,7 @@ public class PyEngineTest {
                         .optModelPath(Paths.get("src/test/resources/accumulate"))
                         .optTranslator(new NoopTranslator())
                         .optOption("env", "TEST_ENV1=a,TEST_ENV2=b")
-                        .optEngine("Python")
+                        .optEngine("DeepSpeed")
                         .build();
         try (ZooModel<NDList, NDList> model = criteria.loadModel();
                 Predictor<NDList, NDList> predictor = model.newPredictor()) {
@@ -148,7 +128,7 @@ public class PyEngineTest {
                         .setTypes(NDList.class, NDList.class)
                         .optModelPath(Paths.get("src/test/resources/echo"))
                         .optTranslator(new NoopTranslator())
-                        .optEngine("Python")
+                        .optEngine("DeepSpeed")
                         .build();
         try (ZooModel<NDList, NDList> model = criteria.loadModel();
                 Predictor<NDList, NDList> predictor = model.newPredictor()) {
@@ -169,7 +149,7 @@ public class PyEngineTest {
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
                         .optModelPath(Paths.get("src/test/resources/resnet18"))
-                        .optEngine("Python")
+                        .optEngine("DeepSpeed")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
@@ -188,41 +168,12 @@ public class PyEngineTest {
     }
 
     @Test
-    public void testHuggingfaceModel() throws TranslateException, IOException, ModelException {
-        if (!Boolean.getBoolean("nightly")) {
-            return;
-        }
-        Criteria<Input, Output> criteria =
-                Criteria.builder()
-                        .setTypes(Input.class, Output.class)
-                        .optEngine("Python")
-                        .optModelPath(Paths.get("src/test/resources/huggingface"))
-                        .build();
-        try (ZooModel<Input, Output> model = criteria.loadModel();
-                Predictor<Input, Output> predictor = model.newPredictor()) {
-            Input input = new Input();
-            input.add(
-                    "{\"question\": \"Why is model conversion important?\",\"context\": \"The"
-                        + " option to convert models between FARM and transformers gives freedom to"
-                        + " the user and let people easily switch between frameworks.\"}");
-            input.addProperty("Content-Type", "application/json");
-            Output output = predictor.predict(input);
-            String classification = output.getData().getAsString();
-            JsonElement json = JsonUtils.GSON.fromJson(classification, JsonElement.class);
-            String answer = json.getAsJsonObject().get("answer").getAsString();
-            Assert.assertEquals(
-                    answer,
-                    "gives freedom to the user and let people easily switch between frameworks");
-        }
-    }
-
-    @Test
     public void testModelException() throws TranslateException, IOException, ModelException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
                         .optModelPath(Paths.get("src/test/resources/echo"))
-                        .optEngine("Python")
+                        .optEngine("DeepSpeed")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
@@ -249,7 +200,7 @@ public class PyEngineTest {
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
                         .optModelPath(Paths.get("src/test/resources/echo"))
-                        .optEngine("Python")
+                        .optEngine("DeepSpeed")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {

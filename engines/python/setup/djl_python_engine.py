@@ -34,24 +34,36 @@ class PythonEngine(object):
     Backend engine to run python code
     """
 
-    def __init__(self, socket_type, socket_name, port, service):
-        self.socket_type = socket_type
-        self.sock_name = socket_name
-        self.port = port
+    def __init__(self, args, service):
+        # Support MPI environment args
+        if os.getenv('OMPI_COMM_WORLD_SIZE'):
+            os.environ["WORLD_SIZE"] = os.getenv('OMPI_COMM_WORLD_SIZE')
+        if os.getenv('OMPI_COMM_WORLD_LOCAL_RANK'):
+            os.environ["LOCAL_RANK"] = os.getenv('OMPI_COMM_WORLD_LOCAL_RANK')
+        rank = os.environ.get("OMPI_COMM_WORLD_RANK")
+        if rank:
+            os.environ["RANK"] = rank
+
+        self.sock_type = args.sock_type
+        self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
+        self.port = args.port
         self.service = service
-        if socket_type == "unix":
-            if socket_name is None:
+        self.device_id = args.device_id
+        self.tensor_parallel_degree = args.tensor_parallel_degree
+
+        if self.sock_type == "unix":
+            if self.sock_name is None:
                 raise ValueError("Missing sock-name argument.")
 
             self.clean_up()
-        elif socket_type == "tcp":
+        elif self.sock_type == "tcp":
             self.sock_name = "127.0.0.1"
-            if port is None:
+            if self.port is None:
                 raise ValueError("Missing port argument.")
         else:
-            raise ValueError(f"Invalid socket-type: {socket_type}.")
+            raise ValueError(f"Invalid socket-type: {self.sock_type}.")
 
-        socket_family = socket.AF_INET if socket_type == "tcp" else socket.AF_UNIX
+        socket_family = socket.AF_INET if self.sock_type == "tcp" else socket.AF_UNIX
         self.sock = socket.socket(socket_family, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(SOCKET_ACCEPT_TIMEOUT)
@@ -80,7 +92,7 @@ class PythonEngine(object):
         Run the backend worker process and listen on a socket
         :return:
         """
-        if self.socket_type == "unix":
+        if self.sock_type == "unix":
             self.sock.bind(self.sock_name)
         else:
             self.sock.bind((self.sock_name, int(self.port)))
@@ -95,6 +107,9 @@ class PythonEngine(object):
         while True:
             inputs = Input()
             inputs.read(cl_socket)
+            prop = inputs.get_properties()
+            prop["tensor_parallel_degree"] = self.tensor_parallel_degree
+            prop["device_id"] = self.device_id
             function_name = inputs.get_function_name()
             try:
                 outputs = self.service.invoke_handler(function_name, inputs)
@@ -111,20 +126,24 @@ class PythonEngine(object):
 def main():
     sock_type = None
     sock_name = None
+    pid = os.getpid()
 
     # noinspection PyBroadException
     try:
         logging.basicConfig(stream=sys.stdout,
                             format="%(message)s",
                             level=logging.INFO)
-        logging.info(f"djl_python_engine started with args: {sys.argv[1:]}")
+        logging.info(
+            f"{pid} - djl_python_engine started with args: {sys.argv[1:]}")
         args = ArgParser.python_engine_args().parse_args()
-        sock_name = args.sock_name
+        rank = os.environ.get("OMPI_COMM_WORLD_RANK")
         sock_type = args.sock_type
+        sock_name = args.sock_name if rank is None else f"{args.sock_name}.{rank}"
+
         model_service = load_model_service(args.model_dir, args.entry_point,
                                            args.device_id)
 
-        engine = PythonEngine(sock_type, sock_name, args.port, model_service)
+        engine = PythonEngine(args, model_service)
 
         engine.run_server()
     except socket.timeout:
@@ -132,12 +151,13 @@ def main():
     except Exception:  # pylint: disable=broad-except
         logging.exception("Python engine process died")
     finally:
-        logging.info("Python process finished")
-        if sock_type == 'unix' and os.path.exists(sock_name):
-            os.remove(sock_name)
-        pid_file = f"{sock_name}.pid"
-        if sock_type == 'unix' and os.path.exists(pid_file):
-            os.remove(pid_file)
+        logging.info(f"{pid} - Python process finished")
+        if sock_type == 'unix':
+            if os.path.exists(sock_name):
+                os.remove(sock_name)
+            pid_file = f"{sock_name}.pid"
+            if os.path.exists(pid_file):
+                os.remove(pid_file)
 
 
 if __name__ == "__main__":

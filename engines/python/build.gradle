@@ -1,4 +1,3 @@
-
 group "ai.djl.python"
 
 dependencies {
@@ -33,6 +32,12 @@ processResources {
             sb.append(",djl_python/").append(name)
         }
         propFile.text = sb.toString()
+    }
+}
+
+test {
+    doFirst {
+        environment("TENSOR_PARALLEL_DEGREE", "2")
     }
 }
 

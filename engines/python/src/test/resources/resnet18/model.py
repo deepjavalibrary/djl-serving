@@ -45,7 +45,7 @@ class Resnet18(object):
         """
         Initialize model.
         """
-        device_id = properties.get("device_id")
+        device_id = properties.get("device_id", "-1")
         device_id = "cpu" if device_id == "-1" else "cuda:" + device_id
         self.device = torch.device(device_id)
         self.model = models.resnet18(pretrained=True).to(self.device)
@@ -91,7 +91,7 @@ class Resnet18(object):
             outputs.add_as_json(
                 self.map_class_to_label(probs, self.mapping, classes))
         except Exception as e:
-            logging.exception("accumulate failed")
+            logging.exception("resnet18 failed")
             # error handling
             outputs = Output().error(str(e))
 

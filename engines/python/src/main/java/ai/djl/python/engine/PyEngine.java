@@ -23,23 +23,22 @@ import ai.djl.training.GradientCollector;
 /** The {@code PyEngine} is an implementation of the {@link Engine} that runs Python worker. */
 public final class PyEngine extends Engine {
 
-    public static final String ENGINE_NAME = "Python";
     static final int RANK = 10;
 
+    private String engineName;
+    private boolean mpiMode;
     private Engine alternativeEngine;
     private boolean initialized;
 
-    private PyEngine() {}
-
-    static Engine newInstance() {
-        PyEnv.init();
-        return new PyEngine();
+    PyEngine(String engineName, boolean mpiMode) {
+        this.engineName = engineName;
+        this.mpiMode = mpiMode;
     }
 
     /** {@inheritDoc} */
     @Override
     public Engine getAlternativeEngine() {
-        if (!initialized && !Boolean.getBoolean("ai.djl.python.disable_alternative")) {
+        if (!mpiMode && !initialized && !Boolean.getBoolean("ai.djl.python.disable_alternative")) {
             Engine engine = Engine.getInstance();
             if (engine.getRank() < getRank()) {
                 // alternativeEngine should not have the same rank as OnnxRuntime
@@ -53,7 +52,7 @@ public final class PyEngine extends Engine {
     /** {@inheritDoc} */
     @Override
     public String getEngineName() {
-        return ENGINE_NAME;
+        return engineName;
     }
 
     /** {@inheritDoc} */
@@ -95,7 +94,7 @@ public final class PyEngine extends Engine {
     /** {@inheritDoc} */
     @Override
     public NDManager newBaseManager(Device device) {
-        return PyNDManager.getSystemManager().newSubManager(device);
+        return PyNDManager.getSystemManager(this).newSubManager(device);
     }
 
     /** {@inheritDoc} */

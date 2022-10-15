@@ -23,18 +23,24 @@ import ai.djl.ndarray.types.Shape;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** {@code PyNDManager} is the Python engine implementation of {@link NDManager}. */
 public class PyNDManager extends BaseNDManager {
 
-    private static final PyNDManager SYSTEM_MANAGER = new SystemManager();
+    private static final Map<String, NDManager> MAP = new ConcurrentHashMap<>();
 
-    private PyNDManager(NDManager parent, Device device) {
+    private Engine engine;
+
+    PyNDManager(Engine engine, NDManager parent, Device device) {
         super(parent, device);
+        this.engine = engine;
     }
 
-    static PyNDManager getSystemManager() {
-        return SYSTEM_MANAGER;
+    static NDManager getSystemManager(Engine engine) {
+        String engineName = engine.getEngineName();
+        return MAP.computeIfAbsent(engineName, n -> new SystemManager(Engine.getEngine(n)));
     }
 
     /** {@inheritDoc} */
@@ -70,15 +76,21 @@ public class PyNDManager extends BaseNDManager {
     /** {@inheritDoc} */
     @Override
     public PyNDManager newSubManager(Device device) {
-        PyNDManager manager = new PyNDManager(this, device);
+        PyNDManager manager;
+        if ("Python".equals(engine.getEngineName())) {
+            manager = new PyNDManager(engine, this, device);
+        } else {
+            manager = new DsNDManager(engine, this, device);
+        }
         attachInternal(manager.uid, manager);
         return manager;
     }
 
     /** {@inheritDoc} */
     @Override
-    public final Engine getEngine() {
-        return Engine.getEngine(PyEngine.ENGINE_NAME);
+    public Engine getEngine() {
+        // FIXME: return engine in 0.20.0, and make this method final
+        return Engine.getEngine("Python");
     }
 
     /** {@inheritDoc} */
@@ -94,8 +106,8 @@ public class PyNDManager extends BaseNDManager {
     /** The SystemManager is the root {@link PyNDManager} of which all others are children. */
     private static final class SystemManager extends PyNDManager implements SystemNDManager {
 
-        SystemManager() {
-            super(null, null);
+        SystemManager(Engine engine) {
+            super(engine, null, null);
         }
 
         /** {@inheritDoc} */
