@@ -162,8 +162,8 @@ public class ModelServer {
             throws InterruptedException, IOException, GeneralSecurityException,
                     ServerStartupException {
         try {
+            logger.info("Starting model server ...");
             List<ChannelFuture> channelFutures = start();
-            logger.info("Model server started.");
             channelFutures.get(0).sync();
         } finally {
             serverGroups.shutdown(true);
@@ -299,7 +299,7 @@ public class ModelServer {
         ChannelFuture f = future.channel().closeFuture();
         f.addListener(
                 (ChannelFutureListener)
-                        listener -> logger.info("{} model server stopped.", connector.getType()));
+                        listener -> logger.info("{} listener stopped.", connector.getType()));
 
         logger.info("{} API bind to: {}", connector.getType(), connector);
         return f;
