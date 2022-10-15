@@ -65,6 +65,7 @@ import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -333,12 +334,18 @@ public class ModelServer {
                 return;
             }
 
-            // Check folders to see if they can be models as well
-            try (Stream<Path> stream = Files.list(modelStore)) {
-                urls =
-                        stream.map(this::mapModelUrl)
-                                .filter(Objects::nonNull)
-                                .collect(Collectors.toList());
+            // Check if root model store folder contains a model
+            String url = mapModelUrl(modelStore);
+            if (url == null) {
+                // Check folders to see if they can be models as well
+                try (Stream<Path> stream = Files.list(modelStore)) {
+                    urls =
+                            stream.map(this::mapModelUrl)
+                                    .filter(Objects::nonNull)
+                                    .collect(Collectors.toList());
+                }
+            } else {
+                urls = Collections.singletonList(url);
             }
         } else {
             String[] modelsUrls = loadModels.split("[, ]+");
