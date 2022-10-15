@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
+set -ex
+
 PYTHON=$1
 HOME_DIR=/root
 
 pip3 install requests
-curl -o ${HOME_DIR}/oss_compliance.zip https://aws-dlinfra-utilities.s3.amazonaws.com/oss_compliance.zip
+curl -f -o ${HOME_DIR}/oss_compliance.zip https://aws-dlinfra-utilities.s3.amazonaws.com/oss_compliance.zip
 unzip ${HOME_DIR}/oss_compliance.zip -d ${HOME_DIR}/
 cp ${HOME_DIR}/oss_compliance/test/testOSSCompliance /usr/local/bin/testOSSCompliance
 chmod +x /usr/local/bin/testOSSCompliance

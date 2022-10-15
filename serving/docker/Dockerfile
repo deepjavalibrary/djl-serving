@@ -17,7 +17,7 @@ RUN mkdir -p /opt/djl/conf
 COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/security_patch.sh cpu && \
-    apt-get clean -y && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     rm -rf scripts
 
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
