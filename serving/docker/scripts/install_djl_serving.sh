@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 DJL_VERSION=$1
 PYTORCH_JNI=$2
@@ -15,7 +15,7 @@ if [ -z "$PYTORCH_JNI" ]; then
     unzip
 
   # install DJLServing
-  curl https://publish.djl.ai/djl-serving/djl-serving_${DJL_VERSION}-1_all.deb -o djl-serving_all.deb
+  curl https://publish.djl.ai/djl-serving/djl-serving_${DJL_VERSION}-1_all.deb -f -o djl-serving_all.deb
   dpkg -i djl-serving_all.deb
   rm djl-serving_all.deb
   cp /usr/local/djl-serving-*/conf/log4j2.xml /opt/djl/conf/

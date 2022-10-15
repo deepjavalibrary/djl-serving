@@ -34,12 +34,12 @@ COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY deepspeed.config.properties /opt/djl/conf/config.properties
-### Install DJL Serving and remove general python executor
+### Install DJLServing and update latest python engine, TODO: stop updatign python engine once it stable
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_python.sh && \
     cd /usr/local/djl-serving-*/lib/ && \
     rm -rf python*.jar && \
-    curl -O https://djl-misc.s3.amazonaws.com/rubikon/rubikon-0.19.0-SNAPSHOT.jar
+    curl -f -O https://publish.djl.ai/djl-serving/python/python-${djl_version}.jar
 
 ### Deep Speed installations
 RUN apt-get update && \
