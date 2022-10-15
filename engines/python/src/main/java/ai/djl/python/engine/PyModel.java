@@ -74,9 +74,11 @@ public class PyModel extends BaseModel {
         }
         String entryPoint = null;
         if (options != null) {
+            logger.debug("options in serving.properties for model: {}", modelName);
             for (Map.Entry<String, ?> entry : options.entrySet()) {
                 String key = entry.getKey();
                 String value = (String) entry.getValue();
+                logger.debug("{}={}", key, value);
                 switch (key) {
                     case "pythonExecutable":
                         pyEnv.setPythonExecutable(value);
@@ -112,6 +114,9 @@ public class PyModel extends BaseModel {
                     case "parallel_loading":
                         parallelLoading = Boolean.parseBoolean(value);
                         break;
+                    case "tensor_parallel_degree":
+                        pyEnv.setTensorParallelDegree(Integer.parseInt(value));
+                        break;
                     case "handler":
                         pyEnv.setHandler(value);
                         break;
@@ -134,10 +139,8 @@ public class PyModel extends BaseModel {
         }
         pyEnv.setEntryPoint(entryPoint);
         if (pyEnv.isMpiMode()) {
-            int partitions;
-            if (System.getenv("TENSOR_PARALLEL_DEGREE") != null) {
-                partitions = Integer.parseInt(System.getenv("TENSOR_PARALLEL_DEGREE"));
-            } else {
+            int partitions = pyEnv.getTensorParallelDegree();
+            if (partitions == 0) {
                 // TODO: avoid use hardcoded "partitioned_model_" name
                 try (Stream<Path> stream = Files.list(modelPath)) {
                     partitions =
@@ -154,10 +157,10 @@ public class PyModel extends BaseModel {
                     throw new FileNotFoundException(
                             "partitioned_model_ file not found in: " + modelPath);
                 }
+                pyEnv.setTensorParallelDegree(partitions);
             }
             logger.info("Loading model in MPI model with TP: {}.", partitions);
 
-            pyEnv.setTensorParallelDegree(partitions);
             int mpiWorkers = pyEnv.getMpiWorkers();
             if (mpiWorkers <= 0) {
                 throw new EngineException(
@@ -235,6 +238,7 @@ public class PyModel extends BaseModel {
     }
 
     private void createAllPyProcesses(int mpiWorkers) {
+        long begin = System.currentTimeMillis();
         ExecutorService pool = null;
         List<Future<?>> futures = new ArrayList<>();
         if (parallelLoading) {
@@ -245,6 +249,7 @@ public class PyModel extends BaseModel {
             PyProcess worker = new PyProcess(this, pyEnv, i);
             workerQueue.offer(worker);
             if (pool != null) {
+                logger.debug("Submitting to pool: {}", i);
                 futures.add(pool.submit(worker::startPythonProcess));
             } else {
                 worker.startPythonProcess();
@@ -264,6 +269,8 @@ public class PyModel extends BaseModel {
                 }
             }
         }
+        long duration = System.currentTimeMillis() - begin;
+        logger.info("{} model loaded in {} ms.", modelName, duration);
     }
 
     private void shutdown() {

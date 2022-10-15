@@ -50,7 +50,6 @@ public class PyEnv {
     private int predictTimeout;
     private int modelLoadingTimeout;
     private int tensorParallelDegree;
-    private int mpiProcesses;
     private Map<String, String> envs;
     private Map<String, String> initParameters;
     private boolean initialized;
@@ -219,6 +218,12 @@ public class PyEnv {
      * @return the tensor parallel degree
      */
     public int getTensorParallelDegree() {
+        if (tensorParallelDegree == 0) {
+            String value = Utils.getenv("TENSOR_PARALLEL_DEGREE");
+            if (value != null) {
+                tensorParallelDegree = Integer.parseInt(value);
+            }
+        }
         return tensorParallelDegree;
     }
 
@@ -229,12 +234,11 @@ public class PyEnv {
      */
     public void setTensorParallelDegree(int tensorParallelDegree) {
         this.tensorParallelDegree = tensorParallelDegree;
-        int gpuCount = CudaUtils.getGpuCount();
-        mpiProcesses = gpuCount / tensorParallelDegree;
     }
 
     int getMpiWorkers() {
-        return mpiProcesses;
+        int gpuCount = CudaUtils.getGpuCount();
+        return gpuCount / getTensorParallelDegree();
     }
 
     /**
