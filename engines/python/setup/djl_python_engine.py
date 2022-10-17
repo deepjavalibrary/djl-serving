@@ -117,6 +117,7 @@ class PythonEngine(object):
                     outputs = Output(code=204, message="No content")
             except Exception as e:
                 logging.exception("Failed invoke service.invoke_handler()")
+                logging.exception(e)
                 outputs = Output().error(str(e))
 
             if not cl_socket.sendall(outputs.encode()):
@@ -148,8 +149,9 @@ def main():
         engine.run_server()
     except socket.timeout:
         logging.error(f"Listener timed out in: {SOCKET_ACCEPT_TIMEOUT} s.")
-    except Exception:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         logging.exception("Python engine process died")
+        logging.exception(e)
     finally:
         logging.info(f"{pid} - Python process finished")
         if sock_type == 'unix':
