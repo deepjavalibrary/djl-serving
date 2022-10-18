@@ -28,14 +28,4 @@ public class DsEngineProvider extends PyEngineProvider {
     public int getEngineRank() {
         return PyEngine.RANK + 1;
     }
-
-    /** {@code RbEngineProvider} is the alias of {@link DsEngineProvider}. */
-    public static final class RbEngineProvider extends DsEngineProvider {
-
-        /** {@inheritDoc} */
-        @Override
-        public String getEngineName() {
-            return "Rubikon";
-        }
-    }
 }
