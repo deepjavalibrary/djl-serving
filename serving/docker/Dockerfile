@@ -39,6 +39,7 @@ CMD ["serve"]
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 
 FROM base AS cpu-full
 
@@ -52,4 +53,6 @@ RUN scripts/install_python.sh && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
     scripts/patch_oss_dlc.sh python && \
     rm -rf scripts && pip3 cache purge && \
-    apt-get clean -y && rm -rf /var/lib/apt/lists/*
+    apt-get clean -y && rm -rf /var/lib/apt/lists/* \
+
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
