@@ -42,3 +42,4 @@ RUN scripts/install_djl_serving.sh $djl_version && \
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch="true"
