@@ -14,7 +14,7 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 |ENGINE_CACHE_DIR	|env var	|The cache directory for engine native libraries: default: $DJL_CACHE_DIR	|
 |ai.djl.dataiterator.autoclose	|system prop	|Automatically close data set iterator, default: true	|
 |ai.djl.repository.zoo.location	|system prop	|global model zoo search locations, not recommended	|
-|offline	|system prop	|Donot access network (currently only for download model zoo)	|
+|offline	|system prop	|Don't access network for downloading engine's native library and model zoo metadata	|
 |collect-memory	|system prop	|Enable memory metric collection, default: false	|
 |disableProgressBar	|system prop	|Disable progress bar, default: false	|
 
@@ -26,7 +26,7 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 |PYTORCH_VERSION	|env var	|PyTorch version to load	|
 |PYTORCH_EXTRA_LIBRARY_PATH	|env var	|Custom pytorch library to load (e.g. torchneuron/torchvision/torchtext)	|
 |PYTORCH_PRECXX11	|env var	|Load precxx11 libtorch	|
-|PYTORCH_FLAVOR	|env var	|To force override auto detection (cpu/cpu-precxx11/cu102/cu116-precxx11)	|
+|PYTORCH_FLAVOR	|env var	|To force override auto detection (e.g. cpu/cpu-precxx11/cu102/cu116-precxx11)	|
 |ai.djl.pytorch.native_helper	|system prop	|A user provided custom loader class to help locate pytorch native resources	|
 |ai.djl.pytorch.num_threads	|system prop	|Override OMP_NUM_THREAD environment variable	|
 |ai.djl.pytorch.num_interop_threads	|system prop	|Set PyTorch interop threads	|
@@ -39,6 +39,7 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 |---	|---	|---	|
 |TENSORFLOW_LIBRARY_PATH	|env var	|User provided custom TensorFlow native library	|
 |TENSORRT_EXTRA_LIBRARY_PATH	|env var	|Extra TensorFlow custom operators library to load	|
+|TF_CPP_MIN_LOG_LEVEL	|env var	|TensorFlow log level	|
 |ai.djl.tensorflow.debug	|env var	|Enable devicePlacement logging, default: false	|
 
 ### MXNet
@@ -77,7 +78,7 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 |PREDICT_TIMEOUT	|env var	|Python predict call timeout, default: 120 seconds	|
 |ai.djl.python.disable_alternative	|system prop	|Disable alternative engine	|
 
-### Rubikon(DeepSpeed)
+### Python (DeepSpeed)
 
 |Key	|Type	|Description	|
 |---	|---	|---	|
@@ -113,7 +114,7 @@ For example, set minimum workers and maximum workers for your model:
 
 ```
 minWorkers=32
-gmaxWorkers=64
+maxWorkers=64
 ```
 
 Or you can configure minimum workers and maximum workers differently for GPU and CPU:
@@ -131,17 +132,31 @@ job queue size can be configured at per model level, this will override global `
 job_queue_size=10
 ```
 
-### Rubikon (DeepSpeed)
+### Python (DeepSpeed)
 
-For Rubikon (DeepSpeed) engine, DJL load multiple workers sequentially by default to avoid run out of memory. You can reduced model loading time by parallel loading workers if you know the peak memory won’t cause out of memory:
+For Python (DeepSpeed) engine, DJL load multiple workers sequentially by default to avoid run out of memory. You can reduced model loading time by parallel loading workers if you know the peak memory won’t cause out of memory:
 
 ```
 parallel_loading=true
-model_loading_timeout=12000
-predict_timeout=240
+# Allows to load DeepSpeed workers in parallel
+option.parallel_loading=true
+# specify tensor parallel degree (number of partitions)
+option.tensor_parallel_degree=2
+# specify per model timeout
+option.model_loading_timeout=600
+option.predict_timeout=240
+
+# use built-in DeepSpeed handler
+option.entryPoint=djl_python.deepspeed
+# passing extra options to model.py or built-in handler
+option.model_id=gpt2
+option.data_type=fp32
+option.max_new_tokens=50
+
+# defines custom environment variables
 env=LARGE_TENSOR=1
-pythonExecutable=python3
-entryPoint=my_model.py
+# specify the path to the python executable
+pythonExecutable=/usr/bin/python3
 ```
 
 ## Engine specific settings
