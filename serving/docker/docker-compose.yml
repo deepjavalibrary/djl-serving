@@ -33,9 +33,9 @@ services:
       target: base
       dockerfile: pytorch-cu113.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu113${NIGHTLY}"
-  parallelformers:
+  transformers:
     build:
       context: .
-      target: parallelformers
+      target: transformers
       dockerfile: pytorch-cu113.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}parallelformers${NIGHTLY}"
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}transformers${NIGHTLY}"

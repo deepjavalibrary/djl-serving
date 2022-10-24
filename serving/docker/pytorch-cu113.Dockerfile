@@ -50,9 +50,9 @@ LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-cu113="true"
 
-FROM base as parallelformers
+FROM base as transformers
 
-ARG transformers_version=4.22.1
+ARG transformers_version=4.23.1
 ARG parallelformers_version=1.2.6
 
 COPY scripts scripts/
@@ -62,4 +62,4 @@ RUN pip3 install transformers==${transformers_version} parallelformers==${parall
 
 ENV MODEL_LOADING_TIMEOUT=2400
 ENV SERVING_LOAD_ON_DEVICES=0
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.parallelformers="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.transformers="true"
