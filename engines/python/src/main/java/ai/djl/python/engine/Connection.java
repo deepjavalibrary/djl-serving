@@ -19,6 +19,7 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.util.PairList;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -55,6 +56,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 class Connection {
 
@@ -147,6 +150,23 @@ class Connection {
             return args;
         }
 
+        // TP settings
+        if (pyEnv.getTensorParallelDegree() > 0
+                && model.getNDManager().getDevice().getDeviceId() != -1) {
+            int tp = pyEnv.getTensorParallelDegree();
+            int deviceId = model.getNDManager().getDevice().getDeviceId();
+            String devices =
+                    IntStream.range(deviceId, tp + deviceId)
+                            .mapToObj(Integer::toString)
+                            .collect(Collectors.joining(","));
+            if (deviceId + tp > CudaUtils.getGpuCount()) {
+                throw new IllegalArgumentException(
+                        String.format(
+                                "Do not have enough gpu for starting deviceId: %d %s",
+                                deviceId, devices));
+            }
+            pyEnv.addEnv("CUDA_VISIBLE_DEVICES", devices);
+        }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
         args[0] = pyEnv.getPythonExecutable();

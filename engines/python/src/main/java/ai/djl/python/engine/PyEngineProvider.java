@@ -21,6 +21,7 @@ public class PyEngineProvider implements EngineProvider {
     private static final String ENGINE_NAME = "Python";
 
     private Engine engine;
+    protected boolean mpiMode;
 
     /** {@inheritDoc} */
     @Override
@@ -40,7 +41,7 @@ public class PyEngineProvider implements EngineProvider {
         if (engine == null) {
             synchronized (this) {
                 PyEnv.init();
-                engine = new PyEngine(getEngineName(), false);
+                engine = new PyEngine(getEngineName(), mpiMode);
             }
         }
         return engine;

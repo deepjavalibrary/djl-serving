@@ -12,6 +12,7 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.engine.Engine;
 import ai.djl.engine.EngineProvider;
 
 /** {@code DsEngineProvider} is the DeepSpeed implementation of {@link EngineProvider}. */
@@ -27,5 +28,14 @@ public class DsEngineProvider extends PyEngineProvider {
     @Override
     public int getEngineRank() {
         return PyEngine.RANK + 1;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Engine getEngine() {
+        synchronized (this) {
+            mpiMode = true;
+        }
+        return super.getEngine();
     }
 }

@@ -114,4 +114,13 @@ public final class PyEngine extends Engine {
     public String toString() {
         return getEngineName() + ':' + getVersion();
     }
+
+    /**
+     * Check if MPI model is set.
+     *
+     * @return mpiMode
+     */
+    public boolean isMpiMode() {
+        return mpiMode;
+    }
 }

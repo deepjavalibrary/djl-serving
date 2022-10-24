@@ -59,7 +59,11 @@ public class PyModel extends BaseModel {
         super(name);
         this.manager = manager;
         this.manager.setName("pythonModel");
-        pyEnv = new PyEnv(!"Python".equals(manager.getEngine().getEngineName()));
+        boolean mpiMode = false;
+        if (manager.getEngine() instanceof PyEngine) {
+            mpiMode = ((PyEngine) manager.getEngine()).isMpiMode();
+        }
+        pyEnv = new PyEnv(mpiMode);
         dataType = DataType.FLOAT32;
         workerQueue = new LinkedBlockingDeque<>();
     }
