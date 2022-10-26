@@ -19,7 +19,6 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.util.PairList;
 import ai.djl.util.Utils;
-import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -56,8 +55,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 class Connection {
 
@@ -105,8 +102,8 @@ class Connection {
     }
 
     static String[] getPythonStartCmd(PyEnv pyEnv, Model model, int workerId, int port) {
+        int tensorParallelDegree = pyEnv.getTensorParallelDegree();
         if (pyEnv.isMpiMode()) {
-            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             String[] args = new String[36];
             args[0] = "mpirun";
             args[1] = "-N";
@@ -151,21 +148,10 @@ class Connection {
         }
 
         // TP settings
-        if (pyEnv.getTensorParallelDegree() > 0
-                && model.getNDManager().getDevice().getDeviceId() != -1) {
-            int tp = pyEnv.getTensorParallelDegree();
-            int deviceId = model.getNDManager().getDevice().getDeviceId();
-            String devices =
-                    IntStream.range(deviceId, tp + deviceId)
-                            .mapToObj(Integer::toString)
-                            .collect(Collectors.joining(","));
-            if (deviceId + tp > CudaUtils.getGpuCount()) {
-                throw new IllegalArgumentException(
-                        String.format(
-                                "Do not have enough gpu for starting deviceId: %d %s",
-                                deviceId, devices));
-            }
-            pyEnv.addEnv("CUDA_VISIBLE_DEVICES", devices);
+        int deviceId = model.getNDManager().getDevice().getDeviceId();
+        if (tensorParallelDegree > 0 && deviceId != -1) {
+            String cudaDevices = getVisibleDevices(deviceId, tensorParallelDegree);
+            pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
@@ -180,7 +166,7 @@ class Connection {
         args[8] = "--entry-point";
         args[9] = pyEnv.getEntryPoint();
         args[10] = "--device-id";
-        args[11] = String.valueOf(model.getNDManager().getDevice().getDeviceId());
+        args[11] = String.valueOf(deviceId);
         return args;
     }
 

@@ -116,11 +116,11 @@ public final class PyEngine extends Engine {
     }
 
     /**
-     * Check if MPI model is set.
+     * Returns the MPI mode.
      *
-     * @return mpiMode
+     * @return the MPI mode
      */
-    public boolean isMpiMode() {
+    boolean isMpiMode() {
         return mpiMode;
     }
 }

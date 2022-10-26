@@ -59,10 +59,7 @@ public class PyModel extends BaseModel {
         super(name);
         this.manager = manager;
         this.manager.setName("pythonModel");
-        boolean mpiMode = false;
-        if (manager.getEngine() instanceof PyEngine) {
-            mpiMode = ((PyEngine) manager.getEngine()).isMpiMode();
-        }
+        boolean mpiMode = ((PyEngine) manager.getEngine()).isMpiMode();
         pyEnv = new PyEnv(mpiMode);
         dataType = DataType.FLOAT32;
         workerQueue = new LinkedBlockingDeque<>();
@@ -190,6 +187,12 @@ public class PyModel extends BaseModel {
             }
             mpiWorkers = Integer.parseInt(getProperty("gpu.maxWorkers"));
             createAllPyProcesses(mpiWorkers);
+        } else {
+            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+            if (tensorParallelDegree > 0) {
+                setProperty("gpu.minWorkers", "1");
+                setProperty("gpu.maxWorkers", "1");
+            }
         }
     }
 

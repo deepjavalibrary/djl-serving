@@ -13,6 +13,7 @@
 package ai.djl.serving;
 
 import ai.djl.engine.Engine;
+import ai.djl.engine.EngineException;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
@@ -36,6 +37,7 @@ import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -525,6 +527,32 @@ public class ModelServer {
             if (engine == null) {
                 return null;
             }
+
+            if ("Python".equals(engine)) {
+                Properties prop = getServingProperties(path);
+                String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
+                v = prop.getProperty("option.tensor_parallel_degree", v);
+                int tensorParallelDegree = Integer.parseInt(v);
+                if (tensorParallelDegree > 0) {
+                    String loadOnDevices = configManager.getLoadOnDevices();
+                    if ("*".equals(loadOnDevices)) {
+                        int gpus = CudaUtils.getGpuCount();
+                        int procs = gpus / tensorParallelDegree;
+                        if (procs == 0) {
+                            throw new EngineException(
+                                    "GPU devices are not enough to run "
+                                            + tensorParallelDegree
+                                            + " partitions.");
+                        }
+                        StringBuilder sb = new StringBuilder("0");
+                        for (int i = 1; i < procs; ++i) {
+                            sb.append(',').append(i);
+                        }
+                        configManager.setLoadOnDevices(sb.toString());
+                    }
+                }
+            }
+
             return modelName + "::" + engine + ':' + configManager.getLoadOnDevices() + '=' + url;
         } catch (MalformedURLException e) {
             throw new AssertionError("Invalid path: " + path, e);
@@ -552,23 +580,29 @@ public class ModelServer {
         }
     }
 
-    private String inferEngine(Path modelDir, String modelName) {
-        modelDir = Utils.getNestedModelDir(modelDir);
-
+    private Properties getServingProperties(Path modelDir) {
         Path file = modelDir.resolve("serving.properties");
+        Properties prop = new Properties();
         if (Files.isRegularFile(file)) {
-            Properties prop = new Properties();
             try (InputStream is = Files.newInputStream(file)) {
                 prop.load(is);
-                String engine = prop.getProperty("engine");
-                if (engine != null) {
-                    return engine;
-                }
-                modelName = prop.getProperty("modelName", modelName);
             } catch (IOException e) {
                 logger.warn("Failed read serving.properties file", e);
             }
         }
+        return prop;
+    }
+
+    private String inferEngine(Path modelDir, String modelName) {
+        modelDir = Utils.getNestedModelDir(modelDir);
+
+        Properties prop = getServingProperties(modelDir);
+        String engine = prop.getProperty("engine");
+        if (engine != null) {
+            return engine;
+        }
+
+        modelName = prop.getProperty("modelName", modelName);
         if (Files.isDirectory(modelDir.resolve("MAR-INF"))
                 || Files.isRegularFile(modelDir.resolve("model.py"))
                 || Files.isRegularFile(modelDir.resolve(modelName + ".py"))) {
