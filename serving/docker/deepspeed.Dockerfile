@@ -14,6 +14,7 @@ FROM nvidia/cuda:$version
 ARG djl_version=0.19.0~SNAPSHOT
 ARG torch_version=1.12.1
 ARG deepspeed_version=0.7.3
+ARG accelerate_version=0.13.2
 ARG transformers_version=4.22.1
 
 EXPOSE 8080
@@ -46,7 +47,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
     pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} && \
-    pip3 install triton==1.0.0 mpi4py sentencepiece accelerate bitsandbytes && \
+    pip3 install triton==1.0.0 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
     rm -rf scripts && \
