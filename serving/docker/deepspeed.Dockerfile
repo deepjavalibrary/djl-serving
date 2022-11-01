@@ -9,13 +9,13 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.3.1-cudnn8-devel-ubuntu20.04
+ARG version=11.6.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
-ARG djl_version=0.19.0~SNAPSHOT
+ARG djl_version=0.20.0~SNAPSHOT
 ARG torch_version=1.12.1
-ARG deepspeed_version=0.7.3
 ARG accelerate_version=0.13.2
-ARG transformers_version=4.22.1
+ARG deepspeed_version=0.7.4
+ARG transformers_version=4.23.1
 
 EXPOSE 8080
 
@@ -35,17 +35,13 @@ COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY deepspeed.config.properties /opt/djl/conf/config.properties
-### Install DJLServing and update latest python engine, TODO: stop updatign python engine once it stable
 RUN scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_python.sh && \
-    cd /usr/local/djl-serving-*/lib/ && \
-    rm -rf python*.jar && \
-    curl -f -O https://publish.djl.ai/djl-serving/python/python-${djl_version}.jar
+    scripts/install_python.sh
 
 ### Deep Speed installations
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
+    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu116 && \
     pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} && \
     pip3 install triton==1.0.0 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     scripts/patch_oss_dlc.sh python && \
