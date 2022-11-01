@@ -102,8 +102,8 @@ class Connection {
     }
 
     static String[] getPythonStartCmd(PyEnv pyEnv, Model model, int workerId, int port) {
+        int tensorParallelDegree = pyEnv.getTensorParallelDegree();
         if (pyEnv.isMpiMode()) {
-            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             String[] args = new String[36];
             args[0] = "mpirun";
             args[1] = "-N";
@@ -147,6 +147,12 @@ class Connection {
             return args;
         }
 
+        // TP settings
+        int deviceId = model.getNDManager().getDevice().getDeviceId();
+        if (tensorParallelDegree > 0 && deviceId != -1) {
+            String cudaDevices = getVisibleDevices(deviceId, tensorParallelDegree);
+            pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
+        }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
         args[0] = pyEnv.getPythonExecutable();
@@ -160,7 +166,7 @@ class Connection {
         args[8] = "--entry-point";
         args[9] = pyEnv.getEntryPoint();
         args[10] = "--device-id";
-        args[11] = String.valueOf(model.getNDManager().getDevice().getDeviceId());
+        args[11] = String.valueOf(deviceId);
         return args;
     }
 
