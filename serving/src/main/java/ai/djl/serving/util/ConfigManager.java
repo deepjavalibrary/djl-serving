@@ -136,6 +136,12 @@ public final class ConfigManager {
                 && Utils.getenv("OMP_NUM_THREADS") == null) {
             System.setProperty("ai.djl.pytorch.num_threads", "1");
         }
+        if (System.getProperty("ai.djl.onnxruntime.num_interop_threads") == null) {
+            System.setProperty("ai.djl.pytorch.num_interop_threads", "1");
+        }
+        if (System.getProperty("ai.djl.onnxruntime.num_threads") == null) {
+            System.setProperty("ai.djl.onnxruntime.num_threads", "1");
+        }
         if (System.getProperty("log4j2.contextSelector") == null) {
             // turn on async logging by default
             System.setProperty(
