@@ -12,18 +12,20 @@
  */
 package ai.djl.serving.workflow.function;
 
-import ai.djl.modality.Input;
 import ai.djl.serving.workflow.Workflow;
+import ai.djl.serving.workflow.WorkflowExpression.Item;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/** An identity function which passes back it's input. */
+/** Workflow function "id" accepts a single argument and returns the result of evaluating it. */
 public class IdentityWF extends WorkflowFunction {
+
+    public static final String NAME = "id";
 
     /** {@inheritDoc} */
     @Override
-    public CompletableFuture<Input> run(
+    public CompletableFuture<Item> run(
             Workflow.WorkflowExecutor executor, List<Workflow.WorkflowArgument> args) {
         if (args.size() != 1) {
             throw new IllegalArgumentException("Expected one argument to id");

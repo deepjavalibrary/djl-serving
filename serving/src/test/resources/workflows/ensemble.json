@@ -1,0 +1,10 @@
+{
+  "models": {
+    "m1": "https://resources.djl.ai/test-models/mlp.tar.gz",
+    "m2": "https://resources.djl.ai/test-models/mlp.tar.gz",
+    "m3": "https://resources.djl.ai/test-models/mlp.tar.gz"
+  },
+  "workflow": {
+    "out": ["ensemble", ["functionsApply",["m1", "m2", "m3"], "in"]]
+  }
+}

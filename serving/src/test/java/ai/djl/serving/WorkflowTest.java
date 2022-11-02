@@ -103,6 +103,12 @@ public class WorkflowTest {
         Assert.assertEquals(m.getBatchSize(), 3);
     }
 
+    @Test
+    public void testEnsemble() throws IOException, BadWorkflowException {
+        Path workflowFile = Paths.get("src/test/resources/workflows/ensemble.json");
+        runWorkflow(workflowFile, zeroInput);
+    }
+
     private Input runWorkflow(Path workflowFile, Input input)
             throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
