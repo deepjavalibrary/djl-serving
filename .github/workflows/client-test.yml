@@ -22,11 +22,11 @@ jobs:
           distribution: 'corretto'
           java-version: 11
       - name: Set up Python3
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.x'
       # Enable gradle cache: https://github.com/actions/cache/blob/master/examples.md#java---gradle
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
@@ -81,7 +81,7 @@ jobs:
           distribution: 'corretto'
           java-version: 11
       - name: Set up Python3
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.x'
       - name: Install DJLServing dependencies

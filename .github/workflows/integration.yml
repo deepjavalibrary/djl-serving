@@ -59,7 +59,7 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 11
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
@@ -140,7 +140,7 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 11
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
@@ -199,7 +199,7 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 11
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
@@ -257,7 +257,7 @@ jobs:
           distribution: 'corretto'
           java-version: 11
           architecture: aarch64
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
