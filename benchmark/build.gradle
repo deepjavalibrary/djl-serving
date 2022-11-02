@@ -19,6 +19,7 @@ dependencies {
     runtimeOnly "ai.djl.ml.xgboost:xgboost"
     runtimeOnly project(":engines:python")
     runtimeOnly "ai.djl.tensorrt:tensorrt"
+    runtimeOnly "ai.djl.huggingface:tokenizers"
 
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
