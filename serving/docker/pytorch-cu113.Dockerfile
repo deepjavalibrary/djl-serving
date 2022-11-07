@@ -57,6 +57,8 @@ ARG parallelformers_version=1.2.6
 
 COPY scripts scripts/
 RUN pip3 install transformers==${transformers_version} parallelformers==${parallelformers_version} accelerate bitsandbytes && \
+    apt update && apt install --only-upgrade curl && \
+    apt update && apt install --only-upgrade libcurl4 && \
     scripts/patch_oss_dlc.sh python && \
     pip cache purge && rm -rf scripts
 
