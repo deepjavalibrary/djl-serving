@@ -72,7 +72,7 @@ gradlew benchmark --args="--help"
 
 ## Prerequisite
 
-Please ensure Java 8+ is installed and you are using an OS that DJL supported with.
+Please ensure Java 11+ is installed and you are using an OS that DJL supported with.
 
 After that, you need to clone the djl project and `cd` into the folder.
 
@@ -131,6 +131,9 @@ SSD object detection model:
 
 ```
 djl-bench -e PyTorch -c 2 -s 1,3,300,300 -u djl://ai.djl.pytorch/ssd/0.0.1/ssd_300_resnet50
+
+# For AL2 or centos 7, you need use precxx11 version of PyTorch
+PYTORCH_PRECXX11=true djl-bench -e PyTorch -c 2 -s 1,3,300,300 -u djl://ai.djl.pytorch/ssd/0.0.1/ssd_300_resnet50
 ```
 
 ## Configuration of Benchmark script
