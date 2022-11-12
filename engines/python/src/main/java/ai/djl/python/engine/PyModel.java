@@ -160,7 +160,7 @@ public class PyModel extends BaseModel {
                 }
                 pyEnv.setTensorParallelDegree(partitions);
             }
-            logger.info("Loading model in MPI model with TP: {}.", partitions);
+            logger.info("Loading model in MPI mode with TP: {}.", partitions);
 
             int mpiWorkers = pyEnv.getMpiWorkers();
             if (mpiWorkers <= 0) {
