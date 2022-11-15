@@ -13,7 +13,7 @@ ARG version=11.3.1-cudnn8-devel-ubuntu20.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.19.0~SNAPSHOT
+ARG djl_version=0.20.0~SNAPSHOT
 ARG torch_version=1.12.1
 
 RUN mkdir -p /opt/djl/conf
@@ -35,6 +35,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_python.sh && \
+    scripts/install_s5cmd.sh x64 && \
     pip3 install numpy && pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-cu113 && \
@@ -53,10 +54,10 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-cu113="true"
 FROM base as transformers
 
 ARG transformers_version=4.23.1
-ARG parallelformers_version=1.2.6
+ARG accelerate_version=0.13.2
 
 COPY scripts scripts/
-RUN pip3 install transformers==${transformers_version} parallelformers==${parallelformers_version} accelerate bitsandbytes && \
+RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \
     scripts/patch_oss_dlc.sh python && \
     pip cache purge && rm -rf scripts
 

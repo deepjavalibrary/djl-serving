@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM arm64v8/ubuntu:20.04
-ARG djl_version=0.19.0~SNAPSHOT
+ARG djl_version=0.20.0~SNAPSHOT
 ARG torch_version=1.12.1
 
 EXPOSE 8080
@@ -33,6 +33,7 @@ COPY config.properties /opt/djl/conf/
 
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
+    scripts/install_s5cmd.sh aarch64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \
     rm -f /usr/local/djl-serving-*/lib/mxnet-* && \
     rm -f /usr/local/djl-serving-*/lib/tensorflow-* && \

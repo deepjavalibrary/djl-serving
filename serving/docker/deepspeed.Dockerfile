@@ -36,7 +36,8 @@ RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY deepspeed.config.properties /opt/djl/conf/config.properties
 RUN scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_python.sh
+    scripts/install_python.sh && \
+    scripts/install_s5cmd.sh x64
 
 ### Deep Speed installations
 RUN apt-get update && \
