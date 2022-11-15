@@ -35,6 +35,7 @@ ARCHITECTURES_2_TASK = {
     # Model specific task for backward comp
     "GPT2LMHeadModel": "text-generation",
     "T5WithLMHeadModel": "text2text-generation",
+    "BloomModel": "text-generation",
 }
 
 
@@ -49,18 +50,30 @@ class HuggingFaceService(object):
         device_id = int(properties.get("device_id", "-1"))
         model_id = properties.get("model_id")
         task = properties.get("task")
+        # HF Acc handling
+        kwargs = {
+            "load_in_8bit": bool(properties.get("load_in_8bit", "FALSE")),
+            "low_cpu_mem_usage": bool(properties.get("low_cpu_mem_usage", "TRUE")),
+        }
+        # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
+        if "device_map" in properties:
+            kwargs["device_map"] = properties.get("device_map")
+        if "dtype" in properties:
+            kwargs["torch_dtype"] = properties.get("dtype")
         if task:
             self.hf_pipeline = self.get_pipeline(task=task,
                                                  model_id=model_id,
                                                  model_dir=model_dir,
-                                                 device=device_id)
+                                                 device=device_id,
+                                                 kwargs=kwargs)
         elif "config.json" in os.listdir(model_dir):
             task = self.infer_task_from_model_architecture(
                 f"{model_dir}/config.json")
             self.hf_pipeline = self.get_pipeline(task=task,
                                                  model_id=model_id,
                                                  model_dir=model_dir,
-                                                 device=device_id)
+                                                 device=device_id,
+                                                 kwargs=kwargs)
         else:
             raise ValueError("You need to define 'task' options.")
 

@@ -55,18 +55,18 @@ jobs:
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
-          sudo python3 deepspeed/prepare.py bloom-7b1
+          sudo python3 llm/prepare.py deepspeed_raw bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:///opt/ml/model/test/
-          python3 deepspeed/client.py bloom-7b1
+          python3 llm/client.py deepspeed_raw bloom-7b1
           docker rm -f $(docker ps -aq)
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
-          sudo python3 deepspeed/prepare.py gpt-j-6b
+          sudo python3 llm/prepare.py deepspeed_raw gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:///opt/ml/model/test/
-          python3 deepspeed/client.py gpt-j-6b
+          python3 llm/client.py deepspeed_raw gpt-j-6b
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
