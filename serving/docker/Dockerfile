@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04 AS base
-ARG djl_version=0.19.0~SNAPSHOT
+ARG djl_version=0.20.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf
@@ -48,6 +48,7 @@ ARG torch_version=1.12.1
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
+    scripts/install_s5cmd.sh x64 && \
     djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.1:linux-x86_64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \

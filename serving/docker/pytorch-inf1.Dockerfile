@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
-ARG djl_version=0.19.0~SNAPSHOT
+ARG djl_version=0.20.0~SNAPSHOT
 ARG torch_version=1.11.0
 EXPOSE 8080
 
@@ -42,6 +42,7 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_inferentia.sh && \
     scripts/patch_oss_dlc.sh python && \
+    scripts/security_patch.sh pytorch-inf1 && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
