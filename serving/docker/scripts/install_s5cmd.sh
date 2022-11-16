@@ -11,5 +11,5 @@ else
 fi
 
 mkdir -p /opt/djl/bin
-tar -xvf s5cmd.tar.gz /opt/djl/bin
+tar -xvf s5cmd.tar.gz -C /opt/djl/bin
 rm -rf s5cmd.tar.gz
