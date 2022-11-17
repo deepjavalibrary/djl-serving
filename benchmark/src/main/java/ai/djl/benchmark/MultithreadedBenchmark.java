@@ -82,9 +82,16 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
 
         int successThreads = 0;
         try {
+            int warmupIterations = arguments.getWarmup();
+            logger.info("Warmup with {} iteration ...", warmupIterations);
+            long[] minMax = {Long.MAX_VALUE, 0};
             for (PredictorCallable callable : callables) {
-                callable.warmup();
+                warmup(callable.predictor, minMax, warmupIterations);
             }
+            logger.info(
+                    String.format(
+                            "Warmup latency, min: %.3f ms, max: %.3f ms",
+                            minMax[0] / 1_000_000f, minMax[1] / 1_000_000f));
 
             metrics.addMetric("start", System.currentTimeMillis(), Unit.MILLISECONDS);
             try {
@@ -186,10 +193,6 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
             }
             logger.debug("Worker-{}: finished.", workerId);
             return result;
-        }
-
-        public void warmup() throws TranslateException {
-            predictor.predict(null);
         }
 
         public void close() {

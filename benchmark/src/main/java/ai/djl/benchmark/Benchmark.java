@@ -78,7 +78,14 @@ public final class Benchmark extends AbstractBenchmark {
             float[] predictResult = null;
 
             try (Predictor<Void, float[]> predictor = model.newPredictor()) {
-                predictor.predict(null); // warmup
+                long[] minMax = {Long.MAX_VALUE, 0};
+                int warmupIterations = arguments.getWarmup();
+                logger.info("Warmup with {} iteration ...", warmupIterations);
+                warmup(predictor, minMax, warmupIterations);
+                logger.info(
+                        String.format(
+                                "Warmup latency, min: %.3f ms, max: %.3f ms",
+                                minMax[0] / 1_000_000f, minMax[1] / 1_000_000f));
 
                 predictor.setMetrics(metrics); // Let predictor collect metrics
                 metrics.addMetric("start", System.currentTimeMillis(), Unit.MILLISECONDS);

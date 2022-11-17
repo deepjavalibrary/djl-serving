@@ -47,6 +47,7 @@ public class Arguments {
     private String outputDir;
     private int duration;
     private int iteration;
+    private int warmup;
     private int threads;
     private int maxGpus;
     private int neuronCores;
@@ -88,6 +89,10 @@ public class Arguments {
         iteration = 1;
         if (cmd.hasOption("iteration")) {
             iteration = Integer.parseInt(cmd.getOptionValue("iteration"));
+        }
+        warmup = 2;
+        if (cmd.hasOption("warmup-iteration")) {
+            warmup = Integer.parseInt(cmd.getOptionValue("warmup-iteration"));
         }
         if (cmd.hasOption("gpus")) {
             maxGpus = Integer.parseInt(cmd.getOptionValue("gpus"));
@@ -204,6 +209,13 @@ public class Arguments {
                         .desc("Number of total iterations.")
                         .build());
         options.addOption(
+                Option.builder("w")
+                        .longOpt("warmup-iteration")
+                        .hasArg()
+                        .argName("WARMUP-ITERATION")
+                        .desc("Number of warmup iterations, default: 2.")
+                        .build());
+        options.addOption(
                 Option.builder("t")
                         .longOpt("threads")
                         .hasArg()
@@ -311,6 +323,10 @@ public class Arguments {
 
     int getIteration() {
         return iteration;
+    }
+
+    int getWarmup() {
+        return warmup;
     }
 
     int getThreads() {
