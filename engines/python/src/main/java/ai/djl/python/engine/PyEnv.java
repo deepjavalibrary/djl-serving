@@ -50,6 +50,7 @@ public class PyEnv {
     private int predictTimeout;
     private int modelLoadingTimeout;
     private int tensorParallelDegree;
+    private String s3url;
     private Map<String, String> envs;
     private Map<String, String> initParameters;
     private boolean initialized;
@@ -317,6 +318,26 @@ public class PyEnv {
      */
     public void setModelLoadingTimeout(int modelLoadingTimeout) {
         this.modelLoadingTimeout = modelLoadingTimeout;
+    }
+
+    /**
+     * Sets the download url of the model.
+     *
+     * <p>This function is used only in docker container with s5cmd.
+     *
+     * @param s3url the s3 url that point to the folder/files
+     */
+    public void setS3DownloadUrl(String s3url) {
+        this.s3url = s3url;
+    }
+
+    /**
+     * Returns the S3 download urls.
+     *
+     * @return the s3 url that point to the folder/files
+     */
+    public String getS3DownloadUrl() {
+        return this.s3url;
     }
 
     String[] getEnvironmentVars(Model model) {

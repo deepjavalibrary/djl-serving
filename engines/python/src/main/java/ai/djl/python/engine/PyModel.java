@@ -121,6 +121,9 @@ public class PyModel extends BaseModel {
                     case "handler":
                         pyEnv.setHandler(value);
                         break;
+                    case "s3url":
+                        pyEnv.setS3DownloadUrl(value);
+                        break;
                     default:
                         pyEnv.addParameter(key, value);
                         break;
@@ -139,6 +142,11 @@ public class PyModel extends BaseModel {
             }
         }
         pyEnv.setEntryPoint(entryPoint);
+
+        if (pyEnv.getS3DownloadUrl() != null) {
+            downloadS3(pyEnv.getS3DownloadUrl());
+        }
+
         if (pyEnv.isMpiMode()) {
             int partitions = pyEnv.getTensorParallelDegree();
             if (partitions == 0) {
@@ -278,6 +286,25 @@ public class PyModel extends BaseModel {
         }
         long duration = System.currentTimeMillis() - begin;
         logger.info("{} model loaded in {} ms.", modelName, duration);
+    }
+
+    private void downloadS3(String url) {
+        try {
+            if (!Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
+                throw new UnsupportedOperationException("s5cmd is not found in the default path");
+            }
+            String[] commands = {
+                "/opt/djl/bin/./s5cmd",
+                "cp",
+                "--recursive",
+                url,
+                modelDir.toAbsolutePath().toString()
+            };
+            Process exec = Runtime.getRuntime().exec(commands);
+            exec.waitFor();
+        } catch (Exception e) {
+            throw new EngineException("Model failed to download from s3", e);
+        }
     }
 
     private void shutdown() {
