@@ -579,7 +579,7 @@ _ = outfile.seek(0)
 
 response = http.request('POST',
 	'http://localhost:8080/predictions/resnet',
-	headers={'Content-Type':'tensor/ndlist'},
+	headers={'Content-Type':'tensor/npz'},
 	body=outfile.read())
 ```
 
