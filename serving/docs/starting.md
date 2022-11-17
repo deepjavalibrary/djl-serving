@@ -82,5 +82,5 @@ djl-serving -m "s3://djl-ai/demo/resnet/resnet18.zip"
 djl-serving -m "hdfs://localhost:50070/models/pytorch/resnet18/"
 
 # Use a HuggingFace tokenizer
-djl-serving -m "file:/resnet?transaltorFactory=ai.djl.huggingface.BertQATranslator"
+djl-serving -m "file:/bertqa?transaltorFactory=ai.djl.huggingface.BertQATranslator"
 ```

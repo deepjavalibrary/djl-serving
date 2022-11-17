@@ -16,8 +16,8 @@ DJL Serving console is a DJL model server management platform that can achieve m
     * Dependency List
     * Add Dependency
     * Delete Dependency
-* Configuration management
-* restart the service
+* Configuration Management
+* Restart the Service
 
 ## Model Management
 Users can register models through a friendly interface, view the status of all models in the system and the details of each model, and perform advanced configuration operations such as `bacth_size` adjustment and equipment expansion on the model on the details page. The model inference interface provides functions such as file upload, text input, and custom headers to edit input data. For model output, the inference interface can also directly display general output format such as images and json, as well as download other streaming data files.
