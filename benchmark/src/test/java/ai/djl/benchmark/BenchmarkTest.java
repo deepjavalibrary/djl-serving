@@ -88,7 +88,9 @@ public class BenchmarkTest {
             "-s",
             "1,3,224,224",
             "-c",
-            "2"
+            "2",
+            "-w",
+            "3"
         };
         Assert.assertTrue(new Benchmark().runBenchmark(args));
     }

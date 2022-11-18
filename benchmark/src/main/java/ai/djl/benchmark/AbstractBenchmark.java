@@ -15,6 +15,7 @@ package ai.djl.benchmark;
 import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
+import ai.djl.inference.Predictor;
 import ai.djl.metric.Metrics;
 import ai.djl.metric.Unit;
 import ai.djl.ndarray.NDList;
@@ -277,6 +278,17 @@ public abstract class AbstractBenchmark {
      * @return whether the benchmark uses threading
      */
     protected abstract boolean benchmarkUsesThreads();
+
+    static void warmup(Predictor<Void, float[]> predictor, long[] result, int warmup)
+            throws TranslateException {
+        for (int i = 0; i < warmup; ++i) {
+            long begin = System.nanoTime();
+            predictor.predict(null);
+            long duration = System.nanoTime() - begin;
+            result[0] = Math.min(result[0], duration);
+            result[1] = Math.max(result[1], duration);
+        }
+    }
 
     private static final class BenchmarkTranslator implements NoBatchifyTranslator<Void, float[]> {
 
