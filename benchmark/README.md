@@ -23,6 +23,7 @@ djl-bench currently support benchmark the following type of models:
 - TFLite model
 - TensorRT model
 - XGBoost model
+- LightGBM model
 - Python script model
 - Neo DLR (TVM) model
 
@@ -158,22 +159,24 @@ This will print out the possible arguments to pass in:
 
 ```
 usage: djl-bench [-p MODEL-PATH] -s INPUT-SHAPES [OPTIONS]
- -c,--iteration <ITERATION>               Number of total iterations.
- -d,--duration <DURATION>                 Duration of the test in minutes.
- -e,--engine <ENGINE-NAME>                Choose an Engine for the benchmark.
- -g,--gpus <NUMBER_GPUS>                  Number of GPUS to run multithreading inference.
- -h,--help                                Print this help.
- -l,--delay <DELAY>                       Delay of incremental threads.
-    --model-arguments <MODEL-ARGUMENTS>   Specify model loading arguments.
-    --model-options <MODEL-OPTIONS>       Specify model loading options.
- -n,--model-name <MODEL-NAME>             Specify model file name.
-    --neuron-cores <NEURON-CORES>         Number of neuron cores to run multithreading inference, See
-                                          https://awsdocs-neuron.readthedocs-hosted.com.
- -o,--output-dir <OUTPUT-DIR>             Directory for output logs.
- -p,--model-path <MODEL-PATH>             Model directory file path.
- -s,--input-shapes <INPUT-SHAPES>         Input data shapes for the model.
- -t,--threads <NUMBER_THREADS>            Number of inference threads.
- -u,--model-url <MODEL-URL>               Model archive file URL.
+ -c,--iteration <ITERATION>                 Number of total iterations.
+ -d,--duration <DURATION>                   Duration of the test in minutes.
+ -e,--engine <ENGINE-NAME>                  Choose an Engine for the benchmark.
+ -g,--gpus <NUMBER_GPUS>                    Number of GPUS to run multithreading inference.
+ -h,--help                                  Print this help.
+ -l,--delay <DELAY>                         Delay of incremental threads.
+    --model-arguments <MODEL-ARGUMENTS>     Specify model loading arguments.
+    --model-options <MODEL-OPTIONS>         Specify model loading options.
+ -n,--model-name <MODEL-NAME>               Specify model file name.
+    --neuron-cores <NEURON-CORES>           Number of neuron cores to run multithreading inference, See
+                                            https://awsdocs-neuron.readthedocs-hosted.com.
+ -o,--output-dir <OUTPUT-DIR>               Directory for output logs.
+ -p,--model-path <MODEL-PATH>               Model directory file path.
+ -s,--input-shapes <INPUT-SHAPES>           Input data shapes for the model.
+ -t,--threads <NUMBER_THREADS>              Number of inference threads.
+ -u,--model-url <MODEL-URL>                 Model archive file URL.
+ -w,--warmup-iteration <WARMUP-ITERATION>   Number of warmup iterations, default: 2.
+    --wlm                                   Use a WorkLoad Manager benchmark
 ```
 
 ### Step 1: Pick your deep engine
@@ -190,6 +193,7 @@ By default, the above script will use MXNet as the default Engine, but you can a
 -e TensorRT # TensorRT
 -e DLR # Neo DLR
 -e XGBoost # XGBoost
+-e LightGBM # LightGBM
 -e Python # Python script
 ```
 
@@ -301,6 +305,8 @@ The above code will create 10 threads with the wait time of 100ms.
 
 ## Advanced use cases
 
+### Benchmark for a long period of time
+
 For different purposes, we designed different mode you can play with. Such as the following arg:
 
 ```
@@ -310,6 +316,8 @@ For different purposes, we designed different mode you can play with. Such as th
 This will ask the benchmark script repeatedly running the designed task for 86400 seconds (24 hour).
 If you would like to make sure DJL is stable in the long run, you can do that.
 
+### Collect memory usage
+
 You can also keep monitoring the DJL memory usages by enable the following flag:
 
 ```
@@ -317,3 +325,13 @@ export BENCHMARK_OPTS="-Dcollect-memory=true"
 ```
 
 The memory report will be made available in `build/memory.log`.
+
+### Extra model warmup iterations
+
+PyTorch engine try to optimize graph execution at run time by default, this may impact the latency
+for the first a few inferences. You can increase warmup iterations to get more accurate benchmark
+result:
+
+```
+-w 10
+```
