@@ -9,7 +9,7 @@
     "style-loader": "^1.1.4"
   },
   "dependencies": {
-    "webpack-cli": "*",
+    "webpack-cli": "^4.9.0",
     "webpack-dev-server": "*",
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.0",
