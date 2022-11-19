@@ -295,14 +295,10 @@ public class PyModel extends BaseModel {
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
                 commands =
                         new String[] {
-                            "/opt/djl/bin/s5cmd",
-                            "cp",
-                            "--recursive",
-                            url,
-                            modelDir.toAbsolutePath().toString()
+                            "/opt/djl/bin/s5cmd", "sync", url, modelDir.toAbsolutePath().toString()
                         };
             } else {
-                logger.info("s3cmd is not installed, using aws cli");
+                logger.info("s5cmd is not installed, using aws cli");
                 commands =
                         new String[] {
                             "aws", "s3", "sync", url, modelDir.toAbsolutePath().toString()
