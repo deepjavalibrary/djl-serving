@@ -35,12 +35,13 @@ COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY deepspeed.config.properties /opt/djl/conf/config.properties
-RUN scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_python.sh && \
-    scripts/install_s5cmd.sh x64
 
-### Deep Speed installations
 RUN apt-get update && \
+    scripts/install_djl_serving.sh $djl_version && \
+    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
+    echo "${djl_version}-deepspeed${deepspeed_version}" > /opt/djl/bin/telemetry && \
+    scripts/install_python.sh && \
+    scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu116 && \
     pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} && \

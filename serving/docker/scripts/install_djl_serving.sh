@@ -12,6 +12,7 @@ if [ -z "$PYTORCH_JNI" ]; then
     fakeroot \
     openjdk-11-jdk-headless \
     curl \
+    jq \
     unzip
 
   # install DJLServing

@@ -39,6 +39,8 @@ RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
+    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
+    echo "${djl_version}-inf1" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_inferentia.sh && \
     scripts/patch_oss_dlc.sh python && \

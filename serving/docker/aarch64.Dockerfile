@@ -32,6 +32,8 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/
 
 RUN scripts/install_djl_serving.sh $djl_version && \
+    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
+    echo "${djl_version}-aarch64" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     scripts/install_s5cmd.sh aarch64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \

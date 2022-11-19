@@ -96,7 +96,11 @@ task createDeb(type: Deb, dependsOn: distTar) {
 startScripts {
     defaultJvmOpts = []
     doLast {
+        String telemetry = 'if [ -f "/opt/djl/bin/telemetry.sh" ]; then\n' +
+                '    /opt/djl/bin/telemetry.sh\n' +
+                'fi\n'
         String text = unixScript.text.replace('exec "$JAVACMD" "$@"',
+                telemetry +
                 'if [ "${OMP_NUM_THREADS}" = "" ] && [ "${NO_OMP_NUM_THREADS}" = "" ] ; then\n' +
                 '    export OMP_NUM_THREADS=1\n' +
                 'fi\n' +
