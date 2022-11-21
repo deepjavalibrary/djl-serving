@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -79,6 +80,9 @@ public class PyModel extends BaseModel {
             for (Map.Entry<String, ?> entry : options.entrySet()) {
                 String key = entry.getKey();
                 String value = (String) entry.getValue();
+                if (!"env".equals(key)) {
+                    pyEnv.addParameter(key, value);
+                }
                 logger.debug("{}={}", key, value);
                 switch (key) {
                     case "pythonExecutable":
@@ -122,7 +126,6 @@ public class PyModel extends BaseModel {
                         pyEnv.setHandler(value);
                         break;
                     default:
-                        pyEnv.addParameter(key, value);
                         break;
                 }
             }
@@ -139,6 +142,12 @@ public class PyModel extends BaseModel {
             }
         }
         pyEnv.setEntryPoint(entryPoint);
+
+        String s3Url = pyEnv.getInitParameters().get("s3url");
+        if (s3Url != null) {
+            downloadS3(s3Url);
+        }
+
         if (pyEnv.isMpiMode()) {
             int partitions = pyEnv.getTensorParallelDegree();
             if (partitions == 0) {
@@ -278,6 +287,31 @@ public class PyModel extends BaseModel {
         }
         long duration = System.currentTimeMillis() - begin;
         logger.info("{} model loaded in {} ms.", modelName, duration);
+    }
+
+    private void downloadS3(String url) {
+        try {
+            String[] commands;
+            if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
+                commands =
+                        new String[] {
+                            "/opt/djl/bin/s5cmd", "sync", url, modelDir.toAbsolutePath().toString()
+                        };
+            } else {
+                logger.info("s5cmd is not installed, using aws cli");
+                commands =
+                        new String[] {
+                            "aws", "s3", "sync", url, modelDir.toAbsolutePath().toString()
+                        };
+            }
+            Process exec = Runtime.getRuntime().exec(commands);
+            try (InputStream is = exec.getInputStream()) {
+                logger.debug(Utils.toString(is));
+            }
+            exec.waitFor();
+        } catch (IOException | InterruptedException e) {
+            throw new EngineException("Model failed to download from s3", e);
+        }
     }
 
     private void shutdown() {
