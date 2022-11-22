@@ -33,6 +33,8 @@ ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryErro
 COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
+    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
+    echo "${djl_version}-pytorch${torch_version}" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_python.sh && \
     scripts/install_s5cmd.sh x64 && \
@@ -58,6 +60,7 @@ ARG accelerate_version=0.13.2
 
 COPY scripts scripts/
 RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \
+    echo "${djl_version}-transformers${transformers_version}" > /opt/djl/bin/telemetry && \
     scripts/patch_oss_dlc.sh python && \
     pip cache purge && rm -rf scripts
 
