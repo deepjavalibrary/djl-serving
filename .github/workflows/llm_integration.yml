@@ -1,0 +1,82 @@
+name: Large model integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 15 * * *'
+
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new G5 instance
+        id: create_gpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+    outputs:
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_gpu_instance_id }}
+
+  gpu-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          mkdir logs
+      - name: Test OPT 30B
+        working-directory: tests/integration
+        run: |
+          python3 deepspeed/prepare.py opt-30b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:///opt/ml/model/test/
+          python3 deepspeed/client.py opt-30b
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: tests/integration/logs/
+
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, gpu-test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          ./stop_instance.sh $instance_id
