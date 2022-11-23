@@ -94,8 +94,7 @@ public class DependencyManager {
             return;
         }
 
-        String djlVersion = ConfigManager.getVersion();
-
+        String djlVersion = Engine.getDjlVersion();
         switch (engineName) {
             case "OnnxRuntime":
                 installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
