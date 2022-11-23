@@ -145,6 +145,7 @@ public class PyModel extends BaseModel {
 
         String s3Url = pyEnv.getInitParameters().get("s3url");
         if (s3Url != null) {
+            logger.info("S3 url found, start downloading from {}", s3Url);
             downloadS3(s3Url);
         }
 
@@ -295,7 +296,12 @@ public class PyModel extends BaseModel {
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
                 commands =
                         new String[] {
-                            "/opt/djl/bin/s5cmd", "sync", url, modelDir.toAbsolutePath().toString()
+                            "/opt/djl/bin/s5cmd",
+                            "--retry-count",
+                            "1",
+                            "sync",
+                            url + "*",
+                            modelDir.toAbsolutePath().toString()
                         };
             } else {
                 logger.info("s5cmd is not installed, using aws cli");
