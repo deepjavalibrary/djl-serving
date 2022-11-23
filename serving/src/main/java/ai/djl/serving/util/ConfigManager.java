@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.util;
 
-import ai.djl.engine.Engine;
 import ai.djl.serving.Arguments;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.util.Utils;
@@ -216,20 +215,6 @@ public final class ConfigManager {
         }
         home = getCanonicalPath(dir);
         return home;
-    }
-
-    /**
-     * Returns model server version.
-     *
-     * @return Returns model server version
-     */
-    public static String getVersion() {
-        String version = ConfigManager.class.getPackage().getSpecificationVersion();
-        if (version == null) {
-            // development mode
-            version = Engine.class.getPackage().getSpecificationVersion() + "-SNAPSHOT";
-        }
-        return version;
     }
 
     /**
