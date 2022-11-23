@@ -24,3 +24,4 @@ node_modules/
 
 #vscode
 .vscode
+tests/integration/models/
