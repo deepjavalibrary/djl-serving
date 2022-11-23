@@ -288,6 +288,10 @@ jobs:
           serve -m test::OnnxRuntime=file:///opt/ml/model/resnet18-v1-7.zip?model_name=resnet18-v1-7
           ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
           docker rm -f $(docker ps -aq)
+      - name: Check telemetry collection
+        working-directory: tests/integration
+        run: |
+          ./test_telemetry.sh logs/telemetry-test
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
