@@ -25,6 +25,7 @@ docker run \
   -p 8080:8080 \
   -v ${model_path}:/opt/ml/model \
   -v ${PWD}/logs:/opt/djl/logs \
+  -e TEST_TELEMETRY_COLLECTION='true' \
   ${runtime:+--runtime="${runtime}"} \
   ${host_device:+--device "${host_device}"} \
   "${docker_image}" \
