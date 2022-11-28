@@ -11,7 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
 ARG djl_version=0.20.0~SNAPSHOT
-ARG torch_version=1.11.0
+ARG torch_version=1.12.1
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -28,7 +28,7 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.7/dist-packages/torch/lib
 ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
-ENV PYTORCH_VERSION=1.11.0
+ENV PYTORCH_VERSION=1.12.1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
