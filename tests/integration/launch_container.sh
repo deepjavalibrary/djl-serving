@@ -13,6 +13,9 @@ args=${@:4}     #optional
 
 if [[ "$platform" == *"cu113"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
+elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
+  runtime="nvidia"
+  shm="2gb"
 elif [[ "$platform" == *"inf1"* ]]; then # if the platform is inferentia
   host_device="/dev/neuron0"
 fi
@@ -25,18 +28,25 @@ docker run \
   --network="host" \
   -v ${model_path}:/opt/ml/model \
   -v ${PWD}/logs:/opt/djl/logs \
+  -v ~/.aws:/root/.aws \
   -e TEST_TELEMETRY_COLLECTION='true' \
   ${runtime:+--runtime="${runtime}"} \
+  ${shm:+--shm-size="${shm}"} \
   ${host_device:+--device "${host_device}"} \
   "${docker_image}" \
   ${args}
 set +x
 
+if [[ "$platform" == *"deepspeed"* ]]; then
+  echo "extra sleep for 5 min on DeepSpeed"
+  sleep 300
+fi
+
 # retrying to connect, till djl serving started.
 retry=0
 while true; do
   echo "Start pinging to the host... Retry: $retry"
-  http_code=$(curl -s -w '%{http_code}' -o /dev/null "http://127.0.0.1:8080/ping" || true)
+  http_code=$(curl -s -w '%{http_code}' -m 3 -o /dev/null "http://127.0.0.1:8080/ping" || true)
   if [[ "$http_code" -eq 200 ]]; then
     echo "DJL serving started"
     break
