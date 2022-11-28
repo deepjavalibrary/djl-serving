@@ -22,7 +22,7 @@ set -x
 docker run \
   -itd \
   --rm \
-  -p 8080:8080 \
+  --network="host" \
   -v ${model_path}:/opt/ml/model \
   -v ${PWD}/logs:/opt/djl/logs \
   -e TEST_TELEMETRY_COLLECTION='true' \

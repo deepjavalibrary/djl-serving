@@ -21,7 +21,7 @@ done
 [[ $found == 0 ]] && exit 0
 line=$(head -n 1 $TELEMETRY_FILE)
 
-if [[ -z "${TEST_TELEMETRY_COLLECTION}" ]]; then
+if [[ ! -z "${TEST_TELEMETRY_COLLECTION}" ]]; then
   echo "${REGION} ${INSTANCE_ID} ${line}" > /opt/djl/logs/telemetry-test
 fi
 
