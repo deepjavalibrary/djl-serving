@@ -11,7 +11,7 @@ model_path=$2   #required
 platform=$3     #required
 args=${@:4}     #optional
 
-if [[ "$platform" == *"cu113"* ]]; then # if the platform has cuda capabilities
+if [[ "$platform" == *"cu117"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
 elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
   runtime="nvidia"
