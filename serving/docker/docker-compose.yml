@@ -27,15 +27,15 @@ services:
       context: .
       dockerfile: pytorch-inf1.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-inf1${NIGHTLY}"
-  pytorch-cu113:
+  pytorch-cu117:
     build:
       context: .
       target: base
-      dockerfile: pytorch-cu113.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu113${NIGHTLY}"
+      dockerfile: pytorch-cu117.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu117${NIGHTLY}"
   transformers:
     build:
       context: .
       target: transformers
-      dockerfile: pytorch-cu113.Dockerfile
+      dockerfile: pytorch-cu117.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}transformers${NIGHTLY}"
