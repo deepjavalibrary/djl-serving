@@ -9,8 +9,9 @@ parser.add_argument('model',
 endpoint="http://127.0.0.1:8080/predictions/test"
 
 model_spec = {
-    "bloom-7b1" : {"max_memory_per_gpu" : 12.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256] },
-    "opt-30b" : {"max_memory_per_gpu" : 16.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256] }
+    "gpt-j-6b" : {"max_memory_per_gpu" : 10.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256], "use_pipeline": True },
+    "bloom-7b1" : {"max_memory_per_gpu" : 12.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256], "use_pipeline": False},
+    "opt-30b" : {"max_memory_per_gpu" : 16.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256], "use_pipeline": False }
 }
 
 def send_json(data):
@@ -29,9 +30,10 @@ def test_model(model):
     spec = model_spec[args.model]
     for batch_size in spec["batch_size"]:
         for seq_length in spec["seq_length"]:
-            req = {"batch_size" : batch_size, "text_length" : seq_length }
+            req = {"batch_size" : batch_size, "text_length" : seq_length, "use_pipeline" : spec["use_pipeline"]}
+            print(f"req: {req}")
             res = send_json(req)
-            print(res)
+            print(f"res: {res}")
             assert len(res["outputs"]) == batch_size
             memory_usage = get_gpu_memory()
             print(memory_usage)

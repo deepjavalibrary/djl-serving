@@ -7,6 +7,7 @@ parser.add_argument('model',
                     help='s3 bucket url')
 
 model_list = {
+    "gpt-j-6b" : { "option.s3url" :"s3://djl-llm/gpt-j-6b/", "option.tensor_parallel_degree" : 4 },
     "bloom-7b1" : { "option.s3url" :"s3://djl-llm/bloom-7b1/", "option.tensor_parallel_degree" : 4 },
     "opt-30b" : { "option.s3url" :"s3://djl-llm/opt-30b/", "option.tensor_parallel_degree" : 4 }
 }

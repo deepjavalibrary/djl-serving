@@ -48,7 +48,7 @@ class TestInputOutput(unittest.TestCase):
             self.assertTrue(np.array_equal(item, nd))
 
     def test_json(self):
-        data = {"key1": "value1", "key2": [1, 2, 3]}
+        data = {"key1": "value1", "key2": [1, 2, 3], "key3": True}
         headers = {'content-type': 'application/json'}
         res = requests.post(endpoint, headers=headers, json=data)
         result = res.json()

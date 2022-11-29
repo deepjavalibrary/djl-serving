@@ -11,9 +11,9 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import ast
 import io
 import struct
+import json
 
 from .np_util import from_nd_list
 from .pair_list import PairList
@@ -153,7 +153,7 @@ class Input(object):
         return self.get_as_bytes(key=key).decode("utf-8")
 
     def get_as_json(self, key=None):
-        return ast.literal_eval(self.get_as_bytes(key=key).decode("utf-8"))
+        return json.loads((self.get_as_bytes(key=key).decode("utf-8")))
 
     def get_as_image(self, key=None):
         from PIL import Image
