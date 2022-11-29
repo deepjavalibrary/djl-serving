@@ -52,13 +52,13 @@ jobs:
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
-      - name: Test BLOOM 7B
+      - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
-          python3 deepspeed/prepare.py bloom-7b1
+          python3 deepspeed/prepare.py gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:///opt/ml/model/test/
-          python3 deepspeed/client.py bloom-7b1
+          python3 deepspeed/client.py gpt-j-6b
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
