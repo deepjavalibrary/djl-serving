@@ -315,6 +315,9 @@ public class PyModel extends BaseModel {
                 logger.debug(Utils.toString(is));
             }
             exec.waitFor();
+            logger.info(
+                    String.format(
+                            "Download completed! Files saved to %s", modelDir.toAbsolutePath()));
         } catch (IOException | InterruptedException e) {
             throw new EngineException("Model failed to download from s3", e);
         }
