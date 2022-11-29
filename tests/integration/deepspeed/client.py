@@ -10,7 +10,7 @@ endpoint="http://127.0.0.1:8080/predictions/test"
 
 model_spec = {
     "gpt-j-6b" : {"max_memory_per_gpu" : 10.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256], "use_pipeline": True },
-    "bloom-7b1" : {"max_memory_per_gpu" : 12.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256], "use_pipeline": False},
+    "bloom-7b1" : {"max_memory_per_gpu" : 10.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256], "use_pipeline": False},
     "opt-30b" : {"max_memory_per_gpu" : 16.0, "batch_size" : [1, 2, 4, 8], "seq_length" : [64, 128, 256], "use_pipeline": False }
 }
 

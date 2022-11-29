@@ -8,10 +8,16 @@ from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 
 torch.manual_seed(1234)
 
+
 def load_model(properties):
     tensor_parallel = properties["tensor_parallel_degree"]
     logging.info(f"Loading model in {properties['model_dir']}")
-    model = AutoModelForCausalLM.from_pretrained(properties["model_dir"])
+    model = AutoModelForCausalLM.from_pretrained(properties["model_dir"], low_cpu_mem_usage=True)
+    if "dtype" in properties:
+        if properties["dtype"] == "float16":
+            model.to(torch.float16)
+        if properties["dtype"] == "bfloat16":
+            model.to(torch.bfloat16)
     tokenizer = AutoTokenizer.from_pretrained(properties["model_dir"])
     logging.info(f"Starting DeepSpeed init with TP={tensor_parallel}")
     model = deepspeed.init_inference(model,
@@ -43,8 +49,9 @@ model = None
 tokenizer = None
 generator = None
 
+
 def separate_inference(model, tokenizer, batch_size, length):
-    generate_kwargs = dict(min_length=length, max_new_tokens=length, do_sample=False)
+    generate_kwargs = dict(min_length=length, max_new_tokens=length, do_sample=True)
     input_tokens = tokenizer.batch_encode_plus(batch_generation(batch_size), return_tensors="pt", padding=True)
     for t in input_tokens:
         if torch.is_tensor(input_tokens[t]):
@@ -77,5 +84,5 @@ def handle(inputs: Input):
         outputs = pipeline_inference(model, tokenizer, batch_size, tokens_to_gen)
     else:
         outputs = separate_inference(model, tokenizer, batch_size, tokens_to_gen)
-    result = {"outputs" : outputs }
+    result = {"outputs": outputs}
     return Output().add_as_json(result)
