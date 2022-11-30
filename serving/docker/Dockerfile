@@ -18,7 +18,7 @@ COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_s5cmd.sh x64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version}-cpu" > /opt/djl/bin/telemetry && \
+    echo "${djl_version} cpu" > /opt/djl/bin/telemetry && \
     scripts/security_patch.sh cpu && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     rm -rf scripts
@@ -51,7 +51,7 @@ ARG torch_version=1.12.1
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
-    echo "${djl_version}-cpu-full" > /opt/djl/bin/telemetry && \
+    echo "${djl_version} cpufull" > /opt/djl/bin/telemetry && \
     djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.1:linux-x86_64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
     djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
