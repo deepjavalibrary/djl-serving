@@ -43,4 +43,4 @@ services:
     build:
       context: .
       dockerfile: paddle-cu112.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}paddle-cu112{NIGHTLY}"
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}paddle-cu112${NIGHTLY}"
