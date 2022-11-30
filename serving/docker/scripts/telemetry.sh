@@ -29,9 +29,10 @@ done
 
 [[ $found == 0 ]] && exit 0
 line=$(head -n 1 $TELEMETRY_FILE)
+arr=($line)
 
 if [[ ! -z "${TEST_TELEMETRY_COLLECTION}" ]]; then
   echo "${REGION} ${INSTANCE_ID} ${line}" > /opt/djl/logs/telemetry-test
 fi
 
-curl -s "https://aws-deep-learning-containers-${REGION}.s3.${REGION}.amazonaws.com/dlc-containers-${INSTANCE_ID}.txt?x-instance-id=${INSTANCE_ID}&x-framework=djl&x-framework_version=${line}&x-py_version=3.x&x-container_type=inference"
+curl -s "https://aws-deep-learning-containers-${REGION}.s3.${REGION}.amazonaws.com/dlc-containers-${INSTANCE_ID}.txt?x-instance-id=${INSTANCE_ID}&x-framework=djl&x-framework_version=${arr[0]}&x-py_version=3&x-container_type=${arr[1]}" 2>/dev/null

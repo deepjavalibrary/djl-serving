@@ -39,7 +39,7 @@ COPY deepspeed.config.properties /opt/djl/conf/config.properties
 RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version}-deepspeed${deepspeed_version}" > /opt/djl/bin/telemetry && \
+    echo "${djl_version} deepspeed" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
