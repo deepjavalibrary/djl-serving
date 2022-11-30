@@ -19,7 +19,12 @@ if ! [[ "${result[1]}" =~ ^i\-[0-9a-z]+$ ]]; then
   exit 1;
 fi
 
-if ! [[ "${result[2]}" =~ ^[0-9]\.[0-9]+\.[0-9][~A-Z]* [a-zA-Z]+$ ]]; then
+if ! [[ "${result[2]}" =~ ^[0-9]\.[0-9]+\.[0-9][~A-Z]*$ ]]; then
   echo "version ${result[2]} is not correct!"
+  exit 1;
+fi
+
+if ! [[ "${result[3]}" =~ ^[a-zA-Z]+$ ]]; then
+  echo "container ${result[3]} is not correct!"
   exit 1;
 fi
