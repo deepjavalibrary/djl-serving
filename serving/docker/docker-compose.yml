@@ -39,3 +39,8 @@ services:
       target: transformers
       dockerfile: pytorch-cu117.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}transformers${NIGHTLY}"
+  paddle-cu112:
+    build:
+      context: .
+      dockerfile: paddle-cu112.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}paddle-cu112{NIGHTLY}"
