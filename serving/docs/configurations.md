@@ -93,7 +93,7 @@ restart model server to take effect.
 
 Most of the model server specific configuration can be configured in `conf/config.properties` file.
 You can find the configuration keys here:
-https://github.com/deepjavalibrary/djl-serving/blob/master/serving/src/main/java/ai/djl/serving/util/ConfigManager.java#L52-L79
+[ConfigManager.java](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/src/main/java/ai/djl/serving/util/ConfigManager.java#L52-L79)
 
 Each configuration key can also be override by environment variable with `SERVING_` prefix, for example:
 
