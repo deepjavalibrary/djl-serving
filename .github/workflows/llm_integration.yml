@@ -27,7 +27,7 @@ jobs:
     outputs:
       gpu_instance_id: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
 
-  gpu-test:
+  ds-raw-test:
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -68,6 +68,71 @@ jobs:
           serve -m test=file:///opt/ml/model/test/
           python3 llm/client.py deepspeed_raw gpt-j-6b
           docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: tests/integration/logs/
+
+  hf-handler-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    strategy:
+      matrix:
+        arch: [ deepspeed, transformers ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          mkdir logs
+      - name: Test gpt-neo
+        working-directory: tests/integration
+        run: |
+          sudo python3 llm/prepare.py huggingface gpt-neo-2.7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:///opt/ml/model/test/
+          python3 llm/client.py huggingface gpt-neo-2.7b
+          docker rm -f $(docker ps -aq)
+      - name: Test bloom-7b
+        working-directory: tests/integration
+        run: |
+          sudo python3 llm/prepare.py huggingface bloom-7b1
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:///opt/ml/model/test/
+          python3 llm/client.py huggingface bloom-7b1
+          docker rm -f $(docker ps -aq)
+      - name: Test GPTJ-6B
+        working-directory: tests/integration
+        run: |
+          sudo python3 llm/prepare.py huggingface gpt-j-6b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:///opt/ml/model/test/
+          python3 llm/client.py huggingface gpt-j-6b
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -83,7 +148,7 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, gpu-test ]
+    needs: [ create-runners, hf-handler-test, ds-raw-test ]
     steps:
       - name: Stop all instances
         run: |

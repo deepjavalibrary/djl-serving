@@ -15,6 +15,7 @@ import json
 import logging
 import os
 
+import torch
 from transformers import pipeline, Conversation
 
 from djl_python.encode_decode import encode, decode
@@ -58,6 +59,14 @@ class HuggingFaceService(object):
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         if "device_map" in properties:
             kwargs["device_map"] = properties.get("device_map")
+            logging.info(f"Using device map {kwargs['device_map']}")
+        elif "tensor_parallel_degree" in properties:
+            kwargs["device_map"] = "auto"
+            world_size = torch.cuda.device_count()
+            if world_size != properties["tensor_parallel_degree"]:
+                raise ValueError(f"TP degree {properties['tensor_parallel_degree']}"
+                                 f" and world size {world_size} mismatch!")
+            logging.info(f"Using {world_size} gpus")
         if "dtype" in properties:
             kwargs["torch_dtype"] = properties.get("dtype")
         if task:
@@ -126,11 +135,15 @@ class HuggingFaceService(object):
             kwargs["tokenizer"] = model
 
         # load pipeline
-        hf_pipeline = pipeline(task=task,
-                               model=model,
-                               device=device,
-                               framework="pt",
-                               **kwargs)
+        if "device_map" in kwargs:
+            hf_pipeline = pipeline(task=task,
+                                   model=model,
+                                   **kwargs)
+        else:
+            hf_pipeline = pipeline(task=task,
+                                   model=model,
+                                   device=device,
+                                   **kwargs)
 
         # wrapp specific pipeline to support better ux
         if task == "conversational":
