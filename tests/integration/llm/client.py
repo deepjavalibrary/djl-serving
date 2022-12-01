@@ -4,6 +4,7 @@ import subprocess as sp
 import logging
 import math
 
+logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Build the LLM configs')
 parser.add_argument('handler',
                     help='the handler used in the model')
