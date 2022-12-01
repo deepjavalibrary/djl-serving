@@ -1,6 +1,6 @@
 # Add test models (DJL internal)
 
-For DeepSpeed container testing, we will download model from DJL's S3 bucket.
+For LLM container testing, we will download model from DJL's S3 bucket.
 To check in new models, follow the steps below:
 
 ```python
