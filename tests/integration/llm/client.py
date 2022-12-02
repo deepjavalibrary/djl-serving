@@ -23,9 +23,16 @@ ds_raw_model_spec = {
 }
 
 hf_model_spec = {
-    "gpt-j-6b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]},
+    "gpt-neo-2.7b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]},
+    "gpt-j-6b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
     "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]}
 }
+
+
+def check_worker_number(desired):
+    endpoint = "http://127.0.0.1:8080/models/test"
+    res = requests.get(endpoint).json()
+    assert desired == len(res[0]["models"][0]["workerGroups"][0]["workers"])
 
 
 def send_json(data):
@@ -61,6 +68,8 @@ def test_hf_model(model):
     if model not in hf_model_spec:
         raise ValueError(f"{args.model} is not one of the supporting models {list(hf_model_spec.keys())}")
     spec = hf_model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
     for batch_size in spec["batch_size"]:
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}

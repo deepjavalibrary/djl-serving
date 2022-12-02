@@ -65,5 +65,4 @@ RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_
     pip cache purge && rm -rf scripts
 
 ENV MODEL_LOADING_TIMEOUT=2400
-ENV SERVING_LOAD_ON_DEVICES=0
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.transformers="true"
