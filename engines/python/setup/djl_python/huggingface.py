@@ -16,7 +16,7 @@ import logging
 import os
 
 import torch
-from transformers import pipeline, Conversation
+from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoTokenizer
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -54,9 +54,9 @@ class HuggingFaceService(object):
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         # HF Acc handling
         kwargs = {
-            "load_in_8bit": bool(properties.get("load_in_8bit", "FALSE")),
+            "load_in_8bit": properties.get("load_in_8bit", "FALSE").lower() == 'true',
             "low_cpu_mem_usage":
-            bool(properties.get("low_cpu_mem_usage", "TRUE")),
+            properties.get("low_cpu_mem_usage", "TRUE").lower() == 'true'
         }
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         if "device_map" in properties:
@@ -122,7 +122,7 @@ class HuggingFaceService(object):
         return outputs
 
     def get_pipeline(self, task: str, device: int, model_id: str,
-                     model_dir: str, **kwargs):
+                     model_dir: str, kwargs):
         model = model_id if model_id else model_dir
 
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
@@ -138,9 +138,18 @@ class HuggingFaceService(object):
         else:
             kwargs["tokenizer"] = model
 
+        if kwargs["load_in_8bit"] and "device_map" not in kwargs:
+            raise ValueError("device_map should set when load_in_8bit is set")
         # load pipeline
         if "device_map" in kwargs:
-            hf_pipeline = pipeline(task=task, model=model, **kwargs)
+            # TODO: load_in_8bit is not supported by pipeline init
+            if kwargs["load_in_8bit"]:
+                tokenizer = AutoTokenizer.from_pretrained(model)
+                kwargs.pop("tokenizer", None)
+                model = AutoModelForCausalLM.from_pretrained(model, **kwargs)
+                hf_pipeline = pipeline(task=task, model=model, tokenizer=tokenizer)
+            else:
+                hf_pipeline = pipeline(task=task, model=model, **kwargs)
         else:
             hf_pipeline = pipeline(task=task,
                                    model=model,
