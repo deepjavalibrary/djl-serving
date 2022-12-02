@@ -51,22 +51,26 @@ class HuggingFaceService(object):
         device_id = int(properties.get("device_id", "-1"))
         model_id = properties.get("model_id")
         task = properties.get("task")
+        tp_degree = int(properties["tensor_parallel_degree", "-1"])
         # HF Acc handling
         kwargs = {
             "load_in_8bit": bool(properties.get("load_in_8bit", "FALSE")),
-            "low_cpu_mem_usage": bool(properties.get("low_cpu_mem_usage", "TRUE")),
+            "low_cpu_mem_usage":
+            bool(properties.get("low_cpu_mem_usage", "TRUE")),
         }
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         if "device_map" in properties:
             kwargs["device_map"] = properties.get("device_map")
             logging.info(f"Using device map {kwargs['device_map']}")
-        elif "tensor_parallel_degree" in properties:
+        elif tp_degree > 0:
             kwargs["device_map"] = "auto"
             world_size = torch.cuda.device_count()
-            if world_size != properties["tensor_parallel_degree"]:
-                raise ValueError(f"TP degree {properties['tensor_parallel_degree']}"
-                                 f" and world size {world_size} mismatch!")
+            assert (
+                world_size == tp_degree,
+                f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
+            )
             logging.info(f"Using {world_size} gpus")
+
         if "dtype" in properties:
             kwargs["torch_dtype"] = properties.get("dtype")
         if task:
@@ -136,9 +140,7 @@ class HuggingFaceService(object):
 
         # load pipeline
         if "device_map" in kwargs:
-            hf_pipeline = pipeline(task=task,
-                                   model=model,
-                                   **kwargs)
+            hf_pipeline = pipeline(task=task, model=model, **kwargs)
         else:
             hf_pipeline = pipeline(task=task,
                                    model=model,
