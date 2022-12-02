@@ -108,7 +108,8 @@ class PythonEngine(object):
             inputs = Input()
             inputs.read(cl_socket)
             prop = inputs.get_properties()
-            prop["tensor_parallel_degree"] = self.tensor_parallel_degree
+            if self.tensor_parallel_degree:
+                prop["tensor_parallel_degree"] = self.tensor_parallel_degree
             prop["device_id"] = self.device_id
             function_name = inputs.get_function_name()
             try:
