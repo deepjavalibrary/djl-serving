@@ -76,9 +76,9 @@ def test_hf_model(model):
             params = {"min_length": seq_length, "max_length": seq_length}
             req["parameters"] = params
             res = send_json(req)
+            logging.info(f"res {res}")
             result = [item[0]['generated_text'] for item in res]
             assert len(result) == batch_size
-            logging.info(f"res: {result}")
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
             for memory in memory_usage:
