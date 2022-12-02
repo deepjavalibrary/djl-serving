@@ -546,7 +546,7 @@ public class ModelServer {
                         }
                         StringBuilder sb = new StringBuilder("0");
                         for (int i = 1; i < procs; ++i) {
-                            sb.append(',').append(i);
+                            sb.append(';').append(i);
                         }
                         configManager.setLoadOnDevices(sb.toString());
                     }
