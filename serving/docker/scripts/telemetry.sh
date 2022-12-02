@@ -9,7 +9,7 @@ TELEMETRY_FILE="/opt/djl/bin/telemetry"
 curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 600" -m 1 &>/dev/null || IMDS_V1=true
 
 if [[ "${IMDS_V1}" == true ]]; then
-  curl -s -m 1 -v http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || exit 0
+  curl -s -m 1 -v http://169.254.169.254/latest/meta-data/instance-id &>/dev/null || exit 0
   INSTANCE_ID=`curl -s -v http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null`
   REGION=`curl -s -v http://169.254.169.254/latest/dynamic/instance-identity/document 2>/dev/null | jq -r '.region'`
 else
@@ -35,4 +35,4 @@ if [[ ! -z "${TEST_TELEMETRY_COLLECTION}" ]]; then
   echo "${REGION} ${INSTANCE_ID} ${line}" > /opt/djl/logs/telemetry-test
 fi
 
-curl -s "https://aws-deep-learning-containers-${REGION}.s3.${REGION}.amazonaws.com/dlc-containers-${INSTANCE_ID}.txt?x-instance-id=${INSTANCE_ID}&x-framework=djl&x-framework_version=${arr[0]}&x-py_version=3&x-container_type=${arr[1]}" 2>/dev/null
+curl -s "https://aws-deep-learning-containers-${REGION}.s3.${REGION}.amazonaws.com/dlc-containers-${INSTANCE_ID}.txt?x-instance-id=${INSTANCE_ID}&x-framework=djl&x-framework_version=${arr[0]}&x-py_version=3&x-container_type=${arr[1]}" &>/dev/null
