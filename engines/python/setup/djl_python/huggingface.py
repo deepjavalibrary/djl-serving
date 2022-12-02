@@ -51,7 +51,7 @@ class HuggingFaceService(object):
         device_id = int(properties.get("device_id", "-1"))
         model_id = properties.get("model_id")
         task = properties.get("task")
-        tp_degree = int(properties["tensor_parallel_degree", "-1"])
+        tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         # HF Acc handling
         kwargs = {
             "load_in_8bit": bool(properties.get("load_in_8bit", "FALSE")),
