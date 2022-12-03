@@ -36,8 +36,8 @@ import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
+import ai.djl.util.Pair;
 import ai.djl.util.Utils;
-import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -364,7 +364,7 @@ public class ModelServer {
             String modelUrl = matcher.group(3);
             String version = null;
             String engineName = null;
-            String[] devices = {null};
+            String deviceMapping = null;
             String modelName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
@@ -376,20 +376,24 @@ public class ModelServer {
                     engineName = tokens[2].isEmpty() ? null : tokens[2];
                 }
                 if (tokens.length > 3) {
-                    Engine engine;
-                    if (engineName != null) {
-                        DependencyManager.getInstance().installEngine(engineName);
-                        engine = Engine.getEngine(engineName);
-                    } else {
-                        engine = Engine.getInstance();
-                    }
-                    devices = parseDevices(tokens[3], engine);
+                    deviceMapping = tokens[3];
                 }
             } else {
                 modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
+            Pair<String, Path> pair = downloadModel(modelUrl);
             if (engineName == null) {
-                engineName = inferEngineFromUrl(modelUrl);
+                engineName = inferEngine(pair.getValue(), pair.getKey());
+                if (engineName == null) {
+                    logger.warn("Failed to infer engine, skip url: {}", url);
+                    continue;
+                }
+            }
+            String[] devices = {null};
+            if (deviceMapping != null) {
+                DependencyManager.getInstance().installEngine(engineName);
+                Engine engine = Engine.getEngine(engineName);
+                devices = parseDevices(deviceMapping, engine, pair.getValue());
             }
 
             WlmConfigManager wlmc = WlmConfigManager.getInstance();
@@ -465,7 +469,11 @@ public class ModelServer {
                 String[] tokens = endpoint.split(":", -1);
                 workflowName = tokens[0];
                 if (tokens.length > 1) {
-                    devices = parseDevices(tokens[1], Engine.getInstance());
+                    Pair<String, Path> pair = downloadModel(workflowUrlString);
+                    String engineName = inferEngine(pair.getValue(), pair.getKey());
+                    DependencyManager.getInstance().installEngine(engineName);
+                    Engine engine = Engine.getEngine(engineName);
+                    devices = parseDevices(tokens[1], engine, pair.getValue());
                 }
             } else {
                 workflowName = ModelInfo.inferModelNameFromUrl(workflowUrlString);
@@ -522,35 +530,11 @@ public class ModelServer {
             if (Files.isDirectory(path)) {
                 engine = inferEngine(path, path.toFile().getName());
             } else {
+                // .zip file
                 engine = inferEngineFromUrl(url);
             }
             if (engine == null) {
                 return null;
-            }
-
-            if ("Python".equals(engine)) {
-                Properties prop = getServingProperties(path);
-                String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
-                v = prop.getProperty("option.tensor_parallel_degree", v);
-                int tensorParallelDegree = Integer.parseInt(v);
-                if (tensorParallelDegree > 0) {
-                    String loadOnDevices = configManager.getLoadOnDevices();
-                    if ("*".equals(loadOnDevices)) {
-                        int gpus = CudaUtils.getGpuCount();
-                        int procs = gpus / tensorParallelDegree;
-                        if (procs == 0) {
-                            throw new EngineException(
-                                    "GPU devices are not enough to run "
-                                            + tensorParallelDegree
-                                            + " partitions.");
-                        }
-                        StringBuilder sb = new StringBuilder("0");
-                        for (int i = 1; i < procs; ++i) {
-                            sb.append(';').append(i);
-                        }
-                        configManager.setLoadOnDevices(sb.toString());
-                    }
-                }
             }
 
             return modelName + "::" + engine + ':' + configManager.getLoadOnDevices() + '=' + url;
@@ -562,18 +546,22 @@ public class ModelServer {
         }
     }
 
+    private Pair<String, Path> downloadModel(String modelUrl) throws IOException {
+        Repository repository = Repository.newInstance("modelStore", modelUrl);
+        List<MRL> mrls = repository.getResources();
+        if (mrls.isEmpty()) {
+            throw new IllegalArgumentException("Invalid model url: " + modelUrl);
+        }
+
+        Artifact artifact = mrls.get(0).getDefaultArtifact();
+        repository.prepare(artifact);
+        return new Pair<>(artifact.getName(), repository.getResourceDirectory(artifact));
+    }
+
     private String inferEngineFromUrl(String modelUrl) {
         try {
-            Repository repository = Repository.newInstance("modelStore", modelUrl);
-            List<MRL> mrls = repository.getResources();
-            if (mrls.isEmpty()) {
-                throw new IllegalArgumentException("Invalid model url: " + modelUrl);
-            }
-
-            Artifact artifact = mrls.get(0).getDefaultArtifact();
-            repository.prepare(artifact);
-            Path modelDir = repository.getResourceDirectory(artifact);
-            return inferEngine(modelDir, artifact.getName());
+            Pair<String, Path> pair = downloadModel(modelUrl);
+            return inferEngine(pair.getValue(), pair.getKey());
         } catch (IOException e) {
             logger.warn("Failed to extract model: " + modelUrl, e);
             return null;
@@ -635,10 +623,27 @@ public class ModelServer {
         return null;
     }
 
-    private String[] parseDevices(String devices, Engine engine) {
+    private String[] parseDevices(String devices, Engine engine, Path modelDir) {
         if ("*".equals(devices)) {
             int gpuCount = engine.getGpuCount();
             if (gpuCount > 0) {
+                if ("Python".equals(engine.getEngineName())) {
+                    Properties prop = getServingProperties(modelDir);
+                    String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
+                    v = prop.getProperty("option.tensor_parallel_degree", v);
+                    int tensorParallelDegree = Integer.parseInt(v);
+                    if (tensorParallelDegree > 0) {
+                        int procs = gpuCount / tensorParallelDegree;
+                        if (procs == 0) {
+                            throw new EngineException(
+                                    "GPU devices are not enough to run "
+                                            + tensorParallelDegree
+                                            + " partitions.");
+                        }
+                        gpuCount = procs;
+                    }
+                }
+
                 return IntStream.range(0, gpuCount)
                         .mapToObj(String::valueOf)
                         .toArray(String[]::new);
