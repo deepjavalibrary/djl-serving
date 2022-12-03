@@ -53,11 +53,7 @@ class HuggingFaceService(object):
         task = properties.get("task")
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         # HF Acc handling
-        kwargs = {
-            "load_in_8bit": properties.get("load_in_8bit", "FALSE").lower() == 'true',
-            "low_cpu_mem_usage":
-            properties.get("low_cpu_mem_usage", "TRUE").lower() == 'true'
-        }
+        kwargs = {}
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         if "device_map" in properties:
             kwargs["device_map"] = properties.get("device_map")
@@ -70,6 +66,12 @@ class HuggingFaceService(object):
                 f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
             )
             logging.info(f"Using {world_size} gpus")
+        if "load_in_8bit" in properties:
+            if "device_map" not in kwargs:
+                raise ValueError("device_map should set when load_in_8bit is set")
+            kwargs["load_in_8bit"] = properties.get("load_in_8bit")
+        if "low_cpu_mem_usage" in properties:
+            kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage")
 
         if "dtype" in properties:
             kwargs["torch_dtype"] = properties.get("dtype")
@@ -138,23 +140,21 @@ class HuggingFaceService(object):
         else:
             kwargs["tokenizer"] = model
 
-        if kwargs["load_in_8bit"] and "device_map" not in kwargs:
-            raise ValueError("device_map should set when load_in_8bit is set")
-        # load pipeline
-        if "device_map" in kwargs:
-            # TODO: load_in_8bit is not supported by pipeline init
-            if kwargs["load_in_8bit"]:
-                tokenizer = AutoTokenizer.from_pretrained(model)
-                kwargs.pop("tokenizer", None)
-                model = AutoModelForCausalLM.from_pretrained(model, **kwargs)
-                hf_pipeline = pipeline(task=task, model=model, tokenizer=tokenizer)
-            else:
+        use_pipeline = True
+        for element in ["load_in_8bit", "low_cpu_mem_usage"]:
+            if element in kwargs:
+                use_pipeline = False
+        # build pipeline
+        if use_pipeline:
+            if "device_map" in kwargs:
                 hf_pipeline = pipeline(task=task, model=model, **kwargs)
+            else:
+                hf_pipeline = pipeline(task=task, model=model, device=device, **kwargs)
         else:
-            hf_pipeline = pipeline(task=task,
-                                   model=model,
-                                   device=device,
-                                   **kwargs)
+            tokenizer = AutoTokenizer.from_pretrained(model)
+            kwargs.pop("tokenizer", None)
+            model = AutoModelForCausalLM.from_pretrained(model, **kwargs)
+            hf_pipeline = pipeline(task=task, model=model, tokenizer=tokenizer)
 
         # wrapp specific pipeline to support better ux
         if task == "conversational":
