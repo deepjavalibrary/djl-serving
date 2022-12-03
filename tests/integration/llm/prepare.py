@@ -18,10 +18,10 @@ ds_model_list = {
 hf_handler_list = {
     "gpt-neo-2.7b": {"option.model_id": "EleutherAI/gpt-neo-2.7B", "option.task": "text-generation",
                      "option.tensor_parallel_degree": 2},
-    "gpt-j-6b": {"option.s3url": "s3://djl-llm/gpt-j-6b/", "option.tensor_parallel_degree": 2,
-                 "option.device_map": "auto"},
+    "gpt-j-6b": {"option.s3url": "s3://djl-llm/gpt-j-6b/", "option.task": "text-generation",
+                 "option.tensor_parallel_degree": 2, "option.device_map": "auto"},
     "bloom-7b1": {"option.s3url": "s3://djl-llm/bloom-7b1/", "option.tensor_parallel_degree": 4,
-                  "option.load_in_8bit": "TRUE", "option.device_map": "auto"}
+                  "option.task": "text-generation", "option.load_in_8bit": "TRUE", "option.device_map": "auto"}
 }
 
 
