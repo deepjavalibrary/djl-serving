@@ -61,14 +61,12 @@ class HuggingFaceService(object):
         elif tp_degree > 0:
             kwargs["device_map"] = "auto"
             world_size = torch.cuda.device_count()
-            assert (
-                world_size == tp_degree,
-                f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
-            )
+            assert world_size == tp_degree, f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
             logging.info(f"Using {world_size} gpus")
         if "load_in_8bit" in properties:
             if "device_map" not in kwargs:
-                raise ValueError("device_map should set when load_in_8bit is set")
+                raise ValueError(
+                    "device_map should set when load_in_8bit is set")
             kwargs["load_in_8bit"] = properties.get("load_in_8bit")
         if "low_cpu_mem_usage" in properties:
             kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage")
@@ -149,7 +147,10 @@ class HuggingFaceService(object):
             if "device_map" in kwargs:
                 hf_pipeline = pipeline(task=task, model=model, **kwargs)
             else:
-                hf_pipeline = pipeline(task=task, model=model, device=device, **kwargs)
+                hf_pipeline = pipeline(task=task,
+                                       model=model,
+                                       device=device,
+                                       **kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model)
             kwargs.pop("tokenizer", None)
