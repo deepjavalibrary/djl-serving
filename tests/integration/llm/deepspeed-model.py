@@ -51,7 +51,7 @@ generator = None
 
 
 def separate_inference(model, tokenizer, batch_size, length):
-    generate_kwargs = dict(min_length=length, max_new_tokens=length, do_sample=True)
+    generate_kwargs = dict(max_new_tokens=length, do_sample=True)
     input_tokens = tokenizer.batch_encode_plus(batch_generation(batch_size), return_tensors="pt", padding=True)
     for t in input_tokens:
         if torch.is_tensor(input_tokens[t]):
@@ -65,7 +65,7 @@ def pipeline_inference(model, tokenizer, batch_size, length):
     if not generator:
         local_rank = int(os.getenv('LOCAL_RANK', '0'))
         generator = pipeline(task='text-generation', model=model, tokenizer=tokenizer, device=local_rank)
-    outputs = generator(batch_generation(batch_size), min_length=length, max_length=length)
+    outputs = generator(batch_generation(batch_size), max_length=length)
     return [item[0]['generated_text'] for item in outputs]
 
 

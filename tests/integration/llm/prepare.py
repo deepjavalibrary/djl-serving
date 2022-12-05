@@ -41,6 +41,7 @@ def build_hf_handler_model(model):
     options = hf_handler_list[model]
     options["engine"] = "Python"
     options["option.entryPoint"] = "djl_python.huggingface"
+    options["option.predict_timeout"] = 240
     write_prperties(options)
 
 
