@@ -17,7 +17,7 @@ curl -L https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB
 
 # Installing Neuron Tools
 apt-get update
-apt-get install -y aws-neuron-tools python3.7 python3.7-distutils pciutils
+apt-get install -y aws-neuronx-tools aws-neuronx-dkms python3.7 python3.7-distutils pciutils
 ln -sf /usr/bin/python3.7 /usr/bin/python3
 ln -sf /usr/bin/python3.7 /usr/bin/python
 
@@ -28,4 +28,4 @@ rm get-pip.py
 
 # Include torch-neuron
 python3 -m pip install numpy awscli
-python3 -m pip install torch-neuron==1.11.0.* --extra-index-url=https://pip.repos.neuron.amazonaws.com
+python3 -m pip install torch-neuron==1.12.1.* --extra-index-url=https://pip.repos.neuron.amazonaws.com
