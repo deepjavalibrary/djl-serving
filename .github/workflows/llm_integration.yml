@@ -113,7 +113,7 @@ jobs:
         run: |
           sudo python3 llm/prepare.py huggingface gpt-neo-2.7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve
+          serve -m test:::*=file:///opt/ml/model/test/
           python3 llm/client.py huggingface gpt-neo-2.7b
           docker rm -f $(docker ps -aq)
       - name: Test bloom-7b

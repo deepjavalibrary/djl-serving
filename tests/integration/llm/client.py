@@ -25,7 +25,7 @@ ds_raw_model_spec = {
 hf_model_spec = {
     "gpt-neo-2.7b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
     "gpt-j-6b": {"max_memory_per_gpu": 14.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
-    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]}
+    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128]}
 }
 
 
@@ -73,8 +73,9 @@ def test_hf_model(model):
     for batch_size in spec["batch_size"]:
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}
-            params = {"min_length": seq_length, "max_length": seq_length}
+            params = {"max_length": seq_length}
             req["parameters"] = params
+            logging.info(f"req {req}")
             res = send_json(req)
             logging.info(f"res {res}")
             result = [item[0]['generated_text'] for item in res]
