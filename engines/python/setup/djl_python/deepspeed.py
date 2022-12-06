@@ -24,7 +24,7 @@ from transformers import (
     AutoModelForTokenClassification,
     pipeline,
     Conversation,
-    SquadExample,
+    SquadExample
 )
 import transformers
 from deepspeed.module_inject.replace_policy import (
@@ -70,6 +70,7 @@ ARCHITECTURES_TO_TASK = {
     "ForQuestionAnswering": "question-answering",
     "ForMaskedLM": "fill-mask",
     "ForTokenClassification": "token-classification",
+    "BloomModel": "text-generation",
 }
 
 TASK_TO_MODEL = {
@@ -93,6 +94,16 @@ MODEL_TYPE_TO_INJECTION_POLICY = {
 }
 
 
+def get_torch_dtype_from_str(dtype: str):
+    if dtype == "fp16":
+        return torch.float16
+    if dtype == "bf16":
+        return torch.bfloat16
+    if dtype == "int8":
+        return torch.int8
+    return torch.float32
+
+
 class DeepSpeedService(object):
 
     def __init__(self):
@@ -109,6 +120,7 @@ class DeepSpeedService(object):
         self.world_size = None
         self.tensor_parallel_degree = None
         self.model_config = None
+        self.low_cpu_mem_usage = False
 
     def initialize(self, properties: dict):
         self.parse_properties(properties)
@@ -125,19 +137,17 @@ class DeepSpeedService(object):
         self.model_dir = properties.get("model_dir")
         self.model_id = properties.get("model_id")
         self.task = properties.get("task")
-        self.data_type = properties.get("data_type", "fp32")
+        self.data_type = get_torch_dtype_from_str(properties.get("data_type", "fp32"))
         self.max_tokens = int(properties.get("max_tokens", 1024))
         self.device = int(os.getenv("LOCAL_RANK", 0))
         self.world_size = int(os.getenv("WORLD_SIZE", 1))
         self.tensor_parallel_degree = int(properties.get("tensor_parallel_degree", self.world_size))
+        self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage", "true").lower() == "true"
         self.ds_config = {
             "replace_with_kernel_inject": True,
             "dtype": self.data_type,
-            "tensor_parallel": {
-                "enabled": True,
-                "tp_size": self.tensor_parallel_degree,
-                "mpu": None,
-            },
+            "mp_size": self.tensor_parallel_degree,
+            "mpu": None,
             "enable_cuda_graph": properties.get("enable_cuda_graph", "false").lower() == "true",
             "triangular_masking": properties.get("triangular_masking", "true").lower() == "true",
             "checkpoint": properties.get("checkpoint"),
@@ -146,7 +156,7 @@ class DeepSpeedService(object):
             "training_mp_size": int(properties.get("training_mp_size", 1)),
             "replace_method": "auto",
             "injection_policy": None,
-            "max_out_tokens": self.max_tokens,
+            "max_tokens": self.max_tokens,
         }
 
     def validate_model_type_and_task(self):
@@ -182,21 +192,19 @@ class DeepSpeedService(object):
     def create_model_pipeline(self):
         # If a ds checkpoint is provided, we instantiate model with meta tensors. weights loaded when DS engine invoked
         if self.ds_config["checkpoint"]:
-            dtype = torch.float32 if self.data_type == "fp32" else torch.float16
+            dtype = torch.float32 if self.data_type == torch.float32 else torch.float16
             with deepspeed.OnDevice(dtype=dtype, device="meta"):
                 model = TASK_TO_MODEL[self.task].from_config(self.model_config)
         else:
-            model = TASK_TO_MODEL[self.task].from_pretrained(self.model_id, low_cpu_mem_usage=True)
+            model = TASK_TO_MODEL[self.task].from_pretrained(self.model_id, low_cpu_mem_usage=self.low_cpu_mem_usage)
 
         model.eval()
         tokenizer = AutoTokenizer.from_pretrained(self.model_id)
         self.pipeline = pipeline(task=self.task, model=model, tokenizer=tokenizer, device=self.device)
-        self.logger.info(f"Model before deepspeed: {self.pipeline.model}")
         if self.model_config.model_type in MODEL_TYPE_TO_INJECTION_POLICY:
             self.ds_config["injection_policy"] = MODEL_TYPE_TO_INJECTION_POLICY[self.model_config.model_type]
         engine = deepspeed.init_inference(self.pipeline.model, **self.ds_config)
         self.pipeline.model = engine.module
-        self.logger.info(f"Model after deepspeed: {self.pipeline.model}")
 
     def format_input_for_task(self, input_values):
         if not isinstance(input_values, list):
@@ -213,8 +221,12 @@ class DeepSpeedService(object):
                 )
             elif self.task == "question-answering":
                 current_input = SquadExample(
-                    context_text=val.get("context"),
-                    question_text=val.get("question")
+                    None,
+                    val.get("context"),
+                    val.get("question"),
+                    None,
+                    None,
+                    None
                 )
             else:
                 current_input = val
