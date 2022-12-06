@@ -281,15 +281,6 @@ public final class ConfigManager {
     }
 
     /**
-     * Sets the devices the model will be loaded on.
-     *
-     * @param loadOnDevices the devices to load the model on
-     */
-    public void setLoadOnDevices(String loadOnDevices) {
-        prop.setProperty(LOAD_ON_DEVICES, loadOnDevices);
-    }
-
-    /**
      * Returns the CORS allowed origin setting.
      *
      * @return the CORS allowed origin setting
