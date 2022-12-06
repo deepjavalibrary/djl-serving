@@ -34,7 +34,7 @@ CMD ["serve"]
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
-COPY deepspeed.config.properties /opt/djl/conf/config.properties
+COPY config.properties /opt/djl/conf/config.properties
 
 RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \

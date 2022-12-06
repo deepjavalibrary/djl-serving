@@ -364,7 +364,7 @@ public class ModelServer {
             String modelUrl = matcher.group(3);
             String version = null;
             String engineName = null;
-            String deviceMapping = null;
+            String deviceMapping = "*";
             String modelName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
@@ -389,12 +389,9 @@ public class ModelServer {
                     continue;
                 }
             }
-            String[] devices = {null};
-            if (deviceMapping != null) {
-                DependencyManager.getInstance().installEngine(engineName);
-                Engine engine = Engine.getEngine(engineName);
-                devices = parseDevices(deviceMapping, engine, pair.getValue());
-            }
+            DependencyManager.getInstance().installEngine(engineName);
+            Engine engine = Engine.getEngine(engineName);
+            String[] devices = parseDevices(deviceMapping, engine, pair.getValue());
 
             WlmConfigManager wlmc = WlmConfigManager.getInstance();
             ModelInfo<Input, Output> modelInfo =
@@ -410,13 +407,12 @@ public class ModelServer {
                             wlmc.getMaxBatchDelay(),
                             wlmc.getBatchSize());
             Workflow workflow = new Workflow(modelInfo);
-            String[] finalDevices = devices;
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
                             .thenAccept(
                                     v -> {
-                                        for (String deviceName : finalDevices) {
+                                        for (String deviceName : devices) {
                                             modelManager.initWorkers(workflow, deviceName, -1, -1);
                                         }
                                     })
@@ -627,7 +623,8 @@ public class ModelServer {
         if ("*".equals(devices)) {
             int gpuCount = engine.getGpuCount();
             if (gpuCount > 0) {
-                if ("Python".equals(engine.getEngineName())) {
+                String engineName = engine.getEngineName();
+                if ("Python".equals(engineName)) {
                     Properties prop = getServingProperties(modelDir);
                     String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
                     v = prop.getProperty("option.tensor_parallel_degree", v);
@@ -642,6 +639,8 @@ public class ModelServer {
                         }
                         gpuCount = procs;
                     }
+                } else if ("DeepSpeed".equals(engineName)) {
+                    return new String[] {"0"};
                 }
 
                 return IntStream.range(0, gpuCount)
