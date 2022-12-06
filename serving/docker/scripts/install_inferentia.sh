@@ -28,4 +28,4 @@ rm get-pip.py
 
 # Include torch-neuron
 python3 -m pip install numpy awscli
-python3 -m pip install torch-neuron==1.12.1.* --extra-index-url=https://pip.repos.neuron.amazonaws.com
+python3 -m pip install torch-neuron==1.12.1.* torchvision --extra-index-url=https://pip.repos.neuron.amazonaws.com
