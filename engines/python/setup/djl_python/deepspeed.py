@@ -95,13 +95,16 @@ MODEL_TYPE_TO_INJECTION_POLICY = {
 
 
 def get_torch_dtype_from_str(dtype: str):
+    if dtype == "fp32":
+        return torch.float32
     if dtype == "fp16":
         return torch.float16
-    if dtype == "bf16":
+    elif dtype == "bf16":
         return torch.bfloat16
-    if dtype == "int8":
+    elif dtype == "int8":
         return torch.int8
-    return torch.float32
+    else:
+        raise ValueError(f"Invalid data type: {dtype}")
 
 
 class DeepSpeedService(object):
@@ -133,7 +136,7 @@ class DeepSpeedService(object):
                          f"tensor_parallel_degree: {self.tensor_parallel_degree}")
         self.initialized = True
 
-    def parse_properties(self, properties):
+    def _parse_properties(self, properties):
         self.model_dir = properties.get("model_dir")
         self.model_id = properties.get("model_id")
         self.task = properties.get("task")
@@ -159,7 +162,7 @@ class DeepSpeedService(object):
             "max_tokens": self.max_tokens,
         }
 
-    def validate_model_type_and_task(self):
+    def _validate_model_type_and_task(self):
         if not self.model_id:
             self.model_id = self.model_dir
             config_file = os.path.join(self.model_id, "config.json")
