@@ -103,6 +103,8 @@ def get_torch_dtype_from_str(dtype: str):
         return torch.bfloat16
     elif dtype == "int8":
         return torch.int8
+    elif dtype is None:
+        return None
     else:
         raise ValueError(f"Invalid data type: {dtype}")
 
@@ -120,19 +122,18 @@ class DeepSpeedService(object):
         self.data_type = None
         self.max_tokens = None
         self.device = None
-        self.world_size = None
         self.tensor_parallel_degree = None
         self.model_config = None
         self.low_cpu_mem_usage = False
 
     def initialize(self, properties: dict):
-        self.parse_properties(properties)
-        self.validate_model_type_and_task()
+        self._parse_properties(properties)
+        self._validate_model_type_and_task()
         self.create_model_pipeline()
         self.logger.info(f"Initialized DeepSpeed model with the following configurations"
                          f"model: {self.model_id}"
                          f"task: {self.task}"
-                         f"data_type: {self.data_type}"
+                         f"data_type: {self.ds_config['dtype']}"
                          f"tensor_parallel_degree: {self.tensor_parallel_degree}")
         self.initialized = True
 
@@ -140,27 +141,28 @@ class DeepSpeedService(object):
         self.model_dir = properties.get("model_dir")
         self.model_id = properties.get("model_id")
         self.task = properties.get("task")
-        self.data_type = get_torch_dtype_from_str(properties.get("data_type", "fp32"))
+        self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
         self.max_tokens = int(properties.get("max_tokens", 1024))
         self.device = int(os.getenv("LOCAL_RANK", 0))
-        self.world_size = int(os.getenv("WORLD_SIZE", 1))
-        self.tensor_parallel_degree = int(properties.get("tensor_parallel_degree", self.world_size))
+        self.tensor_parallel_degree = int(properties.get("tensor_parallel_degree", 1))
         self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage", "true").lower() == "true"
         self.ds_config = {
             "replace_with_kernel_inject": True,
-            "dtype": self.data_type,
             "mp_size": self.tensor_parallel_degree,
             "mpu": None,
             "enable_cuda_graph": properties.get("enable_cuda_graph", "false").lower() == "true",
             "triangular_masking": properties.get("triangular_masking", "true").lower() == "true",
-            "checkpoint": properties.get("checkpoint"),
-            "base_dir": properties.get("base_dir"),
             "return_tuple": properties.get("return_tuple", "true").lower() == "true",
             "training_mp_size": int(properties.get("training_mp_size", 1)),
             "replace_method": "auto",
             "injection_policy": None,
             "max_tokens": self.max_tokens,
         }
+        if properties.get("checkpoint"):
+            self.ds_config["checkpoint"] = os.path.join(self.model_dir, properties.get("checkpoint"))
+            self.ds_config["base_dir"] =  self.model_dir
+            if self.data_type is None:
+                raise ValueError("dtype should also be provided for checkpoint loading")
 
     def _validate_model_type_and_task(self):
         if not self.model_id:
@@ -194,14 +196,17 @@ class DeepSpeedService(object):
 
     def create_model_pipeline(self):
         # If a ds checkpoint is provided, we instantiate model with meta tensors. weights loaded when DS engine invoked
+        # Workaround on int8. fp16 fp32 bf16 init supported
+        dtype = torch.float16 if self.data_type == torch.int8 else self.data_type
+        kwargs = {"torch_dtype" : dtype} if dtype else {}
         if self.ds_config["checkpoint"]:
-            dtype = torch.float32 if self.data_type == torch.float32 else torch.float16
             with deepspeed.OnDevice(dtype=dtype, device="meta"):
-                model = TASK_TO_MODEL[self.task].from_config(self.model_config)
+                model = TASK_TO_MODEL[self.task].from_config(self.model_config, **kwargs)
         else:
-            model = TASK_TO_MODEL[self.task].from_pretrained(self.model_id, low_cpu_mem_usage=self.low_cpu_mem_usage)
-
+            model = TASK_TO_MODEL[self.task].from_pretrained(self.model_id, low_cpu_mem_usage=self.low_cpu_mem_usage,
+                                                             **kwargs)
         model.eval()
+        self.ds_config["dtype"] = torch.int8 if self.data_type == torch.int8 else model.dtype
         tokenizer = AutoTokenizer.from_pretrained(self.model_id)
         self.pipeline = pipeline(task=self.task, model=model, tokenizer=tokenizer, device=self.device)
         if self.model_config.model_type in MODEL_TYPE_TO_INJECTION_POLICY:
@@ -244,7 +249,7 @@ class DeepSpeedService(object):
                 json_input = inputs.get_as_json()
                 if isinstance(json_input, dict):
                     input_data = self.format_input_for_task(json_input.pop("inputs"))
-                    model_kwargs = json_input
+                    model_kwargs = json_input.pop("parameters", None)
                 else:
                     input_data = json_input
             else:
