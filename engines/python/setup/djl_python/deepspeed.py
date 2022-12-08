@@ -205,14 +205,12 @@ class DeepSpeedService(object):
         else:
             model = TASK_TO_MODEL[self.task].from_pretrained(self.model_id, low_cpu_mem_usage=self.low_cpu_mem_usage,
                                                              **kwargs)
-        model.eval()
         self.ds_config["dtype"] = torch.int8 if self.data_type == torch.int8 else model.dtype
-        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-        self.pipeline = pipeline(task=self.task, model=model, tokenizer=tokenizer, device=self.device)
         if self.model_config.model_type in MODEL_TYPE_TO_INJECTION_POLICY:
             self.ds_config["injection_policy"] = MODEL_TYPE_TO_INJECTION_POLICY[self.model_config.model_type]
-        engine = deepspeed.init_inference(self.pipeline.model, **self.ds_config)
-        self.pipeline.model = engine.module
+        engine = deepspeed.init_inference(model, **self.ds_config)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        self.pipeline = pipeline(task=self.task, model=engine.module, tokenizer=tokenizer, device=self.device)
 
     def format_input_for_task(self, input_values):
         if not isinstance(input_values, list):
