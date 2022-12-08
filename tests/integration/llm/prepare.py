@@ -53,9 +53,9 @@ def build_hf_handler_model(model):
 
 
 def build_ds_handler_model(model):
-    if model not in hf_handler_list:
-        raise ValueError(f"{model} is not one of the supporting handler {list(hf_handler_list.keys())}")
-    options = hf_handler_list[model]
+    if model not in ds_handler_list:
+        raise ValueError(f"{model} is not one of the supporting handler {list(ds_handler_list.keys())}")
+    options = ds_handler_list[model]
     options["engine"] = "DeepSpeed"
     options["option.entryPoint"] = "djl_python.deepspeed"
     write_prperties(options)
