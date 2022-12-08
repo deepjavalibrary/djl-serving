@@ -28,6 +28,11 @@ hf_model_spec = {
     "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128]}
 }
 
+ds_model_spec = {
+    "gpt-j-6b": {"max_memory_per_gpu": 14.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
+    "bloom-7b1-int8": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]}
+}
+
 
 def check_worker_number(desired):
     endpoint = "http://127.0.0.1:8080/models/test"
@@ -64,10 +69,10 @@ def batch_generation(batch_size):
     return input_sentences[: batch_size]
 
 
-def test_hf_model(model):
-    if model not in hf_model_spec:
-        raise ValueError(f"{args.model} is not one of the supporting models {list(hf_model_spec.keys())}")
-    spec = hf_model_spec[args.model]
+def test_handler(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(f"{args.model} is not one of the supporting models {list(model_spec.keys())}")
+    spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
     for batch_size in spec["batch_size"]:
@@ -103,10 +108,13 @@ def test_ds_raw_model(model):
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
-supported_handler = {'deepspeed': None, 'huggingface': test_hf_model, "deepspeed_raw": test_ds_raw_model}
-
 if __name__ == '__main__':
     args = parser.parse_args()
-    if args.handler not in supported_handler:
-        raise ValueError(f"{args.handler} is not one of the supporting handler {list(supported_handler.keys())}")
-    supported_handler[args.handler](args.model)
+    if args.handler == "deepspeed_raw":
+        test_ds_raw_model(args.model)
+    elif args.handler == "huggingface":
+        test_handler(args.model, hf_model_spec)
+    elif args.handler == "deepspeed":
+        test_handler(args.model, ds_model_spec)
+    else:
+        raise ValueError(f"{args.handler} is not one of the supporting handler")
