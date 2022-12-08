@@ -199,7 +199,7 @@ class DeepSpeedService(object):
         # Workaround on int8. fp16 fp32 bf16 init supported
         dtype = torch.float16 if self.data_type == torch.int8 else self.data_type
         kwargs = {"torch_dtype" : dtype} if dtype else {}
-        if self.ds_config["checkpoint"]:
+        if "checkpoint" in self.ds_config:
             with deepspeed.OnDevice(dtype=dtype, device="meta"):
                 model = TASK_TO_MODEL[self.task].from_config(self.model_config, **kwargs)
         else:
