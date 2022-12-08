@@ -22,7 +22,7 @@ fi
 
 set -x
 # start the docker container
-docker run \
+container_id=$(docker run \
   -itd \
   --rm \
   --network="host" \
@@ -34,8 +34,10 @@ docker run \
   ${shm:+--shm-size="${shm}"} \
   ${host_device:+--device "${host_device}"} \
   "${docker_image}" \
-  ${args}
+  ${args})
 set +x
+
+echo "Launching ${container_id}..."
 
 if [[ "$platform" == *"deepspeed"* ]]; then
   echo "extra sleep for 5 min on DeepSpeed"
@@ -50,6 +52,10 @@ while true; do
   if [[ "$http_code" -eq 200 ]]; then
     echo "DJL serving started"
     break
+  fi
+  if [[ "$( docker ps | wc -l )" == "1" ]]; then
+    echo "Docker container shut down"
+    exit 1
   fi
   if [[ "$retry" -ge 24 ]]; then
     echo "Max retry exceeded."
