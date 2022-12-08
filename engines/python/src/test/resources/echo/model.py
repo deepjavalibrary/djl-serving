@@ -14,6 +14,7 @@
 Test Python model example.
 """
 
+import logging
 import sys
 from djl_python import Input
 from djl_python import Output
@@ -30,10 +31,18 @@ def handle(inputs: Input):
         sys.exit()
 
     data = inputs.get_as_bytes()
-    content_type = inputs.get_property("content-type")
+
     outputs = Output()
-    outputs.add(data, key="data")
+    content_type = inputs.get_property("content-type")
     if content_type:
         outputs.add_property("content-type", content_type)
+
+    if inputs.is_batch():
+        logging.info(f"Dynamic batching size: {inputs.get_batch_size()}.")
+        batch = inputs.get_batches()
+        for i, item in enumerate(batch):
+            outputs.add(item.get_as_bytes(), key="data", batch_index=i)
+    else:
+        outputs.add(data, key="data")
 
     return outputs
