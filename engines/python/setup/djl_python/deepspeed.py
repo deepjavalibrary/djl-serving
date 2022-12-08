@@ -158,7 +158,7 @@ class DeepSpeedService(object):
             "injection_policy": None,
             "max_tokens": self.max_tokens,
         }
-        if properties.get("checkpoint"):
+        if "checkpoint" in properties:
             self.ds_config["checkpoint"] = os.path.join(self.model_dir, properties.get("checkpoint"))
             self.ds_config["base_dir"] =  self.model_dir
             if self.data_type is None:
