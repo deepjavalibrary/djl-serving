@@ -81,6 +81,12 @@ class PyPredictor<I, O> extends Predictor<I, O> {
                 }
             }
             Output output = process.predict(batch, timeout, false);
+            if (output.getCode() >= 300) {
+                for (int i = 0; i < size; ++i) {
+                    ret.add((O) output);
+                }
+                return ret;
+            }
             if (output.getContent().size() != size) {
                 throw new TranslateException(
                         "Batch output size mismatch, expected: "
@@ -90,6 +96,8 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             }
             for (int i = 0; i < size; ++i) {
                 Output out = new Output();
+                out.setCode(output.getCode());
+                out.setMessage(output.getMessage());
                 out.setProperties(output.getProperties());
                 ret.add((O) out);
             }

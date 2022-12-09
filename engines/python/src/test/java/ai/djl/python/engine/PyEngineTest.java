@@ -43,6 +43,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -161,6 +162,27 @@ public class PyEngineTest {
     }
 
     @Test
+    public void testBatchEcho() throws TranslateException, IOException, ModelException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input in1 = new Input();
+            in1.add("test1");
+            Input in2 = new Input();
+            in2.add("test2");
+            List<Input> batch = Arrays.asList(in1, in2);
+            List<Output> out = predictor.batchPredict(batch);
+            Assert.assertEquals(out.size(), 2);
+            Assert.assertEquals(out.get(1).getAsString(0), "test2");
+        }
+    }
+
+    @Test
     public void testResnet18() throws TranslateException, IOException, ModelException {
         if (!Boolean.getBoolean("nightly")) {
             return;
@@ -181,9 +203,14 @@ public class PyEngineTest {
             input.addProperty("Content-Type", "image/jpeg");
             Output output = predictor.predict(input);
             String classification = output.getData().getAsString();
-            Type type = new TypeToken<List<Map<String, Double>>>() {}.getType();
-            List<Map<String, Double>> list = JsonUtils.GSON.fromJson(classification, type);
-            Assert.assertTrue(list.get(0).containsKey("tabby"));
+            Type type = new TypeToken<Map<String, Double>>() {}.getType();
+            Map<String, Double> map = JsonUtils.GSON.fromJson(classification, type);
+            Assert.assertTrue(map.containsKey("tabby"));
+
+            // Test batch predict
+            List<Input> batch = Arrays.asList(input, input);
+            List<Output> ret = predictor.batchPredict(batch);
+            Assert.assertEquals(ret.size(), 2);
         }
     }
 

@@ -14,7 +14,6 @@
 PyTorch resnet18 model example.
 """
 
-import itertools
 import json
 import logging
 import os
@@ -78,18 +77,28 @@ class Resnet18(object):
                 outputs.add_as_numpy([data.detach().numpy()])
                 return outputs
 
-            image = inputs.get_as_image()
-            image = self.image_processing(image)
-            images = torch.stack([image]).to(self.device)
+            batch = inputs.get_batches()
+            images = []
+            for i, item in enumerate(batch):
+                image = self.image_processing(item.get_as_image())
+                images.append(image)
+            images = torch.stack(images).to(self.device)
 
             data = self.model(images)
-            ps = F.softmax(data, dim=1)
-            probs, classes = torch.topk(ps, self.topK, dim=1)
-            probs = probs.tolist()
-            classes = classes.tolist()
-
-            outputs.add_as_json(
-                self.map_class_to_label(probs, self.mapping, classes))
+            for i in range(inputs.get_batch_size()):
+                item = data[i]
+                ps = F.softmax(item, dim=0)
+                probs, classes = torch.topk(ps, self.topK)
+                probs = probs.tolist()
+                classes = classes.tolist()
+                result = {
+                    self.mapping[str(classes[i])]: probs[i]
+                    for i in range(self.topK)
+                }
+                if inputs.is_batch():
+                    outputs.add_as_json(result, batch_index=i)
+                else:
+                    outputs.add_as_json(result)
         except Exception as e:
             logging.exception("resnet18 failed")
             # error handling
@@ -116,23 +125,6 @@ class Resnet18(object):
                     'labels in mapping must be either str or [str]')
             mapping[key] = new_value
         return mapping
-
-    @staticmethod
-    def map_class_to_label(probs, mapping=None, lbl_classes=None):
-        if not (isinstance(probs, list) and isinstance(probs, list)):
-            raise Exception('Convert classes to list before doing mapping')
-        if mapping is not None and not isinstance(mapping, dict):
-            raise Exception('Mapping must be a dict')
-
-        if lbl_classes is None:
-            lbl_classes = itertools.repeat(range(len(probs[0])), len(probs))
-
-        results = [{(mapping[str(lbl_class)]
-                     if mapping is not None else str(lbl_class)): prob
-                    for lbl_class, prob in zip(*row)}
-                   for row in zip(lbl_classes, probs)]
-
-        return results
 
 
 _service = Resnet18()
