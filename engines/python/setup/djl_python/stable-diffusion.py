@@ -66,11 +66,10 @@ class StableDiffusionService(object):
             kwargs["torch_dtype"] = torch.float16
             kwargs["revision"] = "fp16"
 
-        torch.set_grad_enabled(False)
         pipeline = DiffusionPipeline.from_pretrained(self.model_id, **kwargs)
         pipeline.to(f"cuda:{self.device}")
         deepspeed.init_distributed()
-        engine = deepspeed.init_inference(getattr(pipeline, "model", pipeline), config=self.ds_config)
+        engine = deepspeed.init_inference(getattr(pipeline, "model", pipeline), **self.ds_config)
 
         if hasattr(pipeline, "model"):
             pipeline.model = engine
