@@ -28,7 +28,9 @@ ds_handler_list = {
     "gpt-j-6b": {"option.s3url": "s3://djl-llm/gpt-j-6b/", "option.task": "text-generation",
                  "option.tensor_parallel_degree": 2, "option.dtype": "bf16"},
     "bloom-7b1": {"option.s3url": "s3://djl-llm/bloom-7b1/", "option.tensor_parallel_degree": 4,
-                  "option.task": "text-generation", "option.dtype": "fp16"}
+                  "option.task": "text-generation", "option.dtype": "fp16"},
+    "opt-13b": {"option.s3url": "s3://djl-llm/opt-13b/", "option.tensor_parallel_degree": 2,
+                "option.task": "text-generation"}
 }
 
 
