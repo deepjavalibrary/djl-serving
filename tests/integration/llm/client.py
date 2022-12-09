@@ -29,8 +29,9 @@ hf_model_spec = {
 }
 
 ds_model_spec = {
-    "gpt-j-6b": {"max_memory_per_gpu": 14.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
-    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]}
+    "gpt-j-6b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
+    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]},
+    "opt-13b": {"max_memory_per_gpu": 15.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2}
 }
 
 

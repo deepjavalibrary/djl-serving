@@ -186,6 +186,15 @@ jobs:
           python3 llm/client.py deepspeed gpt-j-6b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
+      - name: Test OPT-13B
+        working-directory: tests/integration
+        run: |
+          sudo python3 llm/prepare.py deepspeed opt-13b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed opt-13b
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
