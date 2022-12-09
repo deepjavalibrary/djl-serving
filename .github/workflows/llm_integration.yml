@@ -77,7 +77,7 @@ jobs:
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
-          name: logs
+          name: ds-raw-logs
           path: tests/integration/logs/
 
   hf-handler-test:
@@ -141,7 +141,7 @@ jobs:
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
-          name: logs
+          name: hf-handler-${{ matrix.arch }}-logs
           path: tests/integration/logs/
 
   ds-handler-test:
@@ -172,10 +172,10 @@ jobs:
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py deepspeed bloom-7b1-int8
+          sudo python3 llm/prepare.py deepspeed bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
-          python3 llm/client.py deepspeed bloom-7b1-int8
+          python3 llm/client.py deepspeed bloom-7b1
           docker rm -f $(docker ps -aq)
       - name: Test GPTJ-6B
         working-directory: tests/integration
@@ -194,7 +194,7 @@ jobs:
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
-          name: logs
+          name: ds-handler-logs
           path: tests/integration/logs/
 
 

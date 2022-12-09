@@ -30,14 +30,19 @@ hf_model_spec = {
 
 ds_model_spec = {
     "gpt-j-6b": {"max_memory_per_gpu": 14.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
-    "bloom-7b1-int8": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]}
+    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]}
 }
 
 
 def check_worker_number(desired):
     endpoint = "http://127.0.0.1:8080/models/test"
     res = requests.get(endpoint).json()
-    assert desired == len(res[0]["models"][0]["workerGroups"])
+    if desired == len(res[0]["models"][0]["workerGroups"]):
+        return
+    elif desired == len(res[0]["models"][0]["workerGroups"][0]["workers"]):
+        return
+    else:
+        raise AssertionError(f"Worker number does not meet requirements! {res}")
 
 
 def send_json(data):
