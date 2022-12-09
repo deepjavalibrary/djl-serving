@@ -14,6 +14,7 @@
 import io
 import struct
 import json
+import re
 
 from .np_util import from_nd_list
 from .pair_list import PairList
@@ -80,6 +81,34 @@ class Input(object):
         for key in self.get_content().get_keys():
             cur_str += "\n{}: {}".format(key, self.get_data(key))
         return cur_str
+
+    def is_batch(self) -> bool:
+        return self.get_batch_size() > 1
+
+    def get_batch_size(self) -> int:
+        return int(self.properties.get("batch_size", "1"))
+
+    def get_batches(self) -> list["Input"]:
+        batch_size = self.get_batch_size()
+        if batch_size == 1:
+            return [self]
+
+        batch = []
+        for i in range(batch_size):
+            item = Input()
+            item.properties = self.properties
+            batch.append(item)
+
+        p = re.compile("batch_(\\d+)\\.(.*)")
+        for i in range(self.content.size()):
+            key = self.content.key_at(i)
+            m = p.match(key)
+            if m is None:
+                raise ValueError(f"Unexpected key in batch input: key")
+            index = int(m.group(1))
+            batch[index].content.add(m.group(2), self.content.value_at(i))
+
+        return batch
 
     def get_function_name(self) -> str:
         return self.function_name

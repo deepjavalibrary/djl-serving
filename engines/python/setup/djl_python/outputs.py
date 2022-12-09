@@ -86,10 +86,14 @@ class Output(object):
         self.properties[key] = val
         return self
 
-    def add(self, value, key=None):
+    def add(self, value, key=None, batch_index=None):
         if key is not None and type(key) is not str:
             logging.warning(f"Output key should be str type, got {type(key)}")
             key = str(key)
+
+        if batch_index is not None:
+            key = "" if key is None else key
+            key = f"batch_{batch_index}.{key}"
 
         if type(value) is str:
             self.content.add(key=key, value=value.encode("utf-8"))
@@ -98,31 +102,34 @@ class Output(object):
         elif type(value) is bytes:
             self.content.add(key=key, value=bytearray(value))
         else:
-            self.add_as_json(value, key=key)
+            self.content.add(key=key, value=self._encode_json(value))
         return self
 
-    def add_as_numpy(self, np_list, key=None):
-        self.content.add(key=key, value=to_nd_list(np_list))
-        return self
+    def add_as_numpy(self, np_list, key=None, batch_index=None):
+        return self.add(to_nd_list(np_list), key=key, batch_index=batch_index)
 
-    def add_as_npz(self, np_list, key=None):
+    def add_as_npz(self, np_list, key=None, batch_index=None):
         import numpy as np
         import io
         memory_file = io.BytesIO()
         np.savez(memory_file, *np_list)
         memory_file.seek(0)
-        self.content.add(key=key, value=memory_file.read(-1))
-        return self
+        return self.add(memory_file.read(-1), key=key, batch_index=batch_index)
 
-    def add_as_json(self, val, key=None):
-        json_value = json.dumps(val,
-                                ensure_ascii=False,
-                                allow_nan=False,
-                                indent=2,
-                                cls=_JSONEncoder,
-                                separators=(",", ":")).encode("utf-8")
-        self.content.add(key=key, value=json_value)
-        return self
+    def add_as_json(self, val, key=None, batch_index=None):
+        return self.add(self._encode_json(val),
+                        key=key,
+                        batch_index=batch_index)
+
+    @staticmethod
+    def _encode_json(val) -> bytes:
+        return bytearray(
+            json.dumps(val,
+                       ensure_ascii=False,
+                       allow_nan=False,
+                       indent=2,
+                       cls=_JSONEncoder,
+                       separators=(",", ":")).encode("utf-8"))
 
     @staticmethod
     def write_utf8(msg, val):

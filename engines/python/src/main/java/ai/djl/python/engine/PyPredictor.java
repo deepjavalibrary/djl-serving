@@ -17,16 +17,24 @@ import ai.djl.Model;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.ndarray.BytesSupplier;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
 import ai.djl.translate.TranslateException;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorContext;
+import ai.djl.util.Pair;
+import ai.djl.util.PairList;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class PyPredictor<I, O> extends Predictor<I, O> {
+
+    private static final Pattern BATCH_PATTERN = Pattern.compile("batch_(\\d+)\\.(.*)");
 
     private PyProcess process;
     private int timeout;
@@ -50,10 +58,60 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             // TODO: wait for restart
             throw new TranslateException("Backend Python process is stopped.");
         }
-        if (inputs.get(0) instanceof Input) {
-            List<O> ret = new ArrayList<>(inputs.size());
-            for (I input : inputs) {
-                ret.add((O) process.predict((Input) input, timeout, false));
+        Object first = inputs.get(0);
+        if (first instanceof Input) {
+            int size = inputs.size();
+            if (size == 1) {
+                Output output = process.predict((Input) first, timeout, false);
+                return Collections.singletonList((O) output);
+            }
+
+            Input batch = new Input();
+            List<O> ret = new ArrayList<>(size);
+            batch.setProperties(((Input) first).getProperties());
+            batch.addProperty("batch_size", String.valueOf(size));
+            for (int i = 0; i < size; ++i) {
+                Input in = (Input) inputs.get(i);
+                PairList<String, BytesSupplier> content = in.getContent();
+                String prefix = "batch_" + i;
+                for (Pair<String, BytesSupplier> pair : content) {
+                    String key = pair.getKey();
+                    key = key == null ? "data" : key;
+                    batch.add(prefix + '.' + key, pair.getValue());
+                }
+            }
+            Output output = process.predict(batch, timeout, false);
+            if (output.getCode() >= 300) {
+                for (int i = 0; i < size; ++i) {
+                    ret.add((O) output);
+                }
+                return ret;
+            }
+            if (output.getContent().size() != size) {
+                throw new TranslateException(
+                        "Batch output size mismatch, expected: "
+                                + size
+                                + ", actual: "
+                                + output.getContent().size());
+            }
+            for (int i = 0; i < size; ++i) {
+                Output out = new Output();
+                out.setCode(output.getCode());
+                out.setMessage(output.getMessage());
+                out.setProperties(output.getProperties());
+                ret.add((O) out);
+            }
+
+            PairList<String, BytesSupplier> content = output.getContent();
+            for (Pair<String, BytesSupplier> pair : content) {
+                String key = pair.getKey();
+                Matcher m = BATCH_PATTERN.matcher(key);
+                if (!m.matches()) {
+                    throw new TranslateException("Unexpected batch output key: " + key);
+                }
+                int index = Integer.parseInt(m.group(1));
+                Output out = (Output) ret.get(index);
+                out.add(m.group(2), pair.getValue());
             }
             return ret;
         }
