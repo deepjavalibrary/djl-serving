@@ -88,7 +88,7 @@ class Input(object):
     def get_batch_size(self) -> int:
         return int(self.properties.get("batch_size", "1"))
 
-    def get_batches(self) -> list["Input"]:
+    def get_batches(self) -> list:
         batch_size = self.get_batch_size()
         if batch_size == 1:
             return [self]
