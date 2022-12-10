@@ -33,6 +33,11 @@ ds_handler_list = {
                 "option.task": "text-generation"}
 }
 
+sd_handler_list = {
+    "stable-diffusion-v1-4": {"option.s3url": "s3://djl-llm/stable-diffusion-v1-4/", "option.tensor_parallel_degree": 2,
+                              "option.dtype": "fp16"},
+}
+
 
 def write_prperties(properties):
     model_path = "models/test"
@@ -70,8 +75,17 @@ def build_ds_raw_model(model):
     shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
 
 
+def build_sd_handler_model(model):
+    if model not in sd_handler_list:
+        raise ValueError(f"{model} is not one of the supporting handler {list(ds_handler_list.keys())}")
+    options = sd_handler_list[model]
+    options["engine"] = "DeepSpeed"
+    options["option.entryPoint"] = "djl_python.stable-diffusion"
+    write_prperties(options)
+
+
 supported_handler = {'deepspeed': build_ds_handler_model, 'huggingface': build_hf_handler_model,
-                     "deepspeed_raw": build_ds_raw_model}
+                     "deepspeed_raw": build_ds_raw_model, 'stable-diffusion': build_sd_handler_model}
 
 if __name__ == '__main__':
     args = parser.parse_args()

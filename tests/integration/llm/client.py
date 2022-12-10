@@ -34,6 +34,10 @@ ds_model_spec = {
     "opt-13b": {"max_memory_per_gpu": 15.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2}
 }
 
+sd_model_spec = {
+    "stable-diffusion-v1-4": {"max_memory_per_gpu": 8.0, "size": [256, 512], "steps": [1, 2], "worker": 2},
+}
+
 
 def check_worker_number(desired):
     endpoint = "http://127.0.0.1:8080/models/test"
@@ -114,6 +118,26 @@ def test_ds_raw_model(model):
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
+def test_sd_handler(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(f"{model} is not one of the supporting models {list(sd_model_spec.keys())}")
+    spec = sd_model_spec[model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for size in spec["size"]:
+        for step in spec["steps"]:
+            req = {"prompt": "A bird and cat flying through space"}
+            params = {"height": size, "width": size, "steps": step}
+            req["parameters"] = params
+            logging.info(f"req: {req}")
+            res = send_json(req)
+            assert res["status_code"] == 200
+            memory_usage = get_gpu_memory()
+            logging.info(memory_usage)
+            for memory in memory_usage:
+                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
     if args.handler == "deepspeed_raw":
@@ -122,5 +146,7 @@ if __name__ == '__main__':
         test_handler(args.model, hf_model_spec)
     elif args.handler == "deepspeed":
         test_handler(args.model, ds_model_spec)
+    elif args.handler == "stable-diffusion":
+        test_sd_handler(args.model, sd_model_spec)
     else:
         raise ValueError(f"{args.handler} is not one of the supporting handler")
