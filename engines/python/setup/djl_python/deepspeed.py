@@ -247,7 +247,7 @@ class DeepSpeedService(object):
                 json_input = inputs.get_as_json()
                 if isinstance(json_input, dict):
                     input_data = self.format_input_for_task(json_input.pop("inputs"))
-                    model_kwargs = json_input.pop("parameters", None)
+                    model_kwargs = json_input.pop("parameters", {})
                 else:
                     input_data = json_input
             else:

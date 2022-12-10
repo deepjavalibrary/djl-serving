@@ -18,6 +18,18 @@ import deepspeed
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from typing import Optional
+from io import BytesIO
+
+
+def get_torch_dtype_from_str(dtype: str):
+    if dtype == "fp32":
+        return torch.float32
+    if dtype == "fp16":
+        return torch.float16
+    elif dtype is None:
+        return None
+    else:
+        raise ValueError(f"Invalid data type: {dtype}")
 
 
 class StableDiffusionService(object):
@@ -39,12 +51,10 @@ class StableDiffusionService(object):
     def initialize(self, properties: dict):
         self.model_dir = properties.get("model_dir")
         self.model_id = properties.get("model_id")
-        self.data_type = properties.get("data_type", "fp32")
+        self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
         self.max_tokens = int(properties.get("max_tokens", "1024"))
         self.device = int(os.getenv("LOCAL_RANK", "0"))
-        self.world_size = int(os.getenv("TENSOR_PARALLEL_DEGREE", "1"))
-        self.tensor_parallel_degree = int(properties.get("tensor_parallel_degree", self.world_size))
-        self.save_image_dir = properties.get("save_image_dir", "output_images")
+        self.tensor_parallel_degree = int(properties.get("tensor_parallel_degree", 1))
         self.ds_config = {
             "replace_with_kernel_inject": True,
             # TODO: Figure out why cuda graph doesn't work for stable diffusion via DS
@@ -75,43 +85,30 @@ class StableDiffusionService(object):
             pipeline.model = engine
 
         self.pipeline = pipeline
-        if not os.path.exists(self.save_image_dir):
-            os.mkdir(self.save_image_dir)
         self.initialized = True
 
     def inference(self, inputs: Input):
         try:
             content_type = inputs.get_property("Content-Type")
-            if content_type is not None and content_type == "application/json":
-                json_input = inputs.get_as_json()
-                if isinstance(json_input, dict):
-                    data = json_input.pop("inputs")
-                    if isinstance(data, dict):
-                        prompt = data.pop("query")
-                    else:
-                        prompt = data
-                else:
-                    prompt = inputs.get_as_string()
+            if content_type == "application/json":
+                request = inputs.get_as_json()
+                prompt = request.pop("prompt")
+                params = request.pop("parameters")
+                result = self.pipeline(prompt, **params)
             else:
                 prompt = inputs.get_as_string()
+                result = self.pipeline(prompt)
 
-            result = self.pipeline(prompt)
-
-            saved_image_names = []
-            for idx, img in enumerate(result.images):
-                save_path = os.path.join(self.save_image_dir, f"img-{idx}.png")
-                if self.device == 0:
-                    img.save(save_path)
-                saved_image_names += [save_path]
-
-            outputs = Output()
-            outputs.add_as_json(saved_image_names, "saved_images")
+            img = result.images[0]
+            buf = BytesIO()
+            img.save(buf, format="PNG")
+            byte_img = buf.getvalue()
+            outputs = Output().add(byte_img).add_property("content-type", "image/png")
 
         except Exception as e:
             logging.exception("DeepSpeed inference failed")
             outputs = Output().error(str(e))
         return outputs
-
 
 
 _service = StableDiffusionService()
