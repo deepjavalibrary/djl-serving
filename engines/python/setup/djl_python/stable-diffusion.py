@@ -54,21 +54,25 @@ class StableDiffusionService(object):
         self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
         self.max_tokens = int(properties.get("max_tokens", "1024"))
         self.device = int(os.getenv("LOCAL_RANK", "0"))
-        self.tensor_parallel_degree = int(properties.get("tensor_parallel_degree", 1))
+        self.tensor_parallel_degree = int(
+            properties.get("tensor_parallel_degree", 1))
         self.ds_config = {
             "replace_with_kernel_inject": True,
             # TODO: Figure out why cuda graph doesn't work for stable diffusion via DS
             "enable_cuda_graph": False,
             "replace_method": "auto",
-            "dtype": torch.float16 if self.data_type == "fp16" else torch.float32,
+            "dtype":
+            torch.float16 if self.data_type == "fp16" else torch.float32,
             "mp_size": self.tensor_parallel_degree
         }
 
         if not self.model_id:
             config_file = os.path.join(self.model_dir, "model_index.json")
             if not os.path.exists(config_file):
-                raise ValueError(f"model_dir: {self.model_dir} does not contain a model_index.json."
-                                 f"This is required for loading stable diffusion models from local storage")
+                raise ValueError(
+                    f"model_dir: {self.model_dir} does not contain a model_index.json."
+                    f"This is required for loading stable diffusion models from local storage"
+                )
             self.model_id = self.model_dir
 
         kwargs = {}
@@ -79,7 +83,8 @@ class StableDiffusionService(object):
         pipeline = DiffusionPipeline.from_pretrained(self.model_id, **kwargs)
         pipeline.to(f"cuda:{self.device}")
         deepspeed.init_distributed()
-        engine = deepspeed.init_inference(getattr(pipeline, "model", pipeline), **self.ds_config)
+        engine = deepspeed.init_inference(getattr(pipeline, "model", pipeline),
+                                          **self.ds_config)
 
         if hasattr(pipeline, "model"):
             pipeline.model = engine
@@ -103,7 +108,8 @@ class StableDiffusionService(object):
             buf = BytesIO()
             img.save(buf, format="PNG")
             byte_img = buf.getvalue()
-            outputs = Output().add(byte_img).add_property("content-type", "image/png")
+            outputs = Output().add(byte_img).add_property(
+                "content-type", "image/png")
 
         except Exception as e:
             logging.exception("DeepSpeed inference failed")

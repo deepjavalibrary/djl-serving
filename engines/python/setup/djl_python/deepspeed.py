@@ -13,19 +13,12 @@
 import logging
 import os
 import torch
-from transformers import (
-    AutoConfig,
-    PretrainedConfig,
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    AutoModelForSequenceClassification,
-    AutoModelForQuestionAnswering,
-    AutoModelForMaskedLM,
-    AutoModelForTokenClassification,
-    pipeline,
-    Conversation,
-    SquadExample
-)
+from transformers import (AutoConfig, PretrainedConfig, AutoTokenizer,
+                          AutoModelForCausalLM,
+                          AutoModelForSequenceClassification,
+                          AutoModelForQuestionAnswering, AutoModelForMaskedLM,
+                          AutoModelForTokenClassification, pipeline,
+                          Conversation, SquadExample)
 import transformers
 from deepspeed.module_inject.replace_policy import (
     HFBertLayerPolicy,
@@ -83,14 +76,33 @@ TASK_TO_MODEL = {
 }
 
 MODEL_TYPE_TO_INJECTION_POLICY = {
-    "roberta": {transformers.models.roberta.modeling_roberta.RobertaLayer: HFBertLayerPolicy},
-    "gpt2": {transformers.models.gpt2.modeling_gpt2.GPT2Block: HFGPT2LayerPolicy},
-    "bert": {transformers.models.bert.modeling_bert.BertLayer: HFBertLayerPolicy},
-    "gpt_neo": {transformers.models.gpt_neo.modeling_gpt_neo.GPTNeoBlock: HFGPTNEOLayerPolicy},
-    "gptj": {transformers.models.gptj.modeling_gptj.GPTJBlock: HFGPTJLayerPolicy},
-    "opt": {transformers.models.opt.modeling_opt.OPTDecoderLayer: HFOPTLayerPolicy},
-    "gpt-neox": {transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXLayer: GPTNEOXLayerPolicy},
-    "bloom": {transformers.models.bloom.modeling_bloom.BloomBlock: BLOOMLayerPolicy},
+    "roberta": {
+        transformers.models.roberta.modeling_roberta.RobertaLayer:
+        HFBertLayerPolicy
+    },
+    "gpt2": {
+        transformers.models.gpt2.modeling_gpt2.GPT2Block: HFGPT2LayerPolicy
+    },
+    "bert": {
+        transformers.models.bert.modeling_bert.BertLayer: HFBertLayerPolicy
+    },
+    "gpt_neo": {
+        transformers.models.gpt_neo.modeling_gpt_neo.GPTNeoBlock:
+        HFGPTNEOLayerPolicy
+    },
+    "gptj": {
+        transformers.models.gptj.modeling_gptj.GPTJBlock: HFGPTJLayerPolicy
+    },
+    "opt": {
+        transformers.models.opt.modeling_opt.OPTDecoderLayer: HFOPTLayerPolicy
+    },
+    "gpt-neox": {
+        transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXLayer:
+        GPTNEOXLayerPolicy
+    },
+    "bloom": {
+        transformers.models.bloom.modeling_bloom.BloomBlock: BLOOMLayerPolicy
+    },
 }
 
 
@@ -130,11 +142,12 @@ class DeepSpeedService(object):
         self._parse_properties(properties)
         self._validate_model_type_and_task()
         self.create_model_pipeline()
-        self.logger.info(f"Initialized DeepSpeed model with the following configurations"
-                         f"model: {self.model_id}"
-                         f"task: {self.task}"
-                         f"data_type: {self.ds_config['dtype']}"
-                         f"tensor_parallel_degree: {self.tensor_parallel_degree}")
+        self.logger.info(
+            f"Initialized DeepSpeed model with the following configurations"
+            f"model: {self.model_id}"
+            f"task: {self.task}"
+            f"data_type: {self.ds_config['dtype']}"
+            f"tensor_parallel_degree: {self.tensor_parallel_degree}")
         self.initialized = True
 
     def _parse_properties(self, properties):
@@ -144,45 +157,65 @@ class DeepSpeedService(object):
         self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
         self.max_tokens = int(properties.get("max_tokens", 1024))
         self.device = int(os.getenv("LOCAL_RANK", 0))
-        self.tensor_parallel_degree = int(properties.get("tensor_parallel_degree", 1))
-        self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage", "true").lower() == "true"
+        self.tensor_parallel_degree = int(
+            properties.get("tensor_parallel_degree", 1))
+        self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage",
+                                                "true").lower() == "true"
         self.ds_config = {
-            "replace_with_kernel_inject": True,
-            "mp_size": self.tensor_parallel_degree,
-            "mpu": None,
-            "enable_cuda_graph": properties.get("enable_cuda_graph", "false").lower() == "true",
-            "triangular_masking": properties.get("triangular_masking", "true").lower() == "true",
-            "return_tuple": properties.get("return_tuple", "true").lower() == "true",
-            "training_mp_size": int(properties.get("training_mp_size", 1)),
-            "replace_method": "auto",
-            "injection_policy": None,
-            "max_tokens": self.max_tokens,
+            "replace_with_kernel_inject":
+            True,
+            "mp_size":
+            self.tensor_parallel_degree,
+            "mpu":
+            None,
+            "enable_cuda_graph":
+            properties.get("enable_cuda_graph", "false").lower() == "true",
+            "triangular_masking":
+            properties.get("triangular_masking", "true").lower() == "true",
+            "return_tuple":
+            properties.get("return_tuple", "true").lower() == "true",
+            "training_mp_size":
+            int(properties.get("training_mp_size", 1)),
+            "replace_method":
+            "auto",
+            "injection_policy":
+            None,
+            "max_tokens":
+            self.max_tokens,
         }
         if "checkpoint" in properties:
-            self.ds_config["checkpoint"] = os.path.join(self.model_dir, properties.get("checkpoint"))
-            self.ds_config["base_dir"] =  self.model_dir
+            self.ds_config["checkpoint"] = os.path.join(
+                self.model_dir, properties.get("checkpoint"))
+            self.ds_config["base_dir"] = self.model_dir
             if self.data_type is None:
-                raise ValueError("dtype should also be provided for checkpoint loading")
+                raise ValueError(
+                    "dtype should also be provided for checkpoint loading")
 
     def _validate_model_type_and_task(self):
         if not self.model_id:
             self.model_id = self.model_dir
             config_file = os.path.join(self.model_id, "config.json")
             if not os.path.exists(config_file):
-                raise ValueError(f"model_dir: {self.model_id} does not contain a config.json. "
-                                 f"This is required for loading models from local storage")
+                raise ValueError(
+                    f"model_dir: {self.model_id} does not contain a config.json. "
+                    f"This is required for loading models from local storage")
             self.model_config = AutoConfig.from_pretrained(config_file)
         else:
             self.model_config = AutoConfig.from_pretrained(self.model_id)
 
         if self.model_config.model_type not in SUPPORTED_MODEL_TYPES:
-            raise ValueError(f"model_type: {self.model_config.model_type} is not currently supported by DeepSpeed")
+            raise ValueError(
+                f"model_type: {self.model_config.model_type} is not currently supported by DeepSpeed"
+            )
 
         if not self.task:
-            self.logger.warning("No task provided. Attempting to infer from model architecture")
+            self.logger.warning(
+                "No task provided. Attempting to infer from model architecture"
+            )
             self.infer_task_from_model_architecture(self.model_config)
         if self.task not in SUPPORTED_TASKS:
-            raise ValueError(f"task: {self.task} is not currently supported by DeepSpeed")
+            raise ValueError(
+                f"task: {self.task} is not currently supported by DeepSpeed")
 
     def infer_task_from_model_architecture(self, config: PretrainedConfig):
         architecture = config.architectures[0]
@@ -191,26 +224,36 @@ class DeepSpeedService(object):
                 self.task = ARCHITECTURES_TO_TASK[arch_option]
 
         if not self.task:
-            raise ValueError(f"Task could not be inferred from model config. "
-                             f"Please manually set `task` in serving.properties")
+            raise ValueError(
+                f"Task could not be inferred from model config. "
+                f"Please manually set `task` in serving.properties")
 
     def create_model_pipeline(self):
         # If a ds checkpoint is provided, we instantiate model with meta tensors. weights loaded when DS engine invoked
         # Workaround on int8. fp16 fp32 bf16 init supported
         dtype = torch.float16 if self.data_type == torch.int8 else self.data_type
-        kwargs = {"torch_dtype" : dtype} if dtype else {}
+        kwargs = {"torch_dtype": dtype} if dtype else {}
         if "checkpoint" in self.ds_config:
             with deepspeed.OnDevice(dtype=dtype, device="meta"):
-                model = TASK_TO_MODEL[self.task].from_config(self.model_config, **kwargs)
+                model = TASK_TO_MODEL[self.task].from_config(
+                    self.model_config, **kwargs)
         else:
-            model = TASK_TO_MODEL[self.task].from_pretrained(self.model_id, low_cpu_mem_usage=self.low_cpu_mem_usage,
-                                                             **kwargs)
-        self.ds_config["dtype"] = torch.int8 if self.data_type == torch.int8 else model.dtype
+            model = TASK_TO_MODEL[self.task].from_pretrained(
+                self.model_id,
+                low_cpu_mem_usage=self.low_cpu_mem_usage,
+                **kwargs)
+        self.ds_config[
+            "dtype"] = torch.int8 if self.data_type == torch.int8 else model.dtype
         if self.model_config.model_type in MODEL_TYPE_TO_INJECTION_POLICY:
-            self.ds_config["injection_policy"] = MODEL_TYPE_TO_INJECTION_POLICY[self.model_config.model_type]
+            self.ds_config[
+                "injection_policy"] = MODEL_TYPE_TO_INJECTION_POLICY[
+                    self.model_config.model_type]
         engine = deepspeed.init_inference(model, **self.ds_config)
         tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-        self.pipeline = pipeline(task=self.task, model=engine.module, tokenizer=tokenizer, device=self.device)
+        self.pipeline = pipeline(task=self.task,
+                                 model=engine.module,
+                                 tokenizer=tokenizer,
+                                 device=self.device)
 
     def format_input_for_task(self, input_values):
         if not isinstance(input_values, list):
@@ -223,17 +266,11 @@ class DeepSpeedService(object):
                     text=val.get("text"),
                     conversation_id=val.get("conversation_id"),
                     past_user_inputs=val.get("past_user_inputs", []),
-                    generated_responses=val.get("generated_responses", [])
-                )
+                    generated_responses=val.get("generated_responses", []))
             elif self.task == "question-answering":
-                current_input = SquadExample(
-                    None,
-                    val.get("context"),
-                    val.get("question"),
-                    None,
-                    None,
-                    None
-                )
+                current_input = SquadExample(None, val.get("context"),
+                                             val.get("question"), None, None,
+                                             None)
             else:
                 current_input = val
             batch_inputs += [current_input]
@@ -246,7 +283,8 @@ class DeepSpeedService(object):
             if content_type is not None and content_type == "application/json":
                 json_input = inputs.get_as_json()
                 if isinstance(json_input, dict):
-                    input_data = self.format_input_for_task(json_input.pop("inputs"))
+                    input_data = self.format_input_for_task(
+                        json_input.pop("inputs"))
                     model_kwargs = json_input.pop("parameters", {})
                 else:
                     input_data = json_input
