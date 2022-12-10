@@ -31,6 +31,8 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=1.12.1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -Xss2m -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 
+RUN useradd -m -d /home/djl djl
+
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 

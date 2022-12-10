@@ -23,6 +23,8 @@ ENV OMP_NUM_THREADS=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV MODEL_SERVER_HOME=/opt/djl
 
+RUN useradd -m -d /home/djl djl
+
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
