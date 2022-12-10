@@ -30,8 +30,6 @@ ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu117-precxx11
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 
-RUN useradd -m -d /home/djl djl
-
 COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
@@ -43,8 +41,11 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     pip3 install numpy && pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-cu117 && \
+    useradd -m -d /home/djl djl && \
+    chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
 
 EXPOSE 8080
 

@@ -31,8 +31,6 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=1.12.1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -Xss2m -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 
-RUN useradd -m -d /home/djl djl
-
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
@@ -47,6 +45,8 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_inferentia.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-inf1 && \
+    useradd -m -d /home/djl djl && \
+    chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 

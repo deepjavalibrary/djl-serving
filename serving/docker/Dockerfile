@@ -37,7 +37,8 @@ ENV TF_CPP_MIN_LOG_LEVEL=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
 
-RUN useradd -m -d /home/djl djl
+RUN useradd -m -d /home/djl djl && \
+    chown -R djl:djl /opt/djl
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
@@ -48,7 +49,7 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 
 FROM base AS cpu-full
 
-ARG torch_version=1.12.1
+ARG torch_version=1.13.0
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
@@ -56,8 +57,10 @@ RUN scripts/install_python.sh && \
     echo "${djl_version} cpufull" > /opt/djl/bin/telemetry && \
     djl-serving -i ai.djl.mxnet:mxnet-native-mkl:1.9.1:linux-x86_64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
-    djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.0:linux-x86_64 && \
+    djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.7.4:linux-x86_64 && \
     scripts/patch_oss_dlc.sh python && \
+    rm -rf /opt/djl/logs && \
+    chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 

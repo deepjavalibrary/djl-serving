@@ -22,6 +22,8 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     echo "${djl_version} paddlegpu" > /opt/djl/bin/telemetry && \
     scripts/security_patch.sh pytorch-cu117 && \
     scripts/patch_oss_dlc.sh python && \
+    useradd -m -d /home/djl djl && \
+    chown -R djl:djl /opt/djl && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     rm -rf scripts
 
@@ -35,8 +37,6 @@ ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV OMP_NUM_THREADS=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
-
-RUN useradd -m -d /home/djl djl
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
