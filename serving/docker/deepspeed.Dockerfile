@@ -29,8 +29,6 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 
-RUN useradd -m -d /home/djl djl
-
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
@@ -53,6 +51,8 @@ RUN apt-get update && \
     pip3 install diffusers[torch]==${diffusers_version} && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
+    useradd -m -d /home/djl djl && \
+    chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*

@@ -11,7 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 FROM arm64v8/ubuntu:20.04
 ARG djl_version=0.20.0~SNAPSHOT
-ARG torch_version=1.12.1
+ARG torch_version=1.13.0
 
 EXPOSE 8080
 
@@ -23,8 +23,6 @@ ENV OMP_NUM_THREADS=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV MODEL_SERVER_HOME=/opt/djl
 
-RUN useradd -m -d /home/djl djl
-
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
@@ -33,7 +31,7 @@ RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps
 COPY config.properties /opt/djl/conf/
 
-RUN scripts/install_djl_serving.sh $djl_version && \
+RUN scripts/install_djl_serving.sh $djl_version $torch_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} aarch" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
@@ -42,6 +40,9 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     rm -f /usr/local/djl-serving-*/lib/mxnet-* && \
     rm -f /usr/local/djl-serving-*/lib/tensorflow-* && \
     rm -f /usr/local/djl-serving-*/lib/tensorrt-* && \
+    rm -rf /opt/djl/logs && \
+    useradd -m -d /home/djl djl && \
+    chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
