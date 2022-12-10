@@ -47,7 +47,11 @@ class Resnet18(object):
         device_id = properties.get("device_id", "-1")
         device_id = "cpu" if device_id == "-1" else "cuda:" + device_id
         self.device = torch.device(device_id)
-        self.model = models.resnet18(pretrained=True).to(self.device)
+        if os.path.exists("resnet18.pt"):
+            self.model = torch.jit.load("resnet18.pt",
+                                        map_location=self.device)
+        else:
+            self.model = models.resnet18(pretrained=True).to(self.device)
         self.model.eval()
         self.image_processing = transforms.Compose([
             transforms.Resize(256),
