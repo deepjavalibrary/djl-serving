@@ -51,10 +51,10 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-          mkdir logs
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py deepspeed_raw bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/test/
@@ -63,6 +63,7 @@ jobs:
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py deepspeed_raw gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/test/
@@ -106,10 +107,10 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-          mkdir logs
       - name: Test gpt-neo
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py huggingface gpt-neo-2.7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/test/
@@ -118,6 +119,7 @@ jobs:
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py huggingface bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
@@ -126,6 +128,7 @@ jobs:
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py huggingface gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
@@ -166,10 +169,10 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-          mkdir logs
       - name: Test stable-diffusion-v1-4
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py stable-diffusion stable-diffusion-v1-4
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
@@ -178,6 +181,7 @@ jobs:
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py deepspeed bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
@@ -186,6 +190,7 @@ jobs:
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py deepspeed gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
@@ -194,6 +199,7 @@ jobs:
       - name: Test OPT-13B
         working-directory: tests/integration
         run: |
+          rm -rf models
           python3 llm/prepare.py deepspeed opt-13b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve

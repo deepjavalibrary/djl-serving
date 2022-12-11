@@ -6,36 +6,79 @@ import math
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Build the LLM configs')
-parser.add_argument('handler',
-                    help='the handler used in the model')
-parser.add_argument('model',
-                    help='The name of model')
+parser.add_argument('handler', help='the handler used in the model')
+parser.add_argument('model', help='The name of model')
 
 endpoint = "http://127.0.0.1:8080/predictions/test"
 
 ds_raw_model_spec = {
-    "gpt-j-6b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256],
-                 "use_pipeline": True},
-    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256],
-                  "use_pipeline": False},
-    "opt-30b": {"max_memory_per_gpu": 16.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256],
-                "use_pipeline": False}
+    "gpt-j-6b": {
+        "max_memory_per_gpu": 10.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "use_pipeline": True
+    },
+    "bloom-7b1": {
+        "max_memory_per_gpu": 10.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "use_pipeline": False
+    },
+    "opt-30b": {
+        "max_memory_per_gpu": 16.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "use_pipeline": False
+    }
 }
 
 hf_model_spec = {
-    "gpt-neo-2.7b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
-    "gpt-j-6b": {"max_memory_per_gpu": 14.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
-    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128]}
+    "gpt-neo-2.7b": {
+        "max_memory_per_gpu": 10.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "worker": 2
+    },
+    "gpt-j-6b": {
+        "max_memory_per_gpu": 14.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "worker": 2
+    },
+    "bloom-7b1": {
+        "max_memory_per_gpu": 10.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128]
+    }
 }
 
 ds_model_spec = {
-    "gpt-j-6b": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2},
-    "bloom-7b1": {"max_memory_per_gpu": 10.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256]},
-    "opt-13b": {"max_memory_per_gpu": 15.0, "batch_size": [1, 2, 4, 8], "seq_length": [64, 128, 256], "worker": 2}
+    "gpt-j-6b": {
+        "max_memory_per_gpu": 10.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "worker": 2
+    },
+    "bloom-7b1": {
+        "max_memory_per_gpu": 10.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256]
+    },
+    "opt-13b": {
+        "max_memory_per_gpu": 15.0,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "worker": 2
+    }
 }
 
 sd_model_spec = {
-    "stable-diffusion-v1-4": {"max_memory_per_gpu": 8.0, "size": [256, 512], "steps": [1, 2], "worker": 2},
+    "stable-diffusion-v1-4": {
+        "max_memory_per_gpu": 8.0,
+        "size": [256, 512],
+        "steps": [1, 2],
+        "worker": 2
+    },
 }
 
 
@@ -47,7 +90,8 @@ def check_worker_number(desired):
     elif desired == len(res[0]["models"][0]["workerGroups"][0]["workers"]):
         return
     else:
-        raise AssertionError(f"Worker number does not meet requirements! {res}")
+        raise AssertionError(
+            f"Worker number does not meet requirements! {res}")
 
 
 def send_json(data):
@@ -58,7 +102,8 @@ def send_json(data):
 
 def get_gpu_memory():
     command = "nvidia-smi --query-gpu=memory.used --format=csv"
-    memory_free_info = sp.check_output(command.split()).decode('ascii').split('\n')[:-1][1:]
+    memory_free_info = sp.check_output(
+        command.split()).decode('ascii').split('\n')[:-1][1:]
     return [int(x.split()[0]) for i, x in enumerate(memory_free_info)]
 
 
@@ -76,12 +121,14 @@ def batch_generation(batch_size):
     if batch_size > len(input_sentences):
         # dynamically extend to support larger bs by repetition
         input_sentences *= math.ceil(batch_size / len(input_sentences))
-    return input_sentences[: batch_size]
+    return input_sentences[:batch_size]
 
 
 def test_handler(model, model_spec):
     if model not in model_spec:
-        raise ValueError(f"{args.model} is not one of the supporting models {list(model_spec.keys())}")
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
@@ -103,11 +150,17 @@ def test_handler(model, model_spec):
 
 def test_ds_raw_model(model):
     if model not in ds_raw_model_spec:
-        raise ValueError(f"{args.model} is not one of the supporting models {list(ds_raw_model_spec.keys())}")
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(ds_raw_model_spec.keys())}"
+        )
     spec = ds_raw_model_spec[args.model]
     for batch_size in spec["batch_size"]:
         for seq_length in spec["seq_length"]:
-            req = {"batch_size": batch_size, "text_length": seq_length, "use_pipeline": spec["use_pipeline"]}
+            req = {
+                "batch_size": batch_size,
+                "text_length": seq_length,
+                "use_pipeline": spec["use_pipeline"]
+            }
             logging.info(f"req: {req}")
             res, _ = send_json(req)
             logging.info(f"res: {res}")
@@ -120,7 +173,9 @@ def test_ds_raw_model(model):
 
 def test_sd_handler(model, model_spec):
     if model not in model_spec:
-        raise ValueError(f"{model} is not one of the supporting models {list(sd_model_spec.keys())}")
+        raise ValueError(
+            f"{model} is not one of the supporting models {list(sd_model_spec.keys())}"
+        )
     spec = sd_model_spec[model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
@@ -149,4 +204,5 @@ if __name__ == '__main__':
     elif args.handler == "stable-diffusion":
         test_sd_handler(args.model, sd_model_spec)
     else:
-        raise ValueError(f"{args.handler} is not one of the supporting handler")
+        raise ValueError(
+            f"{args.handler} is not one of the supporting handler")
