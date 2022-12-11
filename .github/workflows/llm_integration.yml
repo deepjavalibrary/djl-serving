@@ -55,20 +55,19 @@ jobs:
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py deepspeed_raw bloom-7b1
+          python3 llm/prepare.py deepspeed_raw bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:///opt/ml/model/test/
+          serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py deepspeed_raw bloom-7b1
           docker rm -f $(docker ps -aq)
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py deepspeed_raw gpt-j-6b
+          python3 llm/prepare.py deepspeed_raw gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:///opt/ml/model/test/
+          serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py deepspeed_raw gpt-j-6b
           docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -111,15 +110,15 @@ jobs:
       - name: Test gpt-neo
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py huggingface gpt-neo-2.7b
+          python3 llm/prepare.py huggingface gpt-neo-2.7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test:::*=file:///opt/ml/model/test/
+          serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py huggingface gpt-neo-2.7b
           docker rm -f $(docker ps -aq)
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py huggingface bloom-7b1
+          python3 llm/prepare.py huggingface bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py huggingface bloom-7b1
@@ -127,12 +126,11 @@ jobs:
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py huggingface gpt-j-6b
+          python3 llm/prepare.py huggingface gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py huggingface gpt-j-6b
           docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -172,16 +170,15 @@ jobs:
       - name: Test stable-diffusion-v1-4
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py stable-diffusion stable-diffusion-v1-4
+          python3 llm/prepare.py stable-diffusion stable-diffusion-v1-4
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py stable-diffusion stable-diffusion-v1-4
           docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py deepspeed bloom-7b1
+          python3 llm/prepare.py deepspeed bloom-7b1
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py deepspeed bloom-7b1
@@ -189,21 +186,19 @@ jobs:
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py deepspeed gpt-j-6b
+          python3 llm/prepare.py deepspeed gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py deepspeed gpt-j-6b
           docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: Test OPT-13B
         working-directory: tests/integration
         run: |
-          sudo python3 llm/prepare.py deepspeed opt-13b
+          python3 llm/prepare.py deepspeed opt-13b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py deepspeed opt-13b
           docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
