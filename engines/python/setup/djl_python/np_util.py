@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import io
 import struct
 
 import numpy as np
@@ -126,6 +127,14 @@ def from_nd_list(encoded: bytearray) -> list:
     :param encoded: bytearray
     :return: list of numpy array
     """
+    if len(encoded) >= 4 and encoded[0] == 80 and encoded[1] == 75:
+        # Assume the input is npz format (PK)
+        result = []
+        npz = np.load(io.BytesIO(encoded))
+        for item in npz.items():
+            result.append(item[1])
+        return result
+
     idx = 0
     num_ele, idx = get_int(encoded, idx)
     result = []
