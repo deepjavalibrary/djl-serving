@@ -175,7 +175,7 @@ jobs:
           sudo python3 llm/prepare.py stable-diffusion stable-diffusion-v1-4
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
-          python3 llm/client.py deepspeed stable-diffusion-v1-4
+          python3 llm/client.py stable-diffusion stable-diffusion-v1-4
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: Test bloom-7b
