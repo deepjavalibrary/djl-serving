@@ -3,6 +3,8 @@ import argparse
 import subprocess as sp
 import logging
 import math
+from PIL import Image
+from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Build the LLM configs')
@@ -79,6 +81,11 @@ sd_model_spec = {
         "steps": [1, 2],
         "worker": 2
     },
+    "stable-diffusion-v1-5": {
+        "max_memory_per_gpu": 16.0,
+        "size": [256, 512],
+        "steps": [1, 2]
+    },
 }
 
 
@@ -97,7 +104,7 @@ def check_worker_number(desired):
 def send_json(data):
     headers = {'content-type': 'application/json'}
     res = requests.post(endpoint, headers=headers, json=data)
-    return res.json(), res.status_code
+    return res
 
 
 def get_gpu_memory():
@@ -138,7 +145,8 @@ def test_handler(model, model_spec):
             params = {"max_length": seq_length}
             req["parameters"] = params
             logging.info(f"req {req}")
-            res, _ = send_json(req)
+            res = send_json(req)
+            res = res.json()
             logging.info(f"res {res}")
             result = [item[0]['generated_text'] for item in res]
             assert len(result) == batch_size
@@ -162,7 +170,8 @@ def test_ds_raw_model(model):
                 "use_pipeline": spec["use_pipeline"]
             }
             logging.info(f"req: {req}")
-            res, _ = send_json(req)
+            res = send_json(req)
+            res = res.json()
             logging.info(f"res: {res}")
             assert len(res["outputs"]) == batch_size
             memory_usage = get_gpu_memory()
@@ -185,8 +194,12 @@ def test_sd_handler(model, model_spec):
             params = {"height": size, "width": size, "steps": step}
             req["parameters"] = params
             logging.info(f"req: {req}")
-            res, status_code = send_json(req)
-            assert status_code == 200
+            res = send_json(req)
+            assert res.status_code == 200
+            try:
+                img = Image.open(BytesIO(res.content)).convert("RGB")
+            except Exception as e:
+                raise IOError("failed to deserialize image from response", e)
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
             for memory in memory_usage:
