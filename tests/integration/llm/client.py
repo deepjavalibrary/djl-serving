@@ -53,7 +53,7 @@ def check_worker_number(desired):
 def send_json(data):
     headers = {'content-type': 'application/json'}
     res = requests.post(endpoint, headers=headers, json=data)
-    return res.json()
+    return res.json(), res.status_code()
 
 
 def get_gpu_memory():
@@ -91,7 +91,7 @@ def test_handler(model, model_spec):
             params = {"max_length": seq_length}
             req["parameters"] = params
             logging.info(f"req {req}")
-            res = send_json(req)
+            res, _ = send_json(req)
             logging.info(f"res {res}")
             result = [item[0]['generated_text'] for item in res]
             assert len(result) == batch_size
@@ -109,7 +109,7 @@ def test_ds_raw_model(model):
         for seq_length in spec["seq_length"]:
             req = {"batch_size": batch_size, "text_length": seq_length, "use_pipeline": spec["use_pipeline"]}
             logging.info(f"req: {req}")
-            res = send_json(req)
+            res, _ = send_json(req)
             logging.info(f"res: {res}")
             assert len(res["outputs"]) == batch_size
             memory_usage = get_gpu_memory()
@@ -130,8 +130,8 @@ def test_sd_handler(model, model_spec):
             params = {"height": size, "width": size, "steps": step}
             req["parameters"] = params
             logging.info(f"req: {req}")
-            res = send_json(req)
-            assert res["status_code"] == 200
+            res, status_code = send_json(req)
+            assert status_code == 200
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
             for memory in memory_usage:
