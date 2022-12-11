@@ -33,7 +33,9 @@ class TestInputOutput(unittest.TestCase):
         memory_file = io.BytesIO()
         np.savez(memory_file, nd, nd)
         memory_file.seek(0)
-        res = requests.post(endpoint, headers=headers, data=memory_file.read(-1))
+        res = requests.post(endpoint,
+                            headers=headers,
+                            data=memory_file.read(-1))
         result = np.load(io.BytesIO(res.content))
         for item in result.values():
             self.assertTrue(np.array_equal(item, nd))
@@ -42,7 +44,9 @@ class TestInputOutput(unittest.TestCase):
         from djl_python import np_util
         nd = np.random.rand(3, 2)
         headers = {'content-type': 'tensor/ndlist'}
-        res = requests.post(endpoint, headers=headers, data=np_util.to_nd_list([nd, nd]))
+        res = requests.post(endpoint,
+                            headers=headers,
+                            data=np_util.to_nd_list([nd, nd]))
         result = np_util.from_nd_list(res.content)
         for item in result:
             self.assertTrue(np.array_equal(item, nd))

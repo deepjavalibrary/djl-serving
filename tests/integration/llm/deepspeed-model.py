@@ -12,7 +12,8 @@ torch.manual_seed(1234)
 def load_model(properties):
     tensor_parallel = properties["tensor_parallel_degree"]
     logging.info(f"Loading model in {properties['model_dir']}")
-    model = AutoModelForCausalLM.from_pretrained(properties["model_dir"], low_cpu_mem_usage=True)
+    model = AutoModelForCausalLM.from_pretrained(properties["model_dir"],
+                                                 low_cpu_mem_usage=True)
     if "dtype" in properties:
         if properties["dtype"] == "float16":
             model.to(torch.float16)
@@ -42,7 +43,7 @@ def batch_generation(batch_size):
     if batch_size > len(input_sentences):
         # dynamically extend to support larger bs by repetition
         input_sentences *= math.ceil(batch_size / len(input_sentences))
-    return input_sentences[: batch_size]
+    return input_sentences[:batch_size]
 
 
 model = None
@@ -52,7 +53,9 @@ generator = None
 
 def separate_inference(model, tokenizer, batch_size, length):
     generate_kwargs = dict(max_new_tokens=length, do_sample=True)
-    input_tokens = tokenizer.batch_encode_plus(batch_generation(batch_size), return_tensors="pt", padding=True)
+    input_tokens = tokenizer.batch_encode_plus(batch_generation(batch_size),
+                                               return_tensors="pt",
+                                               padding=True)
     for t in input_tokens:
         if torch.is_tensor(input_tokens[t]):
             input_tokens[t] = input_tokens[t].to(torch.cuda.current_device())
@@ -64,7 +67,10 @@ def pipeline_inference(model, tokenizer, batch_size, length):
     global generator
     if not generator:
         local_rank = int(os.getenv('LOCAL_RANK', '0'))
-        generator = pipeline(task='text-generation', model=model, tokenizer=tokenizer, device=local_rank)
+        generator = pipeline(task='text-generation',
+                             model=model,
+                             tokenizer=tokenizer,
+                             device=local_rank)
     outputs = generator(batch_generation(batch_size), max_length=length)
     return [item[0]['generated_text'] for item in outputs]
 
@@ -81,8 +87,10 @@ def handle(inputs: Input):
     batch_size = data["batch_size"]
     tokens_to_gen = data["text_length"]
     if data["use_pipeline"]:
-        outputs = pipeline_inference(model, tokenizer, batch_size, tokens_to_gen)
+        outputs = pipeline_inference(model, tokenizer, batch_size,
+                                     tokens_to_gen)
     else:
-        outputs = separate_inference(model, tokenizer, batch_size, tokens_to_gen)
+        outputs = separate_inference(model, tokenizer, batch_size,
+                                     tokens_to_gen)
     result = {"outputs": outputs}
     return Output().add_as_json(result)
