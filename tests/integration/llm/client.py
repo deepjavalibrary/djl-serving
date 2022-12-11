@@ -53,7 +53,7 @@ def check_worker_number(desired):
 def send_json(data):
     headers = {'content-type': 'application/json'}
     res = requests.post(endpoint, headers=headers, json=data)
-    return res.json(), res.status_code()
+    return res.json(), res.status_code
 
 
 def get_gpu_memory():
