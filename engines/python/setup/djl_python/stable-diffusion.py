@@ -61,8 +61,7 @@ class StableDiffusionService(object):
             # TODO: Figure out why cuda graph doesn't work for stable diffusion via DS
             "enable_cuda_graph": False,
             "replace_method": "auto",
-            "dtype":
-            torch.float16 if self.data_type == "fp16" else torch.float32,
+            "dtype": self.data_type,
             "mp_size": self.tensor_parallel_degree
         }
 
@@ -76,7 +75,7 @@ class StableDiffusionService(object):
             self.model_id = self.model_dir
 
         kwargs = {}
-        if self.data_type == "fp16":
+        if self.data_type == torch.float16:
             kwargs["torch_dtype"] = torch.float16
             kwargs["revision"] = "fp16"
 
