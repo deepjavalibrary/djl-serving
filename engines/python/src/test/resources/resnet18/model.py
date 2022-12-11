@@ -77,8 +77,13 @@ class Resnet18(object):
                 images = torch.from_numpy(inputs.get_as_numpy()[0]).to(
                     self.device)
                 data = self.model(images).to(torch.device('cpu'))
-                outputs.add_property("Content-Type", "tensor/ndlist")
-                outputs.add_as_numpy([data.detach().numpy()])
+                accept = inputs.get_property("Accept")
+                if accept == "tensor/npz" or content_type == "tensor/npz":
+                    outputs.add_property("Content-Type", "tensor/npz")
+                    outputs.add_as_numpy([data.detach().numpy()])
+                else:
+                    outputs.add_property("Content-Type", "tensor/ndlist")
+                    outputs.add_as_npz([data.detach().numpy()])
                 return outputs
 
             batch = inputs.get_batches()

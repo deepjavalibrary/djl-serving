@@ -211,6 +211,40 @@ public class PyEngineTest {
             List<Input> batch = Arrays.asList(input, input);
             List<Output> ret = predictor.batchPredict(batch);
             Assert.assertEquals(ret.size(), 2);
+
+            // Test npz input
+            NDArray ones = model.getNDManager().ones(new Shape(1, 3, 224, 224));
+            NDList list = new NDList();
+            list.add(ones);
+            byte[] buf = list.encode(true);
+
+            input = new Input();
+            input.add("data", buf);
+            input.addProperty("Content-Type", "tensor/npz");
+            output = predictor.predict(input);
+            String contentType = output.getProperty("Content-Type", "");
+            Assert.assertEquals(contentType, "tensor/npz");
+            NDList nd = output.getDataAsNDList(model.getNDManager());
+            Assert.assertEquals(nd.get(0).toArray().length, 1000);
+        }
+    }
+
+    @Test
+    public void testResnet18BinaryMode() throws TranslateException, IOException, ModelException {
+        if (!Boolean.getBoolean("nightly")) {
+            return;
+        }
+        Criteria<NDList, NDList> criteria =
+                Criteria.builder()
+                        .setTypes(NDList.class, NDList.class)
+                        .optModelPath(Paths.get("src/test/resources/resnet18"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<NDList, NDList> model = criteria.loadModel();
+                Predictor<NDList, NDList> predictor = model.newPredictor()) {
+            NDArray x = model.getNDManager().ones(new Shape(1, 3, 224, 224));
+            NDList ret = predictor.predict(new NDList(x));
+            Assert.assertEquals(ret.get(0).getShape().get(1), 1000);
         }
     }
 
