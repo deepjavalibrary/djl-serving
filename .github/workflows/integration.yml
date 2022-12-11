@@ -74,43 +74,73 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-          mkdir logs
           ./download_models.sh ${{ matrix.arch }}
-      - name: Test Pytorch python mode
+      - name: Test Python model
         if: ${{ matrix.arch != 'cpu' }}
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
-          serve -m test::Python=file:///opt/ml/model/resnet18_serving_all.zip
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::Python=file:/opt/ml/model/resnet18_serving_all.zip
+          ./test_client.sh image/jpg models/kitten.jpg
+          ./test_client.sh tensor/ndlist 1,3,224,224
+          ./test_client.sh tensor/npz 1,3,224,224
           docker rm -f $(docker ps -aq)
-      - name: Test PyTorch Binary mode
+      - name: Test dynamic batch with Python model
+        if: ${{ matrix.arch != 'cpu' }}
+        working-directory: tests/integration
+        run: |
+          echo -en "SERVING_BATCH_SIZE=2\nSERVING_MAX_BATCH_DELAY=30000" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
+          serve -m test::Python=file:/opt/ml/model/resnet18_serving_all.zip
+          EXPECT_TIMEOUT=1 ./test_client.sh image/jpg models/kitten.jpg
+          ./test_client.sh image/jpg models/kitten.jpg
+          docker rm -f $(docker ps -aq)
+          rm docker_env
+      - name: Test PyTorch model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
-          serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::PyTorch=file:/opt/ml/model/resnet18_serving_all.zip
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
-      - name: Test MxNet binary mode
+      - name: Test PyTorch model binary mode
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
-          serve -m test::MXNet=file:///opt/ml/model/ssd_resnet50.zip?model_name=ssd_resnet50
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m "test::PyTorch=file:/opt/ml/model/resnet18_serving_all.zip?translatorFactory=ai.djl.translate.NoopServingTranslatorFactory&application=undefined"
+          ./test_client.sh tensor/ndlist 1,3,224,224
+          ./test_client.sh tensor/npz 1,3,224,224
           docker rm -f $(docker ps -aq)
-      - name: Test ONNX binary mode
+      - name: Test dynamic batch with PyTorch model
+        working-directory: tests/integration
+        run: |
+          echo -en "SERVING_BATCH_SIZE=2\nSERVING_MAX_BATCH_DELAY=30000" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
+          serve -m test::PyTorch=file:/opt/ml/model/resnet18_serving_all.zip
+          EXPECT_TIMEOUT=1 ./test_client.sh image/jpg models/kitten.jpg
+          ./test_client.sh image/jpg models/kitten.jpg
+          docker rm -f $(docker ps -aq)
+          rm docker_env
+      - name: Test MxNet model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
-          serve -m test::OnnxRuntime=file:///opt/ml/model/resnet18-v1-7.zip?model_name=resnet18-v1-7
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::MXNet=file:/opt/ml/model/ssd_resnet50.zip
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
-      - name: Test Tensorflow binary mode
+      - name: Test ONNX model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
-          serve -m test::TensorFlow=file:///opt/ml/model/resnet50v1.zip?model_name=resnet50
-          ./test_client.sh http://127.0.0.1:8080/predictions/test tensor/ndlist 1,224,224,3
+          serve -m test::OnnxRuntime=file:/opt/ml/model/resnet18-v1-7.zip
+          ./test_client.sh image/jpg models/kitten.jpg
+          docker rm -f $(docker ps -aq)
+      - name: Test TensorFlow model binary mode
+        working-directory: tests/integration
+        run: |
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.arch }} \
+          serve -m test::TensorFlow=file:/opt/ml/model/resnet50v1.zip?model_name=resnet50
+          ./test_client.sh tensor/ndlist 1,224,224,3
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
@@ -157,19 +187,19 @@ jobs:
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh pytorch-inf1
-      - name: Test Pytorch Binary mode
+      - name: Test Pytorch model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf1 \
-          serve -m test::PyTorch=file:///opt/ml/model/resnet18_inf1_1_12.tar.gz?model_name=resnet18_inf1_1_12
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::PyTorch=file:/opt/ml/model/resnet18_inf1_1_12.tar.gz?model_name=resnet18_inf1_1_12
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
-      - name: Test Pytorch Python mode
+      - name: Test Python mode
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf1 \
-          serve -m test::Python=file:///opt/ml/model/resnet18_inf1_1_12.tar.gz
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::Python=file:/opt/ml/model/resnet18_inf1_1_12.tar.gz
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
@@ -216,19 +246,19 @@ jobs:
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh pytorch-cu117
-      - name: Test Pytorch python mode
+      - name: Test Python model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu117 \
-          serve -m test::Python=file:///opt/ml/model/resnet18_serving_all.zip
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::Python=file:/opt/ml/model/resnet18_serving_all.zip
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
-      - name: Test Pytorch Binary mode
+      - name: Test PyTorch model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu117 \
-          serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::PyTorch=file:/opt/ml/model/resnet18_serving_all.zip
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
@@ -274,19 +304,19 @@ jobs:
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh aarch64
-      - name: Test PyTorch Binary mode
+      - name: Test PyTorch model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models aarch64 \
-          serve -m test::PyTorch=file:///opt/ml/model/resnet18_serving_all.zip?model_name=resnet18
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::PyTorch=file:/opt/ml/model/resnet18_serving_all.zip
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
-      - name: Test ONNX binary mode
+      - name: Test ONNX model
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models aarch64 \
-          serve -m test::OnnxRuntime=file:///opt/ml/model/resnet18-v1-7.zip?model_name=resnet18-v1-7
-          ./test_client.sh http://127.0.0.1:8080/predictions/test image/jpg https://resources.djl.ai/images/kitten.jpg
+          serve -m test::OnnxRuntime=file:/opt/ml/model/resnet18-v1-7.zip
+          ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Check telemetry collection
         working-directory: tests/integration
