@@ -20,6 +20,13 @@ elif [[ "$platform" == *"inf1"* ]]; then # if the platform is inferentia
   host_device="/dev/neuron0"
 fi
 
+if [[ -f ${PWD}/docker_env ]]; then
+  env_file="--env-file ${PWD}/docker_env"
+fi
+
+rm -rf logs
+mkdir logs
+
 set -x
 # start the docker container
 container_id=$(docker run \
@@ -28,8 +35,10 @@ container_id=$(docker run \
   --network="host" \
   -v ${model_path}:/opt/ml/model \
   -v ${PWD}/logs:/opt/djl/logs \
-  -v ~/.aws:/root/.aws \
+  -v ~/.aws:/home/djl/.aws \
+  ${env_file} \
   -e TEST_TELEMETRY_COLLECTION='true' \
+  -u djl \
   ${runtime:+--runtime="${runtime}"} \
   ${shm:+--shm-size="${shm}"} \
   ${host_device:+--device "${host_device}"} \
@@ -53,7 +62,7 @@ while true; do
     echo "DJL serving started"
     break
   fi
-  if [[ "$( docker ps | wc -l )" == "1" ]]; then
+  if [[ "$(docker ps | wc -l)" == "1" ]]; then
     echo "Docker container shut down"
     exit 1
   fi
