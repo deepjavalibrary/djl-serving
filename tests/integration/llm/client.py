@@ -3,8 +3,6 @@ import argparse
 import subprocess as sp
 import logging
 import math
-from PIL import Image
-from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Build the LLM configs')
@@ -188,6 +186,8 @@ def test_sd_handler(model, model_spec):
     spec = sd_model_spec[model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    from PIL import Image
+    from io import BytesIO
     for size in spec["size"]:
         for step in spec["steps"]:
             req = {"prompt": "A bird and cat flying through space"}
