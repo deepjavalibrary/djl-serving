@@ -18,6 +18,7 @@ import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.WorkflowFunction;
+import ai.djl.util.ClassLoaderUtils;
 import ai.djl.util.JsonUtils;
 
 import com.google.gson.Gson;
@@ -28,12 +29,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 
-import org.yaml.snakeyaml.Yaml;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -69,7 +70,6 @@ public class WorkflowDefinition {
     int maxBatchDelay;
     int batchSize;
 
-    private static final Yaml YAML = new Yaml();
     public static final Gson GSON =
             JsonUtils.builder()
                     .registerTypeAdapter(ModelInfo.class, new ModelDefinitionDeserializer())
@@ -109,9 +109,18 @@ public class WorkflowDefinition {
     public static WorkflowDefinition parse(URI uri, Reader input) {
         String fileName = Objects.requireNonNull(uri.toString());
         if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
-            Object yaml = YAML.load(input);
-            String asJson = GSON.toJson(yaml);
-            return GSON.fromJson(asJson, WorkflowDefinition.class);
+            try {
+                ClassLoader cl = ClassLoaderUtils.getContextClassLoader();
+                Class<?> clazz = Class.forName("org.yaml.snakeyaml.Yaml", true, cl);
+                Constructor<?> constructor = clazz.getConstructor();
+                Method method = clazz.getMethod("load", Reader.class);
+                Object obj = constructor.newInstance();
+                Object yaml = method.invoke(obj, input);
+                String asJson = GSON.toJson(yaml);
+                return GSON.fromJson(asJson, WorkflowDefinition.class);
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalArgumentException("Yaml parsing is not supported.", e);
+            }
         } else if (fileName.endsWith(".json")) {
             return GSON.fromJson(input, WorkflowDefinition.class);
         } else {

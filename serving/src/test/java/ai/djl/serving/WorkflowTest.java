@@ -32,7 +32,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ExecutionException;
 
 public class WorkflowTest {
 
@@ -52,29 +51,25 @@ public class WorkflowTest {
     }
 
     @Test
-    public void testJson()
-            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
+    public void testJson() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/basic.json");
         runWorkflow(workflowFile, zeroInput);
     }
 
     @Test
-    public void testYaml()
-            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
+    public void testYaml() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/basic.yaml");
         runWorkflow(workflowFile, zeroInput);
     }
 
     @Test
-    public void testCriteria()
-            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
+    public void testCriteria() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/criteria.json");
         runWorkflow(workflowFile, zeroInput);
     }
 
     @Test
-    public void testFunctions()
-            throws IOException, BadWorkflowException, ExecutionException, InterruptedException {
+    public void testFunctions() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/functions.json");
         runWorkflow(workflowFile, zeroInput);
     }
