@@ -12,7 +12,6 @@ dependencies {
     api "io.netty:netty-transport-native-kqueue:${netty_version}:osx-aarch_64"
     api "io.netty:netty-transport-native-kqueue:${netty_version}:osx-x86_64"
 
-    implementation "org.yaml:snakeyaml:${snakeyaml_version}"
     //noinspection GradlePackageUpdate
     implementation "commons-cli:commons-cli:${commons_cli_version}"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
@@ -30,6 +29,7 @@ dependencies {
     }
     runtimeOnly project(":engines:python")
 
+    testRuntimeOnly "org.yaml:snakeyaml:${snakeyaml_version}"
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
     }
