@@ -21,6 +21,8 @@ if [ -z "$PYTORCH_JNI" ]; then
   rm djl-serving_all.deb
   cp /usr/local/djl-serving-*/conf/log4j2.xml /opt/djl/conf/
   cp -r /usr/local/djl-serving-*/plugins /opt/djl/plugins
+  # TODO: Workaround on Snakeyaml CVE
+  rm -rf /usr/local/djl-serving-*/lib/snakeyaml*
 else
   if [[ ! "$DJL_VERSION" == *SNAPSHOT ]]; then
     djl-serving -i ai.djl.pytorch:pytorch-jni:${PYTORCH_JNI}-${DJL_VERSION}
