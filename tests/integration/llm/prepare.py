@@ -69,6 +69,11 @@ sd_handler_list = {
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16"
     },
+    "stable-diffusion-v1-5": {
+        "option.s3url": "s3://djl-llm/stable-diffusion-v1-5/",
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp32"
+    },
 }
 
 

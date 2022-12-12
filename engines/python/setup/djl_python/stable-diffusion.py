@@ -56,14 +56,7 @@ class StableDiffusionService(object):
         self.device = int(os.getenv("LOCAL_RANK", "0"))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
-        self.ds_config = {
-            "replace_with_kernel_inject": True,
-            # TODO: Figure out why cuda graph doesn't work for stable diffusion via DS
-            "enable_cuda_graph": False,
-            "replace_method": "auto",
-            "dtype": self.data_type,
-            "mp_size": self.tensor_parallel_degree
-        }
+        self.ds_config = self._get_ds_config_for_dtype(self.data_type)
 
         if not self.model_id:
             config_file = os.path.join(self.model_dir, "model_index.json")
@@ -90,6 +83,25 @@ class StableDiffusionService(object):
 
         self.pipeline = pipeline
         self.initialized = True
+
+    def _get_ds_config_for_dtype(self, dtype):
+        # This is a workaround due to 2 issues with DeepSpeed 0.7.5
+        # 1. No kernel injection is available for stable diffusion using fp32 (kernels only written for fp16)
+        # 2. Changes in our bf16 fork raise an error, but the original deepspeed codebase defaults to fp16
+        #    when dtype is not set explicitly. We need to be explicit here with this config
+        ds_config = {
+            # TODO: Figure out why cuda graph doesn't work for stable diffusion via DS
+            "enable_cuda_graph": False,
+            "dtype": dtype,
+            "mp_size": self.tensor_parallel_degree
+        }
+        if dtype == torch.float16:
+            ds_config["replace_with_kernel_inject"] = True
+            ds_config["replace_method"] = "auto"
+        else:
+            ds_config["replace_with_kernel_inject"] = False
+            ds_config["replace_method"] = None
+        return ds_config
 
     def inference(self, inputs: Input):
         try:
