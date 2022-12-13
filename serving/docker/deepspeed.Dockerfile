@@ -12,7 +12,7 @@
 ARG version=11.3.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.19.0~SNAPSHOT
-ARG torch_version=1.12.1
+ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.12.1_ec2/20221208-233710/d3dae914337cde7e182d28544aed5efce29255c4/torch-1.12.1%2Bcu113-cp38-cp38-linux_x86_64.whl"
 ARG deepspeed_version=0.7.3
 ARG accelerate_version=0.13.2
 ARG transformers_version=4.22.1
@@ -45,7 +45,7 @@ RUN scripts/install_djl_serving.sh $djl_version && \
 ### Deep Speed installations
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu113 && \
+    pip3 install ${torch_wheel} && \
     pip3 install deepspeed==${deepspeed_version} transformers==${transformers_version} && \
     pip3 install triton==1.0.0 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     scripts/patch_oss_dlc.sh python && \
