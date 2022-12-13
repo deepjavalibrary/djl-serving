@@ -56,7 +56,7 @@ You can pull the server from the central Maven repository by including the follo
 <dependency>
     <groupId>ai.djl.serving</groupId>
     <artifactId>wlm</artifactId>
-    <version>0.19.0</version>
+    <version>0.20.0</version>
 </dependency>
 ```
 
