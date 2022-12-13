@@ -58,7 +58,7 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-cu117="true"
 
 FROM base as transformers
 
-ARG transformers_version=4.24.0
+ARG transformers_version=4.25.1
 ARG accelerate_version=0.14.0
 
 COPY scripts scripts/

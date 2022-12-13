@@ -9,14 +9,14 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.6.1-cudnn8-devel-ubuntu20.04
+ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.20.0~SNAPSHOT
-ARG torch_version=1.12.1
-ARG accelerate_version=0.13.2
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.7.5%2Bbf16-py2.py3-none-any.whl"
-ARG transformers_version=4.23.1
-ARG diffusers_version=0.7.2
+ARG torch_version=1.13.0
+ARG accelerate_version=0.14.0
+ARG deepspeed_wheel="deepspeed==0.7.7"
+ARG transformers_version=4.25.1
+ARG diffusers_version=0.10.2
 
 EXPOSE 8080
 
