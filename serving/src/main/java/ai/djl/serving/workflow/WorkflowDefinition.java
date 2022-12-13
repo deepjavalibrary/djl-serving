@@ -119,7 +119,12 @@ public class WorkflowDefinition {
                 String asJson = GSON.toJson(yaml);
                 return GSON.fromJson(asJson, WorkflowDefinition.class);
             } catch (ReflectiveOperationException e) {
-                throw new IllegalArgumentException("Yaml parsing is not supported.", e);
+                throw new IllegalArgumentException(
+                        "Yaml parsing is not supported. In order to support parsing Yaml files, the"
+                            + " dependency snakeyaml is required. Please add"
+                            + " 'org.yaml.snakeyaml.Yaml' to your classpath, pom.xml, or"
+                            + " build.gradle.",
+                        e);
             }
         } else if (fileName.endsWith(".json")) {
             return GSON.fromJson(input, WorkflowDefinition.class);
