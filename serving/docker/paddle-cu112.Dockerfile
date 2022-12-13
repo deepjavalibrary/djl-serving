@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM paddlepaddle/paddle:2.3.2-gpu-cuda11.2-cudnn8
-ARG djl_version=0.20.0~SNAPSHOT
+ARG djl_version=0.21.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf
