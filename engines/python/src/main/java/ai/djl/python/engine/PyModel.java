@@ -292,15 +292,18 @@ public class PyModel extends BaseModel {
 
     private void downloadS3(String url) {
         // TODO: Workaround on SageMaker readonly disk
-        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", "/tmp");
+        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", "temp");
         if ("default".equals(downloadDir)) {
             downloadDir = modelDir.toAbsolutePath().toString();
         }
         if (pyEnv.getInitParameters().containsKey("model_id")) {
             throw new IllegalArgumentException("model_id and s3url could not both set!");
         }
-        pyEnv.addParameter("model_id", downloadDir);
         try {
+            if ("temp".equals(downloadDir)) {
+                downloadDir = Files.createTempDirectory("djlserving").toAbsolutePath().toString();
+            }
+            pyEnv.addParameter("model_id", downloadDir);
             String[] commands;
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
                 commands =
