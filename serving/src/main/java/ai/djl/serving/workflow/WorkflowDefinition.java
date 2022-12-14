@@ -121,9 +121,9 @@ public class WorkflowDefinition {
             } catch (ReflectiveOperationException e) {
                 throw new IllegalArgumentException(
                         "Yaml parsing is not supported. In order to support parsing Yaml files, the"
-                            + " dependency snakeyaml is required. Please add"
-                            + " 'org.yaml.snakeyaml.Yaml' to your classpath, pom.xml, or"
-                            + " build.gradle.",
+                                + " dependency snakeyaml is required. Please add"
+                                + " 'org.yaml.snakeyaml.Yaml' to your classpath, pom.xml, or"
+                                + " build.gradle.",
                         e);
             }
         } else if (fileName.endsWith(".json")) {
