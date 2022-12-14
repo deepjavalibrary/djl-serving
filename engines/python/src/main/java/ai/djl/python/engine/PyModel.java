@@ -299,8 +299,11 @@ public class PyModel extends BaseModel {
         if (pyEnv.getInitParameters().containsKey("model_id")) {
             throw new IllegalArgumentException("model_id and s3url could not both set!");
         }
-        pyEnv.addParameter("model_id", downloadDir);
         try {
+            if ("temp".equals(downloadDir)) {
+                downloadDir = Files.createTempDirectory("djlserving").toAbsolutePath().toString();
+            }
+            pyEnv.addParameter("model_id", downloadDir);
             String[] commands;
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
                 commands =
