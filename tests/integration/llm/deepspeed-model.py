@@ -11,15 +11,18 @@ torch.manual_seed(1234)
 
 def load_model(properties):
     tensor_parallel = properties["tensor_parallel_degree"]
-    logging.info(f"Loading model in {properties['model_dir']}")
-    model = AutoModelForCausalLM.from_pretrained(properties["model_dir"],
+    model_location = properties['model_dir']
+    if "model_id" in properties:
+        model_location = properties['model_id']
+    logging.info(f"Loading model in {model_location}")
+    model = AutoModelForCausalLM.from_pretrained(model_location,
                                                  low_cpu_mem_usage=True)
     if "dtype" in properties:
         if properties["dtype"] == "float16":
             model.to(torch.float16)
         if properties["dtype"] == "bfloat16":
             model.to(torch.bfloat16)
-    tokenizer = AutoTokenizer.from_pretrained(properties["model_dir"])
+    tokenizer = AutoTokenizer.from_pretrained(model_location)
     logging.info(f"Starting DeepSpeed init with TP={tensor_parallel}")
     model = deepspeed.init_inference(model,
                                      mp_size=tensor_parallel,
