@@ -317,11 +317,14 @@ public class PyModel extends BaseModel {
                 logger.info("s5cmd is not installed, using aws cli");
                 commands = new String[] {"aws", "s3", "sync", url, downloadDir};
             }
-            Process exec = Runtime.getRuntime().exec(commands);
+            Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             try (InputStream is = exec.getInputStream()) {
                 logger.debug(Utils.toString(is));
             }
-            exec.waitFor();
+            int exitCode = exec.waitFor();
+            if (0 != exitCode) {
+                throw new IOException("s5cmd failed. View the debug logs for details");
+            }
             logger.info("Download completed! Files saved to {}", downloadDir);
         } catch (IOException | InterruptedException e) {
             throw new EngineException("Model failed to download from s3", e);
