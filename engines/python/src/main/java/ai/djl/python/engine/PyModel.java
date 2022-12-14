@@ -291,6 +291,19 @@ public class PyModel extends BaseModel {
     }
 
     private void downloadS3(String url) {
+        // TODO: Workaround on SageMaker readonly disk
+        String downloadDir = "/tmp/";
+        if (Utils.getenv("SERVING_DOWNLOAD_DIR") != null) {
+            String servingDownloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR");
+            if ("default".equals(servingDownloadDir)) {
+                servingDownloadDir = modelDir.toAbsolutePath().toString();
+            }
+            downloadDir = servingDownloadDir;
+        }
+        if (pyEnv.getInitParameters().containsKey("model_id")) {
+            throw new IllegalArgumentException("model_id and s3url could not both set!");
+        }
+        pyEnv.addParameter("model_id", downloadDir);
         try {
             String[] commands;
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
@@ -301,23 +314,18 @@ public class PyModel extends BaseModel {
                             "1",
                             "sync",
                             url + "*",
-                            modelDir.toAbsolutePath().toString()
+                            downloadDir
                         };
             } else {
                 logger.info("s5cmd is not installed, using aws cli");
-                commands =
-                        new String[] {
-                            "aws", "s3", "sync", url, modelDir.toAbsolutePath().toString()
-                        };
+                commands = new String[] {"aws", "s3", "sync", url, downloadDir};
             }
             Process exec = Runtime.getRuntime().exec(commands);
             try (InputStream is = exec.getInputStream()) {
                 logger.debug(Utils.toString(is));
             }
             exec.waitFor();
-            logger.info(
-                    String.format(
-                            "Download completed! Files saved to %s", modelDir.toAbsolutePath()));
+            logger.info(String.format("Download completed! Files saved to %s", downloadDir));
         } catch (IOException | InterruptedException e) {
             throw new EngineException("Model failed to download from s3", e);
         }
