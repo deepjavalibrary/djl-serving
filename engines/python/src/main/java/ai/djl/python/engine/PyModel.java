@@ -292,13 +292,9 @@ public class PyModel extends BaseModel {
 
     private void downloadS3(String url) {
         // TODO: Workaround on SageMaker readonly disk
-        String downloadDir = "/tmp/";
-        if (Utils.getenv("SERVING_DOWNLOAD_DIR") != null) {
-            String servingDownloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR");
-            if ("default".equals(servingDownloadDir)) {
-                servingDownloadDir = modelDir.toAbsolutePath().toString();
-            }
-            downloadDir = servingDownloadDir;
+        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", "/tmp");
+        if ("default".equals(downloadDir)) {
+            downloadDir = modelDir.toAbsolutePath().toString();
         }
         if (pyEnv.getInitParameters().containsKey("model_id")) {
             throw new IllegalArgumentException("model_id and s3url could not both set!");
@@ -325,7 +321,7 @@ public class PyModel extends BaseModel {
                 logger.debug(Utils.toString(is));
             }
             exec.waitFor();
-            logger.info(String.format("Download completed! Files saved to %s", downloadDir));
+            logger.info("Download completed! Files saved to {}", downloadDir);
         } catch (IOException | InterruptedException e) {
             throw new EngineException("Model failed to download from s3", e);
         }
