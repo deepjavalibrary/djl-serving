@@ -22,6 +22,9 @@ if [ -z "$PYTORCH_JNI" ]; then
   cp -r /usr/local/djl-serving-*/plugins /opt/djl/plugins
   # TODO: Workaround on Snakeyaml CVE
   rm -rf /usr/local/djl-serving-*/lib/snakeyaml*
+  # TODO: remove TensorFlow in 0.19.0 to mitigate Protobuf CVE
+  rm -rf /usr/local/djl-serving-*/lib/tensorflow*
+  rm -rf /usr/local/djl-serving-*/lib/protobuf*
 else
   if [[ ! "$DJL_VERSION" == *SNAPSHOT ]]; then
     # TODO: remove hack in 0.20.0
