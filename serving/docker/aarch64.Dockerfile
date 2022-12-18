@@ -11,7 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 FROM arm64v8/ubuntu:20.04
 ARG djl_version=0.21.0~SNAPSHOT
-ARG torch_version=1.13.0
+ARG torch_version=1.13.1
 
 EXPOSE 8080
 
