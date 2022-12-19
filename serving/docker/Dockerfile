@@ -49,7 +49,7 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 
 FROM base AS cpu-full
 
-ARG torch_version=1.13.0
+ARG torch_version=1.13.1
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
