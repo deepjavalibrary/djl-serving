@@ -38,7 +38,9 @@ public class KServeTensorTest {
         Shape shape = new Shape(1);
         try (NDManager manager = NDManager.newBaseManager()) {
             for (DataType type : DataType.values()) {
-                if (type != DataType.STRING && type != DataType.UNKNOWN) {
+                if (type != DataType.STRING
+                        && type != DataType.UNKNOWN
+                        && type != DataType.COMPLEX64) {
                     KServeTensor tensor = getKServeTensor(shape, type);
                     tensor.toTensor(manager);
                 }

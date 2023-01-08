@@ -16,8 +16,6 @@ import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.engine.Engine;
 import ai.djl.ndarray.NDManager;
-import ai.djl.nn.SymbolBlock;
-import ai.djl.training.GradientCollector;
 
 /**
  * The {@code JavaEngine} is an implementation of the {@link Engine} that runs Java applications.
@@ -74,12 +72,6 @@ public class JavaEngine extends Engine {
 
     /** {@inheritDoc} */
     @Override
-    public SymbolBlock newSymbolBlock(NDManager manager) {
-        throw new UnsupportedOperationException("Java Engine does not support empty symbol block");
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public Model newModel(String name, Device device) {
         // TODO: Support Java model loading
         throw new UnsupportedOperationException("Java Engine currently does not support model");
@@ -95,17 +87,5 @@ public class JavaEngine extends Engine {
     @Override
     public NDManager newBaseManager(Device device) {
         return JavaNDManager.getSystemManager().newSubManager(device);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public GradientCollector newGradientCollector() {
-        throw new UnsupportedOperationException("Not supported for Java Engine");
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public String toString() {
-        return getEngineName() + ':' + getVersion();
     }
 }
