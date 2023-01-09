@@ -126,7 +126,7 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
         models.forEach(ZooModel::close);
         if (successThreads != numOfThreads) {
             logger.error("Only {}/{} threads finished.", successThreads, numOfThreads);
-            return null;
+            return new float[0];
         }
 
         return result;

@@ -79,11 +79,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         return PATTERN.matcher(req.uri()).matches();
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @return
-     */
+    /** {@inheritDoc} */
     @Override
     public Void handleRequest(
             ChannelHandlerContext ctx,

@@ -34,7 +34,7 @@ public final class CodecUtils {
     public static byte[] readBytes(ByteBuf in, int maxLength) {
         int len = in.readInt();
         if (len < 0) {
-            return null;
+            return null; // NOPMD
         }
         if (len > maxLength) {
             throw new CorruptedFrameException("Message size exceed limit: " + len);

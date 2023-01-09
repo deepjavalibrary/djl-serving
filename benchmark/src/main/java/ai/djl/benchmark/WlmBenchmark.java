@@ -105,7 +105,7 @@ public class WlmBenchmark extends AbstractBenchmark {
 
         if (successfulResults != iteration) {
             logger.error("Only {}/{} results successfully finished.", successfulResults, iteration);
-            return null;
+            return new float[0];
         }
 
         return results[0].join();
