@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Build with Gradle
-        run: ./gradlew --refresh-dependencies build jRR jRV
+        run: ./gradlew --refresh-dependencies build :jacoco:testCodeCoverageReport
       - name: Upload test results
         uses: actions/upload-artifact@v3
         if: always()

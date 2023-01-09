@@ -1,0 +1,34 @@
+plugins {
+    id "base"
+    id "jacoco-report-aggregation"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    jacocoAggregation project(":benchmark")
+    // TODO: Add unit test for central and console
+    // jacocoAggregation project(":central")
+    jacocoAggregation project(":engines:python")
+    jacocoAggregation project(":engines:java")
+    jacocoAggregation project(":plugins:kserve")
+    // jacocoAggregation project(":plugins:management-console")
+    jacocoAggregation project(":plugins:plugin-management-plugin")
+    jacocoAggregation project(":plugins:static-file-plugin")
+    jacocoAggregation project(":serving")
+    jacocoAggregation project(":wlm")
+}
+
+reporting {
+    reports {
+        testCodeCoverageReport(JacocoCoverageReport) {
+            testType = TestSuiteType.UNIT_TEST
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn tasks.named("testCodeCoverageReport", JacocoReport)
+}
