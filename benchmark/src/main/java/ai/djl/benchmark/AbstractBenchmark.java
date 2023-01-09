@@ -123,7 +123,7 @@ public abstract class AbstractBenchmark {
                 Metrics metrics = new Metrics(); // Reset Metrics for each test loop.
                 progressBar = new ProgressBar("Iteration", iteration);
                 float[] lastResult = predict(arguments, metrics, iteration);
-                if (lastResult == null) {
+                if (lastResult.length == 0) {
                     return false;
                 }
 

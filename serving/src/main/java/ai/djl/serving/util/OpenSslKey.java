@@ -28,7 +28,7 @@ public final class OpenSslKey {
      */
     public static byte[] convertPrivateKey(byte[] keySpec) {
         if (keySpec == null) {
-            return null;
+            return null; // NOPMD
         }
 
         byte[] bytes = new byte[keySpec.length];
@@ -55,7 +55,7 @@ public final class OpenSslKey {
 
     private static byte[] encodeOID(int[] oid) {
         if (oid == null) {
-            return null;
+            return null; // NOPMD
         }
 
         int oLen = 1;
@@ -82,7 +82,7 @@ public final class OpenSslKey {
 
     private static byte[] encodeOctetString(byte[] bytes) {
         if (bytes == null) {
-            return null;
+            return null; // NOPMD
         }
 
         int oLen = bytes.length; // one byte for unused bits field
@@ -94,7 +94,7 @@ public final class OpenSslKey {
         int offset = writeLengthField(newBytes, oLen);
 
         if (len - oLen != offset) {
-            return null;
+            return null; // NOPMD
         }
 
         System.arraycopy(bytes, 0, newBytes, offset, oLen);
@@ -103,7 +103,7 @@ public final class OpenSslKey {
 
     private static byte[] encodeSequence(byte[][] byteArrays) {
         if (byteArrays == null) {
-            return null;
+            return null; // NOPMD
         }
 
         int oLen = 0;
@@ -122,7 +122,7 @@ public final class OpenSslKey {
         int offset = writeLengthField(bytes, oLen);
 
         if (len - oLen != offset) {
-            return null;
+            return null; // NOPMD
         }
 
         for (byte[] b : byteArrays) {

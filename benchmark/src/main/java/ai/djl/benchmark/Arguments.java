@@ -290,7 +290,7 @@ public class Arguments {
 
     Map<String, String> getModelOptions() {
         if (modelOptions == null) {
-            return null;
+            return null; // NOPMD
         }
         Map<String, String> map = new ConcurrentHashMap<>();
         for (String option : modelOptions.split(",")) {
@@ -306,7 +306,7 @@ public class Arguments {
 
     Map<String, Object> getModelArguments() {
         if (modelArguments == null) {
-            return null;
+            return null; // NOPMD
         }
 
         Map<String, Object> map = new ConcurrentHashMap<>();
