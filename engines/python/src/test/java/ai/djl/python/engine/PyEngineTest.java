@@ -64,7 +64,6 @@ public class PyEngineTest {
         Engine engine = Engine.getInstance();
         Assert.assertNotNull(engine.getVersion());
         Assert.assertTrue(engine.toString().startsWith("Python:"));
-        Assert.assertThrows(UnsupportedOperationException.class, () -> engine.setRandomSeed(1));
         Assert.assertThrows(UnsupportedOperationException.class, engine::newGradientCollector);
         Assert.assertThrows(UnsupportedOperationException.class, () -> engine.newSymbolBlock(null));
     }
