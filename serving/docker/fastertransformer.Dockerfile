@@ -65,6 +65,8 @@ RUN git clone https://github.com/NVIDIA/FasterTransformer.git -b ${ft_version} \
     && make -j${nproc} install \
     && rm -rf lib/*TritonBackend.so \
     && cp lib/*.so /usr/local/backends/fastertransformer/ \
+    && mkdir /usr/local/backends/fastertransformer/bin \
+    && cp -r bin/*_gemm /usr/local/backends/fastertransformer/bin/ \
     && cd ../../ && rm -rf FasterTransformer
 
 # TODO: Add DLC patching
