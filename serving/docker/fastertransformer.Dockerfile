@@ -9,11 +9,11 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.7.1-cudnn8-devel-ubuntu20.04
+ARG version=11.6.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
 ARG ft_version="release/v5.2.1_tag"
-ARG torch_version=1.13.1
+ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.12.1_ec2/20221208-234008/d3dae914337cde7e182d28544aed5efce29255c4/torch-1.12.1%2Bcu116-cp38-cp38-linux_x86_64.whl"
 ARG ompi_version=4.1.4
 
 EXPOSE 8080
@@ -41,11 +41,11 @@ RUN apt-get update && apt-get install -y wget git && \
     wget -q -O - https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-${ompi_version}.tar.gz | tar xzf - && \
     cd openmpi-${ompi_version} && \
     ./configure --enable-orterun-prefix-by-default --prefix=/usr/local/openmpi-${ompi_version} --with-cuda && \
-    make -j${nproc} install && \
+    make -j${nproc} -s install && \
     ln -s /usr/local/openmpi-${ompi_version} /usr/local/mpi && \
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
+    pip3 install ${torch_wheel} && \
     pip3 install cmake && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
@@ -63,6 +63,8 @@ RUN git clone https://github.com/NVIDIA/FasterTransformer.git -b ${ft_version} \
     && git submodule init && git submodule update \
     && cmake -DCMAKE_BUILD_TYPE=Release -DSM=70,75,80,86 -DBUILD_PYT=ON -DBUILD_MULTI_GPU=ON .. \
     && make -j${nproc} install \
+    && rm -rf lib/*TritonBackend.so \
+    && cp lib/*.so /usr/local/backends/fastertransformer/ \
     && cd ../../ && rm -rf FasterTransformer
 
 # TODO: Add DLC patching
