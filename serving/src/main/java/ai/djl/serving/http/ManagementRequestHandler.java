@@ -251,6 +251,10 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         .exceptionally(
                                 t -> {
                                     NettyUtils.sendError(ctx, t.getCause());
+                                    if (synchronous) {
+                                        String name = workflow.getName();
+                                        modelManager.unregisterWorkflow(name, version);
+                                    }
                                     return null;
                                 });
         if (synchronous) {
