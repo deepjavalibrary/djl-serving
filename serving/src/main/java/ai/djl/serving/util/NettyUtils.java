@@ -386,7 +386,11 @@ public final class NettyUtils {
     public static String getParameter(QueryStringDecoder decoder, String key, String def) {
         List<String> param = decoder.parameters().get(key);
         if (param != null && !param.isEmpty()) {
-            return param.get(0);
+            String ret = param.get(0);
+            if (ret.isEmpty()) {
+                return def;
+            }
+            return ret;
         }
         return def;
     }
