@@ -19,25 +19,28 @@
           <el-checkbox v-model="header.checked" :disabled="header.disabled">
           </el-checkbox>
           <el-col :span="6">
-            <el-input size="mini" v-model="header.key" @input='headerChange'></el-input>
+            <el-input size="mini" v-model="header.key" @input='headerChange' :readonly="index < 2"></el-input>
           </el-col>
           <span>:</span>
           <el-col :span="6">
-            <el-autocomplete size="mini" class="inline-input" @input='headerChange' v-if="header.key == 'content-type'" v-model="header.value" :fetch-suggestions="querySearch" placeholder="Please select content type" clearable></el-autocomplete>
-            <el-input size="mini" v-model="header.value" @input='headerChange' clearable v-else></el-input>
+            <el-autocomplete size="mini" class="inline-input" @input='headerChange' v-if="header.key == 'content-type'" :disabled="header.disabled" v-model="header.value" :fetch-suggestions="querySearch" placeholder="Please select content type" clearable></el-autocomplete>
+            <el-input size="mini" v-model="header.value" @input='headerChange' :disabled="header.disabled" clearable v-else></el-input>
           </el-col>
-          <i class="el-icon-close" @click="deleteHeader(index)" v-if="index != headers.length-1"></i>
+          <i class="el-icon-close" @click="deleteHeader(index)" v-if="index > 1 && index != headers.length-1"></i>
         </el-row>
         <div class="header">Body</div>
         <el-form-item label="Data type:">
           <el-radio-group v-model="dataType" @change="dataTypeChange">
-            <el-radio label="file">File</el-radio>
-            <el-radio label="text">Text</el-radio>
+            <el-radio label="json">json</el-radio>
+            <el-radio label="x-www-form-urlencoded">www-form-urlencoded</el-radio>
+            <el-radio label="text">text</el-radio>
+            <el-radio label="raw">raw</el-radio>
+            <el-radio label="form">form</el-radio>
           </el-radio-group>
         </el-form-item>
-        <div class="upload-area" v-show='dataType=="file"'>
+        <div class="upload-area" v-show='dataType=="raw" || dataType=="form"'>
           <el-upload ref='upload' multiple :show-file-list="false" :on-change="onChange" :auto-upload="false" name="data" action="">
-            <el-button size="medium" type="success">Click to upload</el-button>
+            <el-button size="medium" type="success" v-show='dataType!="raw" || fileList.length==0'>Click to upload</el-button>
           </el-upload>
           <div class="file-list">
 
@@ -55,8 +58,8 @@
             </div>
 
           </div>
-          <el-row :gutter="20" v-for="(data,index) in bodyDatas" :key='index'>
-            <el-checkbox v-model="data.checked" :disabled="data.disabled">
+          <el-row :gutter="20" v-for="(data,index) in bodyDatas" :key='index' v-show='dataType=="form"'>
+            <el-checkbox v-model="data.checked">
             </el-checkbox>
             <el-col :span="6">
               <el-input size="mini" v-model="data.key" @input='dataChange'></el-input>
@@ -65,10 +68,10 @@
             <el-col :span="6">
               <el-input size="mini" v-model="data.value" @input='dataChange' clearable></el-input>
             </el-col>
-            <i class="el-icon-close" @click="deleteHeader(index)" v-if="index != headers.length-1"></i>
+            <i class="el-icon-close" @click="deleteData(index)" v-if="index != bodyDatas.length-1"></i>
           </el-row>
         </div>
-        <div class="text-area" v-show='dataType=="text"'>
+        <div class="text-area" v-show='dataType!="raw" && dataType!="form"'>
           <el-input type="textarea" :autosize="{ minRows: 3, maxRows: 6}" v-model="bodyText">
           </el-input>
         </div>
@@ -101,19 +104,27 @@ export default {
   data() {
     return {
       modelName: "",
-      dataType: 'file',
+      dataType: 'json',
       bodyText: "",
-      headers: [{ key: 'Accept', value: '', checked: false, disabled: false }, { key: 'content-type', value: '', checked: false, disabled: true }, { key: '', value: '', checked: true, disabled: false }],
-      contentList: [{ value: 'text/string' }, { value: 'tensor/npz' }, { value: 'tensor/ndlist' }, { value: 'application/json' }, { value: 'image/jpg' }],
+      headers: [{ key: 'Accept', value: '', checked: false, disabled: false }, { key: 'content-type', value: 'application/json', checked: false, disabled: true }, { key: '', value: '', checked: true, disabled: false }],
+      contentList: [
+        { value: 'application/json' },
+        { value: 'application/octet-stream' },
+        { value: 'application/x-www-form-urlencoded' },
+        { value: 'image/gif' },
+        { value: 'image/jpeg' },
+        { value: 'text/plain' },
+        { value: 'tensor/npz' },
+        { value: 'tensor/ndlist' }
+      ],
       fileList: [],
-      imgs: ['jpg', 'jpeg', 'png', 'bmp'],
+      imgs: ['gif', 'jpg', 'jpeg', 'png', 'bmp'],
       versionList: [],
       activeVersion: '',
       resultText: "",
       imgSrc: "",
       bodyDatas: [{ key: '', value: '', checked: true }],
       resultError: false
-
     };
   },
   computed: {
@@ -162,17 +173,18 @@ export default {
     deleteHeader(index) {
       this.headers.splice(index, 1)
     },
+    deleteData(index) {
+      this.bodyDatas.splice(index, 1)
+    },
     removeFile(file) {
       return this.$confirm(`Are you sure to delete  ${file.fileName}？`, 'Warning', {
-        confirmButtonText: 'Sure',
+        confirmButtonText: 'OK',
         cancelButtonText: 'Cancel',
         type: 'warning',
       }).then(() => {
-
         this.fileList = this.fileList.filter(f => f.uid != file.uid)
         this.$refs.upload.uploadFiles = this.$refs.upload.uploadFiles.filter(f => f.uid != file.uid)
       })
-
     },
     onChange(file, fileList) {
       console.log("onChange", file);
@@ -180,6 +192,10 @@ export default {
         let file = { ...f }
         file.fileName = f.name
         file.suffName = f.name.substring(file.name.lastIndexOf('.') + 1)
+        if (this.dataType == "raw") {
+          let find = this.headers.find(v => v.key == "content-type")
+          find.value = this.getContentType(file.suffName);
+        }
         return file
       })
     },
@@ -188,7 +204,7 @@ export default {
       this.imgSrc = ""
       this.resultText = ''
       let fileData = new FormData()
-      if (this.dataType == 'file') {
+      if (this.dataType == 'form') {
         if (this.fileList.length < 1) {
           this.$message.error("File list is empty ")
           return
@@ -201,9 +217,15 @@ export default {
             fileData.append([v.key], v.value)
           }
         })
+      } else if (this.dataType == 'raw') {
+        if (this.fileList.length != 1) {
+          this.$message.error("One and only one upload file is required.")
+          return
+        }
+        fileData = this.fileList[0].raw
       } else {
         if (!this.bodyText) {
-          this.$message.error("Text body is empty ")
+          this.$message.error("Request body is empty ")
           return
         }
         fileData = this.bodyText
@@ -281,12 +303,59 @@ export default {
     dataTypeChange(val) {
       console.log("dataTypeChange", val);
       let find = this.headers.find(v => v.key == "content-type")
-      if (val == "file") {
+      find.checked = true
+      if (val == "json") {
+        find.value = "application/json"
         find.disabled = true
-        find.checked = false
-      } else {
+      } else if (val == "x-www-form-urlencoded") {
+        find.value = "application/x-www-form-urlencoded"
+        find.disabled = true
+      } else if (val == "text") {
+        find.value = "text/plain"
         find.disabled = false
+      } else if (val == "raw") {
+        if (this.fileList.length > 0) {
+          let uid = this.fileList[0].uid;
+          find.value = this.getContentType(this.fileList[0].suffName);
+          this.fileList = this.fileList.filter(f => f.uid == uid)
+          this.$refs.upload.uploadFiles = this.$refs.upload.uploadFiles.filter(f => f.uid == uid)
+        } else {
+          find.value = "application/octet-stream"
+        }
+        find.disabled = false
+      } else if (val == "form") {
+        find.value = "multipart/form-data"
         find.checked = true
+        find.disabled = true
+      }
+    },
+    getContentType(val) {
+      switch (val) {
+        case 'jpg':
+        case 'jpeg':
+        case 'jpe':
+          return 'image/jpeg';
+        case 'gif':
+          return 'image/gif';
+        case 'png':
+          return 'image/png';
+        case 'bmp':
+          return 'image/bmp';
+        case 'tiff':
+          return 'image/tiff';
+        case 'csv':
+        case 'xls':
+          return 'text/csv';
+        case 'txt':
+          return 'text/plain';
+        case 'ndlist':
+          return 'tensor/ndlist';
+        case 'npz':
+          return 'tensor/npz';
+        case 'json':
+          return 'application/json';
+        default:
+          return 'application/octet-stream';
       }
     }
   },
