@@ -54,12 +54,6 @@
               <el-input v-model.number="form.maxBatchDelay"></el-input>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="Max idle time:" prop="maxIdleTime">
-              <el-input v-model.number="form.maxIdleTime"></el-input>
-            </el-form-item>
-          </el-col>
-
         </el-row>
       </el-form>
 
@@ -75,11 +69,16 @@
           <el-row :gutter="20">
             <el-col :span="8">
               Min worker:
-              <el-input-number v-model="form.workerGroups[activeDevice].minWorkers" size="small" :min="1" :max="100" @change="workerChange('min')"></el-input-number>
+              <el-input-number v-model="form.workerGroups[activeDevice].minWorkers" size="small" :min="1" @change="workerChange('min')"></el-input-number>
             </el-col>
             <el-col :span="8">
               Max worker:
-              <el-input-number v-model="form.workerGroups[activeDevice].maxWorkers" size="small" :min="1" :max="100" @change="workerChange('max')"></el-input-number>
+              <el-input-number v-model="form.workerGroups[activeDevice].maxWorkers" size="small" :min="1" @change="workerChange('max')"></el-input-number>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="Max idle time:" prop="maxIdleTime">
+                <el-input v-model.number="form.maxIdleTime"></el-input>
+              </el-form-item>
             </el-col>
           </el-row>
         </el-tab-pane>
@@ -109,13 +108,13 @@
         <el-col>
 
           <label>Device:</label>
-          <el-input v-model.number="newDeviceId" size="small"></el-input>
+          <el-input v-model="newDeviceId" size="small"></el-input>
         </el-col>
       </el-row>
 
       <span slot="footer" class="dialog-footer">
         <el-button @click="addGroupShow = false" size="medium">Cancel</el-button>
-        <el-button type="primary" @click="addGroup" size="medium">Sure</el-button>
+        <el-button type="primary" @click="addGroup" size="medium">OK</el-button>
       </span>
     </el-dialog>
   </div>

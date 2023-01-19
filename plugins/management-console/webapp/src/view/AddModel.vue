@@ -38,24 +38,16 @@
                 <el-tooltip class="item" effect="dark" content="the name of engine to load the model. The default is MXNet if the model doesn't define its engine." placement="top"><span>Engine:</span></el-tooltip>
               </template>
               <el-select v-model="form.engine">
-                <el-option label="MXNet" value="MXNet"></el-option>
+                <el-option label="Auto detect" value=""></el-option>
                 <el-option label="PyTorch" value="PyTorch"></el-option>
+                <el-option label="MXNet" value="MXNet"></el-option>
                 <el-option label="TensorFlow" value="TensorFlow"></el-option>
                 <el-option label="PaddlePaddle" value="PaddlePaddle"></el-option>
+                <el-option label="ONNXRuntime" value="OnnxRuntime"></el-option>
                 <el-option label="Python" value="Python"></el-option>
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="device:" prop="device">
-              <template slot="label">
-                <el-tooltip class="item" effect="dark" content="the GPU device id to load the model. The default is CPU (`-1')." placement="top"><span>Device:</span></el-tooltip>
-              </template>
-
-              <el-input v-model.number="form.device"></el-input>
-            </el-form-item>
-          </el-col>
-
         </el-row>
         <el-collapse accordion @change="settingClick()">
           <el-collapse-item>
@@ -65,49 +57,73 @@
             </template>
             <el-row :gutter="20">
               <el-col :span="8">
-                <el-form-item label="batch_size:" prop="batch_size">
+                <el-form-item label="device:" prop="device">
                   <template slot="label">
-                    <el-tooltip class="item" effect="dark" content="the inference batch size. The default value is `1`." placement="top"><span>Batch size:</span></el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="the device to load the model, e.g. cpu/gpu0." placement="top"><span>Device:</span></el-tooltip>
                   </template>
-                  <el-input v-model.number="form.batch_size"></el-input>
+                  <el-autocomplete size="mini" class="inline-input" v-model="form.device" :fetch-suggestions="listDevice" clearable></el-autocomplete>
+                  <el-input size="mini" v-model="form.device" clearable v-else></el-input>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
-                <el-form-item label="max_batch_delay:" v-if="form.batch_size>1" prop="max_batch_delay">
+                <el-form-item label="job_queue_size:" prop="job_queue_size">
                   <template slot="label">
-                    <el-tooltip class="item" effect="dark" content="the maximum delay for batch aggregation. The default value is 100 milliseconds." placement="top"><span>Max batch delay:</span></el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="the request job queue size, default is 1000." placement="top"><span>Job queue size:</span></el-tooltip>
                   </template>
-                  <el-input v-model.number="form.max_batch_delay"></el-input>
+
+                  <el-input-number size="mini" :min="1" v-model="form.job_queue_size"></el-input>
                 </el-form-item>
               </el-col>
-              <el-col :span="8">
-                <el-form-item label="max_idle_time:" v-if="form.batch_size>1" prop="max_idle_time">
-                  <template slot="label">
-                    <el-tooltip class="item" effect="dark" content=" the maximum idle time before the worker thread is scaled down." placement="top"><span>Max idle time:</span></el-tooltip>
-                  </template>
-                  <el-input v-model.number="form.max_idle_time"></el-input>
-                </el-form-item>
-              </el-col>
+            </el-row>
+            <el-row :gutter="20">
               <el-col :span="8">
                 <el-form-item label="min_worker:">
                   <template slot="label">
-                    <el-tooltip class="item" effect="dark" content="the minimum number of worker processes. The default value is `1`." placement="top"><span>Min worker:</span></el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="the minimum number of worker processes." placement="top"><span>Min worker:</span></el-tooltip>
                   </template>
-                  <el-input-number v-model="form.min_worker" :min="1" :max="10" label="min_worker"></el-input-number>
+                  <el-input-number size="mini" :min="1" v-model="form.min_worker" label="min_worker"></el-input>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
                 <el-form-item label="max_worker:">
                   <template slot="label">
-                    <el-tooltip class="item" effect="dark" content="the maximum number of worker processes. The default is the same as the setting for `min_worker`." placement="top"><span>Max worker:</span></el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="the maximum number of worker processes." placement="top"><span>Max worker:</span></el-tooltip>
                   </template>
-                  <el-input-number v-model="form.max_worker" :min="1" :max="10" label="max_worker"></el-input-number>
+                  <el-input-number size="mini" :min="1" v-model="form.max_worker" label="max_worker"></el-input>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
+                <el-form-item label="max_idle_time:">
+                  <template slot="label">
+                    <el-tooltip class="item" effect="dark" content="the maximum idle time before the worker thread is scaled down." placement="top"><span>Max idle time:</span></el-tooltip>
+                  </template>
+                  <el-input-number size="mini" :min="1" v-model.number="form.max_idle_time"></el-input>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="8">
+                <el-form-item label="batch_size:">
+                  <template slot="label">
+                    <el-tooltip class="item" effect="dark" content="the inference batch size, default is 1." placement="top"><span>Batch size:</span></el-tooltip>
+                  </template>
+                  <el-input-number size="mini" :min="1" v-model.number="form.batch_size"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item label="max_batch_delay:">
+                  <template slot="label">
+                    <el-tooltip class="item" effect="dark" content="the maximum delay for batch aggregation, default is 100 milliseconds." placement="top"><span>Max batch delay:</span></el-tooltip>
+                  </template>
+                  <el-input-number size="mini" :min="1" v-model.number="form.max_batch_delay"></el-input>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row>
+              <el-col :span="8">
                 <el-form-item label="synchronous:" prop="synchronous">
                   <template slot="label">
-                    <el-tooltip class="item" effect="dark" content="whether or not the creation of worker is synchronous. The default value is true." placement="top"><span>Synchronous:</span></el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="whether or not the creation of worker is synchronous." placement="top"><span>Synchronous:</span></el-tooltip>
                   </template>
                   <el-switch v-model="form.synchronous"></el-switch>
                 </el-form-item>
@@ -141,24 +157,21 @@ export default {
     return {
       form: {
         url: "",
-        model_name: '',
-        model_version: '0.0.1',
-        engine: 'MXNet',
-        device: -1,
+        model_name: "",
+        model_version: "",
+        engine: "",
+        device: "",
+        job_queue_size: undefined,
         synchronous: true,
-        batch_size: 1,
-        max_batch_delay: 100,
-        max_idle_time: 60,
-        min_worker: 1,
-        max_worker: 1
+        batch_size: undefined,
+        max_batch_delay: undefined,
+        min_worker: undefined,
+        max_worker: undefined,
+        max_idle_time: undefined
       },
       rules: {
         url: [{ required: true, message: 'Url cannot be empty', trigger: 'blur' }],
         model_name: [{ required: true, message: 'Model name cannot be empty', trigger: 'blur' }],
-        batch_size: [{ type: 'number', message: 'Batch size must be a number' }],
-        device: [{ type: 'number', message: 'Device id must be a number' }],
-        max_batch_delay: [{ type: 'number', message: 'Max batch delay must be a number' }],
-        max_idle_time: [{ type: 'number', message: 'Max idle time must be a number' }],
       },
       isDown: true,
       baseURL: "",
@@ -177,6 +190,11 @@ export default {
     this.baseURL = window.location.origin + env.baseUrl + (env.baseUrl.endsWith("/") ? "" : "/")
   },
   methods: {
+    listDevice(queryString, cb) {
+      var devices = [{value: "cpu"}, {value: "gpu0"}, {value: "gpu1"}, {value: "gpu2"}, {value: "gpu3"}]
+      var results = queryString ? devices.filter(v => v.value.includes(queryString)) : devices;
+      cb(results);
+    },
     async submit() {
       let flag = true
       await this.$refs.form.validate(async (valid, rules) => {
