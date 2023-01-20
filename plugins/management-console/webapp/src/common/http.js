@@ -14,7 +14,7 @@ var loadingInstance;
 // request interceptors
 axiosInst.interceptors.request.use(
   req => {
-    
+
     let data = req.data || {}
     if(!data.cancelLoading){
       loadingInstance = Loading.service();
@@ -35,7 +35,7 @@ axiosInst.interceptors.request.use(
 );
 //response interceptors
 axiosInst.interceptors.response.use(response => {
-  
+
   loadingInstance.close();
   // console.log("response",response);
 
@@ -53,7 +53,7 @@ axiosInst.interceptors.response.use(response => {
     }else{
       Message.error({ message: error.response.data.message, customClass: 'error-toast' });
     }
- 
+
   return Promise.reject(error);
   // return error;
 });
@@ -139,7 +139,7 @@ export default {
   //post
   requestQuickPost(url, params = {}) {
     return new Promise((resolve, reject) => {
-      url = url + "?"+Object.keys(params).map(v => v+"="+params[v]).join("&")
+      url = url + "?"+Object.keys(params).map(v => v+"="+(params[v] == undefined ? '' : params[v])).join("&")
 
       axiosInst.post(url, {}, {}).then(res => {
         resolve(res.data)
