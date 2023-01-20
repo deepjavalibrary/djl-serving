@@ -23,14 +23,18 @@ Registers a new model as a single model workflow. The workflow name and version 
 * model_name - the name of the model and workflow; this name will be used as {workflow_name} in other API as path.
   If this parameter is not present, modelName will be inferred by url.
 * model_version - the version of the mode
-* engine - the name of engine to load the model. The default is MXNet if the model doesn't define its engine.
-* gpu_id - the GPU device id to load the model. The default is CPU (`-1').
-* batch_size - the inference batch size. The default value is `1`.
-* max_batch_delay - the maximum delay for batch aggregation. The default value is 100 milliseconds.
-* max_idle_time - the maximum idle time before the worker thread is scaled down.
-* min_worker - the minimum number of worker processes. The default value is `1`.
-* max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
-* synchronous - whether or not the creation of worker is synchronous. The default value is true.
+* engine - the name of engine to load the model. DJL will try to infer engine if not specified.
+* device - the device to load the model. DJL will pick optimal device if not specified, the value device can be:
+  * CPU device: cpu or simply -1
+  * GPU device: gpu0, gpu1, ... or simply 0, 1, 2, 3, ...
+  * Neuron core: nc1, nc2, ...
+* job_queue_size: the request job queue size, default is `1000`.
+* batch_size - the inference batch size, default is `1`.
+* max_batch_delay - the maximum delay for batch aggregation in millis, default value is `100` milliseconds.
+* max_idle_time - the maximum idle time in seconds before the worker thread is scaled down, default is `60` seconds.
+* min_worker - the minimum number of worker processes, DJL will auto detect minimum workers if not specified.
+* max_worker - the maximum number of worker processes, DJL will auto detect maximum workers if not specified.
+* synchronous - whether or not the creation of worker is synchronous, the default is `true`.
 
 ```bash
 curl -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai%2Ftest-models%2Fmlp.tar.gz"
@@ -66,8 +70,11 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
 `POST /workflows`
 
 * url - Workflow url.
-* engine - the name of engine to load the model. The default is MXNet if the model doesn't define its engine.
-* gpu_id - the GPU device id to load the model. The default is CPU (`-1').
+* engine - the name of engine to load the model. DJL will try to infer engine if not specified.
+* device - the device to load the model. DJL will pick optimal device if not specified, the value device can be:
+  * CPU device: cpu or simply -1
+  * GPU device: gpu0, gpu1, ... or simply 0, 1, 2, 3, ...
+  * Neuron core: nc1, nc2, ...
 * min_worker - the minimum number of worker processes. The default value is `1`.
 * max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
 * synchronous - whether or not the creation of worker is synchronous. The default value is true.
