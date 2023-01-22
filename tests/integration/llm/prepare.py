@@ -77,7 +77,7 @@ sd_handler_list = {
 }
 
 
-def write_prperties(properties):
+def write_properties(properties):
     model_path = "models/test"
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
@@ -96,7 +96,7 @@ def build_hf_handler_model(model):
     options["engine"] = "Python"
     options["option.entryPoint"] = "djl_python.huggingface"
     options["option.predict_timeout"] = 240
-    write_prperties(options)
+    write_properties(options)
 
 
 def build_ds_handler_model(model):
@@ -107,13 +107,13 @@ def build_ds_handler_model(model):
     options = ds_handler_list[model]
     options["engine"] = "DeepSpeed"
     options["option.entryPoint"] = "djl_python.deepspeed"
-    write_prperties(options)
+    write_properties(options)
 
 
 def build_ds_raw_model(model):
     options = ds_model_list[model]
     options["engine"] = "DeepSpeed"
-    write_prperties(options)
+    write_properties(options)
     shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
 
 
@@ -125,7 +125,7 @@ def build_sd_handler_model(model):
     options = sd_handler_list[model]
     options["engine"] = "DeepSpeed"
     options["option.entryPoint"] = "djl_python.stable-diffusion"
-    write_prperties(options)
+    write_properties(options)
 
 
 supported_handler = {
