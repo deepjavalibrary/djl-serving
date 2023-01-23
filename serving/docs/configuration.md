@@ -1,4 +1,4 @@
-# Advanced configuration
+# DJLServing startup configuration
 
 ## Environment variables
 
@@ -42,6 +42,7 @@ DJL Serving only allows localhost access by default.
 * management_address: management API binding address, default: http://127.0.0.1:8081
 
 Here are a couple of examples:
+
 ```properties
 # bind inference API to all network interfaces with SSL enabled
 inference_address=https://0.0.0.0:8443
@@ -122,41 +123,43 @@ User also must provide certificate and private keys to enable SSL. DJL Serving s
 This is a quick example to enable SSL with self-signed certificate
 
 1. User java keytool to create keystore
-```bash
-keytool -genkey -keyalg RSA -alias djl -keystore keystore.p12 -storepass changeit -storetype PKCS12 -validity 3600 -keysize 2048 -dname "CN=www.MY_DOMSON.com, OU=Cloud Service, O=model server, L=Palo Alto, ST=California, C=US"
-```
 
-Config following property in config.properties:
+   ```bash
+   keytool -genkey -keyalg RSA -alias djl -keystore keystore.p12 -storepass changeit -storetype PKCS12 -validity 3600 -keysize 2048 -dname "CN=www.MY_DOMSON.com, OU=Cloud Service, O=model server, L=Palo Alto, ST=California, C=US"
+   ```
 
-```properties
-inference_address=https://127.0.0.1:8443
-management_address=https://127.0.0.1:8444
-keystore=keystore.p12
-keystore_pass=changeit
-keystore_type=PKCS12
-```
+   Config following property in config.properties:
+
+   ```properties
+   inference_address=https://127.0.0.1:8443
+   management_address=https://127.0.0.1:8444
+   keystore=keystore.p12
+   keystore_pass=changeit
+   keystore_type=PKCS12
+   ```
 
 2. User OpenSSL to create private key and certificate
-```bash
-# generate a private key with the correct length
-openssl genrsa -out private-key.pem 2048
 
-# generate corresponding public key
-openssl rsa -in private-key.pem -pubout -out public-key.pem
+   ```bash
+   # generate a private key with the correct length
+   openssl genrsa -out private-key.pem 2048
 
-# create a self-signed certificate
-openssl req -new -x509 -key private-key.pem -out cert.pem -days 360
+   # generate corresponding public key
+   openssl rsa -in private-key.pem -pubout -out public-key.pem
 
-# convert pem to pfx/p12 keystore
-openssl pkcs12 -export -inkey private-key.pem -in cert.pem -out keystore.p12
-```
+   # create a self-signed certificate
+   openssl req -new -x509 -key private-key.pem -out cert.pem -days 360
 
-Config following property in config.properties:
+   # convert pem to pfx/p12 keystore
+   openssl pkcs12 -export -inkey private-key.pem -in cert.pem -out keystore.p12
+   ```
 
-```properties
-inference_address=https://127.0.0.1:8443
-management_address=https://127.0.0.1:8444
-keystore=keystore.p12
-keystore_pass=changeit
-keystore_type=PKCS12
-```
+   Config following property in config.properties:
+
+   ```properties
+   inference_address=https://127.0.0.1:8443
+   management_address=https://127.0.0.1:8444
+   keystore=keystore.p12
+   keystore_pass=changeit
+   keystore_type=PKCS12
+   ```
