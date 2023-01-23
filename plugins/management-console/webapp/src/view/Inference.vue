@@ -23,7 +23,7 @@
           </el-col>
           <span>:</span>
           <el-col :span="6">
-            <el-autocomplete size="mini" class="inline-input" @input='headerChange' v-if="header.key == 'content-type'" :disabled="header.disabled" v-model="header.value" :fetch-suggestions="querySearch" placeholder="Please select content type" clearable></el-autocomplete>
+            <el-autocomplete size="mini" class="inline-input" @input='headerChange' v-if="header.key == 'content-type'" :readonly="header.disabled" v-model="header.value" :fetch-suggestions="querySearch" placeholder="Please select content type" clearable></el-autocomplete>
             <el-input size="mini" v-model="header.value" @input='headerChange' :disabled="header.disabled" clearable v-else></el-input>
           </el-col>
           <i class="el-icon-close" @click="deleteHeader(index)" v-if="index > 1 && index != headers.length-1"></i>
@@ -264,33 +264,36 @@ export default {
         }
         return
       }
+
+      let contentType = "text/plain"
       if (res.headers && res.headers['content-type']) {
-        let contentType = res.headers['content-type']
+        contentType = res.headers['content-type']
         console.log("contentType", contentType);
-        if (contentType.startsWith("text/") || contentType == 'application/json') {
-          if (res.data instanceof Blob) {
-            let blob = new Blob([res.data])
-            var reader = new FileReader()
-            reader.onload = e => {
-              this.resultText = e.target.result
-            }
-            reader.readAsText(blob)
-          } else {
-            this.resultText = res.data
-          }
-        } else if (['tensor/ndlist', 'tensor/npz', "multipart/form-data"].includes(contentType)) {
-          const link = document.createElement('a');
-          let blob = new Blob([res.data]);
-          link.style.display = 'none';
-          link.href = URL.createObjectURL(blob);
-          link.setAttribute('download', contentType.replace('/', "."));
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link)
-        } else if (contentType.startsWith("image/")) {
+      }
+
+      if (contentType.startsWith("text/") || contentType == 'application/json') {
+        if (res.data instanceof Blob) {
           let blob = new Blob([res.data])
-          this.imgSrc = window.URL.createObjectURL(blob)
+          var reader = new FileReader()
+          reader.onload = e => {
+            this.resultText = e.target.result
+          }
+          reader.readAsText(blob)
+        } else {
+          this.resultText = res.data
         }
+      } else if (contentType.startsWith("image/")) {
+        let blob = new Blob([res.data])
+        this.imgSrc = window.URL.createObjectURL(blob)
+      } else {
+        const link = document.createElement('a');
+        let blob = new Blob([res.data]);
+        link.style.display = 'none';
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', contentType.replace('/', "."));
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link)
       }
       console.log(res);
     },
