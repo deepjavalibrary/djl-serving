@@ -12,9 +12,11 @@
 ARG version=11.6.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
-ARG ft_version="release/v5.2.1_tag"
+ARG ft_version="release/v5.3_tag"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.12.1_ec2/20221208-234008/d3dae914337cde7e182d28544aed5efce29255c4/torch-1.12.1%2Bcu116-cp38-cp38-linux_x86_64.whl"
 ARG ompi_version=4.1.4
+ARG transformers_version=4.25.1
+ARG accelerate_version=0.15.0
 
 EXPOSE 8080
 
@@ -45,7 +47,7 @@ RUN apt-get update && apt-get install -y wget git && \
     ln -s /usr/local/openmpi-${ompi_version} /usr/local/mpi && \
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh && \
-    pip3 install ${torch_wheel} && \
+    pip3 install ${torch_wheel} transformers==${transformers_version} accelerate==${accelerate_version} && \
     pip3 install cmake && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
