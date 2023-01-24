@@ -304,27 +304,34 @@ public class PyModel extends BaseModel {
             pyEnv.addParameter("model_id", downloadDir);
             String[] commands;
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
+                if (!url.endsWith("*")) {
+                    if (url.endsWith("/")) {
+                        url = url + '*';
+                    } else {
+                        url = url + "/*";
+                    }
+                }
                 commands =
                         new String[] {
-                            "/opt/djl/bin/s5cmd",
-                            "--retry-count",
-                            "1",
-                            "sync",
-                            url + "*",
-                            downloadDir
+                            "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync", url, downloadDir
                         };
             } else {
                 logger.info("s5cmd is not installed, using aws cli");
                 commands = new String[] {"aws", "s3", "sync", url, downloadDir};
             }
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
+            String logOutput;
             try (InputStream is = exec.getInputStream()) {
-                logger.debug(Utils.toString(is));
+                logOutput = Utils.toString(is);
             }
             int exitCode = exec.waitFor();
-            if (0 != exitCode) {
-                throw new IOException("s5cmd failed. View the debug logs for details");
+            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
+                logger.error(logOutput);
+                throw new EngineException("Download model failed.");
+            } else {
+                logger.debug(logOutput);
             }
+
             logger.info("Download completed! Files saved to {}", downloadDir);
         } catch (IOException | InterruptedException e) {
             throw new EngineException("Model failed to download from s3", e);
