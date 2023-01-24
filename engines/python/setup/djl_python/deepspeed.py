@@ -43,7 +43,7 @@ SUPPORTED_MODEL_TYPES = {
     "gpt_neo",
     "gptj",
     "opt",
-    "gpt-neox",
+    "gpt_neox",
     "bloom",
 }
 
