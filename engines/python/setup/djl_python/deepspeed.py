@@ -96,7 +96,7 @@ MODEL_TYPE_TO_INJECTION_POLICY = {
     "opt": {
         transformers.models.opt.modeling_opt.OPTDecoderLayer: HFOPTLayerPolicy
     },
-    "gpt-neox": {
+    "gpt_neox": {
         transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXLayer:
         GPTNEOXLayerPolicy
     },
