@@ -1,6 +1,5 @@
 rootProject.name = 'djl-serving'
 include ':benchmark'
-include ':central'
 include ':engines:python'
 include ':engines:java'
 include ':plugins:kserve'

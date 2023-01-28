@@ -128,8 +128,8 @@ applicationDistribution.into("plugins") {
     from(project(":plugins:static-file-plugin").tasks.jar)
 }
 tasks.test.dependsOn(
-        ":central:jar",
         ":plugins:kserve:jar",
+        ":plugins:management-console:jar",
         ":plugins:plugin-management-plugin:jar",
         ":plugins:static-file-plugin:jar")
 tasks.run.dependsOn(
