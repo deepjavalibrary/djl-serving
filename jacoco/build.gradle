@@ -9,10 +9,7 @@ repositories {
 
 dependencies {
     jacocoAggregation project(":benchmark")
-    // TODO: Add unit test for central and console
-    // jacocoAggregation project(":central")
     jacocoAggregation project(":engines:python")
-    jacocoAggregation project(":engines:java")
     jacocoAggregation project(":plugins:kserve")
     // jacocoAggregation project(":plugins:management-console")
     jacocoAggregation project(":plugins:plugin-management-plugin")

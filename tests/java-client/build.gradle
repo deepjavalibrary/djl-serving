@@ -15,7 +15,6 @@ repositories {
 
 dependencies {
     implementation "ai.djl:api:${djl_version}-SNAPSHOT"
-    implementation "ai.djl.java:java:${djl_version}-SNAPSHOT"
     implementation "org.slf4j:slf4j-api:${slf4j_version}"
 
     testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
@@ -27,7 +26,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_11
 }
 
+apply from: file("${rootProject.projectDir}/../../tools/gradle/java-formatter.gradle")
+
 test {
     useTestNG()
 }
-

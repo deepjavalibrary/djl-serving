@@ -17,6 +17,7 @@ import ai.djl.ndarray.types.Shape;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
 import java.io.IOException;
 
 public class TestBinaryClient {
