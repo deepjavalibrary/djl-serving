@@ -40,6 +40,22 @@ ARCHITECTURES_2_TASK = {
 }
 
 
+def get_torch_dtype_from_str(dtype: str):
+    if dtype == "auto":
+        return dtype
+    if dtype == "fp32":
+        return torch.float32
+    if dtype == "fp16":
+        return torch.float16
+    if dtype == "bf16":
+        return torch.bfloat16
+    if dtype == "int8":
+        return torch.int8
+    if dtype is None:
+        return None
+    raise ValueError(f"Invalid data type: {dtype}")
+
+
 class HuggingFaceService(object):
 
     def __init__(self):
@@ -72,7 +88,7 @@ class HuggingFaceService(object):
             kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage")
 
         if "dtype" in properties:
-            kwargs["torch_dtype"] = properties.get("dtype")
+            kwargs["torch_dtype"] = get_torch_dtype_from_str(properties.get("dtype"))
         if task:
             self.hf_pipeline = self.get_pipeline(task=task,
                                                  model_id=model_id,
