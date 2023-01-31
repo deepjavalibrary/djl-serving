@@ -32,7 +32,8 @@ hf_handler_list = {
         "option.s3url": "s3://djl-llm/gpt-j-6b/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
-        "option.device_map": "auto"
+        "option.device_map": "auto",
+        "option.dtype": "fp16"
     },
     "bloom-7b1": {
         "option.s3url": "s3://djl-llm/bloom-7b1/",

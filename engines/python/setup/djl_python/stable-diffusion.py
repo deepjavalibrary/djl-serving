@@ -26,10 +26,9 @@ def get_torch_dtype_from_str(dtype: str):
         return torch.float32
     if dtype == "fp16":
         return torch.float16
-    elif dtype is None:
+    if dtype is None:
         return None
-    else:
-        raise ValueError(f"Invalid data type: {dtype}")
+    raise ValueError(f"Invalid data type: {dtype}")
 
 
 class StableDiffusionService(object):

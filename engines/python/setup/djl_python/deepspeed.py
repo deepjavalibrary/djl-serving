@@ -111,14 +111,13 @@ def get_torch_dtype_from_str(dtype: str):
         return torch.float32
     if dtype == "fp16":
         return torch.float16
-    elif dtype == "bf16":
+    if dtype == "bf16":
         return torch.bfloat16
-    elif dtype == "int8":
+    if dtype == "int8":
         return torch.int8
-    elif dtype is None:
+    if dtype is None:
         return None
-    else:
-        raise ValueError(f"Invalid data type: {dtype}")
+    raise ValueError(f"Invalid data type: {dtype}")
 
 
 class DeepSpeedService(object):
