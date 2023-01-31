@@ -23,18 +23,17 @@ import java.net.http.HttpResponse.BodyHandlers;
 public class BinaryClient {
 
     private static final URI testUrl = URI.create("http://127.0.0.1:8080/predictions/test");
-    private static final HttpClient httpClient = HttpClient.newBuilder()
-        .version(HttpClient.Version.HTTP_1_1)
-        .build();
+    private static final HttpClient httpClient =
+            HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
 
     public static NDList postNDList(NDList list) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-            .POST(BodyPublishers.ofByteArray(list.encode()))
-            .uri(testUrl)
-            .setHeader("content-type", "tensor/ndlist")
-            .build();
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .POST(BodyPublishers.ofByteArray(list.encode()))
+                        .uri(testUrl)
+                        .setHeader("content-type", "tensor/ndlist")
+                        .build();
         HttpResponse<byte[]> response = httpClient.send(request, BodyHandlers.ofByteArray());
         return NDList.decode(list.getManager(), response.body());
     }
-
 }

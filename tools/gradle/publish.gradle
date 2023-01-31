@@ -1,5 +1,4 @@
 configure([
-        project(':engines:java'),
         project(':engines:python'),
         project(':serving'),
         project(':wlm')]) {
@@ -21,12 +20,6 @@ configure([
         options.overview "src/main/javadoc/overview.html"
         options.addBooleanOption("-allow-script-in-comments", true)
         options.header "<script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>"
-    }
-
-    task uploadJavadoc(type: Exec) {
-        dependsOn javadoc
-        enabled = (project.name != ":engines:mxnet:native" && project.name != ":examples")
-        commandLine "sh", "-c", "find . -name .DS_Store | xargs rm && aws s3 sync build/docs/javadoc s3://javadoc-djl-ai/${project.name}/${version} > build/upload.log"
     }
 
     signing {
