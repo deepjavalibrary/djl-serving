@@ -63,9 +63,11 @@ class HuggingFaceService(object):
         self.initialized = False
 
     def initialize(self, properties: dict):
-        model_dir = properties.get("model_dir")
+        # If option.s3url is used, the directory is stored in model_id
+        # If option.s3url is not used but model_id is present, we download from hub
+        # Otherwise we assume model artifacts are in the model_dir
+        model_id_or_path = properties.get("model_id") or properties.get("model_dir")
         device_id = int(properties.get("device_id", "-1"))
-        model_id = properties.get("model_id")
         task = properties.get("task")
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         # HF Acc handling
@@ -91,16 +93,14 @@ class HuggingFaceService(object):
             kwargs["torch_dtype"] = get_torch_dtype_from_str(properties.get("dtype"))
         if task:
             self.hf_pipeline = self.get_pipeline(task=task,
-                                                 model_id=model_id,
-                                                 model_dir=model_dir,
+                                                 model_id_or_path=model_id_or_path,
                                                  device=device_id,
                                                  kwargs=kwargs)
-        elif "config.json" in os.listdir(model_dir):
+        elif "config.json" in os.listdir(model_id_or_path):
             task = self.infer_task_from_model_architecture(
-                f"{model_dir}/config.json")
+                f"{model_id_or_path}/config.json")
             self.hf_pipeline = self.get_pipeline(task=task,
-                                                 model_id=model_id,
-                                                 model_dir=model_dir,
+                                                 model_id_or_path=model_id_or_path,
                                                  device=device_id,
                                                  kwargs=kwargs)
         else:
@@ -137,10 +137,7 @@ class HuggingFaceService(object):
 
         return outputs
 
-    def get_pipeline(self, task: str, device: int, model_id: str,
-                     model_dir: str, kwargs):
-        model = model_id if model_id else model_dir
-
+    def get_pipeline(self, task: str, device: int, model_id_or_path: str, **kwargs):
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
         if task in {
                 "automatic-speech-recognition",
@@ -150,9 +147,9 @@ class HuggingFaceService(object):
                 "object-detection",
                 "zero-shot-image-classification",
         }:
-            kwargs["feature_extractor"] = model
+            kwargs["feature_extractor"] = model_id_or_path
         else:
-            kwargs["tokenizer"] = model
+            kwargs["tokenizer"] = model_id_or_path
 
         use_pipeline = True
         for element in ["load_in_8bit", "low_cpu_mem_usage"]:
@@ -161,19 +158,21 @@ class HuggingFaceService(object):
         # build pipeline
         if use_pipeline:
             if "device_map" in kwargs:
-                hf_pipeline = pipeline(task=task, model=model, **kwargs)
+                hf_pipeline = pipeline(task=task,
+                                       model=model_id_or_path,
+                                       **kwargs)
             else:
                 hf_pipeline = pipeline(task=task,
-                                       model=model,
+                                       model=model_id_or_path,
                                        device=device,
                                        **kwargs)
         else:
-            tokenizer = AutoTokenizer.from_pretrained(model)
+            tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
             kwargs.pop("tokenizer", None)
-            model = AutoModelForCausalLM.from_pretrained(model, **kwargs)
+            model = AutoModelForCausalLM.from_pretrained(model_id_or_path, **kwargs)
             hf_pipeline = pipeline(task=task, model=model, tokenizer=tokenizer)
 
-        # wrapp specific pipeline to support better ux
+        # wrap specific pipeline to support better ux
         if task == "conversational":
             hf_pipeline = self.wrap_conversation_pipeline(hf_pipeline)
 
