@@ -15,6 +15,8 @@ In `serving.properties`, you can set the following properties and more.
 - `engine`: Which Engine to use, values include MXNet, PyTorch, TensorFlow, ONNX, PaddlePaddle, DeepSpeed, etc.
 - `translatorFactory`: Specify the TranslatorFactory.
 - `job_queue_size`: Specify the job queue size at model level, this will override global `job_queue_size`.
+- `log_model_metric`: Enable model metrics (inference, pre-process and post-process latency) logging.
+- `metrics_aggregation`: Number of model metrics to aggregate, default 1000.
 - `minWorkers`: Minimum number of workers.
 - `maxWorkers`: Maximum number of workers.
 - `gpu.minWorkers`: Minimum number of workers for GPU.

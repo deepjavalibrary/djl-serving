@@ -58,7 +58,6 @@ run {
     systemProperties System.getProperties()
     systemProperties.remove("user.dir")
     systemProperty("file.encoding", "UTF-8")
-    systemProperty("ai.djl.pytorch.num_interop_threads", "1")
     // systemProperty("ai.djl.logging.level", "debug")
     systemProperty("log4j.configurationFile", "${project.projectDir}/src/main/conf/log4j2.xml")
     applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000"]

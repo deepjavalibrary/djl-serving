@@ -1,4 +1,4 @@
-# DJL Serving Console
+# Management Console
 
 DJL Serving console is a DJL model server management platform that can achieve model management, log management, dependency management, configuration management and so on. It makes it easier for users to use DJL model server. We will provide the following basic functions:
 

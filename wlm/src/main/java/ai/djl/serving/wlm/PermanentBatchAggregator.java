@@ -29,7 +29,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public class PermanentBatchAggregator<I, O> extends BatchAggregator<I, O> {
 
-    private static final Logger logger = LoggerFactory.getLogger(TemporaryBatchAggregator.class);
+    private static final Logger logger = LoggerFactory.getLogger(PermanentBatchAggregator.class);
 
     /**
      * Constructs a {@code PermanentBatchAggregator} instance.
