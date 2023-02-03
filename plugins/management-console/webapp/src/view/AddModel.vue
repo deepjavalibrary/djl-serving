@@ -62,7 +62,6 @@
                     <el-tooltip class="item" effect="dark" content="the device to load the model, e.g. cpu/gpu0." placement="top"><span>Device:</span></el-tooltip>
                   </template>
                   <el-autocomplete size="mini" class="inline-input" v-model="form.device" :fetch-suggestions="listDevice" clearable></el-autocomplete>
-                  <el-input size="mini" v-model="form.device" clearable v-else></el-input>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
@@ -71,7 +70,7 @@
                     <el-tooltip class="item" effect="dark" content="the request job queue size, default is 1000." placement="top"><span>Job queue size:</span></el-tooltip>
                   </template>
 
-                  <el-input-number size="mini" :min="1" v-model="form.job_queue_size"></el-input>
+                  <el-input-number size="mini" :min="1" v-model="form.job_queue_size"></el-input-number>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -81,7 +80,7 @@
                   <template slot="label">
                     <el-tooltip class="item" effect="dark" content="the minimum number of worker processes." placement="top"><span>Min worker:</span></el-tooltip>
                   </template>
-                  <el-input-number size="mini" :min="1" v-model="form.min_worker" label="min_worker"></el-input>
+                  <el-input-number size="mini" :min="1" v-model="form.min_worker" label="min_worker"></el-input-number>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
@@ -89,7 +88,7 @@
                   <template slot="label">
                     <el-tooltip class="item" effect="dark" content="the maximum number of worker processes." placement="top"><span>Max worker:</span></el-tooltip>
                   </template>
-                  <el-input-number size="mini" :min="1" v-model="form.max_worker" label="max_worker"></el-input>
+                  <el-input-number size="mini" :min="1" v-model="form.max_worker" label="max_worker"></el-input-number>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
@@ -97,7 +96,7 @@
                   <template slot="label">
                     <el-tooltip class="item" effect="dark" content="the maximum idle time before the worker thread is scaled down." placement="top"><span>Max idle time:</span></el-tooltip>
                   </template>
-                  <el-input-number size="mini" :min="1" v-model.number="form.max_idle_time"></el-input>
+                  <el-input-number size="mini" :min="1" v-model.number="form.max_idle_time"></el-input-number>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -107,7 +106,7 @@
                   <template slot="label">
                     <el-tooltip class="item" effect="dark" content="the inference batch size, default is 1." placement="top"><span>Batch size:</span></el-tooltip>
                   </template>
-                  <el-input-number size="mini" :min="1" v-model.number="form.batch_size"></el-input>
+                  <el-input-number size="mini" :min="1" v-model.number="form.batch_size"></el-input-number>
                 </el-form-item>
               </el-col>
               <el-col :span="8">
@@ -115,7 +114,7 @@
                   <template slot="label">
                     <el-tooltip class="item" effect="dark" content="the maximum delay for batch aggregation, default is 100 milliseconds." placement="top"><span>Max batch delay:</span></el-tooltip>
                   </template>
-                  <el-input-number size="mini" :min="1" v-model.number="form.max_batch_delay"></el-input>
+                  <el-input-number size="mini" :min="1" v-model.number="form.max_batch_delay"></el-input-number>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -171,7 +170,6 @@ export default {
       },
       rules: {
         url: [{ required: true, message: 'Url cannot be empty', trigger: 'blur' }],
-        model_name: [{ required: true, message: 'Model name cannot be empty', trigger: 'blur' }],
       },
       isDown: true,
       baseURL: "",
@@ -215,7 +213,7 @@ export default {
       if (this.isDown) param = (({ url, model_name, model_version, engine, device }) => ({ url, model_name, model_version, engine, device }))(this.form)
       let res = await modelApi.addModel(param)
       console.log("submit", res);
-      this.$message.success('Model "' + this.form.model_name + '" registered.')
+      this.$message.success(res.status)
       this.$router.go(-1)
     },
     settingClick() {
