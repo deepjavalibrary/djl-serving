@@ -38,8 +38,7 @@ class StableDiffusionService(object):
         self.initialized = False
         self.ds_config = None
         self.logger = logging.getLogger()
-        self.model_dir = None
-        self.model_id = None
+        self.model_id_or_path = None
         self.data_type = None
         self.device = None
         self.world_size = None
@@ -48,8 +47,10 @@ class StableDiffusionService(object):
         self.save_image_dir = None
 
     def initialize(self, properties: dict):
-        self.model_dir = properties.get("model_dir")
-        self.model_id = properties.get("model_id")
+        # If option.s3url is used, the directory is stored in model_id
+        # If option.s3url is not used but model_id is present, we download from hub
+        # Otherwise we assume model artifacts are in the model_dir
+        self.model_id_or_path = properties.get("model_id") or properties.get("model_dir")
         self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
         self.max_tokens = int(properties.get("max_tokens", "1024"))
         self.device = int(os.getenv("LOCAL_RANK", "0"))
@@ -57,21 +58,20 @@ class StableDiffusionService(object):
             properties.get("tensor_parallel_degree", 1))
         self.ds_config = self._get_ds_config_for_dtype(self.data_type)
 
-        if not self.model_id:
-            config_file = os.path.join(self.model_dir, "model_index.json")
+        if os.path.exists(self.model_id_or_path):
+            config_file = os.path.join(self.model_id_or_path, "model_index.json")
             if not os.path.exists(config_file):
                 raise ValueError(
-                    f"model_dir: {self.model_dir} does not contain a model_index.json."
+                    f"{self.model_id_or_path} does not contain a model_index.json."
                     f"This is required for loading stable diffusion models from local storage"
                 )
-            self.model_id = self.model_dir
 
         kwargs = {}
         if self.data_type == torch.float16:
             kwargs["torch_dtype"] = torch.float16
             kwargs["revision"] = "fp16"
 
-        pipeline = DiffusionPipeline.from_pretrained(self.model_id, **kwargs)
+        pipeline = DiffusionPipeline.from_pretrained(self.model_id_or_path, **kwargs)
         pipeline.to(f"cuda:{self.device}")
         deepspeed.init_distributed()
         engine = deepspeed.init_inference(getattr(pipeline, "model", pipeline),
