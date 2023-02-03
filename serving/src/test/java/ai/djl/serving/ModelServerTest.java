@@ -1051,7 +1051,7 @@ public class ModelServerTest {
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.POST,
-                        "/models?model_name=identity&url="
+                        "/models?model_name=identity&min_worker=1&url="
                                 + URLEncoder.encode(url, StandardCharsets.UTF_8)));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
@@ -1071,11 +1071,20 @@ public class ModelServerTest {
         data.put("inputs", new Object[] {input});
         data.put("outputs", new Object[] {output});
 
+        // trigger model metrics logging
         req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         request(channel, req);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
+        req =
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/v2/models/identity/infer");
+        req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+        request(channel, req);
 
         request(
                 channel,

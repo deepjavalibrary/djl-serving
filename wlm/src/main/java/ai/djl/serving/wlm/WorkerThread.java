@@ -14,6 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Device;
 import ai.djl.inference.Predictor;
+import ai.djl.metric.Metrics;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WorkerJob;
@@ -31,8 +32,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class WorkerThread<I, O> implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerThread.class);
+    private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private String workerName;
+    private String modelName;
     private Predictor<I, O> predictor;
 
     private AtomicBoolean running = new AtomicBoolean(true);
@@ -44,6 +47,8 @@ public final class WorkerThread<I, O> implements Runnable {
     private int workerId;
     private long startTime;
     private boolean fixPoolThread;
+    private boolean logModelMetric;
+    private int metricsAggregation;
 
     /**
      * Builds a workerThread with this builder.
@@ -60,6 +65,14 @@ public final class WorkerThread<I, O> implements Runnable {
         ZooModel<I, O> model = builder.model.getModel(device);
 
         predictor = model.newPredictor();
+        modelName = model.getName();
+        logModelMetric = Boolean.parseBoolean(model.getProperty("log_model_metric"));
+        String value = model.getProperty("metrics_aggregation");
+        if (value == null || value.isBlank()) {
+            metricsAggregation = 1000;
+        } else {
+            metricsAggregation = Integer.parseInt(value);
+        }
     }
 
     /** {@inheritDoc} */
@@ -72,6 +85,13 @@ public final class WorkerThread<I, O> implements Runnable {
         List<I> req = null;
         String errorMessage = "Worker shutting down";
         try {
+            if (logModelMetric) {
+                Metrics metrics = new Metrics();
+                metrics.setLimit(metricsAggregation);
+                metrics.setOnLimit(
+                        (m, s) -> MODEL_METRIC.info("{}-{}", modelName, m.percentile(s, 50)));
+                predictor.setMetrics(metrics);
+            }
             while (isRunning() && !aggregator.isFinished()) {
                 req = aggregator.getRequest();
                 if (req != null && !req.isEmpty()) {
