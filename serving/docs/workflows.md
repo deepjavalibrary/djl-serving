@@ -47,7 +47,7 @@ version: "1.2.0"
 minWorkers: 1
 maxWorkers: 4
 batchSize: 3
-maxBatchDelay: 5000
+maxBatchDelayMillis: 5000
 retryAttempts: 3
 timeout: 5000
 

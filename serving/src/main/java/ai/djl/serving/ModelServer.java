@@ -403,8 +403,8 @@ public class ModelServer {
                             Input.class,
                             Output.class,
                             wlmc.getJobQueueSize(),
-                            wlmc.getMaxIdleTime(),
-                            wlmc.getMaxBatchDelay(),
+                            wlmc.getMaxIdleSeconds(),
+                            wlmc.getMaxBatchDelayMillis(),
                             wlmc.getBatchSize());
             Workflow workflow = new Workflow(modelInfo);
             CompletableFuture<Void> f =

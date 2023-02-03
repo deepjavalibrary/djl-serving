@@ -161,8 +161,8 @@ curl http://localhost:8080/models/mlp
   "minWorkers": 1,
   "maxWorkers": 1,
   "batchSize": 1,
-  "maxBatchDelay": 100,
-  "maxIdleTime": 60,
+  "maxBatchDelayMillis": 100,
+  "maxIdleSeconds": 60,
   "status": "Healthy",
   "loadedAtStartup": false,
   "workers": [

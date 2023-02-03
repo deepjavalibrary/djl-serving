@@ -51,20 +51,11 @@ public class Job<I, O> {
     }
 
     /**
-     * Returns the job begin time.
-     *
-     * @return the job begin time
-     */
-    public long getBegin() {
-        return begin;
-    }
-
-    /**
      * Returns the wait time of this job.
      *
      * @return the wait time of this job in mirco seconds
      */
-    public long getWaitingTime() {
+    public long getWaitingMicroSeconds() {
         return (System.nanoTime() - begin) / 1000;
     }
 }

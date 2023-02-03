@@ -60,8 +60,8 @@ public class DescribeWorkflowResponse {
                 m.setModelName(model.getModelId());
                 m.setModelUrl(model.getModelUrl());
                 m.setBatchSize(model.getBatchSize());
-                m.setMaxBatchDelay(model.getMaxBatchDelay());
-                m.setMaxIdleTime(model.getMaxIdleTime());
+                m.setMaxBatchDelayMillis(model.getMaxBatchDelayMillis());
+                m.setMaxIdleSeconds(model.getMaxIdleSeconds());
                 m.setQueueSize(model.getQueueSize());
                 m.setRequestInQueue(pool.getJobQueue().size());
                 m.setLoadedAtStartup(startupWorkflows.contains(model.getModelId()));
@@ -125,8 +125,8 @@ public class DescribeWorkflowResponse {
         private String modelName;
         private String modelUrl;
         private int batchSize;
-        private int maxBatchDelay;
-        private int maxIdleTime;
+        private int maxBatchDelayMillis;
+        private int maxIdleSeconds;
         private int queueSize;
         private int requestInQueue;
         private String status;
@@ -211,17 +211,17 @@ public class DescribeWorkflowResponse {
          *
          * @return the maximum delay in milliseconds to aggregate a batch
          */
-        public int getMaxBatchDelay() {
-            return maxBatchDelay;
+        public int getMaxBatchDelayMillis() {
+            return maxBatchDelayMillis;
         }
 
         /**
          * Sets the maximum delay in milliseconds to aggregate a batch.
          *
-         * @param maxBatchDelay the maximum delay in milliseconds to aggregate a batch
+         * @param maxBatchDelayMillis the maximum delay in milliseconds to aggregate a batch
          */
-        public void setMaxBatchDelay(int maxBatchDelay) {
-            this.maxBatchDelay = maxBatchDelay;
+        public void setMaxBatchDelayMillis(int maxBatchDelayMillis) {
+            this.maxBatchDelayMillis = maxBatchDelayMillis;
         }
 
         /**
@@ -279,21 +279,21 @@ public class DescribeWorkflowResponse {
         }
 
         /**
-         * Sets the max idle time for worker threads.
+         * Sets the max idle time in seconds for worker threads.
          *
-         * @param maxIdleTime the time a worker thread can be idle before scaling down.
+         * @param maxIdleSeconds the time a worker thread can be idle before scaling down.
          */
-        public void setMaxIdleTime(int maxIdleTime) {
-            this.maxIdleTime = maxIdleTime;
+        public void setMaxIdleSeconds(int maxIdleSeconds) {
+            this.maxIdleSeconds = maxIdleSeconds;
         }
 
         /**
-         * Returns the maximum idle time for worker threads.
+         * Returns the maximum idle time in seconds for worker threads.
          *
-         * @return the maxIdleTime
+         * @return the maximum idle time in seconds
          */
-        public int getMaxIdleTime() {
-            return maxIdleTime;
+        public int getMaxIdleSeconds() {
+            return maxIdleSeconds;
         }
 
         /**

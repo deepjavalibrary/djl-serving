@@ -678,8 +678,8 @@ public class ModelServerTest {
         assertEquals(model.getModelName(), "mlp_2");
         assertNotNull(model.getModelUrl());
         assertEquals(model.getBatchSize(), 1);
-        assertEquals(model.getMaxBatchDelay(), 100);
-        assertEquals(model.getMaxIdleTime(), 60);
+        assertEquals(model.getMaxBatchDelayMillis(), 100);
+        assertEquals(model.getMaxIdleSeconds(), 60);
         assertEquals(model.getQueueSize(), 1000);
         assertTrue(model.getRequestInQueue() >= 0);
         assertEquals(model.getStatus(), "Healthy");

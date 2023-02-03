@@ -81,8 +81,8 @@ public class WorkflowTest {
         ModelInfo<Input, Output> m = workflow.getModels().stream().findFirst().get();
 
         Assert.assertEquals(m.getQueueSize(), 101);
-        Assert.assertEquals(m.getMaxIdleTime(), 61);
-        Assert.assertEquals(m.getMaxBatchDelay(), 301);
+        Assert.assertEquals(m.getMaxIdleSeconds(), 61);
+        Assert.assertEquals(m.getMaxBatchDelayMillis(), 301);
         Assert.assertEquals(m.getBatchSize(), 2);
     }
 
@@ -93,8 +93,8 @@ public class WorkflowTest {
         ModelInfo<Input, Output> m = workflow.getModels().stream().findFirst().get();
 
         Assert.assertEquals(m.getQueueSize(), 102);
-        Assert.assertEquals(m.getMaxIdleTime(), 62);
-        Assert.assertEquals(m.getMaxBatchDelay(), 302);
+        Assert.assertEquals(m.getMaxIdleSeconds(), 62);
+        Assert.assertEquals(m.getMaxBatchDelayMillis(), 302);
         Assert.assertEquals(m.getBatchSize(), 3);
     }
 

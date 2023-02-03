@@ -32,7 +32,7 @@ public class TemporaryBatchAggregator<I, O> extends BatchAggregator<I, O> {
     private static final Logger logger = LoggerFactory.getLogger(TemporaryBatchAggregator.class);
 
     private long idleSince;
-    private long maxIdleTime;
+    private long maxIdleSeconds;
 
     /**
      * a batch aggregator that terminates after a maximum idle time.
@@ -44,17 +44,17 @@ public class TemporaryBatchAggregator<I, O> extends BatchAggregator<I, O> {
             ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
         super(model, jobQueue);
         this.idleSince = System.currentTimeMillis();
-        this.maxIdleTime = model.getMaxIdleTime();
+        this.maxIdleSeconds = model.getMaxIdleSeconds();
     }
 
     /** {@inheritDoc} */
     @Override
     protected List<WorkerJob<I, O>> pollBatch() throws InterruptedException {
         List<WorkerJob<I, O>> list = new ArrayList<>(batchSize);
-        WorkerJob<I, O> wj = jobQueue.poll(maxIdleTime, TimeUnit.SECONDS);
+        WorkerJob<I, O> wj = jobQueue.poll(maxIdleSeconds, TimeUnit.SECONDS);
         if (wj != null && wj.getJob() != null) {
             list.add(wj);
-            drainTo(list, maxBatchDelay);
+            drainTo(list, maxBatchDelayMicros);
             logger.trace("sending jobs, size: {}", list.size());
             idleSince = System.currentTimeMillis();
         }
@@ -65,7 +65,7 @@ public class TemporaryBatchAggregator<I, O> extends BatchAggregator<I, O> {
     @Override
     public boolean isFinished() {
         long idle = System.currentTimeMillis() - idleSince;
-        logger.trace("Temporary batch aggregator idle time (max {}s): {}ms", maxIdleTime, idle);
-        return idle > maxIdleTime * 1000;
+        logger.trace("Temporary batch aggregator idle time (max {}s): {}ms", maxIdleSeconds, idle);
+        return idle > maxIdleSeconds * 1000;
     }
 }

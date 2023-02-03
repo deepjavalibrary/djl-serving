@@ -94,7 +94,7 @@
               <el-col :span="8">
                 <el-form-item label="max_idle_time:">
                   <template slot="label">
-                    <el-tooltip class="item" effect="dark" content="the maximum idle time before the worker thread is scaled down." placement="top"><span>Max idle time:</span></el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="the maximum idle time in seconds before the worker thread is scaled down." placement="top"><span>Max idle time:</span></el-tooltip>
                   </template>
                   <el-input-number size="mini" :min="1" v-model.number="form.max_idle_time"></el-input-number>
                 </el-form-item>
@@ -112,7 +112,7 @@
               <el-col :span="8">
                 <el-form-item label="max_batch_delay:">
                   <template slot="label">
-                    <el-tooltip class="item" effect="dark" content="the maximum delay for batch aggregation, default is 100 milliseconds." placement="top"><span>Max batch delay:</span></el-tooltip>
+                    <el-tooltip class="item" effect="dark" content="the maximum delay in milliseconds for batch aggregation, default is 100." placement="top"><span>Max batch delay:</span></el-tooltip>
                   </template>
                   <el-input-number size="mini" :min="1" v-model.number="form.max_batch_delay"></el-input-number>
                 </el-form-item>

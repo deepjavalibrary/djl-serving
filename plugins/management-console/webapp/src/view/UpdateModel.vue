@@ -50,13 +50,13 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="Max batch delay:" prop="maxBatchDelay">
-              <el-input v-model.number="form.maxBatchDelay"></el-input>
+            <el-form-item label="Max batch delay:" prop="maxBatchDelayMillis">
+              <el-input v-model.number="form.maxBatchDelayMillis"></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="Max idle time:" prop="maxIdleTime">
-              <el-input v-model.number="form.maxIdleTime"></el-input>
+            <el-form-item label="Max idle time:" prop="maxIdleSeconds">
+              <el-input v-model.number="form.maxIdleSeconds"></el-input>
             </el-form-item>
           </el-col>
 
@@ -141,8 +141,8 @@ export default {
         modelUrl: "",
 
         batchSize: 1,
-        maxBatchDelay: 100,
-        maxIdleTime: 60,
+        maxBatchDelayMillis: 100,
+        maxIdleSeconds: 60,
         queueLength: 0,
         status: "",
         loadedAtStartup: false,
@@ -166,8 +166,8 @@ export default {
       activeIndex: 0,
       rules: {
         batchSize: [{ type: 'number', message: 'Batch size must be a number' }],
-        maxBatchDelay: [{ type: 'number', message: 'Max batch delay must be a number' }],
-        maxIdleTime: [{ type: 'number', message: 'Max idle time must be a number' }],
+        maxBatchDelayMillis: [{ type: 'number', message: 'Max batch delay in milliseconds must be a number' }],
+        maxIdleSeconds: [{ type: 'number', message: 'Max idle time in seconds must be a number' }],
       },
       models: [],
       activeDevice: '0',
@@ -218,7 +218,7 @@ export default {
         throw Error('Valid failed')
       }
       let model = { ...this.form }
-      let params = { batch_size: model.batchSize, max_batch_delay: model.maxBatchDelay, max_idle_time: model.maxIdleTime, }
+      let params = { batch_size: model.batchSize, max_batch_delay: model.maxBatchDelayMillis, max_idle_time: model.maxIdleSeconds, }
       params.device = model.workerGroups[this.activeDevice].device.deviceId
       params.min_worker = model.workerGroups[this.activeDevice].minWorkers
       params.max_worker = model.workerGroups[this.activeDevice].maxWorkers
