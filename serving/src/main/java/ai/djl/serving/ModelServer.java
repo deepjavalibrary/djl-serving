@@ -19,10 +19,7 @@ import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
-import ai.djl.repository.MRL;
-import ai.djl.repository.Repository;
 import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.DependencyManager;
@@ -32,7 +29,6 @@ import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.NeuronUtils;
 import ai.djl.serving.util.ServerGroups;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
@@ -58,7 +54,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -381,7 +376,7 @@ public class ModelServer {
             } else {
                 modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
-            Pair<String, Path> pair = downloadModel(modelUrl);
+            Pair<String, Path> pair = ModelInfo.downloadModel(modelUrl);
             if (engineName == null) {
                 engineName = inferEngine(pair.getValue(), pair.getKey());
                 if (engineName == null) {
@@ -393,7 +388,6 @@ public class ModelServer {
             Engine engine = Engine.getEngine(engineName);
             String[] devices = parseDevices(deviceMapping, engine, pair.getValue());
 
-            WlmConfigManager wlmc = WlmConfigManager.getInstance();
             ModelInfo<Input, Output> modelInfo =
                     new ModelInfo<>(
                             modelName,
@@ -402,10 +396,10 @@ public class ModelServer {
                             engineName,
                             Input.class,
                             Output.class,
-                            wlmc.getJobQueueSize(),
-                            wlmc.getMaxIdleSeconds(),
-                            wlmc.getMaxBatchDelayMillis(),
-                            wlmc.getBatchSize());
+                            -1,
+                            -1,
+                            -1,
+                            -1);
             Workflow workflow = new Workflow(modelInfo);
             CompletableFuture<Void> f =
                     modelManager
@@ -465,7 +459,7 @@ public class ModelServer {
                 String[] tokens = endpoint.split(":", -1);
                 workflowName = tokens[0];
                 if (tokens.length > 1) {
-                    Pair<String, Path> pair = downloadModel(workflowUrlString);
+                    Pair<String, Path> pair = ModelInfo.downloadModel(workflowUrlString);
                     String engineName = inferEngine(pair.getValue(), pair.getKey());
                     DependencyManager.getInstance().installEngine(engineName);
                     Engine engine = Engine.getEngine(engineName);
@@ -542,21 +536,9 @@ public class ModelServer {
         }
     }
 
-    private Pair<String, Path> downloadModel(String modelUrl) throws IOException {
-        Repository repository = Repository.newInstance("modelStore", modelUrl);
-        List<MRL> mrls = repository.getResources();
-        if (mrls.isEmpty()) {
-            throw new IllegalArgumentException("Invalid model url: " + modelUrl);
-        }
-
-        Artifact artifact = mrls.get(0).getDefaultArtifact();
-        repository.prepare(artifact);
-        return new Pair<>(artifact.getName(), repository.getResourceDirectory(artifact));
-    }
-
     private String inferEngineFromUrl(String modelUrl) {
         try {
-            Pair<String, Path> pair = downloadModel(modelUrl);
+            Pair<String, Path> pair = ModelInfo.downloadModel(modelUrl);
             return inferEngine(pair.getValue(), pair.getKey());
         } catch (IOException e) {
             logger.warn("Failed to extract model: " + modelUrl, e);
@@ -564,23 +546,10 @@ public class ModelServer {
         }
     }
 
-    private Properties getServingProperties(Path modelDir) {
-        Path file = modelDir.resolve("serving.properties");
-        Properties prop = new Properties();
-        if (Files.isRegularFile(file)) {
-            try (InputStream is = Files.newInputStream(file)) {
-                prop.load(is);
-            } catch (IOException e) {
-                logger.warn("Failed read serving.properties file", e);
-            }
-        }
-        return prop;
-    }
-
     private String inferEngine(Path modelDir, String modelName) {
         modelDir = Utils.getNestedModelDir(modelDir);
 
-        Properties prop = getServingProperties(modelDir);
+        Properties prop = ModelInfo.getServingProperties(modelDir);
         String engine = prop.getProperty("engine");
         if (engine != null) {
             return engine;
@@ -625,7 +594,7 @@ public class ModelServer {
             if (gpuCount > 0) {
                 String engineName = engine.getEngineName();
                 if ("Python".equals(engineName)) {
-                    Properties prop = getServingProperties(modelDir);
+                    Properties prop = ModelInfo.getServingProperties(modelDir);
                     String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
                     v = prop.getProperty("option.tensor_parallel_degree", v);
                     int tensorParallelDegree = Integer.parseInt(v);

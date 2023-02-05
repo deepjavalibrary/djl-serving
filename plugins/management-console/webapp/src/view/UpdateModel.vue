@@ -45,24 +45,29 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="8">
-            <el-form-item label="Batch size:" prop="batchSize">
-              <el-input v-model.number="form.batchSize"></el-input>
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="Max batch delay:" prop="maxBatchDelayMillis">
-              <el-input v-model.number="form.maxBatchDelayMillis"></el-input>
+            <el-form-item label="Job queue size:" prop="queueSize">
+              <el-input v-model.number="form.queueSize" disabled></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item label="Max idle time:" prop="maxIdleSeconds">
-              <el-input v-model.number="form.maxIdleSeconds"></el-input>
+              <el-input v-model.number="form.maxIdleSeconds" disabled></el-input>
             </el-form-item>
           </el-col>
-
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="Batch size:" prop="batchSize">
+              <el-input v-model.number="form.batchSize" disabled></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="Max batch delay:" prop="maxBatchDelayMillis">
+              <el-input v-model.number="form.maxBatchDelayMillis" disabled></el-input>
+            </el-form-item>
+          </el-col>
         </el-row>
       </el-form>
-
     </div>
     <div class="worker-list">
       <div class="title">Worker Groups</div>
@@ -140,10 +145,10 @@ export default {
         modelName: "",
         modelUrl: "",
 
-        batchSize: 1,
-        maxBatchDelayMillis: 100,
-        maxIdleSeconds: 60,
-        queueLength: 0,
+        batchSize: -1,
+        maxBatchDelayMillis: -1,
+        maxIdleSeconds: -1,
+        queueSize: -1,
         status: "",
         loadedAtStartup: false,
         workerGroups: [
@@ -164,11 +169,6 @@ export default {
 
       },
       activeIndex: 0,
-      rules: {
-        batchSize: [{ type: 'number', message: 'Batch size must be a number' }],
-        maxBatchDelayMillis: [{ type: 'number', message: 'Max batch delay in milliseconds must be a number' }],
-        maxIdleSeconds: [{ type: 'number', message: 'Max idle time in seconds must be a number' }],
-      },
       models: [],
       activeDevice: '0',
       addGroupShow: false,
@@ -218,7 +218,7 @@ export default {
         throw Error('Valid failed')
       }
       let model = { ...this.form }
-      let params = { batch_size: model.batchSize, max_batch_delay: model.maxBatchDelayMillis, max_idle_time: model.maxIdleSeconds, }
+      let params = {}
       params.device = model.workerGroups[this.activeDevice].device.deviceId
       params.min_worker = model.workerGroups[this.activeDevice].minWorkers
       params.max_worker = model.workerGroups[this.activeDevice].maxWorkers

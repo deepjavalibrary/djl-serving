@@ -927,8 +927,7 @@ public class ModelServerTest {
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
             assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
-            assertEquals(
-                    resp.getMessage(), "No matching model with specified Input/Output type found.");
+            assertEquals(resp.getType(), "ModelNotFoundException");
         }
     }
 

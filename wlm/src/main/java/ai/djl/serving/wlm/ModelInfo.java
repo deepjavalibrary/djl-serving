@@ -17,23 +17,32 @@ import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
+import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
+import ai.djl.repository.MRL;
+import ai.djl.repository.Repository;
 import ai.djl.repository.zoo.Criteria;
+import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.translate.ServingTranslator;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
+import ai.djl.util.Pair;
 import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** A class represent a loaded model and it's metadata. */
@@ -90,12 +99,6 @@ public final class ModelInfo<I, O> {
         this.criteria = criteria;
         inputClass = criteria.getInputClass();
         outputClass = criteria.getOutputClass();
-
-        WlmConfigManager config = WlmConfigManager.getInstance();
-        queueSize = config.getJobQueueSize();
-        maxIdleSeconds = config.getMaxIdleSeconds();
-        batchSize = config.getBatchSize();
-        maxBatchDelayMillis = config.getMaxBatchDelayMillis();
     }
 
     /**
@@ -147,76 +150,71 @@ public final class ModelInfo<I, O> {
         if (getModels().containsKey(device)) {
             return;
         }
-        Criteria.Builder<I, O> builder;
-        if (criteria != null) {
-            builder = criteria.toBuilder();
-        } else {
-            builder =
-                    Criteria.builder()
-                            .setTypes(inputClass, outputClass)
-                            .optModelUrls(modelUrl)
-                            .optModelName(modelName)
-                            .optEngine(engineName)
-                            .optFilters(filters)
-                            .optArguments(arguments)
-                            .optOptions(options);
-            if (application != null) {
-                builder.optApplication(Application.of(application));
-            }
-            try {
-                if (translator != null) {
-                    Class<? extends ServingTranslator> clazz =
-                            Class.forName(translator).asSubclass(ServingTranslator.class);
-                    builder.optTranslator((Translator<I, O>) clazz.getConstructor().newInstance());
-                }
-                if (translatorFactory != null) {
-                    Class<? extends TranslatorFactory> clazz =
-                            Class.forName(translator).asSubclass(TranslatorFactory.class);
-                    builder.optTranslatorFactory(clazz.getConstructor().newInstance());
-                }
-            } catch (ReflectiveOperationException e) {
-                throw new ModelException("Invalid criteria", e);
-            }
-            if (batchSize > 1) {
-                builder.optArgument("batchifier", "stack");
-            }
-        }
-        logger.info("Loading model {} on {}", id, device);
-        if ("nc".equals(device.getDeviceType())) {
-            String ncs = String.valueOf(device.getDeviceId());
-            builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
-        } else {
-            builder.optDevice(device);
-        }
 
         try {
-            getModels().put(device, builder.build().loadModel());
+            Criteria.Builder<I, O> builder;
+            if (criteria != null) {
+                builder = criteria.toBuilder();
+            } else {
+                // Download the model first, and get model specific configuration
+                // batchSize is required before model loading in dynamic batching case
+                try {
+                    Pair<String, Path> pair = downloadModel(modelUrl);
+                    configPerModelSettings(pair.getValue());
+                } catch (IOException e) {
+                    throw new ModelNotFoundException(e);
+                }
+
+                builder =
+                        Criteria.builder()
+                                .setTypes(inputClass, outputClass)
+                                .optModelUrls(modelUrl)
+                                .optModelName(modelName)
+                                .optEngine(engineName)
+                                .optFilters(filters)
+                                .optArguments(arguments)
+                                .optOptions(options);
+                if (application != null) {
+                    builder.optApplication(Application.of(application));
+                }
+                try {
+                    if (translator != null) {
+                        Class<? extends ServingTranslator> clazz =
+                                Class.forName(translator).asSubclass(ServingTranslator.class);
+                        builder.optTranslator(
+                                (Translator<I, O>) clazz.getConstructor().newInstance());
+                    }
+                    if (translatorFactory != null) {
+                        Class<? extends TranslatorFactory> clazz =
+                                Class.forName(translator).asSubclass(TranslatorFactory.class);
+                        builder.optTranslatorFactory(clazz.getConstructor().newInstance());
+                    }
+                } catch (ReflectiveOperationException e) {
+                    throw new ModelException("Invalid criteria", e);
+                }
+                if (batchSize > 1) {
+                    builder.optArgument("batchifier", "stack");
+                }
+            }
+            logger.info("Loading model {} on {}", id, device);
+            if ("nc".equals(device.getDeviceType())) {
+                String ncs = String.valueOf(device.getDeviceId());
+                builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
+            } else {
+                builder.optDevice(device);
+            }
+
+            ZooModel<I, O> m = builder.build().loadModel();
+            if (criteria != null) {
+                // TODO: use has to manually configure batchifer if using dynamic batch
+                configPerModelSettings(m.getModelPath());
+            }
+            models.put(device, m);
             status = Status.READY;
         } finally {
             if (status == null) {
                 status = Status.FAILED;
             }
-        }
-    }
-
-    /**
-     * Sets a new batchSize and returns a new configured ModelInfo object. You have to
-     * triggerUpdates in the {@code ModelManager} using this new model.
-     *
-     * @param batchSize the batchSize to set
-     * @param maxBatchDelayMillis maximum time to wait for a free space in worker queue after
-     *     scaling up workers before giving up to offer the job to the queue.
-     * @param maxIdleSeconds time a WorkerThread can be idle before scaling down this worker.
-     */
-    public void configureModelBatch(int batchSize, int maxBatchDelayMillis, int maxIdleSeconds) {
-        if (batchSize > 0) {
-            this.batchSize = batchSize;
-        }
-        if (maxBatchDelayMillis >= 0) {
-            this.maxBatchDelayMillis = maxBatchDelayMillis;
-        }
-        if (maxIdleSeconds > 0) {
-            this.maxIdleSeconds = maxIdleSeconds;
         }
     }
 
@@ -475,6 +473,70 @@ public final class ModelInfo<I, O> {
             return engine.defaultDevice();
         }
         return Device.fromName(deviceName, engine);
+    }
+
+    /**
+     * Downloads model from the model URL.
+     *
+     * @param modelUrl the model URL
+     * @return model name and downloaded model path
+     * @throws IOException if failed to download the model
+     */
+    public static Pair<String, Path> downloadModel(String modelUrl) throws IOException {
+        Repository repository = Repository.newInstance("modelStore", modelUrl);
+        List<MRL> mrls = repository.getResources();
+        if (mrls.isEmpty()) {
+            throw new IOException("Invalid model url: " + modelUrl);
+        }
+
+        Artifact artifact = mrls.get(0).getDefaultArtifact();
+        repository.prepare(artifact);
+        return new Pair<>(artifact.getName(), repository.getResourceDirectory(artifact));
+    }
+
+    /**
+     * Loads the serving properties from model folder.
+     *
+     * @param modelDir model directory
+     * @return the serving properties
+     */
+    public static Properties getServingProperties(Path modelDir) {
+        Path file = modelDir.resolve("serving.properties");
+        Properties prop = new Properties();
+        if (Files.isRegularFile(file)) {
+            try (InputStream is = Files.newInputStream(file)) {
+                prop.load(is);
+            } catch (IOException e) {
+                logger.warn("Failed read serving.properties file", e);
+            }
+        }
+        return prop;
+    }
+
+    private void configPerModelSettings(Path modelDir) throws IOException {
+        // per model settings can only be configured once
+        Properties prop = getServingProperties(modelDir);
+        WlmConfigManager wlmc = WlmConfigManager.getInstance();
+        if (queueSize <= 0) {
+            queueSize = intValue(prop, "job_queue_size", wlmc.getJobQueueSize());
+        }
+        if (batchSize <= 0) {
+            batchSize = intValue(prop, "batch_size", wlmc.getBatchSize());
+        }
+        if (maxBatchDelayMillis <= 0) {
+            maxBatchDelayMillis = intValue(prop, "max_batch_delay", wlmc.getMaxBatchDelayMillis());
+        }
+        if (maxIdleSeconds <= 0) {
+            maxIdleSeconds = intValue(prop, "max_idle_time", wlmc.getMaxIdleSeconds());
+        }
+    }
+
+    private static int intValue(Properties prop, String key, int defValue) {
+        String value = prop.getProperty(key);
+        if (value == null) {
+            return defValue;
+        }
+        return Integer.parseInt(value);
     }
 
     /** {@inheritDoc} */

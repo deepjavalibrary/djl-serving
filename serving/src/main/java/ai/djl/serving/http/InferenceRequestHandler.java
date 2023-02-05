@@ -22,7 +22,6 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
@@ -193,7 +192,6 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
             logger.info("Loading model {} from: {}", workflowName, modelUrl);
 
-            WlmConfigManager wlmc = WlmConfigManager.getInstance();
             ModelInfo<Input, Output> modelInfo =
                     new ModelInfo<>(
                             workflowName,
@@ -202,10 +200,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             engineName,
                             Input.class,
                             Output.class,
-                            wlmc.getJobQueueSize(),
-                            wlmc.getMaxIdleSeconds(),
-                            wlmc.getMaxBatchDelayMillis(),
-                            wlmc.getBatchSize());
+                            -1,
+                            -1,
+                            -1,
+                            -1);
             Workflow wf = new Workflow(modelInfo);
 
             modelManager
