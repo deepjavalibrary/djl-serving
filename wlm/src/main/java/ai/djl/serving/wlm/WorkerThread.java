@@ -67,12 +67,7 @@ public final class WorkerThread<I, O> implements Runnable {
         predictor = model.newPredictor();
         modelName = model.getName();
         logModelMetric = Boolean.parseBoolean(model.getProperty("log_model_metric"));
-        String value = model.getProperty("metrics_aggregation");
-        if (value == null || value.isBlank()) {
-            metricsAggregation = 1000;
-        } else {
-            metricsAggregation = Integer.parseInt(value);
-        }
+        metricsAggregation = Integer.parseInt(model.getProperty("metrics_aggregation", "1000"));
     }
 
     /** {@inheritDoc} */
