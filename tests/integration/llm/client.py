@@ -34,7 +34,7 @@ ds_raw_model_spec = {
 
 hf_model_spec = {
     "gpt-neo-2.7b": {
-        "max_memory_per_gpu": 10.0,
+        "max_memory_per_gpu": 8.0,
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
