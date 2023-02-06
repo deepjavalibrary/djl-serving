@@ -137,7 +137,7 @@ class HuggingFaceService(object):
 
         return outputs
 
-    def get_pipeline(self, task: str, device: int, model_id_or_path: str, **kwargs):
+    def get_pipeline(self, task: str, device: int, model_id_or_path: str, kwargs):
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
         if task in {
                 "automatic-speech-recognition",
