@@ -313,9 +313,11 @@ public class PyEngineTest {
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
+            Assert.assertNull(model.getProperty("failed"));
             Input input = new Input();
             input.add("exit", "true");
             Assert.assertThrows(TranslateException.class, () -> predictor.predict(input));
+            Assert.assertEquals(model.getProperty("failed"), "true");
 
             Input input2 = new Input();
             input2.add("data", "input");

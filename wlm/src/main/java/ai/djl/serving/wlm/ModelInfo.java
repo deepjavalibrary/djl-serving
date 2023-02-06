@@ -63,7 +63,7 @@ public final class ModelInfo<I, O> {
     private transient Class<I> inputClass;
     private transient Class<O> outputClass;
     private transient Criteria<I, O> criteria;
-    private transient Map<Device, ZooModel<I, O>> model;
+    private transient Map<Device, ZooModel<I, O>> models;
 
     /**
      * Constructs a new {@code ModelInfo} instance.
@@ -226,10 +226,10 @@ public final class ModelInfo<I, O> {
      * @return all loaded models
      */
     public Map<Device, ZooModel<I, O>> getModels() {
-        if (model == null) {
-            model = new ConcurrentHashMap<>();
+        if (models == null) {
+            models = new ConcurrentHashMap<>();
         }
-        return model;
+        return models;
     }
 
     /**
@@ -296,7 +296,17 @@ public final class ModelInfo<I, O> {
      * @return the model loading status
      */
     public Status getStatus() {
-        return status == null ? Status.PENDING : status;
+        if (status == null) {
+            return Status.PENDING;
+        } else if (status == Status.FAILED) {
+            return Status.FAILED;
+        }
+        for (Model m : getModels().values()) {
+            if (Boolean.parseBoolean(m.getProperty("failed"))) {
+                return Status.FAILED;
+            }
+        }
+        return status;
     }
 
     /**
@@ -411,11 +421,11 @@ public final class ModelInfo<I, O> {
         if (!getModels().isEmpty()) {
             logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
             Path path = null;
-            for (Model m : model.values()) {
+            for (Model m : models.values()) {
                 m.close();
                 path = m.getModelPath();
             }
-            model.clear();
+            models.clear();
             Path cacheDir = Utils.getCacheDir().toAbsolutePath();
             if (Objects.requireNonNull(path).startsWith(cacheDir)) {
                 Utils.deleteQuietly(path);
