@@ -20,7 +20,6 @@ import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
@@ -211,12 +210,11 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         String version = NettyUtils.getParameter(decoder, MODEL_VERSION_PARAMETER, null);
         String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
         String engineName = NettyUtils.getParameter(decoder, ENGINE_NAME_PARAMETER, null);
-        int defJobQueueSize = WlmConfigManager.getInstance().getJobQueueSize();
-        int jobQueueSize = NettyUtils.getIntParameter(decoder, JOB_QUEUE_SIZE, defJobQueueSize);
-        int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, 1);
+        int jobQueueSize = NettyUtils.getIntParameter(decoder, JOB_QUEUE_SIZE, -1);
+        int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, -1);
         int maxBatchDelayMillis =
-                NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, 100);
-        int maxIdleSeconds = NettyUtils.getIntParameter(decoder, MAX_IDLE_TIME_PARAMETER, 60);
+                NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, -1);
+        int maxIdleSeconds = NettyUtils.getIntParameter(decoder, MAX_IDLE_TIME_PARAMETER, -1);
         int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
         int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
         boolean synchronous =
@@ -243,8 +241,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         .thenAccept(
                                 v -> {
                                     for (ModelInfo<Input, Output> m : workflow.getModels()) {
-                                        m.configureModelBatch(
-                                                batchSize, maxBatchDelayMillis, maxIdleSeconds);
                                         modelManager.initWorkers(
                                                 m, deviceName, minWorkers, maxWorkers);
                                     }
@@ -337,10 +333,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             throws ModelNotFoundException {
         try {
             String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
-            int maxIdleSeconds = NettyUtils.getIntParameter(decoder, MAX_IDLE_TIME_PARAMETER, -1);
-            int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, -1);
-            int maxBatchDelayMillis =
-                    NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, -1);
             int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
             int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
 
@@ -373,7 +365,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 }
 
                 for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
-                    modelInfo.configureModelBatch(batchSize, maxBatchDelayMillis, maxIdleSeconds);
                     modelManager.scaleWorkers(modelInfo, deviceName, minWorkers, maxWorkers);
                     String msg =
                             "Workflow \""

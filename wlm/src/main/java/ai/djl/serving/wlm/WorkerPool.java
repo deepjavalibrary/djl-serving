@@ -13,7 +13,6 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.Device;
-import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.serving.wlm.util.WorkerJob;
 
@@ -55,7 +54,6 @@ public class WorkerPool<I, O> {
         this.model = model;
         this.threadPool = threadPool;
         workerGroups = new ConcurrentHashMap<>();
-        jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
     }
 
     ModelInfo<I, O> getModel() {
@@ -138,17 +136,15 @@ public class WorkerPool<I, O> {
                 logger.warn("Cannot scale workers while model is not READY: {}", model);
             }
         }
+
+        // jobQueue should be initialized after model is configure
+        jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
         cleanup();
 
         WorkerGroup<I, O> group =
                 workerGroups.computeIfAbsent(device, d -> new WorkerGroup<>(this, d));
         group.configureWorkers(minWorkers, maxWorkers);
         doScaleWorker(group);
-        Model zooModel = model.getModel(device);
-        String queue = zooModel.getProperty("job_queue_size");
-        if (queue != null && !queue.isEmpty()) {
-            model.setQueueSize(Integer.parseInt(queue));
-        }
         log();
     }
 
@@ -226,8 +222,10 @@ public class WorkerPool<I, O> {
             }
         }
         workerGroups.clear();
-        for (WorkerJob<I, O> wj : jobQueue) {
-            wj.getFuture().cancel(true);
+        if (jobQueue != null) {
+            for (WorkerJob<I, O> wj : jobQueue) {
+                wj.getFuture().cancel(true);
+            }
         }
     }
 

@@ -118,9 +118,6 @@ curl -v -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl
 
 `PUT /workflows/{workflow_name}/{version}`
 
-* batch_size - the inference batch size. The default value is `1`.
-* max_batch_delay - the maximum delay for batch aggregation. The default value is 100 milliseconds.
-* max_idle_time - the maximum idle time before the worker thread is scaled down.
 * min_worker - the minimum number of worker processes. The default value is `1`.
 * max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
 
