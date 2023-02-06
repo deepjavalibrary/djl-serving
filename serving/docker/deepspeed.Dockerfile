@@ -9,14 +9,14 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.6.1-cudnn8-devel-ubuntu20.04
+ARG version=11.7.1-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
-ARG torch_version=1.12.1
-ARG accelerate_version=0.13.2
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.7.5%2Bbf16-py2.py3-none-any.whl"
-ARG transformers_version=4.23.1
-ARG diffusers_version=0.7.2
+ARG torch_version=1.13.1
+ARG accelerate_version=0.16.0
+ARG deepspeed_version=0.8.0
+ARG transformers_version=4.26.0
+ARG diffusers_version=0.12.0
 
 EXPOSE 8080
 
@@ -45,7 +45,7 @@ RUN apt-get update && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu116 && \
-    pip3 install ${deepspeed_wheel} &&  \
+    pip3 install deepspeed==${deepspeed_version} &&  \
     pip3 install transformers==${transformers_version} && \
     pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     pip3 install diffusers[torch]==${diffusers_version} && \
