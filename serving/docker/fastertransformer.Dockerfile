@@ -9,11 +9,11 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.6.1-cudnn8-devel-ubuntu20.04
+ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
 ARG ft_version="release/v5.3_tag"
-ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.12.1_ec2/20221208-234008/d3dae914337cde7e182d28544aed5efce29255c4/torch-1.12.1%2Bcu116-cp38-cp38-linux_x86_64.whl"
+ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
 ARG ompi_version=4.1.4
 ARG transformers_version=4.25.1
 ARG accelerate_version=0.15.0
