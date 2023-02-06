@@ -561,13 +561,15 @@ public class ModelServer {
                 || Files.isRegularFile(modelDir.resolve(modelName + ".py"))) {
             // MMS/TorchServe
             return "Python";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".pt"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".pt"))
+                || Files.isRegularFile(modelDir.resolve("model.pt"))) {
             return "PyTorch";
         } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
             return "TensorFlow";
         } else if (Files.isRegularFile(modelDir.resolve(modelName + "-symbol.json"))) {
             return "MXNet";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".onnx"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".onnx"))
+                || Files.isRegularFile(modelDir.resolve("model.onnx"))) {
             return "OnnxRuntime";
         } else if (Files.isRegularFile(modelDir.resolve(modelName + ".trt"))
                 || Files.isRegularFile(modelDir.resolve(modelName + ".uff"))) {
