@@ -54,6 +54,12 @@
               <el-input v-model.number="form.maxBatchDelay"></el-input>
             </el-form-item>
           </el-col>
+          <el-col :span="8">
+            <el-form-item label="Max idle time:" prop="maxIdleTime">
+              <el-input v-model.number="form.maxIdleTime"></el-input>
+            </el-form-item>
+          </el-col>
+
         </el-row>
       </el-form>
 
@@ -74,11 +80,6 @@
             <el-col :span="8">
               Max worker:
               <el-input-number v-model="form.workerGroups[activeDevice].maxWorkers" size="small" :min="1" @change="workerChange('max')"></el-input-number>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="Max idle time:" prop="maxIdleTime">
-                <el-input v-model.number="form.maxIdleTime"></el-input>
-              </el-form-item>
             </el-col>
           </el-row>
         </el-tab-pane>
