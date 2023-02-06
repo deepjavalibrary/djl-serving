@@ -66,8 +66,8 @@ public class WorkflowDefinition {
     Map<String, String> funcs;
 
     int queueSize;
-    int maxIdleTime;
-    int maxBatchDelay;
+    int maxIdleSeconds;
+    int maxBatchDelayMillis;
     int batchSize;
 
     public static final Gson GSON =
@@ -146,10 +146,14 @@ public class WorkflowDefinition {
                 ModelInfo<Input, Output> md = emd.getValue();
                 md.setModelId(emd.getKey());
                 md.setQueueSize(firstValid(md.getQueueSize(), queueSize, wlmc.getJobQueueSize()));
-                md.setMaxIdleTime(
-                        firstValid(md.getMaxIdleTime(), maxIdleTime, wlmc.getMaxIdleTime()));
-                md.setMaxBatchDelay(
-                        firstValid(md.getMaxBatchDelay(), maxBatchDelay, wlmc.getMaxBatchDelay()));
+                md.setMaxIdleSeconds(
+                        firstValid(
+                                md.getMaxIdleSeconds(), maxIdleSeconds, wlmc.getMaxIdleSeconds()));
+                md.setMaxBatchDelayMillis(
+                        firstValid(
+                                md.getMaxBatchDelayMillis(),
+                                maxBatchDelayMillis,
+                                wlmc.getMaxBatchDelayMillis()));
                 md.setBatchSize(firstValid(md.getBatchSize(), batchSize, wlmc.getBatchSize()));
                 if (name == null) {
                     name = emd.getKey();

@@ -48,8 +48,8 @@ public final class ModelInfo<I, O> {
 
     private int queueSize;
     private int batchSize;
-    private int maxBatchDelay;
-    private int maxIdleTime;
+    private int maxBatchDelayMillis;
+    private int maxIdleSeconds;
 
     private Map<String, String> filters;
     private Map<String, Object> arguments;
@@ -93,9 +93,9 @@ public final class ModelInfo<I, O> {
 
         WlmConfigManager config = WlmConfigManager.getInstance();
         queueSize = config.getJobQueueSize();
-        maxIdleTime = config.getMaxIdleTime();
+        maxIdleSeconds = config.getMaxIdleSeconds();
         batchSize = config.getBatchSize();
-        maxBatchDelay = config.getMaxBatchDelay();
+        maxBatchDelayMillis = config.getMaxBatchDelayMillis();
     }
 
     /**
@@ -108,8 +108,8 @@ public final class ModelInfo<I, O> {
      * @param inputClass the model input class
      * @param outputClass the model output class
      * @param queueSize the maximum request queue size
-     * @param maxIdleTime the initial maximum idle time for workers.
-     * @param maxBatchDelay the initial maximum delay when scaling up before giving up.
+     * @param maxIdleSeconds the initial maximum idle time for workers.
+     * @param maxBatchDelayMillis the initial maximum delay when scaling up before giving up.
      * @param batchSize the batch size for this model.
      */
     public ModelInfo(
@@ -120,8 +120,8 @@ public final class ModelInfo<I, O> {
             Class<I> inputClass,
             Class<O> outputClass,
             int queueSize,
-            int maxIdleTime,
-            int maxBatchDelay,
+            int maxIdleSeconds,
+            int maxBatchDelayMillis,
             int batchSize) {
         this.id = id;
         this.modelUrl = modelUrl;
@@ -129,8 +129,8 @@ public final class ModelInfo<I, O> {
         this.engineName = engineName;
         this.inputClass = inputClass;
         this.outputClass = outputClass;
-        this.maxBatchDelay = maxBatchDelay;
-        this.maxIdleTime = maxIdleTime; // default max idle time 60s
+        this.maxBatchDelayMillis = maxBatchDelayMillis;
+        this.maxIdleSeconds = maxIdleSeconds; // default max idle time 60s
         this.queueSize = queueSize;
         this.batchSize = batchSize;
     }
@@ -204,19 +204,19 @@ public final class ModelInfo<I, O> {
      * triggerUpdates in the {@code ModelManager} using this new model.
      *
      * @param batchSize the batchSize to set
-     * @param maxBatchDelay maximum time to wait for a free space in worker queue after scaling up
-     *     workers before giving up to offer the job to the queue.
-     * @param maxIdleTime time a WorkerThread can be idle before scaling down this worker.
+     * @param maxBatchDelayMillis maximum time to wait for a free space in worker queue after
+     *     scaling up workers before giving up to offer the job to the queue.
+     * @param maxIdleSeconds time a WorkerThread can be idle before scaling down this worker.
      */
-    public void configureModelBatch(int batchSize, int maxBatchDelay, int maxIdleTime) {
+    public void configureModelBatch(int batchSize, int maxBatchDelayMillis, int maxIdleSeconds) {
         if (batchSize > 0) {
             this.batchSize = batchSize;
         }
-        if (maxBatchDelay >= 0) {
-            this.maxBatchDelay = maxBatchDelay;
+        if (maxBatchDelayMillis >= 0) {
+            this.maxBatchDelayMillis = maxBatchDelayMillis;
         }
-        if (maxIdleTime > 0) {
-            this.maxIdleTime = maxIdleTime;
+        if (maxIdleSeconds > 0) {
+            this.maxIdleSeconds = maxIdleSeconds;
         }
     }
 
@@ -345,21 +345,21 @@ public final class ModelInfo<I, O> {
     }
 
     /**
-     * Sets the configured maxIdleTime of workers.
+     * Sets the configured max idle time in seconds of workers.
      *
-     * @param maxIdleTime the configured maxIdleTime of workers
+     * @param maxIdleSeconds the configured max idle time in seconds of workers
      */
-    public void setMaxIdleTime(int maxIdleTime) {
-        this.maxIdleTime = maxIdleTime;
+    public void setMaxIdleSeconds(int maxIdleSeconds) {
+        this.maxIdleSeconds = maxIdleSeconds;
     }
 
     /**
-     * Returns the configured maxIdleTime of workers.
+     * Returns the configured max idle time in seconds of workers.
      *
-     * @return the maxIdleTime
+     * @return the max idle time in seconds
      */
-    public int getMaxIdleTime() {
-        return maxIdleTime;
+    public int getMaxIdleSeconds() {
+        return maxIdleSeconds;
     }
 
     /**
@@ -383,10 +383,10 @@ public final class ModelInfo<I, O> {
     /**
      * Sets the maximum delay in milliseconds to aggregate a batch.
      *
-     * @param maxBatchDelay the maximum delay in milliseconds to aggregate a batch
+     * @param maxBatchDelayMillis the maximum delay in milliseconds to aggregate a batch
      */
-    public void setMaxBatchDelay(int maxBatchDelay) {
-        this.maxBatchDelay = maxBatchDelay;
+    public void setMaxBatchDelayMillis(int maxBatchDelayMillis) {
+        this.maxBatchDelayMillis = maxBatchDelayMillis;
     }
 
     /**
@@ -394,8 +394,8 @@ public final class ModelInfo<I, O> {
      *
      * @return the maximum delay in milliseconds to aggregate a batch
      */
-    public int getMaxBatchDelay() {
-        return maxBatchDelay;
+    public int getMaxBatchDelayMillis() {
+        return maxBatchDelayMillis;
     }
 
     /**

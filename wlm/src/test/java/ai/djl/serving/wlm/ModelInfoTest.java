@@ -37,8 +37,8 @@ public class ModelInfoTest {
                 new ModelInfo<>(
                         "", null, null, "MXNet", Input.class, Output.class, 4711, 1, 300, 1);
         Assert.assertEquals(4711, modelInfo.getQueueSize());
-        Assert.assertEquals(1, modelInfo.getMaxIdleTime());
-        Assert.assertEquals(300, modelInfo.getMaxBatchDelay());
+        Assert.assertEquals(1, modelInfo.getMaxIdleSeconds());
+        Assert.assertEquals(300, modelInfo.getMaxBatchDelayMillis());
         Assert.assertEquals(1, modelInfo.getBatchSize());
     }
 

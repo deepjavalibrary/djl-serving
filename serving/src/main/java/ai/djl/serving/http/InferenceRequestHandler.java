@@ -203,8 +203,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             Input.class,
                             Output.class,
                             wlmc.getJobQueueSize(),
-                            wlmc.getMaxIdleTime(),
-                            wlmc.getMaxBatchDelay(),
+                            wlmc.getMaxIdleSeconds(),
+                            wlmc.getMaxBatchDelayMillis(),
                             wlmc.getBatchSize());
             Workflow wf = new Workflow(modelInfo);
 

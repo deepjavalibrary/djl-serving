@@ -37,7 +37,7 @@ abstract class BatchAggregator<I, O> {
 
     private Dimension dimension;
     protected int batchSize;
-    protected int maxBatchDelay;
+    protected long maxBatchDelayMicros;
     protected List<WorkerJob<I, O>> wjs;
     protected LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
 
@@ -50,7 +50,7 @@ abstract class BatchAggregator<I, O> {
     public BatchAggregator(ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
         this.dimension = new Dimension("Model", model.getModelId());
         this.batchSize = model.getBatchSize();
-        this.maxBatchDelay = model.getMaxBatchDelay();
+        this.maxBatchDelayMicros = model.getMaxBatchDelayMillis() * 1000L;
         this.jobQueue = jobQueue;
         wjs = new ArrayList<>();
     }
@@ -67,7 +67,7 @@ abstract class BatchAggregator<I, O> {
         List<I> list = new ArrayList<>(wjs.size());
         for (WorkerJob<I, O> wj : wjs) {
             Job<I, O> job = wj.getJob();
-            long queueTime = job.getWaitingTime();
+            long queueTime = job.getWaitingMicroSeconds();
             SERVER_METRIC.info("{}", new Metric("QueueTime", queueTime, Unit.MICROSECONDS));
             list.add(job.getInput());
         }
@@ -88,7 +88,7 @@ abstract class BatchAggregator<I, O> {
         for (O output : outputs) {
             WorkerJob<I, O> wj = wjs.get(i++);
             wj.getFuture().complete(output);
-            long latency = wj.getJob().getWaitingTime();
+            long latency = wj.getJob().getWaitingMicroSeconds();
             Metric metric = new Metric("ModelLatency", latency, Unit.MICROSECONDS, dimension);
             SERVER_METRIC.info("{}", metric);
         }
@@ -124,17 +124,17 @@ abstract class BatchAggregator<I, O> {
      */
     public abstract boolean isFinished();
 
-    protected void drainTo(List<WorkerJob<I, O>> list, int maxDelay) throws InterruptedException {
-        long begin = System.currentTimeMillis();
+    protected void drainTo(List<WorkerJob<I, O>> list, long maxDelay) throws InterruptedException {
+        long begin = System.nanoTime();
         jobQueue.drainTo(list, batchSize - 1);
         int remain = batchSize - list.size();
         for (int i = 0; i < remain; ++i) {
-            WorkerJob<I, O> wj = jobQueue.poll(maxDelay, TimeUnit.MILLISECONDS);
+            WorkerJob<I, O> wj = jobQueue.poll(maxDelay, TimeUnit.MICROSECONDS);
             if (wj == null || wj.getJob() == null) {
                 break;
             }
-            long end = System.currentTimeMillis();
-            maxDelay -= end - begin;
+            long end = System.nanoTime();
+            maxDelay -= (end - begin) / 1000;
             begin = end;
             list.add(wj);
             if (maxDelay <= 0) {

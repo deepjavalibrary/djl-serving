@@ -20,9 +20,9 @@ import ai.djl.ndarray.NDManager;
 public final class WlmConfigManager {
 
     private int jobQueueSize = 1000;
-    private int maxIdleTime = 60;
+    private int maxIdleSeconds = 60;
     private int batchSize = 1;
-    private int maxBatchDelay = 300;
+    private int maxBatchDelayMillis = 100;
 
     private static final WlmConfigManager INSTANCE = new WlmConfigManager();
 
@@ -69,17 +69,17 @@ public final class WlmConfigManager {
      *
      * @return the default max idle time
      */
-    public int getMaxIdleTime() {
-        return maxIdleTime;
+    public int getMaxIdleSeconds() {
+        return maxIdleSeconds;
     }
 
     /**
-     * Sets the default max idle time for workers.
+     * Sets the default max idle time in seconds for workers.
      *
-     * @param maxIdleTime the new default max idle time
+     * @param maxIdleSeconds the new default max idle time in seconds
      */
-    public void setMaxIdleTime(int maxIdleTime) {
-        this.maxIdleTime = maxIdleTime;
+    public void setMaxIdleSeconds(int maxIdleSeconds) {
+        this.maxIdleSeconds = maxIdleSeconds;
     }
 
     /**
@@ -101,21 +101,21 @@ public final class WlmConfigManager {
     }
 
     /**
-     * Returns the default maxBatchDelay for the working queue.
+     * Returns the default max batch delay in milliseconds for the working queue.
      *
-     * @return the default max batch delay
+     * @return the default max batch delay in milliseconds
      */
-    public int getMaxBatchDelay() {
-        return maxBatchDelay;
+    public int getMaxBatchDelayMillis() {
+        return maxBatchDelayMillis;
     }
 
     /**
-     * Sets the default maxBatchDelay for the working queue.
+     * Sets the default max batch delay in milliseconds for the working queue.
      *
-     * @param maxBatchDelay the new default maxBatchDelay
+     * @param maxBatchDelayMillis the new default max batch delay in milliseconds
      */
-    public void setMaxBatchDelay(int maxBatchDelay) {
-        this.maxBatchDelay = maxBatchDelay;
+    public void setMaxBatchDelayMillis(int maxBatchDelayMillis) {
+        this.maxBatchDelayMillis = maxBatchDelayMillis;
     }
 
     /**

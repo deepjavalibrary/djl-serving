@@ -155,9 +155,9 @@ public final class ConfigManager {
 
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         instance.withIntProperty(JOB_QUEUE_SIZE, wlmc::setJobQueueSize);
-        instance.withIntProperty(MAX_IDLE_TIME, wlmc::setMaxIdleTime);
+        instance.withIntProperty(MAX_IDLE_TIME, wlmc::setMaxIdleSeconds);
         instance.withIntProperty(BATCH_SIZE, wlmc::setBatchSize);
-        instance.withIntProperty(MAX_BATCH_DELAY, wlmc::setMaxBatchDelay);
+        instance.withIntProperty(MAX_BATCH_DELAY, wlmc::setMaxBatchDelayMillis);
     }
 
     /**
@@ -420,9 +420,9 @@ public final class ConfigManager {
                 + "\nDefault batch_size: "
                 + wlmc.getBatchSize()
                 + "\nDefault max_batch_delay: "
-                + wlmc.getMaxBatchDelay()
+                + wlmc.getMaxBatchDelayMillis()
                 + "\nDefault max_idle_time: "
-                + wlmc.getMaxIdleTime()
+                + wlmc.getMaxIdleSeconds()
                 + "\nModel Store: "
                 + (getModelStore() == null ? "N/A" : getModelStore())
                 + "\nInitial Models: "

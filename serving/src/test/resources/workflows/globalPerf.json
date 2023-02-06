@@ -1,7 +1,7 @@
 {
   "queueSize": 101,
-  "maxIdleTime": 61,
-  "maxBatchDelay": 301,
+  "maxIdleSeconds": 61,
+  "maxBatchDelayMillis": 301,
   "batchSize": 2,
   "models": {
     "m": "https://resources.djl.ai/test-models/mlp.tar.gz"

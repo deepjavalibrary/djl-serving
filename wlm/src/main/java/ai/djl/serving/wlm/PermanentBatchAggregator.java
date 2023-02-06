@@ -48,7 +48,7 @@ public class PermanentBatchAggregator<I, O> extends BatchAggregator<I, O> {
         List<WorkerJob<I, O>> list = new ArrayList<>(batchSize);
         WorkerJob<I, O> wj = jobQueue.take();
         list.add(wj);
-        drainTo(list, maxBatchDelay);
+        drainTo(list, maxBatchDelayMicros);
         logger.trace("sending jobs, size: {}", list.size());
         return list;
     }
