@@ -12,7 +12,7 @@ else
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl software-properties-common
   add-apt-repository -y ppa:deadsnakes/ppa
   apt-get autoremove -y python3
-  apt-get install -y "python${PYTHON_VERSION}" "python${PYTHON_VERSION}-distutils"
+  apt-get install -y "python${PYTHON_VERSION}-dev" "python${PYTHON_VERSION}-distutils"
   ln -sf /usr/bin/"python${PYTHON_VERSION}" /usr/bin/python3
   ln -sf /usr/bin/"python${PYTHON_VERSION}" /usr/bin/python
   curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py

@@ -39,7 +39,7 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/config.properties
 
 # Install all dependencies
-RUN apt-get update && apt-get install -y wget git && \
+RUN apt-get update && apt-get install -y wget git zlib1g-dev && \
     mkdir ompi && cd ompi && \
     wget -q -O - https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-${ompi_version}.tar.gz | tar xzf - && \
     cd openmpi-${ompi_version} && \
