@@ -91,7 +91,7 @@
 
       </el-tabs>
       <ul>
-        <li :class="['worker-item', {'active':activeIndex==index}]" v-for="(item,index) in form.workerGroups[activeDevice].workers" :key="index" @click="activeIndex=index"><img src="../assets/img/worker.png" alt="" srcset=""> worker</li>
+        <li :class="['worker-item', {'active':activeIndex==index}, {'error':item.status!='READY'} ]" v-for="(item,index) in form.workerGroups[activeDevice].workers" :key="index" @click="activeIndex=index"><img src="../assets/img/worker.png" alt="" srcset=""> worker</li>
 
       </ul>
       <div class="worker-info">
@@ -386,6 +386,9 @@ export default {
       .worker-item.active {
         box-sizing: border-box;
         border: 1px solid rgb(69, 255, 69);
+      }
+      .worker-item.error {
+        color: #ff4545;
       }
     }
     .worker-info {
