@@ -138,7 +138,9 @@ public class WorkerPool<I, O> {
         }
 
         // jobQueue should be initialized after model is configure
-        jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
+        if (jobQueue == null) {
+            jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
+        }
         cleanup();
 
         WorkerGroup<I, O> group =
@@ -206,10 +208,7 @@ public class WorkerPool<I, O> {
     /** removes all stopped workers and workers in state error from the pool. */
     public void cleanup() {
         for (WorkerGroup<I, O> group : workerGroups.values()) {
-            group.workers.removeIf(
-                    t ->
-                            t.getState() == WorkerState.WORKER_STOPPED
-                                    || t.getState() == WorkerState.WORKER_ERROR);
+            group.workers.removeIf(WorkerThread::isStale);
         }
     }
 

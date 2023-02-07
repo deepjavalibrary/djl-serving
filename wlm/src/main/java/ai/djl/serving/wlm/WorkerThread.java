@@ -23,6 +23,7 @@ import ai.djl.translate.TranslateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,6 +50,7 @@ public final class WorkerThread<I, O> implements Runnable {
     private boolean fixPoolThread;
     private boolean logModelMetric;
     private int metricsAggregation;
+    private long stateChangeTime;
 
     /**
      * Builds a workerThread with this builder.
@@ -191,7 +193,15 @@ public final class WorkerThread<I, O> implements Runnable {
         if (state != WorkerState.WORKER_SCALED_DOWN) {
             // Don't update the state if it was terminated on purpose.. Scaling in..
             this.state = newState;
+            stateChangeTime = System.currentTimeMillis();
         }
+    }
+
+    boolean isStale() {
+        return (state == WorkerState.WORKER_STOPPED
+                        || state == WorkerState.WORKER_ERROR
+                        || state == WorkerState.WORKER_SCALED_DOWN)
+                && System.currentTimeMillis() - stateChangeTime > Duration.ofMinutes(1).toMillis();
     }
 
     /**

@@ -57,6 +57,8 @@ public class DescribeWorkflowResponse {
             models.add(m);
             WorkerPool<Input, Output> pool = wlm.getWorkerPool(model);
             if (pool != null) {
+                pool.cleanup();
+
                 m.setModelName(model.getModelId());
                 m.setModelUrl(model.getModelUrl());
                 m.setBatchSize(model.getBatchSize());
