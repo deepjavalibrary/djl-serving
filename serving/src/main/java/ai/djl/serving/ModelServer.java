@@ -555,7 +555,7 @@ public class ModelServer {
             return engine;
         }
 
-        modelName = prop.getProperty("modelName", modelName);
+        modelName = prop.getProperty("option.modelName", modelName);
         if (Files.isDirectory(modelDir.resolve("MAR-INF"))
                 || Files.isRegularFile(modelDir.resolve("model.py"))
                 || Files.isRegularFile(modelDir.resolve(modelName + ".py"))) {

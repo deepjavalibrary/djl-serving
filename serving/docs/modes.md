@@ -8,13 +8,52 @@ DJL Serving is a high-performance serving system for deep learning models. DJL S
 2. [Java Mode](#java-mode)
 3. [Binary Mode](#binary-mode)
 
-In addition to the mode specific files, the `serving.properties` is a configuration file that can be used in all modes. Place `serving.properties` in the same directory with your model file to specify configuration for each model.
+In addition to the mode specific files, the `serving.properties` is a configuration file that can be used in all modes.
+Place `serving.properties` in the same directory with your model file to specify configuration for each model.
 
-In `serving.properties`, you can set the following properties and more.
+In `serving.properties`, you can set options (prefixed with `options`) and properties. The options
+will be passed to `Model.load(Path modelPath, String prefix, Map<String, ?> options)` API. It allows
+you set engine specific configurations, for example:
+
+```
+# set model file name prefix if different from folder name
+option.modeName=resnet18_v1
+
+# PyTorch options
+option.mapLocation=true
+option.extraFiles=foo.txt,bar.txt
+
+# ONNXRuntime options
+option.interOpNumThreads=2
+option.intraOpNumThreads=2
+option.executionMode=SEQUENTIAL
+option.optLevel=BASIC_OPT
+option.memoryPatternOptimization=true
+option.cpuArenaAllocator=true
+option.disablePerSessionThreads=true
+option.customOpLibrary=myops.so
+option.disablePerSessionThreads=true
+option.ortDevice=TensorRT/ROCM/CoreML
+
+# Python model options
+option.pythonExecutable=python3
+option.entryPoint=deepspeed.py
+option.handler=hanlde
+option.predict_timeout=120
+option.model_loading_timeout=10
+option.parallel_loading=true
+option.tensor_parallel_degree=2
+```
+
+In `serving.properties`, you can set the following properties. Model properties are accessible to `Translator`
+and python handler functions.
 
 - `engine`: Which Engine to use, values include MXNet, PyTorch, TensorFlow, ONNX, PaddlePaddle, DeepSpeed, etc.
 - `translatorFactory`: Specify the TranslatorFactory.
 - `job_queue_size`: Specify the job queue size at model level, this will override global `job_queue_size`.
+- `batch_size`: the dynamic batch size, default is `1`.
+- `max_batch_delay` - the maximum delay for batch aggregation in millis, default value is `100` milliseconds.
+- `max_idle_time` - the maximum idle time in seconds before the worker thread is scaled down, default is `60` seconds.
 - `log_model_metric`: Enable model metrics (inference, pre-process and post-process latency) logging.
 - `metrics_aggregation`: Number of model metrics to aggregate, default 1000.
 - `minWorkers`: Minimum number of workers.
@@ -24,11 +63,14 @@ In `serving.properties`, you can set the following properties and more.
 - `cpu.minWorkers`: Minimum number of workers for CPU.
 - `cpu.maxWorkers`: Maximum number of workers for CPU.
 
+
 For example, set minimum workers and maximum workers for your model:
 
 ```
 minWorkers=32
 maxWorkers=64
+# idle time in seconds before the worker thread is scaled down
+max_idle_time=120
 ```
 
 Or set minimum workers and maximum workers differently for GPU and CPU:
@@ -45,6 +87,14 @@ Or override global `job_queue_size`:
 ```
 job_queue_size=10
 ```
+
+To enable dynamic batching:
+
+```
+batch_size=2
+max_batch_delay=1
+```
+
 
 An example `serving.properties` can be found [here](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/src/test/resources/identity/serving.properties).
 
