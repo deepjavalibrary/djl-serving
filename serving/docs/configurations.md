@@ -137,10 +137,14 @@ cpu.minWorkers=2
 cpu.maxWorkers=4
 ```
 
-job queue size can be configured at per model level, this will override global `job_queue_size`:
+job queue size, batch size, max batch delay, max worker idle time can be configured at
+per model level, this will override global settings:
 
 ```
 job_queue_size=10
+batch_size=2
+max_batch_delay=1
+max_idle_time=120
 ```
 
 ### Python (DeepSpeed)
@@ -150,7 +154,6 @@ out of memory. You can reduced model loading time by parallel loading workers if
 peak memory won’t cause out of memory:
 
 ```
-parallel_loading=true
 # Allows to load DeepSpeed workers in parallel
 option.parallel_loading=true
 # specify tensor parallel degree (number of partitions)
@@ -158,6 +161,8 @@ option.tensor_parallel_degree=2
 # specify per model timeout
 option.model_loading_timeout=600
 option.predict_timeout=240
+# mark the model as failure after python process crashing 10 times
+retry_threshold=0
 
 # use built-in DeepSpeed handler
 option.entryPoint=djl_python.deepspeed
@@ -169,7 +174,7 @@ option.max_new_tokens=50
 # defines custom environment variables
 env=LARGE_TENSOR=1
 # specify the path to the python executable
-pythonExecutable=/usr/bin/python3
+option.pythonExecutable=/usr/bin/python3
 ```
 
 ## Engine specific settings
