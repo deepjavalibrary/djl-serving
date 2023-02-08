@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import logging
 import os
+import json
 import torch
 from transformers import (AutoConfig, PretrainedConfig, AutoTokenizer,
                           AutoModelForCausalLM,
@@ -19,18 +20,6 @@ from transformers import (AutoConfig, PretrainedConfig, AutoTokenizer,
                           AutoModelForQuestionAnswering, AutoModelForMaskedLM,
                           AutoModelForTokenClassification, pipeline,
                           Conversation, SquadExample)
-import transformers
-from deepspeed.module_inject.replace_policy import (
-    HFBertLayerPolicy,
-    HFGPTNEOLayerPolicy,
-    GPTNEOXLayerPolicy,
-    HFGPTJLayerPolicy,
-    MegatronLayerPolicy,
-    HFGPT2LayerPolicy,
-    BLOOMLayerPolicy,
-    HFOPTLayerPolicy,
-    HFCLIPLayerPolicy,
-)
 import deepspeed
 from djl_python.inputs import Input
 from djl_python.outputs import Output
@@ -38,6 +27,7 @@ from typing import Optional
 
 SUPPORTED_MODEL_TYPES = {
     "roberta",
+    "xlm-roberta",
     "gpt2",
     "bert",
     "gpt_neo",
@@ -73,36 +63,6 @@ TASK_TO_MODEL = {
     "fill-mask": AutoModelForMaskedLM,
     "token-classification": AutoModelForTokenClassification,
     "conversational": AutoModelForCausalLM,
-}
-
-MODEL_TYPE_TO_INJECTION_POLICY = {
-    "roberta": {
-        transformers.models.roberta.modeling_roberta.RobertaLayer:
-        HFBertLayerPolicy
-    },
-    "gpt2": {
-        transformers.models.gpt2.modeling_gpt2.GPT2Block: HFGPT2LayerPolicy
-    },
-    "bert": {
-        transformers.models.bert.modeling_bert.BertLayer: HFBertLayerPolicy
-    },
-    "gpt_neo": {
-        transformers.models.gpt_neo.modeling_gpt_neo.GPTNeoBlock:
-        HFGPTNEOLayerPolicy
-    },
-    "gptj": {
-        transformers.models.gptj.modeling_gptj.GPTJBlock: HFGPTJLayerPolicy
-    },
-    "opt": {
-        transformers.models.opt.modeling_opt.OPTDecoderLayer: HFOPTLayerPolicy
-    },
-    "gpt_neox": {
-        transformers.models.gpt_neox.modeling_gpt_neox.GPTNeoXLayer:
-        GPTNEOXLayerPolicy
-    },
-    "bloom": {
-        transformers.models.bloom.modeling_bloom.BloomBlock: BLOOMLayerPolicy
-    },
 }
 
 
@@ -161,11 +121,20 @@ class DeepSpeedService(object):
             properties.get("tensor_parallel_degree", 1))
         self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage",
                                                 "true").lower() == "true"
-        self.ds_config = {
+        if properties.get("deepspeed_config_path"):
+            with open(properties.get("deepspeed_config_path"), "r") as f:
+                self.ds_config = json.load(f)
+        else:
+            self.ds_config = self._get_ds_config(properties)
+
+    def _get_ds_config(self, properties: dict):
+        ds_config = {
             "replace_with_kernel_inject":
             True,
-            "mp_size":
-            self.tensor_parallel_degree,
+            "dtype":
+            self.data_type,
+            "tensor_parallel":
+            {"tp_size": self.tensor_parallel_degree},
             "mpu":
             None,
             "enable_cuda_graph":
@@ -178,18 +147,18 @@ class DeepSpeedService(object):
             int(properties.get("training_mp_size", 1)),
             "replace_method":
             "auto",
-            "injection_policy":
-            None,
             "max_tokens":
             self.max_tokens,
         }
         if "checkpoint" in properties:
-            self.ds_config["checkpoint"] = os.path.join(
+            ds_config["checkpoint"] = os.path.join(
                 self.model_id_or_path, properties.get("checkpoint"))
-            self.ds_config["base_dir"] = self.model_id_or_path
+            ds_config["base_dir"] = self.model_id_or_path
             if self.data_type is None:
                 raise ValueError(
                     "dtype should also be provided for checkpoint loading")
+        return ds_config
+
 
     def _validate_model_type_and_task(self):
         if os.path.exists(self.model_id_or_path):
@@ -241,13 +210,7 @@ class DeepSpeedService(object):
                 self.model_id_or_path,
                 low_cpu_mem_usage=self.low_cpu_mem_usage,
                 **kwargs)
-        self.ds_config[
-            "dtype"] = torch.int8 if self.data_type == torch.int8 else model.dtype
-        if self.model_config.model_type in MODEL_TYPE_TO_INJECTION_POLICY:
-            self.ds_config[
-                "injection_policy"] = MODEL_TYPE_TO_INJECTION_POLICY[
-                    self.model_config.model_type]
-        engine = deepspeed.init_inference(model, **self.ds_config)
+        engine = deepspeed.init_inference(model, config=self.ds_config)
         tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
         self.pipeline = pipeline(task=self.task,
                                  model=engine.module,
