@@ -22,13 +22,9 @@ from io import BytesIO
 
 
 def get_torch_dtype_from_str(dtype: str):
-    if dtype == "fp32":
-        return torch.float32
     if dtype == "fp16":
         return torch.float16
-    if dtype is None:
-        return None
-    raise ValueError(f"Invalid data type: {dtype}")
+    raise ValueError(f"Invalid data type: {dtype}. DeepSpeed currently only supports fp16 for stable diffusion")
 
 
 class StableDiffusionService(object):
@@ -56,7 +52,12 @@ class StableDiffusionService(object):
         self.device = int(os.getenv("LOCAL_RANK", "0"))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
-        self.ds_config = self._get_ds_config_for_dtype(self.data_type)
+        enable_cuda_graph = False
+        if properties.get("enable_cuda_graph", "false").lower() == "true":
+            if self.tensor_parallel_degree > 1:
+                raise ValueError("enable_cuda_graph optimization can only be used with tensor_parallel_degree=1")
+            enable_cuda_graph = True
+        self.ds_config = self._get_ds_config_for_dtype(self.data_type, enable_cuda_graph)
 
         if os.path.exists(self.model_id_or_path):
             config_file = os.path.join(self.model_id_or_path, "model_index.json")
@@ -66,10 +67,8 @@ class StableDiffusionService(object):
                     f"This is required for loading stable diffusion models from local storage"
                 )
 
-        kwargs = {}
-        if self.data_type == torch.float16:
-            kwargs["torch_dtype"] = torch.float16
-            kwargs["revision"] = "fp16"
+        # DS 0.8.0 only supports fp16 and by this point we have validated dtype
+        kwargs = {"torch_dtype": torch.float16, "revision": "fp16"}
 
         pipeline = DiffusionPipeline.from_pretrained(self.model_id_or_path, **kwargs)
         pipeline.to(f"cuda:{self.device}")
@@ -83,23 +82,18 @@ class StableDiffusionService(object):
         self.pipeline = pipeline
         self.initialized = True
 
-    def _get_ds_config_for_dtype(self, dtype):
+    def _get_ds_config_for_dtype(self, dtype, cuda_graph):
         # This is a workaround due to 2 issues with DeepSpeed 0.7.5
         # 1. No kernel injection is available for stable diffusion using fp32 (kernels only written for fp16)
         # 2. Changes in our bf16 fork raise an error, but the original deepspeed codebase defaults to fp16
         #    when dtype is not set explicitly. We need to be explicit here with this config
         ds_config = {
-            # TODO: Figure out why cuda graph doesn't work for stable diffusion via DS
-            "enable_cuda_graph": False,
+            "enable_cuda_graph": cuda_graph,
             "dtype": dtype,
-            "mp_size": self.tensor_parallel_degree
+            "tensor_parallel": {"tp_size": self.tensor_parallel_degree},
+            "replace_method": "auto",
+            "replace_with_kernel_inject": True,
         }
-        if dtype == torch.float16:
-            ds_config["replace_with_kernel_inject"] = True
-            ds_config["replace_method"] = "auto"
-        else:
-            ds_config["replace_with_kernel_inject"] = False
-            ds_config["replace_method"] = None
         return ds_config
 
     def inference(self, inputs: Input):
