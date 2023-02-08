@@ -50,7 +50,6 @@ package "DJL Serving - single process" {
             MXNet
             OnnxRuntime
             TFLite
-            DLR
             XGBoost
         ]
     }

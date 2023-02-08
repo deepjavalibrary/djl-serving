@@ -191,7 +191,6 @@ By default, the above script will use MXNet as the default Engine, but you can a
 -e OnnxRuntime # pytorch
 -e TFLite # TFLite
 -e TensorRT # TensorRT
--e DLR # Neo DLR
 -e XGBoost # XGBoost
 -e LightGBM # LightGBM
 -e Python # Python script

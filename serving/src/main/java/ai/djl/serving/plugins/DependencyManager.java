@@ -114,9 +114,6 @@ public class DependencyManager {
             case "XGBoost":
                 installDependency("ai.djl.ml.xgboost:xgboost:" + djlVersion);
                 break;
-            case "DLR":
-                installDependency("ai.djl.dlr:dlr-engine:" + djlVersion);
-                break;
             default:
                 break;
         }

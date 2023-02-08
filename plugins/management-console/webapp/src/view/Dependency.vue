@@ -55,7 +55,6 @@
             <el-option label="PaddlePaddle" value="PaddlePaddle"></el-option>
             <el-option label="TFLite" value="TFLite"></el-option>
             <el-option label="XGBoost" value="XGBoost"></el-option>
-            <el-option label="DLR" value="DLR"></el-option>
           </el-select>
         </el-form-item>
 

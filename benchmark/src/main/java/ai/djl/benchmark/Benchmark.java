@@ -124,9 +124,6 @@ public final class Benchmark extends AbstractBenchmark {
         if (System.getProperty("ai.djl.tflite.disable_alternative") == null) {
             System.setProperty("ai.djl.tflite.disable_alternative", "true");
         }
-        if (System.getProperty("ai.djl.dlr.disable_alternative") == null) {
-            System.setProperty("ai.djl.dlr.disable_alternative", "true");
-        }
         if (System.getProperty("ai.djl.paddlepaddle.disable_alternative") == null) {
             System.setProperty("ai.djl.paddlepaddle.disable_alternative", "true");
         }
