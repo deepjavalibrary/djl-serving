@@ -15,7 +15,6 @@ dependencies {
     runtimeOnly "ai.djl.mxnet:mxnet-model-zoo"
     runtimeOnly "ai.djl.paddlepaddle:paddlepaddle-model-zoo"
     runtimeOnly "ai.djl.tflite:tflite-engine"
-    runtimeOnly "ai.djl.dlr:dlr-engine"
     runtimeOnly "ai.djl.ml.xgboost:xgboost"
     runtimeOnly project(":engines:python")
     runtimeOnly "ai.djl.tensorrt:tensorrt"

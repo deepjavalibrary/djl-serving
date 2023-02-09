@@ -17,7 +17,6 @@ You can install extra extensions to enable the following models:
 
 - PaddlePaddle model
 - TFLite model
-- Neo DLR (TVM) model
 - XGBoost model
 - LightGBM model
 - Sentencepiece model

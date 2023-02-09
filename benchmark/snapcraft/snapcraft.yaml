@@ -16,7 +16,6 @@ description: |
   - ONNXRuntime
   - TensorRT
   - TensorFlow Lite
-  - Neo DLR
   - XGBoost
   - Python
 
