@@ -244,7 +244,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh fastertransformer ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
