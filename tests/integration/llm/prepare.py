@@ -141,7 +141,7 @@ def build_ft_raw_model(model):
             f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
         )
     options = ft_model_list[model]
-    options["engine"] = "DeepSpeed"
+    options["engine"] = "FasterTransformer"
     write_properties(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
