@@ -188,11 +188,6 @@ public class ModelServerTest {
 
             String expected = modelDir.toUri().toURL().toString();
 
-            Path dlr = modelDir.resolve("test_model.so");
-            Files.createFile(dlr);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::DLR:*=" + expected);
-
             Path xgb = modelDir.resolve("test_model.json");
             Files.createFile(xgb);
             url = server.mapModelUrl(modelDir);

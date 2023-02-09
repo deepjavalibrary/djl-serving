@@ -63,18 +63,11 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 | PADDLE_LIBRARY_PATH                     | env var/system prop | User provided custom PaddlePaddle native library |
 | ai.djl.paddlepaddle.disable_alternative | system prop         | Disable alternative engine                       |
 
-### Neo DLR (TVM)
-
-| Key                            | Type        | Description                             |
-|--------------------------------|-------------|-----------------------------------------|
-| DLR_LIBRARY_PATH               | env var     | User provided custom DLR native library |
-| ai.djl.dlr.disable_alternative | system prop | Disable alternative engine              |
-
 ### Huggingface tokenizers
 
-| Key              | Type    | Description                             |
-|------------------|---------|-----------------------------------------|
-| TOKENIZERS_CACHE | env var | User provided custom DLR native library |
+| Key              | Type    | Description                            |
+|------------------|---------|----------------------------------------|
+| TOKENIZERS_CACHE | env var | User provided custom native library    |
 
 ### Python
 
@@ -193,7 +186,6 @@ The follow table show some engine specific environment variables that is overrid
 | TF_NUM_INTEROP_THREADS | TensorFlow | default 1, OMP_NUM_THREADS will override this value |
 | TF_NUM_INTRAOP_THREADS | TensorFlow | default 1                                           |
 | TF_CPP_MIN_LOG_LEVEL	  | TensorFlow | default 1                                           |
-| TVM_NUM_THREADS        | DLR/TVM    | default 1, OMP_NUM_THREADS will override this value |
 | MXNET_ENGINE_TYPE      | MXNet      | this value must be `NaiveEngine`                    |
 
 ## Appendix

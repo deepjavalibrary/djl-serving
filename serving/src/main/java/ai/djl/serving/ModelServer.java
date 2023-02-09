@@ -582,9 +582,6 @@ public class ModelServer {
             return "PaddlePaddle";
         } else if (Files.isRegularFile(modelDir.resolve(modelName + ".json"))) {
             return "XGBoost";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".dylib"))
-                || Files.isRegularFile(modelDir.resolve(modelName + ".so"))) {
-            return "DLR";
         }
         logger.warn("Failed to detect engine of the model: {}", modelDir);
         return null;
