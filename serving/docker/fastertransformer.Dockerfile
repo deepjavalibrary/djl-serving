@@ -15,6 +15,7 @@ ARG djl_version=0.21.0~SNAPSHOT
 ARG python_version=3.9
 ARG ft_version="release/v5.3_tag"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
+ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-main%2Bf1e491dd-py3-none-any.whl"
 ARG ompi_version=4.1.4
 ARG transformers_version=4.25.1
 ARG accelerate_version=0.15.0
@@ -48,8 +49,8 @@ RUN apt-get update && apt-get install -y wget git zlib1g-dev && \
     ln -s /usr/local/openmpi-${ompi_version} /usr/local/mpi && \
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh ${python_version} && \
-    pip3 install ${torch_wheel} transformers==${transformers_version} accelerate==${accelerate_version} && \
-    pip3 install cmake && \
+    pip3 install ${torch_wheel} ${ft_wheel} transformers==${transformers_version} accelerate==${accelerate_version} && \
+    pip3 install cmake sentencepiece && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     mv /usr/local/mpi/bin/mpirun /usr/local/mpi/bin/mpirun.real && \
