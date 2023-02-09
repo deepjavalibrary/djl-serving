@@ -33,4 +33,14 @@ public class DsEngineProvider extends PyEngineProvider {
     public int getEngineRank() {
         return PyEngine.RANK + 1;
     }
+
+    /** {@code FtEngineProvider} is the alias of {@link DsEngineProvider}. */
+    public static final class FtEngineProvider extends DsEngineProvider {
+
+        /** {@inheritDoc} */
+        @Override
+        public String getEngineName() {
+            return "FasterTransformer";
+        }
+    }
 }

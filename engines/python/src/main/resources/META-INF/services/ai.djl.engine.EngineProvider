@@ -1,2 +1,3 @@
 ai.djl.python.engine.PyEngineProvider
 ai.djl.python.engine.DsEngineProvider
+ai.djl.python.engine.DsEngineProvider$FtEngineProvider
