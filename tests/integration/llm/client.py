@@ -72,6 +72,12 @@ ds_model_spec = {
     }
 }
 
+ft_raw_model_spec = {
+    "t5-small": {
+        "batch_size": [1, 2]
+    }
+}
+
 sd_model_spec = {
     "stable-diffusion-v1-4": {
         "max_memory_per_gpu": 8.0,
@@ -128,6 +134,14 @@ def batch_generation(batch_size):
         input_sentences *= math.ceil(batch_size / len(input_sentences))
     return input_sentences[:batch_size]
 
+def t5_batch_generation(batch_size):
+    input_sentences = [
+        "translate English to German: The house is wonderful.",
+        "translate English to German: My name is AWS",
+    ]
+    if batch_size > len(input_sentences):
+        input_sentences *= math.ceil(batch_size / len(input_sentences))
+    return input_sentences[:batch_size]
 
 def test_handler(model, model_spec):
     if model not in model_spec:
@@ -205,6 +219,18 @@ def test_sd_handler(model, model_spec):
             for memory in memory_usage:
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
+def test_ft_raw_handler(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{model} is not one of the supporting models {list(ft_raw_model_spec.keys())}"
+        )
+    spec = model_spec[model]
+    for batch_size in spec['batch_size']:
+        print(f"testing ft_handler with model: {model}, batch_size: {batch_size} ")
+        req = {"inputs" : t5_batch_generation(batch_size)}
+        res = send_json(req)
+        res = res.json()
+        assert len(res) == batch_size
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -216,6 +242,8 @@ if __name__ == '__main__':
         test_handler(args.model, ds_model_spec)
     elif args.handler == "stable-diffusion":
         test_sd_handler(args.model, sd_model_spec)
+    elif args.handler == "fastertransformer_raw":
+        test_ft_raw_handler(args.model, ft_raw_model_spec)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")

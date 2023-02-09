@@ -77,6 +77,12 @@ sd_handler_list = {
     },
 }
 
+ft_model_list = {
+    "t5-small": {
+        "option.model_id": "t5-small",
+        "option.tensor_parallel_degree": 4,
+    }
+}
 
 def write_properties(properties):
     model_path = "models/test"
@@ -129,11 +135,23 @@ def build_sd_handler_model(model):
     write_properties(options)
 
 
+def build_ft_raw_model(model):
+    if model not in ft_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
+        )
+    options = ft_model_list[model]
+    options["engine"] = "DeepSpeed"
+    write_properties(options)
+    shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
     'huggingface': build_hf_handler_model,
     "deepspeed_raw": build_ds_raw_model,
-    'stable-diffusion': build_sd_handler_model
+    'stable-diffusion': build_sd_handler_model,
+    'fastertransformer_raw': build_ft_raw_model,
 }
 
 if __name__ == '__main__':

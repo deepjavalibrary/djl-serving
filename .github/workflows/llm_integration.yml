@@ -225,6 +225,49 @@ jobs:
           name: ds-handler-logs
           path: tests/integration/logs/
 
+  ft-raw-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test t5-small
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer_raw t5-small
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer_raw t5-small
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ft-raw-logs
+          path: tests/integration/logs/
 
   stop-runners:
     if: always()
