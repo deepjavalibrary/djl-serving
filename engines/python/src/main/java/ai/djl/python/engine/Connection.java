@@ -95,7 +95,7 @@ class Connection {
     CompletableFuture<Output> send(Input input) throws InterruptedException {
         CompletableFuture<Output> f = new CompletableFuture<>();
         requestHandler.setResponseFuture(f);
-        if (!channel.writeAndFlush(input).sync().isSuccess()) {
+        if (!channel.isActive() || !channel.writeAndFlush(input).sync().isSuccess()) {
             throw new IllegalStateException("Failed to send data to python.");
         }
         return f;

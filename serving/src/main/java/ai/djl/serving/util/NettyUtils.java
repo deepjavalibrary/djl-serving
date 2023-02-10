@@ -339,11 +339,19 @@ public final class NettyUtils {
         HttpUtil.setContentLength(resp, resp.content().readableBytes());
         if (!keepAlive || code >= 400) {
             headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            ChannelFuture f = channel.writeAndFlush(resp);
-            f.addListener(ChannelFutureListener.CLOSE);
+            if (channel.isActive()) {
+                ChannelFuture f = channel.writeAndFlush(resp);
+                f.addListener(ChannelFutureListener.CLOSE);
+            } else {
+                logger.warn("Channel is closed by peer.");
+            }
         } else {
             headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-            channel.writeAndFlush(resp);
+            if (channel.isActive()) {
+                channel.writeAndFlush(resp);
+            } else {
+                logger.warn("Channel is closed by peer.");
+            }
         }
     }
 
