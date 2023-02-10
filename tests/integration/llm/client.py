@@ -74,7 +74,8 @@ ds_model_spec = {
 
 ft_raw_model_spec = {
     "t5-small": {
-        "batch_size": [1, 2]
+        "batch_size": [1, 2],
+        "max_memory_per_gpu": 2
     }
 }
 
@@ -137,7 +138,8 @@ def batch_generation(batch_size):
 def t5_batch_generation(batch_size):
     input_sentences = [
         "translate English to German: The house is wonderful.",
-        "translate English to German: My name is AWS",
+        "summarize: state authorities dispatched emergency crews tuesday to survey the damage after an onslaught \
+             of severe weather in mississippi…",
     ]
     if batch_size > len(input_sentences):
         input_sentences *= math.ceil(batch_size / len(input_sentences))
@@ -230,7 +232,12 @@ def test_ft_raw_handler(model, model_spec):
         req = {"inputs" : t5_batch_generation(batch_size)}
         res = send_json(req)
         res = res.json()
+        print("inference output: ", res)
         assert len(res) == batch_size
+        memory_usage = get_gpu_memory()
+        logging.info(memory_usage)
+        for memory in memory_usage:
+            assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 if __name__ == '__main__':
     args = parser.parse_args()
