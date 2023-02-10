@@ -607,7 +607,8 @@ public class ModelServer {
                         }
                         gpuCount = procs;
                     }
-                } else if ("DeepSpeed".equals(engineName)) {
+                } else if ("DeepSpeed".equals(engineName)
+                        || "FasterTransformer".equals(engineName)) {
                     return new String[] {"0"};
                 }
 
