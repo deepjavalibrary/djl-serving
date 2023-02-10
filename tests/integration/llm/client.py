@@ -89,6 +89,10 @@ ft_raw_model_spec = {
         "batch_size": [1, 2],
         "max_memory_per_gpu": 5.0
     },
+    "flan-t5-xxl": {
+        "batch_size": [1, 2],
+        "max_memory_per_gpu": 10
+    }
 }
 
 sd_model_spec = {
@@ -147,6 +151,7 @@ def batch_generation(batch_size):
         input_sentences *= math.ceil(batch_size / len(input_sentences))
     return input_sentences[:batch_size]
 
+
 def t5_batch_generation(batch_size):
     input_sentences = [
         "translate English to German: The house is wonderful.",
@@ -156,6 +161,7 @@ def t5_batch_generation(batch_size):
     if batch_size > len(input_sentences):
         input_sentences *= math.ceil(batch_size / len(input_sentences))
     return input_sentences[:batch_size]
+
 
 def test_handler(model, model_spec):
     if model not in model_spec:
@@ -233,6 +239,7 @@ def test_sd_handler(model, model_spec):
             for memory in memory_usage:
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
+
 def test_ft_raw_handler(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -253,6 +260,7 @@ def test_ft_raw_handler(model, model_spec):
         logging.info(memory_usage)
         for memory in memory_usage:
             assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
