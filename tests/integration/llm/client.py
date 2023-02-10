@@ -76,7 +76,19 @@ ft_raw_model_spec = {
     "t5-small": {
         "batch_size": [1, 2],
         "max_memory_per_gpu": 2
-    }
+    },
+    "gpt2-xl": {
+        "batch_size": [1, 2],
+        "max_memory_per_gpu": 7.0
+    },
+    "facebook/opt-13b": {
+        "batch_size": [1, 2],
+        "max_memory_per_gpu": 15.0
+    },
+    "bigscience/bloomz-3b": {
+        "batch_size": [1, 2],
+        "max_memory_per_gpu": 8.0
+    },
 }
 
 sd_model_spec = {
@@ -228,11 +240,14 @@ def test_ft_raw_handler(model, model_spec):
         )
     spec = model_spec[model]
     for batch_size in spec['batch_size']:
-        print(f"testing ft_handler with model: {model}, batch_size: {batch_size} ")
-        req = {"inputs" : t5_batch_generation(batch_size)}
+        logging.info(f"testing ft_handler with model: {model}, batch_size: {batch_size} ")
+        if "t5" in model:
+            req = {"inputs" : t5_batch_generation(batch_size)}
+        else:
+            req = {"inputs": batch_generation(batch_size)}
         res = send_json(req)
         res = res.json()
-        print("inference output: ", res)
+        logging.info("inference output: ", res)
         assert len(res) == batch_size
         memory_usage = get_gpu_memory()
         logging.info(memory_usage)

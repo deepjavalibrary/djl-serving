@@ -258,6 +258,33 @@ jobs:
           serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py fastertransformer_raw t5-small
           docker rm -f $(docker ps -aq)
+      - name: Test gpt2-xl
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer_raw gpt2-xl
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer_raw gpt2-xl
+          docker rm -f $(docker ps -aq)
+      - name: Test facebook/opt-13b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer_raw facebook/opt-13b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer_raw facebook/opt-13b
+          docker rm -f $(docker ps -aq)
+      - name: Test bigscience/bloomz-3b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer_raw bigscience/bloomz-3b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer_raw bigscience/bloomz-3b
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration

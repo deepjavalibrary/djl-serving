@@ -81,7 +81,19 @@ ft_model_list = {
     "t5-small": {
         "option.model_id": "t5-small",
         "option.tensor_parallel_degree": 4,
-    }
+    },
+    "gpt2-xl": {
+        "option.model_id": "gpt2-xl",
+        "option.tensor_parallel_degree": 1,
+    },
+    "facebook/opt-13b": {
+        "option.model_id": "facebook/opt-13b",
+        "option.tensor_parallel_degree": 4,
+    },
+    "bigscience/bloomz-3b": {
+        "option.model_id": "bigscience/bloomz-3b",
+        "option.tensor_parallel_degree": 2,
+    },
 }
 
 def write_properties(properties):
