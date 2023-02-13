@@ -227,7 +227,7 @@ jobs:
 
   ft-raw-test:
     runs-on: [ self-hosted, g5 ]
-    timeout-minutes: 120
+    timeout-minutes: 90
     needs: create-runners
     steps:
       - uses: actions/checkout@v3

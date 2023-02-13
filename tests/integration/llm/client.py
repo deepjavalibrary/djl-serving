@@ -247,7 +247,7 @@ def test_ft_raw_handler(model, model_spec):
             req = {"inputs": batch_generation(batch_size)}
         res = send_json(req)
         res = res.json()
-        logging.info("inference output: ", res)
+        logging.info(res)
         assert len(res) == batch_size
         memory_usage = get_gpu_memory()
         logging.info(memory_usage)
