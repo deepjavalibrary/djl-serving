@@ -85,9 +85,9 @@ ft_raw_model_spec = {
         "batch_size": [1, 2],
         "max_memory_per_gpu": 15.0
     },
-    "bigscience/bloomz-3b": {
+    "bigscience/bloom-7b1": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 8.0
+        "max_memory_per_gpu": 17.0
     },
 }
 

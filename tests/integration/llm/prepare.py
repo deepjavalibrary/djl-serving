@@ -87,11 +87,11 @@ ft_model_list = {
         "option.tensor_parallel_degree": 1,
     },
     "facebook/opt-13b": {
-        "option.model_id": "facebook/opt-13b",
+        "option.s3url": "s3://djl-llm/opt-13b/",
         "option.tensor_parallel_degree": 4,
     },
-    "bigscience/bloomz-3b": {
-        "option.model_id": "bigscience/bloomz-3b",
+    "bigscience/bloom-7b1": {
+        "option.s3url": "s3://djl-llm/bloom-7b1/",
         "option.tensor_parallel_degree": 2,
     },
 }
