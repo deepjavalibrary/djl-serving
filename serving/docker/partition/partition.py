@@ -10,17 +10,19 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import subprocess
-import logging
 import sys
 import os
 import json
-import argparse
-import zipfile
 import glob
+import shutil
+import zipfile
+import logging
+import argparse
+import subprocess
 
 from pathlib import Path
 from properties_manager import PropertiesManager
+from huggingface_hub import snapshot_download
 
 MASTER_ADDR = "127.0.0.1"
 MASTER_PORT = 29761
@@ -28,11 +30,26 @@ MASTER_PORT = 29761
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
 FILES_TO_EXTRACT = [
-    'djl_python/', 'djl_python/deepspeed.py', 'djl_python/inputs.py',
-    'djl_python/outputs.py', 'djl_python/pair_list.py',
-    'djl_python/np_util.py', 'djl_python/service_loader.py'
+    'djl_python/',
+    'djl_python/deepspeed.py',
+    'djl_python/inputs.py',
+    'djl_python/outputs.py',
+    'djl_python/pair_list.py',
+    'djl_python/np_util.py',
+    'djl_python/service_loader.py'
 ]
 
+CONFIG_FILES_PATTERNS = [
+    "*.json",
+    "*.txt"
+]
+
+ALLOW_PATTERNS = [
+    "*.json",
+    "*.pt",
+    "*.bin",
+    "*.txt"
+]
 
 def get_python_executable():
     python_executable = os.environ.get("PYTHON_EXECUTABLE")
@@ -45,13 +62,18 @@ def get_python_executable():
 class PartitionService(object):
     def __init__(self, props_manager):
         self.properties_manager = props_manager
-        self.properties = props_manager.properties()
+        self.properties = props_manager.properties
         self.install_requirements_file()
-        self.download_model()
+        self.download_model_from_s3()
 
-    def download_model(self):
+    def download_model_from_s3(self):
         if "s3url" not in self.properties:
             return
+        elif 'model_id' in self.properties:
+            raise ValueError("Both model_id and s3_url cannot be in serving.properties")
+        elif 'model_dir' in self.properties:
+            raise ValueError("Both model_dir and s3_url cannot be in serving.properties")
+
         download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
                                       '/tmp/download/model/')
 
@@ -80,11 +102,11 @@ class PartitionService(object):
                         download_dir]
 
         subprocess.run(commands)
-        self.properties['model_id'] = download_dir
+        self.properties['model_dir'] = download_dir
 
     def install_requirements_file(self):
-        model_dir = self.properties.get("model_dir")
-        file = os.path.join(model_dir, 'requirements.txt')
+        req_file_dir = self.properties_manager.properties_dir
+        file = os.path.join(req_file_dir, 'requirements.txt')
         if os.path.isfile(file):
             command = [
                 get_python_executable(), "-m", "pip", "-q", "install", "-r",
@@ -102,29 +124,75 @@ class PartitionService(object):
                 logging.exception(
                     f"Could not install requirements.txt {str(e)}")
 
-    def get_environmental_vars(self):
+    def set_environmental_vars(self):
+        environments = {}
         python_path = os.environ.get("PYTHONPATH")
         python_path = f"{python_path},{PYTHON_CACHE_DIR}" if python_path else PYTHON_CACHE_DIR
-        python_path += self.properties['model_dir']
+        if 'model_dir' in self.properties:
+            python_path += self.properties['model_dir']
+        environments['PYTHONPATH'] = PYTHON_CACHE_DIR
+        os.environ.update(environments)
+
+    def download_config_from_hf(self):
+        if 'model_id' not in self.properties:
+            return
+
+        download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
+                                      '/tmp/download/model/')
+
+        model_name = self.properties['model_id']
+        downloaded_dir = snapshot_download(
+            repo_id=model_name,
+            cache_dir=download_dir,
+            allow_patterns=CONFIG_FILES_PATTERNS,
+        )
+        return downloaded_dir
+
+    def copy_config_files(self):
+        model_dir = self.properties['model_dir']
+        if model_dir is None and 'model_id' in self.properties:
+            model_dir = self.download_config_from_hf()
+
+        config_files = []
+        for pattern in CONFIG_FILES_PATTERNS:
+            config_files += glob.glob(os.path.join(model_dir, pattern))
+
+        for file in config_files:
+            shutil.copy(file, dst=self.properties['save_mp_checkpoint_path'])
 
     def run_partition(self):
         commands = [
             "mpirun", "-N",
             self.properties.get("tensor_parallel_degree", 1),
-            "--allow-run-as-root", "--mca", "btl_vader_single_copy_mechanism",
-            "none", "--tag-output", "-x", "FI_PROVIDER=efa", "-x",
-            "RDMAV_FORK_SAFE=1", "-x", "FI_EFA_USE_DEVICE_RDMA=1", "-x",
-            "LD_LIBRARY_PATH", "-x", f"MASTER_ADDR={MASTER_ADDR}", "-x",
-            f"MASTER_PORT={MASTER_PORT}", "-x", "PYTHONPATH",
+            "--allow-run-as-root",
+            "--mca",
+            "btl_vader_single_copy_mechanism",
+            "none",
+            "--tag-output",
+            "-x",
+            "FI_PROVIDER=efa",
+            "-x",
+            "RDMAV_FORK_SAFE=1",
+            "-x",
+            "FI_EFA_USE_DEVICE_RDMA=1",
+            "-x",
+            "LD_LIBRARY_PATH",
+            "-x",
+            f"MASTER_ADDR={MASTER_ADDR}",
+            "-x",
+            f"MASTER_PORT={MASTER_PORT}",
+            "-x",
+            "PYTHONPATH",
             get_python_executable(), "run_partition.py", "--properties",
             str(json.dumps(self.properties))
         ]
-
-        result = subprocess.run(commands, env=self.get_environmental_vars())
+        self.set_environmental_vars()
+        result = subprocess.run(commands)
         logging.info(result)
         if result.returncode == 0:
             logging.info(f"Partitioning done.")
             self.properties_manager.generate_properties_file()
+            self.copy_config_files()
         else:
             raise Exception("Partitioning was not successful.")
 
@@ -153,7 +221,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    extract_python_jar()
+    #extract_python_jar()
 
     properties_manager = PropertiesManager(args.model_dir)
     service = PartitionService(properties_manager)
