@@ -89,10 +89,12 @@ ft_model_list = {
     "facebook/opt-13b": {
         "option.s3url": "s3://djl-llm/opt-13b/",
         "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp16"
     },
     "bigscience/bloom-7b1": {
         "option.s3url": "s3://djl-llm/bloom-7b1/",
         "option.tensor_parallel_degree": 2,
+        "option.dtype": "fp16"
     },
 }
 
