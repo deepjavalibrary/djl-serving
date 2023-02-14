@@ -2,10 +2,11 @@
 
 ## Available Plugins
 
- - [Static File Plugin](../../plugins/static-file-plugin/README.md) - Allows DJL Serving to also serve static files
- - [Plugin Management Plugin](../../plugins/plugin-management-plugin/README.md) - Adds plugin management to the management API
- - [DJL Central](../../central/README.md) - DJL Central is added as a DJL Serving plugin
-
+- [Management console](../../plugins/kserve/README.md) - KServe V2 Protocol support
+- [KServe plugin](../../plugins/management-console/README.md) - DJL Management console UI
+- [Static File plugin](../../plugins/static-file-plugin/README.md) - Allows DJL Serving to also serve static files
+- [Plugin Management plugin](../../plugins/plugin-management-plugin/README.md) - Adds plugin management to the management API
+ 
 ## Installing plug-ins
 
 The model server looks for plug-ins during startup in the plugin folder and register this plug-ins.
