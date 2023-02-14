@@ -49,3 +49,8 @@ services:
       context: .
       dockerfile: paddle-cu112.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}paddle-cu112${NIGHTLY}"
+  pytorch-inf2:
+    build:
+      context: .
+      dockerfile: pytorch-inf2.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-inf2${NIGHTLY}"

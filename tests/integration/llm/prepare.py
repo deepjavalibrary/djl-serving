@@ -126,6 +126,15 @@ ft_model_list = {
     }
 }
 
+transformers_neuronx_handler_list = {
+    "gpt2": {
+        "option.tensor_parallel_degree": 2,
+        "option.batch_size": 4,
+        "option.dtype": "f32",
+        "option.n_positions": 128,
+    },
+}
+
 
 def write_properties(properties):
     model_path = "models/test"
@@ -202,13 +211,26 @@ def build_ft_raw_model(model):
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
 
+def build_transformers_neuronx_model(model):
+    if model not in transformers_neuronx_handler_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(transformers_neuronx_handler_list.keys())}"
+        )
+    options = transformers_neuronx_handler_list[model]
+    options["engine"] = "Python"
+    write_properties(options)
+    shutil.copyfile("llm/transformers-neuronx-gpt2-model.py",
+                    "models/test/model.py")
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
     'huggingface': build_hf_handler_model,
     "deepspeed_raw": build_ds_raw_model,
     'stable-diffusion': build_sd_handler_model,
     'fastertransformer_raw': build_ft_raw_model,
-    'deepspeed_aot': build_ds_aot_model
+    'deepspeed_aot': build_ds_aot_model,
+    'transformers_neuronx': build_transformers_neuronx_model,
 }
 
 if __name__ == '__main__':

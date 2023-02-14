@@ -126,6 +126,8 @@ ds_aot_model_spec = {
     }
 }
 
+transformers_neuronx_model_spec = {"gpt2": {"seq_length": [64, 128]}}
+
 
 def check_worker_number(desired):
     endpoint = "http://127.0.0.1:8080/models/test"
@@ -305,6 +307,29 @@ def test_ft_raw_handler(model, model_spec):
             assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
+def test_transformers_neuronx_handler(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{model} is not one of the supporting models {list(transformers_neuronx_model_spec.keys())}"
+        )
+    spec = model_spec[model]
+    for seq_length in spec["seq_length"]:
+        print(
+            f"testing transformers_neuronx_handler with model: {model}, seq_length: {seq_length} "
+        )
+        text = "Hello, I'm a language model,"
+        compiled_batch_size = 4
+        req = {
+            "seq_length": seq_length,
+            "text": text,
+        }
+        res = send_json(req)
+        res = res.json()
+        logging.info(res)
+        assert len(res["outputs"]) == compiled_batch_size
+        assert all([text in t for t in res["outputs"]])
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
     if args.handler == "deepspeed_raw":
@@ -319,6 +344,9 @@ if __name__ == '__main__':
         test_ft_raw_handler(args.model, ft_raw_model_spec)
     elif args.handler == "deepspeed_aot":
         test_ds_raw_model(args.model, ds_aot_model_spec)
+    elif args.handler == "transformers_neuronx":
+        test_transformers_neuronx_handler(args.model,
+                                          transformers_neuronx_model_spec)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")

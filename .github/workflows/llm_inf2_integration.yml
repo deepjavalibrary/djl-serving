@@ -7,15 +7,15 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
-#  schedule:
-#    - cron: '0 15 * * *'
+  schedule:
+    - cron: '0 15 * * *'
 
 
 jobs:
   create-runners:
     runs-on: [self-hosted, scheduler]
     steps:
-      - name: Create new Inf2.2xl instance
+      - name: Create new Inf2.24xl instance
         id: create_inf2
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
