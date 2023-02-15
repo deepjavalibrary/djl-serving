@@ -9,7 +9,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.7.1-cudnn8-devel-ubuntu22.04
+ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
 ARG torch_version=1.13.1
@@ -44,7 +44,7 @@ RUN apt-get update && \
     scripts/install_python.sh && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu116 && \
+    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
     pip3 install deepspeed==${deepspeed_version} &&  \
     pip3 install transformers==${transformers_version} && \
     pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
