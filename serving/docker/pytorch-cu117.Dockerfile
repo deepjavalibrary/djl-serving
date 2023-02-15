@@ -69,3 +69,4 @@ RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_
 
 ENV MODEL_LOADING_TIMEOUT=2400
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.transformers="true"
+LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
