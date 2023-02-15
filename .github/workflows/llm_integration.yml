@@ -24,8 +24,18 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g5 $token djl-serving
+      - name: Create new G5 instance
+        id: create_gpu2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
     outputs:
-      gpu_instance_id: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
+      gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
+      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g5_instance_id }}
 
   ds-raw-test:
     runs-on: [ self-hosted, g5 ]
@@ -284,6 +294,14 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py fastertransformer_raw bigscience/bloom-3b
+      - name: Test flan-t5-xxl
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer_raw flan-t5-xxl
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer_raw flan-t5-xxl
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
@@ -304,5 +322,7 @@ jobs:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
           ./stop_instance.sh $instance_id

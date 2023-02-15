@@ -97,7 +97,13 @@ ft_model_list = {
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1,
     },
+    "flan-t5-xxl": {
+        "option.s3url": "s3://djl-llm/flan-t5-xxl/",
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp16"
+    }
 }
+
 
 def write_properties(properties):
     model_path = "models/test"
@@ -156,7 +162,7 @@ def build_ft_raw_model(model):
             f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
         )
     options = ft_model_list[model]
-    options["engine"] = "DeepSpeed"
+    options["engine"] = "FasterTransformer"
     write_properties(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
