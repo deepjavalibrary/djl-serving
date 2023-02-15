@@ -462,12 +462,79 @@ public final class ModelInfo<I, O> {
     }
 
     /**
+     * Infers engine name from model URL.
+     *
+     * @param modelUrl the model URL
+     * @return the engine name
+     */
+    public static String inferEngineFromUrl(String modelUrl) {
+        try {
+            Pair<String, Path> pair = ModelInfo.downloadModel(modelUrl);
+            return ModelInfo.inferEngine(pair.getValue(), pair.getKey());
+        } catch (IOException e) {
+            logger.warn("Failed to extract model: " + modelUrl, e);
+            return null;
+        }
+    }
+
+    /**
+     * Infers engine name from model directory.
+     *
+     * @param modelDir the model directory
+     * @param modelName the model name
+     * @return the engine name
+     */
+    public static String inferEngine(Path modelDir, String modelName) {
+        modelDir = Utils.getNestedModelDir(modelDir);
+
+        Properties prop = getServingProperties(modelDir);
+        String engine = prop.getProperty("engine");
+        if (engine != null) {
+            return engine;
+        }
+
+        modelName = prop.getProperty("option.modelName", modelName);
+        if (Files.isDirectory(modelDir.resolve("MAR-INF"))
+                || Files.isRegularFile(modelDir.resolve("model.py"))
+                || Files.isRegularFile(modelDir.resolve(modelName + ".py"))) {
+            // MMS/TorchServe
+            return "Python";
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".pt"))
+                || Files.isRegularFile(modelDir.resolve("model.pt"))) {
+            return "PyTorch";
+        } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
+            return "TensorFlow";
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + "-symbol.json"))) {
+            return "MXNet";
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".onnx"))
+                || Files.isRegularFile(modelDir.resolve("model.onnx"))) {
+            return "OnnxRuntime";
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".trt"))
+                || Files.isRegularFile(modelDir.resolve(modelName + ".uff"))) {
+            return "TensorRT";
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".tflite"))) {
+            return "TFLite";
+        } else if (Files.isRegularFile(modelDir.resolve("model"))
+                || Files.isRegularFile(modelDir.resolve("__model__"))
+                || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
+            return "PaddlePaddle";
+        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".json"))) {
+            return "XGBoost";
+        }
+        logger.warn("Failed to detect engine of the model: {}", modelDir);
+        return null;
+    }
+
+    /**
      * Returns the default device for this model if device is null.
      *
      * @param deviceName the device to use if it is not null
      * @return a non-null device
      */
     public Device withDefaultDevice(String deviceName) {
+        if (engineName == null && modelUrl != null) {
+            engineName = inferEngineFromUrl(modelUrl);
+        }
         Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
         if (deviceName == null) {
             return engine.defaultDevice();
