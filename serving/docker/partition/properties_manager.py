@@ -34,6 +34,7 @@ class PropertiesManager(object):
         self.set_and_validate_model_dir()
         self.validate_engine()
         self.validate_tp_degree()
+        self.set_and_validate_entry_point()
 
     def load_properties(self):
         properties_file = os.path.join(self.properties_dir, 'serving.properties')
@@ -103,3 +104,13 @@ class PropertiesManager(object):
         tensor_parallel_degree = self.properties['tensor_parallel_degree']
         if num_gpus < int(tensor_parallel_degree):
             raise ValueError(f'GPU devices are not enough to run {tensor_parallel_degree} partitions.')
+
+    def set_and_validate_entry_point(self):
+        if "entryPoint" not in self.properties:
+            entry_point = os.environ.get("DJL_ENTRY_POINT")
+            if entry_point is None:
+                entry_point_file = glob.glob(os.path.join(self.properties_dir, 'model.py'))
+                if entry_point_file:
+                    self.properties['entryPoint'] = 'model.py'
+                else:
+                    raise FileNotFoundError(f"model.py not found in model path {self.properties_dir}")

@@ -102,7 +102,7 @@ class PartitionService(object):
                         download_dir]
 
         subprocess.run(commands)
-        self.properties['model_dir'] = download_dir
+        self.properties['model_id'] = download_dir
 
     def install_requirements_file(self):
         req_file_dir = self.properties_manager.properties_dir
@@ -126,15 +126,21 @@ class PartitionService(object):
 
     def set_environmental_vars(self):
         environments = {}
-        python_path = os.environ.get("PYTHONPATH")
-        python_path = f"{python_path},{PYTHON_CACHE_DIR}" if python_path else PYTHON_CACHE_DIR
+        python_path = []
+        if os.environ.get("PYTHONPATH"):
+            python_path.append(os.environ.get("PYTHONPATH"))
+        python_path.append(PYTHON_CACHE_DIR)
         if 'model_dir' in self.properties:
-            python_path += self.properties['model_dir']
-        environments['PYTHONPATH'] = PYTHON_CACHE_DIR
+            python_path.append(self.properties['model_dir'])
+        environments['PYTHONPATH'] = ':'.join(python_path)
         os.environ.update(environments)
 
     def download_config_from_hf(self):
         if 'model_id' not in self.properties:
+            return
+
+        # checks if model_id is a path
+        if glob.glob(self.properties['model_id']):
             return
 
         download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
@@ -221,7 +227,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    #extract_python_jar()
+    extract_python_jar()
 
     properties_manager = PropertiesManager(args.model_dir)
     service = PartitionService(properties_manager)
