@@ -81,13 +81,13 @@ ft_raw_model_spec = {
         "batch_size": [1, 2],
         "max_memory_per_gpu": 7.0
     },
-    "facebook/opt-13b": {
+    "facebook/opt-6.7b": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 9.0
+        "max_memory_per_gpu": 6.0
     },
-    "bigscience/bloom-7b1": {
+    "bigscience/bloom-3b": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 10.0
+        "max_memory_per_gpu": 5.0
     },
 }
 

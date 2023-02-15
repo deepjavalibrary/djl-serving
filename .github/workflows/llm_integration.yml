@@ -227,7 +227,7 @@ jobs:
 
   ft-raw-test:
     runs-on: [ self-hosted, g5 ]
-    timeout-minutes: 90
+    timeout-minutes: 60
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
@@ -267,23 +267,23 @@ jobs:
           serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py fastertransformer_raw gpt2-xl
           docker rm -f $(docker ps -aq)
-      - name: Test facebook/opt-13b
+      - name: Test facebook/opt-6.7b
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py fastertransformer_raw facebook/opt-13b
+          python3 llm/prepare.py fastertransformer_raw facebook/opt-6.7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py fastertransformer_raw facebook/opt-13b
+          python3 llm/client.py fastertransformer_raw facebook/opt-6.7b
           docker rm -f $(docker ps -aq)
-      - name: Test bigscience/bloom-7b1
+      - name: Test bigscience/bloom-3b
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py fastertransformer_raw bigscience/bloom-7b1
+          python3 llm/prepare.py fastertransformer_raw bigscience/bloom-3b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py fastertransformer_raw bigscience/bloom-7b1
+          python3 llm/client.py fastertransformer_raw bigscience/bloom-3b
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}

@@ -86,15 +86,16 @@ ft_model_list = {
         "option.model_id": "gpt2-xl",
         "option.tensor_parallel_degree": 1,
     },
-    "facebook/opt-13b": {
-        "option.s3url": "s3://djl-llm/opt-13b/",
+    "facebook/opt-6.7b": {
+        "option.s3url": "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
     },
-    "bigscience/bloom-7b1": {
-        "option.s3url": "s3://djl-llm/bloom-7b1/",
+    "bigscience/bloom-3b": {
+        "option.s3url": "s3://djl-llm/bloom-3b/",
         "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "gpu.maxWorkers": 1,
     },
 }
 
