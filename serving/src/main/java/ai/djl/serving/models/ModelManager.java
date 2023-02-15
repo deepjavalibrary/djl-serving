@@ -76,7 +76,7 @@ public final class ModelManager {
         Endpoint endpoint = endpoints.computeIfAbsent(workflow.getName(), k -> new Endpoint());
         if (!endpoint.add(workflow)) {
             // workflow already exists
-            throw new BadRequestException("Workflow " + workflow + " is already registered.");
+            throw new BadRequestException(409, "Workflow " + workflow + " is already registered.");
         }
 
         return CompletableFuture.supplyAsync(

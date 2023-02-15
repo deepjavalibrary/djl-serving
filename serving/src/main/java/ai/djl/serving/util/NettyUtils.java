@@ -241,7 +241,12 @@ public final class NettyUtils {
         if (t instanceof ResourceNotFoundException || t instanceof ModelNotFoundException) {
             logger.trace("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.NOT_FOUND, t);
-        } else if (t instanceof BadRequestException || t instanceof ModelException) {
+        } else if (t instanceof BadRequestException) {
+            logger.trace("", t);
+            BadRequestException e = (BadRequestException) t;
+            HttpResponseStatus status = HttpResponseStatus.valueOf(e.getCode(), e.getMessage());
+            NettyUtils.sendError(ctx, status, t);
+        } else if (t instanceof ModelException) {
             logger.trace("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.BAD_REQUEST, t);
         } else if (t instanceof MethodNotAllowedException) {

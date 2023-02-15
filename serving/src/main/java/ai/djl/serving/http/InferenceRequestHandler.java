@@ -55,7 +55,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private RequestParser requestParser;
 
     private static final Pattern PATTERN =
-            Pattern.compile("^/(ping|invocations|predictions)([/?].*)?");
+            Pattern.compile("/(ping|invocations|predictions)([/?].*)?|/models/.+/invoke");
 
     /** default constructor. */
     public InferenceRequestHandler() {
@@ -67,7 +67,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     public boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
             FullHttpRequest req = (FullHttpRequest) msg;
-            return PATTERN.matcher(req.uri()).matches();
+            String uri = req.uri();
+            return PATTERN.matcher(uri).matches();
         }
         return false;
     }
@@ -107,6 +108,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             case "invocations":
                 handleInvocations(ctx, req, decoder);
                 break;
+            case "models":
+                handleInvocations(ctx, req, decoder, segments[2]);
+                break;
             case "predictions":
                 handlePredictions(ctx, req, decoder, segments);
                 break;
@@ -138,9 +142,19 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private void handleInvocations(
             ChannelHandlerContext ctx, FullHttpRequest req, QueryStringDecoder decoder)
             throws ModelNotFoundException {
+        handleInvocations(ctx, req, decoder, null);
+    }
+
+    private void handleInvocations(
+            ChannelHandlerContext ctx,
+            FullHttpRequest req,
+            QueryStringDecoder decoder,
+            String modelName)
+            throws ModelNotFoundException {
         Input input = requestParser.parseRequest(req, decoder);
-        String modelName = NettyUtils.getParameter(decoder, "model_name", null);
-        String version = NettyUtils.getParameter(decoder, "model_version", null);
+        if (modelName == null) {
+            modelName = NettyUtils.getParameter(decoder, "model_name", null);
+        }
         if ((modelName == null || modelName.isEmpty())) {
             modelName = input.getProperty("model_name", null);
             if (modelName == null) {
@@ -156,6 +170,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 throw new BadRequestException("Parameter model_name is required.");
             }
         }
+        String version = NettyUtils.getParameter(decoder, "model_version", null);
         if (version == null) {
             version = input.getProperty("model_version", null);
         }
