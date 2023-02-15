@@ -141,7 +141,11 @@ export default {
     return new Promise((resolve, reject) => {
       url = url + "?"+Object.keys(params).map(v => v+"="+(params[v] == undefined ? '' : params[v])).join("&")
 
-      axiosInst.post(url, {}, {}).then(res => {
+      axiosInst.post(url, {}, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+      }).then(res => {
         resolve(res.data)
       }).catch(error => {
         reject(error)

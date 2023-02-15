@@ -17,6 +17,20 @@ public class BadRequestException extends IllegalArgumentException {
 
     static final long serialVersionUID = 1L;
 
+    private final int code;
+
+    /**
+     * Constructs an {@code BadRequestException} with the specified detail message.
+     *
+     * @param code the HTTP response code
+     * @param message the detail message (which is saved for later retrieval by the {@link
+     *     #getMessage()} method)
+     */
+    public BadRequestException(int code, String message) {
+        super(message);
+        this.code = code;
+    }
+
     /**
      * Constructs an {@code BadRequestException} with the specified detail message.
      *
@@ -24,7 +38,7 @@ public class BadRequestException extends IllegalArgumentException {
      *     #getMessage()} method)
      */
     public BadRequestException(String message) {
-        super(message);
+        this(400, message);
     }
 
     /**
@@ -36,5 +50,15 @@ public class BadRequestException extends IllegalArgumentException {
      */
     public BadRequestException(String message, Throwable cause) {
         super(message, cause);
+        this.code = 400;
+    }
+
+    /**
+     * Return the HTTP response code.
+     *
+     * @return the HTTP response code
+     */
+    public int getCode() {
+        return code;
     }
 }

@@ -60,6 +60,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -286,6 +287,7 @@ public class ModelServerTest {
             testPing(channel);
             testRoot(channel);
             testPredictionsModels(channel);
+            testInvoke(channel);
             testInvocations(channel);
             testInvocationsMultipart(channel);
             testDescribeApi(channel);
@@ -421,6 +423,20 @@ public class ModelServerTest {
             List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
             assertEquals(classifications.get(0).getClassName(), "0");
         }
+    }
+
+    private void testInvoke(Channel channel) throws InterruptedException {
+        String url = "/models/mlp/invoke";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.content().writeBytes(testImage);
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
+        request(channel, req);
+
+        Type type = new TypeToken<List<Classification>>() {}.getType();
+        List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
+        assertEquals(classifications.get(0).getClassName(), "0");
     }
 
     private void testInvocations(Channel channel) throws InterruptedException {
@@ -626,11 +642,19 @@ public class ModelServerTest {
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models"));
 
         ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
+        Assert.assertNull(resp.getNextPageToken());
         for (String expectedModel : new String[] {"mlp", "mlp_1", "mlp_2"}) {
             assertTrue(
                     resp.getModels().stream()
                             .anyMatch(w -> expectedModel.equals(w.getModelName())));
         }
+
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models?limit=2"));
+        resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
+        Assert.assertEquals(resp.getNextPageToken(), "2");
     }
 
     private void testListWorkflows(Channel channel) throws InterruptedException {
@@ -896,9 +920,9 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models"));
+        HttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models");
+        request(channel, req);
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -912,10 +936,9 @@ public class ModelServerTest {
     private void testRegisterModelNotFound() throws InterruptedException {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.POST, "/models?url=InvalidUrl"));
+        String uri = "/models?url=InvalidUrl";
+        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri);
+        request(channel, req);
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -930,20 +953,22 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?model_name=mlp_2&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        String modelUrl = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        Map<String, String> map = Map.of("model_name", "mlp_2", "url", modelUrl);
+
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models");
+        req.content().writeCharSequence(JsonUtils.GSON.toJson(map), StandardCharsets.UTF_8);
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+
+        request(channel, req);
         channel.closeFuture().sync();
         channel.close().sync();
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
+            assertEquals(resp.getCode(), 409);
             assertEquals(resp.getMessage(), "Workflow mlp_2 is already registered.");
         }
     }
@@ -1113,7 +1138,7 @@ public class ModelServerTest {
         return false;
     }
 
-    private void request(Channel channel, DefaultFullHttpRequest req) throws InterruptedException {
+    private void request(Channel channel, HttpRequest req) throws InterruptedException {
         reset();
         channel.writeAndFlush(req).sync();
         latch.await();

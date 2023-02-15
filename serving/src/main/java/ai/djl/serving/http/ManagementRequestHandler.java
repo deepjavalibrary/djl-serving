@@ -23,12 +23,16 @@ import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
+import ai.djl.util.JsonUtils;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.util.CharsetUtil;
 
 import org.apache.logging.log4j.util.Strings;
 
@@ -49,41 +53,21 @@ import java.util.regex.Pattern;
  */
 public class ManagementRequestHandler extends HttpRequestHandler {
 
-    /** HTTP Parameter "synchronous". */
-    private static final String SYNCHRONOUS_PARAMETER = "synchronous";
-    /** HTTP Parameter "url". */
-    private static final String URL_PARAMETER = "url";
-    /** HTTP Parameter "job_queue_size". */
-    private static final String JOB_QUEUE_SIZE = "job_queue_size";
-    /** HTTP Parameter "batch_size". */
-    private static final String BATCH_SIZE_PARAMETER = "batch_size";
-    /** HTTP Parameter "model_name". */
-    private static final String MODEL_NAME_PARAMETER = "model_name";
-    /** HTTP Parameter "model_version". */
-    private static final String MODEL_VERSION_PARAMETER = "model_version";
-    /** HTTP Parameter "engine". */
-    private static final String ENGINE_NAME_PARAMETER = "engine";
-    /** HTTP Parameter "device". */
-    private static final String DEVICE_PARAMETER = "device";
-    /** HTTP Parameter "max_batch_delay". */
-    private static final String MAX_BATCH_DELAY_PARAMETER = "max_batch_delay";
-    /** HTTP Parameter "max_idle_time". */
-    private static final String MAX_IDLE_TIME_PARAMETER = "max_idle_time";
-    /** HTTP Parameter "max_worker". */
-    private static final String MAX_WORKER_PARAMETER = "max_worker";
-    /** HTTP Parameter "min_worker". */
-    private static final String MIN_WORKER_PARAMETER = "min_worker";
-
     private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?].*)?");
     private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
+    private static final Pattern INVOKE_PATTERN = Pattern.compile("^/models/.+/invoke$");
 
     /** {@inheritDoc} */
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
         if (super.acceptInboundMessage(msg)) {
             FullHttpRequest req = (FullHttpRequest) msg;
-            return WORKFLOWS_PATTERN.matcher(req.uri()).matches()
-                    || MODELS_PATTERN.matcher(req.uri()).matches();
+            String uri = req.uri();
+            if (WORKFLOWS_PATTERN.matcher(uri).matches()) {
+                return true;
+            } else if (MODELS_PATTERN.matcher(uri).matches()) {
+                return req.method() != HttpMethod.POST || !INVOKE_PATTERN.matcher(uri).matches();
+            }
         }
         return false;
     }
@@ -107,7 +91,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 return;
             } else if (HttpMethod.POST.equals(method)) {
                 if (MODELS_PATTERN.matcher(req.uri()).matches()) {
-                    handleRegisterModel(ctx, decoder);
+                    handleRegisterModel(ctx, req, decoder);
                 } else {
                     handleRegisterWorkflow(ctx, decoder);
                 }
@@ -142,7 +126,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         ListModelsResponse list = new ListModelsResponse();
 
         ListPagination pagination = new ListPagination(decoder, keys.size());
-        if (pagination.last <= keys.size()) {
+        if (pagination.last < keys.size()) {
             list.setNextPageToken(String.valueOf(pagination.last));
         }
 
@@ -197,42 +181,29 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         NettyUtils.sendJsonResponse(ctx, resp);
     }
 
-    private void handleRegisterModel(final ChannelHandlerContext ctx, QueryStringDecoder decoder) {
-        String modelUrl = NettyUtils.getParameter(decoder, URL_PARAMETER, null);
-        if (modelUrl == null) {
-            throw new BadRequestException("Parameter url is required.");
+    private void handleRegisterModel(
+            final ChannelHandlerContext ctx, FullHttpRequest request, QueryStringDecoder decoder) {
+        LoadModelRequest req;
+        CharSequence contentType = HttpUtil.getMimeType(request);
+        if (HttpHeaderValues.APPLICATION_JSON.contentEqualsIgnoreCase(contentType)) {
+            String body = request.content().toString(CharsetUtil.UTF_8);
+            req = JsonUtils.GSON.fromJson(body, LoadModelRequest.class);
+        } else {
+            req = new LoadModelRequest(decoder);
         }
-
-        String modelName = NettyUtils.getParameter(decoder, MODEL_NAME_PARAMETER, null);
-        if (modelName == null || modelName.isEmpty()) {
-            modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
-        }
-        String version = NettyUtils.getParameter(decoder, MODEL_VERSION_PARAMETER, null);
-        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
-        String engineName = NettyUtils.getParameter(decoder, ENGINE_NAME_PARAMETER, null);
-        int jobQueueSize = NettyUtils.getIntParameter(decoder, JOB_QUEUE_SIZE, -1);
-        int batchSize = NettyUtils.getIntParameter(decoder, BATCH_SIZE_PARAMETER, -1);
-        int maxBatchDelayMillis =
-                NettyUtils.getIntParameter(decoder, MAX_BATCH_DELAY_PARAMETER, -1);
-        int maxIdleSeconds = NettyUtils.getIntParameter(decoder, MAX_IDLE_TIME_PARAMETER, -1);
-        int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
-        int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
-        boolean synchronous =
-                Boolean.parseBoolean(
-                        NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
 
         ModelInfo<Input, Output> modelInfo =
                 new ModelInfo<>(
-                        modelName,
-                        modelUrl,
-                        version,
-                        engineName,
+                        req.getModelName(),
+                        req.getModelUrl(),
+                        req.getVersion(),
+                        req.getEngineName(),
                         Input.class,
                         Output.class,
-                        jobQueueSize,
-                        maxIdleSeconds,
-                        maxBatchDelayMillis,
-                        batchSize);
+                        req.getJobQueueSize(),
+                        req.getMaxIdleSeconds(),
+                        req.getMaxBatchDelayMillis(),
+                        req.getBatchSize());
         Workflow workflow = new Workflow(modelInfo);
         final ModelManager modelManager = ModelManager.getInstance();
         CompletableFuture<Void> f =
@@ -242,40 +213,43 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                                 v -> {
                                     for (ModelInfo<Input, Output> m : workflow.getModels()) {
                                         modelManager.initWorkers(
-                                                m, deviceName, minWorkers, maxWorkers);
+                                                m,
+                                                req.getDeviceName(),
+                                                req.getMinWorkers(),
+                                                req.getMaxWorkers());
                                     }
                                 })
                         .exceptionally(
                                 t -> {
                                     NettyUtils.sendError(ctx, t.getCause());
-                                    if (synchronous) {
+                                    if (req.isSynchronous()) {
                                         String name = workflow.getName();
-                                        modelManager.unregisterWorkflow(name, version);
+                                        modelManager.unregisterWorkflow(name, req.getVersion());
                                     }
                                     return null;
                                 });
-        if (synchronous) {
-            final String msg = "Model \"" + modelName + "\" registered.";
+        if (req.isSynchronous()) {
+            final String msg = "Model \"" + req.getModelName() + "\" registered.";
             f.thenAccept(v -> NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg)));
         } else {
-            String msg = "Model \"" + modelName + "\" registration scheduled.";
+            String msg = "Model \"" + req.getModelName() + "\" registration scheduled.";
             NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg), HttpResponseStatus.ACCEPTED);
         }
     }
 
     private void handleRegisterWorkflow(
             final ChannelHandlerContext ctx, QueryStringDecoder decoder) {
-        String workflowUrl = NettyUtils.getParameter(decoder, URL_PARAMETER, null);
+        String workflowUrl = NettyUtils.getParameter(decoder, LoadModelRequest.URL, null);
         if (workflowUrl == null) {
             throw new BadRequestException("Parameter url is required.");
         }
 
-        String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
-        int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
-        int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
+        String deviceName = NettyUtils.getParameter(decoder, LoadModelRequest.DEVICE, null);
+        int minWorkers = NettyUtils.getIntParameter(decoder, LoadModelRequest.MIN_WORKER, -1);
+        int maxWorkers = NettyUtils.getIntParameter(decoder, LoadModelRequest.MAX_WORKER, -1);
         boolean synchronous =
                 Boolean.parseBoolean(
-                        NettyUtils.getParameter(decoder, SYNCHRONOUS_PARAMETER, "true"));
+                        NettyUtils.getParameter(decoder, LoadModelRequest.SYNCHRONOUS, "true"));
 
         try {
             URL url = new URL(workflowUrl);
@@ -332,9 +306,9 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             String version)
             throws ModelNotFoundException {
         try {
-            String deviceName = NettyUtils.getParameter(decoder, DEVICE_PARAMETER, null);
-            int minWorkers = NettyUtils.getIntParameter(decoder, MIN_WORKER_PARAMETER, -1);
-            int maxWorkers = NettyUtils.getIntParameter(decoder, MAX_WORKER_PARAMETER, -1);
+            String deviceName = NettyUtils.getParameter(decoder, LoadModelRequest.DEVICE, null);
+            int minWorkers = NettyUtils.getIntParameter(decoder, LoadModelRequest.MIN_WORKER, -1);
+            int maxWorkers = NettyUtils.getIntParameter(decoder, LoadModelRequest.MAX_WORKER, -1);
 
             ModelManager modelManager = ModelManager.getInstance();
             Endpoint endpoint = modelManager.getEndpoints().get(workflowName);
