@@ -378,7 +378,7 @@ public class ModelServer {
             }
             Pair<String, Path> pair = ModelInfo.downloadModel(modelUrl);
             if (engineName == null) {
-                engineName = inferEngine(pair.getValue(), pair.getKey());
+                engineName = ModelInfo.inferEngine(pair.getValue(), pair.getKey());
                 if (engineName == null) {
                     logger.warn("Failed to infer engine, skip url: {}", url);
                     continue;
@@ -460,7 +460,7 @@ public class ModelServer {
                 workflowName = tokens[0];
                 if (tokens.length > 1) {
                     Pair<String, Path> pair = ModelInfo.downloadModel(workflowUrlString);
-                    String engineName = inferEngine(pair.getValue(), pair.getKey());
+                    String engineName = ModelInfo.inferEngine(pair.getValue(), pair.getKey());
                     DependencyManager.getInstance().installEngine(engineName);
                     Engine engine = Engine.getEngine(engineName);
                     devices = parseDevices(tokens[1], engine, pair.getValue());
@@ -518,10 +518,10 @@ public class ModelServer {
             String modelName = ModelInfo.inferModelNameFromUrl(url);
             String engine;
             if (Files.isDirectory(path)) {
-                engine = inferEngine(path, path.toFile().getName());
+                engine = ModelInfo.inferEngine(path, path.toFile().getName());
             } else {
                 // .zip file
-                engine = inferEngineFromUrl(url);
+                engine = ModelInfo.inferEngineFromUrl(url);
             }
             if (engine == null) {
                 return null;
@@ -534,57 +534,6 @@ public class ModelServer {
             logger.warn("Failed to access file: " + path, e);
             return null;
         }
-    }
-
-    private String inferEngineFromUrl(String modelUrl) {
-        try {
-            Pair<String, Path> pair = ModelInfo.downloadModel(modelUrl);
-            return inferEngine(pair.getValue(), pair.getKey());
-        } catch (IOException e) {
-            logger.warn("Failed to extract model: " + modelUrl, e);
-            return null;
-        }
-    }
-
-    private String inferEngine(Path modelDir, String modelName) {
-        modelDir = Utils.getNestedModelDir(modelDir);
-
-        Properties prop = ModelInfo.getServingProperties(modelDir);
-        String engine = prop.getProperty("engine");
-        if (engine != null) {
-            return engine;
-        }
-
-        modelName = prop.getProperty("option.modelName", modelName);
-        if (Files.isDirectory(modelDir.resolve("MAR-INF"))
-                || Files.isRegularFile(modelDir.resolve("model.py"))
-                || Files.isRegularFile(modelDir.resolve(modelName + ".py"))) {
-            // MMS/TorchServe
-            return "Python";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".pt"))
-                || Files.isRegularFile(modelDir.resolve("model.pt"))) {
-            return "PyTorch";
-        } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
-            return "TensorFlow";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + "-symbol.json"))) {
-            return "MXNet";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".onnx"))
-                || Files.isRegularFile(modelDir.resolve("model.onnx"))) {
-            return "OnnxRuntime";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".trt"))
-                || Files.isRegularFile(modelDir.resolve(modelName + ".uff"))) {
-            return "TensorRT";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".tflite"))) {
-            return "TFLite";
-        } else if (Files.isRegularFile(modelDir.resolve("model"))
-                || Files.isRegularFile(modelDir.resolve("__model__"))
-                || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
-            return "PaddlePaddle";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".json"))) {
-            return "XGBoost";
-        }
-        logger.warn("Failed to detect engine of the model: {}", modelDir);
-        return null;
     }
 
     private String[] parseDevices(String devices, Engine engine, Path modelDir) {
