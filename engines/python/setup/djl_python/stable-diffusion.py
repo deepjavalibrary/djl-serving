@@ -102,7 +102,7 @@ class StableDiffusionService(object):
             if content_type == "application/json":
                 request = inputs.get_as_json()
                 prompt = request.pop("prompt")
-                params = request.pop("parameters")
+                params = request.pop("parameters", {})
                 result = self.pipeline(prompt, **params)
             else:
                 prompt = inputs.get_as_string()

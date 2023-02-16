@@ -120,13 +120,9 @@ class HuggingFaceService(object):
 
             input_map = decode(inputs, content_type)
             data = input_map.pop("inputs", input_map)
-            parameters = input_map.pop("parameters", None)
+            parameters = input_map.pop("parameters", {})
 
-            # pass inputs with all kwargs in data
-            if parameters is not None:
-                prediction = self.hf_pipeline(data, **parameters)
-            else:
-                prediction = self.hf_pipeline(data)
+            prediction = self.hf_pipeline(data, **parameters)
 
             outputs = Output()
             encode(outputs, prediction, accept)

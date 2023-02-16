@@ -14,7 +14,8 @@ FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG accelerate_version=0.16.0
-ARG deepspeed_version=0.8.0
+# This needs to be added once available in s3
+ARG deepspeed_wheel=""
 ARG transformers_version=4.26.0
 ARG diffusers_version=0.12.0
 
