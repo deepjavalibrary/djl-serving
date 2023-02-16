@@ -100,7 +100,7 @@ ft_model_list = {
     "flan-t5-xxl": {
         "option.s3url": "s3://djl-llm/flan-t5-xxl/",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16"
+        "option.dtype": "fp32"
     }
 }
 
