@@ -11,7 +11,7 @@ if [[ "$1" = "serve" ]]; then
     done
 elif [[ "$1" = "partition" ]]; then
     shift 1
-    /usr/bin/python3 partition/partition.py "$@"
+    /usr/bin/python3 /opt/djl/partition/partition.py "$@"
 else
     eval "$@"
 fi
