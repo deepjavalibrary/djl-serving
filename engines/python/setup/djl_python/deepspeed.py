@@ -281,7 +281,7 @@ _service = DeepSpeedService()
 
 
 def partition(inputs: Input):
-    _service.initialize(inputs.properties)
+    _service.initialize(inputs.get_properties())
 
 
 def handle(inputs: Input) -> Optional[Output]:

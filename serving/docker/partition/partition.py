@@ -224,7 +224,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    #extract_python_jar()
+    extract_python_jar()
 
     properties_manager = PropertiesManager(args.model_dir)
     service = PartitionService(properties_manager)

@@ -45,10 +45,7 @@ class PropertiesManager(object):
                     if line.startswith("#"):
                         continue
                     key, value = line.strip().split('=', 1)
-                    if key.startswith("option"):
-                        self.properties[key[7:]] = value
-                    else:
-                        self.properties[key] = value
+                    self.properties[key.split(".", 1)[-1]] = value
         else:
             raise FileNotFoundError("serving.properties file does not exist in the path provided.")
 
