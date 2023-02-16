@@ -25,6 +25,7 @@ from djl_python.service_loader import load_model_service
 
 PARTITION_HANDLER = "partition"
 
+
 def invoke_partition(properties):
     inputs = Input()
     handler = properties.get("partition_handler", PARTITION_HANDLER)

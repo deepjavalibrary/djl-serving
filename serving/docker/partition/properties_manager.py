@@ -53,13 +53,18 @@ class PropertiesManager(object):
             raise FileNotFoundError("serving.properties file does not exist in the path provided.")
 
     def set_and_validate_model_dir(self):
+        if 'model_id' in self.properties and 's3url' in self.properties:
+            raise KeyError('Both model_id and s3url cannot be in serving.properties')
+
         if 'model_dir' in self.properties:
             model_files = glob.glob(os.path.join(self.properties['model_dir'], '*.bin'))
             if not model_files:
                 raise FileNotFoundError('No .bin files found in the given option.model_dir')
         elif 'model_id' in self.properties:
             self.properties['model_dir'] = self.properties_dir
-        elif 's3url' not in self.properties:
+        elif 's3url' in self.properties:
+            self.properties['model_dir'] = self.properties_dir
+        else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
             if model_files:
                 self.properties['model_dir'] = self.properties_dir

@@ -69,10 +69,6 @@ class PartitionService(object):
     def download_model_from_s3(self):
         if "s3url" not in self.properties:
             return
-        elif 'model_id' in self.properties:
-            raise ValueError("Both model_id and s3_url cannot be in serving.properties")
-        elif 'model_dir' in self.properties:
-            raise ValueError("Both model_dir and s3_url cannot be in serving.properties")
 
         download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
                                       '/tmp/download/model/')
@@ -102,6 +98,10 @@ class PartitionService(object):
                         download_dir]
 
         subprocess.run(commands)
+
+        if not glob.glob(os.path.join(download_dir, '*.pt')):
+            raise Exception('Model download from s3url failed')
+
         self.properties['model_id'] = download_dir
 
     def install_requirements_file(self):
@@ -136,12 +136,9 @@ class PartitionService(object):
         os.environ.update(environments)
 
     def download_config_from_hf(self):
-        if 'model_id' not in self.properties:
-            return
-
         # checks if model_id is a path
         if glob.glob(self.properties['model_id']):
-            return
+            return self.properties['model_id']
 
         download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
                                       '/tmp/download/model/')
@@ -156,7 +153,7 @@ class PartitionService(object):
 
     def copy_config_files(self):
         model_dir = self.properties['model_dir']
-        if model_dir is None and 'model_id' in self.properties:
+        if 'model_id' in self.properties:
             model_dir = self.download_config_from_hf()
 
         config_files = []
@@ -227,7 +224,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    extract_python_jar()
+    #extract_python_jar()
 
     properties_manager = PropertiesManager(args.model_dir)
     service = PartitionService(properties_manager)
