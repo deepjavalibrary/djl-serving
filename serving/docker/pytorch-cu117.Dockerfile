@@ -58,8 +58,8 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-cu117="true"
 
 FROM base as transformers
 
-ARG transformers_version=4.24.0
-ARG accelerate_version=0.14.0
+ARG transformers_version=4.26.0
+ARG accelerate_version=0.16.0
 
 COPY scripts scripts/
 RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \
