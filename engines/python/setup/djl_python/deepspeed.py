@@ -131,8 +131,6 @@ class DeepSpeedService(object):
         ds_config = {
             "replace_with_kernel_inject":
             True,
-            "dtype":
-            self.data_type,
             "tensor_parallel":
             {"tp_size": self.tensor_parallel_degree},
             "mpu":
@@ -210,6 +208,10 @@ class DeepSpeedService(object):
                 self.model_id_or_path,
                 low_cpu_mem_usage=self.low_cpu_mem_usage,
                 **kwargs)
+        if self.data_type:
+            self.ds_config["dtype"] = self.data_type
+        else:
+            self.ds_config["dtype"] = model.dtype
         engine = deepspeed.init_inference(model, config=self.ds_config)
         tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
         self.pipeline = pipeline(task=self.task,
