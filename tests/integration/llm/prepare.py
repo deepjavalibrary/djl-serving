@@ -60,7 +60,8 @@ ds_handler_list = {
     "opt-13b": {
         "option.s3url": "s3://djl-llm/opt-13b/",
         "option.tensor_parallel_degree": 2,
-        "option.task": "text-generation"
+        "option.task": "text-generation",
+        "option.dtype": "fp16"
     }
 }
 
