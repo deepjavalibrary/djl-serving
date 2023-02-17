@@ -112,7 +112,8 @@ class DeepSpeedService(object):
         # If option.s3url is used, the directory is stored in model_id
         # If option.s3url is not used but model_id is present, we download from hub
         # Otherwise we assume model artifacts are in the model_dir
-        self.model_id_or_path = properties.get("model_id") or properties.get("model_dir")
+        self.model_id_or_path = properties.get("model_id") or properties.get(
+            "model_dir")
         self.task = properties.get("task")
         self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
         self.max_tokens = int(properties.get("max_tokens", 1024))
@@ -131,8 +132,9 @@ class DeepSpeedService(object):
         ds_config = {
             "replace_with_kernel_inject":
             True,
-            "tensor_parallel":
-            {"tp_size": self.tensor_parallel_degree},
+            "tensor_parallel": {
+                "tp_size": self.tensor_parallel_degree
+            },
             "mpu":
             None,
             "enable_cuda_graph":
@@ -157,7 +159,6 @@ class DeepSpeedService(object):
                     "dtype should also be provided for checkpoint loading")
         return ds_config
 
-
     def _validate_model_type_and_task(self):
         if os.path.exists(self.model_id_or_path):
             config_file = os.path.join(self.model_id_or_path, "config.json")
@@ -167,7 +168,8 @@ class DeepSpeedService(object):
                     f"This is required for loading models from local storage")
             self.model_config = AutoConfig.from_pretrained(config_file)
         else:
-            self.model_config = AutoConfig.from_pretrained(self.model_id_or_path)
+            self.model_config = AutoConfig.from_pretrained(
+                self.model_id_or_path)
 
         if self.model_config.model_type not in SUPPORTED_MODEL_TYPES:
             raise ValueError(

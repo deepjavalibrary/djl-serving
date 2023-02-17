@@ -19,12 +19,15 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from typing import Optional
 from io import BytesIO
+from PIL import Image
 
 
 def get_torch_dtype_from_str(dtype: str):
     if dtype == "fp16":
         return torch.float16
-    raise ValueError(f"Invalid data type: {dtype}. DeepSpeed currently only supports fp16 for stable diffusion")
+    raise ValueError(
+        f"Invalid data type: {dtype}. DeepSpeed currently only supports fp16 for stable diffusion"
+    )
 
 
 class StableDiffusionService(object):
@@ -46,7 +49,8 @@ class StableDiffusionService(object):
         # If option.s3url is used, the directory is stored in model_id
         # If option.s3url is not used but model_id is present, we download from hub
         # Otherwise we assume model artifacts are in the model_dir
-        self.model_id_or_path = properties.get("model_id") or properties.get("model_dir")
+        self.model_id_or_path = properties.get("model_id") or properties.get(
+            "model_dir")
         self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
         self.max_tokens = int(properties.get("max_tokens", "1024"))
         self.device = int(os.getenv("LOCAL_RANK", "0"))
@@ -55,12 +59,16 @@ class StableDiffusionService(object):
         enable_cuda_graph = False
         if properties.get("enable_cuda_graph", "false").lower() == "true":
             if self.tensor_parallel_degree > 1:
-                raise ValueError("enable_cuda_graph optimization can only be used with tensor_parallel_degree=1")
+                raise ValueError(
+                    "enable_cuda_graph optimization can only be used with tensor_parallel_degree=1"
+                )
             enable_cuda_graph = True
-        self.ds_config = self._get_ds_config_for_dtype(self.data_type, enable_cuda_graph)
+        self.ds_config = self._get_ds_config_for_dtype(self.data_type,
+                                                       enable_cuda_graph)
 
         if os.path.exists(self.model_id_or_path):
-            config_file = os.path.join(self.model_id_or_path, "model_index.json")
+            config_file = os.path.join(self.model_id_or_path,
+                                       "model_index.json")
             if not os.path.exists(config_file):
                 raise ValueError(
                     f"{self.model_id_or_path} does not contain a model_index.json."
@@ -70,7 +78,8 @@ class StableDiffusionService(object):
         # DS 0.8.0 only supports fp16 and by this point we have validated dtype
         kwargs = {"torch_dtype": torch.float16, "revision": "fp16"}
 
-        pipeline = DiffusionPipeline.from_pretrained(self.model_id_or_path, **kwargs)
+        pipeline = DiffusionPipeline.from_pretrained(self.model_id_or_path,
+                                                     **kwargs)
         pipeline.to(f"cuda:{self.device}")
         deepspeed.init_distributed()
         engine = deepspeed.init_inference(getattr(pipeline, "model", pipeline),
@@ -90,7 +99,9 @@ class StableDiffusionService(object):
         ds_config = {
             "enable_cuda_graph": cuda_graph,
             "dtype": dtype,
-            "tensor_parallel": {"tp_size": self.tensor_parallel_degree},
+            "tensor_parallel": {
+                "tp_size": self.tensor_parallel_degree
+            },
             "replace_method": "auto",
             "replace_with_kernel_inject": True,
         }
@@ -104,9 +115,16 @@ class StableDiffusionService(object):
                 prompt = request.pop("prompt")
                 params = request.pop("parameters", {})
                 result = self.pipeline(prompt, **params)
-            else:
+            elif content_type and content_type.startswith("text/"):
                 prompt = inputs.get_as_string()
                 result = self.pipeline(prompt)
+            else:
+                init_image = Image.open(BytesIO(
+                    inputs.get_as_bytes())).convert("RGB")
+                request = inputs.get_as_json("json")
+                prompt = request.pop("prompt")
+                params = request.pop("parameters", {})
+                result = self.pipeline(prompt, image=init_image, **params)
 
             img = result.images[0]
             buf = BytesIO()

@@ -3,6 +3,7 @@ import argparse
 import subprocess as sp
 import logging
 import math
+import json
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Build the LLM configs')
@@ -106,6 +107,12 @@ sd_model_spec = {
         "size": [256, 512],
         "num_inference_steps": [50, 100],
         "workers": 2
+    },
+    "stable-diffusion-2-depth": {
+        "max_memory_per_gpu": 8.0,
+        "size": [512],
+        "num_inference_steps": [50],
+        "depth": True
     }
 }
 
@@ -126,6 +133,15 @@ def send_json(data):
     headers = {'content-type': 'application/json'}
     res = requests.post(endpoint, headers=headers, json=data)
     return res
+
+
+def send_image_json(img_url, data):
+    multipart_form_data = {
+        'data': BytesIO(requests.get(img_url, stream=True).content),
+        'json': (None, json.dumps(data), 'application/json')
+    }
+    response = requests.post(endpoint, files=multipart_form_data)
+    return response
 
 
 def get_gpu_memory():
@@ -213,6 +229,9 @@ def test_ds_raw_model(model):
 
 
 def test_sd_handler(model, model_spec):
+    from PIL import Image
+    from io import BytesIO
+
     if model not in model_spec:
         raise ValueError(
             f"{model} is not one of the supporting models {list(sd_model_spec.keys())}"
@@ -220,15 +239,22 @@ def test_sd_handler(model, model_spec):
     spec = sd_model_spec[model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
-    from PIL import Image
-    from io import BytesIO
     for size in spec["size"]:
         for step in spec["num_inference_steps"]:
-            req = {"prompt": "A bird and cat flying through space"}
-            params = {"height": size, "width": size, "num_inference_steps": step}
-            req["parameters"] = params
-            logging.info(f"req: {req}")
-            res = send_json(req)
+            if "depth" in spec:
+                req = {"prompt": "two tigers"}
+                params = {"n_propmt": "bad, deformed, ugly, bad anotomy", "strength": 0.7}
+                url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+                params.update({"height": size, "width": size, "num_inference_steps": step})
+                req["parameters"] = params
+                logging.info(f"req: {req}")
+                res = send_image_json(url, req)
+            else:
+                req = {"prompt": "A bird and cat flying through space"}
+                params = {"height": size, "width": size, "num_inference_steps": step}
+                req["parameters"] = params
+                logging.info(f"req: {req}")
+                res = send_json(req)
             assert res.status_code == 200
             try:
                 img = Image.open(BytesIO(res.content)).convert("RGB")
@@ -249,7 +275,7 @@ def test_ft_raw_handler(model, model_spec):
     for batch_size in spec['batch_size']:
         logging.info(f"testing ft_handler with model: {model}, batch_size: {batch_size} ")
         if "t5" in model:
-            req = {"inputs" : t5_batch_generation(batch_size)}
+            req = {"inputs": t5_batch_generation(batch_size)}
         else:
             req = {"inputs": batch_generation(batch_size)}
         res = send_json(req)
