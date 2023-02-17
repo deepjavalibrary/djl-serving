@@ -179,14 +179,14 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Test stable-diffusion-v1-4
+      - name: Test stable-diffusion-2-1-base
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py stable-diffusion stable-diffusion-v1-4
+          python3 llm/prepare.py stable-diffusion stable-diffusion-2-1-base
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
-          python3 llm/client.py stable-diffusion stable-diffusion-v1-4
+          python3 llm/client.py stable-diffusion stable-diffusion-2-1-base
           docker rm -f $(docker ps -aq)
       - name: Test stable-diffusion-v1-5
         working-directory: tests/integration

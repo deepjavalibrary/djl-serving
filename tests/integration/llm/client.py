@@ -96,17 +96,17 @@ ft_raw_model_spec = {
 }
 
 sd_model_spec = {
-    "stable-diffusion-v1-4": {
+    "stable-diffusion-v1-5": {
         "max_memory_per_gpu": 8.0,
         "size": [256, 512],
-        "steps": [1, 2],
-        "worker": 2
+        "num_inference_steps": [50, 100]
     },
-    "stable-diffusion-v1-5": {
-        "max_memory_per_gpu": 16.0,
+    "stable-diffusion-2-1-base": {
+        "max_memory_per_gpu": 8.0,
         "size": [256, 512],
-        "steps": [1, 2]
-    },
+        "num_inference_steps": [50, 100],
+        "workers": 2
+    }
 }
 
 
@@ -223,9 +223,9 @@ def test_sd_handler(model, model_spec):
     from PIL import Image
     from io import BytesIO
     for size in spec["size"]:
-        for step in spec["steps"]:
+        for step in spec["num_inference_steps"]:
             req = {"prompt": "A bird and cat flying through space"}
-            params = {"height": size, "width": size, "steps": step}
+            params = {"height": size, "width": size, "num_inference_steps": step}
             req["parameters"] = params
             logging.info(f"req: {req}")
             res = send_json(req)
