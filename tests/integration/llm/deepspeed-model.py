@@ -25,7 +25,7 @@ def load_model(properties):
     tokenizer = AutoTokenizer.from_pretrained(model_location)
     logging.info(f"Starting DeepSpeed init with TP={tensor_parallel}")
     model = deepspeed.init_inference(model,
-                                     mp_size=tensor_parallel,
+                                     tensor_parallel={"tp_size": tensor_parallel},
                                      dtype=model.dtype,
                                      replace_method='auto',
                                      replace_with_kernel_inject=True)
