@@ -9,3 +9,4 @@ python setup.py bdist_wheel
 pip install dist/*.whl --force-reinstall
 cd ../../
 rm -rf AITemplate
+apt-get remove -y git
