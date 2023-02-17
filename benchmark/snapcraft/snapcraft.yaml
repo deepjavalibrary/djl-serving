@@ -1,22 +1,23 @@
 name: djlbench
-version: '0.20.0'
-title: DJL Benhmark
+version: '0.21.0'
+title: DJL Benchmark
 license: Apache-2.0
 summary: A machine learning benchmarking toolkit
 description: |
-  djlbench is a command line tool that allows you to benchmark the
+  djl-bench is a command line tool that allows you to benchmark the
   model on all different platforms for single-thread/multi-thread
   inference performance.
 
-  Currently djlbench support the models from the following framework:
+  Currently djl-bench support the models from the following framework:
   - PyTorch
   - TensorFlow
-  - Apachmark MXNet
+  - Apache MXNet
   - PaddlePaddle
   - ONNXRuntime
   - TensorRT
   - TensorFlow Lite
   - XGBoost
+  - LightGBM
   - Python
 
 base: core18
