@@ -197,6 +197,15 @@ jobs:
           serve
           python3 llm/client.py stable-diffusion stable-diffusion-v1-5
           docker rm -f $(docker ps -aq)
+      - name: Test stable-diffusion-2-depth
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py stable-diffusion stable-diffusion-2-depth
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py stable-diffusion stable-diffusion-2-depth
+          docker rm -f $(docker ps -aq)
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |

@@ -74,6 +74,12 @@ sd_handler_list = {
         "option.s3url": "s3://djl-llm/stable-diffusion-2-1-base/",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16"
+    },
+    "stable-diffusion-2-depth": {
+        "option.s3url": "s3://djl-llm/stable-diffusion-2-depth/",
+        "option.tensor_parallel_degree": 1,
+        "option.dtype": "fp16",
+        "gpu.maxWorkers": 1
     }
 }
 

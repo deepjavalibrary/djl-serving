@@ -19,6 +19,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from typing import Optional
 from io import BytesIO
+from PIL import Image
 
 
 def get_torch_dtype_from_str(dtype: str):
@@ -104,9 +105,15 @@ class StableDiffusionService(object):
                 prompt = request.pop("prompt")
                 params = request.pop("parameters", {})
                 result = self.pipeline(prompt, **params)
-            else:
+            elif content_type and content_type.startswith("text/"):
                 prompt = inputs.get_as_string()
                 result = self.pipeline(prompt)
+            else:
+                init_image = Image.open(BytesIO(inputs.get_as_bytes())).convert("RGB")
+                request = inputs.get_as_json("json")
+                prompt = request.pop("prompt")
+                params = request.pop("parameters", {})
+                result = self.pipeline(prompt, image=init_image, **params)
 
             img = result.images[0]
             buf = BytesIO()
