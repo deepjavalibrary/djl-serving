@@ -243,7 +243,7 @@ def test_sd_handler(model, model_spec):
         for step in spec["num_inference_steps"]:
             if "depth" in spec:
                 req = {"prompt": "two tigers"}
-                params = {"n_propmt": "bad, deformed, ugly, bad anotomy", "strength": 0.7}
+                params = {"negative_prompt": "bad, deformed, ugly, bad anotomy", "strength": 0.7}
                 url = "http://images.cocodataset.org/val2017/000000039769.jpg"
                 params.update({"height": size, "width": size, "num_inference_steps": step})
                 req["parameters"] = params
