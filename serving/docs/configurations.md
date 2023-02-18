@@ -109,7 +109,7 @@ export SERVING_JOB_QUEUE_SIZE=1000 # This will override JOB_QUEUE_SIZE in the co
 
 ## Model specific settings
 
-You set per model settings by adding a `serving.properties` file in the root of your model directory (or .zip).
+You set per model settings by adding a [serving.properties](modes.md#servingproperties) file in the root of your model directory (or .zip).
 
 You can set number of workers for each model:
 https://github.com/deepjavalibrary/djl-serving/blob/master/serving/src/test/resources/identity/serving.properties#L4-L8
@@ -138,6 +138,14 @@ job_queue_size=10
 batch_size=2
 max_batch_delay=1
 max_idle_time=120
+```
+
+You can configure which device to load the model on, default is *:
+
+```
+load_on_devices=GPU4;GPU5
+# or simply:
+load_on_devices=4;5
 ```
 
 ### Python (DeepSpeed)
