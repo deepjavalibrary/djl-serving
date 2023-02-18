@@ -245,7 +245,6 @@ def test_sd_handler(model, model_spec):
                 req = {"prompt": "two tigers"}
                 params = {"negative_prompt": "bad, deformed, ugly, bad anotomy", "strength": 0.7}
                 url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-                params.update({"height": size, "width": size, "num_inference_steps": step})
                 req["parameters"] = params
                 logging.info(f"req: {req}")
                 res = send_image_json(url, req)
