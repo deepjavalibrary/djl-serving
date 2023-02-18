@@ -83,6 +83,7 @@ jobs:
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -148,6 +149,7 @@ jobs:
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -237,6 +239,7 @@ jobs:
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -316,6 +319,7 @@ jobs:
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
