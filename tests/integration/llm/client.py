@@ -4,6 +4,7 @@ import subprocess as sp
 import logging
 import math
 import json
+from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Build the LLM configs')
@@ -230,7 +231,6 @@ def test_ds_raw_model(model):
 
 def test_sd_handler(model, model_spec):
     from PIL import Image
-    from io import BytesIO
 
     if model not in model_spec:
         raise ValueError(
