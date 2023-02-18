@@ -522,12 +522,17 @@ public class ModelServer {
             } else {
                 // .zip file
                 engine = ModelInfo.inferEngineFromUrl(url);
+                Pair<String, Path> pair = ModelInfo.downloadModel(url);
+                path = pair.getValue();
             }
             if (engine == null) {
                 return null;
             }
-
-            return modelName + "::" + engine + ':' + configManager.getLoadOnDevices() + '=' + url;
+            String loadOnDevices = ModelInfo.inferDeviceName(url);
+            if (loadOnDevices == null) {
+                loadOnDevices = configManager.getLoadOnDevices();
+            }
+            return modelName + "::" + engine + ':' + loadOnDevices + '=' + url;
         } catch (MalformedURLException e) {
             throw new AssertionError("Invalid path: " + path, e);
         } catch (IOException e) {

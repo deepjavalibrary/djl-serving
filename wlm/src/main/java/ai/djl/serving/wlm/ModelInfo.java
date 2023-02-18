@@ -469,8 +469,25 @@ public final class ModelInfo<I, O> {
      */
     public static String inferEngineFromUrl(String modelUrl) {
         try {
-            Pair<String, Path> pair = ModelInfo.downloadModel(modelUrl);
-            return ModelInfo.inferEngine(pair.getValue(), pair.getKey());
+            Pair<String, Path> pair = downloadModel(modelUrl);
+            return inferEngine(pair.getValue(), pair.getKey());
+        } catch (IOException e) {
+            logger.warn("Failed to extract model: " + modelUrl, e);
+            return null;
+        }
+    }
+
+    /**
+     * Infers which device to load.
+     *
+     * @param modelUrl the model URL
+     * @return the device name
+     */
+    public static String inferDeviceName(String modelUrl) {
+        try {
+            Pair<String, Path> pair = downloadModel(modelUrl);
+            Properties prop = getServingProperties(pair.getValue());
+            return prop.getProperty("load_on_devices");
         } catch (IOException e) {
             logger.warn("Failed to extract model: " + modelUrl, e);
             return null;
@@ -535,11 +552,16 @@ public final class ModelInfo<I, O> {
         if (engineName == null && modelUrl != null) {
             engineName = inferEngineFromUrl(modelUrl);
         }
+        if (deviceName == null && modelUrl != null) {
+            deviceName = inferDeviceName(modelUrl);
+        }
         Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
-        if (deviceName == null) {
+        // TODO: Load model API doesn't support * or multiple devices
+        if (deviceName == null || "*".equals(deviceName)) {
             return engine.defaultDevice();
         }
-        return Device.fromName(deviceName, engine);
+        String[] devices = deviceName.split(";");
+        return Device.fromName(devices[0], engine);
     }
 
     /**
@@ -558,7 +580,8 @@ public final class ModelInfo<I, O> {
 
         Artifact artifact = mrls.get(0).getDefaultArtifact();
         repository.prepare(artifact);
-        return new Pair<>(artifact.getName(), repository.getResourceDirectory(artifact));
+        Path modelDir = Utils.getNestedModelDir(repository.getResourceDirectory(artifact));
+        return new Pair<>(artifact.getName(), modelDir);
     }
 
     /**

@@ -8,6 +8,8 @@ DJL Serving is a high-performance serving system for deep learning models. DJL S
 2. [Java Mode](#java-mode)
 3. [Binary Mode](#binary-mode)
 
+### serving.properties
+
 In addition to the mode specific files, the `serving.properties` is a configuration file that can be used in all modes.
 Place `serving.properties` in the same directory with your model file to specify configuration for each model.
 
@@ -49,13 +51,14 @@ In `serving.properties`, you can set the following properties. Model properties 
 and python handler functions.
 
 - `engine`: Which Engine to use, values include MXNet, PyTorch, TensorFlow, ONNX, PaddlePaddle, DeepSpeed, etc.
+- `load_on_devices`: A ; delimited devices list, which the model to be loaded on, default to load on all devices.
 - `translatorFactory`: Specify the TranslatorFactory.
 - `job_queue_size`: Specify the job queue size at model level, this will override global `job_queue_size`.
 - `batch_size`: the dynamic batch size, default is `1`.
 - `max_batch_delay` - the maximum delay for batch aggregation in millis, default value is `100` milliseconds.
 - `max_idle_time` - the maximum idle time in seconds before the worker thread is scaled down, default is `60` seconds.
 - `log_model_metric`: Enable model metrics (inference, pre-process and post-process latency) logging.
-- `metrics_aggregation`: Number of model metrics to aggregate, default 1000.
+- `metrics_aggregation`: Number of model metrics to aggregate, default is `1000`.
 - `minWorkers`: Minimum number of workers.
 - `maxWorkers`: Maximum number of workers.
 - `gpu.minWorkers`: Minimum number of workers for GPU.
