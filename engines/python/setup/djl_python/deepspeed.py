@@ -149,6 +149,8 @@ class DeepSpeedService(object):
             "auto",
             "max_tokens":
             self.max_tokens,
+            "save_mp_checkpoint_path":
+            properties.get("save_mp_checkpoint_path")
         }
         if "checkpoint" in properties:
             ds_config["checkpoint"] = os.path.join(
@@ -276,6 +278,10 @@ class DeepSpeedService(object):
 
 
 _service = DeepSpeedService()
+
+
+def partition(inputs: Input):
+    _service.initialize(inputs.get_properties())
 
 
 def handle(inputs: Input) -> Optional[Output]:
