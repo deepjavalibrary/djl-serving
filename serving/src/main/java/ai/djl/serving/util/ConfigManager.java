@@ -62,6 +62,7 @@ public final class ConfigManager {
     private static final String MAX_IDLE_TIME = "max_idle_time";
     private static final String BATCH_SIZE = "batch_size";
     private static final String MAX_BATCH_DELAY = "max_batch_delay";
+    private static final String RESERVED_MEMORY_MB = "reserved_memory_mb";
     private static final String CORS_ALLOWED_ORIGIN = "cors_allowed_origin";
     private static final String CORS_ALLOWED_METHODS = "cors_allowed_methods";
     private static final String CORS_ALLOWED_HEADERS = "cors_allowed_headers";
@@ -158,6 +159,7 @@ public final class ConfigManager {
         instance.withIntProperty(MAX_IDLE_TIME, wlmc::setMaxIdleSeconds);
         instance.withIntProperty(BATCH_SIZE, wlmc::setBatchSize);
         instance.withIntProperty(MAX_BATCH_DELAY, wlmc::setMaxBatchDelayMillis);
+        instance.withIntProperty(RESERVED_MEMORY_MB, wlmc::setReservedMemoryMb);
     }
 
     /**

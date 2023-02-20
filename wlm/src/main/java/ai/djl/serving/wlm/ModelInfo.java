@@ -25,30 +25,40 @@ import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.WlmConfigManager;
+import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
 import ai.djl.translate.ServingTranslator;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
 import ai.djl.util.Pair;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.MemoryUsage;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /** A class represent a loaded model and it's metadata. */
 public final class ModelInfo<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
+
+    private static final Pattern PATTERN = Pattern.compile("MemFree:\\s+(\\d+) kB");
 
     private transient String id;
     private String version;
@@ -160,6 +170,7 @@ public final class ModelInfo<I, O> {
                 // batchSize is required before model loading in dynamic batching case
                 try {
                     Pair<String, Path> pair = downloadModel(modelUrl);
+                    checkAvailableMemory(device, pair.getValue());
                     configPerModelSettings(pair.getValue());
                 } catch (IOException e) {
                     throw new ModelNotFoundException(e);
@@ -206,7 +217,7 @@ public final class ModelInfo<I, O> {
 
             ZooModel<I, O> m = builder.build().loadModel();
             if (criteria != null) {
-                // TODO: use has to manually configure batchifer if using dynamic batch
+                // TODO: user has to manually configure batchifier if using dynamic batch
                 configPerModelSettings(m.getModelPath());
             }
             models.put(device, m);
@@ -619,6 +630,87 @@ public final class ModelInfo<I, O> {
         if (maxIdleSeconds <= 0) {
             maxIdleSeconds = intValue(prop, "max_idle_time", wlmc.getMaxIdleSeconds());
         }
+    }
+
+    void checkAvailableMemory(Device device, Path modelDir) throws IOException {
+        if (Boolean.getBoolean("skip_oom_check")) {
+            return;
+        }
+
+        Properties prop = getServingProperties(modelDir);
+        long requiredMemory = intValue(prop, "required_memory_mb", 0) * 1024L * 1024;
+        WlmConfigManager wlmc = WlmConfigManager.getInstance();
+        int defMemory = wlmc.getReservedMemoryMb();
+        long reservedMemory = intValue(prop, "reserved_memory_mb", defMemory) * 1024L * 1024;
+        int tpDegree = Integer.parseInt(Utils.getenv("TENSOR_PARALLEL_DEGREE", "0"));
+        tpDegree = intValue(prop, "option.tensor_parallel_degree", tpDegree);
+        if (requiredMemory <= 0 && tpDegree < 1) {
+            // TODO: handle LMI use case in future
+            try (Stream<Path> walk = Files.walk(modelDir)) {
+                // estimate the memory to be 1.2x of file size
+                requiredMemory =
+                        walk.filter(Files::isRegularFile).mapToLong(ModelInfo::getFileSize).sum();
+                requiredMemory = requiredMemory * 12 / 10;
+            }
+        }
+        // Assume requires the same amount of CPU memory when load on GPU
+        long free = getAvailableCpuMemory();
+        logger.info(
+                "Available CPU memory: {} MB, required: {} MB, reserved: {} MB",
+                free / 1024 / 1024,
+                requiredMemory / 1024 / 1024,
+                reservedMemory / 1024 / 1024);
+        if (free - requiredMemory < reservedMemory) {
+            throw new WlmOutOfMemoryException("No enough memory to load the model.");
+        }
+
+        if (device.isGpu()) {
+            MemoryUsage usage = CudaUtils.getGpuMemory(device);
+            free = usage.getMax() - usage.getCommitted();
+            long gpuMem = intValue(prop, "gpu.reserved_memory_mb", -1) * 1024L * 1024;
+            if (gpuMem > 0) {
+                reservedMemory = gpuMem;
+            }
+            gpuMem = intValue(prop, "gpu.required_memory_mb", -1) * 1024L * 1024;
+            if (gpuMem > 0) {
+                requiredMemory = gpuMem;
+            }
+            logger.info(
+                    "Available GPU memory: {} MB, required: {} MB, reserved: {} MB",
+                    free / 1024 / 1024,
+                    requiredMemory / 1024 / 1024,
+                    reservedMemory / 1024 / 1024);
+            if (free - requiredMemory < reservedMemory) {
+                throw new WlmOutOfMemoryException("No enough memory to load the model.");
+            }
+        }
+    }
+
+    private static long getFileSize(Path path) {
+        try {
+            return Files.size(path);
+        } catch (IOException e) {
+            logger.warn("Failed to get size of: " + path, e);
+        }
+        return 0L;
+    }
+
+    private static long getAvailableCpuMemory() {
+        if (System.getProperty("os.name").startsWith("Linux")) {
+            try (Scanner scanner = new Scanner(Paths.get("/proc/meminfo"))) {
+                while (scanner.hasNext()) {
+                    String line = scanner.nextLine();
+                    Matcher m = PATTERN.matcher(line);
+                    if (m.matches()) {
+                        return Long.parseLong(m.group(1)) * 1024;
+                    }
+                }
+                logger.warn("Failed to read free memory from /proc/meminfo");
+            } catch (IOException e) {
+                logger.warn("Failed open /proc/meminfo file", e);
+            }
+        }
+        return Integer.MAX_VALUE * 1024L;
     }
 
     private static int intValue(Properties prop, String key, int defValue) {

@@ -14,6 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Device;
 import ai.djl.ModelException;
+import ai.djl.engine.Engine;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -27,7 +28,12 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Writer;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
 
 public class ModelInfoTest {
 
@@ -35,7 +41,7 @@ public class ModelInfoTest {
     public void testQueueSizeIsSet() {
         ModelInfo<?, ?> modelInfo =
                 new ModelInfo<>(
-                        "", null, null, "MXNet", Input.class, Output.class, 4711, 1, 300, 1);
+                        "", null, null, "PyTorch", Input.class, Output.class, 4711, 1, 300, 1);
         Assert.assertEquals(4711, modelInfo.getQueueSize());
         Assert.assertEquals(1, modelInfo.getMaxIdleSeconds());
         Assert.assertEquals(300, modelInfo.getMaxBatchDelayMillis());
@@ -60,6 +66,48 @@ public class ModelInfoTest {
                 input.add(Utils.toByteArray(is));
             }
             predictor.predict(input);
+        }
+    }
+
+    @Test
+    public void testOutOfMemory() throws IOException {
+        Path modelDir = Paths.get("build/oom_model");
+        Utils.deleteQuietly(modelDir);
+        Files.createDirectories(modelDir);
+        ModelInfo<?, ?> modelInfo =
+                new ModelInfo<>(
+                        "",
+                        "build/oom_model",
+                        null,
+                        "PyTorch",
+                        Input.class,
+                        Output.class,
+                        4711,
+                        1,
+                        300,
+                        1);
+
+        Device device = Engine.getInstance().defaultDevice();
+        modelInfo.checkAvailableMemory(device, modelDir);
+
+        Path file = modelDir.resolve("serving.properties");
+        Properties prop = new Properties();
+        prop.setProperty("reserved_memory_mb", String.valueOf(Integer.MAX_VALUE));
+        try (Writer writer = Files.newBufferedWriter(file)) {
+            prop.store(writer, "");
+        }
+        Assert.assertThrows(() -> modelInfo.checkAvailableMemory(Device.cpu(), modelDir));
+
+        if (device.isGpu()) {
+            prop.setProperty("required_memory_mb", "1");
+            prop.setProperty("reserved_memory_mb", "1");
+            prop.setProperty("gpu.required_memory_mb", String.valueOf(80L * 1024 * 1024 * 1024));
+            prop.setProperty("gpu.reserved_memory_mb", "1");
+            try (Writer writer = Files.newBufferedWriter(file)) {
+                prop.store(writer, "");
+            }
+
+            Assert.assertThrows(() -> modelInfo.checkAvailableMemory(device, modelDir));
         }
     }
 }
