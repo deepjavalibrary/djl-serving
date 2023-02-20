@@ -49,6 +49,7 @@ RUN apt-get update && \
     pip3 install transformers==${transformers_version} && \
     pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     pip3 install diffusers[torch]==${diffusers_version} && \
+    scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
     useradd -m -d /home/djl djl && \
