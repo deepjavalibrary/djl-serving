@@ -31,6 +31,7 @@ PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
 FILES_TO_EXTRACT = [
     'djl_python/',
+    'djl_python/__init__.py',
     'djl_python/deepspeed.py',
     'djl_python/inputs.py',
     'djl_python/outputs.py',
@@ -186,7 +187,9 @@ class PartitionService(object):
             f"MASTER_PORT={MASTER_PORT}",
             "-x",
             "PYTHONPATH",
-            get_python_executable(), "run_partition.py", "--properties",
+            get_python_executable(),
+            "/opt/djl/partition/run_partition.py",
+            "--properties",
             str(json.dumps(self.properties))
         ]
         self.set_environmental_vars()
