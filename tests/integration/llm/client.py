@@ -67,7 +67,7 @@ ds_model_spec = {
         "seq_length": [64, 128, 256]
     },
     "opt-13b": {
-        "max_memory_per_gpu": 15.0,
+        "max_memory_per_gpu": 17.0,
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
