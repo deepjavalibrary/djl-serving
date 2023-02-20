@@ -65,6 +65,10 @@ and python handler functions.
 - `gpu.maxWorkers`: Maximum number of workers for GPU.
 - `cpu.minWorkers`: Minimum number of workers for CPU.
 - `cpu.maxWorkers`: Maximum number of workers for CPU.
+- `required_memory_mb`: Specify the required memory (CPU and GPU) in MB to load the model.
+- `gpu.required_memory_mb`: Specify the required GPU memory in MB to load the model.
+- `reserved_memory_mb`: Reserve memory in MB to avoid system out of memory.
+- `gpu.reserved_memory_mb`: Reserve GPU memory in MB to avoid system out of memory.
 
 
 For example, set minimum workers and maximum workers for your model:

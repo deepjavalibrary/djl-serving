@@ -23,6 +23,7 @@ public final class WlmConfigManager {
     private int maxIdleSeconds = 60;
     private int batchSize = 1;
     private int maxBatchDelayMillis = 100;
+    private int reservedMemoryMb = 500;
 
     private static final WlmConfigManager INSTANCE = new WlmConfigManager();
 
@@ -116,6 +117,24 @@ public final class WlmConfigManager {
      */
     public void setMaxBatchDelayMillis(int maxBatchDelayMillis) {
         this.maxBatchDelayMillis = maxBatchDelayMillis;
+    }
+
+    /**
+     * Returns the default reserved memory in MB.
+     *
+     * @return the default reserved memory in MB
+     */
+    public int getReservedMemoryMb() {
+        return reservedMemoryMb;
+    }
+
+    /**
+     * Sets the reserved memory in MB.
+     *
+     * @param reservedMemoryMb the reserved memory in MB
+     */
+    public void setReservedMemoryMb(int reservedMemoryMb) {
+        this.reservedMemoryMb = reservedMemoryMb;
     }
 
     /**
