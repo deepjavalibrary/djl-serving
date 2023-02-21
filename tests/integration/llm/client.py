@@ -89,7 +89,7 @@ ft_raw_model_spec = {
     },
     "bigscience/bloom-3b": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 5.0
+        "max_memory_per_gpu": 6.0
     },
     "flan-t5-xxl": {
         "batch_size": [1, 2],
