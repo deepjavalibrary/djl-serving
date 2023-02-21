@@ -18,7 +18,8 @@ EXCLUDE_PROPERTIES = ['model_id',
                       'checkpoint',
                       's3url',
                       'save_mp_checkpoint_path',
-                      'model_dir']
+                      'model_dir',
+                      'engine']
 
 PARTITION_SUPPORTED_ENGINES = ['DeepSpeed']
 
@@ -78,13 +79,17 @@ class PropertiesManager(object):
             raise Exception('Partition was not successful')
 
         configs = {
+            'engine': self.properties['engine'],
             'option.model_dir': checkpoint_path,
             'option.checkpoint': 'ds_inference_config.json',
         }
 
         for key, value in self.properties.items():
             if key not in EXCLUDE_PROPERTIES:
-                configs[f'option.{key}'] = value
+                if key == "entryPoint" and self.properties.get("entryPoint") == "model.py":
+                    continue
+                else:
+                    configs[f'option.{key}'] = value
 
         properties_file = os.path.join(checkpoint_path, 'serving.properties')
         with open(properties_file, "w") as f:
