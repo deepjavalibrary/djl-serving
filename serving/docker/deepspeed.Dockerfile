@@ -56,6 +56,8 @@ RUN apt-get update && \
     scripts/security_patch.sh deepspeed && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
+    mkdir -p /opt/ml/model && \
+    chown -R djl:djl /opt/ml/model && \
     rm -rf scripts && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
