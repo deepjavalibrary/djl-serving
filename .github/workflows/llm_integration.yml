@@ -327,10 +327,65 @@ jobs:
           name: ft-raw-logs
           path: tests/integration/logs/
 
+  ds-aot-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests pillow
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: serving/docker
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test opt-6.7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_aot opt-6.7b
+          docker run -t --rm --network=host \
+          -v $PWD/models:/opt/ml/model \
+          -v ${PWD}/logs:/opt/djl/logs \
+          -v ~/.aws:/home/djl/.aws  \
+          -u djl \
+          --runtime=nvidia --shm-size=2gb \
+          deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG partition --model-dir /opt/ml/model/test/
+          
+          cp $PWD/models/test/model.py $PWD/models/partition-test
+
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/partition-test/
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py deepspeed_aot opt-6.7b
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ds-aot-${{ matrix.arch }}-logs
+          path: tests/integration/logs/
+
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, hf-handler-test, ds-raw-test, ds-handler-test, ft-raw-test ]
+    needs: [ create-runners, hf-handler-test, ds-raw-test, ds-handler-test, ft-raw-test, ds-aot-test ]
     steps:
       - name: Stop all instances
         run: |

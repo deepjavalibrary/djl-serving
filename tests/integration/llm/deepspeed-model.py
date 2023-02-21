@@ -4,7 +4,7 @@ import torch
 import logging
 import math
 import os
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 torch.manual_seed(1234)
 
@@ -15,7 +15,16 @@ def load_model(properties):
     if "model_id" in properties:
         model_location = properties['model_id']
     logging.info(f"Loading model in {model_location}")
-    model = AutoModelForCausalLM.from_pretrained(model_location,
+    checkpoint = None
+    if "checkpoint" in properties:
+        checkpoint = os.path.join(model_location, properties['checkpoint'])
+
+    if checkpoint:
+        config_file = os.path.join(model_location, "config.json")
+        config = AutoConfig.from_pretrained(config_file)
+        model = AutoModelForCausalLM.from_config(config)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_location,
                                                  low_cpu_mem_usage=True)
     if "dtype" in properties:
         if properties["dtype"] == "float16":
@@ -28,7 +37,8 @@ def load_model(properties):
                                      tensor_parallel={"tp_size": tensor_parallel},
                                      dtype=model.dtype,
                                      replace_method='auto',
-                                     replace_with_kernel_inject=True)
+                                     replace_with_kernel_inject=True,
+                                     save_mp_checkpoint_path=properties.get("save_mp_checkpoint_path"))
     return model.module, tokenizer
 
 
