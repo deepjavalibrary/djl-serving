@@ -11,6 +11,11 @@ model_path=$2   #required
 platform=$3     #required
 args=${@:4}     #optional
 
+is_partition=false
+if [[ $4 == "partition" ]]; then
+  is_partition=true
+fi
+
 if [[ "$platform" == *"cu117"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
 elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
@@ -29,21 +34,42 @@ mkdir logs
 
 set -x
 # start the docker container
-container_id=$(docker run \
-  -itd \
-  --rm \
-  --network="host" \
-  -v ${model_path}:/opt/ml/model \
-  -v ${PWD}/logs:/opt/djl/logs \
-  -v ~/.aws:/home/djl/.aws \
-  ${env_file} \
-  -e TEST_TELEMETRY_COLLECTION='true' \
-  -u djl \
-  ${runtime:+--runtime="${runtime}"} \
-  ${shm:+--shm-size="${shm}"} \
-  ${host_device:+--device "${host_device}"} \
-  "${docker_image}" \
-  ${args})
+
+if $is_partition ; then
+  docker run \
+    -t \
+    --rm \
+    --network="host" \
+    -v ${model_path}:/opt/ml/model \
+    -v ${PWD}/logs:/opt/djl/logs \
+    -v ~/.aws:/root/.aws \
+    ${env_file} \
+    -e TEST_TELEMETRY_COLLECTION='true' \
+    ${runtime:+--runtime="${runtime}"} \
+    ${shm:+--shm-size="${shm}"} \
+    ${host_device:+--device "${host_device}"} \
+    "${docker_image}" \
+    ${args}
+
+    exit 0
+else
+  container_id=$(docker run \
+      -itd \
+      --rm \
+      --network="host" \
+      -v ${model_path}:/opt/ml/model \
+      -v ${PWD}/logs:/opt/djl/logs \
+      -v ~/.aws:/home/djl/.aws \
+      ${env_file} \
+      -e TEST_TELEMETRY_COLLECTION='true' \
+      -u djl \
+      ${runtime:+--runtime="${runtime}"} \
+      ${shm:+--shm-size="${shm}"} \
+      ${host_device:+--device "${host_device}"} \
+      "${docker_image}" \
+      ${args})
+fi
+
 set +x
 
 echo "Launching ${container_id}..."

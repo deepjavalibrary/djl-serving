@@ -22,7 +22,8 @@ def load_model(properties):
     if checkpoint:
         config_file = os.path.join(model_location, "config.json")
         config = AutoConfig.from_pretrained(config_file)
-        model = AutoModelForCausalLM.from_config(config)
+        with deepspeed.OnDevice(dtype=torch.float16, device="meta"):
+            model = AutoModelForCausalLM.from_config(config)
     else:
         model = AutoModelForCausalLM.from_pretrained(model_location,
                                                  low_cpu_mem_usage=True)

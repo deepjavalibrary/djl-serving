@@ -344,7 +344,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests pillow
+        run: pip3 install requests
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -356,21 +356,17 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py deepspeed_aot opt-6.7b
-          docker run -t --rm --network=host \
-          -v $PWD/models:/opt/ml/model \
-          -v ${PWD}/logs:/opt/djl/logs \
-          -v ~/.aws:/home/djl/.aws  \
-          -u djl \
-          --runtime=nvidia --shm-size=2gb \
-          deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG partition --model-dir /opt/ml/model/test/
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          partition --model-dir /opt/ml/model/test/
           
-          cp $PWD/models/test/model.py $PWD/models/partition-test
+          sudo cp $PWD/models/test/model.py $PWD/models/partition-test
 
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/partition-test/
           curl http://127.0.0.1:8080/models
           python3 llm/client.py deepspeed_aot opt-6.7b
           docker rm -f $(docker ps -aq)
+          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
