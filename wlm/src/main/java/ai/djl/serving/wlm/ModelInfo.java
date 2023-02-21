@@ -58,7 +58,7 @@ public final class ModelInfo<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
 
-    private static final Pattern PATTERN = Pattern.compile("MemFree:\\s+(\\d+) kB");
+    private static final Pattern PATTERN = Pattern.compile("MemAvailable:\\s+(\\d+) kB");
 
     private transient String id;
     private String version;
