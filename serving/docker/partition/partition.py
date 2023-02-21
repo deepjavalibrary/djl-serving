@@ -100,7 +100,8 @@ class PartitionService(object):
 
         subprocess.run(commands)
 
-        if not glob.glob(os.path.join(download_dir, '*.pt')):
+        # check if any file was downloaded.
+        if not glob.glob(os.path.join(download_dir, '*')):
             raise Exception('Model download from s3url failed')
 
         self.properties['model_id'] = download_dir
