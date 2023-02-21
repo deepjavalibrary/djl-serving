@@ -66,7 +66,7 @@ RUN git clone https://github.com/NVIDIA/FasterTransformer.git -b ${ft_version} \
     && cd FasterTransformer/build \
     && git submodule init && git submodule update \
     && cmake -DCMAKE_BUILD_TYPE=Release -DSM=70,75,80,86 -DBUILD_PYT=ON -DBUILD_MULTI_GPU=ON .. \
-    && make -j${nproc} install \
+    && make -j$(nproc) install \
     && rm -rf lib/*TritonBackend.so \
     && cp lib/*.so /usr/local/backends/fastertransformer/ \
     && mkdir -p /usr/local/backends/fastertransformer/bin \
