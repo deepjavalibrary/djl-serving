@@ -117,6 +117,15 @@ sd_model_spec = {
     }
 }
 
+ds_aot_model_spec = {
+    "opt-6.7b": {
+        "max_memory_per_gpu": 12,
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "use_pipeline": True
+    }
+}
+
 
 def check_worker_number(desired):
     endpoint = "http://127.0.0.1:8080/models/test"
@@ -205,12 +214,12 @@ def test_handler(model, model_spec):
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
-def test_ds_raw_model(model):
-    if model not in ds_raw_model_spec:
+def test_ds_raw_model(model, model_spec):
+    if model not in model_spec:
         raise ValueError(
-            f"{args.model} is not one of the supporting models {list(ds_raw_model_spec.keys())}"
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
         )
-    spec = ds_raw_model_spec[args.model]
+    spec = model_spec[args.model]
     for batch_size in spec["batch_size"]:
         for seq_length in spec["seq_length"]:
             req = {
@@ -290,7 +299,7 @@ def test_ft_raw_handler(model, model_spec):
 if __name__ == '__main__':
     args = parser.parse_args()
     if args.handler == "deepspeed_raw":
-        test_ds_raw_model(args.model)
+        test_ds_raw_model(args.model, ds_raw_model_spec)
     elif args.handler == "huggingface":
         test_handler(args.model, hf_model_spec)
     elif args.handler == "deepspeed":
@@ -299,6 +308,8 @@ if __name__ == '__main__':
         test_sd_handler(args.model, sd_model_spec)
     elif args.handler == "fastertransformer_raw":
         test_ft_raw_handler(args.model, ft_raw_model_spec)
+    elif args.handler == "deepspeed_aot":
+        test_ds_raw_model(args.model, ds_aot_model_spec)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")

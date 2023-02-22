@@ -6,6 +6,22 @@ parser = argparse.ArgumentParser(description='Build the LLM configs')
 parser.add_argument('handler', help='the handler used in the model')
 parser.add_argument('model', help='model that works with certain handler')
 
+
+ds_aot_list = {
+    "opt-6.7b": {
+        "option.s3url": "s3://djl-llm/opt-6b7/",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "float16"
+    },
+    "gpt-neox-20b": {
+        "option.s3url": "s3://djl-llm/gpt-neox-20b/",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "float16"
+    }
+}
+
 ds_model_list = {
     "gpt-j-6b": {
         "option.s3url": "s3://djl-llm/gpt-j-6b/",
@@ -152,6 +168,19 @@ def build_ds_raw_model(model):
     shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
 
 
+def build_ds_aot_model(model):
+    if model not in ds_aot_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(ds_aot_list.keys())}"
+        )
+
+    options = ds_aot_list[model]
+    options["engine"] = "DeepSpeed"
+    options["option.save_mp_checkpoint_path"] = "/opt/ml/model/partition-test"
+    write_properties(options)
+    shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
+
+
 def build_sd_handler_model(model):
     if model not in sd_handler_list:
         raise ValueError(
@@ -180,6 +209,7 @@ supported_handler = {
     "deepspeed_raw": build_ds_raw_model,
     'stable-diffusion': build_sd_handler_model,
     'fastertransformer_raw': build_ft_raw_model,
+    'deepspeed_aot': build_ds_aot_model
 }
 
 if __name__ == '__main__':
