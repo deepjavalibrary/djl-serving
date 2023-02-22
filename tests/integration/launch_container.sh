@@ -35,7 +35,7 @@ mkdir logs
 set -x
 # start the docker container
 
-if $is_partition ; then
+if $is_partition; then
   docker run \
     -t \
     --rm \
@@ -51,23 +51,27 @@ if $is_partition ; then
     "${docker_image}" \
     ${args}
 
-    exit 0
+  exit 0
 else
+  echo "$(whoami), UID: $UID"
+  if [[ "$UID" == "1000" ]]; then
+    uid_mapping="-u djl"
+  fi
   container_id=$(docker run \
-      -itd \
-      --rm \
-      --network="host" \
-      -v ${model_path}:/opt/ml/model \
-      -v ${PWD}/logs:/opt/djl/logs \
-      -v ~/.aws:/home/djl/.aws \
-      ${env_file} \
-      -e TEST_TELEMETRY_COLLECTION='true' \
-      -u djl \
-      ${runtime:+--runtime="${runtime}"} \
-      ${shm:+--shm-size="${shm}"} \
-      ${host_device:+--device "${host_device}"} \
-      "${docker_image}" \
-      ${args})
+    -itd \
+    --rm \
+    --network="host" \
+    -v ${model_path}:/opt/ml/model \
+    -v ${PWD}/logs:/opt/djl/logs \
+    -v ~/.aws:/home/djl/.aws \
+    ${env_file} \
+    -e TEST_TELEMETRY_COLLECTION='true' \
+    $uid_mapping \
+    ${runtime:+--runtime="${runtime}"} \
+    ${shm:+--shm-size="${shm}"} \
+    ${host_device:+--device "${host_device}"} \
+    "${docker_image}" \
+    ${args})
 fi
 
 set +x
