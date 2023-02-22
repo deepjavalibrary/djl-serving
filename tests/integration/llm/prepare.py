@@ -12,11 +12,13 @@ ds_aot_list = {
         "option.s3url": "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
+        "option.dtype": "float16"
     },
     "gpt-neox-20b": {
         "option.s3url": "s3://djl-llm/gpt-neox-20b/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
+        "option.dtype": "float16"
     }
 }
 
