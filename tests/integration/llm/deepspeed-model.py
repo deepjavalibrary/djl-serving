@@ -19,11 +19,16 @@ def load_model(properties):
     if "checkpoint" in properties:
         checkpoint = os.path.join(model_location, properties['checkpoint'])
 
+    ds_kwargs = dict()
     if checkpoint:
+        kwargs = {"torch_dtype": torch.float16}
         config_file = os.path.join(model_location, "config.json")
         config = AutoConfig.from_pretrained(config_file)
         with deepspeed.OnDevice(dtype=torch.float16, device="meta"):
-            model = AutoModelForCausalLM.from_config(config)
+            model = AutoModelForCausalLM.from_config(config, **kwargs)
+
+        ds_kwargs["checkpoint"] = properties['checkpoint']
+        ds_kwargs["base_dir"] = model_location
     else:
         model = AutoModelForCausalLM.from_pretrained(model_location,
                                                  low_cpu_mem_usage=True)
@@ -36,10 +41,12 @@ def load_model(properties):
     logging.info(f"Starting DeepSpeed init with TP={tensor_parallel}")
     model = deepspeed.init_inference(model,
                                      tensor_parallel={"tp_size": tensor_parallel},
-                                     dtype=model.dtype,
+                                     dtype=torch.float16,
                                      replace_method='auto',
                                      replace_with_kernel_inject=True,
-                                     save_mp_checkpoint_path=properties.get("save_mp_checkpoint_path"))
+                                     max_tokens=1024,
+                                     save_mp_checkpoint_path=properties.get("save_mp_checkpoint_path"),
+                                     **ds_kwargs)
     return model.module, tokenizer
 
 
