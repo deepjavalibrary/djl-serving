@@ -119,7 +119,7 @@ sd_model_spec = {
 
 ds_aot_model_spec = {
     "opt-6.7b": {
-        "max_memory_per_gpu": 8.0,
+        "max_memory_per_gpu": 15,
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "use_pipeline": False
