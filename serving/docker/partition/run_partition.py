@@ -15,7 +15,6 @@ import sys
 import json
 import argparse
 
-
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
 sys.path.append(PYTHON_CACHE_DIR)
@@ -33,8 +32,7 @@ def invoke_partition(properties):
 
     try:
         model_service = load_model_service(properties['model_dir'],
-                                           properties['entryPoint'],
-                                           None)
+                                           properties['entryPoint'], None)
         model_service.invoke_handler(handler, inputs)
         logging.info("Partitioning is successful")
     except Exception as e:
@@ -48,9 +46,7 @@ if __name__ == '__main__':
                         level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--properties',
-                        type=str,
-                        help='properties')
+    parser.add_argument('--properties', type=str, help='properties')
 
     args = parser.parse_args()
     properties = json.loads(args.properties)
