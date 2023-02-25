@@ -93,7 +93,7 @@ ft_raw_model_spec = {
     },
     "flan-t5-xxl": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 10
+        "max_memory_per_gpu": 15.0
     }
 }
 
