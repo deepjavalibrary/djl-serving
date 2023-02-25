@@ -78,8 +78,10 @@ set +x
 
 echo "Launching ${container_id}..."
 
+total=24
 if [[ "$platform" == *"deepspeed"* ]]; then
   echo "extra sleep for 5 min on DeepSpeed"
+  total=36
   sleep 300
 fi
 
@@ -96,7 +98,7 @@ while true; do
     echo "Docker container shut down"
     exit 1
   fi
-  if [[ "$retry" -ge 24 ]]; then
+  if [[ "$retry" -ge "$total" ]]; then
     echo "Max retry exceeded."
     exit 1
   fi
