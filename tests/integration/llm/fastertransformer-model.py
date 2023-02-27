@@ -9,7 +9,8 @@ def load_model(properties):
     pipeline_parallel_degree = 1  # TODO: add tests for pp_degree > 1
     model_id = properties["model_id"]
     dtype = properties.get("dtype", "fp32")
-    return fastertransformer.init_inference(model_id, tensor_parallel_degree, pipeline_parallel_degree, dtype)
+    return fastertransformer.init_inference(model_id, tensor_parallel_degree,
+                                            pipeline_parallel_degree, dtype)
 
 
 def handle(inputs: Input):

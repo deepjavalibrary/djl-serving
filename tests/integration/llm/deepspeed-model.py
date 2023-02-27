@@ -20,6 +20,7 @@ def get_torch_dtype_from_str(dtype: str):
         return torch.int8
     raise ValueError(f"Invalid data type: {dtype}")
 
+
 def load_model(properties):
     tensor_parallel = properties["tensor_parallel_degree"]
     model_location = properties['model_dir']
@@ -44,18 +45,21 @@ def load_model(properties):
         ds_kwargs["checkpoint"] = properties['checkpoint']
         ds_kwargs["base_dir"] = model_location
     else:
-        model = AutoModelForCausalLM.from_pretrained(model_location, low_cpu_mem_usage=True, **kwargs)
+        model = AutoModelForCausalLM.from_pretrained(model_location,
+                                                     low_cpu_mem_usage=True,
+                                                     **kwargs)
 
     tokenizer = AutoTokenizer.from_pretrained(model_location)
     logging.info(f"Starting DeepSpeed init with TP={tensor_parallel}")
-    model = deepspeed.init_inference(model,
-                                     tensor_parallel={"tp_size": tensor_parallel},
-                                     dtype=model.dtype,
-                                     replace_method='auto',
-                                     replace_with_kernel_inject=True,
-                                     max_tokens=1024,
-                                     save_mp_checkpoint_path=properties.get("save_mp_checkpoint_path"),
-                                     **ds_kwargs)
+    model = deepspeed.init_inference(
+        model,
+        tensor_parallel={"tp_size": tensor_parallel},
+        dtype=model.dtype,
+        replace_method='auto',
+        replace_with_kernel_inject=True,
+        max_tokens=1024,
+        save_mp_checkpoint_path=properties.get("save_mp_checkpoint_path"),
+        **ds_kwargs)
     return model.module, tokenizer
 
 
@@ -107,6 +111,7 @@ def pipeline_inference(model, tokenizer, batch_size, length):
 
 def partition(inputs: Input):
     load_model(inputs.get_properties())
+
 
 def handle(inputs: Input):
     global model, tokenizer

@@ -30,27 +30,15 @@ MASTER_PORT = 29761
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
 FILES_TO_EXTRACT = [
-    'djl_python/',
-    'djl_python/__init__.py',
-    'djl_python/deepspeed.py',
-    'djl_python/inputs.py',
-    'djl_python/outputs.py',
-    'djl_python/pair_list.py',
-    'djl_python/np_util.py',
-    'djl_python/service_loader.py'
+    'djl_python/', 'djl_python/__init__.py', 'djl_python/deepspeed.py',
+    'djl_python/inputs.py', 'djl_python/outputs.py', 'djl_python/pair_list.py',
+    'djl_python/np_util.py', 'djl_python/service_loader.py'
 ]
 
-CONFIG_FILES_PATTERNS = [
-    "*.json",
-    "*.txt"
-]
+CONFIG_FILES_PATTERNS = ["*.json", "*.txt"]
 
-ALLOW_PATTERNS = [
-    "*.json",
-    "*.pt",
-    "*.bin",
-    "*.txt"
-]
+ALLOW_PATTERNS = ["*.json", "*.pt", "*.bin", "*.txt"]
+
 
 def get_python_executable():
     python_executable = os.environ.get("PYTHON_EXECUTABLE")
@@ -61,6 +49,7 @@ def get_python_executable():
 
 
 class PartitionService(object):
+
     def __init__(self, props_manager):
         self.properties_manager = props_manager
         self.properties = props_manager.properties
@@ -84,19 +73,11 @@ class PartitionService(object):
                     s3url = s3url + '/*'
 
             commands = [
-                "/opt/djl/bin/s5cmd",
-                "--retry-count",
-                "1",
-                "sync",
-                s3url,
+                "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync", s3url,
                 download_dir
             ]
         else:
-            commands = ["aws",
-                        "s3",
-                        "sync",
-                        s3url,
-                        download_dir]
+            commands = ["aws", "s3", "sync", s3url, download_dir]
 
         subprocess.run(commands)
 
@@ -169,27 +150,12 @@ class PartitionService(object):
         commands = [
             "mpirun", "-N",
             self.properties.get("tensor_parallel_degree", 1),
-            "--allow-run-as-root",
-            "--mca",
-            "btl_vader_single_copy_mechanism",
-            "none",
-            "--tag-output",
-            "-x",
-            "FI_PROVIDER=efa",
-            "-x",
-            "RDMAV_FORK_SAFE=1",
-            "-x",
-            "FI_EFA_USE_DEVICE_RDMA=1",
-            "-x",
-            "LD_LIBRARY_PATH",
-            "-x",
-            f"MASTER_ADDR={MASTER_ADDR}",
-            "-x",
-            f"MASTER_PORT={MASTER_PORT}",
-            "-x",
-            "PYTHONPATH",
-            get_python_executable(),
-            "/opt/djl/partition/run_partition.py",
+            "--allow-run-as-root", "--mca", "btl_vader_single_copy_mechanism",
+            "none", "--tag-output", "-x", "FI_PROVIDER=efa", "-x",
+            "RDMAV_FORK_SAFE=1", "-x", "FI_EFA_USE_DEVICE_RDMA=1", "-x",
+            "LD_LIBRARY_PATH", "-x", f"MASTER_ADDR={MASTER_ADDR}", "-x",
+            f"MASTER_PORT={MASTER_PORT}", "-x", "PYTHONPATH",
+            get_python_executable(), "/opt/djl/partition/run_partition.py",
             "--properties",
             str(json.dumps(self.properties))
         ]

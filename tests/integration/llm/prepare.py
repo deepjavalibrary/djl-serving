@@ -6,7 +6,6 @@ parser = argparse.ArgumentParser(description='Build the LLM configs')
 parser.add_argument('handler', help='the handler used in the model')
 parser.add_argument('model', help='model that works with certain handler')
 
-
 ds_aot_list = {
     "opt-6.7b": {
         "option.s3url": "s3://djl-llm/opt-6b7/",

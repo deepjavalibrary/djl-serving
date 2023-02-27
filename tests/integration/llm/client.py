@@ -252,14 +252,21 @@ def test_sd_handler(model, model_spec):
         for step in spec["num_inference_steps"]:
             if "depth" in spec:
                 req = {"prompt": "two tigers"}
-                params = {"negative_prompt": "bad, deformed, ugly, bad anotomy", "strength": 0.7}
+                params = {
+                    "negative_prompt": "bad, deformed, ugly, bad anotomy",
+                    "strength": 0.7
+                }
                 url = "http://images.cocodataset.org/val2017/000000039769.jpg"
                 req["parameters"] = params
                 logging.info(f"req: {req}")
                 res = send_image_json(url, req)
             else:
                 req = {"prompt": "A bird and cat flying through space"}
-                params = {"height": size, "width": size, "num_inference_steps": step}
+                params = {
+                    "height": size,
+                    "width": size,
+                    "num_inference_steps": step
+                }
                 req["parameters"] = params
                 logging.info(f"req: {req}")
                 res = send_json(req)
@@ -281,7 +288,9 @@ def test_ft_raw_handler(model, model_spec):
         )
     spec = model_spec[model]
     for batch_size in spec['batch_size']:
-        logging.info(f"testing ft_handler with model: {model}, batch_size: {batch_size} ")
+        logging.info(
+            f"testing ft_handler with model: {model}, batch_size: {batch_size} "
+        )
         if "t5" in model:
             req = {"inputs": t5_batch_generation(batch_size)}
         else:
