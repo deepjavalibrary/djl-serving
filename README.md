@@ -50,8 +50,8 @@ brew services stop djl-serving
 For Ubuntu
 
 ```
-curl -O https://publish.djl.ai/djl-serving/djl-serving_0.20.0-1_all.deb
-sudo dpkg -i djl-serving_0.20.0-1_all.deb
+curl -O https://publish.djl.ai/djl-serving/djl-serving_0.21.0-1_all.deb
+sudo dpkg -i djl-serving_0.21.0-1_all.deb
 ```
 
 For Windows
@@ -60,10 +60,10 @@ We are considering to create a `chocolatey` package for Windows. For the time be
 download djl-serving zip file from [here](https://publish.djl.ai/djl-serving/serving-0.20.0.zip).
 
 ```
-curl -O https://publish.djl.ai/djl-serving/serving-0.20.0.zip
-unzip serving-0.20.0.zip
+curl -O https://publish.djl.ai/djl-serving/serving-0.21.0.zip
+unzip serving-0.21.0.zip
 # start djl-serving
-serving-0.20.0\bin\serving.bat
+serving-0.21.0\bin\serving.bat
 ```
 
 ### Docker
