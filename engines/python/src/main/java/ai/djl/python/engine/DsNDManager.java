@@ -19,7 +19,7 @@ import ai.djl.ndarray.NDManager;
 /**
  * {@code DsNDManager} is the Python engine implementation of {@link NDManager}.
  *
- * <p>TODO: remove this class in 0.20.0
+ * <p>TODO: remove this class in 0.21.0
  */
 public class DsNDManager extends PyNDManager {
 

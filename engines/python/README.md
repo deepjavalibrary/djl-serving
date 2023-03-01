@@ -29,13 +29,13 @@ The javadocs output is generated in the `build/doc/javadoc` folder.
 ## Installation
 You can pull the Python engine from the central Maven repository by including the following dependency:
 
-- ai.djl.python:python:0.20.0
+- ai.djl.python:python:0.21.0
 
 ```xml
 <dependency>
     <groupId>ai.djl.python</groupId>
     <artifactId>python</artifactId>
-    <version>0.20.0</version>
+    <version>0.21.0</version>
     <scope>runtime</scope>
 </dependency>
 ```
