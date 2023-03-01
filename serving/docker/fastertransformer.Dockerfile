@@ -71,6 +71,7 @@ RUN git clone https://github.com/NVIDIA/FasterTransformer.git -b ${ft_version} \
     && cp lib/*.so /usr/local/backends/fastertransformer/ \
     && mkdir -p /usr/local/backends/fastertransformer/bin \
     && cp -r bin/*_gemm /usr/local/backends/fastertransformer/bin/ \
+    && cp ../LICENSE /root/FASTERTRANSFORMER_LICENSE \
     && cd ../../ && rm -rf FasterTransformer
 
 # TODO: Add DLC patching
