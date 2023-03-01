@@ -74,13 +74,13 @@ RUN git clone https://github.com/NVIDIA/FasterTransformer.git -b ${ft_version} \
     && cp ../LICENSE /root/FASTERTRANSFORMER_LICENSE \
     && cd ../../ && rm -rf FasterTransformer
 
-# TODO: Add DLC patching
 RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} fastertransformer" > /opt/djl/bin/telemetry && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
+    scripts/security_patch.sh fastertransformer && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
