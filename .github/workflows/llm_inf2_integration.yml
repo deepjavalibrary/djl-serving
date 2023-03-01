@@ -1,0 +1,85 @@
+name: Transformers neuronx large model integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        default: ''
+#  schedule:
+#    - cron: '0 15 * * *'
+
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new Inf2.2xl instance
+        id: create_inf2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_inf2 $token djl-serving
+    outputs:
+      inf2_instance_id: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
+
+  transformers-neuronx-test:
+    runs-on: [ self-hosted, inf2 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8.x'
+      - name: Install pip dependencies
+        run: pip3 install requests
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: serving/docker
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test transformers-neuronx gpt2
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx gpt2
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: transformers-neuronx-${{ matrix.arch }}-logs
+          path: tests/integration/logs/
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, transformers-neuronx-test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.inf2_instance_id }}
+          ./stop_instance.sh $instance_id
