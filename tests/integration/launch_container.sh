@@ -21,7 +21,7 @@ if [[ "$platform" == *"cu117"* ]]; then # if the platform has cuda capabilities
 elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   shm="2gb"
-elif [[ "$platform" == *"inf1"* ]]; then # if the platform is inferentia
+elif [[ "$platform" == *"inf1"* || "$platform" == *"inf2"* ]]; then # if the platform is inferentia
   host_device="/dev/neuron0"
 fi
 
