@@ -2,7 +2,7 @@
 <Configuration status="INFO">
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
-            <PatternLayout pattern="[%-5level] - %msg%n"/>
+            <PatternLayout pattern="%highlight{%-5level} %style{%c{1}}{bright_green} %msg%n"/>
         </Console>
     </Appenders>
     <Loggers>
