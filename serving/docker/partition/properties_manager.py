@@ -14,25 +14,31 @@ import glob
 import torch
 
 # Properties to exclude while generating serving.properties
+from utils import is_engine_mpi_mode, get_engine_configs
+
 EXCLUDE_PROPERTIES = [
     'model_id', 'checkpoint', 's3url', 'save_mp_checkpoint_path', 'model_dir',
     'engine'
 ]
 
-PARTITION_SUPPORTED_ENGINES = ['DeepSpeed']
+PARTITION_SUPPORTED_ENGINES = ['DeepSpeed', 'FasterTransformer']
 
 
 class PropertiesManager(object):
-
     def __init__(self, properties_dir):
         self.properties = {}
         self.properties_dir = properties_dir
 
         self.load_properties()
 
-        self.set_and_validate_model_dir()
         self.validate_engine()
-        self.validate_tp_degree()
+        self.is_mpi_mode = is_engine_mpi_mode(self.properties['engine'])
+
+        self.set_and_validate_model_dir()
+
+        if self.is_mpi_mode:
+            self.validate_tp_degree()
+
         self.set_and_validate_entry_point()
 
     def load_properties(self):
@@ -77,16 +83,8 @@ class PropertiesManager(object):
 
     def generate_properties_file(self):
         checkpoint_path = self.properties.get('save_mp_checkpoint_path')
-
-        checkpoint_json = os.path.join(checkpoint_path,
-                                       'ds_inference_config.json')
-        if not os.path.exists(checkpoint_json):
-            raise Exception('Partition was not successful')
-
         configs = {
             'engine': self.properties['engine'],
-            'option.model_dir': checkpoint_path,
-            'option.checkpoint': 'ds_inference_config.json',
         }
 
         for key, value in self.properties.items():
@@ -96,6 +94,8 @@ class PropertiesManager(object):
                     continue
                 else:
                     configs[f'option.{key}'] = value
+
+        configs.update(get_engine_configs(self.properties))
 
         properties_file = os.path.join(checkpoint_path, 'serving.properties')
         with open(properties_file, "w") as f:
