@@ -1,3 +1,16 @@
+#!/usr/bin/env python
+#
+# Copyright 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file
+# except in compliance with the License. A copy of the License is located at
+#
+# http://aws.amazon.com/apache2.0/
+#
+# or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
+# BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
+# the specific language governing permissions and limitations under the License.
+
 import fastertransformer as ft
 from djl_python import Input, Output
 import logging
@@ -23,11 +36,12 @@ class FasterTransformerService(object):
     def inference(self, inputs: Input):
         try:
             # TODO: Add support for more content types
-            data = inputs.get_as_json()
-            input_text = data["text"]
+            input_map = inputs.get_as_json()
+            input_text = input_map.pop("inputs", input_map)
+            parameters = input_map.pop("parameters", {})
             if isinstance(input_text, str):
                 input_text = [input_text]
-            result = self.model.pipeline_generate(input_text)
+            result = self.model.pipeline_generate(input_text, **parameters)
             outputs = Output().add(result)
         except Exception as e:
             logging.exception("FasterTransformer inference failed")
