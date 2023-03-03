@@ -1,4 +1,4 @@
-name: Transformers neuronx large model integration tests
+name: Inferentia2 integration tests
 
 on:
   workflow_dispatch:
@@ -51,6 +51,22 @@ jobs:
         working-directory: serving/docker
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          mkdir logs
+          ./download_models.sh pytorch-inf2
+      - name: Test Pytorch model
+        working-directory: tests/integration
+        run: |
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2 \
+          serve -m test::PyTorch=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
+          ./test_client.sh image/jpg models/kitten.jpg
+          docker rm -f $(docker ps -aq)
+      - name: Test Python mode
+        working-directory: tests/integration
+        run: |
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2 \
+          serve -m test::Python=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
+          ./test_client.sh image/jpg models/kitten.jpg
+          docker rm -f $(docker ps -aq)
       - name: Test transformers-neuronx gpt2
         working-directory: tests/integration
         run: |
