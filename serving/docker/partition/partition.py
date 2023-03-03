@@ -24,32 +24,16 @@ from pathlib import Path
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
 
-MASTER_ADDR = "127.0.0.1"
-MASTER_PORT = 29761
+from utils import get_partition_cmd, extract_python_jar
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
-FILES_TO_EXTRACT = [
-    'djl_python/', 'djl_python/__init__.py', 'djl_python/deepspeed.py',
-    'djl_python/inputs.py', 'djl_python/outputs.py', 'djl_python/pair_list.py',
-    'djl_python/np_util.py', 'djl_python/service_loader.py'
-]
-
-CONFIG_FILES_PATTERNS = ["*.json", "*.txt"]
+CONFIG_FILES_PATTERNS = ["*.json", "*.txt", "*.model"]
 
 ALLOW_PATTERNS = ["*.json", "*.pt", "*.bin", "*.txt"]
 
 
-def get_python_executable():
-    python_executable = os.environ.get("PYTHON_EXECUTABLE")
-    if python_executable is None:
-        python_executable = "python3"
-
-    return python_executable
-
-
 class PartitionService(object):
-
     def __init__(self, props_manager):
         self.properties_manager = props_manager
         self.properties = props_manager.properties
@@ -147,18 +131,8 @@ class PartitionService(object):
             shutil.copy(file, dst=self.properties['save_mp_checkpoint_path'])
 
     def run_partition(self):
-        commands = [
-            "mpirun", "-N",
-            self.properties.get("tensor_parallel_degree", 1),
-            "--allow-run-as-root", "--mca", "btl_vader_single_copy_mechanism",
-            "none", "--tag-output", "-x", "FI_PROVIDER=efa", "-x",
-            "RDMAV_FORK_SAFE=1", "-x", "FI_EFA_USE_DEVICE_RDMA=1", "-x",
-            "LD_LIBRARY_PATH", "-x", f"MASTER_ADDR={MASTER_ADDR}", "-x",
-            f"MASTER_PORT={MASTER_PORT}", "-x", "PYTHONPATH",
-            get_python_executable(), "/opt/djl/partition/run_partition.py",
-            "--properties",
-            str(json.dumps(self.properties))
-        ]
+        commands = get_partition_cmd(self.properties_manager.is_mpi_mode,
+                                     self.properties)
         self.set_environmental_vars()
         result = subprocess.run(commands)
         logging.info(result)
@@ -168,16 +142,6 @@ class PartitionService(object):
             self.copy_config_files()
         else:
             raise Exception("Partitioning was not successful.")
-
-
-def extract_python_jar():
-    os.makedirs(PYTHON_CACHE_DIR, exist_ok=True)
-    jarfiles = glob.glob('/usr/local/djl-serving-*/lib/python-*.jar')
-
-    with zipfile.ZipFile(jarfiles[0], 'r') as zip:
-        # Extracting only required files into a specific location.
-        for file in FILES_TO_EXTRACT:
-            zip.extract(file, path=PYTHON_CACHE_DIR)
 
 
 if __name__ == "__main__":
@@ -194,7 +158,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    extract_python_jar()
+    extract_python_jar(PYTHON_CACHE_DIR)
 
     properties_manager = PropertiesManager(args.model_dir)
     service = PartitionService(properties_manager)

@@ -36,8 +36,10 @@ CMD ["serve"]
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
-    mkdir -p /opt/djl/deps
+    mkdir -p /opt/djl/deps \
+    mkdir -p /opt/djl/partition
 COPY config.properties /opt/djl/conf/config.properties
+COPY partition /opt/djl/partition
 
 # Install all dependencies
 RUN apt-get update && apt-get install -y wget git zlib1g-dev && \
