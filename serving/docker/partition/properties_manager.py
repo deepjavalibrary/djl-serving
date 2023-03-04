@@ -25,6 +25,7 @@ PARTITION_SUPPORTED_ENGINES = ['DeepSpeed', 'FasterTransformer']
 
 
 class PropertiesManager(object):
+
     def __init__(self, properties_dir):
         self.properties = {}
         self.properties_dir = properties_dir
