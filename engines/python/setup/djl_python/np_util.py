@@ -160,7 +160,7 @@ def from_nd_list(encoded: bytearray) -> list:
     return result
 
 
-def to_nd_list(np_list: list) -> bytearray:
+def to_nd_list(np_list) -> bytearray:
     """
     Converts list of numpy array into djl NDList
 
@@ -168,6 +168,9 @@ def to_nd_list(np_list: list) -> bytearray:
     :return: djl NDList as bytearray
     """
     arr = bytearray()
+    if type(np_list) is not list:
+        np_list = [np_list]
+
     arr.extend(set_int(len(np_list)))
     for nd in np_list:
         arr.extend(set_str(MAGIC_NUMBER))
