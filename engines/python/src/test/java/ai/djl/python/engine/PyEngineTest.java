@@ -248,6 +248,62 @@ public class PyEngineTest {
     }
 
     @Test
+    public void testResnet18HybridMode() throws TranslateException, IOException, ModelException {
+        if (!Boolean.getBoolean("nightly")) {
+            return;
+        }
+        Criteria<Input, Output> criteria1 =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/resnet18"))
+                        .optEngine("Python")
+                        .optOption("entryPoint", "processing.py")
+                        .build();
+        Criteria<NDList, NDList> criteria2 =
+                Criteria.builder()
+                        .setTypes(NDList.class, NDList.class)
+                        .optModelPath(Paths.get("src/test/resources/resnet18"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> processingModel = criteria1.loadModel();
+                Predictor<Input, Output> processingPredictor = processingModel.newPredictor();
+                ZooModel<NDList, NDList> resnet18 = criteria2.loadModel();
+                Predictor<NDList, NDList> predictor = resnet18.newPredictor();
+                NDManager manager = NDManager.newBaseManager()) {
+
+            Input preProcessing = new Input();
+            Path file = Paths.get("build/test/kitten.jpg");
+            DownloadUtils.download(
+                    new URL("https://resources.djl.ai/images/kitten.jpg"), file, null);
+            preProcessing.add("data", Files.readAllBytes(file));
+            preProcessing.addProperty("Content-Type", "image/jpeg");
+            // calling preprocess() function in processing.py
+            preProcessing.addProperty("handler", "preprocess");
+            Output preprocessed = processingPredictor.predict(preProcessing);
+            NDList list = preprocessed.getDataAsNDList(manager);
+            NDArray array = list.singletonOrThrow();
+            Assert.assertEquals(array.getShape(), new Shape(1, 3, 224, 224));
+
+            // workaround bug: https://github.com/deepjavalibrary/djl/pull/2436
+            // TODO: Remove in 0.22.0
+            list = new NDList(manager.create(array.toFloatArray(), new Shape(1, 3, 224, 224)));
+
+            list = predictor.predict(list);
+            Assert.assertEquals(list.get(0).getShape(), new Shape(1, 1000));
+
+            Input postProcessing = new Input();
+            postProcessing.add("data", list.encode());
+            // calling postprocess() function in processing.py
+            postProcessing.addProperty("handler", "postprocess");
+            Output ret = processingPredictor.predict(postProcessing);
+            String json = ret.getData().getAsString();
+            Type type = new TypeToken<Map<String, Double>>() {}.getType();
+            Map<String, Double> map = JsonUtils.GSON.fromJson(json, type);
+            Assert.assertTrue(map.containsKey("tabby"));
+        }
+    }
+
+    @Test
     public void testHuggingfaceModel() throws TranslateException, IOException, ModelException {
         if (!Boolean.getBoolean("nightly")) {
             return;
