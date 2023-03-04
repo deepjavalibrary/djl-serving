@@ -131,6 +131,11 @@ public class PyModel extends BaseModel {
             }
         }
 
+        // MMS and TorchServe Bcc
+        if (Files.isDirectory(modelDir.resolve("MAR-INF"))) {
+            pyEnv.setFailOnInitialize(false);
+        }
+
         if (entryPoint == null) {
             entryPoint = Utils.getenv("DJL_ENTRY_POINT");
             if (entryPoint == null) {

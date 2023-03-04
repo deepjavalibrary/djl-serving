@@ -141,10 +141,9 @@ class TransformerNeuronXService(object):
                     f"{self.batch_size} batch size not equal to {len(input_text)} prompt size"
                 )
             with torch.inference_mode():
-                input_tokens = self.tokenizer.batch_encode_plus(
-                    input_text, return_tensors="pt", padding=True)
+                input_ids = torch.as_tensor([self.tokenizer.encode(text) for text in input_text])
                 generated_sequence = self.model.sample(
-                    input_tokens, sequence_length=seq_length)
+                    input_ids, sequence_length=seq_length)
                 result = [
                     self.tokenizer.decode(gen_seq)
                     for gen_seq in generated_sequence

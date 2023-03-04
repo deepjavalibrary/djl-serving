@@ -54,6 +54,8 @@ public class PyEnv {
     private Map<String, String> initParameters;
     private boolean initialized;
 
+    private boolean failOnInitialize = true;
+
     /**
      * Constructs a new {@code PyEnv} instance.
      *
@@ -308,6 +310,24 @@ public class PyEnv {
             modelLoadingTimeout = getDefaultTimeout("MODEL_LOADING_TIMEOUT", 240);
         }
         return modelLoadingTimeout;
+    }
+
+    /**
+     * Returns true to forcibly fail if initialize process in python failed.
+     *
+     * @return true if forcibly failed
+     */
+    public boolean isFailOnInitialize() {
+        return failOnInitialize;
+    }
+
+    /**
+     * Enables to forcibly fail if initialize process in python failed.
+     *
+     * @param failOnInitialize the flag
+     */
+    public void setFailOnInitialize(boolean failOnInitialize) {
+        this.failOnInitialize = failOnInitialize;
     }
 
     /**
