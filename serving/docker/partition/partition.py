@@ -34,6 +34,7 @@ ALLOW_PATTERNS = ["*.json", "*.pt", "*.bin", "*.txt"]
 
 
 class PartitionService(object):
+
     def __init__(self, props_manager):
         self.properties_manager = props_manager
         self.properties = props_manager.properties

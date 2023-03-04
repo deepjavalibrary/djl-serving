@@ -18,6 +18,7 @@ from typing import Optional
 
 
 class FasterTransformerService(object):
+
     def __init__(self) -> None:
         self.initialized = False
 
