@@ -6,7 +6,8 @@ set -ex
 apt-get update -y && apt-get install -y --no-install-recommends \
   curl \
   git \
-  gnupg2
+  gnupg2 \
+  pciutils
 
 # Configure Linux for Neuron repository updates
 . /etc/os-release

@@ -90,7 +90,7 @@ class PyProcess {
                 output = future.get(timeout, TimeUnit.SECONDS);
                 if (initialLoad) {
                     if (output.getCode() >= 300) {
-                        if (pyEnv.isMpiMode()) {
+                        if (pyEnv.isFailOnInitialize()) {
                             throw new TranslateException(
                                     "Failed to initialize model: " + output.getMessage());
                         }
