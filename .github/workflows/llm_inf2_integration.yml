@@ -56,26 +56,37 @@ jobs:
       - name: Test Pytorch model
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2 \
-          serve -m test::PyTorch=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          serve -m test::PyTorch:nc0=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test Python mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2 \
-          serve -m test::Python=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          serve -m test::Python:nc0=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test transformers-neuronx gpt2
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py transformers_neuronx gpt2
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2 \
+          python3 llm/prepare.py transformers_neuronx_raw gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
           serve
           curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx gpt2
+          python3 llm/client.py transformers_neuronx_raw gpt2
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: Test transformers-neuronx opt-1.3b with handler
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx opt-1.3b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-6 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx opt-1.3b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: On fail step
