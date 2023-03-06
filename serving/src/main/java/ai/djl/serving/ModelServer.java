@@ -581,7 +581,8 @@ public class ModelServer {
                         throw new EngineException(
                                 "Neuron devices are not enough to run "
                                         + tensorParallelDegree
-                                        + " partitions.");
+                                        + " partitions. Please refer to: "
+                                        + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
                     }
                     neurons = procs;
                 }
