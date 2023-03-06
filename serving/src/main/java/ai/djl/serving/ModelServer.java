@@ -571,6 +571,20 @@ public class ModelServer {
                         .toArray(String[]::new);
             } else if (NeuronUtils.hasNeuron()) {
                 int neurons = NeuronUtils.getNeuronCores();
+                Properties prop = ModelInfo.getServingProperties(modelDir);
+                String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
+                v = prop.getProperty("option.tensor_parallel_degree", v);
+                int tensorParallelDegree = Integer.parseInt(v);
+                if (tensorParallelDegree > 0 && NeuronUtils.isInf2()) {
+                    int procs = neurons / tensorParallelDegree;
+                    if (procs == 0) {
+                        throw new EngineException(
+                                "Neuron devices are not enough to run "
+                                        + tensorParallelDegree
+                                        + " partitions.");
+                    }
+                    neurons = procs;
+                }
                 return IntStream.range(0, neurons).mapToObj(i -> "nc" + i).toArray(String[]::new);
             }
         } else if (!devices.isEmpty()) {

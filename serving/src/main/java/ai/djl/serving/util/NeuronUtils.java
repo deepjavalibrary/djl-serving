@@ -29,6 +29,19 @@ public final class NeuronUtils {
     }
 
     /**
+     * Checks if inf2 is used.
+     *
+     * @return is inf2
+     */
+    public static boolean isInf2() {
+        String metadata = Ec2Utils.readMetadata("instance-type");
+        if (metadata == null) {
+            return false;
+        }
+        return metadata.startsWith("inf2") || metadata.startsWith("trn1");
+    }
+
+    /**
      * Returns the number of NeuronCores available in the system.
      *
      * @return the number of NeuronCores available in the system
@@ -46,6 +59,16 @@ public final class NeuronUtils {
                 return 16;
             case "inf1.24xlarge":
                 return 64;
+            case "inf2.xlarge":
+            case "inf2.8xlarge":
+            case "trn1.2xlarge":
+                return 2;
+            case "inf2.24xlarge":
+                return 12;
+            case "inf2.48xlarge":
+                return 24;
+            case "trn1.32xlarge":
+                return 32;
             default:
                 return 0;
         }
