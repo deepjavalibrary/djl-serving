@@ -208,13 +208,7 @@ public final class ModelInfo<I, O> {
                 }
             }
             logger.info("Loading model {} on {}", id, device);
-            if ("nc".equals(device.getDeviceType())) {
-                //                String ncs = String.valueOf(device.getDeviceId());
-                //                builder.optOption("env", "NEURON_RT_VISIBLE_CORES=" + ncs);
-                logger.info("Bypass NC core allocation");
-            } else {
-                builder.optDevice(device);
-            }
+            builder.optDevice(device);
 
             ZooModel<I, O> m = builder.build().loadModel();
             if (criteria != null) {
