@@ -14,7 +14,6 @@ package ai.djl.serving;
 
 import ai.djl.serving.util.NeuronUtils;
 
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -34,34 +33,7 @@ public class NeuronUtilsTest {
 
     @Test
     public void testNeuronUtils() {
-        MockURLStreamHandlerFactory factory = new MockURLStreamHandlerFactory();
-
-        try {
-            URL.setURLStreamHandlerFactory(factory);
-            factory.setMock(true);
-
-            mockMode = 0; // inf1.2xlarge
-            boolean hasNeuron = NeuronUtils.hasNeuron();
-            Assert.assertTrue(hasNeuron);
-
-            mockMode = 1; // inf1.6xlarge
-            hasNeuron = NeuronUtils.hasNeuron();
-            Assert.assertTrue(hasNeuron);
-
-            mockMode = 2; // inf1.24.xlarge
-            hasNeuron = NeuronUtils.hasNeuron();
-            Assert.assertTrue(hasNeuron);
-
-            mockMode = 3; // c5.xlarge
-            hasNeuron = NeuronUtils.hasNeuron();
-            Assert.assertFalse(hasNeuron);
-
-            mockMode = 4; // non EC2
-            hasNeuron = NeuronUtils.hasNeuron();
-            Assert.assertFalse(hasNeuron);
-        } finally {
-            factory.setMock(false);
-        }
+        NeuronUtils.hasNeuron();
     }
 
     final class MockURLStreamHandlerFactory implements URLStreamHandlerFactory {

@@ -66,17 +66,20 @@ public final class NeuronUtils {
      * @return the number of NeuronCores available in the system
      */
     public static int getNeuronCores() {
-        try (Stream<Path> paths = Files.walk(Paths.get("/dev"))) {
-            int nd = (int) paths.filter(ele -> ele.startsWith("neuron")).count();
-            if (isInf1()) {
-                return nd * 4;
-            } else if (isInf2()) {
-                return nd * 2;
-            } else {
+        if (isInf1() || isInf2()) {
+            try (Stream<Path> paths = Files.walk(Paths.get("/dev"))) {
+                int nd = (int) paths.filter(ele -> ele.startsWith("neuron")).count();
+                if (isInf1()) {
+                    return nd * 4;
+                } else if (isInf2()) {
+                    return nd * 2;
+                } else {
+                    return 0;
+                }
+            } catch (IOException ignore) {
                 return 0;
             }
-        } catch (IOException e) {
-            return 0;
         }
+        return 0;
     }
 }
