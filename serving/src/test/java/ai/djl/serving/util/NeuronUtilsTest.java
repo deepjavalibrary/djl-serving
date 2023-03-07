@@ -10,10 +10,9 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package ai.djl.serving;
+package ai.djl.serving.util;
 
-import ai.djl.serving.util.NeuronUtils;
-
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -29,19 +28,54 @@ import java.nio.charset.StandardCharsets;
 
 public class NeuronUtilsTest {
 
-    int mockMode;
-
     @Test
     public void testNeuronUtils() {
-        NeuronUtils.hasNeuron();
+        MockURLStreamHandlerFactory factory = new MockURLStreamHandlerFactory();
+
+        try {
+            URL.setURLStreamHandlerFactory(factory);
+
+            NeuronUtils.setInstanceType(-1);
+            factory.setMockMode(0); // inf1
+            Assert.assertTrue(NeuronUtils.hasNeuron());
+            Assert.assertTrue(NeuronUtils.isInf1());
+            if (System.getProperty("os.name").startsWith("Linux")) {
+                NeuronUtils.getNeuronCores();
+            }
+
+            NeuronUtils.setInstanceType(-1);
+            factory.setMockMode(1); // inf2
+            Assert.assertTrue(NeuronUtils.hasNeuron());
+            Assert.assertTrue(NeuronUtils.isInf2());
+
+            NeuronUtils.setInstanceType(-1);
+            factory.setMockMode(2); // inf1
+            Assert.assertTrue(NeuronUtils.hasNeuron());
+            Assert.assertTrue(NeuronUtils.isInf2());
+
+            NeuronUtils.setInstanceType(-1);
+            factory.setMockMode(3); // inf1
+            Assert.assertFalse(NeuronUtils.hasNeuron());
+
+            NeuronUtils.setInstanceType(-1);
+            factory.setMockMode(4); // inf1
+            Assert.assertFalse(NeuronUtils.hasNeuron());
+        } finally {
+            factory.setMock(false);
+        }
     }
 
-    final class MockURLStreamHandlerFactory implements URLStreamHandlerFactory {
+    static final class MockURLStreamHandlerFactory implements URLStreamHandlerFactory {
 
-        private boolean mock;
+        private boolean mock = true;
+        private int mockMode;
 
         public void setMock(boolean mock) {
             this.mock = mock;
+        }
+
+        public void setMockMode(int mockMode) {
+            this.mockMode = mockMode;
         }
 
         /** {@inheritDoc} */
@@ -95,13 +129,13 @@ public class NeuronUtilsTest {
                         return new ByteArrayInputStream(
                                 "inf1.2xlarge".getBytes(StandardCharsets.UTF_8));
                     case 1:
-                        // EC2 inf1.6xlarge
+                        // EC2 inf2.24xlarge
                         return new ByteArrayInputStream(
-                                "inf1.6xlarge".getBytes(StandardCharsets.UTF_8));
+                                "inf2.24xlarge".getBytes(StandardCharsets.UTF_8));
                     case 2:
-                        // EC2 inf1.24xlarge
+                        // EC2 trn1.32xlarge
                         return new ByteArrayInputStream(
-                                "inf1.24xlarge".getBytes(StandardCharsets.UTF_8));
+                                "trn1.32xlarge".getBytes(StandardCharsets.UTF_8));
                     case 3:
                         // EC2 c5.xlarge
                         return new ByteArrayInputStream(
