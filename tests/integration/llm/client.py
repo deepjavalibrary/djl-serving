@@ -126,7 +126,15 @@ ds_aot_model_spec = {
     }
 }
 
-transformers_neuronx_model_spec = {"gpt2": {"seq_length": [64, 128]}}
+transformers_neuronx_raw_model_spec = {"gpt2": {"seq_length": [64, 128]}}
+
+transformers_neuronx_model_spec = {
+    "opt-1.3b": {
+        "worker": 2,
+        "seq_length": [128, 256],
+        "batch_size": [4]
+    }
+}
 
 
 def check_worker_number(desired):
@@ -307,10 +315,10 @@ def test_ft_raw_handler(model, model_spec):
             assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
-def test_transformers_neuronx_handler(model, model_spec):
+def test_transformers_neuronx_raw(model, model_spec):
     if model not in model_spec:
         raise ValueError(
-            f"{model} is not one of the supporting models {list(transformers_neuronx_model_spec.keys())}"
+            f"{model} is not one of the supporting models {list(model_spec.keys())}"
         )
     spec = model_spec[model]
     for seq_length in spec["seq_length"]:
@@ -330,6 +338,28 @@ def test_transformers_neuronx_handler(model, model_spec):
         assert all([text in t for t in res["outputs"]])
 
 
+def test_transformers_neuronx_handler(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for batch_size in spec["batch_size"]:
+        for seq_length in spec["seq_length"]:
+            req = {
+                "inputs": batch_generation(batch_size),
+                "seq_length": seq_length
+            }
+            logging.info(f"req {req}")
+            res = send_json(req)
+            res = res.json()
+            logging.info(f"res {res}")
+            result = res
+            assert len(result) == batch_size
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
     if args.handler == "deepspeed_raw":
@@ -344,6 +374,9 @@ if __name__ == '__main__':
         test_ft_raw_handler(args.model, ft_raw_model_spec)
     elif args.handler == "deepspeed_aot":
         test_ds_raw_model(args.model, ds_aot_model_spec)
+    elif args.handler == "transformers_neuronx_raw":
+        test_transformers_neuronx_raw(args.model,
+                                      transformers_neuronx_raw_model_spec)
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)

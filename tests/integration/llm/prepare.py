@@ -126,13 +126,25 @@ ft_model_list = {
     }
 }
 
-transformers_neuronx_handler_list = {
+transformers_neuronx_model_list = {
     "gpt2": {
         "option.tensor_parallel_degree": 2,
         "option.batch_size": 4,
         "option.dtype": "f32",
         "option.n_positions": 128,
+        "load_on_devices": "nc0"
     },
+}
+
+transformers_neuronx_handler_list = {
+    "opt-1.3b": {
+        "option.model_id": "s3://djl-llm/opt-1.3b/",
+        "option.batch_size": 4,
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 256,
+        "option.dtype": "fp16",
+        "option.model_loading_timeout": 600
+    }
 }
 
 
@@ -212,15 +224,26 @@ def build_ft_raw_model(model):
 
 
 def build_transformers_neuronx_model(model):
+    if model not in transformers_neuronx_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(transformers_neuronx_model_list.keys())}"
+        )
+    options = transformers_neuronx_model_list[model]
+    options["engine"] = "Python"
+    write_properties(options)
+    shutil.copyfile("llm/transformers-neuronx-gpt2-model.py",
+                    "models/test/model.py")
+
+
+def build_transformers_neuronx_handler_model(model):
     if model not in transformers_neuronx_handler_list.keys():
         raise ValueError(
             f"{model} is not one of the supporting handler {list(transformers_neuronx_handler_list.keys())}"
         )
     options = transformers_neuronx_handler_list[model]
     options["engine"] = "Python"
+    options["option.entryPoint"] = "djl_python.transformer-neuronx"
     write_properties(options)
-    shutil.copyfile("llm/transformers-neuronx-gpt2-model.py",
-                    "models/test/model.py")
 
 
 supported_handler = {
@@ -230,7 +253,8 @@ supported_handler = {
     'stable-diffusion': build_sd_handler_model,
     'fastertransformer_raw': build_ft_raw_model,
     'deepspeed_aot': build_ds_aot_model,
-    'transformers_neuronx': build_transformers_neuronx_model,
+    'transformers_neuronx_raw': build_transformers_neuronx_model,
+    'transformers_neuronx': build_transformers_neuronx_handler_model
 }
 
 if __name__ == '__main__':

@@ -16,13 +16,28 @@ if [[ $4 == "partition" ]]; then
   is_partition=true
 fi
 
+is_llm=false
 if [[ "$platform" == *"cu117"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
 elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
   runtime="nvidia"
+  is_llm=true
   shm="2gb"
-elif [[ "$platform" == *"inf1"* || "$platform" == *"inf2"* ]]; then # if the platform is inferentia
-  host_device="/dev/neuron0"
+elif [[ "$platform" == *"inf1"* ]]; then # if the platform is inferentia
+  host_device="--device /dev/neuron0"
+elif [[ "$platform" == *"inf2"* ]]; then # inf2: pytorch-inf2-24 24 will be the total devices
+  OIFS=$IFS
+  IFS='-'
+  read -a strarr <<<"$platform"
+  devices=${strarr[2]}
+  IFS=$OIFS
+  if [[ $devices -gt 1 ]]; then
+    is_llm=true
+  fi
+  for ((i=0; i<$devices; i++))
+  do
+    host_device+=" --device /dev/neuron${i}"
+  done
 fi
 
 if [[ -f ${PWD}/docker_env ]]; then
@@ -47,7 +62,7 @@ if $is_partition; then
     -e TEST_TELEMETRY_COLLECTION='true' \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
-    ${host_device:+--device "${host_device}"} \
+    ${host_device:+ ${host_device}} \
     "${docker_image}" \
     ${args}
 
@@ -69,7 +84,7 @@ else
     $uid_mapping \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
-    ${host_device:+--device "${host_device}"} \
+    ${host_device:+ ${host_device}} \
     "${docker_image}" \
     ${args})
 fi
@@ -79,8 +94,8 @@ set +x
 echo "Launching ${container_id}..."
 
 total=24
-if [[ "$platform" == *"deepspeed"* ]]; then
-  echo "extra sleep for 5 min on DeepSpeed"
+if $is_llm; then
+  echo "extra sleep for 5 min on LLM models"
   total=36
   sleep 300
 fi
