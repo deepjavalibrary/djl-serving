@@ -17,6 +17,7 @@ import ai.djl.engine.EngineException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
+import ai.djl.util.Ec2Utils;
 import ai.djl.util.PairList;
 import ai.djl.util.Utils;
 
@@ -153,6 +154,14 @@ class Connection {
             String cudaDevices = getVisibleDevices(deviceId, tensorParallelDegree);
             pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
         }
+        if (tensorParallelDegree > 0 && isInf2()) {
+            pyEnv.addEnv(
+                    "NEURON_RT_VISIBLE_CORES",
+                    getNeuronVisibleCores(deviceId, tensorParallelDegree));
+        }
+        if (isInf1()) {
+            pyEnv.addEnv("NEURON_RT_NUM_CORES", "1");
+        }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
         args[0] = pyEnv.getPythonExecutable();
@@ -177,6 +186,28 @@ class Connection {
             sb.append(',').append(workerId * tensorParallelDegree + i);
         }
         return sb.toString();
+    }
+
+    private static String getNeuronVisibleCores(int workerId, int tensorParallelDegree) {
+        int start = workerId * tensorParallelDegree;
+        int end = start + tensorParallelDegree - 1;
+        return start + "-" + end;
+    }
+
+    public static boolean isInf1() {
+        String metadata = Ec2Utils.readMetadata("instance-type");
+        if (metadata == null) {
+            return false;
+        }
+        return metadata.startsWith("inf1");
+    }
+
+    private static boolean isInf2() {
+        String metadata = Ec2Utils.readMetadata("instance-type");
+        if (metadata == null) {
+            return false;
+        }
+        return metadata.startsWith("inf2") || metadata.startsWith("trn1");
     }
 
     void connect() throws InterruptedException {

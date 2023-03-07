@@ -47,7 +47,11 @@ class TransformerNeuronXService(object):
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_id_or_path, low_cpu_mem_usage=True)
         logging.info(f"Start model conversion to INF2 format...")
-        load_path = os.path.join(tempfile.gettempdir(), self.model_id_or_path)
+        path = os.environ.get("SERVING_DOWNLOAD_DIR")
+        if path:
+            load_path = tempfile.mkdtemp(dir=path, prefix="converted_model")
+        else:
+            load_path = tempfile.mkdtemp()
         dtype = dtypes.to_torch_dtype(amp)
         for block in self.model.model.decoder.layers:
             block.self_attn.to(dtype)
@@ -68,7 +72,11 @@ class TransformerNeuronXService(object):
             self.model_id_or_path, low_cpu_mem_usage=True)
         dtype = dtypes.to_torch_dtype(amp)
         logging.info(f"Start model conversion to INF2 format...")
-        load_path = os.path.join(tempfile.gettempdir(), self.model_id_or_path)
+        path = os.environ.get("SERVING_DOWNLOAD_DIR")
+        if path:
+            load_path = tempfile.mkdtemp(dir=path, prefix="converted_model")
+        else:
+            load_path = tempfile.mkdtemp()
         for block in self.model.transformer.h:
             block.attn.to(dtype)
             block.mlp.to(dtype)
@@ -160,7 +168,6 @@ _service = TransformerNeuronXService()
 
 
 def handle(inputs: Input):
-
     if not _service.initialized:
         _service.initialize(inputs.get_properties())
 
