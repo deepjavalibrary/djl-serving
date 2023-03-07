@@ -210,6 +210,7 @@ def build_ft_raw_model(model):
     write_properties(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
+
 def build_ft_raw_aot_model(model):
     if model not in ft_model_list:
         raise ValueError(
