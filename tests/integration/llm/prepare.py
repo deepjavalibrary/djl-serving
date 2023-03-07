@@ -138,7 +138,7 @@ transformers_neuronx_model_list = {
 
 transformers_neuronx_handler_list = {
     "opt-1.3b": {
-        "option.model_id": "s3://djl-llm/opt-1.3b/",
+        "option.s3url": "s3://djl-llm/opt-1.3b/",
         "option.batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 256,

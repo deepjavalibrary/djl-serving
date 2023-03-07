@@ -46,14 +46,19 @@ class TransformerNeuronXService(object):
         logging.info(f"Start loading the model {self.model_id_or_path}...")
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_id_or_path, low_cpu_mem_usage=True)
-        logging.info(f"Start model conversion to INF2 format...")
-        load_path = os.path.join(tempfile.gettempdir(), self.model_id_or_path)
+        path = os.environ.get("SERVING_DOWNLOAD_DIR")
+        if not path:
+            path = tempfile.gettempdir()
+
+        load_path = tempfile.mkdtemp(dir=path, prefix="inf2_")
+        logging.info("Start model conversion to INF2 format...")
         dtype = dtypes.to_torch_dtype(amp)
         for block in self.model.model.decoder.layers:
             block.self_attn.to(dtype)
             block.fc1.to(dtype)
             block.fc2.to(dtype)
         self.model.lm_head.to(dtype)
+        logging.info(f"Saving to INF2 model to {load_path} ...")
         save_pretrained_split(self.model, load_path)
         with open(os.path.join(load_path, "verify"), "w") as f:
             f.writelines("opt-converted")
@@ -66,13 +71,18 @@ class TransformerNeuronXService(object):
         logging.info(f"Start loading the model {self.model_id_or_path}...")
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_id_or_path, low_cpu_mem_usage=True)
+        path = os.environ.get("SERVING_DOWNLOAD_DIR")
+        if not path:
+            path = tempfile.gettempdir()
+
+        load_path = tempfile.mkdtemp(dir=path, prefix="inf2_")
+        logging.info("Start model conversion to INF2 format...")
         dtype = dtypes.to_torch_dtype(amp)
-        logging.info(f"Start model conversion to INF2 format...")
-        load_path = os.path.join(tempfile.gettempdir(), self.model_id_or_path)
         for block in self.model.transformer.h:
             block.attn.to(dtype)
             block.mlp.to(dtype)
         self.model.lm_head.to(dtype)
+        logging.info(f"Saving to INF2 model to {load_path} ...")
         self.model.save_pretrained(load_path, max_shard_size="100GB")
         with open(os.path.join(load_path, "verify"), "w") as f:
             f.writelines("gpt2-converted")
@@ -160,7 +170,6 @@ _service = TransformerNeuronXService()
 
 
 def handle(inputs: Input):
-
     if not _service.initialized:
         _service.initialize(inputs.get_properties())
 

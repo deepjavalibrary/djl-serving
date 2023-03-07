@@ -21,6 +21,11 @@ class FasterTransformerService(object):
 
     def __init__(self) -> None:
         self.initialized = False
+        self.tensor_parallel_degree = -1
+        self.pipeline_parallel_degree = -1
+        self.dtype = None
+        self.model_id = None
+        self.model = None
 
     def initialize(self, properties):
         self.tensor_parallel_degree = int(

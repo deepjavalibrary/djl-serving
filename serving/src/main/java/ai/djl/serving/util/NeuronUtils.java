@@ -14,6 +14,12 @@ package ai.djl.serving.util;
 
 import ai.djl.util.Ec2Utils;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Stream;
+
 /** A utility class to detect number of nueron cores. */
 public final class NeuronUtils {
 
@@ -42,35 +48,38 @@ public final class NeuronUtils {
     }
 
     /**
+     * Checks if inf1 is used.
+     *
+     * @return is inf1
+     */
+    public static boolean isInf1() {
+        String metadata = Ec2Utils.readMetadata("instance-type");
+        if (metadata == null) {
+            return false;
+        }
+        return metadata.startsWith("inf1");
+    }
+
+    /**
      * Returns the number of NeuronCores available in the system.
      *
      * @return the number of NeuronCores available in the system
      */
     public static int getNeuronCores() {
-        String metadata = Ec2Utils.readMetadata("instance-type");
-        if (metadata == null) {
-            return 0;
-        }
-        switch (metadata) {
-            case "inf1.xlarge":
-            case "inf1.2xlarge":
-                return 4;
-            case "inf1.6xlarge":
-                return 16;
-            case "inf1.24xlarge":
-                return 64;
-            case "inf2.xlarge":
-            case "inf2.8xlarge":
-            case "trn1.2xlarge":
-                return 2;
-            case "inf2.24xlarge":
-                return 12;
-            case "inf2.48xlarge":
-                return 24;
-            case "trn1.32xlarge":
-                return 32;
-            default:
+        if (isInf1() || isInf2()) {
+            try (Stream<Path> paths = Files.walk(Paths.get("/dev"))) {
+                int nd = (int) paths.filter(ele -> ele.startsWith("neuron")).count();
+                if (isInf1()) {
+                    return nd * 4;
+                } else if (isInf2()) {
+                    return nd * 2;
+                } else {
+                    return 0;
+                }
+            } catch (IOException ignore) {
                 return 0;
+            }
         }
+        return 0;
     }
 }
