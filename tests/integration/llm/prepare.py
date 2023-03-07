@@ -223,6 +223,18 @@ def build_ft_raw_model(model):
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
 
+def build_ft_raw_aot_model(model):
+    if model not in ft_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
+        )
+    options = ft_model_list[model]
+    options["engine"] = "FasterTransformer"
+    options["option.save_mp_checkpoint_path"] = "/opt/ml/model/partition-test"
+    write_properties(options)
+    shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
+
+
 def build_transformers_neuronx_model(model):
     if model not in transformers_neuronx_model_list.keys():
         raise ValueError(
@@ -252,6 +264,7 @@ supported_handler = {
     "deepspeed_raw": build_ds_raw_model,
     'stable-diffusion': build_sd_handler_model,
     'fastertransformer_raw': build_ft_raw_model,
+    'fastertransformer_raw_aot': build_ft_raw_aot_model,
     'deepspeed_aot': build_ds_aot_model,
     'transformers_neuronx_raw': build_transformers_neuronx_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model

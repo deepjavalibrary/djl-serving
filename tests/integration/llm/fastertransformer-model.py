@@ -7,10 +7,23 @@ model = None
 def load_model(properties):
     tensor_parallel_degree = properties["tensor_parallel_degree"]
     pipeline_parallel_degree = 1  # TODO: add tests for pp_degree > 1
-    model_id = properties["model_id"]
+    model_id = properties.get('model_id') or properties.get('model_dir')
     dtype = properties.get("dtype", "fp32")
     return fastertransformer.init_inference(model_id, tensor_parallel_degree,
                                             pipeline_parallel_degree, dtype)
+
+
+def partition(inputs: Input):
+    properties = inputs.get_properties()
+    tensor_parallel_degree = properties["tensor_parallel_degree"]
+    pipeline_parallel_degree = 1  # TODO: add tests for pp_degree > 1
+    model_id = properties.get('model_id') or properties.get('model_dir')
+    dtype = properties.get("dtype", "fp32")
+    save_mp_checkpoint_path = properties.get("save_mp_checkpoint_path")
+
+    fastertransformer.save_checkpoint(model_id, tensor_parallel_degree,
+                                      pipeline_parallel_degree,
+                                      save_mp_checkpoint_path, dtype)
 
 
 def handle(inputs: Input):
