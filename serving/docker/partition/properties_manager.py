@@ -78,7 +78,7 @@ class PropertiesManager(object):
                 self.properties['model_dir'] = self.properties_dir
             else:
                 raise KeyError(
-                    'Please specify the option.model_dir or option.model_id or option.s3_url'
+                    'Please specify the option.model_dir or option.model_id or option.s3_url or '
                     'include model '
                     'files in the model-dir argument.')
 

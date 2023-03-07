@@ -357,11 +357,17 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py deepspeed_aot opt-6.7b
+          # To test the requirements.txt download. 
+          echo "dummy_test" >> /opt/ml/model/test/requirements.txt 
+          
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/model/test/
           
           # checking if pt files are generated.
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
+          
+          # checking whether reqirements.txt download is successful
+          if pip list | grep -F dummy-test &>/dev/null ; then echo "requirements.txt install was successful"; else exit 1; fi
       - name: Test opt-6.7b inference
         working-directory: tests/integration
         run: |

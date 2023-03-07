@@ -12,10 +12,8 @@
 # the specific language governing permissions and limitations under the License.
 import sys
 import os
-import json
 import glob
 import shutil
-import zipfile
 import logging
 import argparse
 import subprocess
@@ -24,7 +22,7 @@ from pathlib import Path
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
 
-from utils import get_partition_cmd, extract_python_jar
+from utils import get_partition_cmd, extract_python_jar, get_python_executable
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -49,7 +47,6 @@ class PartitionService(object):
                                       '/tmp/download/model/')
 
         s3url = self.properties["s3url"]
-        commands = []
         if Path("/opt/djl/bin/s5cmd").is_file():
             if not s3url.endswith("*"):
                 if s3url.endswith("/"):
