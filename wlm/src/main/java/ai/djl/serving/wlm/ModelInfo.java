@@ -208,7 +208,12 @@ public final class ModelInfo<I, O> {
                 }
             }
             logger.info("Loading model {} on {}", id, device);
-            builder.optDevice(device);
+            if ("nc".equals(device.getDeviceType()) && "PyTorch".equals(engineName)) {
+                // assume neuron only support PyTorch
+                logger.info("Bypass NC core allocation");
+            } else {
+                builder.optDevice(device);
+            }
 
             ZooModel<I, O> m = builder.build().loadModel();
             if (criteria != null) {
