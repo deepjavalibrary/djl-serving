@@ -130,7 +130,7 @@ transformers_neuronx_raw_model_spec = {"gpt2": {"seq_length": [64, 128]}}
 
 transformers_neuronx_model_spec = {
     "opt-1.3b": {
-        "worker": 2,
+        "worker": 3,
         "seq_length": [128, 256],
         "batch_size": [4]
     }
