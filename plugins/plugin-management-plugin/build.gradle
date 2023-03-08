@@ -6,7 +6,7 @@ dependencies {
     }
 }
 
-task copyJar(type: Copy) {
+tasks.register('copyJar', Copy) {
     from jar // here it automatically reads jar file produced from jar task
     into '../../serving/plugins'
 }
