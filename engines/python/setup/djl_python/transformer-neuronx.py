@@ -151,6 +151,7 @@ class TransformerNeuronXService(object):
                     f"{self.batch_size} batch size not equal to {len(input_text)} prompt size"
                 )
             with torch.inference_mode():
+                # inf 2 needs padding
                 input_ids = self.tokenizer.batch_encode_plus(
                     input_text, return_tensors="pt", padding=True)['input_ids']
                 generated_sequence = self.model.sample(
