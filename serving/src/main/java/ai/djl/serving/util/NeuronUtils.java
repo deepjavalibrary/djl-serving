@@ -67,14 +67,14 @@ public final class NeuronUtils {
         if (!hasNeuron()) {
             return 0;
         }
-        try (Stream<Path> paths = Files.walk(Paths.get("/dev"))) {
-            int nd = (int) paths.filter(ele -> ele.startsWith("neuron")).count();
+        try (Stream<Path> paths = Files.list(Paths.get("/dev"))) {
+            long nd = paths.filter(p -> p.getFileName().toString().startsWith("neuron")).count();
             if (isInf1()) {
                 // inf1 has 4 cores on each device
-                return nd * 4;
+                return (int) nd * 4;
             }
             // inf2 has 2 cores on each device
-            return nd * 2;
+            return (int) nd * 2;
         } catch (IOException e) {
             throw new AssertionError("Failed to list neuron cores", e);
         }
