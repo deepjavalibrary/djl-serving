@@ -1,6 +1,6 @@
 plugins {
     id 'application'
-    id "nebula.ospackage" version "8.5.6"
+    id "nebula.ospackage" version "9.1.1"
 }
 
 dependencies {
@@ -69,7 +69,8 @@ clean {
     delete file("logs")
 }
 
-task createDeb(type: Deb, dependsOn: distTar) {
+tasks.register('createDeb', Deb) {
+    dependsOn distTar
     doFirst {
         exec {
             commandLine "tar", "xvf", "${project.buildDir}/distributions/serving-${project.version}.tar", "-C", "${project.buildDir}"
