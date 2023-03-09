@@ -12,6 +12,7 @@
 ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
+ARG python_version=3.9
 ARG torch_version=1.13.1
 ARG accelerate_version=0.16.0
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.0-py2.py3-none-any.whl"
@@ -43,7 +44,7 @@ RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} deepspeed" > /opt/djl/bin/telemetry && \
-    scripts/install_python.sh && \
+    scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
