@@ -433,6 +433,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/partition-test/
           python3 llm/client.py fastertransformer_raw bigscience/bloom-3b
+          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
