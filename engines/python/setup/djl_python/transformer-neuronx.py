@@ -27,7 +27,7 @@ model = None
 
 DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16"}
 
-SUPPORTED_MODEL_TYPES = {"opt", "gpt2"}
+SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj"}
 
 
 class TransformerNeuronXService(object):
