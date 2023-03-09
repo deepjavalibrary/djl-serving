@@ -19,6 +19,7 @@ import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.cache.CacheEngine;
 import ai.djl.serving.cache.CacheManager;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
@@ -260,32 +261,41 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     void runJob(
             ModelManager modelManager, ChannelHandlerContext ctx, Workflow workflow, Input input) {
-        modelManager
-                .runJob(workflow, input)
-                .whenCompleteAsync(
-                        (o, t) -> {
-                            if (o != null) {
-                                String sync = input.getProperty(X_SYNCHRONOUS, "true");
-                                if (Boolean.parseBoolean(sync)) {
+        String sync = input.getProperty(X_SYNCHRONOUS, "true");
+        if (Boolean.parseBoolean(sync)) { // Synchronous
+            modelManager
+                    .runJob(workflow, input)
+                    .whenCompleteAsync(
+                            (o, t) -> {
+                                if (o != null) {
                                     sendOutput(o, ctx);
-                                    return;
                                 }
-
-                                CacheManager cm = CacheManager.getInstance();
-                                String nextToken = cm.put(o);
-                                Output out = new Output();
-                                out.setCode(o.getCode());
-                                out.setMessage(o.getMessage());
-                                out.getProperties().putAll(out.getProperties());
-                                out.addProperty(X_NEXT_TOKEN, nextToken);
-                                sendOutput(out, ctx);
-                            }
-                        })
-                .exceptionally(
-                        t -> {
-                            onException(t.getCause(), ctx);
-                            return null;
-                        });
+                            })
+                    .exceptionally(
+                            t -> {
+                                onException(t.getCause(), ctx);
+                                return null;
+                            });
+        } else { // Asynchronous
+            CacheEngine cache = CacheManager.getInstance();
+            String nextToken = cache.create(input);
+            Output out = new Output();
+            out.addProperty(X_NEXT_TOKEN, nextToken);
+            sendOutput(out, ctx);
+            modelManager
+                    .runJob(workflow, input)
+                    .whenCompleteAsync(
+                            (o, t) -> {
+                                if (o != null) {
+                                    cache.put(nextToken, o);
+                                } else {
+                                    Output failOut = new Output();
+                                    failOut.setCode(500);
+                                    failOut.setMessage(t.getMessage());
+                                    cache.put(nextToken, failOut);
+                                }
+                            });
+        }
     }
 
     private void getCacheResult(ChannelHandlerContext ctx, Input input, String startingToken) {
@@ -294,8 +304,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             limit = Integer.MAX_VALUE;
         }
 
-        CacheManager cm = CacheManager.getInstance();
-        Output output = cm.get(startingToken);
+        CacheEngine cache = CacheManager.getInstance();
+        Output output = cache.get(startingToken);
         if (output == null) {
             throw new BadRequestException("Invalid " + X_STARTING_TOKEN);
         }
@@ -332,7 +342,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             o.addProperty(X_NEXT_TOKEN, startingToken);
         } else {
             // clean up cache
-            cm.remove(startingToken);
+            cache.remove(startingToken);
         }
         sendOutput(o, ctx);
     }
