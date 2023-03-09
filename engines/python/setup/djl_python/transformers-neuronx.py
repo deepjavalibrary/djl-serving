@@ -30,7 +30,7 @@ DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16"}
 SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj"}
 
 
-class TransformerNeuronXService(object):
+class TransformersNeuronXService(object):
 
     def __init__(self) -> None:
         self.initialized = False
@@ -183,7 +183,7 @@ class TransformerNeuronXService(object):
         return outputs
 
 
-_service = TransformerNeuronXService()
+_service = TransformersNeuronXService()
 
 
 def handle(inputs: Input):
