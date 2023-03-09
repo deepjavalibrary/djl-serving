@@ -65,6 +65,9 @@ public class WorkflowDefinition {
     @SerializedName("functions")
     Map<String, String> funcs;
 
+    @SerializedName("configs")
+    Map<String, Map<String, Object>> configs;
+
     int queueSize;
     int maxIdleSeconds;
     int maxBatchDelayMillis;
@@ -174,7 +177,7 @@ public class WorkflowDefinition {
             }
         }
 
-        return new Workflow(name, version, models, expressions, loadedFunctions);
+        return new Workflow(name, version, models, expressions, configs, loadedFunctions);
     }
 
     private int firstValid(int... inputs) {

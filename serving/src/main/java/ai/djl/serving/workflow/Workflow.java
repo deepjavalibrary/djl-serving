@@ -23,6 +23,7 @@ import ai.djl.serving.workflow.function.FunctionsApply;
 import ai.djl.serving.workflow.function.IdentityWF;
 import ai.djl.serving.workflow.function.ModelWorkflowFunction;
 import ai.djl.serving.workflow.function.WorkflowFunction;
+import ai.djl.serving.workflow.function.cache.CacheWorkflowFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /** A flow of executing {@link ai.djl.Model}s and custom functions. */
@@ -46,12 +48,14 @@ public class Workflow {
     public static final String IN = "in";
     public static final String OUT = "out";
 
-    private static final Map<String, WorkflowFunction> BUILT_INS = new ConcurrentHashMap<>();
+    private static final Map<String, Supplier<WorkflowFunction>> BUILT_INS =
+            new ConcurrentHashMap<>();
 
     static {
-        BUILT_INS.put(IdentityWF.NAME, new IdentityWF());
-        BUILT_INS.put(EnsembleMerge.NAME, new EnsembleMerge());
-        BUILT_INS.put(FunctionsApply.NAME, new FunctionsApply());
+        BUILT_INS.put(IdentityWF.NAME, IdentityWF::new);
+        BUILT_INS.put(EnsembleMerge.NAME, EnsembleMerge::new);
+        BUILT_INS.put(FunctionsApply.NAME, FunctionsApply::new);
+        BUILT_INS.put(CacheWorkflowFunction.NAME, CacheWorkflowFunction::new);
     }
 
     String name;
@@ -59,6 +63,7 @@ public class Workflow {
     Map<String, ModelInfo<Input, Output>> models;
     Map<String, WorkflowExpression> expressions;
     Map<String, WorkflowFunction> funcs;
+    Map<String, Map<String, Object>> configs;
 
     /**
      * Constructs a workflow containing only a single model.
@@ -74,6 +79,7 @@ public class Workflow {
                 Collections.singletonMap(
                         OUT, new WorkflowExpression(new Item(modelName), new Item(IN)));
         funcs = Collections.emptyMap();
+        configs = Collections.emptyMap();
     }
 
     /**
@@ -84,6 +90,7 @@ public class Workflow {
      * @param models a map of executableNames for a model (how it is referred to in the {@link
      *     WorkflowExpression}s to model
      * @param expressions a map of names to refer to an expression to the expression
+     * @param configs the configuration objects
      * @param funcs the custom functions used in the workflow
      */
     public Workflow(
@@ -91,12 +98,14 @@ public class Workflow {
             String version,
             Map<String, ModelInfo<Input, Output>> models,
             Map<String, WorkflowExpression> expressions,
+            Map<String, Map<String, Object>> configs,
             Map<String, WorkflowFunction> funcs) {
         this.name = name;
         this.version = version;
         this.models = models;
         this.expressions = expressions;
         this.funcs = funcs;
+        this.configs = configs;
     }
 
     /**
@@ -269,6 +278,16 @@ public class Workflow {
         /**
          * Returns the executable (model, function, or built-in) with a given name.
          *
+         * @param arg the workflow argument containing the name
+         * @return the function to execute the found executable
+         */
+        public WorkflowFunction getExecutable(WorkflowArgument arg) {
+            return getExecutable(arg.getItem().getString());
+        }
+
+        /**
+         * Returns the executable (model, function, or built-in) with a given name.
+         *
          * @param name the executable name
          * @return the function to execute the found executable
          */
@@ -283,10 +302,33 @@ public class Workflow {
             }
 
             if (BUILT_INS.containsKey(name)) {
-                return BUILT_INS.get(name);
+                // Built-in WorkflowFunctions should be one for each workflow
+                WorkflowFunction f = BUILT_INS.get(name).get();
+                funcs.put(name, f);
+                return f;
             }
 
             throw new IllegalArgumentException("Could not find find model or function: " + name);
+        }
+
+        /**
+         * Returns the configuration with the given name.
+         *
+         * @param name the configuration name
+         * @return the configuration
+         */
+        public Map<String, Object> getConfig(WorkflowArgument name) {
+            return getConfig(name.getItem().getString());
+        }
+
+        /**
+         * Returns the configuration with the given name.
+         *
+         * @param name the configuration name
+         * @return the configuration
+         */
+        public Map<String, Object> getConfig(String name) {
+            return configs.get(name);
         }
     }
 

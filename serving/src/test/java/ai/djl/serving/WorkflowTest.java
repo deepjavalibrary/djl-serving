@@ -38,6 +38,12 @@ public class WorkflowTest {
     /** A standard input for multiple tests with a zero image. */
     private Input zeroInput;
 
+    public static void main(String[] args) throws IOException, BadWorkflowException {
+        WorkflowTest t = new WorkflowTest();
+        t.beforeAll();
+        t.testCache();
+    }
+
     @BeforeSuite
     public void beforeAll() throws IOException {
         ConfigManager.init(new Arguments(new CommandLine.Builder().build()));
@@ -102,6 +108,23 @@ public class WorkflowTest {
     public void testEnsemble() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/ensemble.json");
         runWorkflow(workflowFile, zeroInput);
+    }
+
+    @Test
+    public void testCache() throws IOException, BadWorkflowException {
+        Path workflowFile = Paths.get("src/test/resources/workflows/cache.json");
+        Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
+        WorkLoadManager wlm = new WorkLoadManager();
+        for (ModelInfo<Input, Output> model : workflow.getModels()) {
+            wlm.registerModel(model).initWorkers(null, -1, 1);
+        }
+
+        Output output1 = workflow.execute(wlm, zeroInput).join();
+        Assert.assertNotNull(output1.getData());
+        Output output2 = workflow.execute(wlm, zeroInput).join();
+        Assert.assertNotNull(output2.getData());
+        workflow.stop();
+        wlm.close();
     }
 
     private Input runWorkflow(Path workflowFile, Input input)

@@ -1,0 +1,15 @@
+{
+  "name": "CacheWorkflow",
+  "version": "0.1",
+  "models": {
+    "m": "https://resources.djl.ai/test-models/mlp.tar.gz"
+  },
+  "configs": {
+    "cacheConfig": {
+      "cache": "memory"
+    }
+  },
+  "workflow": {
+    "out": ["cache", "m", "in", "cacheConfig"]
+  }
+}
