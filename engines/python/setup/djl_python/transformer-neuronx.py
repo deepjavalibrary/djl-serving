@@ -86,7 +86,7 @@ class TransformerNeuronXService(object):
         logging.info(f"Saving to INF2 model to {load_path} ...")
         self.model.save_pretrained(load_path, max_shard_size="100GB")
         with open(os.path.join(load_path, "verify"), "w") as f:
-            f.writelines("{}-converted".format(gpt_type))
+            f.writelines(f"{gpt_type}-converted")
         return load_path
 
     def load_opt(self, amp, unroll, n_positions):
