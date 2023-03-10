@@ -17,6 +17,7 @@ import logging
 
 from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
 from transformers_neuronx import dtypes
+from transformers_neuronx.gptj.model import GPTJForSampling
 from transformers_neuronx.gpt2.model import GPT2ForSampling
 from transformers_neuronx.module import save_pretrained_split
 from transformers_neuronx.opt.model import OPTForSampling
@@ -26,10 +27,10 @@ model = None
 
 DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16"}
 
-SUPPORTED_MODEL_TYPES = {"opt", "gpt2"}
+SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj"}
 
 
-class TransformerNeuronXService(object):
+class TransformersNeuronXService(object):
 
     def __init__(self) -> None:
         self.initialized = False
@@ -64,7 +65,7 @@ class TransformerNeuronXService(object):
             f.writelines("opt-converted")
         return load_path
 
-    def convert_gpt2(self, amp):
+    def convert_gpt(self, amp, gpt_type="gpt2"):
         logging.warning(
             "Model conversion is a slow process to do in runtime, please consider convert it"
             " Ahead-of-Time next time")
@@ -85,7 +86,7 @@ class TransformerNeuronXService(object):
         logging.info(f"Saving to INF2 model to {load_path} ...")
         self.model.save_pretrained(load_path, max_shard_size="100GB")
         with open(os.path.join(load_path, "verify"), "w") as f:
-            f.writelines("gpt2-converted")
+            f.writelines(f"{gpt_type}-converted")
         return load_path
 
     def load_opt(self, amp, unroll, n_positions):
@@ -104,8 +105,21 @@ class TransformerNeuronXService(object):
     def load_gpt2(self, amp, unroll, n_positions):
         load_path = self.model_id_or_path
         if not os.path.exists(os.path.join(load_path, "verify")):
-            load_path = self.convert_gpt2(amp)
+            load_path = self.convert_gpt(amp, gpt_type="gpt2")
         self.model = GPT2ForSampling.from_pretrained(
+            load_path,
+            batch_size=self.batch_size,
+            amp=amp,
+            tp_degree=self.tensor_parallel_degree,
+            n_positions=n_positions,
+            unroll=unroll)
+        self.model.to_neuron()
+
+    def load_gptj(self, amp, unroll, n_positions):
+        load_path = self.model_id_or_path
+        if not os.path.exists(os.path.join(load_path, "verify")):
+            load_path = self.convert_gpt(amp, gpt_type="gptj")
+        self.model = GPTJForSampling.from_pretrained(
             load_path,
             batch_size=self.batch_size,
             amp=amp,
@@ -137,6 +151,8 @@ class TransformerNeuronXService(object):
             self.load_opt(amp, unroll, n_positions)
         elif "gpt2" == model_config.model_type:
             self.load_gpt2(amp, unroll, n_positions)
+        elif "gptj" == model_config.model_type:
+            self.load_gptj(amp, unroll, n_positions)
         self.initialized = True
 
     def infer(self, inputs):
@@ -167,7 +183,7 @@ class TransformerNeuronXService(object):
         return outputs
 
 
-_service = TransformerNeuronXService()
+_service = TransformersNeuronXService()
 
 
 def handle(inputs: Input):

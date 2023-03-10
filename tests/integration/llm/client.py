@@ -133,6 +133,11 @@ transformers_neuronx_model_spec = {
         "worker": 3,
         "seq_length": [128, 256],
         "batch_size": [4]
+    },
+    "gpt-j-6b": {
+        "worker": 1,
+        "seq_length": [128, 256, 512],
+        "batch_size": [4]
     }
 }
 
