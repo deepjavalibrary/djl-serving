@@ -16,8 +16,10 @@ import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
+import ai.djl.modality.ChunkedBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.ndarray.BytesSupplier;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.NDManager;
@@ -40,12 +42,14 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class PyEngineTest {
 
@@ -178,6 +182,29 @@ public class PyEngineTest {
             List<Output> out = predictor.batchPredict(batch);
             Assert.assertEquals(out.size(), 2);
             Assert.assertEquals(out.get(1).getAsString(0), "test2");
+        }
+    }
+
+    @Test
+    public void testStreamEcho()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("stream", "true");
+            Output out = predictor.predict(input);
+            BytesSupplier supplier = out.getData();
+            Assert.assertTrue(supplier instanceof ChunkedBytesSupplier);
+            ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) supplier;
+            Assert.assertTrue(cbs.hasNext());
+            byte[] buf = cbs.nextChunk(1, TimeUnit.MINUTES);
+            Assert.assertEquals(new String(buf, StandardCharsets.UTF_8), "t-0\n");
         }
     }
 

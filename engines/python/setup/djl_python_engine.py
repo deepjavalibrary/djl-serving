@@ -120,8 +120,8 @@ class PythonEngine(object):
                 logging.exception("Failed invoke service.invoke_handler()")
                 outputs = Output().error(str(e))
 
-            if not cl_socket.sendall(outputs.encode()):
-                logging.debug("Outputs is sent to DJL engine.")
+            outputs.send(cl_socket)
+            logging.debug("Outputs is sent to DJL engine.")
 
 
 def main():

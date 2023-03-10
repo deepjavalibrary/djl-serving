@@ -16,8 +16,16 @@ Test Python model example.
 
 import logging
 import sys
+import time
+
 from djl_python import Input
 from djl_python import Output
+
+
+def steam_token():
+    for i in range(5):
+        time.sleep(1)
+        yield f"t-{i}\n"
 
 
 def handle(inputs: Input):
@@ -43,6 +51,9 @@ def handle(inputs: Input):
         for i, item in enumerate(batch):
             outputs.add(item.get_as_bytes(), key="data", batch_index=i)
     else:
-        outputs.add(data, key="data")
+        if inputs.contains_key("stream"):
+            outputs.add_stream_content(steam_token())
+        else:
+            outputs.add(data, key="data")
 
     return outputs
