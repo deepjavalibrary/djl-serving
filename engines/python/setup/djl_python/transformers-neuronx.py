@@ -146,6 +146,8 @@ class TransformersNeuronXService(object):
                 f"{model_config.model_type} type not supported for model {self.model_id_or_path}"
                 f"Supported model arch: {SUPPORTED_MODEL_TYPES}")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
+        if not self.tokenizer.pad_token:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
         if "opt" == model_config.model_type:
             self.load_opt(amp, unroll, n_positions)
