@@ -233,6 +233,7 @@ def build_sd_handler_model(model):
     options["option.entryPoint"] = "djl_python.stable-diffusion"
     write_properties(options)
 
+
 def build_ft_handler_model(model):
     if model not in ft_handler_list:
         raise ValueError(
