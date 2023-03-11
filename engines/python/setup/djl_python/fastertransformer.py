@@ -42,8 +42,8 @@ class FasterTransformerService(object):
         self.initialized = True
 
     def load_model(self):
-        logging.info(f"Loading model: {self.model_id}")
-        return ft.init_inference(self.model_id, self.tensor_parallel_degree,
+        logging.info(f"Loading model: {self.model_id_or_path}")
+        return ft.init_inference(self.model_id_or_path, self.tensor_parallel_degree,
                                  self.pipeline_parallel_degree, self.dtype)
 
     def inference(self, inputs: Input):
