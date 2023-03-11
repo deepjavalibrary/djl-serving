@@ -19,12 +19,13 @@ clean {
     }
 }
 
-task buildConsoleApp(type: NpmTask, dependsOn: "npmInstall") {
+tasks.register('buildConsoleApp', NpmTask) {
+    dependsOn "npmInstall"
     project.logger.info("Build the DJL Management console application")
     npmCommand = ["run", "build"]
 }
 
-task copyJar(type: Copy) {
+tasks.register('copyJar', Copy) {
     from jar // here it automatically reads jar file produced from jar task
     into "../../serving/plugins"
 }

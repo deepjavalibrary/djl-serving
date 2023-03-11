@@ -74,6 +74,17 @@ ds_model_spec = {
     }
 }
 
+ft_model_spec = {
+    "bigscience/bloom-3b": {
+        "batch_size": [1, 2],
+        "max_memory_per_gpu": 6.0
+    },
+    "flan-t5-xxl": {
+        "batch_size": [1, 2],
+        "max_memory_per_gpu": 15.0
+    }
+}
+
 ft_raw_model_spec = {
     "t5-small": {
         "batch_size": [1, 2],
@@ -130,8 +141,13 @@ transformers_neuronx_raw_model_spec = {"gpt2": {"seq_length": [64, 128]}}
 
 transformers_neuronx_model_spec = {
     "opt-1.3b": {
-        "worker": 2,
+        "worker": 3,
         "seq_length": [128, 256],
+        "batch_size": [4]
+    },
+    "gpt-j-6b": {
+        "worker": 1,
+        "seq_length": [128, 256, 512],
         "batch_size": [4]
     }
 }
@@ -291,7 +307,7 @@ def test_sd_handler(model, model_spec):
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
-def test_ft_raw_handler(model, model_spec):
+def test_ft_handler(model, model_spec):
     if model not in model_spec:
         raise ValueError(
             f"{model} is not one of the supporting models {list(ft_raw_model_spec.keys())}"
@@ -370,8 +386,10 @@ if __name__ == '__main__':
         test_handler(args.model, ds_model_spec)
     elif args.handler == "stable-diffusion":
         test_sd_handler(args.model, sd_model_spec)
+    elif args.handler == "fastertransformer":
+        test_ft_handler(args.model, ft_model_spec)
     elif args.handler == "fastertransformer_raw":
-        test_ft_raw_handler(args.model, ft_raw_model_spec)
+        test_ft_handler(args.model, ft_raw_model_spec)
     elif args.handler == "deepspeed_aot":
         test_ds_raw_model(args.model, ds_aot_model_spec)
     elif args.handler == "transformers_neuronx_raw":

@@ -23,41 +23,39 @@ import java.util.stream.Stream;
 /** A utility class to detect number of nueron cores. */
 public final class NeuronUtils {
 
+    private static int instanceType = -1;
+
     private NeuronUtils() {}
 
+    static void setInstanceType(int type) {
+        instanceType = type;
+    }
+
     /**
-     * Gets whether Neuron runtime library is in the system.
+     * Returns whether Neuron runtime library is in the system.
      *
      * @return {@code true} if Neuron runtime library is in the system
      */
     public static boolean hasNeuron() {
-        return getNeuronCores() > 0;
+        return isInf1() || isInf2();
     }
 
     /**
-     * Checks if inf2 is used.
+     * Returns whether the instance is an inf1.
      *
-     * @return is inf2
-     */
-    public static boolean isInf2() {
-        String metadata = Ec2Utils.readMetadata("instance-type");
-        if (metadata == null) {
-            return false;
-        }
-        return metadata.startsWith("inf2") || metadata.startsWith("trn1");
-    }
-
-    /**
-     * Checks if inf1 is used.
-     *
-     * @return is inf1
+     * @return {code true} if the instance is an inf1
      */
     public static boolean isInf1() {
-        String metadata = Ec2Utils.readMetadata("instance-type");
-        if (metadata == null) {
-            return false;
-        }
-        return metadata.startsWith("inf1");
+        return getInstanceType() == 1;
+    }
+
+    /**
+     * Returns whether the instance is an inf2 or trn1.
+     *
+     * @return {code true} if the instance is an inf2 or trn1
+     */
+    public static boolean isInf2() {
+        return getInstanceType() == 2;
     }
 
     /**
@@ -66,20 +64,36 @@ public final class NeuronUtils {
      * @return the number of NeuronCores available in the system
      */
     public static int getNeuronCores() {
-        if (isInf1() || isInf2()) {
-            try (Stream<Path> paths = Files.walk(Paths.get("/dev"))) {
-                int nd = (int) paths.filter(ele -> ele.startsWith("neuron")).count();
-                if (isInf1()) {
-                    return nd * 4;
-                } else if (isInf2()) {
-                    return nd * 2;
-                } else {
-                    return 0;
-                }
-            } catch (IOException ignore) {
-                return 0;
+        if (!hasNeuron()) {
+            return 0;
+        }
+        try (Stream<Path> paths = Files.list(Paths.get("/dev"))) {
+            long nd = paths.filter(p -> p.getFileName().toString().startsWith("neuron")).count();
+            if (isInf1()) {
+                // inf1 has 4 cores on each device
+                return (int) nd * 4;
+            }
+            // inf2 has 2 cores on each device
+            return (int) nd * 2;
+        } catch (IOException e) {
+            throw new AssertionError("Failed to list neuron cores", e);
+        }
+    }
+
+    @SuppressWarnings("PMD.NonThreadSafeSingleton")
+    private static int getInstanceType() {
+        if (instanceType == -1) {
+            String metadata = Ec2Utils.readMetadata("instance-type");
+            if (metadata == null) {
+                NeuronUtils.setInstanceType(0);
+            } else if (metadata.startsWith("inf1")) {
+                NeuronUtils.setInstanceType(1);
+            } else if (metadata.startsWith("inf2") || metadata.startsWith("trn1")) {
+                NeuronUtils.setInstanceType(2);
+            } else {
+                NeuronUtils.setInstanceType(0);
             }
         }
-        return 0;
+        return instanceType;
     }
 }

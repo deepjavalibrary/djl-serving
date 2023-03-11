@@ -1,6 +1,6 @@
 plugins {
     id 'application'
-    id "nebula.ospackage" version "8.5.6"
+    id 'com.netflix.nebula.ospackage' version '11.0.0'
 }
 
 dependencies {
@@ -69,12 +69,17 @@ clean {
     delete file("logs")
 }
 
-task createDeb(type: Deb, dependsOn: distTar) {
+tasks.register('prepareDeb') {
+    dependsOn distTar
     doFirst {
         exec {
             commandLine "tar", "xvf", "${project.buildDir}/distributions/serving-${project.version}.tar", "-C", "${project.buildDir}"
         }
     }
+}
+
+tasks.register('createDeb', Deb) {
+    dependsOn prepareDeb
 
     packageName = "djl-serving"
     archiveVersion = "${project.version}"

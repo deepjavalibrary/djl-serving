@@ -99,6 +99,20 @@ sd_handler_list = {
     }
 }
 
+ft_handler_list = {
+    "bigscience/bloom-3b": {
+        "option.s3url": "s3://djl-llm/bloom-3b/",
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "fp16",
+        "gpu.maxWorkers": 1,
+    },
+    "flan-t5-xxl": {
+        "option.s3url": "s3://djl-llm/flan-t5-xxl/",
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp32"
+    }
+}
+
 ft_model_list = {
     "t5-small": {
         "option.model_id": "t5-small",
@@ -144,7 +158,15 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 256,
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600
-    }
+    },
+    "gpt-j-6b": {
+        "option.s3url": "s3://djl-llm/gpt-j-6b/",
+        "option.batch_size": 4,
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 512,
+        "option.dtype": "fp32",
+        "option.model_loading_timeout": 720
+    },
 }
 
 
@@ -211,6 +233,16 @@ def build_sd_handler_model(model):
     options["option.entryPoint"] = "djl_python.stable-diffusion"
     write_properties(options)
 
+def build_ft_handler_model(model):
+    if model not in ft_handler_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(ft_handler_list.keys())}"
+        )
+    options = ft_handler_list[model]
+    options["engine"] = "FasterTransformer"
+    options["option.entryPoint"] = "djl_python.fastertransformer"
+    write_properties(options)
+
 
 def build_ft_raw_model(model):
     if model not in ft_model_list:
@@ -266,7 +298,7 @@ def build_transformers_neuronx_handler_model(model):
         )
     options = transformers_neuronx_handler_list[model]
     options["engine"] = "Python"
-    options["option.entryPoint"] = "djl_python.transformer-neuronx"
+    options["option.entryPoint"] = "djl_python.transformers-neuronx"
     write_properties(options)
 
 
@@ -275,6 +307,7 @@ supported_handler = {
     'huggingface': build_hf_handler_model,
     "deepspeed_raw": build_ds_raw_model,
     'stable-diffusion': build_sd_handler_model,
+    'fastertransformer': build_ft_handler_model,
     'fastertransformer_raw': build_ft_raw_model,
     'fastertransformer_raw_aot': build_ft_raw_aot_model,
     'fastertransformer_handler_aot': builder_ft_handler_aot_model,

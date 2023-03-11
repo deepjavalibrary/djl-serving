@@ -1,6 +1,6 @@
 plugins {
     id 'application'
-    id "nebula.ospackage" version "9.0.0"
+    id 'com.netflix.nebula.ospackage' version '11.0.0'
 }
 
 dependencies {
@@ -53,7 +53,7 @@ run {
     systemProperty("file.encoding", "UTF-8")
 }
 
-task benchmark(type: JavaExec) {
+tasks.register('benchmark', JavaExec) {
     environment("TF_CPP_MIN_LOG_LEVEL", "1") // turn off TensorFlow print out
     List<String> arguments = gradle.startParameter["taskRequests"]["args"].getAt(0)
     for (String argument : arguments) {
@@ -91,12 +91,17 @@ task benchmark(type: JavaExec) {
     mainClass = "ai.djl.benchmark.Benchmark"
 }
 
-task createDeb(type: Deb, dependsOn: distTar) {
+tasks.register('prepareDeb') {
+    dependsOn distTar
     doFirst {
         exec {
             commandLine "tar", "xvf", "${project.buildDir}/distributions/benchmark-${project.version}.tar", "-C", "${project.buildDir}"
         }
     }
+}
+
+tasks.register('createDeb', Deb) {
+    dependsOn prepareDeb
 
     packageName = "djl-bench"
     archiveVersion = "${project.version}"
@@ -112,7 +117,8 @@ task createDeb(type: Deb, dependsOn: distTar) {
     link("/usr/bin/djl-bench", "/usr/local/djl-bench-${project.version}/bin/benchmark")
 }
 
-task installOnLinux(type: Exec, dependsOn: createDeb) {
+tasks.register('installOnLinux', Exec) {
+    dependsOn createDeb
     doFirst {
         if (System.properties['os.name'].startsWith("Linux")) {
             String ver = "${project.version}".replaceAll("-", "~")
