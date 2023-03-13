@@ -181,8 +181,8 @@ To get this model, clone the djl-demo repo if you haven't done so yet. Then, we 
 
 ```
 git clone https://github.com/deepjavalibrary/djl-demo.git
-cd djl-demo/djl-serving/python-mode/resnet18
-tar -czvf resnet18.zip *
+cd djl-demo/djl-serving/python-mode/
+zip -r resnet18.zip resnet18
 ```
 
 #### Step 2: Start Server
