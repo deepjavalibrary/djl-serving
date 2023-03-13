@@ -14,6 +14,7 @@ package ai.djl.serving.http;
 
 import ai.djl.ModelException;
 import ai.djl.metric.Metric;
+import ai.djl.modality.ChunkedBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -26,13 +27,19 @@ import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import org.slf4j.Logger;
@@ -40,6 +47,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /** A class handling inbound HTTP requests for the management API. */
@@ -52,10 +60,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final Metric RESPONSE_5_XX = new Metric("5XX", 1);
     private static final Metric WLM_ERROR = new Metric("WlmError", 1);
     private static final Metric SERVER_ERROR = new Metric("ServerError", 1);
-    private RequestParser requestParser;
-
     private static final Pattern PATTERN =
             Pattern.compile("/(ping|invocations|predictions)([/?].*)?|/models/.+/invoke");
+
+    private RequestParser requestParser;
 
     /** default constructor. */
     public InferenceRequestHandler() {
@@ -240,7 +248,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             ModelManager modelManager, ChannelHandlerContext ctx, Workflow workflow, Input input) {
         modelManager
                 .runJob(workflow, input)
-                .whenComplete(
+                .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
                                 sendOutput(o, ctx);
@@ -254,6 +262,16 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     }
 
     void sendOutput(Output output, ChannelHandlerContext ctx) {
+        /*
+         * We can load the models based on the configuration file. Since this Job is
+         * not driven by the external connections, we could have a empty context for
+         * this job. We shouldn't try to send a response to ctx if this is not triggered
+         * by external clients.
+         */
+        if (ctx == null) {
+            return;
+        }
+
         HttpResponseStatus status;
         int code = output.getCode();
         if (code == 200) {
@@ -269,25 +287,37 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             }
             status = new HttpResponseStatus(code, output.getMessage());
         }
+        BytesSupplier data = output.getData();
+        if (data instanceof ChunkedBytesSupplier) {
+            HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, true);
+            for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
+                resp.headers().set(entry.getKey(), entry.getValue());
+            }
+            NettyUtils.sendHttpResponse(ctx, resp, true);
+            ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
+            try {
+                while (supplier.hasNext()) {
+                    byte[] buf = supplier.nextChunk(1, TimeUnit.MINUTES);
+                    ByteBuf bb = Unpooled.wrappedBuffer(buf);
+                    ctx.writeAndFlush(new DefaultHttpContent(bb));
+                }
+                ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+            } catch (InterruptedException | IllegalStateException e) {
+                logger.warn("Chunk reading interrupted", e);
+                ctx.newFailedFuture(e);
+            }
+            return;
+        }
 
         FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, true);
         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
             resp.headers().set(entry.getKey(), entry.getValue());
         }
-        BytesSupplier data = output.getData();
         if (data != null) {
             resp.content().writeBytes(data.getAsBytes());
         }
 
-        /*
-         * We can load the models based on the configuration file.Since this Job is
-         * not driven by the external connections, we could have a empty context for
-         * this job. We shouldn't try to send a response to ctx if this is not triggered
-         * by external clients.
-         */
-        if (ctx != null) {
-            NettyUtils.sendHttpResponse(ctx, resp, true);
-        }
+        NettyUtils.sendHttpResponse(ctx, resp, true);
     }
 
     void onException(Throwable t, ChannelHandlerContext ctx) {

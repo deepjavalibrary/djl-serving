@@ -51,6 +51,7 @@ class Output(object):
         self.message = message
         self.properties = dict()
         self.content = PairList()
+        self.stream_content = None
 
     def __str__(self):
         d = dict()
@@ -121,6 +122,9 @@ class Output(object):
                         key=key,
                         batch_index=batch_index)
 
+    def add_stream_content(self, stream_content):
+        self.stream_content = stream_content
+
     @staticmethod
     def _encode_json(val) -> bytes:
         return bytearray(
@@ -140,7 +144,7 @@ class Output(object):
             msg += struct.pack('>h', len(buf))
             msg += buf
 
-    def encode(self) -> bytearray:
+    def send(self, cl_socket):
         msg = bytearray()
         msg += struct.pack('>h', self.code)
         self.write_utf8(msg, self.message)
@@ -150,13 +154,52 @@ class Output(object):
             self.write_utf8(msg, k)
             self.write_utf8(msg, v)
 
-        size = self.content.size()
-        msg += struct.pack('>h', size)
-        for i in range(size):
-            k = self.content.key_at(i)
-            v = self.content.value_at(i)
-            self.write_utf8(msg, k)
-            msg += struct.pack('>i', len(v))
-            msg += v
+        if self.stream_content is None:
+            size = self.content.size()
+            msg += struct.pack('>h', size)
+            for i in range(size):
+                k = self.content.key_at(i)
+                v = self.content.value_at(i)
+                self.write_utf8(msg, k)
+                msg += struct.pack('>i', len(v))
+                msg += v
+            cl_socket.sendall(msg)
+            return
 
-        return msg
+        msg += struct.pack('>h', -1)
+        cl_socket.sendall(msg)
+
+        while True:
+            try:
+                data = next(self.stream_content)
+
+                msg = bytearray()
+                msg += b'\1'
+
+                if type(data) is str:
+                    data = data.encode('utf-8')
+                elif type(data) is bytearray:
+                    pass
+                elif type(data) is bytes:
+                    data = bytearray(data)
+                else:
+                    data = bytearray(self._encode_json(data))
+
+                msg += struct.pack('>i', len(data))
+                msg += data
+                cl_socket.sendall(msg)
+            except StopIteration:
+                msg = bytearray()
+                msg += b'\0'
+                msg += struct.pack('>i', 0)
+                cl_socket.sendall(msg)
+                break
+            except Exception as e:
+                logging.exception("Failed read streaming content from output")
+                msg = bytearray()
+                msg += b'\0'
+                data = str(e).encode('utf-8')
+                msg += struct.pack('>i', len(data))
+                msg += data
+                cl_socket.sendall(msg)
+                break

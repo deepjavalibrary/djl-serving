@@ -297,7 +297,7 @@ public class KServeRequestHandler implements RequestHandler<Void> {
 
             modelManager
                     .runJob(workflow, input)
-                    .whenComplete(
+                    .whenCompleteAsync(
                             (o, t) -> {
                                 if (o != null) {
                                     responseOutput(response, o, ctx, request.outputs);

@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -293,12 +294,12 @@ public final class NettyUtils {
      * @param keepAlive if keep the connection
      */
     public static void sendHttpResponse(
-            ChannelHandlerContext ctx, FullHttpResponse resp, boolean keepAlive) {
+            ChannelHandlerContext ctx, HttpResponse resp, boolean keepAlive) {
         sendHttpResponse(ctx, resp, keepAlive, true);
     }
 
     private static void sendHttpResponse(
-            ChannelHandlerContext ctx, FullHttpResponse resp, boolean keepAlive, boolean noCache) {
+            ChannelHandlerContext ctx, HttpResponse resp, boolean keepAlive, boolean noCache) {
         // Send the response and close the connection if necessary.
         Channel channel = ctx.channel();
         Session session = channel.attr(SESSION_KEY).getAndSet(null);
@@ -346,7 +347,12 @@ public final class NettyUtils {
             headers.set("Expires", "Thu, 01 Jan 1970 00:00:00 UTC");
         }
 
-        HttpUtil.setContentLength(resp, resp.content().readableBytes());
+        if (resp instanceof FullHttpResponse) {
+            ByteBuf content = ((FullHttpResponse) resp).content();
+            HttpUtil.setContentLength(resp, content.readableBytes());
+        } else {
+            HttpUtil.setTransferEncodingChunked(resp, true);
+        }
         if (!keepAlive || code >= 400) {
             headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             if (channel.isActive()) {

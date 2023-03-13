@@ -14,6 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
+import ai.djl.modality.ChunkedBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -353,6 +354,8 @@ class Connection {
     private static final class OutputDecoder extends ByteToMessageDecoder {
 
         private int maxBufferSize;
+        private boolean hasMoreChunk;
+        private ChunkedBytesSupplier data;
 
         OutputDecoder(int maxBufferSize) {
             this.maxBufferSize = maxBufferSize;
@@ -366,19 +369,30 @@ class Connection {
             in.markReaderIndex();
             boolean completed = false;
             try {
-                int code = in.readShort();
-                String message = CodecUtils.readUtf8(in);
-                Output output = new Output(code, message);
-                int size = in.readShort();
-                for (int i = 0; i < size; ++i) {
-                    output.addProperty(CodecUtils.readUtf8(in), CodecUtils.readUtf8(in));
+                if (hasMoreChunk) {
+                    hasMoreChunk = in.readByte() == 1;
+                    data.appendContent(CodecUtils.readBytes(in, maxBufferSize), !hasMoreChunk);
+                } else {
+                    int code = in.readShort();
+                    String message = CodecUtils.readUtf8(in);
+                    Output output = new Output(code, message);
+                    int size = in.readShort();
+                    for (int i = 0; i < size; ++i) {
+                        output.addProperty(CodecUtils.readUtf8(in), CodecUtils.readUtf8(in));
+                    }
+                    int contentSize = in.readShort();
+                    if (contentSize == -1) {
+                        hasMoreChunk = true;
+                        data = new ChunkedBytesSupplier();
+                        output.add(data);
+                    } else {
+                        for (int i = 0; i < contentSize; ++i) {
+                            String key = CodecUtils.readUtf8(in);
+                            output.add(key, CodecUtils.readBytes(in, maxBufferSize));
+                        }
+                    }
+                    out.add(output);
                 }
-                int contentSize = in.readShort();
-                for (int i = 0; i < contentSize; ++i) {
-                    String key = CodecUtils.readUtf8(in);
-                    output.add(key, CodecUtils.readBytes(in, maxBufferSize));
-                }
-                out.add(output);
                 completed = true;
             } catch (IndexOutOfBoundsException | NegativeArraySizeException ignore) {
                 // ignore
