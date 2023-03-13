@@ -24,22 +24,27 @@ class FasterTransformerService(object):
         self.tensor_parallel_degree = -1
         self.pipeline_parallel_degree = -1
         self.dtype = None
-        self.model_id = None
+        self.model_id_or_path = None
         self.model = None
 
-    def initialize(self, properties):
+    def inititalize_properties(self, properties):
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
         self.pipeline_parallel_degree = int(
             properties.get("pipeline_parallel_degree", 1))
         self.dtype = properties.get("dtype", "fp32")
-        self.model_id = properties.get("model_id")
+        self.model_id_or_path = properties.get("model_id") or properties.get(
+            "model_dir")
+
+    def initialize(self, properties):
+        self.inititalize_properties(properties)
         self.model = self.load_model()
         self.initialized = True
 
     def load_model(self):
-        logging.info(f"Loading model: {self.model_id}")
-        return ft.init_inference(self.model_id, self.tensor_parallel_degree,
+        logging.info(f"Loading model: {self.model_id_or_path}")
+        return ft.init_inference(self.model_id_or_path,
+                                 self.tensor_parallel_degree,
                                  self.pipeline_parallel_degree, self.dtype)
 
     def inference(self, inputs: Input):
@@ -60,6 +65,16 @@ class FasterTransformerService(object):
 
 
 _service = FasterTransformerService()
+
+
+def partition(inputs: Input):
+    properties = inputs.get_properties()
+    _service.inititalize_properties(properties)
+    ft.save_checkpoint(_service.model_id_or_path,
+                       _service.tensor_parallel_degree,
+                       _service.pipeline_parallel_degree,
+                       properties.get("save_mp_checkpoint_path"),
+                       _service.dtype)
 
 
 def handle(inputs: Input) -> Optional[Output]:
