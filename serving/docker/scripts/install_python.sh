@@ -7,7 +7,7 @@ set -ex
 apt-get update
 
 if [ -z "$PYTHON_VERSION" ]; then
-  DEBIAN_FRONTEND=noninteractive apt-get install -yq python3-dev python3-pip
+  DEBIAN_FRONTEND=noninteractive apt-get install -yq python3-dev python3-pip git
 else
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl software-properties-common
   add-apt-repository -y ppa:deadsnakes/ppa
