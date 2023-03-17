@@ -90,6 +90,7 @@ public class ModelServer {
     private ConfigManager configManager;
 
     private FolderScanPluginManager pluginManager;
+    private DependencyManager dependencyManager;
 
     /**
      * Creates a new {@code ModelServer} instance.
@@ -100,6 +101,7 @@ public class ModelServer {
         this.configManager = configManager;
         this.pluginManager = new FolderScanPluginManager(configManager);
         serverGroups = new ServerGroups(configManager);
+        dependencyManager = DependencyManager.getInstance();
     }
 
     /**
@@ -384,7 +386,7 @@ public class ModelServer {
                     continue;
                 }
             }
-            DependencyManager.getInstance().installEngine(engineName);
+            dependencyManager.installEngine(engineName);
             Engine engine = Engine.getEngine(engineName);
             String[] devices = parseDevices(deviceMapping, engine, pair.getValue());
 
@@ -461,7 +463,7 @@ public class ModelServer {
                 if (tokens.length > 1) {
                     Pair<String, Path> pair = ModelInfo.downloadModel(workflowUrlString);
                     String engineName = ModelInfo.inferEngine(pair.getValue(), pair.getKey());
-                    DependencyManager.getInstance().installEngine(engineName);
+                    dependencyManager.installEngine(engineName);
                     Engine engine = Engine.getEngine(engineName);
                     devices = parseDevices(tokens[1], engine, pair.getValue());
                 }

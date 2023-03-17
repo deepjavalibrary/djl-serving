@@ -14,6 +14,7 @@ package ai.djl.serving.workflow;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
@@ -166,7 +167,8 @@ public class WorkflowDefinition {
             for (Entry<String, String> f : funcs.entrySet()) {
                 try {
                     Class<? extends WorkflowFunction> clazz =
-                            Class.forName(f.getValue()).asSubclass(WorkflowFunction.class);
+                            Class.forName(f.getValue(), true, MutableClassLoader.getInstance())
+                                    .asSubclass(WorkflowFunction.class);
                     loadedFunctions.put(f.getKey(), clazz.getConstructor().newInstance());
                 } catch (Exception e) {
                     throw new BadWorkflowException("Could not load function " + f.getKey(), e);
