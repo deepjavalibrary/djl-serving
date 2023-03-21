@@ -201,6 +201,9 @@ public class PyModel extends BaseModel {
                                 + getProperty("gpu.maxWorkers"));
             }
             mpiWorkers = Integer.parseInt(getProperty("gpu.maxWorkers"));
+
+            properties.forEach((k, v) -> pyEnv.addParameter(k, v));
+
             createAllPyProcesses(mpiWorkers);
         } else {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
@@ -208,6 +211,8 @@ public class PyModel extends BaseModel {
                 setProperty("gpu.minWorkers", "1");
                 setProperty("gpu.maxWorkers", "1");
             }
+
+            properties.forEach((k, v) -> pyEnv.addParameter(k, v));
         }
     }
 
