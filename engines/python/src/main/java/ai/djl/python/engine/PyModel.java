@@ -140,10 +140,22 @@ public class PyModel extends BaseModel {
             entryPoint = Utils.getenv("DJL_ENTRY_POINT");
             if (entryPoint == null) {
                 Path modelFile = findModelFile(prefix);
-                if (modelFile == null) {
+                // find default entryPoint
+                String engineName = manager.getEngine().getEngineName();
+                if (modelFile != null) {
+                    entryPoint = modelFile.toFile().getName();
+                } else if ("DeepSpeed".equals(engineName)) {
+                    entryPoint = "djl_python.deepspeed";
+                } else if ("FasterTransformer".equals(engineName)) {
+                    entryPoint = "djl_python.fastertransformer";
+                } else if ("nc".equals(manager.getDevice().getDeviceType())
+                        && pyEnv.getTensorParallelDegree() > 0) {
+                    entryPoint = "djl_python.transformers-neuronx";
+                } else if (pyEnv.getInitParameters().containsKey("model_id")) {
+                    entryPoint = "djl_python.huggingface";
+                } else {
                     throw new FileNotFoundException(".py file not found in: " + modelPath);
                 }
-                entryPoint = modelFile.toFile().getName();
             }
         }
         pyEnv.setEntryPoint(entryPoint);
