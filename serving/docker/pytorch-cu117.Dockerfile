@@ -15,6 +15,7 @@ FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.21.0~SNAPSHOT
 ARG torch_version=1.13.1
+ARG python_version=3.9
 
 RUN mkdir -p /opt/djl/conf
 COPY config.properties /opt/djl/conf/
@@ -36,7 +37,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} pytorchgpu" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
-    scripts/install_python.sh && \
+    scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     pip3 install numpy && pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
     scripts/patch_oss_dlc.sh python && \
