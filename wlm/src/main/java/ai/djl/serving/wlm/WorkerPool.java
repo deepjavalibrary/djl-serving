@@ -241,7 +241,7 @@ public class WorkerPool<I, O> {
             logger.warn("No worker pool available.");
             return;
         }
-        sorted.sort(Comparator.comparingInt(p -> p.getMaxWorkers() - p.getMinWorkers()));
+        sorted.sort(Comparator.comparingInt(p -> p.getMaxWorkers() - p.workers.size()));
 
         WorkerGroup<I, O> group = sorted.get(sorted.size() - 1);
         if (group.getMaxWorkers() > group.workers.size()) {
