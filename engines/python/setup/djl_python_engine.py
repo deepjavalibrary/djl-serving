@@ -153,6 +153,9 @@ def main():
         logging.exception("Python engine process died")
     finally:
         logging.info(f"{pid} - Python process finished")
+        sys.stdout.flush()
+        sys.stderr.flush()
+        logging.shutdown()
         if sock_type == 'unix':
             if os.path.exists(sock_name):
                 os.remove(sock_name)
