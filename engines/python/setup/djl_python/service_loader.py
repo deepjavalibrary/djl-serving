@@ -15,6 +15,7 @@ import importlib
 import json
 import logging
 import os
+from importlib.machinery import SourceFileLoader
 
 
 class ModelService(object):
@@ -31,14 +32,20 @@ class ModelService(object):
 def load_model_service(model_dir, entry_point, device_id):
     manifest_file = os.path.join(model_dir, "MAR-INF/MANIFEST.json")
     if not os.path.exists(manifest_file):
-        entry_point_file = os.path.join(model_dir, entry_point)
-        if entry_point_file.endswith(".py"):
-            entry_point = entry_point[:-3]
-            if not os.path.exists(entry_point_file):
-                raise ValueError(
-                    f"entry-point file not found {entry_point_file}.")
+        if os.path.isabs(entry_point):
+            if not os.path.exists(entry_point):
+                raise ValueError(f"entry-point file not found {entry_point}.")
+            module = SourceFileLoader("model", entry_point).load_module()
+        else:
+            if entry_point.endswith(".py"):
+                entry_point_file = os.path.join(model_dir, entry_point)
+                entry_point = entry_point[:-3]
+                if not os.path.exists(entry_point_file):
+                    raise ValueError(
+                        f"entry-point file not found {entry_point_file}.")
 
-        module = importlib.import_module(entry_point)
+            module = importlib.import_module(entry_point)
+
         if module is None:
             raise ValueError(
                 f"Unable to load entry_point {model_dir}/{entry_point}.py")
