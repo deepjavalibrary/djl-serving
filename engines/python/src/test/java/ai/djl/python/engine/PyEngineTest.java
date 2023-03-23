@@ -311,10 +311,6 @@ public class PyEngineTest {
             NDArray array = list.singletonOrThrow();
             Assert.assertEquals(array.getShape(), new Shape(1, 3, 224, 224));
 
-            // workaround bug: https://github.com/deepjavalibrary/djl/pull/2436
-            // TODO: Remove in 0.22.0
-            list = new NDList(manager.create(array.toFloatArray(), new Shape(1, 3, 224, 224)));
-
             list = predictor.predict(list);
             Assert.assertEquals(list.get(0).getShape(), new Shape(1, 1000));
 
