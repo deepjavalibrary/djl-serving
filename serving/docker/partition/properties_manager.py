@@ -71,16 +71,18 @@ class PropertiesManager(object):
         elif 'model_id' in self.properties:
             self.properties['model_dir'] = self.properties_dir
         elif 's3url' in self.properties:
+            # backward compatible only, should be replaced with model_id
             self.properties['model_dir'] = self.properties_dir
+            self.properties['model_id'] = self.properties['s3url']
+            self.properties.pop('s3url')
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
             if model_files:
                 self.properties['model_dir'] = self.properties_dir
             else:
                 raise KeyError(
-                    'Please specify the option.model_dir or option.model_id or option.s3_url or '
-                    'include model '
-                    'files in the model-dir argument.')
+                    'Please specify the option.model_dir or option.model_id or include model files in the model-dir.'
+                )
 
     def generate_properties_file(self):
         checkpoint_path = self.properties.get('save_mp_checkpoint_path')

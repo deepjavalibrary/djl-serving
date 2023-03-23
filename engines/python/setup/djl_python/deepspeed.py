@@ -109,8 +109,8 @@ class DeepSpeedService(object):
         self.initialized = True
 
     def _parse_properties(self, properties):
-        # If option.s3url is used, the directory is stored in model_id
-        # If option.s3url is not used but model_id is present, we download from hub
+        # model_id can point to huggingface model_id or local directory.
+        # If option.model_id points to a s3 bucket, we download it and set model_id to the download directory.
         # Otherwise we assume model artifacts are in the model_dir
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")

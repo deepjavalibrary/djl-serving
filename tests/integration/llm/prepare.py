@@ -7,6 +7,7 @@ parser.add_argument('handler', help='the handler used in the model')
 parser.add_argument('model', help='model that works with certain handler')
 
 ds_aot_list = {
+    # Keep option.s3url to test backward compatible case
     "opt-6.7b": {
         "option.s3url": "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree": 4,
@@ -14,7 +15,7 @@ ds_aot_list = {
         "option.dtype": "float16"
     },
     "gpt-neox-20b": {
-        "option.s3url": "s3://djl-llm/gpt-neox-20b/",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "float16"
@@ -23,16 +24,16 @@ ds_aot_list = {
 
 ds_model_list = {
     "gpt-j-6b": {
-        "option.s3url": "s3://djl-llm/gpt-j-6b/",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.tensor_parallel_degree": 4
     },
     "bloom-7b1": {
-        "option.s3url": "s3://djl-llm/bloom-7b1/",
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.tensor_parallel_degree": 4,
         "option.dtype": "float16"
     },
     "opt-30b": {
-        "option.s3url": "s3://djl-llm/opt-30b/",
+        "option.model_id": "s3://djl-llm/opt-30b/",
         "option.tensor_parallel_degree": 4
     }
 }
@@ -44,14 +45,14 @@ hf_handler_list = {
         "option.tensor_parallel_degree": 2
     },
     "gpt-j-6b": {
-        "option.s3url": "s3://djl-llm/gpt-j-6b/",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
         "option.device_map": "auto",
         "option.dtype": "fp16"
     },
     "bloom-7b1": {
-        "option.s3url": "s3://djl-llm/bloom-7b1/",
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.load_in_8bit": "TRUE",
@@ -61,19 +62,19 @@ hf_handler_list = {
 
 ds_handler_list = {
     "gpt-j-6b": {
-        "option.s3url": "s3://djl-llm/gpt-j-6b/",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "bf16"
     },
     "bloom-7b1": {
-        "option.s3url": "s3://djl-llm/bloom-7b1/",
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "fp16"
     },
     "opt-13b": {
-        "option.s3url": "s3://djl-llm/opt-13b/",
+        "option.model_id": "s3://djl-llm/opt-13b/",
         "option.tensor_parallel_degree": 2,
         "option.task": "text-generation",
         "option.dtype": "fp16"
@@ -82,17 +83,17 @@ ds_handler_list = {
 
 sd_handler_list = {
     "stable-diffusion-v1-5": {
-        "option.s3url": "s3://djl-llm/stable-diffusion-v1-5/",
+        "option.model_id": "s3://djl-llm/stable-diffusion-v1-5/",
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp16"
     },
     "stable-diffusion-2-1-base": {
-        "option.s3url": "s3://djl-llm/stable-diffusion-2-1-base/",
+        "option.model_id": "s3://djl-llm/stable-diffusion-2-1-base/",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16"
     },
     "stable-diffusion-2-depth": {
-        "option.s3url": "s3://djl-llm/stable-diffusion-2-depth/",
+        "option.model_id": "s3://djl-llm/stable-diffusion-2-depth/",
         "option.tensor_parallel_degree": 1,
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1
@@ -101,13 +102,13 @@ sd_handler_list = {
 
 ft_handler_list = {
     "bigscience/bloom-3b": {
-        "option.s3url": "s3://djl-llm/bloom-3b/",
+        "option.model_id": "s3://djl-llm/bloom-3b/",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1,
     },
     "flan-t5-xxl": {
-        "option.s3url": "s3://djl-llm/flan-t5-xxl/",
+        "option.model_id": "s3://djl-llm/flan-t5-xxl/",
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp32"
     }
@@ -123,18 +124,18 @@ ft_model_list = {
         "option.tensor_parallel_degree": 1,
     },
     "facebook/opt-6.7b": {
-        "option.s3url": "s3://djl-llm/opt-6b7/",
+        "option.model_id": "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp16",
     },
     "bigscience/bloom-3b": {
-        "option.s3url": "s3://djl-llm/bloom-3b/",
+        "option.model_id": "s3://djl-llm/bloom-3b/",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1,
     },
     "flan-t5-xxl": {
-        "option.s3url": "s3://djl-llm/flan-t5-xxl/",
+        "option.model_id": "s3://djl-llm/flan-t5-xxl/",
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp32"
     }
@@ -152,7 +153,7 @@ transformers_neuronx_model_list = {
 
 transformers_neuronx_handler_list = {
     "opt-1.3b": {
-        "option.s3url": "s3://djl-llm/opt-1.3b/",
+        "option.model_id": "s3://djl-llm/opt-1.3b/",
         "option.batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 256,
@@ -160,7 +161,7 @@ transformers_neuronx_handler_list = {
         "option.model_loading_timeout": 600
     },
     "gpt-j-6b": {
-        "option.s3url": "s3://djl-llm/gpt-j-6b/",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.batch_size": 4,
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 512,
