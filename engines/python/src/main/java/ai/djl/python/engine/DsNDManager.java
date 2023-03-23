@@ -16,11 +16,7 @@ import ai.djl.Device;
 import ai.djl.engine.Engine;
 import ai.djl.ndarray.NDManager;
 
-/**
- * {@code DsNDManager} is the Python engine implementation of {@link NDManager}.
- *
- * <p>TODO: remove this class in 0.21.0
- */
+/** {@code DsNDManager} is the Python engine implementation of {@link NDManager}. */
 public class DsNDManager extends PyNDManager {
 
     DsNDManager(Engine engine, NDManager parent, Device device) {
