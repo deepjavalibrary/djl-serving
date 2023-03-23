@@ -168,15 +168,20 @@ public class PyModel extends BaseModel {
         }
         pyEnv.setEntryPoint(entryPoint);
 
-        String s3Url = pyEnv.getInitParameters().get("s3url");
+        Map<String, String> initParameters = pyEnv.getInitParameters();
+        String s3Url = initParameters.get("s3url");
+        String modelId = pyEnv.getInitParameters().get("model_id");
         if (s3Url != null) {
-            if (pyEnv.getInitParameters().containsKey("model_id")) {
+            // s3url is deprecated, use model_id instead
+            if (modelId != null) {
                 throw new IllegalArgumentException("model_id and s3url could not both set!");
             }
-
-            logger.info("S3 url found, start downloading from {}", s3Url);
+            modelId = s3Url;
+        }
+        if (modelId != null && modelId.startsWith("s3://")) {
+            logger.info("S3 url found, start downloading from {}", modelId);
             String downloadDir = getDownloadDir().toString();
-            downloadS3(s3Url, downloadDir);
+            downloadS3(modelId, downloadDir);
             // point model_id to download directory
             pyEnv.addParameter("model_id", downloadDir);
         }

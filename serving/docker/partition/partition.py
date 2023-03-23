@@ -40,13 +40,14 @@ class PartitionService(object):
         self.download_model_from_s3()
 
     def download_model_from_s3(self):
-        if "s3url" not in self.properties:
+        model_id = self.properties.get("model_id")
+        if not model_id or not model_id.startswith("s3://"):
             return
 
         download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
                                       '/tmp/download/model/')
 
-        s3url = self.properties["s3url"]
+        s3url = model_id
         if Path("/opt/djl/bin/s5cmd").is_file():
             if not s3url.endswith("*"):
                 if s3url.endswith("/"):
