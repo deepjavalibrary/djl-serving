@@ -19,6 +19,7 @@ import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
+import ai.djl.training.util.DownloadUtils;
 import ai.djl.translate.Translator;
 import ai.djl.util.Utils;
 
@@ -28,11 +29,13 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -157,13 +160,25 @@ public class PyModel extends BaseModel {
                     throw new FileNotFoundException(".py file not found in: " + modelPath);
                 }
             }
+        } else if (entryPoint.toLowerCase(Locale.ROOT).startsWith("http")) {
+            logger.info("downloading entryPoint file: {}", entryPoint);
+            Path modelFile = getDownloadDir().resolve("model.py");
+            DownloadUtils.download(new URL(entryPoint), modelFile, null);
+            entryPoint = modelFile.toAbsolutePath().toString();
         }
         pyEnv.setEntryPoint(entryPoint);
 
         String s3Url = pyEnv.getInitParameters().get("s3url");
         if (s3Url != null) {
+            if (pyEnv.getInitParameters().containsKey("model_id")) {
+                throw new IllegalArgumentException("model_id and s3url could not both set!");
+            }
+
             logger.info("S3 url found, start downloading from {}", s3Url);
-            downloadS3(s3Url);
+            String downloadDir = getDownloadDir().toString();
+            downloadS3(s3Url, downloadDir);
+            // point model_id to download directory
+            pyEnv.addParameter("model_id", downloadDir);
         }
 
         if (pyEnv.isMpiMode()) {
@@ -312,18 +327,18 @@ public class PyModel extends BaseModel {
         logger.info("{} model loaded in {} ms.", modelName, duration);
     }
 
-    private void downloadS3(String url) {
-        if (pyEnv.getInitParameters().containsKey("model_id")) {
-            throw new IllegalArgumentException("model_id and s3url could not both set!");
+    private Path getDownloadDir() throws IOException {
+        // SageMaker model_dir are readonly, default to use temp directory
+        Path tmp = Files.createTempDirectory("download").toAbsolutePath();
+        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", tmp.toString());
+        if ("default".equals(downloadDir)) {
+            downloadDir = modelDir.toAbsolutePath().toString();
         }
-        // TODO: Workaround on SageMaker readonly disk
+        return Paths.get(downloadDir);
+    }
+
+    private void downloadS3(String url, String downloadDir) {
         try {
-            Path tmp = Files.createTempDirectory("download").toAbsolutePath();
-            String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", tmp.toString());
-            if ("default".equals(downloadDir)) {
-                downloadDir = modelDir.toAbsolutePath().toString();
-            }
-            pyEnv.addParameter("model_id", downloadDir);
             String[] commands;
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
                 if (!url.endsWith("*")) {

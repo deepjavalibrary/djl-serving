@@ -199,7 +199,7 @@ def build_ds_handler_model(model):
         )
     options = ds_handler_list[model]
     options["engine"] = "DeepSpeed"
-    options["option.entryPoint"] = "djl_python.deepspeed"
+    # options["option.entryPoint"] = "djl_python.deepspeed"
     write_properties(options)
 
 
@@ -241,7 +241,7 @@ def build_ft_handler_model(model):
         )
     options = ft_handler_list[model]
     options["engine"] = "FasterTransformer"
-    options["option.entryPoint"] = "djl_python.fastertransformer"
+    # options["option.entryPoint"] = "djl_python.fastertransformer"
     write_properties(options)
 
 
@@ -275,7 +275,7 @@ def builder_ft_handler_aot_model(model):
         )
     options = ft_model_list[model]
     options["engine"] = "FasterTransformer"
-    options["entryPoint"] = "djl_python.fastertransformer"
+    # options["entryPoint"] = "djl_python.fastertransformer"
     options["option.save_mp_checkpoint_path"] = "/opt/ml/model/partition-test"
     write_properties(options)
 
