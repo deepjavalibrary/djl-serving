@@ -11,14 +11,14 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
-ARG djl_version=0.21.0~SNAPSHOT
+ARG djl_version=0.22.0~SNAPSHOT
 ARG python_version=3.9
 ARG ft_version="release/v5.3_tag"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
 ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-nightly-py3-none-any.whl"
 ARG ompi_version=4.1.4
-ARG transformers_version=4.25.1
-ARG accelerate_version=0.15.0
+ARG transformers_version=4.27.3
+ARG accelerate_version=0.17.1
 
 EXPOSE 8080
 
@@ -30,6 +30,8 @@ ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryErro
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]

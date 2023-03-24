@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM arm64v8/ubuntu:20.04
-ARG djl_version=0.21.0~SNAPSHOT
+ARG djl_version=0.22.0~SNAPSHOT
 ARG torch_version=1.13.1
 
 EXPOSE 8080
@@ -22,6 +22,8 @@ ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
 ENV OMP_NUM_THREADS=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]

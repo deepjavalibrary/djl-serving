@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
-ARG djl_version=0.21.0~SNAPSHOT
+ARG djl_version=0.22.0~SNAPSHOT
 ARG torch_version=1.12.1
 EXPOSE 8080
 
@@ -23,6 +23,8 @@ WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV OMP_NUM_THREADS=1
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
 ENV NEURON_SDK_PATH=/usr/local/lib/python3.7/dist-packages/torch_neuron/lib
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.7/dist-packages/torch/lib

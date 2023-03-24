@@ -13,7 +13,7 @@ ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.21.0~SNAPSHOT
+ARG djl_version=0.22.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.9
 
@@ -25,7 +25,9 @@ WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV OMP_NUM_THREADS=1
 ENV MODEL_SERVER_HOME=/opt/djl
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.8/dist-packages/torch/lib
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.9/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu117-precxx11
@@ -59,8 +61,8 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-cu117="true"
 
 FROM base as transformers
 
-ARG transformers_version=4.26.0
-ARG accelerate_version=0.16.0
+ARG transformers_version=4.27.3
+ARG accelerate_version=0.17.1
 
 COPY scripts scripts/
 RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \
