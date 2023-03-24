@@ -25,6 +25,8 @@ WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV OMP_NUM_THREADS=1
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.9/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
@@ -61,9 +63,6 @@ FROM base as transformers
 
 ARG transformers_version=4.27.3
 ARG accelerate_version=0.17.1
-
-ENV HUGGINGFACE_HUB_CACHE=/tmp
-ENV TRANSFORMERS_CACHE=/tmp
 
 COPY scripts scripts/
 RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \

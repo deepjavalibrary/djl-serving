@@ -36,6 +36,8 @@ ENV TF_NUM_INTRAOP_THREADS=1
 ENV TF_CPP_MIN_LOG_LEVEL=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
 
 RUN useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl

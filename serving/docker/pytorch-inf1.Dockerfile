@@ -23,6 +23,8 @@ WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV OMP_NUM_THREADS=1
 ENV MODEL_SERVER_HOME=/opt/djl
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
 ENV NEURON_SDK_PATH=/usr/local/lib/python3.7/dist-packages/torch_neuron/lib
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.7/dist-packages/torch/lib
