@@ -44,11 +44,6 @@ services:
       context: .
       dockerfile: fastertransformer.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}fastertransformer${NIGHTLY}"
-  paddle-cu112:
-    build:
-      context: .
-      dockerfile: paddle-cu112.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}paddle-cu112${NIGHTLY}"
   pytorch-inf2:
     build:
       context: .

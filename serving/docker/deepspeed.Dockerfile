@@ -11,12 +11,12 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
-ARG djl_version=0.21.0~SNAPSHOT
+ARG djl_version=0.22.0~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=1.13.1
-ARG accelerate_version=0.16.0
+ARG accelerate_version=0.17.1
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.0-py2.py3-none-any.whl"
-ARG transformers_version=4.26.0
+ARG transformers_version=4.27.3
 ARG diffusers_version=0.12.0
 
 EXPOSE 8080
@@ -29,6 +29,8 @@ ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryErro
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
+ENV HUGGINGFACE_HUB_CACHE=/tmp
+ENV TRANSFORMERS_CACHE=/tmp
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
