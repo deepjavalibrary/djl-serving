@@ -49,6 +49,14 @@ mydata: [array([[[1., 1.],
         [1., 1.]]])]'''
         self.assertEqual(result, expected)
 
+    def test_finalize(self):
+
+        def finalize_func(a, b, c):
+            return a + b + c
+
+        outputs = Output().finalize(finalize_func, 1, 2, 3)
+        self.assertEqual(6, outputs.execute_finalize())
+
 
 if __name__ == '__main__':
     unittest.main()

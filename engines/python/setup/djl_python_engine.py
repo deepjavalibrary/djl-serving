@@ -122,6 +122,10 @@ class PythonEngine(object):
 
             outputs.send(cl_socket)
             logging.debug("Outputs is sent to DJL engine.")
+            try:
+                outputs.execute_finalize()
+            except Exception as e:
+                logging.exception(f"Failed on finalize function: {e}")
 
 
 def main():

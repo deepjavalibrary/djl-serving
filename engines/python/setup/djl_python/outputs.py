@@ -52,6 +52,8 @@ class Output(object):
         self.properties = dict()
         self.content = PairList()
         self.stream_content = None
+        self.finalize_function = None
+        self.finalize_args = None
 
     def __str__(self):
         d = dict()
@@ -143,6 +145,15 @@ class Output(object):
             buf = val.encode('utf-8')
             msg += struct.pack('>h', len(buf))
             msg += buf
+
+    def finalize(self, finalize_function, *args):
+        self.finalize_function = finalize_function
+        self.finalize_args = args
+        return self
+
+    def execute_finalize(self):
+        if self.finalize_function:
+            return self.finalize_function(*self.finalize_args)
 
     def send(self, cl_socket):
         msg = bytearray()
