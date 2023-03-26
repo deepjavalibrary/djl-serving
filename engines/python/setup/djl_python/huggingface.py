@@ -21,6 +21,7 @@ from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoToken
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
+from djl_python.streaming_utils import StreamingUtils
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -61,6 +62,9 @@ class HuggingFaceService(object):
     def __init__(self):
         self.hf_pipeline = None
         self.initialized = False
+        self.enable_streaming = False
+        self.model = None
+        self.tokenizer = None
 
     def initialize(self, properties: dict):
         # model_id can point to huggingface model_id or local directory.
@@ -71,6 +75,7 @@ class HuggingFaceService(object):
         device_id = int(properties.get("device_id", "-1"))
         task = properties.get("task")
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
+        self.enable_streaming = bool(properties.get("enable_streaming", False))
         # HF Acc handling
         kwargs = {}
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
@@ -93,6 +98,11 @@ class HuggingFaceService(object):
         if "dtype" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
                 properties.get("dtype"))
+        if self.enable_streaming:
+            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
+            self.initialized = True
+            return
+
         if task:
             self.hf_pipeline = self.get_pipeline(
                 task=task,
@@ -125,10 +135,16 @@ class HuggingFaceService(object):
             input_map = decode(inputs, content_type)
             data = input_map.pop("inputs", input_map)
             parameters = input_map.pop("parameters", {})
+            outputs = Output()
 
+            if self.enable_streaming:
+                stream_generator = StreamingUtils.get_stream_generator("DeepSpeed")
+                outputs.add_stream_content(
+                    stream_generator(self.model, self.tokenizer, data, **parameters))
+                return outputs
+            
             prediction = self.hf_pipeline(data, **parameters)
 
-            outputs = Output()
             encode(outputs, prediction, accept)
         except Exception as e:
             logging.exception("Huggingface inference failed")
@@ -179,6 +195,10 @@ class HuggingFaceService(object):
             hf_pipeline = self.wrap_conversation_pipeline(hf_pipeline)
 
         return hf_pipeline
+
+    def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path, padding_side="left")
+        self.model = AutoModelForCausalLM.from_pretrained(model_id_or_path, **kwargs)
 
     @staticmethod
     def wrap_conversation_pipeline(hf_pipeline):

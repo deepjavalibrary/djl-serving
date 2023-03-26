@@ -52,7 +52,7 @@ def handle(inputs: Input):
             outputs.add(item.get_as_bytes(), key="data", batch_index=i)
     else:
         if inputs.contains_key("stream"):
-            outputs.add_stream_content(stream_token())
+            outputs.add_stream_content(stream_token(), None)
         else:
             outputs.add(data, key="data")
 

@@ -22,6 +22,7 @@ from transformers_neuronx.gpt2.model import GPT2ForSampling
 from transformers_neuronx.module import save_pretrained_split
 from transformers_neuronx.opt.model import OPTForSampling
 from djl_python import Input, Output
+from djl_python.streaming_utils import StreamingUtils
 
 model = None
 
@@ -39,6 +40,7 @@ class TransformersNeuronXService(object):
         self.tensor_parallel_degree = None
         self.model = None
         self.tokenizer = None
+        self.enable_streaming = False
 
     def convert_opt(self, amp):
         logging.warning(
@@ -134,6 +136,7 @@ class TransformersNeuronXService(object):
             properties.get("tensor_parallel_degree", 1))
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
+        self.enable_streaming = bool(properties.get("enable_streaming", False))
         dtype = properties.get("dtype", "fp32")
         n_positions = int(properties.get("n_positions", 128))
         unroll = properties.get("unroll", None)
@@ -168,6 +171,16 @@ class TransformersNeuronXService(object):
                 raise ValueError(
                     f"{self.batch_size} batch size not equal to {len(input_text)} prompt size"
                 )
+            outputs = Output()
+            model_kwargs = {}
+
+            if self.enable_streaming:
+                stream_generator = StreamingUtils.get_stream_generator("transformers-neuronx")
+                model_kwargs["seq_length"] = seq_length
+                outputs.add_stream_content(
+                    stream_generator(self.model, self.tokenizer, input_text, **model_kwargs))
+                return outputs
+            
             with torch.inference_mode():
                 # inf 2 needs padding
                 input_ids = self.tokenizer.batch_encode_plus(
@@ -178,7 +191,7 @@ class TransformersNeuronXService(object):
                     self.tokenizer.decode(gen_seq)
                     for gen_seq in generated_sequence
                 ]
-                outputs = Output().add(result)
+                outputs.add(result)
         except Exception as e:
             logging.exception("TransformerNeuronX inference failed")
             outputs = Output().error((str(e)))
