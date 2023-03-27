@@ -16,13 +16,16 @@ class StreamingUtils:
     DEFAULT_MAX_NEW_TOKENS = 50
 
     @staticmethod
-    def get_stream_generator(engine):
-        if engine in ["DeepSpeed", "Python"]:
+    def get_stream_generator(execution_engine: str):
+        ## execution_engine passed to this function is not the same engine specified in serving.properties
+        ## in djl-serving. For e.g Accelerate and neuronx use Python as the engine serving.properties
+        ## The engine here refers to backend model parallel framework.
+        if execution_engine in {"DeepSpeed", "Accelerate"}:
             return StreamingUtils._hf_model_stream_generator
-        elif engine == "transformers-neuronx":
+        elif execution_engine == "transformers-neuronx":
             return StreamingUtils._transformers_neuronx_stream_generator
         else:
-            raise ValueError(f"{engine} engine is not supported for streaming")
+            raise ValueError(f"{execution_engine} engine is not supported for streaming")
 
 
     @staticmethod
@@ -43,7 +46,6 @@ class StreamingUtils:
         input_ids = tokenized_inputs["input_ids"]
         input_length = input_ids.shape[1]
         all_input_ids = tokenized_inputs["input_ids"]
-        position_ids = tokenized_inputs["attention_mask"].long().cumsum(-1) - 1
         max_new_tokens = kwargs.get("max_new_tokens", StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
         attention_mask = input_ids.new_zeros(len(inputs), input_length + max_new_tokens)
         attention_mask[:, :input_length] = tokenized_inputs["attention_mask"]
@@ -129,11 +131,7 @@ class StreamingUtils:
         if "repetition_penalty" in kwargs and kwargs["repetition_penalty"] != 1.0:
             processors.append(RepetitionPenaltyLogitsProcessor(penalty=kwargs["repetition_penalty"]))
 
-        if logits.shape[0] > 1:
-            logits[-1:, :] = processors(input_ids, logits[-1:, :])
-        else:
-            logits = processors(input_ids, logits)
-
+        logits[-1:, :] = processors(input_ids, logits[-1:, :])
         return logits[-1].argmax()
 
 
@@ -150,14 +148,10 @@ class StreamingUtils:
         if "typical_p" in kwargs and kwargs["typical_p"] < 1.0:
             processors.append(TypicalLogitsWarper(mass=kwargs["typical_p"]))
 
-        if logits.shape[0] > 1:
-            logits[-1:, :] = processors(input_ids, logits[-1:, :])
-        else:
-            logits = processors(input_ids, logits)
-
+        logits[-1:, :] = processors(input_ids, logits[-1:, :])
         generator = torch.Generator(StreamingUtils.DEVICE)
         if "manual_seed" in kwargs:
-            generator.manual_seed(16466056662349265654)
+            generator.manual_seed(kwargs["manual_seed"])
         probs = torch.nn.functional.softmax(logits[-1])
         return torch.multinomial(probs, num_samples=1, generator=generator)
         

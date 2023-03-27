@@ -138,7 +138,7 @@ class HuggingFaceService(object):
             outputs = Output()
 
             if self.enable_streaming:
-                stream_generator = StreamingUtils.get_stream_generator("DeepSpeed")
+                stream_generator = StreamingUtils.get_stream_generator("Accelerate")
                 outputs.add_stream_content(
                     stream_generator(self.model, self.tokenizer, data, **parameters))
                 return outputs
