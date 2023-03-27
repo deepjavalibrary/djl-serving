@@ -530,6 +530,8 @@ public final class ModelInfo<I, O> {
         } else if (Files.isRegularFile(modelDir.resolve(modelName + ".pt"))
                 || Files.isRegularFile(modelDir.resolve("model.pt"))) {
             return "PyTorch";
+        } else if (Files.isRegularFile(modelDir.resolve("config.pbtxt"))) {
+            return "TritonServer";
         } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
             return "TensorFlow";
         } else if (Files.isRegularFile(modelDir.resolve(modelName + "-symbol.json"))) {
