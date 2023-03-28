@@ -175,12 +175,14 @@ class TransformersNeuronXService(object):
             model_kwargs = {}
 
             if self.enable_streaming:
-                stream_generator = StreamingUtils.get_stream_generator("transformers-neuronx")
+                stream_generator = StreamingUtils.get_stream_generator(
+                    "transformers-neuronx")
                 model_kwargs["seq_length"] = seq_length
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer, input_text, **model_kwargs))
+                    stream_generator(self.model, self.tokenizer, input_text,
+                                     **model_kwargs))
                 return outputs
-            
+
             with torch.inference_mode():
                 # inf 2 needs padding
                 input_ids = self.tokenizer.batch_encode_plus(
