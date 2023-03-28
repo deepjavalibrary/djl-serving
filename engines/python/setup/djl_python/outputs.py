@@ -54,6 +54,7 @@ class Output(object):
         self.stream_content = None
         self.finalize_function = None
         self.finalize_args = None
+        self.stream_output_formatter = None
 
     def __str__(self):
         d = dict()
@@ -124,8 +125,16 @@ class Output(object):
                         key=key,
                         batch_index=batch_index)
 
-    def add_stream_content(self, stream_content):
+    def _default_stream_output_formatter(token_texts):
+        token_texts =  {"outputs" : token_texts}
+        json_encoded_str = json.dumps(token_texts) + "\n"
+        return bytearray(json_encoded_str.encode("utf-8"))
+
+    def add_stream_content(self,
+                           stream_content,
+                           output_formatter=_default_stream_output_formatter):
         self.stream_content = stream_content
+        self.stream_output_formatter = output_formatter
 
     @staticmethod
     def _encode_json(val) -> bytes:
@@ -183,6 +192,8 @@ class Output(object):
         while True:
             try:
                 data = next(self.stream_content)
+                if self.stream_output_formatter is not None:
+                    data = self.stream_output_formatter(data)
 
                 msg = bytearray()
                 msg += b'\1'

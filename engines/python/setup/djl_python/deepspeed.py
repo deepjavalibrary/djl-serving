@@ -23,6 +23,7 @@ from transformers import (AutoConfig, PretrainedConfig, AutoTokenizer,
 import deepspeed
 from djl_python.inputs import Input
 from djl_python.outputs import Output
+from djl_python.streaming_utils import StreamingUtils
 from typing import Optional
 
 SUPPORTED_MODEL_TYPES = {
@@ -95,6 +96,9 @@ class DeepSpeedService(object):
         self.tensor_parallel_degree = None
         self.model_config = None
         self.low_cpu_mem_usage = False
+        self.enable_streaming = False
+        self.model = None
+        self.tokenizer = None
 
     def initialize(self, properties: dict):
         self._parse_properties(properties)
@@ -122,6 +126,7 @@ class DeepSpeedService(object):
             properties.get("tensor_parallel_degree", 1))
         self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage",
                                                 "true").lower() == "true"
+        self.enable_streaming = bool(properties.get("enable_streaming", False))
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
                 self.ds_config = json.load(f)
@@ -216,11 +221,13 @@ class DeepSpeedService(object):
             self.ds_config["dtype"] = self.data_type
         else:
             self.ds_config["dtype"] = model.dtype
-        engine = deepspeed.init_inference(model, config=self.ds_config)
-        tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
+        self.model = deepspeed.init_inference(model, config=self.ds_config)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
+        if self.enable_streaming:
+            return
         self.pipeline = pipeline(task=self.task,
-                                 model=engine.module,
-                                 tokenizer=tokenizer,
+                                 model=self.model.module,
+                                 tokenizer=self.tokenizer,
                                  device=self.device)
 
     def format_input_for_task(self, input_values):
@@ -259,6 +266,13 @@ class DeepSpeedService(object):
             else:
                 input_data = inputs.get_as_string()
 
+            outputs = Output()
+            if self.enable_streaming:
+                stream_generator = StreamingUtils.get_stream_generator("DeepSpeed")
+                outputs.add_stream_content(
+                    stream_generator(self.model, self.tokenizer, input_data, **model_kwargs))
+                return outputs
+            
             result = self.pipeline(input_data, **model_kwargs)
             if self.task == "conversational":
                 result = {
@@ -269,7 +283,6 @@ class DeepSpeedService(object):
                     },
                 }
 
-            outputs = Output()
             outputs.add(result)
         except Exception as e:
             logging.exception("DeepSpeed inference failed")
