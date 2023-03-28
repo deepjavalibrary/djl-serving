@@ -17,6 +17,7 @@ import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.engine.Engine;
 import ai.djl.ndarray.NDManager;
+import ai.djl.util.passthrough.PassthroughNDManager;
 
 /** The {@code PyEngine} is an implementation of the {@link Engine} that runs Python worker. */
 public final class PyEngine extends Engine {
@@ -86,7 +87,7 @@ public final class PyEngine extends Engine {
     /** {@inheritDoc} */
     @Override
     public NDManager newBaseManager(Device device) {
-        return PyNDManager.getSystemManager(this).newSubManager(device);
+        return new PassthroughNDManager(this, device);
     }
 
     /**
