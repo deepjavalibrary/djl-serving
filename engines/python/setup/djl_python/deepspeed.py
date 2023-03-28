@@ -268,11 +268,13 @@ class DeepSpeedService(object):
 
             outputs = Output()
             if self.enable_streaming:
-                stream_generator = StreamingUtils.get_stream_generator("DeepSpeed")
+                stream_generator = StreamingUtils.get_stream_generator(
+                    "DeepSpeed")
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer, input_data, **model_kwargs))
+                    stream_generator(self.model, self.tokenizer, input_data,
+                                     **model_kwargs))
                 return outputs
-            
+
             result = self.pipeline(input_data, **model_kwargs)
             if self.task == "conversational":
                 result = {

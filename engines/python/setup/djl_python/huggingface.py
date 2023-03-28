@@ -138,11 +138,13 @@ class HuggingFaceService(object):
             outputs = Output()
 
             if self.enable_streaming:
-                stream_generator = StreamingUtils.get_stream_generator("Accelerate")
+                stream_generator = StreamingUtils.get_stream_generator(
+                    "Accelerate")
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer, data, **parameters))
+                    stream_generator(self.model, self.tokenizer, data,
+                                     **parameters))
                 return outputs
-            
+
             prediction = self.hf_pipeline(data, **parameters)
 
             encode(outputs, prediction, accept)
@@ -197,8 +199,10 @@ class HuggingFaceService(object):
         return hf_pipeline
 
     def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path, padding_side="left")
-        self.model = AutoModelForCausalLM.from_pretrained(model_id_or_path, **kwargs)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
+                                                       padding_side="left")
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_id_or_path, **kwargs)
 
     @staticmethod
     def wrap_conversation_pipeline(hf_pipeline):

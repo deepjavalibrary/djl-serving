@@ -126,7 +126,7 @@ class Output(object):
                         batch_index=batch_index)
 
     def _default_stream_output_formatter(token_texts):
-        token_texts =  {"outputs" : token_texts}
+        token_texts = {"outputs": token_texts}
         json_encoded_str = json.dumps(token_texts) + "\n"
         return bytearray(json_encoded_str.encode("utf-8"))
 
