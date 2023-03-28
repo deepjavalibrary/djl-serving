@@ -20,8 +20,6 @@ import ai.djl.ndarray.types.Shape;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
-
 public class KServeTensorTest {
 
     @Test
@@ -46,7 +44,6 @@ public class KServeTensorTest {
                         && type != DataType.UNKNOWN
                         && type != DataType.COMPLEX64) {
 
-                    System.out.println(Arrays.toString(data));
                     KServeTensor tensor = getKServeTensor(shape, type, data);
                     NDArray ndArray = tensor.toTensor(manager);
 
