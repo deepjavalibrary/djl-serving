@@ -17,7 +17,6 @@ import logging
 
 from .np_util import to_nd_list
 from .pair_list import PairList
-from djl_python.streaming_utils import StreamingUtils
 
 
 # https://github.com/automl/SMAC3/issues/453
@@ -126,9 +125,14 @@ class Output(object):
                         key=key,
                         batch_index=batch_index)
 
+    def _default_stream_output_formatter(token_texts):
+        token_texts =  {"outputs" : token_texts}
+        json_encoded_str = json.dumps(token_texts) + "\n"
+        return bytearray(json_encoded_str.encode("utf-8"))
+
     def add_stream_content(self,
                            stream_content,
-                           output_formatter=StreamingUtils.default_output_formatter):
+                           output_formatter=_default_stream_output_formatter):
         self.stream_content = stream_content
         self.stream_output_formatter = output_formatter
 

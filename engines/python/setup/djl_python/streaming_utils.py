@@ -29,13 +29,6 @@ class StreamingUtils:
 
 
     @staticmethod
-    def default_output_formatter(token_texts):
-        token_texts =  {"outputs" : token_texts}
-        json_encoded_str = json.dumps(token_texts) + "\n"
-        return bytearray(json_encoded_str.encode("utf-8"))
-
-
-    @staticmethod
     @torch.inference_mode()
     def _hf_model_stream_generator(model, tokenizer, inputs, **kwargs):
         StreamingUtils._validate_inputs(inputs)
