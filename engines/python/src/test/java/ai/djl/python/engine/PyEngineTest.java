@@ -16,7 +16,7 @@ import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
-import ai.djl.modality.ChunkedBytesSupplier;
+import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
