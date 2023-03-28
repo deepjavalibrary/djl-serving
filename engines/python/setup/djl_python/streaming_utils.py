@@ -81,7 +81,7 @@ class StreamingUtils:
     @torch.inference_mode()
     def _transformers_neuronx_stream_generator(model, tokenizer, inputs,
                                                **kwargs):
-        sequence_length = kwargs.get("seq_len", 50)
+        sequence_length = kwargs.get("seq_length", 50)
         top_k = kwargs.get("top_k", 50)
         input_ids = torch.as_tensor(
             [tokenizer.encode(text) for text in inputs])
