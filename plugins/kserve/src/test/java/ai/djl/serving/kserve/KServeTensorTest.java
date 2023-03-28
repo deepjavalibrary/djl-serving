@@ -12,12 +12,15 @@
  */
 package ai.djl.serving.kserve;
 
+import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import java.util.Arrays;
 
 public class KServeTensorTest {
 
@@ -35,25 +38,35 @@ public class KServeTensorTest {
 
         Assert.assertEquals(KServeTensor.toKServeDataType(DataType.STRING), "string");
 
-        Shape shape = new Shape(1);
+        Shape shape = new Shape(1, 10);
+        double[] data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
         try (NDManager manager = NDManager.newBaseManager()) {
             for (DataType type : DataType.values()) {
                 if (type != DataType.STRING
                         && type != DataType.UNKNOWN
                         && type != DataType.COMPLEX64) {
-                    KServeTensor tensor = getKServeTensor(shape, type);
-                    tensor.toTensor(manager);
+
+                    System.out.println(Arrays.toString(data));
+                    KServeTensor tensor = getKServeTensor(shape, type, data);
+                    NDArray ndArray = tensor.toTensor(manager);
+
+                    // Data will be encoded and sent to Python server.
+                    // This is to check whether data is converted to bytes properly according to
+                    // datatype.
+                    KServeTensor decodedTensor = KServeTensor.fromTensor(ndArray, "test");
+                    Assert.assertEquals(
+                            ndArray.toArray(), decodedTensor.toTensor(manager).toArray());
                 }
             }
         }
     }
 
-    public static KServeTensor getKServeTensor(Shape shape, DataType dataType) {
+    public static KServeTensor getKServeTensor(Shape shape, DataType dataType, double[] data) {
         KServeTensor tensor = new KServeTensor();
         tensor.name = "input0";
-        tensor.dataType = KServeTensor.toKServeDataType(dataType);
+        tensor.datatype = KServeTensor.toKServeDataType(dataType);
         tensor.shape = shape.getShape();
-        tensor.data = new double[(int) shape.size() * dataType.getNumOfBytes()];
+        tensor.data = data;
         return tensor;
     }
 }

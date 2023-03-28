@@ -16,6 +16,7 @@ import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
+import ai.djl.util.Float16Utils;
 
 import java.nio.ByteBuffer;
 
@@ -25,7 +26,7 @@ import java.nio.ByteBuffer;
 class KServeTensor {
 
     String name;
-    String dataType;
+    String datatype;
     long[] shape;
     // TODO: How to handle [ [ 1, 2 ], [ 4, 5 ] ] format?
     double[] data;
@@ -35,7 +36,7 @@ class KServeTensor {
     public KServeTensor(String name, long[] shape, DataType type) {
         this.name = name;
         this.shape = shape;
-        this.dataType = toKServeDataType(type);
+        this.datatype = toKServeDataType(type);
     }
 
     static DataType fromKServeDataType(String type) {
@@ -86,7 +87,7 @@ class KServeTensor {
 
     NDArray toTensor(NDManager manager) {
         Shape tensorShape = new Shape(shape);
-        DataType type = fromKServeDataType(dataType);
+        DataType type = fromKServeDataType(datatype);
 
         ByteBuffer bb = toByteBuffer(manager, tensorShape, type);
         NDArray array = manager.create(bb, tensorShape, type);
@@ -97,7 +98,7 @@ class KServeTensor {
     static KServeTensor fromTensor(NDArray array, String name) {
         KServeTensor tensor = new KServeTensor();
         tensor.name = name;
-        tensor.dataType = toKServeDataType(array.getDataType());
+        tensor.datatype = toKServeDataType(array.getDataType());
         tensor.shape = array.getShape().getShape();
         Number[] values = array.toArray();
         tensor.data = new double[values.length];
@@ -112,7 +113,30 @@ class KServeTensor {
         int size = Math.toIntExact(tensorShape.size()) * type.getNumOfBytes();
         ByteBuffer bb = manager.allocateDirect(size);
         for (double d : data) {
-            bb.put((byte) d);
+            switch (type) {
+                case BOOLEAN:
+                case UINT8:
+                case INT8:
+                    bb.put((byte) d);
+                    break;
+                case INT32:
+                    bb.putInt((int) d);
+                    break;
+                case INT64:
+                    bb.putLong((long) d);
+                    break;
+                case FLOAT16:
+                    bb.putShort(Float16Utils.floatToHalf((float) d));
+                    break;
+                case FLOAT32:
+                    bb.putFloat((float) d);
+                    break;
+                case FLOAT64:
+                    bb.putDouble(d);
+                    break;
+                default:
+                    break;
+            }
         }
         bb.rewind();
         return bb;
