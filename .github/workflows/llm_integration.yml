@@ -145,6 +145,15 @@ jobs:
           serve
           python3 llm/client.py huggingface gpt-j-6b
           docker rm -f $(docker ps -aq)
+      - name: Test streaming bigscience/bloom-3b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py huggingface bigscience/bloom-3b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py huggingface bigscience/bloom-3b
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -234,6 +243,15 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py deepspeed opt-13b
+          docker rm -f $(docker ps -aq)
+      - name: Test streaming gpt-neo-1.3b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed gpt-neo-1.3b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed gpt-neo-1.3b
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
