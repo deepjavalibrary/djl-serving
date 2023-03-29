@@ -51,6 +51,13 @@ hf_model_spec = {
         "max_memory_per_gpu": 10.0,
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128]
+    },
+    "bigscience/bloom-3b": {
+        "max_memory_per_gpu": 5,
+        "batch_size": [1],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "stream_output": True,
     }
 }
 
@@ -71,6 +78,13 @@ ds_model_spec = {
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
+    },
+    "gpt-neo-1.3b": {
+        "max_memory_per_gpu": 3.5,
+        "batch_size": [1],
+        "seq_length": [16, 32],
+        "worker": 2,
+        "stream_output": True,
     }
 }
 
@@ -226,14 +240,20 @@ def test_handler(model, model_spec):
     for batch_size in spec["batch_size"]:
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}
-            params = {"max_length": seq_length}
+            params = {"max_new_tokens": seq_length}
             req["parameters"] = params
             logging.info(f"req {req}")
             res = send_json(req)
-            res = res.json()
-            logging.info(f"res {res}")
-            result = [item[0]['generated_text'] for item in res]
-            assert len(result) == batch_size
+            if spec.get("stream_output", False):
+                logging.info(f"res: {res.content}")
+                result = res.content.decode().split("\n")[:-1]
+                assert len(result) <= seq_length, "generated more takens than max_new_tokens"
+            else:
+                res = res.json()
+                logging.info(f"res {res}")
+
+                result = [item[0]['generated_text'] for item in res]
+                assert len(result) == batch_size
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
             for memory in memory_usage:

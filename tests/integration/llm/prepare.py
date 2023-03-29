@@ -57,7 +57,16 @@ hf_handler_list = {
         "option.task": "text-generation",
         "option.load_in_8bit": "TRUE",
         "option.device_map": "auto"
-    }
+    },
+    "bigscience/bloom-3b": {
+        "option.model_id": "s3://djl-llm/bloom-3b/",
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "fp16",
+        "option.task": "text-generation",
+        "option.device_map": "auto",
+        "option.enable_streaming": True,
+        "gpu.maxWorkers": 1,
+    },
 }
 
 ds_handler_list = {
@@ -78,7 +87,14 @@ ds_handler_list = {
         "option.tensor_parallel_degree": 2,
         "option.task": "text-generation",
         "option.dtype": "fp16"
-    }
+    },
+    "gpt-neo-1.3b": {
+        "option.model_id": "EleutherAI/gpt-neo-1.3B",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "fp16",
+        "option.enable_streaming": True
+    },
 }
 
 sd_handler_list = {
