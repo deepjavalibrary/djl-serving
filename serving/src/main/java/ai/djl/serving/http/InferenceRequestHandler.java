@@ -19,6 +19,7 @@ import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.cache.CacheManager;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
@@ -45,8 +46,11 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -62,6 +66,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final Metric SERVER_ERROR = new Metric("ServerError", 1);
     private static final Pattern PATTERN =
             Pattern.compile("/(ping|invocations|predictions)([/?].*)?|/models/.+/invoke");
+
+    private static final String X_SYNCHRONOUS = "x-synchronous";
+    private static final String X_STARTING_TOKEN = "x-starting-token";
+    private static final String X_NEXT_TOKEN = "x-next-token";
+    private static final String X_MAX_ITEMS = "x-max-items";
 
     private RequestParser requestParser;
 
@@ -114,7 +123,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                                 });
                 break;
             case "invocations":
-                handleInvocations(ctx, req, decoder);
+                handleInvocations(ctx, req, decoder, null);
                 break;
             case "models":
                 handleInvocations(ctx, req, decoder, segments[2]);
@@ -145,12 +154,6 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
         Input input = requestParser.parseRequest(req, decoder);
         predict(ctx, req, input, modelName, version);
-    }
-
-    private void handleInvocations(
-            ChannelHandlerContext ctx, FullHttpRequest req, QueryStringDecoder decoder)
-            throws ModelNotFoundException {
-        handleInvocations(ctx, req, decoder, null);
     }
 
     private void handleInvocations(
@@ -192,6 +195,17 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String workflowName,
             String version)
             throws ModelNotFoundException {
+        String startingToken = input.getProperty(X_STARTING_TOKEN, null);
+        if (startingToken != null && !HttpMethod.OPTIONS.equals(req.method())) {
+            CompletableFuture.runAsync(() -> getCacheResult(ctx, input, startingToken))
+                    .exceptionally(
+                            t -> {
+                                onException(t.getCause(), ctx);
+                                return null;
+                            });
+            return;
+        }
+
         ModelManager modelManager = ModelManager.getInstance();
         ConfigManager config = ConfigManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(workflowName, version, true);
@@ -251,7 +265,20 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {
-                                sendOutput(o, ctx);
+                                String sync = input.getProperty(X_SYNCHRONOUS, "true");
+                                if (Boolean.parseBoolean(sync)) {
+                                    sendOutput(o, ctx);
+                                    return;
+                                }
+
+                                CacheManager cm = CacheManager.getInstance();
+                                String nextToken = cm.put(o);
+                                Output out = new Output();
+                                out.setCode(o.getCode());
+                                out.setMessage(o.getMessage());
+                                out.getProperties().putAll(out.getProperties());
+                                out.addProperty(X_NEXT_TOKEN, nextToken);
+                                sendOutput(out, ctx);
                             }
                         })
                 .exceptionally(
@@ -259,6 +286,55 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             onException(t.getCause(), ctx);
                             return null;
                         });
+    }
+
+    private void getCacheResult(ChannelHandlerContext ctx, Input input, String startingToken) {
+        int limit = Integer.parseInt(input.getProperty(X_MAX_ITEMS, "-1"));
+        if (limit < 0) {
+            limit = Integer.MAX_VALUE;
+        }
+
+        CacheManager cm = CacheManager.getInstance();
+        Output output = cm.get(startingToken);
+        if (output == null) {
+            throw new BadRequestException("Invalid " + X_STARTING_TOKEN);
+        }
+        BytesSupplier data = output.getData();
+        if (!(data instanceof ChunkedBytesSupplier)) {
+            logger.warn("Output doesn't support async response");
+            sendOutput(output, ctx);
+            return;
+        }
+
+        ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
+        List<byte[]> list = new ArrayList<>();
+        int size = 0;
+        for (int i = 0; i < limit; ++i) {
+            byte[] buf = cbs.poll();
+            if (buf == null) {
+                break;
+            }
+            size += buf.length;
+            list.add(buf);
+        }
+        byte[] buf = new byte[size];
+        int pos = 0;
+        for (byte[] array : list) {
+            System.arraycopy(array, 0, buf, pos, array.length);
+            pos += array.length;
+        }
+        Output o = new Output();
+        o.setCode(output.getCode());
+        o.setMessage(output.getMessage());
+        o.getProperties().putAll(output.getProperties());
+        o.add(buf);
+        if (cbs.hasNext()) {
+            o.addProperty(X_NEXT_TOKEN, startingToken);
+        } else {
+            // clean up cache
+            cm.remove(startingToken);
+        }
+        sendOutput(o, ctx);
     }
 
     void sendOutput(Output output, ChannelHandlerContext ctx) {
@@ -322,7 +398,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     void onException(Throwable t, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
-        if (t instanceof TranslateException) {
+        if (t instanceof TranslateException || t instanceof BadRequestException) {
             SERVER_METRIC.info("{}", RESPONSE_4_XX);
             status = HttpResponseStatus.BAD_REQUEST;
         } else if (t instanceof WlmException) {
