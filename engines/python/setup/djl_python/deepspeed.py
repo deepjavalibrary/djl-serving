@@ -225,6 +225,12 @@ class DeepSpeedService(object):
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
         if self.enable_streaming:
             return
+        # Optimization for text-generation batch processing
+        if self.task == "text-generation":
+            self.tokenizer.padding_side = "left"
+            if not self.tokenizer.pad_token:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            return
         self.pipeline = pipeline(task=self.task,
                                  model=self.model.module,
                                  tokenizer=self.tokenizer,
@@ -273,6 +279,16 @@ class DeepSpeedService(object):
                 outputs.add_stream_content(
                     stream_generator(self.model, self.tokenizer, input_data,
                                      **model_kwargs))
+                return outputs
+            if self.task == "text-generation":
+                tokenized_inputs = self.tokenizer(
+                    input_data, padding=True,
+                    return_tensors="pt").to(torch.cuda.current_device())
+                with torch.no_grad():
+                    output_tokens = self.model.generate(
+                        **tokenized_inputs, **model_kwargs)
+                generated_text = self.tokenizer.batch_decode(output_tokens)
+                outputs.add([{"generated_text": s} for s in generated_text])
                 return outputs
 
             result = self.pipeline(input_data, **model_kwargs)

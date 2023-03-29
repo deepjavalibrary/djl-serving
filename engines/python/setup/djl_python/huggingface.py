@@ -196,6 +196,12 @@ class HuggingFaceService(object):
         if task == "conversational":
             hf_pipeline = self.wrap_conversation_pipeline(hf_pipeline)
 
+        if task == "text-generation":
+            hf_pipeline.tokenizer.padding_side = "left"
+            if not hf_pipeline.tokenizer.pad_token:
+                hf_pipeline.tokenizer.pad_token = hf_pipeline.tokenizer.eos_token
+            hf_pipeline = self.wrap_text_generation_pipeline(hf_pipeline)
+
         return hf_pipeline
 
     def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
@@ -221,6 +227,23 @@ class HuggingFaceService(object):
                     "generated_responses": prediction.generated_responses,
                 },
             }
+
+        return wrapped_pipeline
+
+    @staticmethod
+    def wrap_text_generation_pipeline(hf_pipeline):
+
+        def wrapped_pipeline(inputs, *args, **kwargs):
+            model = hf_pipeline.model
+            tokenizer = hf_pipeline.tokenizer
+            input_tokens = tokenizer(inputs, padding=True,
+                                     return_tensors="pt").to(
+                                         torch.cuda.current_device())
+            with torch.no_grad():
+                output_tokens = model.generate(*args, **input_tokens, **kwargs)
+            generated_text = tokenizer.batch_decode(output_tokens)
+
+            return [{"generated_text": s} for s in generated_text]
 
         return wrapped_pipeline
 
