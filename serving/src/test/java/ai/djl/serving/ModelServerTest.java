@@ -1082,7 +1082,7 @@ public class ModelServerTest {
         output.put("name", "output0");
         Map<String, Object> input = new ConcurrentHashMap<>();
         input.put("name", "input0");
-        input.put("dataType", "INT8");
+        input.put("datatype", "INT8");
         input.put("shape", new long[] {1, 10});
         input.put("data", new double[10]);
         Map<String, Object> data = new ConcurrentHashMap<>();
