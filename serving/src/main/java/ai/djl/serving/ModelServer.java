@@ -577,7 +577,8 @@ public class ModelServer {
                 String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
                 v = prop.getProperty("option.tensor_parallel_degree", v);
                 int tensorParallelDegree = Integer.parseInt(v);
-                if (tensorParallelDegree > 0 && NeuronUtils.isInf2()) {
+                if (tensorParallelDegree > 0) {
+                    // Assume user understand TP only works on inf2
                     int procs = neurons / tensorParallelDegree;
                     if (procs == 0) {
                         throw new EngineException(
