@@ -1,0 +1,2 @@
+name=ddb-cache-manager
+export=ai.djl.serving.plugins.ddb.DDBCacheEngine

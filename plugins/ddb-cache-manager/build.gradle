@@ -1,0 +1,16 @@
+dependencies {
+    implementation project(":serving")
+    api platform("software.amazon.awssdk:bom:${awssdk_version}")
+    api "software.amazon.awssdk:dynamodb"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+}
+
+tasks.register('copyJar', Copy) {
+    from jar // here it automatically reads jar file produced from jar task
+    into "../../serving/plugins"
+}
+
+jar.finalizedBy(copyJar)
