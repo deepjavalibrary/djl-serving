@@ -19,7 +19,6 @@ import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
-import ai.djl.training.util.DownloadUtils;
 import ai.djl.translate.Translator;
 import ai.djl.util.Utils;
 
@@ -33,6 +32,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -161,9 +161,22 @@ public class PyModel extends BaseModel {
                 }
             }
         } else if (entryPoint.toLowerCase(Locale.ROOT).startsWith("http")) {
-            logger.info("downloading entryPoint file: {}", entryPoint);
-            Path modelFile = getDownloadDir().resolve("model.py");
-            DownloadUtils.download(new URL(entryPoint), modelFile, null);
+            String hash = Utils.hash(entryPoint);
+            Path dir = Utils.getCacheDir().resolve("tmp").resolve(hash);
+            Path modelFile = dir.resolve("model.py");
+            if (Files.exists(modelFile)) {
+                logger.info("entryPoint file already exist: {}", dir);
+            } else {
+                logger.info("downloading entryPoint file: {}", entryPoint);
+                Files.createDirectories(dir);
+                Path tmp = Files.createTempFile(dir, "download", ".tmp");
+                try (InputStream is = new URL(entryPoint).openStream()) {
+                    Files.copy(is, tmp, StandardCopyOption.REPLACE_EXISTING);
+                    Utils.moveQuietly(tmp, modelFile);
+                } finally {
+                    Utils.deleteQuietly(tmp);
+                }
+            }
             entryPoint = modelFile.toAbsolutePath().toString();
         }
         pyEnv.setEntryPoint(entryPoint);

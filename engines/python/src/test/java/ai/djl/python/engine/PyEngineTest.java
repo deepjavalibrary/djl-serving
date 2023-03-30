@@ -336,6 +336,9 @@ public class PyEngineTest {
                         .setTypes(Input.class, Output.class)
                         .optEngine("Python")
                         .optModelPath(Paths.get("src/test/resources/huggingface"))
+                        .optOption(
+                                "entryPoint",
+                                "https://raw.githubusercontent.com/deepjavalibrary/djl-serving/master/engines/python/setup/djl_python/huggingface.py")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
