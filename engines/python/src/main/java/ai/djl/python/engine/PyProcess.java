@@ -205,14 +205,16 @@ class PyProcess {
 
     void setStarted(boolean started, int id) {
         if (restartCount.get() == id) {
+            this.started = started;
             if (started) {
                 latch.countDown();
-                this.started = latch.getCount() == 0;
             } else {
                 while (latch.getCount() > 0) {
                     latch.countDown();
                 }
             }
+        } else {
+            logger.warn("Unexpected restartCount: {}, expect: {}", id, restartCount.get());
         }
     }
 
