@@ -279,9 +279,19 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         } else { // Asynchronous
             CacheEngine cache = CacheManager.getInstance();
             String nextToken = cache.create(input);
+
+            // Store pending message to be sent for unfinished computations
+            Output pending = new Output();
+            pending.setMessage("The model result is not yet available");
+            pending.setCode(202);
+            cache.put(nextToken, pending);
+
+            // Send back token to user
             Output out = new Output();
             out.addProperty(X_NEXT_TOKEN, nextToken);
             sendOutput(out, ctx);
+
+            // Run model
             modelManager
                     .runJob(workflow, input)
                     .whenCompleteAsync(
