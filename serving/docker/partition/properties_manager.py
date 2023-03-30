@@ -134,6 +134,13 @@ class PropertiesManager(object):
                 if entry_point_file:
                     self.properties['entryPoint'] = 'model.py'
                 else:
-                    raise FileNotFoundError(
-                        f"model.py not found in model path {self.properties_dir}"
-                    )
+                    engine = self.properties['engine']
+                    if engine == "Deepspeed":
+                        entry_point = "djl_python.deepspeed"
+                    elif engine == "FasterTransformer":
+                        entry_point = "djl_python.fastertransformer"
+                    else:
+                        raise FileNotFoundError(
+                            f"model.py not found in model path {self.properties_dir}"
+                        )
+                    self.properties['entryPoint'] = entry_point
