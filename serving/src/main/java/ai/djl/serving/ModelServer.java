@@ -26,12 +26,12 @@ import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.plugins.FolderScanPluginManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
-import ai.djl.serving.util.NeuronUtils;
 import ai.djl.serving.util.ServerGroups;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
+import ai.djl.util.NeuronUtils;
 import ai.djl.util.Pair;
 import ai.djl.util.Utils;
 

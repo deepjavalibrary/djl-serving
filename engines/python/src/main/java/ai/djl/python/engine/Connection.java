@@ -18,7 +18,7 @@ import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
-import ai.djl.util.Ec2Utils;
+import ai.djl.util.NeuronUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.Utils;
 
@@ -154,14 +154,17 @@ class Connection {
         if (tensorParallelDegree > 0 && deviceId != -1) {
             String cudaDevices = getVisibleDevices(deviceId, tensorParallelDegree);
             pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
+            logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
         }
-        if (tensorParallelDegree > 0 && isInf2()) {
-            pyEnv.addEnv(
-                    "NEURON_RT_VISIBLE_CORES",
-                    getNeuronVisibleCores(deviceId, tensorParallelDegree));
-        }
-        if (isInf1()) {
-            pyEnv.addEnv("NEURON_RT_NUM_CORES", "1");
+        if (NeuronUtils.hasNeuron()) {
+            String visibleCores;
+            if (tensorParallelDegree > 0) {
+                visibleCores = getNeuronVisibleCores(deviceId, tensorParallelDegree);
+            } else {
+                visibleCores = "1";
+            }
+            pyEnv.addEnv("NEURON_RT_NUM_CORES", visibleCores);
+            logger.info("Set NEURON_RT_NUM_CORES={}", visibleCores);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
@@ -193,22 +196,6 @@ class Connection {
         int start = workerId * tensorParallelDegree;
         int end = start + tensorParallelDegree - 1;
         return start + "-" + end;
-    }
-
-    public static boolean isInf1() {
-        String metadata = Ec2Utils.readMetadata("instance-type");
-        if (metadata == null) {
-            return false;
-        }
-        return metadata.startsWith("inf1");
-    }
-
-    private static boolean isInf2() {
-        String metadata = Ec2Utils.readMetadata("instance-type");
-        if (metadata == null) {
-            return false;
-        }
-        return metadata.startsWith("inf2") || metadata.startsWith("trn1");
     }
 
     void connect() throws InterruptedException {
