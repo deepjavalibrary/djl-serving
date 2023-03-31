@@ -254,7 +254,7 @@ def test_handler(model, model_spec):
                 res = res.json()
                 logging.info(f"res {res}")
 
-                result = [item[0]['generated_text'] for item in res]
+                result = [item['generated_text'] for item in res]
                 assert len(result) == batch_size
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
