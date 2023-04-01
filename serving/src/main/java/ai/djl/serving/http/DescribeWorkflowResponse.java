@@ -59,14 +59,14 @@ public class DescribeWorkflowResponse {
             if (pool != null) {
                 pool.cleanup();
 
-                m.setModelName(model.getModelId());
+                m.setModelName(model.getId());
                 m.setModelUrl(model.getModelUrl());
                 m.setBatchSize(model.getBatchSize());
                 m.setMaxBatchDelayMillis(model.getMaxBatchDelayMillis());
                 m.setMaxIdleSeconds(model.getMaxIdleSeconds());
                 m.setQueueSize(model.getQueueSize());
                 m.setRequestInQueue(pool.getJobQueue().size());
-                m.setLoadedAtStartup(startupWorkflows.contains(model.getModelId()));
+                m.setLoadedAtStartup(startupWorkflows.contains(model.getId()));
 
                 for (WorkerGroup<Input, Output> group : pool.getWorkerGroups().values()) {
                     Device device = group.getDevice();

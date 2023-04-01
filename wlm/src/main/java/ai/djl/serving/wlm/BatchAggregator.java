@@ -48,7 +48,7 @@ abstract class BatchAggregator<I, O> {
      * @param jobQueue the job queue for polling data from.
      */
     public BatchAggregator(ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
-        this.dimension = new Dimension("Model", model.getModelId());
+        this.dimension = new Dimension("Model", model.getId());
         this.batchSize = model.getBatchSize();
         this.maxBatchDelayMicros = model.getMaxBatchDelayMillis() * 1000L;
         this.jobQueue = jobQueue;

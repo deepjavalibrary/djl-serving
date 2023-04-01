@@ -181,7 +181,7 @@ public final class WorkerThread<I, O> implements Runnable {
     }
 
     private String buildWorkerName(ModelInfo<I, O> model) {
-        String modelId = model.getModelId();
+        String modelId = model.getId();
         if (modelId.length() > 25) {
             modelId = modelId.substring(0, 25);
         }

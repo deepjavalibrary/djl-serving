@@ -21,7 +21,6 @@ import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.Criteria;
-import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.Utils;
@@ -105,7 +104,7 @@ public class ModelInfoTest {
     }
 
     @Test
-    public void testOutOfMemory() throws IOException, ModelNotFoundException {
+    public void testOutOfMemory() throws IOException, ModelException {
         Path modelDir = Paths.get("build/oom_model");
         Utils.deleteQuietly(modelDir);
         Files.createDirectories(modelDir);
@@ -156,7 +155,7 @@ public class ModelInfoTest {
     }
 
     @Test
-    public void testInitModel() throws IOException, ModelNotFoundException {
+    public void testInitModel() throws IOException, ModelException {
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("test_model");
         Files.createDirectories(modelDir);

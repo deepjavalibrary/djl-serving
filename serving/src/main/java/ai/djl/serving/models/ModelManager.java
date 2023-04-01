@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.models;
 
+import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -97,7 +98,7 @@ public final class ModelManager {
                                 int maxWorkers = model.getMaxWorkers();
                                 modelManager.initWorkers(model, deviceName, minWorkers, maxWorkers);
                             }
-                        } catch (IOException | ModelNotFoundException e) {
+                        } catch (IOException | ModelException e) {
                             throw new CompletionException(e);
                         }
                     }
@@ -315,7 +316,7 @@ public final class ModelManager {
                         for (Workflow wf : endpoint.getWorkflows()) {
                             String workflowName = wf.getName();
                             for (ModelInfo<Input, Output> m : wf.getModels()) {
-                                String modelName = m.getModelId();
+                                String modelName = m.getId();
                                 if (!modelName.equals(workflowName)) {
                                     modelName = workflowName + ':' + modelName; // NOPMD
                                 }
