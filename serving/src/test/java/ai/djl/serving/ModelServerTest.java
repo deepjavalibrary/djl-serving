@@ -84,7 +84,6 @@ import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
@@ -169,91 +168,6 @@ public class ModelServerTest {
         ModelManager.getInstance().clear();
     }
 
-    @Test
-    public void testModelStore()
-            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
-                    InterruptedException {
-        ModelServer server = initTestServer("src/test/resources/config.properties");
-        try {
-            Path modelStore = Paths.get("build/models");
-            Path modelDir = modelStore.resolve("test_model");
-            Files.createDirectories(modelDir);
-            Path notModel = modelStore.resolve("non-model");
-            Files.createFile(notModel);
-
-            String url = server.mapModelUrl(notModel); // not a model dir
-            assertNull(url);
-
-            url = server.mapModelUrl(modelDir); // empty folder
-            assertNull(url);
-
-            String expected = modelDir.toUri().toURL().toString();
-
-            Path xgb = modelDir.resolve("test_model.json");
-            Files.createFile(xgb);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::XGBoost:*=" + expected);
-
-            Path paddle = modelDir.resolve("__model__");
-            Files.createFile(paddle);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::PaddlePaddle:*=" + expected);
-
-            Path tflite = modelDir.resolve("test_model.tflite");
-            Files.createFile(tflite);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::TFLite:*=" + expected);
-
-            Path tensorRt = modelDir.resolve("test_model.uff");
-            Files.createFile(tensorRt);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::TensorRT:*=" + expected);
-
-            Path onnx = modelDir.resolve("test_model.onnx");
-            Files.createFile(onnx);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::OnnxRuntime:*=" + expected);
-
-            Path mxnet = modelDir.resolve("test_model-symbol.json");
-            Files.createFile(mxnet);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::MXNet:*=" + expected);
-
-            Path tensorflow = modelDir.resolve("saved_model.pb");
-            Files.createFile(tensorflow);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::TensorFlow:*=" + expected);
-
-            Path pytorch = modelDir.resolve("test_model.pt");
-            Files.createFile(pytorch);
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::PyTorch:*=" + expected);
-
-            Path prop = modelDir.resolve("serving.properties");
-            try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
-                writer.write("engine=MyEngine");
-            }
-            url = server.mapModelUrl(modelDir);
-            assertEquals(url, "test_model::MyEngine:*=" + expected);
-
-            Path mar = modelStore.resolve("torchServe.mar");
-            Path torchServe = modelStore.resolve("torchServe");
-            Files.createDirectories(torchServe.resolve("MAR-INF"));
-            Files.createDirectories(torchServe.resolve("code"));
-            ZipUtils.zip(torchServe, mar, false);
-
-            url = server.mapModelUrl(mar);
-            assertEquals(url, "torchServe::Python:*=" + mar.toUri().toURL());
-
-            Path root = modelStore.resolve("models.pt");
-            Files.createFile(root);
-            url = server.mapModelUrl(modelStore);
-            assertEquals(url, "models::PyTorch:*=" + modelStore.toUri().toURL());
-        } finally {
-            server.stop();
-        }
-    }
-
     public static void main(String[] args)
             throws ReflectiveOperationException, ServerStartupException, GeneralSecurityException,
                     ErrorDataEncoderException, IOException, ParseException, InterruptedException {
@@ -270,6 +184,10 @@ public class ModelServerTest {
                     ReflectiveOperationException, ServerStartupException {
         ModelServer server = initTestServer("src/test/resources/config.properties");
         try {
+            Path notModel = Paths.get("build/non-model");
+            String url = server.mapModelUrl(notModel); // not a model dir
+            assertNull(url);
+
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 

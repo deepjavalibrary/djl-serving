@@ -24,6 +24,7 @@ public final class WlmConfigManager {
     private int batchSize = 1;
     private int maxBatchDelayMillis = 100;
     private int reservedMemoryMb = 500;
+    private String loadOnDevices;
 
     private static final WlmConfigManager INSTANCE = new WlmConfigManager();
 
@@ -135,6 +136,24 @@ public final class WlmConfigManager {
      */
     public void setReservedMemoryMb(int reservedMemoryMb) {
         this.reservedMemoryMb = reservedMemoryMb;
+    }
+
+    /**
+     * Returns the devices the model will be loaded on at startup.
+     *
+     * @return the devices the model will be loaded on at startup
+     */
+    public String getLoadOnDevices() {
+        return loadOnDevices;
+    }
+
+    /**
+     * Sets the devices the model will be loaded on at startup.
+     *
+     * @param loadOnDevices thes the default model will be loaded on at startup
+     */
+    public void setLoadOnDevices(String loadOnDevices) {
+        this.loadOnDevices = loadOnDevices;
     }
 
     /**

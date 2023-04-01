@@ -160,6 +160,7 @@ public final class ConfigManager {
         instance.withIntProperty(BATCH_SIZE, wlmc::setBatchSize);
         instance.withIntProperty(MAX_BATCH_DELAY, wlmc::setMaxBatchDelayMillis);
         instance.withIntProperty(RESERVED_MEMORY_MB, wlmc::setReservedMemoryMb);
+        wlmc.setLoadOnDevices(instance.getLoadOnDevices());
     }
 
     /**

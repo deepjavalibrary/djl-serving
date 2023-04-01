@@ -17,6 +17,9 @@ import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
+import ai.djl.engine.EngineException;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
@@ -29,7 +32,7 @@ import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
 import ai.djl.translate.ServingTranslator;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
-import ai.djl.util.Pair;
+import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
@@ -51,6 +54,7 @@ import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /** A class represent a loaded model and it's metadata. */
@@ -64,11 +68,14 @@ public final class ModelInfo<I, O> {
     private String version;
     private String modelUrl;
     private String engineName;
+    private String loadOnDevices;
 
     private int queueSize;
     private int batchSize;
     private int maxBatchDelayMillis;
     private int maxIdleSeconds;
+    private int minWorkers = -1;
+    private int maxWorkers = -1;
 
     private Map<String, String> filters;
     private Map<String, Object> arguments;
@@ -77,6 +84,11 @@ public final class ModelInfo<I, O> {
     private String modelName;
     private String translatorFactory;
     private String translator;
+
+    private transient Path modelDir;
+    private transient String artifactName;
+
+    private transient Properties prop;
     private transient Status status;
 
     private transient Class<I> inputClass;
@@ -87,25 +99,26 @@ public final class ModelInfo<I, O> {
     /**
      * Constructs a new {@code ModelInfo} instance.
      *
-     * @param inputClass the model input class
-     * @param outputClass the model output class
      * @param modelUrl the model Url
      */
-    public ModelInfo(String modelUrl, Class<I> inputClass, Class<O> outputClass) {
+    @SuppressWarnings("unchecked")
+    public ModelInfo(String modelUrl) {
         this.id = modelUrl;
         this.modelUrl = modelUrl;
-        this.inputClass = inputClass;
-        this.outputClass = outputClass;
+        this.inputClass = (Class<I>) Input.class;
+        this.outputClass = (Class<O>) Output.class;
     }
 
     /**
      * Constructs a {@link ModelInfo} based on a {@link Criteria}.
      *
      * @param id the id for the created {@link ModelInfo}
+     * @param modelUrl the model Url
      * @param criteria the model criteria
      */
-    public ModelInfo(String id, Criteria<I, O> criteria) {
+    public ModelInfo(String id, String modelUrl, Criteria<I, O> criteria) {
         this.id = id;
+        this.modelUrl = modelUrl;
         this.criteria = criteria;
         inputClass = criteria.getInputClass();
         outputClass = criteria.getOutputClass();
@@ -118,34 +131,43 @@ public final class ModelInfo<I, O> {
      * @param modelUrl the model url
      * @param version the version of the model
      * @param engineName the engine to load the model
+     * @param loadOnDevices the devices to load the model on
      * @param inputClass the model input class
      * @param outputClass the model output class
      * @param queueSize the maximum request queue size
-     * @param maxIdleSeconds the initial maximum idle time for workers.
-     * @param maxBatchDelayMillis the initial maximum delay when scaling up before giving up.
-     * @param batchSize the batch size for this model.
+     * @param maxIdleSeconds the initial maximum idle time for workers
+     * @param maxBatchDelayMillis the initial maximum delay when scaling up before giving up
+     * @param batchSize the batch size for this model
+     * @param minWorkers the minimum number of workers
+     * @param maxWorkers the maximum number of workers
      */
     public ModelInfo(
             String id,
             String modelUrl,
             String version,
             String engineName,
+            String loadOnDevices,
             Class<I> inputClass,
             Class<O> outputClass,
             int queueSize,
             int maxIdleSeconds,
             int maxBatchDelayMillis,
-            int batchSize) {
+            int batchSize,
+            int minWorkers,
+            int maxWorkers) {
         this.id = id;
         this.modelUrl = modelUrl;
         this.version = version;
         this.engineName = engineName;
+        this.loadOnDevices = loadOnDevices;
         this.inputClass = inputClass;
         this.outputClass = outputClass;
         this.maxBatchDelayMillis = maxBatchDelayMillis;
         this.maxIdleSeconds = maxIdleSeconds; // default max idle time 60s
         this.queueSize = queueSize;
         this.batchSize = batchSize;
+        this.minWorkers = minWorkers;
+        this.maxWorkers = maxWorkers;
     }
 
     /**
@@ -162,20 +184,18 @@ public final class ModelInfo<I, O> {
         }
 
         try {
+            // Download the model again if the model files are deleted
+            initialize();
+            checkAvailableMemory(device);
+        } catch (IOException e) {
+            throw new ModelNotFoundException(e);
+        }
+
+        try {
             Criteria.Builder<I, O> builder;
             if (criteria != null) {
                 builder = criteria.toBuilder();
             } else {
-                // Download the model first, and get model specific configuration
-                // batchSize is required before model loading in dynamic batching case
-                try {
-                    Pair<String, Path> pair = downloadModel(modelUrl);
-                    checkAvailableMemory(device, pair.getValue());
-                    configPerModelSettings(pair.getValue());
-                } catch (IOException e) {
-                    throw new ModelNotFoundException(e);
-                }
-
                 builder =
                         Criteria.builder()
                                 .setTypes(inputClass, outputClass)
@@ -216,10 +236,6 @@ public final class ModelInfo<I, O> {
             }
 
             ZooModel<I, O> m = builder.build().loadModel();
-            if (criteria != null) {
-                // TODO: user has to manually configure batchifier if using dynamic batch
-                configPerModelSettings(m.getModelPath());
-            }
             models.put(device, m);
             status = Status.READY;
         } finally {
@@ -425,6 +441,38 @@ public final class ModelInfo<I, O> {
         return queueSize;
     }
 
+    /**
+     * Returns the minimum number of workers.
+     *
+     * @return the minimum number of workers
+     */
+    public int getMinWorkers() {
+        return minWorkers;
+    }
+
+    /**
+     * Returns the maximum number of workers.
+     *
+     * @return the maximum number of workers
+     */
+    public int getMaxWorkers() {
+        return maxWorkers;
+    }
+
+    /**
+     * Initialize the model.
+     *
+     * @throws IOException if failed to download model
+     * @throws ModelNotFoundException if model not found
+     */
+    public void initialize() throws IOException, ModelNotFoundException {
+        downloadModel();
+        loadServingProperties();
+        if (engineName == null) {
+            engineName = inferEngine();
+        }
+    }
+
     /** Close all loaded models. */
     public void close() {
         if (!getModels().isEmpty()) {
@@ -473,152 +521,93 @@ public final class ModelInfo<I, O> {
     }
 
     /**
-     * Infers engine name from model URL.
-     *
-     * @param modelUrl the model URL
-     * @return the engine name
-     */
-    public static String inferEngineFromUrl(String modelUrl) {
-        try {
-            Pair<String, Path> pair = downloadModel(modelUrl);
-            return inferEngine(pair.getValue(), pair.getKey());
-        } catch (IOException e) {
-            logger.warn("Failed to extract model: " + modelUrl, e);
-            return null;
-        }
-    }
-
-    /**
-     * Infers which device to load.
-     *
-     * @param modelUrl the model URL
-     * @return the device name
-     */
-    public static String inferDeviceName(String modelUrl) {
-        try {
-            Pair<String, Path> pair = downloadModel(modelUrl);
-            Properties prop = getServingProperties(pair.getValue());
-            return prop.getProperty("load_on_devices");
-        } catch (IOException e) {
-            logger.warn("Failed to extract model: " + modelUrl, e);
-            return null;
-        }
-    }
-
-    /**
-     * Infers engine name from model directory.
-     *
-     * @param modelDir the model directory
-     * @param modelName the model name
-     * @return the engine name
-     */
-    public static String inferEngine(Path modelDir, String modelName) {
-        modelDir = Utils.getNestedModelDir(modelDir);
-
-        Properties prop = getServingProperties(modelDir);
-        String engine = prop.getProperty("engine");
-        if (engine != null) {
-            return engine;
-        }
-
-        modelName = prop.getProperty("option.modelName", modelName);
-        if (Files.isDirectory(modelDir.resolve("MAR-INF"))
-                || Files.isRegularFile(modelDir.resolve("model.py"))
-                || Files.isRegularFile(modelDir.resolve(modelName + ".py"))) {
-            // MMS/TorchServe
-            return "Python";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".pt"))
-                || Files.isRegularFile(modelDir.resolve("model.pt"))) {
-            return "PyTorch";
-        } else if (Files.isRegularFile(modelDir.resolve("config.pbtxt"))) {
-            return "TritonServer";
-        } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
-            return "TensorFlow";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + "-symbol.json"))) {
-            return "MXNet";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".onnx"))
-                || Files.isRegularFile(modelDir.resolve("model.onnx"))) {
-            return "OnnxRuntime";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".trt"))
-                || Files.isRegularFile(modelDir.resolve(modelName + ".uff"))) {
-            return "TensorRT";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".tflite"))) {
-            return "TFLite";
-        } else if (Files.isRegularFile(modelDir.resolve("model"))
-                || Files.isRegularFile(modelDir.resolve("__model__"))
-                || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
-            return "PaddlePaddle";
-        } else if (Files.isRegularFile(modelDir.resolve(modelName + ".json"))) {
-            return "XGBoost";
-        }
-        logger.warn("Failed to detect engine of the model: {}", modelDir);
-        return null;
-    }
-
-    /**
      * Returns the default device for this model if device is null.
      *
      * @param deviceName the device to use if it is not null
      * @return a non-null device
      */
     public Device withDefaultDevice(String deviceName) {
-        if (engineName == null && modelUrl != null) {
-            engineName = inferEngineFromUrl(modelUrl);
-        }
-        if (deviceName == null && modelUrl != null) {
-            deviceName = inferDeviceName(modelUrl);
-        }
-        Engine engine = engineName != null ? Engine.getEngine(engineName) : Engine.getInstance();
-        // TODO: Load model API doesn't support * or multiple devices
-        if (deviceName == null || "*".equals(deviceName)) {
-            return engine.defaultDevice();
-        }
-        String[] devices = deviceName.split(";");
-        return Device.fromName(devices[0], engine);
+        return Device.fromName(deviceName, Engine.getEngine(engineName));
     }
 
-    /**
-     * Downloads model from the model URL.
-     *
-     * @param modelUrl the model URL
-     * @return model name and downloaded model path
-     * @throws IOException if failed to download the model
-     */
-    public static Pair<String, Path> downloadModel(String modelUrl) throws IOException {
+    private String inferEngine() throws ModelNotFoundException {
+        String engine = prop.getProperty("engine");
+        if (engine != null) {
+            return engine;
+        }
+
+        String prefix = prop.getProperty("option.modelName", artifactName);
+        if (Files.isDirectory(modelDir.resolve("MAR-INF"))
+                || Files.isRegularFile(modelDir.resolve("model.py"))
+                || Files.isRegularFile(modelDir.resolve(prefix + ".py"))) {
+            // MMS/TorchServe
+            return "Python";
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
+                || Files.isRegularFile(modelDir.resolve("model.pt"))) {
+            return "PyTorch";
+        } else if (Files.isRegularFile(modelDir.resolve("config.pbtxt"))) {
+            return "TritonServer";
+        } else if (Files.isRegularFile(modelDir.resolve("saved_model.pb"))) {
+            return "TensorFlow";
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + "-symbol.json"))) {
+            return "MXNet";
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".onnx"))
+                || Files.isRegularFile(modelDir.resolve("model.onnx"))) {
+            return "OnnxRuntime";
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".trt"))
+                || Files.isRegularFile(modelDir.resolve(prefix + ".uff"))) {
+            return "TensorRT";
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".tflite"))) {
+            return "TFLite";
+        } else if (Files.isRegularFile(modelDir.resolve("model"))
+                || Files.isRegularFile(modelDir.resolve("__model__"))
+                || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
+            return "PaddlePaddle";
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))) {
+            return "XGBoost";
+        } else {
+            try {
+                if (Utils.getCurrentEpoch(modelDir, prefix) >= 0) {
+                    // Assume this is DJL model
+                    return Engine.getDefaultEngineName();
+                }
+            } catch (IOException e) {
+                logger.warn("Failed search parameter files in folder: " + modelDir, e);
+            }
+        }
+        throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
+    }
+
+    private void downloadModel() throws ModelNotFoundException, IOException {
         Repository repository = Repository.newInstance("modelStore", modelUrl);
         List<MRL> mrls = repository.getResources();
         if (mrls.isEmpty()) {
-            throw new IOException("Invalid model url: " + modelUrl);
+            throw new ModelNotFoundException("Invalid model url: " + modelUrl);
         }
 
         Artifact artifact = mrls.get(0).getDefaultArtifact();
         repository.prepare(artifact);
-        Path modelDir = Utils.getNestedModelDir(repository.getResourceDirectory(artifact));
-        return new Pair<>(artifact.getName(), modelDir);
+        modelDir = Utils.getNestedModelDir(repository.getResourceDirectory(artifact));
+        artifactName = artifact.getName();
     }
 
-    /**
-     * Loads the serving properties from model folder.
-     *
-     * @param modelDir model directory
-     * @return the serving properties
-     */
-    public static Properties getServingProperties(Path modelDir) {
-        Path file = modelDir.resolve("serving.properties");
-        Properties prop = new Properties();
-        if (Files.isRegularFile(file)) {
-            try (InputStream is = Files.newInputStream(file)) {
-                prop.load(is);
-            } catch (IOException e) {
-                logger.warn("Failed read serving.properties file", e);
+    private void loadServingProperties() {
+        if (prop == null) {
+            Path file = modelDir.resolve("serving.properties");
+            prop = new Properties();
+            if (Files.isRegularFile(file)) {
+                try (InputStream is = Files.newInputStream(file)) {
+                    prop.load(is);
+                } catch (IOException e) {
+                    logger.warn("Failed read serving.properties file", e);
+                }
             }
+            configPerModelSettings();
         }
-        return prop;
     }
 
-    private void configPerModelSettings(Path modelDir) throws IOException {
+    private void configPerModelSettings() {
         // per model settings can only be configured once
-        Properties prop = getServingProperties(modelDir);
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         if (queueSize <= 0) {
             queueSize = intValue(prop, "job_queue_size", wlmc.getJobQueueSize());
@@ -632,14 +621,24 @@ public final class ModelInfo<I, O> {
         if (maxIdleSeconds <= 0) {
             maxIdleSeconds = intValue(prop, "max_idle_time", wlmc.getMaxIdleSeconds());
         }
+        if (loadOnDevices == null) {
+            loadOnDevices = prop.getProperty("load_on_devices", wlmc.getLoadOnDevices());
+        }
+        logger.info(
+                "Apply per model settings:\n\tqueueSize: {}\n\tbatchSize: {}"
+                        + "\n\tmaxBatchDelay: {}\n\tmaxIdle: {}\n\tloadOnDevices: {}",
+                queueSize,
+                batchSize,
+                maxBatchDelayMillis,
+                maxIdleSeconds,
+                loadOnDevices);
     }
 
-    void checkAvailableMemory(Device device, Path modelDir) throws IOException {
+    void checkAvailableMemory(Device device) throws IOException {
         if (Boolean.getBoolean("skip_oom_check")) {
             return;
         }
 
-        Properties prop = getServingProperties(modelDir);
         long requiredMemory = intValue(prop, "required_memory_mb", 0) * 1024L * 1024;
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         int defMemory = wlmc.getReservedMemoryMb();
@@ -688,6 +687,63 @@ public final class ModelInfo<I, O> {
         }
     }
 
+    /**
+     * Returns the devices the model will be loaded on at startup.
+     *
+     * @return the devices the model will be loaded on at startup
+     */
+    public String[] getLoadOnDevices() {
+        Engine engine = Engine.getEngine(engineName);
+        if ("*".equals(loadOnDevices)) {
+            int gpuCount = engine.getGpuCount();
+            if (gpuCount > 0) {
+                if ("Python".equals(engineName)) {
+                    String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
+                    v = prop.getProperty("option.tensor_parallel_degree", v);
+                    int tensorParallelDegree = Integer.parseInt(v);
+                    if (tensorParallelDegree > 0) {
+                        int procs = gpuCount / tensorParallelDegree;
+                        if (procs == 0) {
+                            throw new EngineException(
+                                    "GPU devices are not enough to run "
+                                            + tensorParallelDegree
+                                            + " partitions.");
+                        }
+                        gpuCount = procs;
+                    }
+                } else if ("DeepSpeed".equals(engineName)
+                        || "FasterTransformer".equals(engineName)) {
+                    return new String[] {"0"};
+                }
+
+                return IntStream.range(0, gpuCount)
+                        .mapToObj(String::valueOf)
+                        .toArray(String[]::new);
+            } else if (NeuronUtils.hasNeuron()) {
+                int neurons = NeuronUtils.getNeuronCores();
+                String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
+                v = prop.getProperty("option.tensor_parallel_degree", v);
+                int tensorParallelDegree = Integer.parseInt(v);
+                if (tensorParallelDegree > 0) {
+                    // Assume user understand TP only works on inf2
+                    int procs = neurons / tensorParallelDegree;
+                    if (procs == 0) {
+                        throw new EngineException(
+                                "Neuron devices are not enough to run "
+                                        + tensorParallelDegree
+                                        + " partitions. Please refer to: "
+                                        + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
+                    }
+                    neurons = procs;
+                }
+                return IntStream.range(0, neurons).mapToObj(i -> "nc" + i).toArray(String[]::new);
+            }
+        } else if (!loadOnDevices.isEmpty()) {
+            return loadOnDevices.split(";");
+        }
+        return new String[] {"-1"};
+    }
+
     private static long getFileSize(Path path) {
         try {
             return Files.size(path);
@@ -697,7 +753,7 @@ public final class ModelInfo<I, O> {
         return 0L;
     }
 
-    private static long getAvailableCpuMemory() {
+    private long getAvailableCpuMemory() {
         if (System.getProperty("os.name").startsWith("Linux")) {
             try (Scanner scanner = new Scanner(Paths.get("/proc/meminfo"))) {
                 while (scanner.hasNext()) {

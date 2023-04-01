@@ -12,6 +12,8 @@
  */
 package ai.djl.serving.wlm;
 
+import static org.testng.Assert.assertEquals;
+
 import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
@@ -19,13 +21,18 @@ import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.Criteria;
+import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.Utils;
+import ai.djl.util.ZipUtils;
 
 import org.testng.Assert;
+import org.testng.annotations.AfterSuite;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
@@ -37,11 +44,39 @@ import java.util.Properties;
 
 public class ModelInfoTest {
 
+    @BeforeSuite
+    public void beforeSuite() throws IOException {
+        Path modelStore = Paths.get("build/models");
+        Utils.deleteQuietly(modelStore);
+        Files.createDirectories(modelStore);
+        String engineCacheDir = Utils.getEngineCacheDir().toString();
+        System.setProperty("DJL_CACHE_DIR", "build/cache");
+        System.setProperty("ENGINE_CACHE_DIR", engineCacheDir);
+    }
+
+    @AfterSuite
+    public void afterSuite() {
+        System.clearProperty("DJL_CACHE_DIR");
+        System.clearProperty("ENGINE_CACHE_DIR");
+    }
+
     @Test
     public void testQueueSizeIsSet() {
         ModelInfo<?, ?> modelInfo =
                 new ModelInfo<>(
-                        "", null, null, "PyTorch", Input.class, Output.class, 4711, 1, 300, 1);
+                        "",
+                        null,
+                        null,
+                        "PyTorch",
+                        null,
+                        Input.class,
+                        Output.class,
+                        4711,
+                        1,
+                        300,
+                        1,
+                        -1,
+                        -1);
         Assert.assertEquals(4711, modelInfo.getQueueSize());
         Assert.assertEquals(1, modelInfo.getMaxIdleSeconds());
         Assert.assertEquals(300, modelInfo.getMaxBatchDelayMillis());
@@ -56,7 +91,7 @@ public class ModelInfoTest {
                         .setTypes(Input.class, Output.class)
                         .optModelUrls(modelUrl)
                         .build();
-        ModelInfo<Input, Output> modelInfo = new ModelInfo<>("model", criteria);
+        ModelInfo<Input, Output> modelInfo = new ModelInfo<>("model", modelUrl, criteria);
         modelInfo.load(Device.cpu());
         try (ZooModel<Input, Output> model = modelInfo.getModel(Device.cpu());
                 Predictor<Input, Output> predictor = model.newPredictor()) {
@@ -70,33 +105,40 @@ public class ModelInfoTest {
     }
 
     @Test
-    public void testOutOfMemory() throws IOException {
+    public void testOutOfMemory() throws IOException, ModelNotFoundException {
         Path modelDir = Paths.get("build/oom_model");
         Utils.deleteQuietly(modelDir);
         Files.createDirectories(modelDir);
-        ModelInfo<?, ?> modelInfo =
+
+        ModelInfo<Input, Output> modelInfo =
                 new ModelInfo<>(
                         "",
                         "build/oom_model",
                         null,
                         "PyTorch",
+                        "nc1,nc2",
                         Input.class,
                         Output.class,
                         4711,
                         1,
                         300,
-                        1);
-
+                        1,
+                        -1,
+                        -1);
+        modelInfo.initialize();
         Device device = Engine.getInstance().defaultDevice();
-        modelInfo.checkAvailableMemory(device, modelDir);
+        modelInfo.checkAvailableMemory(device);
 
         Path file = modelDir.resolve("serving.properties");
         Properties prop = new Properties();
         prop.setProperty("reserved_memory_mb", String.valueOf(Integer.MAX_VALUE));
+        prop.setProperty("engine", "PyTorch");
         try (Writer writer = Files.newBufferedWriter(file)) {
             prop.store(writer, "");
         }
-        Assert.assertThrows(() -> modelInfo.checkAvailableMemory(Device.cpu(), modelDir));
+        ModelInfo<Input, Output> m1 = new ModelInfo<>("build/oom_model");
+        m1.initialize();
+        Assert.assertThrows(() -> m1.checkAvailableMemory(Device.cpu()));
 
         if (device.isGpu()) {
             prop.setProperty("required_memory_mb", "1");
@@ -107,7 +149,100 @@ public class ModelInfoTest {
                 prop.store(writer, "");
             }
 
-            Assert.assertThrows(() -> modelInfo.checkAvailableMemory(device, modelDir));
+            ModelInfo<Input, Output> m2 = new ModelInfo<>("build/oom_model");
+            m2.initialize();
+            Assert.assertThrows(() -> m2.checkAvailableMemory(device));
         }
+    }
+
+    @Test
+    public void testInitModel() throws IOException, ModelNotFoundException {
+        Path modelStore = Paths.get("build/models");
+        Path modelDir = modelStore.resolve("test_model");
+        Files.createDirectories(modelDir);
+        Path notModel = modelStore.resolve("non-model");
+
+        ModelInfo<Input, Output> model = new ModelInfo<>(notModel.toUri().toURL().toString());
+        Assert.assertThrows(model::initialize);
+
+        model = new ModelInfo<>("build/models/test_model");
+        Assert.assertThrows(model::initialize);
+
+        Path xgb = modelDir.resolve("test_model.json");
+        Files.createFile(xgb);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "XGBoost");
+
+        Path paddle = modelDir.resolve("__model__");
+        Files.createFile(paddle);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "PaddlePaddle");
+
+        Path tflite = modelDir.resolve("test_model.tflite");
+        Files.createFile(tflite);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "TFLite");
+
+        Path tensorRt = modelDir.resolve("test_model.uff");
+        Files.createFile(tensorRt);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "TensorRT");
+
+        Path onnx = modelDir.resolve("test_model.onnx");
+        Files.createFile(onnx);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "OnnxRuntime");
+
+        Path mxnet = modelDir.resolve("test_model-symbol.json");
+        Files.createFile(mxnet);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "MXNet");
+
+        Path tensorflow = modelDir.resolve("saved_model.pb");
+        Files.createFile(tensorflow);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "TensorFlow");
+
+        Path triton = modelDir.resolve("config.pbtxt");
+        Files.createFile(triton);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "TritonServer");
+
+        Path pytorch = modelDir.resolve("test_model.pt");
+        Files.createFile(pytorch);
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "PyTorch");
+
+        Path prop = modelDir.resolve("serving.properties");
+        try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
+            writer.write("engine=MyEngine");
+        }
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "MyEngine");
+
+        Path mar = modelStore.resolve("torchServe.mar");
+        Path torchServe = modelStore.resolve("torchServe");
+        Files.createDirectories(torchServe.resolve("MAR-INF"));
+        Files.createDirectories(torchServe.resolve("code"));
+        ZipUtils.zip(torchServe, mar, false);
+        model = new ModelInfo<>(mar.toUri().toURL().toString());
+        model.initialize();
+        assertEquals(model.getEngineName(), "Python");
+
+        Path root = modelStore.resolve("models.pt");
+        Files.createFile(root);
+        model = new ModelInfo<>("build/models");
+        model.initialize();
+        assertEquals(model.getEngineName(), "PyTorch");
     }
 }

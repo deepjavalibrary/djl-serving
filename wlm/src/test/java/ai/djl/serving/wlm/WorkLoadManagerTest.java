@@ -37,7 +37,7 @@ public class WorkLoadManagerTest {
                         .setTypes(Input.class, Output.class)
                         .optModelUrls(modelUrl)
                         .build();
-        ModelInfo<Input, Output> modelInfo = new ModelInfo<>("model", criteria);
+        ModelInfo<Input, Output> modelInfo = new ModelInfo<>("model", modelUrl, criteria);
         wlm.registerModel(modelInfo).initWorkers(null, 1, 2);
         Input input = new Input();
         URL url = new URL("https://resources.djl.ai/images/0.png");

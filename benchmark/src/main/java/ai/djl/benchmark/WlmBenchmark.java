@@ -70,7 +70,8 @@ public class WlmBenchmark extends AbstractBenchmark {
         Device device = Device.fromName(devices[0], engine);
         WorkLoadManager wlm = new WorkLoadManager();
         Criteria<Void, float[]> criteria = loadModelCriteria(arguments, device);
-        ModelInfo<Void, float[]> modelInfo = new ModelInfo<>("model", criteria);
+        ModelInfo<Void, float[]> modelInfo =
+                new ModelInfo<>("model", arguments.getModelUrl(), criteria);
 
         WorkerPool<Void, float[]> wp = wlm.registerModel(modelInfo);
         int workersPerDevice = numOfWorkers / devices.length;

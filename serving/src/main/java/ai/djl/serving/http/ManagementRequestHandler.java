@@ -198,27 +198,20 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         req.getModelUrl(),
                         req.getVersion(),
                         req.getEngineName(),
+                        req.getDeviceName(),
                         Input.class,
                         Output.class,
                         req.getJobQueueSize(),
                         req.getMaxIdleSeconds(),
                         req.getMaxBatchDelayMillis(),
-                        req.getBatchSize());
+                        req.getBatchSize(),
+                        req.getMinWorkers(),
+                        req.getMaxWorkers());
         Workflow workflow = new Workflow(modelInfo);
         final ModelManager modelManager = ModelManager.getInstance();
         CompletableFuture<Void> f =
                 modelManager
                         .registerWorkflow(workflow)
-                        .thenAccept(
-                                v -> {
-                                    for (ModelInfo<Input, Output> m : workflow.getModels()) {
-                                        modelManager.initWorkers(
-                                                m,
-                                                req.getDeviceName(),
-                                                req.getMinWorkers(),
-                                                req.getMaxWorkers());
-                                    }
-                                })
                         .exceptionally(
                                 t -> {
                                     NettyUtils.sendError(ctx, t.getCause());
@@ -244,9 +237,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("Parameter url is required.");
         }
 
-        String deviceName = NettyUtils.getParameter(decoder, LoadModelRequest.DEVICE, null);
-        int minWorkers = NettyUtils.getIntParameter(decoder, LoadModelRequest.MIN_WORKER, -1);
-        int maxWorkers = NettyUtils.getIntParameter(decoder, LoadModelRequest.MAX_WORKER, -1);
         boolean synchronous =
                 Boolean.parseBoolean(
                         NettyUtils.getParameter(decoder, LoadModelRequest.SYNCHRONOUS, "true"));
@@ -261,10 +251,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
-                            .thenAccept(
-                                    v ->
-                                            modelManager.initWorkers(
-                                                    workflow, deviceName, minWorkers, maxWorkers))
                             .exceptionally(
                                     t -> {
                                         NettyUtils.sendError(ctx, t.getCause());

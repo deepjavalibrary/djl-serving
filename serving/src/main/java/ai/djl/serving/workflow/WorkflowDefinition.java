@@ -201,7 +201,7 @@ public class WorkflowDefinition {
                 model.hasInputOutputClass(Input.class, Output.class);
                 return model;
             } else if (json.isJsonPrimitive()) {
-                return new ModelInfo<>(json.getAsString(), Input.class, Output.class);
+                return new ModelInfo<>(json.getAsString());
             }
             throw new JsonParseException(
                     "Unexpected type of model definition: should be Criteria object or URI string");
