@@ -12,67 +12,28 @@
  */
 package ai.djl.serving.cache;
 
-import ai.djl.modality.Output;
-
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
 /** A class that manages response cache. */
-public class CacheManager {
+public final class CacheManager {
 
-    private static CacheManager instance = new CacheManager();
+    private static CacheEngine engine = new MemoryCacheEngine();
 
-    private Map<String, Output> cache = new ConcurrentHashMap<>();
-
-    protected CacheManager() {}
+    private CacheManager() {}
 
     /**
-     * Returns the registered {@code CacheManager} instance.
+     * Returns the registered {@code CacheEngine} instance.
      *
-     * @return the registered {@code CacheManager} instance
+     * @return the registered {@code CacheEngine} instance
      */
-    public static CacheManager getInstance() {
-        return instance;
+    public static CacheEngine getCacheEngine() {
+        return engine;
     }
 
     /**
-     * Sets the {@code CacheManager} instance.
+     * Sets the {@code CacheEngine} instance.
      *
-     * @param instance the {@code CacheManager} instance
+     * @param instance the {@code CacheEngine} instance
      */
-    public static void setCacheManager(CacheManager instance) {
-        CacheManager.instance = instance;
-    }
-
-    /**
-     * Adds the {@code Output} to cache and return the cache key.
-     *
-     * @param output the {@code Output} to be added in cache
-     * @return the cache key
-     */
-    public String put(Output output) {
-        String key = UUID.randomUUID().toString();
-        cache.put(key, output);
-        return key;
-    }
-
-    /**
-     * Returns the cached {@code Output} object witch the specified key.
-     *
-     * @param key the cache key
-     * @return the cached {@code Output} object
-     */
-    public Output get(String key) {
-        return cache.get(key);
-    }
-
-    /**
-     * Removes the cache from the key.
-     *
-     * @param key the cache key
-     */
-    public void remove(String key) {
-        cache.remove(key);
+    public static void setCacheEngine(CacheEngine instance) {
+        CacheManager.engine = instance;
     }
 }

@@ -661,6 +661,7 @@ public class ModelServerTest {
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         String nextToken = headers.get("x-next-token");
         assertNotNull(nextToken);
+        Thread.sleep(500); // Sleep to wait for async to be finished
 
         url = "/predictions/echo";
         req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
