@@ -12,13 +12,13 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
-import ai.djl.util.NeuronUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.Utils;
 
@@ -150,21 +150,21 @@ class Connection {
         }
 
         // TP settings
-        int deviceId = model.getNDManager().getDevice().getDeviceId();
-        if (tensorParallelDegree > 0 && deviceId != -1) {
-            String cudaDevices = getVisibleDevices(deviceId, tensorParallelDegree);
+        Device device = model.getNDManager().getDevice();
+        if (tensorParallelDegree > 0 && device.isGpu()) {
+            String cudaDevices = getVisibleDevices(device.getDeviceId(), tensorParallelDegree);
             pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
         }
-        if (NeuronUtils.hasNeuron()) {
+        if ("nc".equals(device.getDeviceType())) {
             String visibleCores;
             if (tensorParallelDegree > 0) {
-                visibleCores = getNeuronVisibleCores(deviceId, tensorParallelDegree);
+                visibleCores = getNeuronVisibleCores(device.getDeviceId(), tensorParallelDegree);
             } else {
-                visibleCores = "1";
+                visibleCores = String.valueOf(device.getDeviceId());
             }
-            pyEnv.addEnv("NEURON_RT_NUM_CORES", visibleCores);
-            logger.info("Set NEURON_RT_NUM_CORES={}", visibleCores);
+            pyEnv.addEnv("NEURON_RT_VISIBLE_CORES", visibleCores);
+            logger.info("Set NEURON_RT_VISIBLE_CORES={}", visibleCores);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
@@ -179,7 +179,7 @@ class Connection {
         args[8] = "--entry-point";
         args[9] = pyEnv.getEntryPoint();
         args[10] = "--device-id";
-        args[11] = String.valueOf(deviceId);
+        args[11] = String.valueOf(device.getDeviceId());
         return args;
     }
 
