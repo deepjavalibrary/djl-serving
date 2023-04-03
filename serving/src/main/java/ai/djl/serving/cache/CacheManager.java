@@ -15,7 +15,7 @@ package ai.djl.serving.cache;
 /** A class that manages response cache. */
 public final class CacheManager {
 
-    private static CacheEngine instance = new MemoryCacheEngine();
+    private static CacheEngine engine = new MemoryCacheEngine();
 
     private CacheManager() {}
 
@@ -24,8 +24,8 @@ public final class CacheManager {
      *
      * @return the registered {@code CacheEngine} instance
      */
-    public static CacheEngine getInstance() {
-        return instance;
+    public static CacheEngine getCacheEngine() {
+        return engine;
     }
 
     /**
@@ -33,7 +33,7 @@ public final class CacheManager {
      *
      * @param instance the {@code CacheEngine} instance
      */
-    public static void setCacheManager(CacheEngine instance) {
-        CacheManager.instance = instance;
+    public static void setCacheEngine(CacheEngine instance) {
+        CacheManager.engine = instance;
     }
 }

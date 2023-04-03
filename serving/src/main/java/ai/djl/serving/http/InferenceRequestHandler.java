@@ -277,7 +277,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                                 return null;
                             });
         } else { // Asynchronous
-            CacheEngine cache = CacheManager.getInstance();
+            CacheEngine cache = CacheManager.getCacheEngine();
             String nextToken = cache.create(input);
 
             // Store pending message to be sent for unfinished computations
@@ -314,7 +314,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             limit = Integer.MAX_VALUE;
         }
 
-        CacheEngine cache = CacheManager.getInstance();
+        CacheEngine cache = CacheManager.getCacheEngine();
         Output output = cache.get(startingToken);
         if (output == null) {
             throw new BadRequestException("Invalid " + X_STARTING_TOKEN);
