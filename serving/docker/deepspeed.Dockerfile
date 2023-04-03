@@ -15,7 +15,7 @@ ARG djl_version=0.22.0~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=1.13.1
 ARG accelerate_version=0.17.1
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.0-py2.py3-none-any.whl"
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.3-py2.py3-none-any.whl"
 ARG transformers_version=4.27.3
 ARG diffusers_version=0.12.0
 
