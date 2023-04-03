@@ -14,7 +14,7 @@ FROM nvidia/cuda:$version
 ARG djl_version=0.21.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG accelerate_version=0.16.0
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.0-py2.py3-none-any.whl"
+ARG deepspeed_wheel="s3://djl-ai/publish/deepspeed/deepspeed-0.8.3-py2.py3-none-any.whl"
 ARG transformers_version=4.26.0
 ARG diffusers_version=0.12.0
 
