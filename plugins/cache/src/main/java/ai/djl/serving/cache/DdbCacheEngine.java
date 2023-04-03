@@ -10,12 +10,9 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package ai.djl.serving.ddbcache;
+package ai.djl.serving.cache;
 
-import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Output;
-import ai.djl.ndarray.BytesSupplier;
-import ai.djl.serving.cache.CacheEngine;
 import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
@@ -53,12 +50,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 /** A {@link CacheEngine} that stores elements in DynamoDB. */
-public final class DdbCacheEngine implements CacheEngine {
+public final class DdbCacheEngine extends BaseCacheEngine {
 
     private static final Logger logger = LoggerFactory.getLogger(DdbCacheEngine.class);
 
@@ -75,7 +70,6 @@ public final class DdbCacheEngine implements CacheEngine {
 
     private DynamoDbClient ddbClient;
     private long cacheTtl;
-    private int writeBatch;
 
     /**
      * Constructs a {@link DdbCacheEngine}.
@@ -85,7 +79,7 @@ public final class DdbCacheEngine implements CacheEngine {
     private DdbCacheEngine(DynamoDbClient ddbClient) {
         this.ddbClient = ddbClient;
         cacheTtl = Duration.ofMillis(30).toMillis();
-        writeBatch = Integer.parseInt(Utils.getenv("SERVING_DDB_BATCH", "5"));
+        writeBatch = Integer.parseInt(Utils.getenv("SERVING_CACHE_BATCH", "5"));
     }
 
     /**
@@ -160,63 +154,26 @@ public final class DdbCacheEngine implements CacheEngine {
         return false;
     }
 
-    /** {@inheritDoc} */
     @Override
-    public CompletableFuture<Void> put(String key, Output output) {
-        return CompletableFuture.<Void>supplyAsync(
-                        () -> {
-                            String ttl = String.valueOf(System.currentTimeMillis() + cacheTtl);
-                            BytesSupplier supplier = output.getData();
-                            if (supplier instanceof ChunkedBytesSupplier) {
-                                Output o = new Output();
-                                o.setCode(output.getCode());
-                                o.setMessage(output.getMessage());
-                                o.setProperties(output.getProperties());
-                                ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) supplier;
-                                int index = 0;
-                                writeDdb(key, o, cbs.pollChunk(), index++, ttl, !cbs.hasNext());
-                                List<byte[]> list = new ArrayList<>(writeBatch);
-                                while (cbs.hasNext()) {
-                                    try {
-                                        list.add(cbs.nextChunk(1, TimeUnit.MINUTES));
-                                    } catch (InterruptedException e) {
-                                        throw new IllegalStateException(e);
-                                    }
-                                    if (list.size() >= writeBatch) {
-                                        byte[] batch = join(list);
-                                        writeDdb(key, null, batch, index++, ttl, !cbs.hasNext());
-                                        list.clear();
-                                    }
-                                }
-                                if (!list.isEmpty()) {
-                                    byte[] batch = join(list);
-                                    writeDdb(key, null, batch, index, ttl, true);
-                                }
-                            } else {
-                                boolean last = output.getCode() != 202;
-                                writeDdb(key, output, null, -1, ttl, last);
-                            }
-                            return null;
-                        })
-                .exceptionally(
-                        t -> {
-                            logger.warn("Failed to write to DynamoDB", t);
-                            return null;
-                        });
+    protected void putSingle(String key, Output output, boolean last) {
+        String ttl = String.valueOf(System.currentTimeMillis() + cacheTtl);
+        writeDdb(key, output, null, -1, ttl, last);
+    }
+
+    @Override
+    protected void putStream(String key, Output output, byte[] buf, int index, boolean last) {
+        String ttl = String.valueOf(System.currentTimeMillis() + cacheTtl);
+        writeDdb(key, output, buf, index, ttl, last);
     }
 
     /** {@inheritDoc} */
     @Override
-    public Output get(String key, int limit) {
-        int start = -1;
-        if (key.length() > 36) {
-            start = Integer.parseInt(key.substring(36));
-            key = key.substring(0, 36);
-        }
-
+    public Output get(String key, int start, int limit) {
+        int shiftedStart = start == 0 ? -1 : start;
         Map<String, AttributeValue> attrValues = new ConcurrentHashMap<>();
         attrValues.put(':' + CACHE_ID, AttributeValue.builder().s(key).build());
-        attrValues.put(':' + INDEX, AttributeValue.builder().n(String.valueOf(start)).build());
+        attrValues.put(
+                ':' + INDEX, AttributeValue.builder().n(String.valueOf(shiftedStart)).build());
         QueryRequest request =
                 QueryRequest.builder()
                         .tableName(TABLE_NAME)
@@ -258,11 +215,13 @@ public final class DdbCacheEngine implements CacheEngine {
             start = Integer.parseInt(item.get(INDEX).n());
         }
         if (!list.isEmpty()) {
-            output.add(join(list));
+            output.add(joinBytes(list));
         }
         if (!complete) {
-            output.addProperty("x-next-token", key + start);
-            output.addProperty("X-Amzn-SageMaker-Custom-Attributes", "x-next-token=" + key + start);
+            String startString = start <= 0 ? "" : Integer.toString(start);
+            output.addProperty("x-next-token", key + startString);
+            output.addProperty(
+                    "X-Amzn-SageMaker-Custom-Attributes", "x-next-token=" + key + startString);
         }
         return output;
     }
@@ -303,20 +262,6 @@ public final class DdbCacheEngine implements CacheEngine {
         } catch (IOException e) {
             throw new AssertionError("Decode output failed.", e);
         }
-    }
-
-    byte[] join(List<byte[]> list) {
-        int size = 0;
-        for (byte[] buf : list) {
-            size += buf.length;
-        }
-        byte[] batch = new byte[size];
-        size = 0;
-        for (byte[] buf : list) {
-            System.arraycopy(buf, 0, batch, size, buf.length);
-            size += buf.length;
-        }
-        return batch;
     }
 
     void writeDdb(String key, Output output, byte[] buf, int index, String cacheTtl, boolean last) {

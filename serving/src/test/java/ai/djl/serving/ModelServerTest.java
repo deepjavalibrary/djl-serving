@@ -177,6 +177,7 @@ public class ModelServerTest {
         t.beforeSuite();
         t.test();
         t.afterMethod();
+        t.afterSuite();
     }
 
     @Test

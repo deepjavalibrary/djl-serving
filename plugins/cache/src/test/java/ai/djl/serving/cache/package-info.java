@@ -10,5 +10,4 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-/** This package contains classes of the ddb-cache-manager. */
-package ai.djl.serving.ddbcache;
+package ai.djl.serving.cache;

@@ -328,7 +328,12 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
 
         CacheEngine cache = CacheManager.getCacheEngine();
-        Output output = cache.get(startingToken, limit);
+        Output output;
+        try {
+            output = cache.get(startingToken, limit);
+        } catch (RuntimeException e) {
+            throw new BadRequestException("Failed to lookup cache element", e);
+        }
         if (output == null) {
             throw new BadRequestException("Invalid " + X_STARTING_TOKEN + ": " + startingToken);
         }
