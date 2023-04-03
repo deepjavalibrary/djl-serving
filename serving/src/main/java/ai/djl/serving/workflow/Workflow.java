@@ -70,7 +70,7 @@ public class Workflow {
      */
     public Workflow(ModelInfo<Input, Output> model) {
         String modelName = "model";
-        this.name = model.getModelId();
+        this.name = model.getId();
         this.version = model.getVersion();
         models = Collections.singletonMap(modelName, model);
         expressions =

@@ -148,7 +148,7 @@ public class WorkflowDefinition {
             WlmConfigManager wlmc = WlmConfigManager.getInstance();
             for (Entry<String, ModelInfo<Input, Output>> emd : models.entrySet()) {
                 ModelInfo<Input, Output> md = emd.getValue();
-                md.setModelId(emd.getKey());
+                md.setId(emd.getKey());
                 md.setQueueSize(firstValid(md.getQueueSize(), queueSize, wlmc.getJobQueueSize()));
                 md.setMaxIdleSeconds(
                         firstValid(

@@ -181,24 +181,6 @@ public class PyModel extends BaseModel {
         }
         pyEnv.setEntryPoint(entryPoint);
 
-        Map<String, String> initParameters = pyEnv.getInitParameters();
-        String s3Url = initParameters.get("s3url");
-        String modelId = pyEnv.getInitParameters().get("model_id");
-        if (s3Url != null) {
-            // s3url is deprecated, use model_id instead
-            if (modelId != null) {
-                throw new IllegalArgumentException("model_id and s3url could not both set!");
-            }
-            modelId = s3Url;
-        }
-        if (modelId != null && modelId.startsWith("s3://")) {
-            logger.info("S3 url found, start downloading from {}", modelId);
-            String downloadDir = getDownloadDir().toString();
-            downloadS3(modelId, downloadDir);
-            // point model_id to download directory
-            pyEnv.addParameter("model_id", downloadDir);
-        }
-
         if (pyEnv.isMpiMode()) {
             int partitions = pyEnv.getTensorParallelDegree();
             if (partitions == 0) {
@@ -343,54 +325,6 @@ public class PyModel extends BaseModel {
         }
         long duration = System.currentTimeMillis() - begin;
         logger.info("{} model loaded in {} ms.", modelName, duration);
-    }
-
-    private Path getDownloadDir() throws IOException {
-        // SageMaker model_dir are readonly, default to use temp directory
-        Path tmp = Files.createTempDirectory("download").toAbsolutePath();
-        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", tmp.toString());
-        if ("default".equals(downloadDir)) {
-            downloadDir = modelDir.toAbsolutePath().toString();
-        }
-        return Paths.get(downloadDir);
-    }
-
-    private void downloadS3(String url, String downloadDir) {
-        try {
-            String[] commands;
-            if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
-                if (!url.endsWith("*")) {
-                    if (url.endsWith("/")) {
-                        url = url + '*';
-                    } else {
-                        url = url + "/*";
-                    }
-                }
-                commands =
-                        new String[] {
-                            "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync", url, downloadDir
-                        };
-            } else {
-                logger.info("s5cmd is not installed, using aws cli");
-                commands = new String[] {"aws", "s3", "sync", url, downloadDir};
-            }
-            Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = exec.getInputStream()) {
-                logOutput = Utils.toString(is);
-            }
-            int exitCode = exec.waitFor();
-            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
-                logger.error(logOutput);
-                throw new EngineException("Download model failed.");
-            } else {
-                logger.debug(logOutput);
-            }
-
-            logger.info("Download completed! Files saved to {}", downloadDir);
-        } catch (IOException | InterruptedException e) {
-            throw new EngineException("Model failed to download from s3", e);
-        }
     }
 
     private void shutdown() {

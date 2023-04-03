@@ -14,6 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Application;
 import ai.djl.Device;
+import ai.djl.MalformedModelException;
 import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
@@ -87,6 +88,7 @@ public final class ModelInfo<I, O> {
 
     private transient Path modelDir;
     private transient String artifactName;
+    private transient Path downloadS3Dir;
 
     private transient Properties prop;
     private transient Status status;
@@ -234,6 +236,10 @@ public final class ModelInfo<I, O> {
             } else {
                 builder.optDevice(device);
             }
+            if (downloadS3Dir != null) {
+                // override model_id
+                builder.optOption("model_id", downloadS3Dir.toAbsolutePath().toString());
+            }
 
             ZooModel<I, O> m = builder.build().loadModel();
             models.put(device, m);
@@ -275,7 +281,7 @@ public final class ModelInfo<I, O> {
      *
      * @param id the model ID
      */
-    public void setModelId(String id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -284,7 +290,7 @@ public final class ModelInfo<I, O> {
      *
      * @return the model ID
      */
-    public String getModelId() {
+    public String getId() {
         return id;
     }
 
@@ -465,18 +471,22 @@ public final class ModelInfo<I, O> {
      * @throws IOException if failed to download model
      * @throws ModelNotFoundException if model not found
      */
-    public void initialize() throws IOException, ModelNotFoundException {
+    public void initialize() throws IOException, ModelException {
         downloadModel();
         loadServingProperties();
         if (engineName == null) {
             engineName = inferEngine();
         }
+        downloadS3();
     }
 
     /** Close all loaded models. */
     public void close() {
-        if (!getModels().isEmpty()) {
+        if (!getModels().isEmpty() && !Boolean.getBoolean("ai.djl.serving.keep_cache")) {
             logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
+            if (downloadS3Dir != null) {
+                Utils.deleteQuietly(downloadS3Dir);
+            }
             Path path = null;
             for (Model m : models.values()) {
                 m.close();
@@ -645,14 +655,25 @@ public final class ModelInfo<I, O> {
         long reservedMemory = intValue(prop, "reserved_memory_mb", defMemory) * 1024L * 1024;
         int tpDegree = Integer.parseInt(Utils.getenv("TENSOR_PARALLEL_DEGREE", "0"));
         tpDegree = intValue(prop, "option.tensor_parallel_degree", tpDegree);
-        if (requiredMemory <= 0 && tpDegree < 1) {
+        if (requiredMemory <= 0
+                && tpDegree < 1
+                && "true".equals(Utils.getenv("SAGEMAKER_MULTI_MODEL"))) {
             // TODO: handle LMI use case in future
+            logger.warn("No reserved_memory_mb defined, estimating memory usage ...");
             try (Stream<Path> walk = Files.walk(modelDir)) {
-                // estimate the memory to be 1.2x of file size
                 requiredMemory =
                         walk.filter(Files::isRegularFile).mapToLong(ModelInfo::getFileSize).sum();
-                requiredMemory = requiredMemory * 12 / 10;
             }
+            if (downloadS3Dir != null) {
+                try (Stream<Path> walk = Files.walk(downloadS3Dir)) {
+                    requiredMemory +=
+                            walk.filter(Files::isRegularFile)
+                                    .mapToLong(ModelInfo::getFileSize)
+                                    .sum();
+                }
+            }
+            // estimate the memory to be 1.2x of file size
+            requiredMemory = requiredMemory * 12 / 10;
         }
         // Assume requires the same amount of CPU memory when load on GPU
         long free = getAvailableCpuMemory();
@@ -769,6 +790,78 @@ public final class ModelInfo<I, O> {
             }
         }
         return Integer.MAX_VALUE * 1024L;
+    }
+
+    private void downloadS3() throws ModelException, IOException {
+        String s3Url = prop.getProperty("option.s3url");
+        String modelId = prop.getProperty("option.model_id");
+        if (s3Url != null) {
+            // s3url is deprecated, use model_id instead
+            if (modelId != null) {
+                throw new MalformedModelException("model_id and s3url could not both set!");
+            }
+            modelId = s3Url;
+        }
+        if (modelId == null || !modelId.startsWith("s3://")) {
+            return;
+        }
+
+        logger.info("S3 url found, start downloading from {}", modelId);
+        // Use fixed download path to avoid repeat download
+        String hash = Utils.hash(modelId);
+        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
+        parent = parent.resolve("download");
+        downloadS3Dir = parent.resolve(hash);
+        if (Files.exists(downloadS3Dir)) {
+            logger.info("artifacts has been downloaded already: {}", downloadS3Dir);
+            return;
+        }
+        Files.createDirectories(parent);
+        Path tmp = Files.createTempDirectory(parent, "tmp");
+        try {
+            downloadS3(modelId, tmp.toAbsolutePath().toString());
+            Utils.moveQuietly(tmp, downloadS3Dir);
+            logger.info("Download completed! Files saved to {}", downloadS3Dir);
+        } finally {
+            Utils.deleteQuietly(tmp);
+        }
+    }
+
+    private void downloadS3(String src, String dest) throws ModelException {
+        try {
+            String[] commands;
+            if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
+                if (!src.endsWith("*")) {
+                    if (src.endsWith("/")) {
+                        src = src + '*';
+                    } else {
+                        src = src + "/*";
+                    }
+                }
+                commands =
+                        new String[] {
+                            "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync", src, dest
+                        };
+            } else {
+                logger.info("s5cmd is not installed, using aws cli");
+                commands = new String[] {"aws", "s3", "sync", src, dest};
+            }
+            Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
+            String logOutput;
+            try (InputStream is = exec.getInputStream()) {
+                logOutput = Utils.toString(is);
+            }
+            int exitCode = exec.waitFor();
+            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
+                logger.error(logOutput);
+                throw new EngineException("Download model failed.");
+            } else {
+                logger.debug(logOutput);
+            }
+        } catch (IOException | InterruptedException e) {
+            throw new ModelNotFoundException("Model failed to download from s3", e);
+        }
     }
 
     private static int intValue(Properties prop, String key, int defValue) {

@@ -135,7 +135,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             for (Workflow workflow : endpoints.get(workflowName).getWorkflows()) {
                 for (ModelInfo<Input, Output> m : workflow.getModels()) {
                     String status = m.getStatus().toString();
-                    String id = m.getModelId();
+                    String id = m.getId();
                     String modelName;
                     if (workflowName.equals(id)) {
                         modelName = workflowName;
