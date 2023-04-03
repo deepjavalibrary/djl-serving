@@ -22,7 +22,7 @@ from pathlib import Path
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
 
-from utils import get_partition_cmd, extract_python_jar, get_python_executable
+from utils import get_partition_cmd, extract_python_jar, get_python_executable, get_download_dir
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -45,7 +45,7 @@ class PartitionService(object):
             return
 
         download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
-                                      '/tmp/download/model/')
+                                      get_download_dir(properties_manager.properties_dir, 'model'))
 
         s3url = model_id
         if Path("/opt/djl/bin/s5cmd").is_file():
@@ -129,6 +129,27 @@ class PartitionService(object):
         for file in config_files:
             shutil.copy(file, dst=self.properties['save_mp_checkpoint_path'])
 
+    def upload_checkpoints_to_s3(self):
+        if 'upload_checkpoints_s3url' not in self.properties:
+            return
+
+        s3url = self.properties['upload_checkpoints_s3url']
+        saved_checkpoints_dir = self.properties["save_mp_checkpoint_path"]
+
+        if not saved_checkpoints_dir.endswith('/'):
+            saved_checkpoints_dir = saved_checkpoints_dir + '/'
+
+        if Path("/opt/djl/bin/s5cmd").is_file():
+            commands = [
+                "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync",
+                saved_checkpoints_dir, s3url
+            ]
+        else:
+            commands = ["aws", "s3", "sync", saved_checkpoints_dir, s3url]
+
+        subprocess.run(commands)
+        shutil.rmtree(self.properties["save_mp_checkpoint_path"])
+
     def run_partition(self):
         commands = get_partition_cmd(self.properties_manager.is_mpi_mode,
                                      self.properties)
@@ -139,6 +160,7 @@ class PartitionService(object):
             logging.info(f"Partitioning done.")
             self.properties_manager.generate_properties_file()
             self.copy_config_files()
+            self.upload_checkpoints_to_s3()
         else:
             raise Exception("Partitioning was not successful.")
 

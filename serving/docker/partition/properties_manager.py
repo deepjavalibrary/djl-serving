@@ -14,11 +14,11 @@ import glob
 import torch
 
 # Properties to exclude while generating serving.properties
-from utils import is_engine_mpi_mode, get_engine_configs
+from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir
 
 EXCLUDE_PROPERTIES = [
     'model_id', 'checkpoint', 's3url', 'save_mp_checkpoint_path', 'model_dir',
-    'engine'
+    'engine', 'upload_checkpoints_s3url'
 ]
 
 PARTITION_SUPPORTED_ENGINES = ['DeepSpeed', 'FasterTransformer']
@@ -41,6 +41,7 @@ class PropertiesManager(object):
             self.validate_tp_degree()
 
         self.set_and_validate_entry_point()
+        self.set_and_validate_save_mp_checkpoint_path()
 
     def load_properties(self):
         properties_file = os.path.join(self.properties_dir,
@@ -144,3 +145,11 @@ class PropertiesManager(object):
                             f"model.py not found in model path {self.properties_dir}"
                         )
                     self.properties['entryPoint'] = entry_point
+
+    def set_and_validate_save_mp_checkpoint_path(self):
+        save_mp_checkpoint_path = self.properties["save_mp_checkpoint_path"]
+        if save_mp_checkpoint_path.startswith("s3://"):
+            self.properties[
+                "upload_checkpoints_s3url"] = save_mp_checkpoint_path
+            self.properties["save_mp_checkpoint_path"] = get_download_dir(
+                self.properties_dir, "partition-model")
