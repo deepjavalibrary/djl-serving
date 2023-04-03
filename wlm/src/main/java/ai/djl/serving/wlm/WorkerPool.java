@@ -124,10 +124,13 @@ public class WorkerPool<I, O> {
      * @param maxWorkers maximum amount of workers.
      */
     public void initWorkers(String deviceName, int minWorkers, int maxWorkers) {
-        Device device = model.withDefaultDevice(deviceName);
-        logger.info("initWorkers for {} ({}): {}, {}", model, device, minWorkers, maxWorkers);
+        Device device;
         synchronized (model) {
             try {
+                model.initialize();
+                device = model.withDefaultDevice(deviceName);
+                logger.info(
+                        "initWorkers for {} ({}): {}, {}", model, device, minWorkers, maxWorkers);
                 model.load(device);
             } catch (ModelException | IOException e) {
                 throw new CompletionException(e);

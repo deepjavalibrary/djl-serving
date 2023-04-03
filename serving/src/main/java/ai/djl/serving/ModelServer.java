@@ -13,7 +13,6 @@
 package ai.djl.serving;
 
 import ai.djl.engine.Engine;
-import ai.djl.engine.EngineException;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
@@ -31,8 +30,6 @@ import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
-import ai.djl.util.NeuronUtils;
-import ai.djl.util.Pair;
 import ai.djl.util.Utils;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -65,7 +62,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -73,7 +69,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /** The main entry point for model server. */
@@ -90,7 +85,6 @@ public class ModelServer {
     private ConfigManager configManager;
 
     private FolderScanPluginManager pluginManager;
-    private DependencyManager dependencyManager;
 
     /**
      * Creates a new {@code ModelServer} instance.
@@ -101,7 +95,6 @@ public class ModelServer {
         this.configManager = configManager;
         this.pluginManager = new FolderScanPluginManager(configManager);
         serverGroups = new ServerGroups(configManager);
-        dependencyManager = DependencyManager.getInstance();
     }
 
     /**
@@ -361,7 +354,7 @@ public class ModelServer {
             String modelUrl = matcher.group(3);
             String version = null;
             String engineName = null;
-            String deviceMapping = "*";
+            String deviceMapping = null;
             String modelName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
@@ -378,17 +371,6 @@ public class ModelServer {
             } else {
                 modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
-            Pair<String, Path> pair = ModelInfo.downloadModel(modelUrl);
-            if (engineName == null) {
-                engineName = ModelInfo.inferEngine(pair.getValue(), pair.getKey());
-                if (engineName == null) {
-                    logger.warn("Failed to infer engine, skip url: {}", url);
-                    continue;
-                }
-            }
-            dependencyManager.installEngine(engineName);
-            Engine engine = Engine.getEngine(engineName);
-            String[] devices = parseDevices(deviceMapping, engine, pair.getValue());
 
             ModelInfo<Input, Output> modelInfo =
                     new ModelInfo<>(
@@ -396,8 +378,11 @@ public class ModelServer {
                             modelUrl,
                             version,
                             engineName,
+                            deviceMapping,
                             Input.class,
                             Output.class,
+                            -1,
+                            -1,
                             -1,
                             -1,
                             -1,
@@ -406,12 +391,6 @@ public class ModelServer {
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
-                            .thenAccept(
-                                    v -> {
-                                        for (String deviceName : devices) {
-                                            modelManager.initWorkers(workflow, deviceName, -1, -1);
-                                        }
-                                    })
                             .exceptionally(
                                     t -> {
                                         logger.error("Failed register workflow", t);
@@ -455,18 +434,10 @@ public class ModelServer {
             }
             String endpoint = matcher.group(2);
             String workflowUrlString = matcher.group(3);
-            String[] devices = {null};
             String workflowName;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
                 workflowName = tokens[0];
-                if (tokens.length > 1) {
-                    Pair<String, Path> pair = ModelInfo.downloadModel(workflowUrlString);
-                    String engineName = ModelInfo.inferEngine(pair.getValue(), pair.getKey());
-                    dependencyManager.installEngine(engineName);
-                    Engine engine = Engine.getEngine(engineName);
-                    devices = parseDevices(tokens[1], engine, pair.getValue());
-                }
             } else {
                 workflowName = ModelInfo.inferModelNameFromUrl(workflowUrlString);
             }
@@ -476,16 +447,9 @@ public class ModelServer {
                     WorkflowDefinition.parse(workflowUrl.toURI(), workflowUrl.openStream())
                             .toWorkflow();
 
-            String[] finalDevices = devices;
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
-                            .thenAccept(
-                                    v -> {
-                                        for (String deviceName : finalDevices) {
-                                            modelManager.initWorkers(workflow, deviceName, -1, -1);
-                                        }
-                                    })
                             .exceptionally(
                                     t -> {
                                         logger.error("Failed register workflow", t);
@@ -518,83 +482,13 @@ public class ModelServer {
             path = Utils.getNestedModelDir(path);
             String url = path.toUri().toURL().toString();
             String modelName = ModelInfo.inferModelNameFromUrl(url);
-            String engine;
-            if (Files.isDirectory(path)) {
-                engine = ModelInfo.inferEngine(path, path.toFile().getName());
-            } else {
-                // .zip file
-                engine = ModelInfo.inferEngineFromUrl(url);
-                Pair<String, Path> pair = ModelInfo.downloadModel(url);
-                path = pair.getValue();
-            }
-            if (engine == null) {
-                return null;
-            }
-            String loadOnDevices = ModelInfo.inferDeviceName(url);
-            if (loadOnDevices == null) {
-                loadOnDevices = configManager.getLoadOnDevices();
-            }
-            return modelName + "::" + engine + ':' + loadOnDevices + '=' + url;
+            return modelName + '=' + url;
         } catch (MalformedURLException e) {
             throw new AssertionError("Invalid path: " + path, e);
         } catch (IOException e) {
             logger.warn("Failed to access file: " + path, e);
             return null;
         }
-    }
-
-    private String[] parseDevices(String devices, Engine engine, Path modelDir) {
-        if ("*".equals(devices)) {
-            int gpuCount = engine.getGpuCount();
-            if (gpuCount > 0) {
-                String engineName = engine.getEngineName();
-                if ("Python".equals(engineName)) {
-                    Properties prop = ModelInfo.getServingProperties(modelDir);
-                    String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
-                    v = prop.getProperty("option.tensor_parallel_degree", v);
-                    int tensorParallelDegree = Integer.parseInt(v);
-                    if (tensorParallelDegree > 0) {
-                        int procs = gpuCount / tensorParallelDegree;
-                        if (procs == 0) {
-                            throw new EngineException(
-                                    "GPU devices are not enough to run "
-                                            + tensorParallelDegree
-                                            + " partitions.");
-                        }
-                        gpuCount = procs;
-                    }
-                } else if ("DeepSpeed".equals(engineName)
-                        || "FasterTransformer".equals(engineName)) {
-                    return new String[] {"0"};
-                }
-
-                return IntStream.range(0, gpuCount)
-                        .mapToObj(String::valueOf)
-                        .toArray(String[]::new);
-            } else if (NeuronUtils.hasNeuron()) {
-                int neurons = NeuronUtils.getNeuronCores();
-                Properties prop = ModelInfo.getServingProperties(modelDir);
-                String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
-                v = prop.getProperty("option.tensor_parallel_degree", v);
-                int tensorParallelDegree = Integer.parseInt(v);
-                if (tensorParallelDegree > 0) {
-                    // Assume user understand TP only works on inf2
-                    int procs = neurons / tensorParallelDegree;
-                    if (procs == 0) {
-                        throw new EngineException(
-                                "Neuron devices are not enough to run "
-                                        + tensorParallelDegree
-                                        + " partitions. Please refer to: "
-                                        + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
-                    }
-                    neurons = procs;
-                }
-                return IntStream.range(0, neurons).mapToObj(i -> "nc" + i).toArray(String[]::new);
-            }
-        } else if (!devices.isEmpty()) {
-            return devices.split(";");
-        }
-        return new String[] {null};
     }
 
     private static void printHelp(String msg, Options options) {

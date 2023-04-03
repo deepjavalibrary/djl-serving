@@ -83,14 +83,21 @@ public final class ModelManager {
                 () -> {
                     for (ModelInfo<Input, Output> model : workflow.getModels()) {
                         try {
+                            // download model and configure per model settings
+                            model.initialize();
+
                             // Install engine if necessary
                             String engine = model.getEngineName();
-                            if (engine != null) {
-                                DependencyManager dm = DependencyManager.getInstance();
-                                dm.installEngine(engine);
-                            }
+                            DependencyManager dm = DependencyManager.getInstance();
+                            dm.installEngine(engine);
                             wlm.registerModel(model);
-                        } catch (IOException e) {
+
+                            for (String deviceName : model.getLoadOnDevices()) {
+                                int minWorkers = model.getMinWorkers();
+                                int maxWorkers = model.getMaxWorkers();
+                                modelManager.initWorkers(model, deviceName, minWorkers, maxWorkers);
+                            }
+                        } catch (IOException | ModelNotFoundException e) {
                             throw new CompletionException(e);
                         }
                     }
@@ -143,24 +150,6 @@ public final class ModelManager {
         }
 
         return true;
-    }
-
-    /**
-     * Initializes the workers for each model in a workflow.
-     *
-     * @param workflow the workflow to scale workers for
-     * @param deviceName the device for the model
-     * @param minWorkers the min workers
-     * @param maxWorkers the max workers
-     * @return the info about the scaled workflow
-     * @see WorkerPool#initWorkers(String, int, int)
-     */
-    public Workflow initWorkers(
-            Workflow workflow, String deviceName, int minWorkers, int maxWorkers) {
-        for (ModelInfo<Input, Output> model : workflow.getModels()) {
-            initWorkers(model, deviceName, minWorkers, maxWorkers);
-        }
-        return workflow;
     }
 
     /**
@@ -264,7 +253,7 @@ public final class ModelManager {
      *
      * @param workflow the workflow to run
      * @param input the input to the task
-     * @return {@code true} if submit success, false otherwise.
+     * @return the {@code CompletableFuture}
      */
     public CompletableFuture<Output> runJob(Workflow workflow, Input input) {
         return workflow.execute(wlm, input);

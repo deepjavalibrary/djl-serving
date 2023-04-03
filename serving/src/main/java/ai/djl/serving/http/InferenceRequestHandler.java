@@ -235,8 +235,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             modelUrl,
                             version,
                             engineName,
+                            deviceName,
                             Input.class,
                             Output.class,
+                            -1,
+                            -1,
                             -1,
                             -1,
                             -1,
@@ -245,8 +248,13 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
             modelManager
                     .registerWorkflow(wf)
-                    .thenApply(p -> modelManager.initWorkers(wf, deviceName, -1, -1))
-                    .thenAccept(p -> runJob(modelManager, ctx, p, input));
+                    .thenAccept(p -> runJob(modelManager, ctx, wf, input))
+                    .exceptionally(
+                            t -> {
+                                logger.error("Failed register workflow", t);
+                                NettyUtils.sendError(ctx, t.getCause());
+                                return null;
+                            });
             return;
         }
 
