@@ -15,19 +15,19 @@ endpoint = "http://127.0.0.1:8080/predictions/test"
 
 ds_raw_model_spec = {
     "gpt-j-6b": {
-        "max_memory_per_gpu": 10.0,
+        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "use_pipeline": True
     },
     "bloom-7b1": {
-        "max_memory_per_gpu": 10.0,
+        "max_memory_per_gpu": [7.0, 7.0, 8.0, 9.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "use_pipeline": False
     },
     "opt-30b": {
-        "max_memory_per_gpu": 16.0,
+        "max_memory_per_gpu": [16.0, 16.0, 16.0, 16.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "use_pipeline": False
@@ -36,24 +36,24 @@ ds_raw_model_spec = {
 
 hf_model_spec = {
     "gpt-neo-2.7b": {
-        "max_memory_per_gpu": 8.0,
+        "max_memory_per_gpu": [8.0, 8.0, 9.0, 17.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
     },
     "gpt-j-6b": {
-        "max_memory_per_gpu": 14.0,
+        "max_memory_per_gpu": [8.0, 9.0, 9.0, 21.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
     },
     "bloom-7b1": {
-        "max_memory_per_gpu": 10.0,
+        "max_memory_per_gpu": [7.0, 7.0, 8.0, 9.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128]
     },
     "bigscience/bloom-3b": {
-        "max_memory_per_gpu": 5,
+        "max_memory_per_gpu": [5],
         "batch_size": [1],
         "seq_length": [16, 32],
         "worker": 1,
@@ -63,24 +63,24 @@ hf_model_spec = {
 
 ds_model_spec = {
     "gpt-j-6b": {
-        "max_memory_per_gpu": 10.0,
+        "max_memory_per_gpu": [9.0, 10.0, 11.0, 12.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
     },
     "bloom-7b1": {
-        "max_memory_per_gpu": 10.0,
+        "max_memory_per_gpu": [7.0, 8.0, 8.0, 9.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256]
     },
     "opt-13b": {
-        "max_memory_per_gpu": 17.0,
+        "max_memory_per_gpu": [17.0, 18.0, 19.0, 22.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "worker": 2
     },
     "gpt-neo-1.3b": {
-        "max_memory_per_gpu": 3.5,
+        "max_memory_per_gpu": [3.5],
         "batch_size": [1],
         "seq_length": [16, 32],
         "worker": 2,
@@ -144,7 +144,7 @@ sd_model_spec = {
 
 ds_aot_model_spec = {
     "opt-6.7b": {
-        "max_memory_per_gpu": 12,
+        "max_memory_per_gpu": [12.0, 12.0, 12.0, 12.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "use_pipeline": True
@@ -237,7 +237,7 @@ def test_handler(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
-    for batch_size in spec["batch_size"]:
+    for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}
             params = {"max_new_tokens": seq_length}
@@ -259,7 +259,7 @@ def test_handler(model, model_spec):
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
             for memory in memory_usage:
-                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
+                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
 
 
 def test_ds_raw_model(model, model_spec):
@@ -268,7 +268,7 @@ def test_ds_raw_model(model, model_spec):
             f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
         )
     spec = model_spec[args.model]
-    for batch_size in spec["batch_size"]:
+    for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
             req = {
                 "batch_size": batch_size,
@@ -283,7 +283,7 @@ def test_ds_raw_model(model, model_spec):
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
             for memory in memory_usage:
-                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
+                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
 
 
 def test_sd_handler(model, model_spec):
