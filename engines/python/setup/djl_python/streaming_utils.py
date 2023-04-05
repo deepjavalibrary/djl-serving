@@ -159,7 +159,7 @@ class StreamingUtils:
             processors.append(TypicalLogitsWarper(mass=kwargs["typical_p"]))
 
         logits[-1:, :] = processors(input_ids, logits[-1:, :])
-        generator = torch.Generator(StreamingUtils.DEVICE)
+        generator = torch.Generator(StreamingUtils._get_current_device())
         if "manual_seed" in kwargs:
             generator.manual_seed(kwargs["manual_seed"])
         probs = torch.nn.functional.softmax(logits[-1])
