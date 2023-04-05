@@ -1,8 +1,8 @@
 import os
 import json
 import glob
-import tempfile
 import zipfile
+import tempfile
 
 MASTER_ADDR = "127.0.0.1"
 MASTER_PORT = 29761
@@ -84,7 +84,7 @@ def is_engine_mpi_mode(engine):
 
 
 def get_download_dir(properties_dir, suffix=""):
-    tmp = tempfile.mktemp(suffix=suffix, prefix="download")
+    tmp = tempfile.mkdtemp(suffix=suffix, prefix="download")
     download_dir = os.environ.get("SERVING_DOWNLOAD_DIR", tmp)
     if download_dir == "default":
         download_dir = properties_dir
