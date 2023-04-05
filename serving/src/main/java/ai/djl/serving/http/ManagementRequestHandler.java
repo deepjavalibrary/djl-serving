@@ -34,8 +34,6 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
-import org.apache.logging.log4j.util.Strings;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -337,7 +335,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 }
             }
 
-            String combinedMsg = Strings.join(messages, '\n');
+            String combinedMsg = String.join("\n", messages);
             NettyUtils.sendJsonResponse(ctx, new StatusResponse(combinedMsg));
         } catch (NumberFormatException ex) {
             throw new BadRequestException("parameter is invalid number." + ex.getMessage(), ex);
