@@ -14,8 +14,9 @@ dependencies {
 
     //noinspection GradlePackageUpdate
     implementation "commons-cli:commons-cli:${commons_cli_version}"
-    implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
-    implementation "com.lmax:disruptor:${disruptor_version}"
+
+    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
+    runtimeOnly "com.lmax:disruptor:${disruptor_version}"
 
     runtimeOnly "ai.djl:model-zoo"
     runtimeOnly "ai.djl.mxnet:mxnet-model-zoo"
