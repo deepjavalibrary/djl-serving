@@ -16,6 +16,7 @@ import json
 import torch
 from transformers import (AutoConfig, PretrainedConfig, AutoTokenizer,
                           AutoModelForCausalLM,
+                          AutoModelForSeq2SeqLM,
                           AutoModelForSequenceClassification,
                           AutoModelForQuestionAnswering, AutoModelForMaskedLM,
                           AutoModelForTokenClassification, pipeline,
@@ -26,7 +27,7 @@ from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
 from typing import Optional
 
-SUPPORTED_MODEL_TYPES = {
+OPTIMIZED_MODEL_TYPES = {
     "roberta",
     "xlm-roberta",
     "gpt2",
@@ -45,6 +46,7 @@ SUPPORTED_TASKS = {
     "fill-mask",
     "token-classification",
     "conversational",
+    "text2text-generation",
 }
 
 ARCHITECTURES_TO_TASK = {
@@ -55,6 +57,7 @@ ARCHITECTURES_TO_TASK = {
     "ForMaskedLM": "fill-mask",
     "ForTokenClassification": "token-classification",
     "BloomModel": "text-generation",
+    "ForConditionalGeneration": "text2text-generation",
 }
 
 TASK_TO_MODEL = {
@@ -64,6 +67,7 @@ TASK_TO_MODEL = {
     "fill-mask": AutoModelForMaskedLM,
     "token-classification": AutoModelForTokenClassification,
     "conversational": AutoModelForCausalLM,
+    "text2text-generation": AutoModelForSeq2SeqLM
 }
 
 
@@ -105,11 +109,11 @@ class DeepSpeedService(object):
         self._validate_model_type_and_task()
         self.create_model_pipeline()
         self.logger.info(
-            f"Initialized DeepSpeed model with the following configurations"
-            f"model: {self.model_id_or_path}"
-            f"task: {self.task}"
-            f"data_type: {self.ds_config['dtype']}"
-            f"tensor_parallel_degree: {self.tensor_parallel_degree}")
+            f"Initialized DeepSpeed model with the following configurations\n"
+            f"model: {self.model_id_or_path}\n"
+            f"task: {self.task}\n"
+            f"data_type: {self.ds_config['dtype']}\n"
+            f"tensor_parallel_degree: {self.tensor_parallel_degree}\n")
         self.initialized = True
 
     def _parse_properties(self, properties):
@@ -135,13 +139,9 @@ class DeepSpeedService(object):
 
     def _get_ds_config(self, properties: dict):
         ds_config = {
-            "replace_with_kernel_inject":
-            True,
             "tensor_parallel": {
                 "tp_size": self.tensor_parallel_degree
             },
-            "mpu":
-            None,
             "enable_cuda_graph":
             properties.get("enable_cuda_graph", "false").lower() == "true",
             "triangular_masking":
@@ -150,8 +150,6 @@ class DeepSpeedService(object):
             properties.get("return_tuple", "true").lower() == "true",
             "training_mp_size":
             int(properties.get("training_mp_size", 1)),
-            "replace_method":
-            "auto",
             "max_tokens":
             self.max_tokens,
             "save_mp_checkpoint_path":
@@ -178,9 +176,11 @@ class DeepSpeedService(object):
             self.model_config = AutoConfig.from_pretrained(
                 self.model_id_or_path)
 
-        if self.model_config.model_type not in SUPPORTED_MODEL_TYPES:
-            raise ValueError(
-                f"model_type: {self.model_config.model_type} is not currently supported by DeepSpeed"
+        if self.model_config.model_type not in OPTIMIZED_MODEL_TYPES:
+            self.logger.warn(
+                f"DeepSpeed does not currently support optimized CUDA kernels for the model type "
+                f"{self.model_config.model_type}, and may not support this model for inference. Please "
+                f"check the DeepSpeed documentation to verify. Attempting to load model with DeepSpeed."
             )
 
         if not self.task:
@@ -201,7 +201,7 @@ class DeepSpeedService(object):
         if not self.task:
             raise ValueError(
                 f"Task could not be inferred from model config. "
-                f"Please manually set `task` in serving.properties")
+                f"Please manually set `task` in serving.properties.")
 
     def create_model_pipeline(self):
         # If a ds checkpoint is provided, we instantiate model with meta tensors. weights loaded when DS engine invoked
@@ -221,6 +221,8 @@ class DeepSpeedService(object):
             self.ds_config["dtype"] = self.data_type
         else:
             self.ds_config["dtype"] = model.dtype
+        if self.model_config.model_type in OPTIMIZED_MODEL_TYPES:
+            self.ds_config["replace_with_kernel_inject"] = True
         self.model = deepspeed.init_inference(model, config=self.ds_config)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
         if self.enable_streaming:
