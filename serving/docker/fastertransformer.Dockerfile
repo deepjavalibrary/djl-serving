@@ -79,6 +79,7 @@ RUN apt-get update && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} fastertransformer" > /opt/djl/bin/telemetry && \
     scripts/install_s5cmd.sh x64 && \
+    apt-get install -yq git && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh fastertransformer && \
     useradd -m -d /home/djl djl && \
