@@ -90,8 +90,9 @@ class StreamingUtils:
                                                **kwargs):
         sequence_length = kwargs.get("seq_length", 50)
         top_k = kwargs.get("top_k", 50)
-        input_ids = torch.as_tensor(
-            [tokenizer.encode(text) for text in inputs])
+        tokenized_inputs = tokenizer(inputs, return_tensors="pt",
+                                     padding=True)
+        input_ids = tokenized_inputs["input_ids"]
         model.reset()
         eos_token_id = model.config.eos_token_id
         # populate key/value caches according to the prompt text
@@ -100,7 +101,6 @@ class StreamingUtils:
         next_token_scores = model(input_ids, position_ids)
 
         tokens = [input_ids]
-        _, start = input_ids.shape
         for cur_len in range(start, sequence_length):
             # don't sample EOS
             next_token_scores[:, eos_token_id] = -float('inf')
@@ -113,7 +113,7 @@ class StreamingUtils:
                                                replacement=True)
             inputs = torch.gather(topk_indices, 1, inputs_in_topk)
             tokens.append(inputs)
-            token_text = tokenizer.decode(inputs[0][0])
+            token_text = tokenizer.batch_decode(inputs)
             position_ids = torch.as_tensor([cur_len], dtype=torch.int32)
             next_token_scores = model(inputs, position_ids)
             yield token_text
