@@ -1,0 +1,2 @@
+name=cache-engines
+export=ai.djl.serving.ddbcache.DdbCachePlugin

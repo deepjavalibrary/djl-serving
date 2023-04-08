@@ -10,6 +10,7 @@ repositories {
 dependencies {
     jacocoAggregation project(":benchmark")
     jacocoAggregation project(":engines:python")
+    jacocoAggregation project(":plugins:cache")
     jacocoAggregation project(":plugins:kserve")
     // jacocoAggregation project(":plugins:management-console")
     jacocoAggregation project(":plugins:plugin-management-plugin")

@@ -129,9 +129,10 @@ applicationDistribution.into("conf") {
     from("src/main/conf/")
 }
 applicationDistribution.into("plugins") {
+    from(project(":plugins:cache").tasks.jar)
+    from(project(":plugins:kserve").tasks.jar)
     from(project(":plugins:management-console").tasks.jar)
     from(project(":plugins:static-file-plugin").tasks.jar)
-    from(project(":plugins:kserve").tasks.jar)
 }
 tasks.test.dependsOn(
         ":plugins:kserve:jar",
