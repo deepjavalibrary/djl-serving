@@ -15,8 +15,7 @@ import os
 import json
 import torch
 from transformers import (AutoConfig, PretrainedConfig, AutoTokenizer,
-                          AutoModelForCausalLM,
-                          AutoModelForSeq2SeqLM,
+                          AutoModelForCausalLM, AutoModelForSeq2SeqLM,
                           AutoModelForSequenceClassification,
                           AutoModelForQuestionAnswering, AutoModelForMaskedLM,
                           AutoModelForTokenClassification, pipeline,

@@ -12,12 +12,42 @@
 # the specific language governing permissions and limitations under the License.
 
 import fastertransformer as ft
+from transformers import AutoConfig
 from djl_python import Input, Output
 import logging
 from typing import Optional
 
 
 class FasterTransformerService(object):
+
+    t5_default_args = dict(inputs_embeds=None,
+                           beam_width=1,
+                           max_seq_len=200,
+                           top_k=1,
+                           top_p=0.0,
+                           beam_search_diversity_rate=0.0,
+                           temperature=1.0,
+                           len_penalty=0.0,
+                           repetition_penalty=1.0,
+                           presence_penalty=None,
+                           min_length=0,
+                           random_seed=0,
+                           is_return_output_log_probs=False,
+                           is_return_cum_log_probs=False,
+                           is_return_cross_attentions=False,
+                           bad_words_list=None,
+                           stop_words_list=None)
+
+    gpt_default_args = dict(beam_width=1,
+                            top_k=1,
+                            top_p=0.0,
+                            temperature=1,
+                            repetition_penalty=1.0,
+                            random_seed=0,
+                            len_penalty=0,
+                            min_length=0,
+                            return_output_length=0,
+                            return_cum_log_probs=0)
 
     def __init__(self) -> None:
         self.initialized = False
@@ -26,6 +56,7 @@ class FasterTransformerService(object):
         self.dtype = None
         self.model_id_or_path = None
         self.model = None
+        self.is_t5 = False
 
     def inititalize_properties(self, properties):
         self.tensor_parallel_degree = int(
@@ -40,12 +71,29 @@ class FasterTransformerService(object):
         self.inititalize_properties(properties)
         self.model = self.load_model()
         self.initialized = True
+        model_config = AutoConfig.from_pretrained(self.model_id_or_path)
+        self.is_t5 = model_config.model_type == "t5"
 
     def load_model(self):
         logging.info(f"Loading model: {self.model_id_or_path}")
         return ft.init_inference(self.model_id_or_path,
                                  self.tensor_parallel_degree,
                                  self.pipeline_parallel_degree, self.dtype)
+
+    @staticmethod
+    def param_mapper(parameters: dict):
+        if "max_new_tokens" in parameters:
+            logging.warning(
+                "max_new_tokens not supported for FasterTransformer,"
+                " will replace to max_length instead.")
+            parameters["max_seq_len"] = parameters.pop("max_new_tokens")
+        if "max_length" in parameters:
+            parameters["max_seq_len"] = parameters.pop("max_length")
+        if "num_beams" in parameters:
+            parameters["beam_width"] = parameters.pop("num_beams")
+        if "length_penalty" in parameters:
+            parameters["len_penalty"] = parameters.pop("length_penalty")
+        return parameters
 
     def inference(self, inputs: Input):
         try:
@@ -55,7 +103,19 @@ class FasterTransformerService(object):
             parameters = input_map.pop("parameters", {})
             if isinstance(input_text, str):
                 input_text = [input_text]
-            result = self.model.pipeline_generate(input_text, **parameters)
+            parameters = self.param_mapper(parameters)
+            if self.is_t5:
+                result = self.model.pipeline_generate(input_text, **parameters)
+            else:
+                output_len = parameters.pop("max_seq_len", 50)
+                beam_width = parameters.pop("beam_width", 1)
+                result = self.model.pipeline_generate(
+                    input_text,
+                    batch_size=len(input_text),
+                    output_len=output_len,
+                    beam_width=beam_width,
+                    **parameters)
+            result = [{"generated_text": s} for s in result]
             outputs = Output().add(result)
         except Exception as e:
             logging.exception("FasterTransformer inference failed")
