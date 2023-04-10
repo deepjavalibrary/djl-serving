@@ -168,14 +168,13 @@ public class WorkflowDefinition {
         Map<String, WorkflowFunction> loadedFunctions = new ConcurrentHashMap<>();
         if (funcs != null) {
             for (Entry<String, String> f : funcs.entrySet()) {
-                try {
-                    Class<? extends WorkflowFunction> clazz =
-                            Class.forName(f.getValue(), true, MutableClassLoader.getInstance())
-                                    .asSubclass(WorkflowFunction.class);
-                    loadedFunctions.put(f.getKey(), clazz.getConstructor().newInstance());
-                } catch (Exception e) {
-                    throw new BadWorkflowException("Could not load function " + f.getKey(), e);
+                ClassLoader cl = MutableClassLoader.getInstance();
+                WorkflowFunction func =
+                        ClassLoaderUtils.initClass(cl, WorkflowFunction.class, f.getValue());
+                if (func == null) {
+                    throw new BadWorkflowException("Could not load function " + f.getKey());
                 }
+                loadedFunctions.put(f.getKey(), func);
             }
         }
 

@@ -30,19 +30,17 @@ import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ServiceLoader;
-import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 /** {@code DependencyManager} is responsible to manage extra maven dependencies. */
-public class DependencyManager {
+public final class DependencyManager {
 
     private static final Logger logger = LoggerFactory.getLogger(DependencyManager.class);
 
@@ -50,29 +48,7 @@ public class DependencyManager {
     private static final String OSS_URL =
             "https://oss.sonatype.org/service/local/repositories/snapshots/content/";
 
-    private Path depDir;
-
-    DependencyManager() {
-        String serverHome = ConfigManager.getModelServerHome();
-        depDir = Paths.get(serverHome, "deps");
-        if (Files.isDirectory(depDir)) {
-            MutableClassLoader mc = MutableClassLoader.getInstance();
-            try (Stream<Path> stream = Files.list(depDir)) {
-                stream.forEach(
-                        p -> {
-                            if (p.toString().endsWith(".jar")) {
-                                try {
-                                    mc.addURL(p.toUri().toURL());
-                                } catch (MalformedURLException e) {
-                                    logger.warn("Invalid file system path: " + p, e);
-                                }
-                            }
-                        });
-            } catch (IOException e) {
-                logger.warn("Failed to load dependencies from deps folder.", e);
-            }
-        }
-    }
+    private DependencyManager() {}
 
     /**
      * Returns the singleton instance of {@code DependencyManager}.
@@ -141,6 +117,8 @@ public class DependencyManager {
         if (tokens.length < 3) {
             throw new IllegalArgumentException("Invalid dependency: " + dependency);
         }
+        String serverHome = ConfigManager.getModelServerHome();
+        Path depDir = Paths.get(serverHome, "deps");
         Files.createDirectories(depDir);
 
         logger.info("Loading dependency: {}", dependency);

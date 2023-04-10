@@ -12,13 +12,24 @@
  */
 package ai.djl.serving.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.stream.Stream;
 
 /** A {@code URLClassLoader} that can add new class at runtime. */
 public class MutableClassLoader extends URLClassLoader {
+
+    private static final Logger logger = LoggerFactory.getLogger(MutableClassLoader.class);
 
     private static final MutableClassLoader INSTANCE =
             AccessController.doPrivileged(
@@ -40,6 +51,24 @@ public class MutableClassLoader extends URLClassLoader {
      */
     public MutableClassLoader() {
         super(new URL[0]);
+        String serverHome = ConfigManager.getModelServerHome();
+        Path depDir = Paths.get(serverHome, "deps");
+        if (Files.isDirectory(depDir)) {
+            try (Stream<Path> stream = Files.list(depDir)) {
+                stream.forEach(
+                        p -> {
+                            if (p.toString().endsWith(".jar")) {
+                                try {
+                                    addURL(p.toUri().toURL());
+                                } catch (MalformedURLException e) {
+                                    logger.warn("Invalid file system path: " + p, e);
+                                }
+                            }
+                        });
+            } catch (IOException e) {
+                logger.warn("Failed to load dependencies from deps folder.", e);
+            }
+        }
     }
 
     /**
@@ -53,7 +82,7 @@ public class MutableClassLoader extends URLClassLoader {
 
     /** {@inheritDoc} */
     @Override
-    public void addURL(URL url) {
+    public final void addURL(URL url) {
         super.addURL(url);
     }
 }
