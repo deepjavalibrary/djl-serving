@@ -59,18 +59,3 @@ CMD ["serve"]
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-cu117="true"
-
-FROM base as transformers
-
-ARG transformers_version=4.27.3
-ARG accelerate_version=0.17.1
-
-COPY scripts scripts/
-RUN pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \
-    echo "${djl_version} transformers" > /opt/djl/bin/telemetry && \
-    scripts/patch_oss_dlc.sh python && \
-    pip cache purge && rm -rf scripts
-
-ENV MODEL_LOADING_TIMEOUT=2400
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.transformers="true"
-LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"

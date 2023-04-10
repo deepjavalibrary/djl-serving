@@ -9,7 +9,7 @@ apt-get update
 if [ -z "$PYTHON_VERSION" ]; then
   DEBIAN_FRONTEND=noninteractive apt-get install -yq python3-dev python3-pip git
 else
-  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl software-properties-common
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl software-properties-common git
   add-apt-repository -y ppa:deadsnakes/ppa
   apt-get autoremove -y python3
   apt-get install -y "python${PYTHON_VERSION}-dev" "python${PYTHON_VERSION}-distutils"
