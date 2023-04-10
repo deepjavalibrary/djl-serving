@@ -244,4 +244,13 @@ public class ModelInfoTest {
         model.initialize();
         assertEquals(model.getEngineName(), "PyTorch");
     }
+
+    @Test
+    public void testInitHuggingFaceHubModel() throws IOException, ModelException {
+        System.setProperty("HF_MODEL_ID", "gpt2");
+        System.setProperty("HF_TASK", "text-generation");
+        ModelInfo<Input, Output> model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        Assert.assertEquals(model.getEngineName(), "DeepSpeed");
+    }
 }

@@ -33,25 +33,28 @@ import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
 import ai.djl.translate.ServingTranslator;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
+import ai.djl.util.JsonUtils;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.management.MemoryUsage;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -577,6 +580,11 @@ public final class ModelInfo<I, O> {
             return "XGBoost";
         } else {
             try {
+                return inferLMIEngine();
+            } catch (IOException e) {
+                logger.error("Failed to find model in huggingface hub", e);
+            }
+            try {
                 if (Utils.getCurrentEpoch(modelDir, prefix) >= 0) {
                     // Assume this is DJL model
                     return Engine.getDefaultEngineName();
@@ -586,6 +594,76 @@ public final class ModelInfo<I, O> {
             }
         }
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
+    }
+
+    private String inferLMIEngine() throws IOException {
+        String huggingFaceHubModelId = System.getenv("HF_MODEL_ID");
+        String huggingFaceTask = System.getenv("HF_TASK");
+        String modelConfigUrl =
+                "https://huggingface.co/" + huggingFaceHubModelId + "/raw/main/config.json";
+        JsonObject modelConfig;
+        try (InputStream is = new URL(modelConfigUrl).openStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+           modelConfig =
+                    JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
+        }
+        String modelType = modelConfig.get("model_type").getAsString();
+        long numAttentionHeads;
+        if (modelConfig.has("num_attention_heads")) {
+            numAttentionHeads = modelConfig.get("num_attention_heads").getAsLong();
+        } else if (modelConfig.has("n_head")) {
+            numAttentionHeads = modelConfig.get("n_head").getAsLong();
+        } else {
+            numAttentionHeads = 0;
+        }
+        int tensorParallelDegree;
+        if (System.getenv("TENSOR_PARALLEL_DEGREE") != null) {
+            tensorParallelDegree = Integer.parseInt(System.getenv("TENSOR_PARALLEL_DEGREE"));
+        } else if (prop.get("option.tensor_parallel_degree") != null) {
+            tensorParallelDegree =
+                    Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
+        } else {
+            tensorParallelDegree = CudaUtils.getGpuCount();
+        }
+
+        prop.put("option.tensor_parallel_degree", tensorParallelDegree);
+        prop.put("option.task", huggingFaceTask);
+        prop.put("option.model_id", huggingFaceHubModelId);
+
+        if (!isTensorParallelSupported(numAttentionHeads, tensorParallelDegree)) {
+            return "Python";
+        }
+        if (isDeepSpeedRecommended(modelType)) {
+            return "DeepSpeed";
+        }
+        if (isFasterTransformerRecommended(modelType)) {
+            return "FasterTransformer";
+        }
+        return "Python";
+    }
+
+    private boolean isFasterTransformerRecommended(String modelType) {
+        return "t5".equals(modelType);
+    }
+
+    private boolean isDeepSpeedRecommended(String modelType) {
+        return DEEPSPEED_MODELS.contains(modelType);
+    }
+
+    static List<String> DEEPSPEED_MODELS = List.of(
+            "roberta",
+            "xlm-roberta",
+            "gpt2",
+            "bert",
+            "gpt_neo",
+            "gptj",
+            "opt",
+            "gpt_neox",
+            "bloom"
+    );
+
+    private boolean isTensorParallelSupported(long numAttentionHeads, int tensorParallelDegree) {
+        return numAttentionHeads % tensorParallelDegree == 0;
     }
 
     private void downloadModel() throws ModelNotFoundException, IOException {
