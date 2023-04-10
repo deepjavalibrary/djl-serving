@@ -54,7 +54,7 @@ hf_model_spec = {
     },
     "bigscience/bloom-3b": {
         "max_memory_per_gpu": [5],
-        "batch_size": [1],
+        "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
         "stream_output": True,
@@ -81,7 +81,7 @@ ds_model_spec = {
     },
     "gpt-neo-1.3b": {
         "max_memory_per_gpu": [3.5],
-        "batch_size": [1],
+        "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2,
         "stream_output": True,
@@ -252,6 +252,8 @@ def test_handler(model, model_spec):
                 assert len(
                     result
                 ) <= seq_length, "generated more takens than max_new_tokens"
+                result_0 = json.loads(result[0])['outputs']
+                assert len(result_0) == batch_size, "batch size number of tokens are not generated"
             else:
                 res = res.json()
                 logging.info(f"res {res}")
