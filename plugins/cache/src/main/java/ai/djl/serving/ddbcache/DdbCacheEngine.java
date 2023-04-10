@@ -29,6 +29,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.BillingMode;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
@@ -36,7 +37,6 @@ import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
@@ -84,7 +84,7 @@ public final class DdbCacheEngine implements CacheEngine {
      */
     private DdbCacheEngine(DynamoDbClient ddbClient) {
         this.ddbClient = ddbClient;
-        cacheTtl = Duration.ofMillis(10).toMillis();
+        cacheTtl = Duration.ofMillis(30).toMillis();
         writeBatch = 5;
     }
 
@@ -99,6 +99,7 @@ public final class DdbCacheEngine implements CacheEngine {
         if (endpoint == null) {
             ddbClient = DynamoDbClient.create();
         } else {
+            // For local unit test only
             URI uri = URI.create(endpoint);
             AwsCredentials credentials = AwsBasicCredentials.create("fake", "key");
             ddbClient =
@@ -134,11 +135,7 @@ public final class DdbCacheEngine implements CacheEngine {
                                             .attributeName(INDEX)
                                             .keyType(KeyType.RANGE)
                                             .build())
-                            .provisionedThroughput(
-                                    ProvisionedThroughput.builder()
-                                            .readCapacityUnits(10L)
-                                            .writeCapacityUnits(10L)
-                                            .build())
+                            .billingMode(BillingMode.PAY_PER_REQUEST)
                             .build();
             try (DynamoDbWaiter waiter = DynamoDbWaiter.builder().client(ddbClient).build()) {
                 ddbClient.createTable(request);
