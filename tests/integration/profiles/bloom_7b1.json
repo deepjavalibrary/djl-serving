@@ -1,0 +1,11 @@
+{
+	"test_series":"performance",
+	"engine":["deepspeed","huggingface"],
+	"model": "bloom-7b1",
+	"dtype": ["fp16","bf16"],
+	"tensor_parallel": 4,
+	"batch_size": 4,
+	"in_tokens": [256, 512, 1024],
+	"out_tokens": 256,
+	"count": 2
+}

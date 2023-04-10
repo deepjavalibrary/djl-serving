@@ -2,14 +2,52 @@ import requests
 import argparse
 import subprocess as sp
 import logging
+import os
+import sys
 import math
 import json
+from random import randrange
+import numpy as np
+from datetime import datetime
 from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Build the LLM configs')
 parser.add_argument('handler', help='the handler used in the model')
 parser.add_argument('model', help='The name of model')
+parser.add_argument("--engine",
+                    default="deepspeed",
+                    type=str,
+                    choices=["deepspeed", "huggingface", "fastertransformer"],
+                    help="The engine used for inference")
+parser.add_argument("--dtype",
+                    default="fp16",
+                    type=str,
+                    help="The model data type")
+parser.add_argument("--tensor_parallel",
+                    default=1,
+                    type=int,
+                    help="The model tensor parallel degree")
+parser.add_argument("--batch_size",
+                    default=1,
+                    type=int,
+                    help="The batch size of inference requests")
+parser.add_argument("--in_tokens",
+                    type=int,
+                    help="The sequence length for input tokens")
+parser.add_argument("--out_tokens",
+                    default=256,
+                    type=int,
+                    help="The sequence length for output tokens")
+parser.add_argument("--count",
+                    default=25,
+                    type=int,
+                    help="Number of requests sent")
+parser.add_argument("--cpu_mem",
+                    default=-1,
+                    type=int,
+                    help="CPU Memory footprint")
+args = parser.parse_args()
 
 endpoint = "http://127.0.0.1:8080/predictions/test"
 
@@ -227,18 +265,74 @@ def get_gpu_memory():
         command.split()).decode('ascii').split('\n')[:-1][1:]
     return [int(x.split()[0]) for i, x in enumerate(memory_free_info)]
 
+def get_total_memory(memory_snapshot):
+    memory_footprint = 0
+    for memory in memory_snapshot:
+        memory_footprint += float(memory)
+    return memory_footprint
+
+def log_metrics(arr):
+    p50 = np.percentile(arr, 50)
+    p90 = np.percentile(arr, 90)
+    p99 = np.percentile(arr, 99)
+    throughput = 1000 / (sum(arr) / len(arr))
+    tps = throughput * args.out_tokens * args.batch_size
+    max_memory = get_total_memory(get_gpu_memory())
+
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) # standard out so that this can be piped to a file
+    outputs = []
+    sanitized_model_name = args.model.split("/")[-1]
+    in_tokens = f"{args.in_tokens}-in-tokens_" if args.in_tokens else ""
+    metric_stem = f"{sanitized_model_name}_{args.dtype}_tp-{args.tensor_parallel}" \
+                  f"_batch-{args.batch_size}_{in_tokens}{args.out_tokens}-out-tokens"
+    outputs.append({"MetricName": f"{metric_stem}_p50", "Unit": "Milliseconds", "Value": p50})
+    outputs.append({"MetricName": f"{metric_stem}_p90", "Unit": "Milliseconds", "Value": p90})
+    outputs.append({"MetricName": f"{metric_stem}_p99", "Unit": "Milliseconds", "Value": p99})
+    outputs.append({"MetricName": f"{metric_stem}_throughput", "Unit": "Count/Second", "Value": throughput})
+    outputs.append({"MetricName": f"{metric_stem}_tokens-per-second", "Unit": "Count/Second", "Value": tps})
+    outputs.append({"MetricName": f"{metric_stem}_gpu-memory", "Unit": "Megabytes", "Value": max_memory})
+    if args.cpu_mem > 0:
+        outputs.append({"MetricName": f"{metric_stem}_cpu-memory", "Unit": "Kilobytes", "Value": args.cpu_mem})
+    logging.info(outputs)
+
+
+def prompt_generation(in_tokens):
+    in_characters = in_tokens * 4
+    result = None
+    with open(os.path.join(os.getcwd(), 'prompts.txt')) as f:
+        result = '\n'.join(f.readlines())
+    rot = result.find('. ', randrange(len(result))) + 2
+    result = result[rot:] + result[:rot]
+
+    # Do we use a generic tokenizer for length determination instead?
+    while len(result) < in_characters:
+        result += result
+    return result[:in_characters]
+
 
 def batch_generation(batch_size):
-    input_sentences = [
-        "DeepSpeed is a machine learning framework",
-        "He is working on",
-        "He has a",
-        "He got all",
-        "Everyone is happy and I can",
-        "The new movie that got Oscar this year",
-        "In the far far distance from our galaxy,",
-        "Peace is the only way",
-    ]
+    if args.in_tokens:
+        input_sentences = [
+            prompt_generation(args.in_tokens),
+            prompt_generation(args.in_tokens),
+            prompt_generation(args.in_tokens),
+            prompt_generation(args.in_tokens),
+            prompt_generation(args.in_tokens),
+            prompt_generation(args.in_tokens),
+            prompt_generation(args.in_tokens),
+            prompt_generation(args.in_tokens)
+        ]
+    else:
+        input_sentences = [
+            "DeepSpeed is a machine learning framework",
+            "He is working on",
+            "He has a",
+            "He got all",
+            "Everyone is happy and I can",
+            "The new movie that got Oscar this year",
+            "In the far far distance from our galaxy,",
+            "Peace is the only way",
+        ]
     if batch_size > len(input_sentences):
         # dynamically extend to support larger bs by repetition
         input_sentences *= math.ceil(batch_size / len(input_sentences))
@@ -431,6 +525,25 @@ def test_transformers_neuronx_handler(model, model_spec):
                 assert len(result) == batch_size
 
 
+def test_performance():
+    response_times = []
+    for i in range(args.count):
+        req = {"inputs": batch_generation(args.batch_size)}
+        total_length = args.out_tokens
+        if args.in_tokens:
+            total_length += args.in_tokens
+        params = {"max_length": total_length}
+        req["parameters"] = params
+        logging.info(f"req: {req}")
+        start = datetime.now()
+        res = send_json(req)
+        delta = (datetime.now() - start).total_seconds() * 1000
+        response_times.append(delta)
+        res = res.json()
+        logging.info(f"res: {res}")
+    log_metrics(response_times)
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
     if args.handler == "deepspeed_raw":
@@ -453,6 +566,8 @@ if __name__ == '__main__':
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)
+    elif args.handler == "performance":
+        test_performance()
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")

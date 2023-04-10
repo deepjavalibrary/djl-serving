@@ -195,6 +195,36 @@ transformers_neuronx_handler_list = {
     },
 }
 
+default_accel_configs = {
+    "huggingface": {
+        "engine": "Python",
+        "option.entryPoint": "djl_python.huggingface"
+    },
+    "deepspeed": {
+        "engine": "DeepSpeed",
+        "option.entryPoint": "djl_python.deepspeed"
+    },
+}
+
+performance_test_list = {
+    "opt-30b": {
+        "option.task": "text-generation",
+        "option.s3url": "s3://djl-llm/opt-30b/"
+    },
+    "gpt-j-6b": {
+        "option.task": "text-generation",
+        "option.s3url": "s3://djl-llm/gpt-j-6b/"
+    },
+    "bloom-7b1": {
+        "option.task": "text-generation",
+        "option.s3url": "s3://djl-llm/bloom-7b1/"
+    },
+    "gpt-neox-20b": {
+        "option.task": "text-generation",
+        "option.s3url": "s3://djl-llm/gpt-neox-20b/"
+    }
+}
+
 
 def write_properties(properties):
     model_path = "models/test"
@@ -329,6 +359,23 @@ def build_transformers_neuronx_handler_model(model):
     write_properties(options)
 
 
+def build_performance_model(model):
+    if model in performance_test_list.keys():
+        options = performance_test_list[model]
+    else:
+        options = {
+            "option.task": "text-generation",
+            "option.model_id": model
+        }
+    options["option.predict_timeout"] = 240
+    options["option.dtype"] = args.dtype
+    options["option.tensor_parallel_degree"] = args.tensor_parallel
+    for key, value in default_accel_configs[args.engine].items():
+        if key not in options:
+            options[key] = value
+    write_properties(options)
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
     'huggingface': build_hf_handler_model,
@@ -340,7 +387,8 @@ supported_handler = {
     'fastertransformer_handler_aot': builder_ft_handler_aot_model,
     'deepspeed_aot': build_ds_aot_model,
     'transformers_neuronx_raw': build_transformers_neuronx_model,
-    'transformers_neuronx': build_transformers_neuronx_handler_model
+    'transformers_neuronx': build_transformers_neuronx_handler_model,
+    'performance': build_performance_model
 }
 
 if __name__ == '__main__':
