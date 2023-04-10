@@ -17,6 +17,7 @@ import ai.djl.modality.Output;
 
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A cache that can be used for streaming online caching, streaming pagination, or async
@@ -60,8 +61,9 @@ public interface CacheEngine {
      *
      * @param key the cache key
      * @param output the {@code Output} to be added in cache
+     * @return a {@code CompletableFuture} instance
      */
-    void put(String key, Output output);
+    CompletableFuture<Void> put(String key, Output output);
 
     /**
      * Adds the {@code Output} to cache and return the cache key.
@@ -80,9 +82,10 @@ public interface CacheEngine {
      * Returns the cached {@link Output} from the cache.
      *
      * @param key the cache key
+     * @param limit the max number of items to return
      * @return the item
      */
-    Output get(String key);
+    Output get(String key, int limit);
 
     /**
      * Removes the cache from the key.

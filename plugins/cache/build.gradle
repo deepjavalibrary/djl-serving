@@ -1,0 +1,49 @@
+configurations {
+    exclusion
+}
+
+dependencies {
+    implementation project(":serving")
+    api platform("software.amazon.awssdk:bom:${awssdk_version}")
+    api "software.amazon.awssdk:dynamodb"
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+    testImplementation "com.amazonaws:DynamoDBLocal:1.21.1"
+
+    exclusion project(":serving")
+}
+
+jar {
+    includeEmptyDirs = false
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    from {
+        (configurations.runtimeClasspath - configurations.exclusion).collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+}
+
+tasks.register('copyNativeDeps', Copy) {
+    from(configurations.testRuntimeClasspath) {
+        include "*.dylib"
+        include "*.so"
+        include "*.dll"
+    }
+    into 'build/native'
+}
+
+compileJava.dependsOn copyNativeDeps
+test {
+    doFirst {
+        System.setProperty("java.library.path", 'build/native')
+    }
+}
+
+tasks.register('copyJar', Copy) {
+    from jar
+    into "../../serving/plugins"
+}
+
+jar.finalizedBy(copyJar)

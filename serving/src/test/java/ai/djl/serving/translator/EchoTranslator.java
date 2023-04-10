@@ -44,11 +44,13 @@ public class EchoTranslator implements ServingTranslator {
         Input input = (Input) ctx.getAttachment("input");
         boolean streaming = Boolean.parseBoolean(input.getAsString("stream"));
         long delay = Long.parseLong(input.getProperty("delay", "1000"));
+        String count = input.getAsString("count");
+        int numTokens = count == null ? 5 : Integer.parseInt(count);
         Output output = new Output();
         if (streaming) {
             ChunkedBytesSupplier cs = new ChunkedBytesSupplier();
             output.add(cs);
-            new Thread(() -> sendToken(cs, delay)).start();
+            new Thread(() -> sendToken(cs, delay, numTokens)).start();
         } else {
             output.setProperties(input.getProperties());
             output.add(input.getData());
@@ -56,13 +58,13 @@ public class EchoTranslator implements ServingTranslator {
         return output;
     }
 
-    public void sendToken(ChunkedBytesSupplier cs, long delay) {
+    public void sendToken(ChunkedBytesSupplier cs, long delay, int count) {
         try {
-            for (int i = 0; i < 5; ++i) {
+            for (int i = 0; i < count; ++i) {
                 cs.appendContent(("tok_" + i + '\n').getBytes(StandardCharsets.UTF_8), false);
                 Thread.sleep(delay);
             }
-            cs.appendContent(("tok_" + 5 + '\n').getBytes(StandardCharsets.UTF_8), true);
+            cs.appendContent(("tok_" + count + '\n').getBytes(StandardCharsets.UTF_8), true);
         } catch (InterruptedException ignore) {
             // ignore
         }

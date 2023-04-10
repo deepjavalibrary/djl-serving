@@ -47,8 +47,6 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -59,6 +57,7 @@ import java.util.regex.Pattern;
 public class InferenceRequestHandler extends HttpRequestHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(InferenceRequestHandler.class);
+
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
     private static final Metric RESPONSE_2_XX = new Metric("2XX", 1);
     private static final Metric RESPONSE_4_XX = new Metric("4XX", 1);
@@ -292,6 +291,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             Output pending = new Output();
             pending.setMessage("The model result is not yet available");
             pending.setCode(202);
+            pending.addProperty(X_NEXT_TOKEN, nextToken);
             cache.put(nextToken, pending);
 
             // Send back token to user
@@ -323,46 +323,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
 
         CacheEngine cache = CacheManager.getCacheEngine();
-        Output output = cache.get(startingToken);
+        Output output = cache.get(startingToken, limit);
         if (output == null) {
             throw new BadRequestException("Invalid " + X_STARTING_TOKEN);
         }
-        BytesSupplier data = output.getData();
-        if (!(data instanceof ChunkedBytesSupplier)) {
-            logger.warn("Output doesn't support async response");
-            sendOutput(output, ctx);
-            return;
-        }
-
-        ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
-        List<byte[]> list = new ArrayList<>();
-        int size = 0;
-        for (int i = 0; i < limit; ++i) {
-            byte[] buf = cbs.poll();
-            if (buf == null) {
-                break;
-            }
-            size += buf.length;
-            list.add(buf);
-        }
-        byte[] buf = new byte[size];
-        int pos = 0;
-        for (byte[] array : list) {
-            System.arraycopy(array, 0, buf, pos, array.length);
-            pos += array.length;
-        }
-        Output o = new Output();
-        o.setCode(output.getCode());
-        o.setMessage(output.getMessage());
-        o.getProperties().putAll(output.getProperties());
-        o.add(buf);
-        if (cbs.hasNext()) {
-            o.addProperty(X_NEXT_TOKEN, startingToken);
-        } else {
-            // clean up cache
-            cache.remove(startingToken);
-        }
-        sendOutput(o, ctx);
+        sendOutput(output, ctx);
     }
 
     void sendOutput(Output output, ChannelHandlerContext ctx) {

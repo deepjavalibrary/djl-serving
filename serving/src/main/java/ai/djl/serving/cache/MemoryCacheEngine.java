@@ -12,11 +12,16 @@
  */
 package ai.djl.serving.cache;
 
+import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Output;
+import ai.djl.ndarray.BytesSupplier;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -73,14 +78,59 @@ public class MemoryCacheEngine implements CacheEngine {
 
     /** {@inheritDoc} */
     @Override
-    public void put(String key, Output output) {
+    public CompletableFuture<Void> put(String key, Output output) {
         cache.put(key, output);
+        return null;
     }
 
     /** {@inheritDoc} */
     @Override
-    public Output get(String key) {
-        return cache.get(key);
+    public Output get(String key, int limit) {
+        Output output = cache.get(key);
+        if (output == null) {
+            return null;
+        }
+        BytesSupplier supplier = output.getData();
+        if (!(supplier instanceof ChunkedBytesSupplier)) {
+            return output;
+        }
+
+        ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
+        List<byte[]> list = new ArrayList<>();
+        int size = 0;
+        for (int i = 0; i < limit; ++i) {
+            byte[] buf = cbs.poll();
+            if (buf == null) {
+                break;
+            }
+            size += buf.length;
+            list.add(buf);
+        }
+        byte[] data = null;
+        if (list.size() > 1) {
+            data = new byte[size];
+            int pos = 0;
+            for (byte[] array : list) {
+                System.arraycopy(array, 0, data, pos, array.length);
+                pos += array.length;
+            }
+        } else if (list.size() == 1) {
+            data = list.get(0);
+        }
+        Output o = new Output();
+        o.setCode(output.getCode());
+        o.setMessage(output.getMessage());
+        o.getProperties().putAll(output.getProperties());
+        if (data != null) {
+            o.add(data);
+        }
+        if (cbs.hasNext()) {
+            o.addProperty("x-next-token", key);
+        } else {
+            // clean up cache
+            remove(key);
+        }
+        return o;
     }
 
     /** {@inheritDoc} */
