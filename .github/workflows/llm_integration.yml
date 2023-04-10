@@ -97,7 +97,7 @@ jobs:
     needs: create-runners
     strategy:
       matrix:
-        arch: [ deepspeed, transformers ]
+        arch: [ deepspeed, fastertransformer ]
     steps:
       - uses: actions/checkout@v3
       - name: Clean env

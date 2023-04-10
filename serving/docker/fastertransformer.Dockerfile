@@ -54,7 +54,8 @@ RUN apt-get update && apt-get install -y wget git zlib1g-dev && \
     ln -s /usr/local/openmpi-${ompi_version} /usr/local/mpi && \
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh ${python_version} && \
-    pip3 install ${torch_wheel} ${ft_wheel} transformers==${transformers_version} accelerate==${accelerate_version} && \
+    pip3 install ${torch_wheel} ${ft_wheel} && \
+    pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \
     pip3 install cmake sentencepiece && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
