@@ -10,7 +10,6 @@ from transformers import (
     RepetitionPenaltyLogitsProcessor,
 )
 
-
 class StreamingUtils:
 
     DEFAULT_MAX_NEW_TOKENS = 50
@@ -50,6 +49,8 @@ class StreamingUtils:
         stop_generation = False
         curr_length = input_length
         new_tokens_count = 0
+        unfinished_sequences = torch.ones((len(inputs), 1), dtype=torch.long,
+                                             device=input_ids.device)
         while True:
             if stop_generation:
                 return
@@ -60,21 +61,27 @@ class StreamingUtils:
                                     past_key_values=past_key_values,
                                     use_cache=True)
             next_token_ids = []
-            for logits in outputs.logits:
-                next_token_id = decoding_method(logits, all_input_ids,
+            for i, logits in enumerate(outputs.logits):
+                next_token_id = decoding_method(logits, all_input_ids[i, :].view(1, -1),
                                                 **kwargs)
                 next_token_ids.append(next_token_id.view(1, 1))
             token_ids = torch.cat(next_token_ids)
             past_key_values = outputs.past_key_values
-            token_text = tokenizer.batch_decode(token_ids)
-            input_ids = token_ids.view(len(inputs), 1)
-            all_input_ids = torch.cat([all_input_ids, token_ids], dim=1)
             attention_mask[:, curr_length] = 1
             curr_length += 1
             new_tokens_count += 1
+
+            not_eos_token_ids = (token_ids !=
+                               tokenizer.eos_token_id).view(len(inputs), 1)
+            unfinished_sequences = unfinished_sequences.mul(not_eos_token_ids)
+
+            input_ids = token_ids.view(len(inputs), 1)
+            input_ids = input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not()
+            all_input_ids = torch.cat([all_input_ids, token_ids], dim=1)
+            token_text = tokenizer.batch_decode(input_ids)
+
             stop_generation = StreamingUtils._has_met_stopping_criteria(
-                token_ids, new_tokens_count, max_new_tokens,
-                model.config.eos_token_id)
+                not_eos_token_ids, new_tokens_count, max_new_tokens)
             yield token_text
 
     @staticmethod
@@ -83,8 +90,9 @@ class StreamingUtils:
                                                **kwargs):
         sequence_length = kwargs.get("seq_length", 50)
         top_k = kwargs.get("top_k", 50)
-        input_ids = torch.as_tensor(
-            [tokenizer.encode(text) for text in inputs])
+        tokenized_inputs = tokenizer(inputs, return_tensors="pt",
+                                     padding=True)
+        input_ids = tokenized_inputs["input_ids"]
         model.reset()
         eos_token_id = model.config.eos_token_id
         # populate key/value caches according to the prompt text
@@ -93,7 +101,6 @@ class StreamingUtils:
         next_token_scores = model(input_ids, position_ids)
 
         tokens = [input_ids]
-        _, start = input_ids.shape
         for cur_len in range(start, sequence_length):
             # don't sample EOS
             next_token_scores[:, eos_token_id] = -float('inf')
@@ -106,21 +113,20 @@ class StreamingUtils:
                                                replacement=True)
             inputs = torch.gather(topk_indices, 1, inputs_in_topk)
             tokens.append(inputs)
-            token_text = tokenizer.decode(inputs[0][0])
+            token_text = tokenizer.batch_decode(inputs)
             position_ids = torch.as_tensor([cur_len], dtype=torch.int32)
             next_token_scores = model(inputs, position_ids)
             yield token_text
 
     @staticmethod
-    def _has_met_stopping_criteria(token, current_token_count, max_new_tokens,
-                                   eos_token_id):
-        if token == eos_token_id or current_token_count >= max_new_tokens:
+    def _has_met_stopping_criteria(not_eos_token_ids, current_token_count, max_new_tokens):
+        if not_eos_token_ids.sum() == 0 or current_token_count >= max_new_tokens:
             return True
         return False
 
     def _validate_inputs(inputs):
         if isinstance(inputs, list):
-            assert len(inputs) == 1, "[ERROR] batching is not yet supported"
+            assert len(inputs) >= 1, "[ERROR] empty input list"
         else:
             assert False, "inputs to stream generator must be a list of strings"
 
@@ -153,7 +159,7 @@ class StreamingUtils:
             processors.append(TypicalLogitsWarper(mass=kwargs["typical_p"]))
 
         logits[-1:, :] = processors(input_ids, logits[-1:, :])
-        generator = torch.Generator(StreamingUtils.DEVICE)
+        generator = torch.Generator(StreamingUtils._get_current_device())
         if "manual_seed" in kwargs:
             generator.manual_seed(kwargs["manual_seed"])
         probs = torch.nn.functional.softmax(logits[-1])
