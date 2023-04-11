@@ -84,6 +84,14 @@ def get_torch_dtype_from_str(dtype: str):
     raise ValueError(f"Invalid data type: {dtype}")
 
 
+def default_dtype():
+    if torch.cuda.is_available():
+        if torch.cuda.is_bf16_supported():
+            return "bf16"
+        return "fp16"
+    return "fp32"
+
+
 class DeepSpeedService(object):
 
     def __init__(self):
@@ -122,7 +130,7 @@ class DeepSpeedService(object):
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
         self.task = properties.get("task")
-        self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
+        self.data_type = get_torch_dtype_from_str(properties.get("dtype", default_dtype()))
         self.max_tokens = int(properties.get("max_tokens", 1024))
         self.device = int(os.getenv("LOCAL_RANK", 0))
         self.tensor_parallel_degree = int(
