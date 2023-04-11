@@ -603,9 +603,12 @@ public final class ModelInfo<I, O> {
             } catch (IOException e) {
                 logger.warn("Failed search parameter files in folder: " + modelDir, e);
             }
-            engine = inferLMIEngine();
-            if (engine != null) {
-                return engine;
+            String huggingFaceHubModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
+            if (huggingFaceHubModelId == null) {
+                huggingFaceHubModelId = prop.get("option.modelId").toString();
+            }
+            if (huggingFaceHubModelId != null && !huggingFaceHubModelId.startsWith("s3://")) {
+                return inferLMIEngine();
             }
         }
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
@@ -623,7 +626,7 @@ public final class ModelInfo<I, O> {
             modelConfig = JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
         } catch (IOException e) {
             logger.error("Could not read model config for {} from huggingface hub", huggingFaceHubModelId, e);
-            return null;
+            return "Python";
         }
 
         String modelType = modelConfig.get("model_type").getAsString();
