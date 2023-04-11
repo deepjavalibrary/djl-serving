@@ -109,6 +109,7 @@ class FasterTransformerService(object):
             else:
                 output_len = parameters.pop("max_seq_len", 50)
                 beam_width = parameters.pop("beam_width", 1)
+                # TODO: remove after fixes in FT python package
                 result = self.model.pipeline_generate(
                     input_text,
                     batch_size=len(input_text),
