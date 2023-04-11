@@ -53,7 +53,7 @@ hf_model_spec = {
         "seq_length": [64, 128]
     },
     "bigscience/bloom-3b": {
-        "max_memory_per_gpu": [5],
+        "max_memory_per_gpu": [5.0, 6.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
@@ -80,7 +80,7 @@ ds_model_spec = {
         "worker": 2
     },
     "gpt-neo-1.3b": {
-        "max_memory_per_gpu": [3.5],
+        "max_memory_per_gpu": [4.0, 5.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2,
