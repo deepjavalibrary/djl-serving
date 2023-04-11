@@ -109,12 +109,13 @@ class FasterTransformerService(object):
             else:
                 output_len = parameters.pop("max_seq_len", 50)
                 beam_width = parameters.pop("beam_width", 1)
+                # TODO: remove after fixes in FT python package
                 result = self.model.pipeline_generate(
                     input_text,
                     batch_size=len(input_text),
                     output_len=output_len,
                     beam_width=beam_width,
-                    **parameters)
+                    **parameters)[0]
             result = [{"generated_text": s} for s in result]
             outputs = Output().add(result)
         except Exception as e:
