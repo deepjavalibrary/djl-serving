@@ -54,7 +54,11 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,6 +71,18 @@ public final class ModelInfo<I, O> {
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
 
     private static final Pattern PATTERN = Pattern.compile("MemAvailable:\\s+(\\d+) kB");
+
+    private static final List<String> DEEPSPEED_MODELS =
+            List.of(
+                    "roberta",
+                    "xlm-roberta",
+                    "gpt2",
+                    "bert",
+                    "gpt_neo",
+                    "gptj",
+                    "opt",
+                    "gpt_neox",
+                    "bloom");
 
     private transient String id;
     private String version;
@@ -580,11 +596,6 @@ public final class ModelInfo<I, O> {
             return "XGBoost";
         } else {
             try {
-                return inferLMIEngine();
-            } catch (IOException e) {
-                logger.error("Failed to find model in huggingface hub", e);
-            }
-            try {
                 if (Utils.getCurrentEpoch(modelDir, prefix) >= 0) {
                     // Assume this is DJL model
                     return Engine.getDefaultEngineName();
@@ -592,21 +603,29 @@ public final class ModelInfo<I, O> {
             } catch (IOException e) {
                 logger.warn("Failed search parameter files in folder: " + modelDir, e);
             }
+            engine = inferLMIEngine();
+            if (engine != null) {
+                return engine;
+            }
         }
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
     }
 
-    private String inferLMIEngine() throws IOException {
-        String huggingFaceHubModelId = System.getenv("HF_MODEL_ID");
-        String huggingFaceTask = System.getenv("HF_TASK");
+    private String inferLMIEngine(){
+        String huggingFaceHubModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
+        String huggingFaceTask = Utils.getEnvOrSystemProperty("HF_TASK");
         String modelConfigUrl =
                 "https://huggingface.co/" + huggingFaceHubModelId + "/raw/main/config.json";
+
         JsonObject modelConfig;
         try (InputStream is = new URL(modelConfigUrl).openStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
-           modelConfig =
-                    JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
+            modelConfig = JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
+        } catch (IOException e) {
+            logger.error("Could not read model config for {} from huggingface hub", huggingFaceHubModelId, e);
+            return null;
         }
+
         String modelType = modelConfig.get("model_type").getAsString();
         long numAttentionHeads;
         if (modelConfig.has("num_attention_heads")) {
@@ -617,8 +636,8 @@ public final class ModelInfo<I, O> {
             numAttentionHeads = 0;
         }
         int tensorParallelDegree;
-        if (System.getenv("TENSOR_PARALLEL_DEGREE") != null) {
-            tensorParallelDegree = Integer.parseInt(System.getenv("TENSOR_PARALLEL_DEGREE"));
+        if (Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE") != null) {
+            tensorParallelDegree = Integer.parseInt(Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE"));
         } else if (prop.get("option.tensor_parallel_degree") != null) {
             tensorParallelDegree =
                     Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
@@ -650,20 +669,9 @@ public final class ModelInfo<I, O> {
         return DEEPSPEED_MODELS.contains(modelType);
     }
 
-    static List<String> DEEPSPEED_MODELS = List.of(
-            "roberta",
-            "xlm-roberta",
-            "gpt2",
-            "bert",
-            "gpt_neo",
-            "gptj",
-            "opt",
-            "gpt_neox",
-            "bloom"
-    );
 
     private boolean isTensorParallelSupported(long numAttentionHeads, int tensorParallelDegree) {
-        return numAttentionHeads % tensorParallelDegree == 0;
+        return tensorParallelDegree > 0 && numAttentionHeads % tensorParallelDegree == 0;
     }
 
     private void downloadModel() throws ModelNotFoundException, IOException {
