@@ -41,7 +41,6 @@ import ai.djl.util.cuda.CudaUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import jdk.jshell.execution.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +50,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.management.MemoryUsage;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -619,7 +617,11 @@ public final class ModelInfo<I, O> {
         if (huggingFaceHubModelId == null && Files.isRegularFile(modelDir.resolve("config.json"))) {
             modelConfigUri = modelDir.resolve("config.json").toUri();
         } else {
-            modelConfigUri = URI.create("https://huggingface.co/" + huggingFaceHubModelId + "/raw/main/config.json");
+            modelConfigUri =
+                    URI.create(
+                            "https://huggingface.co/"
+                                    + huggingFaceHubModelId
+                                    + "/raw/main/config.json");
         }
 
         JsonObject modelConfig;
