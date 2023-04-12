@@ -50,7 +50,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_djl_serving.sh $djl_version && \
     scripts/install_inferentia2.sh $torch_neuronx_version && \
-    pip install git+https://github.com/aws-neuron/transformers-neuronx.git && \
+    pip install git+https://github.com/aws-neuron/transformers-neuronx.git@v2.8.0 && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
