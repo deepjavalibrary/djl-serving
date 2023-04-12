@@ -41,6 +41,7 @@ import ai.djl.util.cuda.CudaUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import jdk.jshell.execution.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -594,6 +595,9 @@ public final class ModelInfo<I, O> {
             return "PaddlePaddle";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))) {
             return "XGBoost";
+        } else if (Utils.getEnvOrSystemProperty("HF_MODEL_ID") != null
+                || Files.isRegularFile(modelDir.resolve("config.json"))) {
+            return inferLMIEngine();
         } else {
             try {
                 if (Utils.getCurrentEpoch(modelDir, prefix) >= 0) {
@@ -603,54 +607,64 @@ public final class ModelInfo<I, O> {
             } catch (IOException e) {
                 logger.warn("Failed search parameter files in folder: " + modelDir, e);
             }
-            String huggingFaceHubModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-            if (huggingFaceHubModelId == null) {
-                huggingFaceHubModelId = prop.get("option.modelId").toString();
-            }
-            if (huggingFaceHubModelId != null && !huggingFaceHubModelId.startsWith("s3://")) {
-                return inferLMIEngine();
-            }
         }
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
     }
 
-    private String inferLMIEngine(){
+    private String inferLMIEngine() {
         String huggingFaceHubModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-        String huggingFaceTask = Utils.getEnvOrSystemProperty("HF_TASK");
-        String modelConfigUrl =
-                "https://huggingface.co/" + huggingFaceHubModelId + "/raw/main/config.json";
-
+        String modelConfigUri;
+        if (huggingFaceHubModelId == null) {
+            modelConfigUri = modelDir.resolve("config.json").toString();
+        } else {
+            modelConfigUri =
+                    "https://huggingface.co/"
+                            + huggingFaceHubModelId
+                            + "/raw/main/config.json";
+        }
         JsonObject modelConfig;
-        try (InputStream is = new URL(modelConfigUrl).openStream();
+        try (InputStream is = new URL(modelConfigUri).openStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
             modelConfig = JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
         } catch (IOException e) {
-            logger.error("Could not read model config for {} from huggingface hub", huggingFaceHubModelId, e);
+            logger.error(
+                    "Could not read model config for {} from huggingface hub",
+                    huggingFaceHubModelId,
+                    e);
             return "Python";
         }
 
         String modelType = modelConfig.get("model_type").getAsString();
-        long numAttentionHeads;
+        long numAttentionHeads = Long.MAX_VALUE;
+        // All of these are valid in the config.json file for the number of attention heads
         if (modelConfig.has("num_attention_heads")) {
             numAttentionHeads = modelConfig.get("num_attention_heads").getAsLong();
+        } else if (modelConfig.has("num_heads")) {
+            numAttentionHeads = modelConfig.get("num_heads").getAsLong();
         } else if (modelConfig.has("n_head")) {
             numAttentionHeads = modelConfig.get("n_head").getAsLong();
-        } else {
-            numAttentionHeads = 0;
         }
-        int tensorParallelDegree;
+
+        int tensorParallelDegree = CudaUtils.getGpuCount();
         if (Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE") != null) {
-            tensorParallelDegree = Integer.parseInt(Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE"));
+            tensorParallelDegree =
+                    Integer.parseInt(Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE"));
         } else if (prop.get("option.tensor_parallel_degree") != null) {
             tensorParallelDegree =
                     Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
-        } else {
-            tensorParallelDegree = CudaUtils.getGpuCount();
         }
+        logger.info("moddel config: {}", modelConfig);
+        logger.info("tensor parallel degree: {}", tensorParallelDegree);
+        logger.info("num attention heads: {}", numAttentionHeads);
 
-        prop.put("option.tensor_parallel_degree", tensorParallelDegree);
-        prop.put("option.task", huggingFaceTask);
         prop.put("option.model_id", huggingFaceHubModelId);
+        if (tensorParallelDegree > 0) {
+            prop.put("option.tensor_parallel_degree", tensorParallelDegree);
+        }
+        String huggingFaceTask = Utils.getEnvOrSystemProperty("HF_TASK");
+        if (huggingFaceTask != null) {
+            prop.put("option.task", huggingFaceTask);
+        }
 
         if (!isTensorParallelSupported(numAttentionHeads, tensorParallelDegree)) {
             return "Python";
@@ -671,7 +685,6 @@ public final class ModelInfo<I, O> {
     private boolean isDeepSpeedRecommended(String modelType) {
         return DEEPSPEED_MODELS.contains(modelType);
     }
-
 
     private boolean isTensorParallelSupported(long numAttentionHeads, int tensorParallelDegree) {
         return tensorParallelDegree > 0 && numAttentionHeads % tensorParallelDegree == 0;

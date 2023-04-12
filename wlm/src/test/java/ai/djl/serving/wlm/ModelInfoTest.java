@@ -252,26 +252,27 @@ public class ModelInfoTest {
         Files.createDirectories(modelDir);
 
         System.setProperty("HF_MODEL_ID", "gpt2");
-        System.setProperty("HF_TASK", "text-generation");
         System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
         ModelInfo<Input, Output> model = new ModelInfo<>("build/models/test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "DeepSpeed");
 
         System.setProperty("HF_MODEL_ID", "google/flan-t5-xl");
-        System.setProperty("HF_TASK", "text2text-generation");
         model = new ModelInfo<>("build/models/test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "FasterTransformer");
 
         System.setProperty("HF_MODEL_ID", "gpt2-xl");
-        System.setProperty("HF_TASK", "text-generation");
-        model  = new ModelInfo<>("build/models/test_model");
+        model = new ModelInfo<>("build/models/test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
 
         System.setProperty("HF_MODEL_ID", "Salesforce/codegen-6B-mono");
-        System.setProperty("HF_TASK", "text-generation");
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "Python");
+
+        System.setProperty("HF_MODEL_ID", "invalid-model-id");
         model = new ModelInfo<>("build/models/test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
@@ -279,6 +280,5 @@ public class ModelInfoTest {
         System.clearProperty("HF_MODEL_ID");
         System.clearProperty("HF_TASK");
         System.clearProperty("TENSOR_PARALLEL_DEGREE");
-
     }
 }
