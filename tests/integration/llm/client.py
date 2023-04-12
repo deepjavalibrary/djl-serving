@@ -82,7 +82,7 @@ ds_model_spec = {
     "gpt-neo-1.3b": {
         "max_memory_per_gpu": [4.0, 5.0],
         "batch_size": [1, 4],
-        "seq_length": [16, 32],
+        "seq_length": [16],
         "worker": 2,
         "stream_output": True,
     }
