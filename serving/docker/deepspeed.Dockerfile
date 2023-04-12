@@ -9,15 +9,16 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.7.1-cudnn8-devel-ubuntu20.04
+ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.22.0~SNAPSHOT
 ARG python_version=3.9
-ARG torch_version=1.13.1
+ARG torch_version=2.0.0
+ARG xformers_version=0.0.18
 ARG accelerate_version=0.17.1
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.3-py2.py3-none-any.whl"
 ARG transformers_version=4.27.3
-ARG diffusers_version=0.12.0
+ARG diffusers_version=0.15.0
 
 EXPOSE 8080
 
@@ -50,11 +51,11 @@ RUN apt-get update && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
+    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu118 && \
     pip3 install ${deepspeed_wheel} &&  \
     pip3 install transformers==${transformers_version} && \
-    pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
-    pip3 install diffusers[torch]==${diffusers_version} && \
+    pip3 install triton==2.0.0.post1 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
+    pip3 install diffusers[torch]==${diffusers_version} xformers==${xformers_version} && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
