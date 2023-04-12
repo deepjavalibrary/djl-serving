@@ -26,6 +26,7 @@ import ai.djl.translate.TranslateException;
 import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
 
+import com.google.gson.JsonObject;
 import org.testng.Assert;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeSuite;
@@ -276,6 +277,15 @@ public class ModelInfoTest {
         model = new ModelInfo<>("build/models/test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
+
+        JsonObject modelConfig = new JsonObject();
+        modelConfig.addProperty("model_type", "bloom");
+        modelConfig.addProperty("num_heads", "12");
+        Files.write(modelDir.resolve("config.json"), modelConfig.toString().getBytes());
+        System.clearProperty("HF_MODEL_ID");
+        model = new ModelInfo<>("build/models/test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "DeepSpeed");
 
         System.clearProperty("HF_MODEL_ID");
         System.clearProperty("HF_TASK");

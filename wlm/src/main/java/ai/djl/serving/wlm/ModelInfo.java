@@ -597,6 +597,7 @@ public final class ModelInfo<I, O> {
             return "XGBoost";
         } else if (Utils.getEnvOrSystemProperty("HF_MODEL_ID") != null
                 || Files.isRegularFile(modelDir.resolve("config.json"))) {
+            // HuggingFace SageMaker DLC
             return inferLMIEngine();
         } else {
             try {
@@ -612,22 +613,21 @@ public final class ModelInfo<I, O> {
     }
 
     private String inferLMIEngine() {
+        // Users either provide the hf hub model id, or upload model directly to container
         String huggingFaceHubModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-        String modelConfigUri;
-        if (huggingFaceHubModelId == null) {
-            modelConfigUri = modelDir.resolve("config.json").toString();
+        URI modelConfigUri;
+        if (huggingFaceHubModelId == null && Files.isRegularFile(modelDir.resolve("config.json"))) {
+            modelConfigUri = modelDir.resolve("config.json").toUri();
         } else {
-            modelConfigUri =
-                    "https://huggingface.co/"
-                            + huggingFaceHubModelId
-                            + "/raw/main/config.json";
+            modelConfigUri = URI.create("https://huggingface.co/" + huggingFaceHubModelId + "/raw/main/config.json");
         }
+
         JsonObject modelConfig;
-        try (InputStream is = new URL(modelConfigUri).openStream();
+        try (InputStream is = modelConfigUri.toURL().openStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
             modelConfig = JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
         } catch (IOException e) {
-            logger.error(
+            logger.warn(
                     "Could not read model config for {} from huggingface hub",
                     huggingFaceHubModelId,
                     e);
@@ -653,11 +653,10 @@ public final class ModelInfo<I, O> {
             tensorParallelDegree =
                     Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
         }
-        logger.info("moddel config: {}", modelConfig);
-        logger.info("tensor parallel degree: {}", tensorParallelDegree);
-        logger.info("num attention heads: {}", numAttentionHeads);
 
-        prop.put("option.model_id", huggingFaceHubModelId);
+        if (huggingFaceHubModelId != null) {
+            prop.put("option.model_id", huggingFaceHubModelId);
+        }
         if (tensorParallelDegree > 0) {
             prop.put("option.tensor_parallel_degree", tensorParallelDegree);
         }
