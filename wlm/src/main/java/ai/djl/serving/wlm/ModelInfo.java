@@ -50,6 +50,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.management.MemoryUsage;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -626,7 +627,8 @@ public final class ModelInfo<I, O> {
 
         JsonObject modelConfig;
         try (InputStream is = modelConfigUri.toURL().openStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+                BufferedReader reader =
+                        new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             modelConfig = JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
         } catch (IOException e) {
             logger.warn(

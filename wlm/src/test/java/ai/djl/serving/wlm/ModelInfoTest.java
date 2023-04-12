@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -250,41 +251,43 @@ public class ModelInfoTest {
     @Test
     public void testInferLMIEngine() throws IOException, ModelException {
         Path modelStore = Paths.get("build/models");
-        Path modelDir = modelStore.resolve("test_model");
+        Path modelDir = modelStore.resolve("lmi_test_model");
         Files.createDirectories(modelDir);
 
         System.setProperty("HF_MODEL_ID", "gpt2");
         System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
-        ModelInfo<Input, Output> model = new ModelInfo<>("build/models/test_model");
+        ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "DeepSpeed");
 
         System.setProperty("HF_MODEL_ID", "google/flan-t5-xl");
-        model = new ModelInfo<>("build/models/test_model");
+        model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "FasterTransformer");
 
         System.setProperty("HF_MODEL_ID", "gpt2-xl");
-        model = new ModelInfo<>("build/models/test_model");
+        model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
 
         System.setProperty("HF_MODEL_ID", "Salesforce/codegen-6B-mono");
-        model = new ModelInfo<>("build/models/test_model");
+        model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
 
         System.setProperty("HF_MODEL_ID", "invalid-model-id");
-        model = new ModelInfo<>("build/models/test_model");
+        model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
 
         JsonObject modelConfig = new JsonObject();
         modelConfig.addProperty("model_type", "bloom");
         modelConfig.addProperty("num_heads", "12");
-        Files.write(modelDir.resolve("config.json"), modelConfig.toString().getBytes());
+        Files.write(
+                modelDir.resolve("config.json"),
+                modelConfig.toString().getBytes(StandardCharsets.UTF_8));
         System.clearProperty("HF_MODEL_ID");
-        model = new ModelInfo<>("build/models/test_model");
+        model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "DeepSpeed");
 
