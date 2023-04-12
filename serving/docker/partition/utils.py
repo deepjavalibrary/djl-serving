@@ -1,6 +1,7 @@
 import os
 import json
 import glob
+import tempfile
 import zipfile
 
 MASTER_ADDR = "127.0.0.1"
@@ -10,7 +11,7 @@ FILES_TO_EXTRACT = [
     'djl_python/', 'djl_python/__init__.py', 'djl_python/deepspeed.py',
     'djl_python/inputs.py', 'djl_python/outputs.py', 'djl_python/pair_list.py',
     'djl_python/np_util.py', 'djl_python/service_loader.py',
-    'djl_python/fastertransformer.py'
+    'djl_python/fastertransformer.py', 'djl_python/streaming_utils.py'
 ]
 
 
@@ -80,3 +81,12 @@ def is_engine_mpi_mode(engine):
         raise NotImplementedError(
             f'{engine} '
             f'engine is not supported for ahead of time partitioning.')
+
+
+def get_download_dir(properties_dir, suffix=""):
+    tmp = tempfile.mktemp(suffix=suffix, prefix="download")
+    download_dir = os.environ.get("SERVING_DOWNLOAD_DIR", tmp)
+    if download_dir == "default":
+        download_dir = properties_dir
+
+    return download_dir
