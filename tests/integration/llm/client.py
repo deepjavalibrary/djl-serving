@@ -92,12 +92,12 @@ ft_model_spec = {
     "bigscience/bloom-3b": {
         "batch_size": [1, 2],
         "seq_length": [64, 128],
-        "max_memory_per_gpu": 6.0
+        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0]
     },
     "flan-t5-xxl": {
         "batch_size": [1, 2],
         "seq_length": [64, 128],
-        "max_memory_per_gpu": 15.0
+        "max_memory_per_gpu": [15.0, 15.0, 15.0, 15.0]
     }
 }
 
