@@ -83,8 +83,7 @@ public final class ModelInfo<I, O> {
                     "gptj",
                     "opt",
                     "gpt_neox",
-                    "bloom",
-                    "stable-diffusion");
+                    "bloom");
 
     private transient String id;
     private String version;
@@ -654,10 +653,6 @@ public final class ModelInfo<I, O> {
                     Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
         }
 
-        logger.info("model_type: {}", modelType);
-        logger.info("tensor_parallel_degree: {}", tensorParallelDegree);
-        logger.info("num attention heads: {}", numAttentionHeads);
-
         if (tensorParallelDegree > 0) {
             prop.put("option.tensor_parallel_degree", tensorParallelDegree);
         }
@@ -667,6 +662,7 @@ public final class ModelInfo<I, O> {
         }
 
         if ("stable-diffusion".equals(modelType)) {
+            // TODO: Move this from hardcoded to deduced in PyModel
             prop.put("option.entryPoint", "djl_python.stable-diffusion");
             return "DeepSpeed";
         }
