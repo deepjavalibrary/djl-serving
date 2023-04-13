@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.management.MemoryUsage;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -82,7 +83,8 @@ public final class ModelInfo<I, O> {
                     "gptj",
                     "opt",
                     "gpt_neox",
-                    "bloom");
+                    "bloom",
+                    "stable-diffusion");
 
     private transient String id;
     private String version;
@@ -566,11 +568,12 @@ public final class ModelInfo<I, O> {
         }
 
         String prefix = prop.getProperty("option.modelName", artifactName);
-        if (Files.isDirectory(modelDir.resolve("MAR-INF"))
-                || Files.isRegularFile(modelDir.resolve("model.py"))
-                || Files.isRegularFile(modelDir.resolve(prefix + ".py"))) {
-            // MMS/TorchServe
-            return "Python";
+        if (isPythonModel(prefix)) {
+            try {
+                return inferLMIEngine();
+            } catch (IOException | ModelException e) {
+                logger.warn("Failed to determine Python Backend engine", e);
+            }
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
                 || Files.isRegularFile(modelDir.resolve("model.pt"))) {
             return "PyTorch";
@@ -594,10 +597,6 @@ public final class ModelInfo<I, O> {
             return "PaddlePaddle";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))) {
             return "XGBoost";
-        } else if (Utils.getEnvOrSystemProperty("HF_MODEL_ID") != null
-                || Files.isRegularFile(modelDir.resolve("config.json"))) {
-            // HuggingFace SageMaker DLC
-            return inferLMIEngine();
         } else {
             try {
                 if (Utils.getCurrentEpoch(modelDir, prefix) >= 0) {
@@ -611,34 +610,32 @@ public final class ModelInfo<I, O> {
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
     }
 
-    private String inferLMIEngine() {
-        // Users either provide the hf hub model id, or upload model directly to container
-        String huggingFaceHubModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-        URI modelConfigUri;
-        if (huggingFaceHubModelId == null && Files.isRegularFile(modelDir.resolve("config.json"))) {
-            modelConfigUri = modelDir.resolve("config.json").toUri();
-        } else {
-            modelConfigUri =
-                    URI.create(
-                            "https://huggingface.co/"
-                                    + huggingFaceHubModelId
-                                    + "/raw/main/config.json");
-        }
+    private boolean isPythonModel(String prefix) {
+        return Files.isDirectory(modelDir.resolve("MAR-INF"))
+                || Files.isRegularFile(modelDir.resolve("model.py"))
+                || Files.isRegularFile(modelDir.resolve(prefix + ".py"))
+                || Utils.getEnvOrSystemProperty("HF_MODEL_ID") != null
+                || Files.isRegularFile(modelDir.resolve("config.json"))
+                || prop.containsKey("option.s3url")
+                || prop.containsKey("option.model_id");
+    }
 
-        JsonObject modelConfig;
-        try (InputStream is = modelConfigUri.toURL().openStream();
-                BufferedReader reader =
-                        new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            modelConfig = JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
-        } catch (IOException e) {
-            logger.warn(
-                    "Could not read model config for {} from huggingface hub",
-                    huggingFaceHubModelId,
-                    e);
+    private String inferLMIEngine() throws ModelException, IOException {
+        // MMS/Torchserve
+        if (Files.isDirectory(modelDir.resolve("MAR-INF"))) {
+            return "Python";
+        }
+        JsonObject modelConfig = getHuggingFaceModelConfig();
+        if (modelConfig == null) {
             return "Python";
         }
 
-        String modelType = modelConfig.get("model_type").getAsString();
+        String modelType;
+        if (modelConfig.has("_diffusers_version")) {
+            modelType = "stable-diffusion";
+        } else {
+            modelType = modelConfig.get("model_type").getAsString();
+        }
         long numAttentionHeads = Long.MAX_VALUE;
         // All of these are valid in the config.json file for the number of attention heads
         if (modelConfig.has("num_attention_heads")) {
@@ -648,7 +645,6 @@ public final class ModelInfo<I, O> {
         } else if (modelConfig.has("n_head")) {
             numAttentionHeads = modelConfig.get("n_head").getAsLong();
         }
-
         int tensorParallelDegree = CudaUtils.getGpuCount();
         if (Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE") != null) {
             tensorParallelDegree =
@@ -658,15 +654,21 @@ public final class ModelInfo<I, O> {
                     Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
         }
 
-        if (huggingFaceHubModelId != null) {
-            prop.put("option.model_id", huggingFaceHubModelId);
-        }
+        logger.info("model_type: {}", modelType);
+        logger.info("tensor_parallel_degree: {}", tensorParallelDegree);
+        logger.info("num attention heads: {}", numAttentionHeads);
+
         if (tensorParallelDegree > 0) {
             prop.put("option.tensor_parallel_degree", tensorParallelDegree);
         }
         String huggingFaceTask = Utils.getEnvOrSystemProperty("HF_TASK");
         if (huggingFaceTask != null) {
             prop.put("option.task", huggingFaceTask);
+        }
+
+        if ("stable-diffusion".equals(modelType)) {
+            prop.put("option.entryPoint", "djl_python.stable-diffusion");
+            return "DeepSpeed";
         }
 
         if (!isTensorParallelSupported(numAttentionHeads, tensorParallelDegree)) {
@@ -679,6 +681,58 @@ public final class ModelInfo<I, O> {
             return "FasterTransformer";
         }
         return "Python";
+    }
+
+    private URI generateHuggingFaceConfigUri(String modelId) throws ModelException, IOException {
+        URI configUri = null;
+        if (modelId != null && modelId.startsWith("s3://")) {
+            // This is definitely suboptimal, but for the majority of cases we need to download this
+            // s3 model eventually, so it is not the worst thing to download it now.
+            downloadS3();
+            if (Files.isRegularFile(downloadS3Dir.resolve("config.json"))) {
+                configUri = downloadS3Dir.resolve("config.json").toUri();
+            } else if (Files.isRegularFile(downloadS3Dir.resolve("model_index.json"))) {
+                configUri = downloadS3Dir.resolve("model_index.json").toUri();
+            }
+        } else if (modelId != null) {
+            prop.put("option.modelId", modelId);
+            configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
+            HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
+            // stable diffusion models have a different file name with the config... sometimes
+            if (HttpURLConnection.HTTP_OK != configUrl.getResponseCode()) {
+                configUri =
+                        URI.create(
+                                "https://huggingface.co/" + modelId + "/raw/main/model_index.json");
+            }
+        } else if (Files.isRegularFile(modelDir.resolve("config.json"))) {
+            configUri = modelDir.resolve("config.json").toUri();
+        } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
+            configUri = modelDir.resolve("model_index.json").toUri();
+        }
+        return configUri;
+    }
+
+    private JsonObject getHuggingFaceModelConfig() throws ModelException, IOException {
+        String modelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
+        if (modelId == null) {
+            modelId = prop.getProperty("option.model_id");
+        }
+        if (modelId == null) {
+            // Deprecated but for backwards compatibility
+            modelId = prop.getProperty("option.s3url");
+        }
+        URI modelConfigUri = generateHuggingFaceConfigUri(modelId);
+        if (modelConfigUri == null) {
+            return null;
+        }
+        try (InputStream is = modelConfigUri.toURL().openStream();
+                BufferedReader reader =
+                        new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            return JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
+        } catch (IOException e) {
+            logger.warn("Could not read model config from {}", modelConfigUri, e);
+            return null;
+        }
     }
 
     private boolean isFasterTransformerRecommended(String modelType) {

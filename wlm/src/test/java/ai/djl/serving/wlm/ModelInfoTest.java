@@ -280,9 +280,16 @@ public class ModelInfoTest {
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
 
+        System.setProperty("HF_MODEL_ID", "stabilityai/stable-diffusion-2-1");
+        System.clearProperty("TENSOR_PARALLEL_DEGREE");
+        model = new ModelInfo<>("build/models/lmi_test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "DeepSpeed");
+
         JsonObject modelConfig = new JsonObject();
         modelConfig.addProperty("model_type", "bloom");
         modelConfig.addProperty("num_heads", "12");
+        System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
         Files.write(
                 modelDir.resolve("config.json"),
                 modelConfig.toString().getBytes(StandardCharsets.UTF_8));
