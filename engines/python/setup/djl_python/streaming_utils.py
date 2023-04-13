@@ -1,6 +1,5 @@
 import torch
 import logging
-import json
 from transformers import (
     LogitsProcessorList,
     TemperatureLogitsWarper,
@@ -14,7 +13,7 @@ from transformers import (
 class StreamingUtils:
 
     DEFAULT_MAX_NEW_TOKENS = 50
-    SUPPORTED_MODEL_ARCH_SUFFIXES = ("CasualLM", "GPT2LMHeadModel")
+    SUPPORTED_MODEL_ARCH_SUFFIXES = ("CausalLM", "GPT2LMHeadModel")
 
     @staticmethod
     def get_stream_generator(execution_engine: str):
@@ -134,7 +133,7 @@ class StreamingUtils:
         return False
 
     def _validate_inputs(model, inputs):
-        model_arch_list = model.config["architectures"]
+        model_arch_list = model.config.architectures
         model_arch_supported = any(
             model_arch.endswith(StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES)
             for model_arch in model_arch_list)
