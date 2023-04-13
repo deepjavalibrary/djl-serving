@@ -38,8 +38,10 @@ import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.annotations.SerializedName;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +86,8 @@ public final class ModelInfo<I, O> {
                     "opt",
                     "gpt_neox",
                     "bloom");
+
+    private static final List<String> FASTERTRANSFORMER_MODELS = List.of("t5");
 
     private transient String id;
     private String version;
@@ -614,9 +618,7 @@ public final class ModelInfo<I, O> {
                 || Files.isRegularFile(modelDir.resolve("model.py"))
                 || Files.isRegularFile(modelDir.resolve(prefix + ".py"))
                 || Utils.getEnvOrSystemProperty("HF_MODEL_ID") != null
-                || Files.isRegularFile(modelDir.resolve("config.json"))
-                || prop.containsKey("option.s3url")
-                || prop.containsKey("option.model_id");
+                || Files.isRegularFile(modelDir.resolve("config.json"));
     }
 
     private String inferLMIEngine() throws ModelException, IOException {
@@ -624,26 +626,11 @@ public final class ModelInfo<I, O> {
         if (Files.isDirectory(modelDir.resolve("MAR-INF"))) {
             return "Python";
         }
-        JsonObject modelConfig = getHuggingFaceModelConfig();
+        HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig();
         if (modelConfig == null) {
             return "Python";
         }
 
-        String modelType;
-        if (modelConfig.has("_diffusers_version")) {
-            modelType = "stable-diffusion";
-        } else {
-            modelType = modelConfig.get("model_type").getAsString();
-        }
-        long numAttentionHeads = Long.MAX_VALUE;
-        // All of these are valid in the config.json file for the number of attention heads
-        if (modelConfig.has("num_attention_heads")) {
-            numAttentionHeads = modelConfig.get("num_attention_heads").getAsLong();
-        } else if (modelConfig.has("num_heads")) {
-            numAttentionHeads = modelConfig.get("num_heads").getAsLong();
-        } else if (modelConfig.has("n_head")) {
-            numAttentionHeads = modelConfig.get("n_head").getAsLong();
-        }
         int tensorParallelDegree = CudaUtils.getGpuCount();
         if (Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE") != null) {
             tensorParallelDegree =
@@ -661,19 +648,19 @@ public final class ModelInfo<I, O> {
             prop.put("option.task", huggingFaceTask);
         }
 
-        if ("stable-diffusion".equals(modelType)) {
+        if ("stable-diffusion".equals(modelConfig.getModelType())) {
             // TODO: Move this from hardcoded to deduced in PyModel
             prop.put("option.entryPoint", "djl_python.stable-diffusion");
             return "DeepSpeed";
         }
 
-        if (!isTensorParallelSupported(numAttentionHeads, tensorParallelDegree)) {
+        if (!isTensorParallelSupported(modelConfig.getNumAttentionHeads(), tensorParallelDegree)) {
             return "Python";
         }
-        if (isDeepSpeedRecommended(modelType)) {
+        if (isDeepSpeedRecommended(modelConfig.getModelType())) {
             return "DeepSpeed";
         }
-        if (isFasterTransformerRecommended(modelType)) {
+        if (isFasterTransformerRecommended(modelConfig.getModelType())) {
             return "FasterTransformer";
         }
         return "Python";
@@ -708,7 +695,7 @@ public final class ModelInfo<I, O> {
         return configUri;
     }
 
-    private JsonObject getHuggingFaceModelConfig() throws ModelException, IOException {
+    private HuggingFaceModelConfig getHuggingFaceModelConfig() throws ModelException, IOException {
         String modelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
         if (modelId == null) {
             modelId = prop.getProperty("option.model_id");
@@ -724,26 +711,53 @@ public final class ModelInfo<I, O> {
         try (InputStream is = modelConfigUri.toURL().openStream();
                 BufferedReader reader =
                         new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            return JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
-        } catch (IOException e) {
-            logger.error(
-                    "The huggingface hub model_id {} is not valid. Please verify this is a valid"
-                            + " model_id",
-                    modelId);
-            throw e;
+            Gson gson =
+                    JsonUtils.builder()
+                            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+                            .create();
+            return gson.fromJson(reader, HuggingFaceModelConfig.class);
+        } catch (IOException | JsonSyntaxException e) {
+            throw new ModelException("Invalid huggingface model id: " + modelId, e);
         }
     }
 
     private boolean isFasterTransformerRecommended(String modelType) {
-        return "t5".equals(modelType);
+        return isPythonDependencyInstalled(
+                        "/usr/local/backends/fastertransformer", "fastertransformer")
+                && FASTERTRANSFORMER_MODELS.contains(modelType);
     }
 
     private boolean isDeepSpeedRecommended(String modelType) {
-        return DEEPSPEED_MODELS.contains(modelType);
+        return isPythonDependencyInstalled("/usr/local/bin/deepspeed", "deepspeed")
+                && DEEPSPEED_MODELS.contains(modelType);
     }
 
     private boolean isTensorParallelSupported(long numAttentionHeads, int tensorParallelDegree) {
         return tensorParallelDegree > 0 && numAttentionHeads % tensorParallelDegree == 0;
+    }
+
+    private boolean isPythonDependencyInstalled(String dependencyPath, String dependencyName) {
+        Path expectedPath = Paths.get(dependencyPath);
+        if (Files.exists(expectedPath)) {
+            return true;
+        }
+        String[] cmd = {"pip", "list", "|", "grep", dependencyName};
+        try {
+            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            String logOutput;
+            try (InputStream is = exec.getInputStream()) {
+                logOutput = Utils.toString(is);
+            }
+            int exitCode = exec.waitFor();
+            if (exitCode == 0 && logOutput.contains(dependencyName)) {
+                return true;
+            } else {
+                logger.warn("Did not find {} installed in python environment", dependencyName);
+            }
+        } catch (IOException | InterruptedException e) {
+            logger.warn("pip check for {} failed", dependencyName, e);
+        }
+        return false;
     }
 
     private void downloadModel() throws ModelNotFoundException, IOException {
@@ -1063,5 +1077,35 @@ public final class ModelInfo<I, O> {
         PENDING,
         READY,
         FAILED
+    }
+
+    //  This represents  the config of huggingface models NLP models as well
+    // as the config of diffusers models. The config is different for both, but for
+    // now we can leverage a single class since we don't need too much information from the config.
+    static class HuggingFaceModelConfig {
+        @SerializedName("model_type")
+        private String modelType;
+
+        @SerializedName("_diffusers_version")
+        private String diffusersVersion;
+
+        @SerializedName(
+                value = "num_attention_heads",
+                alternate = {"n_head", "num_heads"})
+        private Long numAttentionHeads;
+
+        public long getNumAttentionHeads() {
+            if (numAttentionHeads == null) {
+                return Long.MAX_VALUE;
+            }
+            return numAttentionHeads;
+        }
+
+        public String getModelType() {
+            if (modelType == null) {
+                return diffusersVersion == null ? null : "stable-diffusion";
+            }
+            return modelType;
+        }
     }
 }

@@ -253,6 +253,18 @@ public class ModelInfoTest {
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("lmi_test_model");
         Files.createDirectories(modelDir);
+        Path deepspeedLocation = Paths.get("/usr/local/bin/deepspeed");
+        boolean deepspeedExisted = true;
+        if (!Files.exists(deepspeedLocation)) {
+            Files.createDirectories(deepspeedLocation);
+            deepspeedExisted = false;
+        }
+        Path fastertransformerLocation = Paths.get("/usr/local/backends/fastertransformer");
+        boolean fastertransformerExisted = true;
+        if (!Files.exists(fastertransformerLocation)) {
+            Files.createDirectories(fastertransformerLocation);
+            fastertransformerExisted = false;
+        }
 
         System.setProperty("HF_MODEL_ID", "gpt2");
         System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
@@ -298,7 +310,12 @@ public class ModelInfoTest {
         assertEquals(model.getEngineName(), "DeepSpeed");
 
         System.clearProperty("HF_MODEL_ID");
-        System.clearProperty("HF_TASK");
         System.clearProperty("TENSOR_PARALLEL_DEGREE");
+        if (!deepspeedExisted) {
+            Files.delete(deepspeedLocation);
+        }
+        if (!fastertransformerExisted) {
+            Files.delete(fastertransformerLocation);
+        }
     }
 }
