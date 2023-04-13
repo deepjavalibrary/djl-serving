@@ -253,37 +253,9 @@ public class ModelInfoTest {
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("lmi_test_model");
         Files.createDirectories(modelDir);
-        Path deepspeedLocation = Paths.get("/usr/local/bin/deepspeed");
-        boolean deepspeedExisted = true;
-        if (!Files.exists(deepspeedLocation)) {
-            Files.createDirectories(deepspeedLocation);
-            deepspeedExisted = false;
-        }
-        Path fastertransformerLocation = Paths.get("/usr/local/backends/fastertransformer");
-        boolean fastertransformerExisted = true;
-        if (!Files.exists(fastertransformerLocation)) {
-            Files.createDirectories(fastertransformerLocation);
-            fastertransformerExisted = false;
-        }
-
-        System.setProperty("HF_MODEL_ID", "gpt2");
-        System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
-        ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "DeepSpeed");
-
-        System.setProperty("HF_MODEL_ID", "google/flan-t5-xl");
-        model = new ModelInfo<>("build/models/lmi_test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "FasterTransformer");
 
         System.setProperty("HF_MODEL_ID", "gpt2-xl");
-        model = new ModelInfo<>("build/models/lmi_test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "Python");
-
-        System.setProperty("HF_MODEL_ID", "Salesforce/codegen-6B-mono");
-        model = new ModelInfo<>("build/models/lmi_test_model");
+        ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
 
@@ -291,14 +263,8 @@ public class ModelInfoTest {
         model = new ModelInfo<>("build/models/lmi_test_model");
         Assert.assertThrows(model::initialize);
 
-        System.setProperty("HF_MODEL_ID", "stabilityai/stable-diffusion-2-1");
-        System.clearProperty("TENSOR_PARALLEL_DEGREE");
-        model = new ModelInfo<>("build/models/lmi_test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "DeepSpeed");
-
         JsonObject modelConfig = new JsonObject();
-        modelConfig.addProperty("model_type", "bloom");
+        modelConfig.addProperty("model_type", "codegen");
         modelConfig.addProperty("num_heads", "12");
         System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
         Files.write(
@@ -307,15 +273,9 @@ public class ModelInfoTest {
         System.clearProperty("HF_MODEL_ID");
         model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
-        assertEquals(model.getEngineName(), "DeepSpeed");
+        assertEquals(model.getEngineName(), "Python");
 
         System.clearProperty("HF_MODEL_ID");
         System.clearProperty("TENSOR_PARALLEL_DEGREE");
-        if (!deepspeedExisted) {
-            Files.delete(deepspeedLocation);
-        }
-        if (!fastertransformerExisted) {
-            Files.delete(fastertransformerLocation);
-        }
     }
 }

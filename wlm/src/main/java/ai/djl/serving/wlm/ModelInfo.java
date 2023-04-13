@@ -38,8 +38,6 @@ import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 
@@ -711,11 +709,7 @@ public final class ModelInfo<I, O> {
         try (InputStream is = modelConfigUri.toURL().openStream();
                 BufferedReader reader =
                         new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            Gson gson =
-                    JsonUtils.builder()
-                            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                            .create();
-            return gson.fromJson(reader, HuggingFaceModelConfig.class);
+            return JsonUtils.GSON.fromJson(reader, HuggingFaceModelConfig.class);
         } catch (IOException | JsonSyntaxException e) {
             throw new ModelException("Invalid huggingface model id: " + modelId, e);
         }
@@ -1079,10 +1073,10 @@ public final class ModelInfo<I, O> {
         FAILED
     }
 
-    //  This represents  the config of huggingface models NLP models as well
+    // This represents  the config of huggingface models NLP models as well
     // as the config of diffusers models. The config is different for both, but for
     // now we can leverage a single class since we don't need too much information from the config.
-    static class HuggingFaceModelConfig {
+    static final class HuggingFaceModelConfig {
         @SerializedName("model_type")
         private String modelType;
 
