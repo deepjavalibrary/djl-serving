@@ -14,6 +14,7 @@ from transformers import (
 class StreamingUtils:
 
     DEFAULT_MAX_NEW_TOKENS = 50
+    SUPPORTED_MODEL_ARCH_SUFFIXES = ("CasualLM", "GPT2LMHeadModel")
 
     @staticmethod
     def get_stream_generator(execution_engine: str):
@@ -31,7 +32,7 @@ class StreamingUtils:
     @staticmethod
     @torch.inference_mode()
     def _hf_model_stream_generator(model, tokenizer, inputs, **kwargs):
-        StreamingUtils._validate_inputs(inputs)
+        StreamingUtils._validate_inputs(model, inputs)
         if not tokenizer.pad_token:
             tokenizer.pad_token = tokenizer.eos_token
         is_pad_token_equal_to_eos_token = tokenizer.pad_token == tokenizer.eos_token
@@ -94,7 +95,8 @@ class StreamingUtils:
     @torch.inference_mode()
     def _transformers_neuronx_stream_generator(model, tokenizer, inputs,
                                                **kwargs):
-        sequence_length = kwargs.get("seq_length", 50)
+        sequence_length = kwargs.get("seq_length",
+                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
         top_k = kwargs.get("top_k", 50)
         tokenized_inputs = tokenizer(inputs, return_tensors="pt", padding=True)
         input_ids = tokenized_inputs["input_ids"]
@@ -131,7 +133,13 @@ class StreamingUtils:
             return True
         return False
 
-    def _validate_inputs(inputs):
+    def _validate_inputs(model, inputs):
+        model_arch_list = model.config["architectures"]
+        model_arch_supported = any(
+            model_arch.endswith(StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES)
+            for model_arch in model_arch_list)
+        if not model_arch_supported:
+            assert False, f"model archs: {model_arch_list} is not in supported list: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}"
         if isinstance(inputs, list):
             assert len(inputs) >= 1, "[ERROR] empty input list"
         else:
