@@ -164,7 +164,8 @@ class TransformersNeuronXService(object):
         try:
             input_map = inputs.get_as_json()
             input_text = input_map.pop("inputs", input_map)
-            seq_length = input_map.pop("seq_length", 50)
+            parameters = input_map.pop("parameters", {})
+            seq_length = parameters.pop("max_length", 50)
             if isinstance(input_text, str):
                 input_text = [input_text]
             if len(input_text) != self.batch_size:
@@ -193,6 +194,7 @@ class TransformersNeuronXService(object):
                     self.tokenizer.decode(gen_seq)
                     for gen_seq in generated_sequence
                 ]
+                result = [{"generated_text": s} for s in result]
                 outputs.add(result)
         except Exception as e:
             logging.exception("TransformerNeuronX inference failed")
