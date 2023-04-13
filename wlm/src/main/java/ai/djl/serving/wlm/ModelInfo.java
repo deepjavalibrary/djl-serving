@@ -726,8 +726,11 @@ public final class ModelInfo<I, O> {
                         new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             return JsonUtils.GSON.fromJson(reader, JsonElement.class).getAsJsonObject();
         } catch (IOException e) {
-            logger.warn("Could not read model config from {}", modelConfigUri, e);
-            return null;
+            logger.error(
+                    "The huggingface hub model_id {} is not valid. Please verify this is a valid"
+                            + " model_id",
+                    modelId);
+            throw e;
         }
     }
 

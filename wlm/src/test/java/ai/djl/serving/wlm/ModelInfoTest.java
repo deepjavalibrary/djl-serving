@@ -277,8 +277,7 @@ public class ModelInfoTest {
 
         System.setProperty("HF_MODEL_ID", "invalid-model-id");
         model = new ModelInfo<>("build/models/lmi_test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "Python");
+        Assert.assertThrows(model::initialize);
 
         System.setProperty("HF_MODEL_ID", "stabilityai/stable-diffusion-2-1");
         System.clearProperty("TENSOR_PARALLEL_DEGREE");
