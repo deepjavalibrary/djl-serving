@@ -431,7 +431,7 @@ jobs:
           python3 llm/prepare.py fastertransformer_raw_aot flan-t5-xxl
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/model/test/
-          if grep -q /tmp/download/model/-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
+          if grep -q /tmp/download.*-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test flan-t5-xxl-inference
         working-directory: tests/integration
         run: |
@@ -481,7 +481,7 @@ jobs:
           python3 llm/prepare.py fastertransformer_raw_aot facebook/opt-6.7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/model/test/
-          if grep -q /tmp/download/model/-fp16-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
+          if grep -q /tmp/download.*-fp16-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test facebook/opt-6.7b-inference
         working-directory: tests/integration
         run: |
@@ -497,7 +497,7 @@ jobs:
           python3 llm/prepare.py fastertransformer_raw_aot bigscience/bloom-3b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/model/test/
-          if grep -q /tmp/download/model/-fp16-2-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
+          if grep -q /tmp/download.*-fp16-2-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test bigscience/bloom-3b-inference
         working-directory: tests/integration
         run: |
@@ -551,7 +551,7 @@ jobs:
           python3 llm/prepare.py fastertransformer_handler_aot flan-t5-xxl
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/model/test/
-          if grep -q /tmp/download/model/-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
+          if grep -q /tmp/download.*-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test flan-t5-xxl-inference
         working-directory: tests/integration
         run: |
@@ -598,7 +598,7 @@ jobs:
           python3 llm/prepare.py fastertransformer_handler_aot facebook/opt-6.7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/model/test/
-          if grep -q /tmp/download/model/-fp16-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
+          if grep -q /tmp/download.*-fp16-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test facebook/opt-6.7b-inference
         working-directory: tests/integration
         run: |
@@ -613,7 +613,7 @@ jobs:
           python3 llm/prepare.py fastertransformer_handler_aot bigscience/bloom-3b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/model/test/
-          if grep -q /tmp/download/model/-fp16-2-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
+          if grep -q /tmp/download.*-fp16-2-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test bigscience/bloom-3b-inference
         working-directory: tests/integration
         run: |
