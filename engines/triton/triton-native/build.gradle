@@ -1,0 +1,19 @@
+group "ai.djl.triton"
+
+dependencies {
+    api platform("ai.djl:bom:${project.version}")
+    api "ai.djl:api"
+    api "io.netty:netty-codec:${netty_version}"
+    api "io.netty:netty-handler:${netty_version}"
+    api "io.netty:netty-transport:${netty_version}"
+    api "io.netty:netty-transport-native-epoll:${netty_version}:linux-aarch_64"
+    api "io.netty:netty-transport-native-epoll:${netty_version}:linux-x86_64"
+    api "io.netty:netty-transport-native-kqueue:${netty_version}:osx-aarch_64"
+    api "io.netty:netty-transport-native-kqueue:${netty_version}:osx-x86_64"
+    api "org.slf4j:slf4j-api:${slf4j_version}"
+
+    testImplementation "org.slf4j:slf4j-simple:${slf4j_version}"
+    testImplementation "org.testng:testng:${testng_version}"
+}
+
+
