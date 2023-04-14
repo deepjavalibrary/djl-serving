@@ -6,8 +6,8 @@ set(JAVA_AWT_INCLUDE_PATH NotNeeded)
 find_package(JNI REQUIRED)
 
 set(SOURCE_FILES
-         "src/main/native/ai_djl_triton_jni_TritonLibrary.cc"
-         )
+         src/main/native/ai_djl_triton_jni_TritonLibrary.cc
+        src/main/native/ai_djl_triton_helper.h)
 
 add_library(djl_triton SHARED ${SOURCE_FILES})
 

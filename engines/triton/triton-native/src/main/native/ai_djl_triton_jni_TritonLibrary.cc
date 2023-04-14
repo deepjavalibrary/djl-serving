@@ -22,37 +22,10 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <jni.h>
 #include "tritonserver.h"
 #include "ai_djl_triton_jni_TritonLibrary.h"
-#include <jni.h>
-
-extern jclass ENGINE_EXCEPTION_CLASS;
-bool enforce_memory_type = false;
-TRITONSERVER_MemoryType requested_memory_type;
-
-
-#define DJL_CHECK_WITH_MSG(cond, error_msg)           \
-  if (!cond) {                                        \
-    env->ThrowNew(ENGINE_EXCEPTION_CLASS, error_msg); \
-  }
-
-/*
- * Macros to guard beginning and end section of all functions
- * every function starts with API_BEGIN()
- * and finishes with API_END()
- */
-#define API_BEGIN() try {
-#define API_END()                                                      \
-  }                                                                    \
-  catch (const std::exception& e_) {                                   \
-    env->ThrowNew(ENGINE_EXCEPTION_CLASS, e_.what());                  \
-  }
-
-// TODO refactor all jni functions to c style function which mean
-//  return value should be unified to function execution status code
-#define API_END_RETURN() \
-  API_END()              \
-  return 0;
+#include "ai_djl_triton_helper.h"
 
 
 JNIEXPORT jlong JNICALL Java_ai_djl_triton_jni_TritonLibrary_createServerOption
@@ -65,18 +38,18 @@ JNIEXPORT jlong JNICALL Java_ai_djl_triton_jni_TritonLibrary_createServerOption
             "creating server options");
     DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetModelRepositoryPath(
-                    server_options_ptr, env->GetStringUTFChars(jrepositoryPath,nullptr)),
+                    server_options_ptr, env->GetStringUTFChars(jrepositoryPath,JNI_FALSE)),
             "setting model repository path");
         DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetLogVerbose(server_options_ptr, verbose),
             "setting verbose logging level");
         DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetBackendDirectory(
-                    server_options_ptr, env->GetStringUTFChars(jbackendsPath,nullptr)),
+                    server_options_ptr, env->GetStringUTFChars(jbackendsPath,JNI_FALSE)),
             "setting backend directory");
         DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetRepoAgentDirectory(
-                    server_options_ptr, env->GetStringUTFChars(jrepoAgentPath,nullptr)),
+                    server_options_ptr, env->GetStringUTFChars(jrepoAgentPath,JNI_FALSE)),
             "setting repository agent directory");
         DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetStrictModelConfig(server_options_ptr, true),
@@ -100,236 +73,140 @@ JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_deleteServerOption
 }
 
 
-TRITONSERVER_Error*
-ResponseAlloc(
-    TRITONSERVER_ResponseAllocator* allocator, const char* tensor_name,
-    size_t byte_size, TRITONSERVER_MemoryType preferred_memory_type,
-    int64_t preferred_memory_type_id, void* userp, void** buffer,
-    void** buffer_userp, TRITONSERVER_MemoryType* actual_memory_type,
-    int64_t* actual_memory_type_id)
-{
-  // Initially attempt to make the actual memory type and id that we
-  // allocate be the same as preferred memory type
-  *actual_memory_type = preferred_memory_type;
-  *actual_memory_type_id = preferred_memory_type_id;
 
-  // If 'byte_size' is zero just return 'buffer' == nullptr, we don't
-  // need to do any other book-keeping.
-  if (byte_size == 0) {
-    *buffer = nullptr;
-    *buffer_userp = nullptr;
-    std::cout << "allocated " << byte_size << " bytes for result tensor "
-              << tensor_name << std::endl;
-  } else {
-    void* allocated_ptr = nullptr;
-    if (enforce_memory_type) {
-      *actual_memory_type = requested_memory_type;
-    }
 
-    switch (*actual_memory_type) {
-      // Use CPU memory if the requested memory type is unknown
-      // (default case).
-      case TRITONSERVER_MEMORY_CPU:
-      default: {
-        *actual_memory_type = TRITONSERVER_MEMORY_CPU;
-        allocated_ptr = malloc(byte_size);
-        break;
-      }
-    }
-
-    // Pass the tensor name with buffer_userp so we can show it when
-    // releasing the buffer.
-    if (allocated_ptr != nullptr) {
-      *buffer = allocated_ptr;
-      *buffer_userp = new std::string(tensor_name);
-      std::cout << "allocated " << byte_size << " bytes in "
-                << TRITONSERVER_MemoryTypeString(*actual_memory_type)
-                << " for result tensor " << tensor_name << std::endl;
-    }
-  }
-
-  return nullptr;  // Success
+JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_addInput
+        (JNIEnv *env, jobject jthis, jlong jir_handle, jstring jname, jobject jbuffer, jlong jbuffer_size, jlongArray jshape, jint jdtype) {
+    API_BEGIN()
+    auto* irequest = reinterpret_cast<TRITONSERVER_InferenceRequest*>(jir_handle);
+    jsize shape_length = env->GetArrayLength(jshape);
+    // TODO: potential memory leak
+    const auto* jptrs = reinterpret_cast<int64_t*>(env->GetLongArrayElements(jshape, JNI_FALSE));
+    const int dtype = jdtype;
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceRequestAddInput(irequest, env->GetStringUTFChars(jname, JNI_FALSE), TRITONSERVER_datatype_enum(dtype),
+                    jptrs, shape_length), "setting input for the request")
+    auto* buffer_address =  env->GetDirectBufferAddress(jbuffer);
+    TRITONSERVER_MemoryType requested_memory_type;
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceRequestAppendInputData(
+                    irequest, env->GetStringUTFChars(jname, JNI_FALSE), buffer_address, jbuffer_size, requested_memory_type,
+                    0 /* memory_type_id */), "assigning input_ids data")
+    API_END()
 }
 
-TRITONSERVER_Error*
-ResponseRelease(
-    TRITONSERVER_ResponseAllocator* allocator, void* buffer, void* buffer_userp,
-    size_t byte_size, TRITONSERVER_MemoryType memory_type,
-    int64_t memory_type_id)
-{
-  std::string* name = nullptr;
-  if (buffer_userp != nullptr) {
-    name = reinterpret_cast<std::string*>(buffer_userp);
-  } else {
-    name = new std::string("<unknown>");
-  }
-
-  std::cout << "Releasing buffer " << buffer << " of size " << byte_size
-            << " in " << TRITONSERVER_MemoryTypeString(memory_type)
-            << " for result '" << *name << "'" << std::endl;
-  switch (memory_type) {
-    case TRITONSERVER_MEMORY_CPU:
-      free(buffer);
-      break;
-    default:
-      std::cerr << "error: unexpected buffer allocated in CUDA managed memory"
-                << std::endl;
-      break;
-  }
-
-  delete name;
-
-  return nullptr;  // Success
+JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_addOutput
+        (JNIEnv *env, jobject jthis, jlong jir_handle, jstring joutput_name) {
+    API_BEGIN()
+    auto* irequest = reinterpret_cast<TRITONSERVER_InferenceRequest*>(jir_handle);
+    DJL_CHECK_WITH_MSG(TRITONSERVER_InferenceRequestAddRequestedOutput(irequest, env->GetStringUTFChars(joutput_name, JNI_FALSE)),
+            "requesting output_ids for the request");
+    API_END()
 }
 
-void
-InferRequestComplete(
-    TRITONSERVER_InferenceRequest* request, const uint32_t flags, void* userp)
-{
-  // We reuse the request so we don't delete it here.
+JNIEXPORT jlongArray JNICALL Java_ai_djl_triton_jni_TritonLibrary_performInference
+        (JNIEnv *env, jobject jthis, jlong jserver_handle, jlong jir_handle) {
+    API_BEGIN()
+    auto* irequest = reinterpret_cast<TRITONSERVER_InferenceRequest*>(jir_handle);
+    auto* server_ptr = reinterpret_cast<TRITONSERVER_Server*>(jserver_handle);
+    auto p = new std::promise<TRITONSERVER_InferenceResponse*>();
+    std::future<TRITONSERVER_InferenceResponse*> completed = p->get_future();
+
+    TRITONSERVER_ResponseAllocator* allocator = nullptr;
+        DJL_CHECK_WITH_MSG(
+                TRITONSERVER_ResponseAllocatorNew(
+                        &allocator, ResponseAlloc, ResponseRelease, nullptr /* start_fn */),
+                "creating response allocator");
+
+        DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceRequestSetResponseCallback(
+                    irequest, allocator, nullptr /* response_allocator_userp */,
+                    InferResponseComplete, reinterpret_cast<void*>(p)),
+            "setting response callback");
+
+        DJL_CHECK_WITH_MSG(
+            TRITONSERVER_ServerInferAsync(
+                    server_ptr, irequest, nullptr /* trace */),
+            "running inference");
+
+    // The InferResponseComplete function sets the std::promise so
+    // that this thread will block until the response is returned.
+    TRITONSERVER_InferenceResponse* completed_response = completed.get();
+
+
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceResponseError(completed_response), "response status")
+    jlongArray jarray = env->NewLongArray(2);
+    std::vector<jlong> jptrs;
+    jptrs.reserve(2);
+    jptrs[0] = reinterpret_cast<uintptr_t>(allocator);
+    jptrs[1] = reinterpret_cast<uintptr_t>(completed_response);
+    env->SetLongArrayRegion(jarray, 0, 2, jptrs.data());
+    return jarray;
+    API_END_RETURN()
 }
 
-void
-InferResponseComplete(
-    TRITONSERVER_InferenceResponse* response, const uint32_t flags, void* userp)
-{
-  if (response != nullptr) {
-    // Send 'response' to the future.
-    std::promise<TRITONSERVER_InferenceResponse*>* p =
-        reinterpret_cast<std::promise<TRITONSERVER_InferenceResponse*>*>(userp);
-    p->set_value(response);
-    delete p;
-  }
+JNIEXPORT jobjectArray JNICALL Java_ai_djl_triton_jni_TritonLibrary_fetchResult
+        (JNIEnv *env, jobject jthis, jlong jhandler, jobjectArray j2d_shapes, jintArray jdtypes) {
+    API_BEGIN()
+
+    auto* response = reinterpret_cast<TRITONSERVER_InferenceResponse*>(jhandler);
+    uint32_t output_count;
+    DJL_CHECK_WITH_MSG(TRITONSERVER_InferenceResponseOutputCount(response, &output_count),
+            "getting number of response outputs")
+    uint32_t expected_output_length = env->GetArrayLength(jdtypes);
+    if (output_count != expected_output_length) {
+        env->ThrowNew(ENGINE_EXCEPTION_CLASS, "Expected output and actual mismatch!");
+    }
+
+    jobjectArray result = env->NewObjectArray(output_count, env->FindClass("java/nio/ByteBuffer"), nullptr);
+
+    for (uint32_t idx = 0; idx < output_count; ++idx) {
+        const char* cname;
+        TRITONSERVER_DataType datatype;
+        const int64_t* shape;
+        uint64_t dim_count;
+        const void* base;
+        size_t byte_size;
+        TRITONSERVER_MemoryType memory_type;
+        int64_t memory_type_id;
+        void* userp;
+
+        DJL_CHECK_WITH_MSG(TRITONSERVER_InferenceResponseOutput(
+                        response, idx, &cname, &datatype, &shape, &dim_count, &base,
+                        &byte_size, &memory_type, &memory_type_id, &userp),
+                "getting output info");
+
+        jlongArray jlong_array = env->NewLongArray(dim_count);
+        env->SetLongArrayRegion(jlong_array, 0, dim_count, reinterpret_cast<const jlong*>(shape));
+        env->SetObjectArrayElement(j2d_shapes, idx, jlong_array);
+        int dtype_intval = datatype;
+        env->SetIntArrayRegion(jdtypes, idx, 1, &dtype_intval);
+
+        env->SetObjectArrayElement(result, idx, env->NewDirectByteBuffer(const_cast<void *>(base), byte_size));
+    }
+    return result;
+    API_END_RETURN()
 }
 
-template <typename T>
-void
-GenerateInputData(
-    std::vector<char>* input_data)
-{
-  input_data->resize(16 * sizeof(T));
-  for (size_t i = 0; i < 16; ++i) {
-    ((T*)input_data->data())[i] = i;
-  }
-}
-
-template <typename T>
-void
-CompareResult(
-    const std::string& output0_name, const std::string& output1_name,
-    const void* input0, const void* input1, const char* output0,
-    const char* output1)
-{
-  for (size_t i = 0; i < 16; ++i) {
-    std::cout << ((T*)input0)[i] << " + " << ((T*)input1)[i] << " = "
-              << ((T*)output0)[i] << std::endl;
-    std::cout << ((T*)input0)[i] << " - " << ((T*)input1)[i] << " = "
-              << ((T*)output1)[i] << std::endl;
-
-    if ((((T*)input0)[i] + ((T*)input1)[i]) != ((T*)output0)[i]) {
-      FAIL("incorrect sum in " + output0_name);
-    }
-    if ((((T*)input0)[i] - ((T*)input1)[i]) != ((T*)output1)[i]) {
-      FAIL("incorrect difference in " + output1_name);
-    }
-  }
-}
-
-void
-Check(
-    TRITONSERVER_InferenceResponse* response,
-    const std::string& output0, const std::string& output1,
-    const TRITONSERVER_DataType expected_datatype)
-{
-  std::unordered_map<std::string, std::vector<char>> output_data;
-
-  uint32_t output_count;
-  FAIL_IF_ERR(
-      TRITONSERVER_InferenceResponseOutputCount(response, &output_count),
-      "getting number of response outputs");
-  if (output_count != 2) {
-    FAIL("expecting 2 response outputs, got " + std::to_string(output_count));
-  }
-
-  for (uint32_t idx = 0; idx < output_count; ++idx) {
-    const char* cname;
-    TRITONSERVER_DataType datatype;
-    const int64_t* shape;
-    uint64_t dim_count;
-    const void* base;
-    size_t byte_size;
-    TRITONSERVER_MemoryType memory_type;
-    int64_t memory_type_id;
-    void* userp;
-
-    FAIL_IF_ERR(
-        TRITONSERVER_InferenceResponseOutput(
-            response, idx, &cname, &datatype, &shape, &dim_count, &base,
-            &byte_size, &memory_type, &memory_type_id, &userp),
-        "getting output info");
-
-    if (cname == nullptr) {
-      FAIL("unable to get output name");
-    }
-
-    std::string name(cname);
-    if ((name != output0) && (name != output1)) {
-      FAIL("unexpected output '" + name + "'");
-    }
-
-    if (!(dim_count == 3 && shape[0] == 1 && shape[1] == 1 && shape[2] == 128) && !(dim_count == 2 && shape[0] == 1 && shape[1] == 1)) {
-      FAIL("unexpected shape for '" + name + "'");
-    }
-
-    if (datatype != expected_datatype) {
-      FAIL(
-          "unexpected datatype '" +
-          std::string(TRITONSERVER_DataTypeString(datatype)) + "' for '" +
-          name + "'");
-    }
-
-    /*if (byte_size != expected_byte_size) {
-      FAIL(
-          "unexpected byte-size, expected " +
-          std::to_string(expected_byte_size) + ", got " +
-          std::to_string(byte_size) + " for " + name);
-    }*/
-
-    if (enforce_memory_type && (memory_type != requested_memory_type)) {
-      FAIL(
-          "unexpected memory type, expected to be allocated in " +
-          std::string(TRITONSERVER_MemoryTypeString(requested_memory_type)) +
-          ", got " + std::string(TRITONSERVER_MemoryTypeString(memory_type)) +
-          ", id " + std::to_string(memory_type_id) + " for " + name);
-    }
-
-    // We make a copy of the data here... which we could avoid for
-    // performance reasons but ok for this simple example.
-    std::vector<char>& odata = output_data[name];
-    switch (memory_type) {
-      case TRITONSERVER_MEMORY_CPU: {
-        std::cout << name << " is stored in system memory" << std::endl;
-        const char* cbase = reinterpret_cast<const char*>(base);
-        odata.assign(cbase, cbase + byte_size);
-        break;
-      }
-
-      case TRITONSERVER_MEMORY_CPU_PINNED: {
-        std::cout << name << " is stored in pinned memory" << std::endl;
-        const char* cbase = reinterpret_cast<const char*>(base);
-        odata.assign(cbase, cbase + byte_size);
-        break;
-      }
-
-      default:
-        FAIL("unexpected memory type");
-    }
-  }
+JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_deleteResponse
+        (JNIEnv *env, jobject jthis, jlongArray jhandlers) {
+    API_BEGIN()
+    jlong* jarr = env->GetLongArrayElements(jhandlers, JNI_FALSE);
+    auto* allocator = reinterpret_cast<TRITONSERVER_ResponseAllocator*>(jarr[0]);
+    auto* completed_response = reinterpret_cast<TRITONSERVER_InferenceResponse*>(jarr[1]);
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceResponseDelete(completed_response),
+            "deleting inference response")
+    DJL_CHECK_WITH_MSG(
+                TRITONSERVER_ResponseAllocatorDelete(allocator),
+                "deleting response allocator")
+    env->ReleaseLongArrayElements(jhandlers, jarr, RELEASE_MODE);
+    API_END()
 }
 
 
-int
-main(int argc, char** argv)
+int main(int argc, char** argv)
 {
   std::string model_repository_path;
   int verbose_level = 0;

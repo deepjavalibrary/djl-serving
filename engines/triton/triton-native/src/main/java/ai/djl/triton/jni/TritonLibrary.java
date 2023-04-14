@@ -20,7 +20,7 @@ public final class TritonLibrary {
 
     private TritonLibrary() {}
 
-    public native long createServerOption(String repositoryPath, String repoBackendsPath, String repoAgentPath,  int verbose);
+    public native long createServerOption(String repositoryPath, String repoBackendsPath, String repoAgentPath, int verbose);
 
     public native void deleteServerOption(long option);
 
@@ -32,14 +32,14 @@ public final class TritonLibrary {
 
     public native void deleteInferenceRequest(long irHandle);
 
-    public native void addInput(long irHandle, ByteBuffer data, long byteSize, long[] shape);
+    public native void addInput(long irHandle, String name, ByteBuffer data, long byteSize, long[] shape, int dtype);
 
     public native void addOutput(long irHandle, String name);
 
     public native long[] performInference(long serverHandle, long irHandle);
 
-    public native byte[][] fetchResult(long[] handles, long[][] shape, int[] dtype);
+    public native ByteBuffer[] fetchResult(long responseHandle, long[][] shape, int[] dtype);
 
-    public native long deleteResponse(long[] handles);
+    public native void deleteResponse(long[] handles);
 
 }
