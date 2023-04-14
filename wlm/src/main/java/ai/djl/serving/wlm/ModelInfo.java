@@ -33,25 +33,17 @@ import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
 import ai.djl.translate.ServingTranslator;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorFactory;
-import ai.djl.util.JsonUtils;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.annotations.SerializedName;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.management.MemoryUsage;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -72,20 +64,6 @@ public final class ModelInfo<I, O> {
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
 
     private static final Pattern PATTERN = Pattern.compile("MemAvailable:\\s+(\\d+) kB");
-
-    private static final List<String> DEEPSPEED_MODELS =
-            List.of(
-                    "roberta",
-                    "xlm-roberta",
-                    "gpt2",
-                    "bert",
-                    "gpt_neo",
-                    "gptj",
-                    "opt",
-                    "gpt_neox",
-                    "bloom");
-
-    private static final List<String> FASTERTRANSFORMER_MODELS = List.of("t5");
 
     private transient String id;
     private String version;
@@ -108,11 +86,11 @@ public final class ModelInfo<I, O> {
     private String translatorFactory;
     private String translator;
 
-    private transient Path modelDir;
+    transient Path modelDir;
     private transient String artifactName;
-    private transient Path downloadS3Dir;
+    transient Path downloadS3Dir;
 
-    private transient Properties prop;
+    transient Properties prop;
     private transient Status status;
 
     private transient Class<I> inputClass;
@@ -562,7 +540,7 @@ public final class ModelInfo<I, O> {
         return Device.fromName(deviceName, Engine.getEngine(engineName));
     }
 
-    private String inferEngine() throws ModelNotFoundException {
+    private String inferEngine() throws ModelException {
         String engine = prop.getProperty("engine");
         if (engine != null) {
             return engine;
@@ -570,11 +548,7 @@ public final class ModelInfo<I, O> {
 
         String prefix = prop.getProperty("option.modelName", artifactName);
         if (isPythonModel(prefix)) {
-            try {
-                return inferLMIEngine();
-            } catch (IOException | ModelException e) {
-                logger.warn("Failed to determine Python Backend engine", e);
-            }
+            return LmiUtils.inferLmiEngine(this);
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
                 || Files.isRegularFile(modelDir.resolve("model.pt"))) {
             return "PyTorch";
@@ -617,141 +591,6 @@ public final class ModelInfo<I, O> {
                 || Files.isRegularFile(modelDir.resolve(prefix + ".py"))
                 || Utils.getEnvOrSystemProperty("HF_MODEL_ID") != null
                 || Files.isRegularFile(modelDir.resolve("config.json"));
-    }
-
-    private String inferLMIEngine() throws ModelException, IOException {
-        // MMS/Torchserve
-        if (Files.isDirectory(modelDir.resolve("MAR-INF"))) {
-            return "Python";
-        }
-        HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig();
-        if (modelConfig == null) {
-            return "Python";
-        }
-
-        int tensorParallelDegree = CudaUtils.getGpuCount();
-        if (Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE") != null) {
-            tensorParallelDegree =
-                    Integer.parseInt(Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE"));
-        } else if (prop.get("option.tensor_parallel_degree") != null) {
-            tensorParallelDegree =
-                    Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
-        }
-
-        if (tensorParallelDegree > 0) {
-            prop.put("option.tensor_parallel_degree", tensorParallelDegree);
-        }
-        String huggingFaceTask = Utils.getEnvOrSystemProperty("HF_TASK");
-        if (huggingFaceTask != null) {
-            prop.put("option.task", huggingFaceTask);
-        }
-
-        if ("stable-diffusion".equals(modelConfig.getModelType())) {
-            // TODO: Move this from hardcoded to deduced in PyModel
-            prop.put("option.entryPoint", "djl_python.stable-diffusion");
-            return "DeepSpeed";
-        }
-
-        if (!isTensorParallelSupported(modelConfig.getNumAttentionHeads(), tensorParallelDegree)) {
-            return "Python";
-        }
-        if (isDeepSpeedRecommended(modelConfig.getModelType())) {
-            return "DeepSpeed";
-        }
-        if (isFasterTransformerRecommended(modelConfig.getModelType())) {
-            return "FasterTransformer";
-        }
-        return "Python";
-    }
-
-    private URI generateHuggingFaceConfigUri(String modelId) throws ModelException, IOException {
-        URI configUri = null;
-        if (modelId != null && modelId.startsWith("s3://")) {
-            // This is definitely suboptimal, but for the majority of cases we need to download this
-            // s3 model eventually, so it is not the worst thing to download it now.
-            downloadS3();
-            if (Files.isRegularFile(downloadS3Dir.resolve("config.json"))) {
-                configUri = downloadS3Dir.resolve("config.json").toUri();
-            } else if (Files.isRegularFile(downloadS3Dir.resolve("model_index.json"))) {
-                configUri = downloadS3Dir.resolve("model_index.json").toUri();
-            }
-        } else if (modelId != null) {
-            prop.put("option.modelId", modelId);
-            configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
-            HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
-            // stable diffusion models have a different file name with the config... sometimes
-            if (HttpURLConnection.HTTP_OK != configUrl.getResponseCode()) {
-                configUri =
-                        URI.create(
-                                "https://huggingface.co/" + modelId + "/raw/main/model_index.json");
-            }
-        } else if (Files.isRegularFile(modelDir.resolve("config.json"))) {
-            configUri = modelDir.resolve("config.json").toUri();
-        } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
-            configUri = modelDir.resolve("model_index.json").toUri();
-        }
-        return configUri;
-    }
-
-    private HuggingFaceModelConfig getHuggingFaceModelConfig() throws ModelException, IOException {
-        String modelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-        if (modelId == null) {
-            modelId = prop.getProperty("option.model_id");
-        }
-        if (modelId == null) {
-            // Deprecated but for backwards compatibility
-            modelId = prop.getProperty("option.s3url");
-        }
-        URI modelConfigUri = generateHuggingFaceConfigUri(modelId);
-        if (modelConfigUri == null) {
-            return null;
-        }
-        try (InputStream is = modelConfigUri.toURL().openStream();
-                BufferedReader reader =
-                        new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-            return JsonUtils.GSON.fromJson(reader, HuggingFaceModelConfig.class);
-        } catch (IOException | JsonSyntaxException e) {
-            throw new ModelException("Invalid huggingface model id: " + modelId, e);
-        }
-    }
-
-    private boolean isFasterTransformerRecommended(String modelType) {
-        return isPythonDependencyInstalled(
-                        "/usr/local/backends/fastertransformer", "fastertransformer")
-                && FASTERTRANSFORMER_MODELS.contains(modelType);
-    }
-
-    private boolean isDeepSpeedRecommended(String modelType) {
-        return isPythonDependencyInstalled("/usr/local/bin/deepspeed", "deepspeed")
-                && DEEPSPEED_MODELS.contains(modelType);
-    }
-
-    private boolean isTensorParallelSupported(long numAttentionHeads, int tensorParallelDegree) {
-        return tensorParallelDegree > 0 && numAttentionHeads % tensorParallelDegree == 0;
-    }
-
-    private boolean isPythonDependencyInstalled(String dependencyPath, String dependencyName) {
-        Path expectedPath = Paths.get(dependencyPath);
-        if (Files.exists(expectedPath)) {
-            return true;
-        }
-        String[] cmd = {"pip", "list", "|", "grep", dependencyName};
-        try {
-            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = exec.getInputStream()) {
-                logOutput = Utils.toString(is);
-            }
-            int exitCode = exec.waitFor();
-            if (exitCode == 0 && logOutput.contains(dependencyName)) {
-                return true;
-            } else {
-                logger.warn("Did not find {} installed in python environment", dependencyName);
-            }
-        } catch (IOException | InterruptedException e) {
-            logger.warn("pip check for {} failed", dependencyName, e);
-        }
-        return false;
     }
 
     private void downloadModel() throws ModelNotFoundException, IOException {
@@ -958,7 +797,7 @@ public final class ModelInfo<I, O> {
         return Integer.MAX_VALUE * 1024L;
     }
 
-    private void downloadS3() throws ModelException, IOException {
+    void downloadS3() throws ModelException, IOException {
         String s3Url = prop.getProperty("option.s3url");
         String modelId = prop.getProperty("option.model_id");
         if (s3Url != null) {
@@ -1071,35 +910,5 @@ public final class ModelInfo<I, O> {
         PENDING,
         READY,
         FAILED
-    }
-
-    // This represents  the config of huggingface models NLP models as well
-    // as the config of diffusers models. The config is different for both, but for
-    // now we can leverage a single class since we don't need too much information from the config.
-    static final class HuggingFaceModelConfig {
-        @SerializedName("model_type")
-        private String modelType;
-
-        @SerializedName("_diffusers_version")
-        private String diffusersVersion;
-
-        @SerializedName(
-                value = "num_attention_heads",
-                alternate = {"n_head", "num_heads"})
-        private Long numAttentionHeads;
-
-        public long getNumAttentionHeads() {
-            if (numAttentionHeads == null) {
-                return Long.MAX_VALUE;
-            }
-            return numAttentionHeads;
-        }
-
-        public String getModelType() {
-            if (modelType == null) {
-                return diffusersVersion == null ? null : "stable-diffusion";
-            }
-            return modelType;
-        }
     }
 }
