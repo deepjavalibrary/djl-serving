@@ -11,7 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.7.1-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
-ARG djl_version=0.22.0~SNAPSHOT
+ARG djl_version=0.22.1~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=1.13.1
 ARG accelerate_version=0.17.1
