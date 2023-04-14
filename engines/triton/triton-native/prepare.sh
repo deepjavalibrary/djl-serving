@@ -4,6 +4,7 @@ if [[ ! -d "tritonserver" ]]; then
   mkdir -p tritonserver/include
   cd tritonserver/include
   curl -O https://raw.githubusercontent.com/triton-inference-server/core/main/include/triton/core/tritonserver.h
+  cd ../../
 fi
 
 rm -rf build
