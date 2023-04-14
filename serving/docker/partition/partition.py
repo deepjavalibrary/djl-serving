@@ -150,6 +150,14 @@ class PartitionService(object):
         subprocess.run(commands)
         shutil.rmtree(self.properties["save_mp_checkpoint_path"])
 
+    def cleanup(self):
+        """
+        Cleans up the downloaded files in tmp.
+        """
+        if self.properties_manager.entry_point_url:
+            entrypoint_dir = Path(self.properties['entryPoint']).parent
+            shutil.rmtree(entrypoint_dir)
+
     def run_partition(self):
         commands = get_partition_cmd(self.properties_manager.is_mpi_mode,
                                      self.properties)
@@ -161,6 +169,7 @@ class PartitionService(object):
             self.properties_manager.generate_properties_file()
             self.copy_config_files()
             self.upload_checkpoints_to_s3()
+            self.cleanup()
         else:
             raise Exception("Partitioning was not successful.")
 

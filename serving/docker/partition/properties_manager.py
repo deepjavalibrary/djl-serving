@@ -9,9 +9,11 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import logging
 import os
 import glob
 import torch
+import requests
 
 # Properties to exclude while generating serving.properties
 from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir
@@ -23,12 +25,15 @@ EXCLUDE_PROPERTIES = [
 
 PARTITION_SUPPORTED_ENGINES = ['DeepSpeed', 'FasterTransformer']
 
+CHUNK_SIZE = 4096  # 4MB chunk size
+
 
 class PropertiesManager(object):
 
     def __init__(self, properties_dir):
         self.properties = {}
         self.properties_dir = properties_dir
+        self.entry_point_url = None
 
         self.load_properties()
 
@@ -93,9 +98,12 @@ class PropertiesManager(object):
 
         for key, value in self.properties.items():
             if key not in EXCLUDE_PROPERTIES:
-                if key == "entryPoint" and self.properties.get(
-                        "entryPoint") == "model.py":
-                    continue
+                if key == "entryPoint":
+                    entry_point = self.properties.get("entryPoint")
+                    if entry_point == "model.py":
+                        continue
+                    elif self.entry_point_url:
+                        configs[f'option.{key}'] = self.entry_point_url
                 else:
                     configs[f'option.{key}'] = value
 
@@ -127,7 +135,8 @@ class PropertiesManager(object):
             )
 
     def set_and_validate_entry_point(self):
-        if "entryPoint" not in self.properties:
+        entry_point = self.properties.get('entryPoint')
+        if entry_point is None:
             entry_point = os.environ.get("DJL_ENTRY_POINT")
             if entry_point is None:
                 entry_point_file = glob.glob(
@@ -145,6 +154,19 @@ class PropertiesManager(object):
                             f"model.py not found in model path {self.properties_dir}"
                         )
                     self.properties['entryPoint'] = entry_point
+        elif entry_point.lower().startswith('http'):
+            logging.info(f'Downloading entrypoint file.')
+            self.entry_point_url = self.properties['entryPoint']
+            download_dir = get_download_dir(self.properties_dir,
+                                            suffix='modelfile')
+            model_file = os.path.join(download_dir, 'model.py')
+            with requests.get(self.properties['entryPoint'], stream=True) as r:
+                with open(model_file, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
+                        if chunk:
+                            f.write(chunk)
+            self.properties['entryPoint'] = model_file
+            logging.info(f'Entrypoint file downloaded successfully')
 
     def set_and_validate_save_mp_checkpoint_path(self):
         save_mp_checkpoint_path = self.properties["save_mp_checkpoint_path"]
