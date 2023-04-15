@@ -13,7 +13,7 @@ export DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {pr
 docker compose build --build-arg djl_version=${DJL_VERSION} <compose-target>
 ```
 
-You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `pytorch-cu117`...
+You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `deepspeed`...
 
 ## Run docker image
 
@@ -42,7 +42,7 @@ mkdir models
 cd models
 curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_jit.tar.gz
 
-docker run -it --runtime=nvidia -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:pytorch-cu117-nightly
+docker run -it --runtime=nvidia -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:pytorch-cu118-nightly
 ```
 
 ### AWS Inferentia

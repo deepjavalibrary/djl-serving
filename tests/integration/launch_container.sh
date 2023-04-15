@@ -17,7 +17,7 @@ if [[ $4 == "partition" ]]; then
 fi
 
 is_llm=false
-if [[ "$platform" == *"cu117"* ]]; then # if the platform has cuda capabilities
+if [[ "$platform" == *"cu1"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
 elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
   runtime="nvidia"

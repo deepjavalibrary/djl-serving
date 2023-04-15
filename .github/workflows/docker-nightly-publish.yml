@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [ cpu, cpu-full, deepspeed, pytorch-inf1, pytorch-inf2, pytorch-cu117 ]
+        arch: [ cpu, cpu-full, deepspeed, pytorch-inf1, pytorch-inf2, pytorch-cu118 ]
     steps:
       - uses: actions/checkout@v3
       - name: Login to Docker

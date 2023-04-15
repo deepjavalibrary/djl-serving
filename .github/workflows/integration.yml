@@ -239,24 +239,24 @@ jobs:
         working-directory: benchmark
         run: ./gradlew installOnLinux
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-cu117 ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-cu118 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
-          ./download_models.sh pytorch-cu117
+          ./download_models.sh pytorch-cu118
       - name: Test Python model
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu117 \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu118 \
           serve -m test::Python=file:/opt/ml/model/resnet18_all_batch.zip
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test PyTorch model
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu117 \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-cu118 \
           serve -m test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
