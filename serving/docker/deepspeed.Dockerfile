@@ -15,9 +15,9 @@ ARG djl_version=0.22.1~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=2.0.0
 ARG xformers_version=0.0.18
-ARG accelerate_version=0.17.1
+ARG accelerate_version=0.18.0
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.3-py2.py3-none-any.whl"
-ARG transformers_version=4.27.3
+ARG transformers_version=4.28.1
 ARG diffusers_version=0.14.0
 
 EXPOSE 8080
@@ -51,10 +51,9 @@ RUN apt-get update && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu118 && \
-    pip3 install ${deepspeed_wheel} &&  \
-    pip3 install transformers==${transformers_version} && \
-    pip3 install triton==2.0.0.post1 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
+    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
+    ${deepspeed_wheel} transformers==${transformers_version} \
+    triton==2.0.0 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     pip3 install diffusers[torch]==${diffusers_version} xformers==${xformers_version} && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
