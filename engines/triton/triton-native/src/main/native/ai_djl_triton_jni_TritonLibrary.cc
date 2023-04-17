@@ -40,22 +40,27 @@ JNIEXPORT jlong JNICALL Java_ai_djl_triton_jni_TritonLibrary_createServerOption
             TRITONSERVER_ServerOptionsSetModelRepositoryPath(
                     server_options_ptr, env->GetStringUTFChars(jrepositoryPath,JNI_FALSE)),
             "setting model repository path");
-        DJL_CHECK_WITH_MSG(
+    DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetLogVerbose(server_options_ptr, verbose),
             "setting verbose logging level");
-        DJL_CHECK_WITH_MSG(
+    DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetBackendDirectory(
                     server_options_ptr, env->GetStringUTFChars(jbackendsPath,JNI_FALSE)),
             "setting backend directory");
-        DJL_CHECK_WITH_MSG(
+    DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetRepoAgentDirectory(
                     server_options_ptr, env->GetStringUTFChars(jrepoAgentPath,JNI_FALSE)),
             "setting repository agent directory");
-        DJL_CHECK_WITH_MSG(
+    DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetStrictModelConfig(server_options_ptr, true),
             "setting strict model configuration");
+    // Let DJL handle which models to load
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_ServerOptionsSetModelControlMode(
+                    server_options_ptr, TRITONSERVER_MODEL_CONTROL_EXPLICIT),
+            "setting model control");
     double min_compute_capability = 0;
-        DJL_CHECK_WITH_MSG(
+    DJL_CHECK_WITH_MSG(
             TRITONSERVER_ServerOptionsSetMinSupportedComputeCapability(
                     server_options_ptr, min_compute_capability),
             "setting minimum supported CUDA compute capability");
@@ -68,12 +73,63 @@ JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_deleteServerOption
     API_BEGIN()
     auto* server_options_ptr = reinterpret_cast<TRITONSERVER_ServerOptions*>(jhandle);
     DJL_CHECK_WITH_MSG(
-                TRITONSERVER_ServerOptionsDelete(server_options_ptr), "deleting server options")
+            TRITONSERVER_ServerOptionsDelete(server_options_ptr), "deleting server options");
     API_END()
 }
 
+JNIEXPORT jlong JNICALL Java_ai_djl_triton_jni_TritonLibrary_createModelServer
+        (JNIEnv *env, jobject jthis, jlong jhandle) {
+    API_BEGIN()
+    auto* server_options_ptr = reinterpret_cast<TRITONSERVER_ServerOptions*>(jhandle);
+    TRITONSERVER_Server* server_ptr = nullptr;
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_ServerNew(&server_ptr, server_options_ptr),
+            "creating server object");
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_ServerOptionsDelete(server_options_ptr),
+            "deleting server options");
+    std::shared_ptr<TRITONSERVER_Server> server(
+            server_ptr, TRITONSERVER_ServerDelete);
+    return reinterpret_cast<uintptr_t>(server.get());
+    API_END_RETURN()
+}
 
+JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_deleteModelServer
+        (JNIEnv *env, jobject jthis, jlong jhandle) {
+    API_BEGIN()
+    auto* server_ptr = reinterpret_cast<TRITONSERVER_Server*>(jhandle);
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_ServerDelete(server_ptr), "deleting server object");
+    API_END()
+}
 
+JNIEXPORT jlong JNICALL Java_ai_djl_triton_jni_TritonLibrary_buildInferenceRequest
+        (JNIEnv *env, jobject jthis, jlong jhandle, jstring modelName, jstring id) {
+    API_BEGIN()
+    auto* server = reinterpret_cast<TRITONSERVER_Server*>(jhandle);
+    TRITONSERVER_InferenceRequest* irequest = nullptr;
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceRequestNew(&irequest, server,
+                     env->GetStringUTFChars(modelName, JNI_FALSE),
+                     -1 /* model_version */), "creating inference request");
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceRequestSetId(irequest,
+                     env->GetStringUTFChars(id, JNI_FALSE)), "setting ID for the request");
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceRequestSetReleaseCallback(irequest, InferRequestComplete,
+                     nullptr), "setting request release callback");
+    return reinterpret_cast<uintptr_t>(irequest);
+    API_END_RETURN()
+}
+
+JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_deleteInferenceRequest
+        (JNIEnv *env , jobject jthis, jlong irHandle) {
+    API_BEGIN()
+    auto* irequest = reinterpret_cast<TRITONSERVER_InferenceRequest*>(irHandle);
+    DJL_CHECK_WITH_MSG(
+            TRITONSERVER_InferenceRequestDelete(irequest), "deleting inference request");
+    API_END()
+}
 
 JNIEXPORT void JNICALL Java_ai_djl_triton_jni_TritonLibrary_addInput
         (JNIEnv *env, jobject jthis, jlong jir_handle, jstring jname, jobject jbuffer, jlong jbuffer_size, jlongArray jshape, jint jdtype) {
