@@ -241,7 +241,7 @@ class HuggingFaceService(object):
                                          torch.cuda.current_device())
             with torch.no_grad():
                 output_tokens = model.generate(*args, **input_tokens, **kwargs)
-            generated_text = tokenizer.batch_decode(output_tokens)
+            generated_text = tokenizer.batch_decode(output_tokens, skip_special_tokens=True)
 
             return [{"generated_text": s} for s in generated_text]
 

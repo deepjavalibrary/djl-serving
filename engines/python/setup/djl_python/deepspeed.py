@@ -296,7 +296,7 @@ class DeepSpeedService(object):
                 with torch.no_grad():
                     output_tokens = self.model.generate(
                         **tokenized_inputs, **model_kwargs)
-                generated_text = self.tokenizer.batch_decode(output_tokens)
+                generated_text = self.tokenizer.batch_decode(output_tokens, skip_special_tokens=True)
                 outputs.add([{"generated_text": s} for s in generated_text])
                 return outputs
 
