@@ -60,7 +60,15 @@ public class RequestParser {
 
         for (Map.Entry<String, String> entry : req.headers().entries()) {
             String key = entry.getKey();
-            if (!HttpHeaderNames.CONTENT_TYPE.contentEqualsIgnoreCase(key)) {
+            if ("X-Amzn-SageMaker-Custom-Attributes".equalsIgnoreCase(key)) {
+                String[] tokens = entry.getValue().split(";");
+                for (String token : tokens) {
+                    String[] pair = token.split("=", 2);
+                    if (pair.length == 2) {
+                        input.addProperty(pair[0].trim(), pair[1].trim());
+                    }
+                }
+            } else if (!HttpHeaderNames.CONTENT_TYPE.contentEqualsIgnoreCase(key)) {
                 input.addProperty(key, entry.getValue());
             }
         }

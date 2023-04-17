@@ -16,6 +16,7 @@ import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.serving.cache.CacheEngine;
+import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +34,6 @@ import software.amazon.awssdk.services.dynamodb.model.BillingMode;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
-import software.amazon.awssdk.services.dynamodb.model.GetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
@@ -63,7 +62,8 @@ public final class DdbCacheEngine implements CacheEngine {
 
     private static final Logger logger = LoggerFactory.getLogger(DdbCacheEngine.class);
 
-    private static final String TABLE_NAME = "djl-serving-pagination-table";
+    private static final String TABLE_NAME =
+            Utils.getenv("DDB_TABLE_NAME", "djl-serving-pagination-table");
     private static final String CACHE_ID = "CACHE_ID";
     private static final String INDEX = "INDEX_KEY";
     private static final String HEADER = "HEADER";
@@ -85,7 +85,7 @@ public final class DdbCacheEngine implements CacheEngine {
     private DdbCacheEngine(DynamoDbClient ddbClient) {
         this.ddbClient = ddbClient;
         cacheTtl = Duration.ofMillis(30).toMillis();
-        writeBatch = 5;
+        writeBatch = Integer.parseInt(Utils.getenv("SERVING_DDB_BATCH", "5"));
     }
 
     /**
@@ -208,7 +208,7 @@ public final class DdbCacheEngine implements CacheEngine {
     /** {@inheritDoc} */
     @Override
     public Output get(String key, int limit) {
-        int start = 0;
+        int start = -1;
         if (key.length() > 36) {
             start = Integer.parseInt(key.substring(36));
             key = key.substring(0, 36);
@@ -222,30 +222,24 @@ public final class DdbCacheEngine implements CacheEngine {
                         .tableName(TABLE_NAME)
                         .keyConditionExpression(EXPRESSION)
                         .expressionAttributeValues(attrValues)
-                        .limit(limit)
+                        .limit(limit == Integer.MAX_VALUE ? limit : limit + 1)
                         .build();
 
         QueryResponse response = ddbClient.query(request);
         if (response.count() == 0) {
-            if (start == 0) {
-                Map<String, AttributeValue> map = new ConcurrentHashMap<>(2);
-                map.put(CACHE_ID, AttributeValue.builder().s(key).build());
-                map.put(INDEX, AttributeValue.builder().n("-1").build());
-                GetItemRequest get =
-                        GetItemRequest.builder().tableName(TABLE_NAME).key(map).build();
-                GetItemResponse resp = ddbClient.getItem(get);
-                if (resp.hasItem()) {
-                    AttributeValue header = resp.item().get(HEADER);
-                    return decode(header);
-                }
-            }
             return null;
         }
 
         Output output = new Output();
         boolean complete = false;
+        boolean first = true;
         List<byte[]> list = new ArrayList<>();
         for (Map<String, AttributeValue> item : response.items()) {
+            // skip first one
+            if (first) {
+                first = false;
+                continue;
+            }
             AttributeValue header = item.get(HEADER);
             if (header != null) {
                 Output o = decode(header);
@@ -261,13 +255,14 @@ public final class DdbCacheEngine implements CacheEngine {
             if (lastContent != null) {
                 complete = true;
             }
-            start++;
+            start = Integer.parseInt(item.get(INDEX).n());
         }
         if (!list.isEmpty()) {
             output.add(join(list));
         }
         if (!complete) {
             output.addProperty("x-next-token", key + start);
+            output.addProperty("X-Amzn-SageMaker-Custom-Attributes", "x-next-token=" + key + start);
         }
         return output;
     }

@@ -242,10 +242,10 @@ public final class NettyUtils {
      */
     public static void sendError(ChannelHandlerContext ctx, Throwable t) {
         if (t instanceof ResourceNotFoundException || t instanceof ModelNotFoundException) {
-            logger.trace("", t);
+            logger.debug("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.NOT_FOUND, t);
         } else if (t instanceof BadRequestException) {
-            logger.trace("", t);
+            logger.debug("", t);
             BadRequestException e = (BadRequestException) t;
             HttpResponseStatus status = HttpResponseStatus.valueOf(e.getCode(), e.getMessage());
             NettyUtils.sendError(ctx, status, t);
@@ -253,13 +253,13 @@ public final class NettyUtils {
             logger.warn("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
         } else if (t instanceof ModelException) {
-            logger.trace("", t);
+            logger.debug("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.BAD_REQUEST, t);
         } else if (t instanceof MethodNotAllowedException) {
-            logger.trace("", t);
+            logger.debug("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, t);
         } else if (t instanceof ServiceUnavailableException || t instanceof WlmException) {
-            logger.trace("", t);
+            logger.warn("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, t);
         } else {
             logger.error("", t);

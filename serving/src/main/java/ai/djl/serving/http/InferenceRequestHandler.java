@@ -71,6 +71,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final String X_STARTING_TOKEN = "x-starting-token";
     private static final String X_NEXT_TOKEN = "x-next-token";
     private static final String X_MAX_ITEMS = "x-max-items";
+    private static final String X_CUSTOM_ATTRIBUTES = "X-Amzn-SageMaker-Custom-Attributes";
 
     private RequestParser requestParser;
 
@@ -292,11 +293,13 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             pending.setMessage("The model result is not yet available");
             pending.setCode(202);
             pending.addProperty(X_NEXT_TOKEN, nextToken);
+            pending.addProperty(X_CUSTOM_ATTRIBUTES, X_NEXT_TOKEN + '=' + nextToken);
             cache.put(nextToken, pending);
 
             // Send back token to user
             Output out = new Output();
             out.addProperty(X_NEXT_TOKEN, nextToken);
+            out.addProperty(X_CUSTOM_ATTRIBUTES, X_NEXT_TOKEN + '=' + nextToken);
             sendOutput(out, ctx);
 
             // Run model
@@ -325,7 +328,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         CacheEngine cache = CacheManager.getCacheEngine();
         Output output = cache.get(startingToken, limit);
         if (output == null) {
-            throw new BadRequestException("Invalid " + X_STARTING_TOKEN);
+            throw new BadRequestException("Invalid " + X_STARTING_TOKEN + ": " + startingToken);
         }
         sendOutput(output, ctx);
     }
@@ -392,6 +395,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     void onException(Throwable t, ChannelHandlerContext ctx) {
         HttpResponseStatus status;
         if (t instanceof TranslateException || t instanceof BadRequestException) {
+            logger.debug(t.getMessage(), t);
             SERVER_METRIC.info("{}", RESPONSE_4_XX);
             status = HttpResponseStatus.BAD_REQUEST;
         } else if (t instanceof WlmException) {
