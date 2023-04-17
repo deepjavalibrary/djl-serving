@@ -1,6 +1,5 @@
 import torch
 import logging
-import json
 from transformers import (
     LogitsProcessorList,
     TemperatureLogitsWarper,
@@ -10,9 +9,11 @@ from transformers import (
     RepetitionPenaltyLogitsProcessor,
 )
 
+
 class StreamingUtils:
 
     DEFAULT_MAX_NEW_TOKENS = 50
+    SUPPORTED_MODEL_ARCH_SUFFIXES = ("CausalLM", "GPT2LMHeadModel")
 
     @staticmethod
     def get_stream_generator(execution_engine: str):
@@ -30,9 +31,10 @@ class StreamingUtils:
     @staticmethod
     @torch.inference_mode()
     def _hf_model_stream_generator(model, tokenizer, inputs, **kwargs):
-        StreamingUtils._validate_inputs(inputs)
+        StreamingUtils._validate_inputs(model, inputs)
         if not tokenizer.pad_token:
             tokenizer.pad_token = tokenizer.eos_token
+        is_pad_token_equal_to_eos_token = tokenizer.pad_token == tokenizer.eos_token
         tokenized_inputs = tokenizer(inputs, return_tensors="pt",
                                      padding=True).to(
                                          StreamingUtils._get_current_device())
@@ -43,14 +45,17 @@ class StreamingUtils:
                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
         attention_mask = input_ids.new_zeros(len(inputs),
                                              input_length + max_new_tokens)
-        attention_mask[:, :input_length] = tokenized_inputs["attention_mask"]
+        attention_mask[:, :
+                       input_length] = 1 if is_pad_token_equal_to_eos_token else tokenized_inputs[
+                           "attention_mask"]
         past_key_values = None
         decoding_method = StreamingUtils._get_decoding_method(**kwargs)
         stop_generation = False
         curr_length = input_length
         new_tokens_count = 0
-        unfinished_sequences = torch.ones((len(inputs), 1), dtype=torch.long,
-                                             device=input_ids.device)
+        unfinished_sequences = torch.ones((len(inputs), 1),
+                                          dtype=torch.long,
+                                          device=input_ids.device)
         while True:
             if stop_generation:
                 return
@@ -62,8 +67,8 @@ class StreamingUtils:
                                     use_cache=True)
             next_token_ids = []
             for i, logits in enumerate(outputs.logits):
-                next_token_id = decoding_method(logits, all_input_ids[i, :].view(1, -1),
-                                                **kwargs)
+                next_token_id = decoding_method(
+                    logits, all_input_ids[i, :].view(1, -1), **kwargs)
                 next_token_ids.append(next_token_id.view(1, 1))
             token_ids = torch.cat(next_token_ids)
             past_key_values = outputs.past_key_values
@@ -71,12 +76,13 @@ class StreamingUtils:
             curr_length += 1
             new_tokens_count += 1
 
-            not_eos_token_ids = (token_ids !=
-                               tokenizer.eos_token_id).view(len(inputs), 1)
+            not_eos_token_ids = (token_ids != tokenizer.eos_token_id).view(
+                len(inputs), 1)
             unfinished_sequences = unfinished_sequences.mul(not_eos_token_ids)
 
             input_ids = token_ids.view(len(inputs), 1)
-            input_ids = input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not()
+            input_ids = input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not(
+            )
             all_input_ids = torch.cat([all_input_ids, token_ids], dim=1)
             token_text = tokenizer.batch_decode(input_ids)
 
@@ -88,10 +94,10 @@ class StreamingUtils:
     @torch.inference_mode()
     def _transformers_neuronx_stream_generator(model, tokenizer, inputs,
                                                **kwargs):
-        sequence_length = kwargs.get("seq_length", 50)
+        sequence_length = kwargs.get("seq_length",
+                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
         top_k = kwargs.get("top_k", 50)
-        tokenized_inputs = tokenizer(inputs, return_tensors="pt",
-                                     padding=True)
+        tokenized_inputs = tokenizer(inputs, return_tensors="pt", padding=True)
         input_ids = tokenized_inputs["input_ids"]
         model.reset()
         eos_token_id = model.config.eos_token_id
@@ -119,12 +125,20 @@ class StreamingUtils:
             yield token_text
 
     @staticmethod
-    def _has_met_stopping_criteria(not_eos_token_ids, current_token_count, max_new_tokens):
-        if not_eos_token_ids.sum() == 0 or current_token_count >= max_new_tokens:
+    def _has_met_stopping_criteria(not_eos_token_ids, current_token_count,
+                                   max_new_tokens):
+        if not_eos_token_ids.sum(
+        ) == 0 or current_token_count >= max_new_tokens:
             return True
         return False
 
-    def _validate_inputs(inputs):
+    def _validate_inputs(model, inputs):
+        model_arch_list = model.config.architectures
+        model_arch_supported = any(
+            model_arch.endswith(StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES)
+            for model_arch in model_arch_list)
+        if not model_arch_supported:
+            assert False, f"model archs: {model_arch_list} is not in supported list: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}"
         if isinstance(inputs, list):
             assert len(inputs) >= 1, "[ERROR] empty input list"
         else:
