@@ -15,6 +15,7 @@ FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.22.1~SNAPSHOT
 ARG torch_version=2.0.0
+ARG torch_vision_version=0.15.1
 ARG python_version=3.9
 
 RUN mkdir -p /opt/djl/conf
@@ -42,7 +43,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
-    pip3 install numpy && pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu118 && \
+    pip3 install numpy && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-cu118 && \
     useradd -m -d /home/djl djl && \
