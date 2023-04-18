@@ -9,7 +9,7 @@ if [[ "$1" = "serve" ]]; then
         /usr/bin/djl-serving "$@"
         code=$?
     done
-elif [[ "$1" = "partition" ]]; then
+elif [[ "$1" = "partition" ]] || [[ "$1" = "train" ]]; then
     shift 1
     /usr/bin/python3 /opt/djl/partition/partition.py "$@"
 else
