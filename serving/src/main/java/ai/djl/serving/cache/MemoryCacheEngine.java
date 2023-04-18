@@ -126,6 +126,7 @@ public class MemoryCacheEngine implements CacheEngine {
         }
         if (cbs.hasNext()) {
             o.addProperty("x-next-token", key);
+            o.addProperty("X-Amzn-SageMaker-Custom-Attributes", "x-next-token=" + key);
         } else {
             // clean up cache
             remove(key);

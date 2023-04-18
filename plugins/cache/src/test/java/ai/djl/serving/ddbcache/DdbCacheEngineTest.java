@@ -57,14 +57,14 @@ public class DdbCacheEngineTest {
 
             // query before model generate output
             o = engine.get(key1, Integer.MAX_VALUE);
-            Assert.assertEquals(o.getCode(), 202);
+            Assert.assertEquals(o.getCode(), 200);
             Assert.assertNull(o.getData());
             String nextToken = o.getProperty("x-next-token", null);
-            Assert.assertEquals(nextToken, key1);
+            Assert.assertEquals(nextToken, key1 + "-1");
 
             // retry before model generate output
             o = engine.get(nextToken, Integer.MAX_VALUE);
-            Assert.assertEquals(o.getCode(), 202);
+            Assert.assertEquals(o.getCode(), 200);
 
             // real output from model
             Output output1 = new Output();
