@@ -17,7 +17,6 @@ import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -68,7 +67,7 @@ public class RequestParser {
                         input.addProperty(pair[0].trim(), pair[1].trim());
                     }
                 }
-            } else if (!HttpHeaderNames.CONTENT_TYPE.contentEqualsIgnoreCase(key)) {
+            } else {
                 input.addProperty(key, entry.getValue());
             }
         }
@@ -90,10 +89,6 @@ public class RequestParser {
                 form.destroy();
             }
         } else {
-            if (contentType != null) {
-                // use normalized content type
-                input.addProperty("content-type", contentType.toString());
-            }
             byte[] content = NettyUtils.getBytes(req.content());
             input.add("data", content);
         }
