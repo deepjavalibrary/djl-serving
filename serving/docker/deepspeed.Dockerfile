@@ -51,7 +51,7 @@ RUN apt-get update && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
+    pip3 install torch==${torch_version}+cu118 -f https://download.pytorch.org/whl/torch_stable.html && \
     ${deepspeed_wheel} transformers==${transformers_version} \
     triton==2.0.0 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     pip3 install diffusers[torch]==${diffusers_version} xformers==${xformers_version} && \
