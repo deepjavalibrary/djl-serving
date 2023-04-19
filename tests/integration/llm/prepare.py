@@ -184,6 +184,15 @@ transformers_neuronx_handler_list = {
         "option.dtype": "fp32",
         "option.model_loading_timeout": 720
     },
+    "opt-1.3b-streaming": {
+        "option.model_id": "s3://djl-llm/opt-1.3b/",
+        "option.batch_size": 1,
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 256,
+        "option.dtype": "fp16",
+        "option.model_loading_timeout": 600,
+        "option.enable_streaming": True
+    },
 }
 
 
