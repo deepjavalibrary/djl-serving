@@ -13,7 +13,7 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.22.1~SNAPSHOT
 ARG python_version=3.9
-ARG torch_version=2.0.0
+ARG torch_version=1.13.1
 ARG xformers_version=0.0.18
 ARG accelerate_version=0.18.0
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.3-py2.py3-none-any.whl"
@@ -51,7 +51,7 @@ RUN apt-get update && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
+    pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 \
     ${deepspeed_wheel} transformers==${transformers_version} \
     triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
     pip3 install diffusers[torch]==${diffusers_version} xformers==${xformers_version} && \
