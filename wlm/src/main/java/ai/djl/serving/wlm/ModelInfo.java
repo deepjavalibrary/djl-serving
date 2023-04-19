@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.Application;
 import ai.djl.Device;
 import ai.djl.MalformedModelException;
 import ai.djl.Model;
@@ -30,9 +29,6 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
-import ai.djl.translate.ServingTranslator;
-import ai.djl.translate.Translator;
-import ai.djl.translate.TranslatorFactory;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
@@ -78,13 +74,8 @@ public final class ModelInfo<I, O> {
     private int minWorkers = -1;
     private int maxWorkers = -1;
 
-    private Map<String, String> filters;
-    private Map<String, Object> arguments;
-    private Map<String, String> options;
-    private String application;
-    private String modelName;
-    private String translatorFactory;
-    private String translator;
+    private Map<String, Object> arguments = new ConcurrentHashMap<>();
+    private Map<String, String> options = new ConcurrentHashMap<>();
 
     transient Path modelDir;
     private transient String artifactName;
@@ -202,29 +193,9 @@ public final class ModelInfo<I, O> {
                         Criteria.builder()
                                 .setTypes(inputClass, outputClass)
                                 .optModelUrls(modelUrl)
-                                .optModelName(modelName)
                                 .optEngine(engineName)
-                                .optFilters(filters)
                                 .optArguments(arguments)
                                 .optOptions(options);
-                if (application != null) {
-                    builder.optApplication(Application.of(application));
-                }
-                try {
-                    if (translator != null) {
-                        Class<? extends ServingTranslator> clazz =
-                                Class.forName(translator).asSubclass(ServingTranslator.class);
-                        builder.optTranslator(
-                                (Translator<I, O>) clazz.getConstructor().newInstance());
-                    }
-                    if (translatorFactory != null) {
-                        Class<? extends TranslatorFactory> clazz =
-                                Class.forName(translator).asSubclass(TranslatorFactory.class);
-                        builder.optTranslatorFactory(clazz.getConstructor().newInstance());
-                    }
-                } catch (ReflectiveOperationException e) {
-                    throw new ModelException("Invalid criteria", e);
-                }
                 if (batchSize > 1) {
                     builder.optArgument("batchifier", "stack");
                 }
@@ -478,6 +449,15 @@ public final class ModelInfo<I, O> {
             engineName = inferEngine();
         }
         downloadS3();
+        // override prop keys are not write to serving.properties,
+        // we have to explicitly set in Criteria
+        for (String key : prop.stringPropertyNames()) {
+            if (key.startsWith("option.")) {
+                options.put(key.substring(7), prop.getProperty(key));
+            } else {
+                arguments.put(key, prop.getProperty(key));
+            }
+        }
     }
 
     /** Close all loaded models. */
@@ -641,12 +621,15 @@ public final class ModelInfo<I, O> {
         }
         logger.info(
                 "Apply per model settings:\n\tqueueSize: {}\n\tbatchSize: {}"
-                        + "\n\tmaxBatchDelay: {}\n\tmaxIdle: {}\n\tloadOnDevices: {}",
+                        + "\n\tmaxBatchDelay: {}\n\tmaxIdle: {}\n\tloadOnDevices: {}"
+                        + "\n\tengine: {}\n\tentrypoint: {}",
                 queueSize,
                 batchSize,
                 maxBatchDelayMillis,
                 maxIdleSeconds,
-                loadOnDevices);
+                loadOnDevices,
+                engineName,
+                prop.get("option.entryPoint"));
     }
 
     void checkAvailableMemory(Device device) throws IOException {
