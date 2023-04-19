@@ -258,6 +258,7 @@ public class ModelInfoTest {
         ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
+        assertEquals(model.prop.getProperty("option.model_id"), "gpt2-xl");
 
         System.setProperty("HF_MODEL_ID", "invalid-model-id");
         model = new ModelInfo<>("build/models/lmi_test_model");
