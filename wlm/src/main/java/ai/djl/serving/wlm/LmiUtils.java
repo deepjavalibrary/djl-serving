@@ -72,25 +72,25 @@ public final class LmiUtils {
         if (Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE") != null) {
             tensorParallelDegree =
                     Integer.parseInt(Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE"));
-        } else if (prop.get("option.tensor_parallel_degree") != null) {
+        } else if (prop.getProperty("option.tensor_parallel_degree") != null) {
             tensorParallelDegree =
-                    Integer.parseInt(prop.get("option.tensor_parallel_degree").toString());
+                    Integer.parseInt(prop.getProperty("option.tensor_parallel_degree"));
         } else {
             // TODO: Assume use all GPUs for TP
             tensorParallelDegree = CudaUtils.getGpuCount();
         }
 
         if (tensorParallelDegree > 0) {
-            prop.put("option.tensor_parallel_degree", tensorParallelDegree);
+            prop.setProperty("option.tensor_parallel_degree", String.valueOf(tensorParallelDegree));
         }
         String huggingFaceTask = Utils.getEnvOrSystemProperty("HF_TASK");
         if (huggingFaceTask != null) {
-            prop.put("option.task", huggingFaceTask);
+            prop.setProperty("option.task", huggingFaceTask);
         }
 
         if ("stable-diffusion".equals(modelConfig.getModelType())) {
             // TODO: Move this from hardcoded to deduced in PyModel
-            prop.put("option.entryPoint", "djl_python.stable-diffusion");
+            prop.setProperty("option.entryPoint", "djl_python.stable-diffusion");
             return "DeepSpeed";
         }
 
@@ -121,7 +121,7 @@ public final class LmiUtils {
                 configUri = downloadDir.resolve("model_index.json").toUri();
             }
         } else if (modelId != null) {
-            modelInfo.prop.put("option.modelId", modelId);
+            modelInfo.prop.setProperty("option.modelId", modelId);
             configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
             HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
             // stable diffusion models have a different file name with the config... sometimes
