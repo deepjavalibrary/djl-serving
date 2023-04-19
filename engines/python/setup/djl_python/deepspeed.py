@@ -270,7 +270,7 @@ class DeepSpeedService(object):
         try:
             content_type = inputs.get_property("Content-Type")
             model_kwargs = {}
-            if content_type is not None and content_type == "application/json":
+            if content_type is not None and content_type.startswith("application/json"):
                 json_input = inputs.get_as_json()
                 if isinstance(json_input, dict):
                     input_data = self.format_input_for_task(

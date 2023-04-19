@@ -150,7 +150,7 @@ class Input(object):
             return self.get_as_numpy(key)
         if content_type == "tensor/npz":
             return self.get_as_npz(key)
-        elif content_type == "application/json":
+        elif content_type is not None and content_type.startswith("application/json"):
             return self.get_as_json(key)
         elif content_type is not None and content_type.startswith("text/"):
             return self.get_as_string(key)
