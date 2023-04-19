@@ -121,7 +121,7 @@ public final class LmiUtils {
                 configUri = downloadDir.resolve("model_index.json").toUri();
             }
         } else if (modelId != null) {
-            modelInfo.prop.setProperty("option.modelId", modelId);
+            modelInfo.prop.setProperty("option.model_id", modelId);
             configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
             HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
             // stable diffusion models have a different file name with the config... sometimes
