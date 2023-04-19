@@ -17,7 +17,7 @@ ARG torch_version=2.0.0
 ARG xformers_version=0.0.18
 ARG accelerate_version=0.18.0
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.3-py2.py3-none-any.whl"
-ARG transformers_version=4.28.1
+ARG transformers_version=4.27.4
 ARG diffusers_version=0.14.0
 
 EXPOSE 8080
