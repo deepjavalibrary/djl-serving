@@ -76,6 +76,7 @@ public final class ConfigManager {
     private static final String MODEL_URL_PATTERN = "model_url_pattern";
     private static final String LOAD_ON_DEVICES = "load_on_devices";
     private static final String PLUGIN_FOLDER = "plugin_folder";
+    private static final String CHUNKED_READ_TIMEOUT = "chunked_read_timeout";
 
     // Configuration which are not documented or enabled through environment variables
     private static final String USE_NATIVE_IO = "use_native_io";
@@ -379,6 +380,15 @@ public final class ConfigManager {
                 .protocols("TLSv1.2")
                 .ciphers(supportedCiphers)
                 .build();
+    }
+
+    /**
+     * Returns the ChunkedBytesSupplier read time in minutes.
+     *
+     * @return the ChunkedBytesSupplier read time in minutes
+     */
+    public int getChunkedReadTimeout() {
+        return getIntProperty(CHUNKED_READ_TIMEOUT, 2);
     }
 
     /**
