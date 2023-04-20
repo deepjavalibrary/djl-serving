@@ -137,7 +137,8 @@ class DeepSpeedService(object):
             properties.get("tensor_parallel_degree", 1))
         self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage",
                                                 "true").lower() == "true"
-        self.enable_streaming = bool(properties.get("enable_streaming", False))
+        self.enable_streaming = properties.get("enable_streaming",
+                                                    "false").lower() == "true"
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
                 self.ds_config = json.load(f)
