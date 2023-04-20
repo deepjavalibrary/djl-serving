@@ -136,7 +136,8 @@ class TransformersNeuronXService(object):
             properties.get("tensor_parallel_degree", 1))
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        self.enable_streaming = bool(properties.get("enable_streaming", False))
+        self.enable_streaming = properties.get("enable_streaming",
+                                               "false").lower() == "true"
         dtype = properties.get("dtype", "fp32")
         n_positions = int(properties.get("n_positions", 128))
         unroll = properties.get("unroll", None)

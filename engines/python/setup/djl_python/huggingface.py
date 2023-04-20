@@ -75,7 +75,8 @@ class HuggingFaceService(object):
         device_id = int(properties.get("device_id", "-1"))
         task = properties.get("task")
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
-        self.enable_streaming = bool(properties.get("enable_streaming", False))
+        self.enable_streaming = properties.get("enable_streaming",
+                                               "false").lower() == "true"
         # HF Acc handling
         kwargs = {}
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
