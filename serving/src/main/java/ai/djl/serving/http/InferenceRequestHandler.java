@@ -74,10 +74,12 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final String X_CUSTOM_ATTRIBUTES = "X-Amzn-SageMaker-Custom-Attributes";
 
     private RequestParser requestParser;
+    private int chunkReadTime;
 
     /** default constructor. */
     public InferenceRequestHandler() {
         this.requestParser = new RequestParser();
+        chunkReadTime = ConfigManager.getInstance().getChunkedReadTimeout();
     }
 
     /** {@inheritDoc} */
@@ -369,7 +371,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
             try {
                 while (supplier.hasNext()) {
-                    byte[] buf = supplier.nextChunk(1, TimeUnit.MINUTES);
+                    byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.MINUTES);
                     ByteBuf bb = Unpooled.wrappedBuffer(buf);
                     ctx.writeAndFlush(new DefaultHttpContent(bb));
                 }
