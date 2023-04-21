@@ -54,19 +54,19 @@ jobs:
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
-          ./lmic_test.sh --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/bloom_7b1.json
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/bloom_7b1.json
       - name: Test gpt-j-6b
         working-directory: tests/integration
         run: |
-          ./lmic_test.sh --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_j_6b.json
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_j_6b.json
       - name: Test gpt-neox-20b
         working-directory: tests/integration
         run: |
-          ./lmic_test.sh --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_neox_20b.json
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_neox_20b.json
       - name: Test opt-30b
         working-directory: tests/integration
         run: |
-          ./lmic_test.sh --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/opt_30b.json
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/opt_30b.json
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
