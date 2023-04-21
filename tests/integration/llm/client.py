@@ -2,6 +2,7 @@ import requests
 import argparse
 import subprocess as sp
 import logging
+import re
 import os
 import sys
 import math
@@ -12,39 +13,41 @@ from datetime import datetime
 from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description='Build the LLM configs')
-parser.add_argument('handler', help='the handler used in the model')
-parser.add_argument('model', help='The name of model')
+parser = argparse.ArgumentParser(description="Build the LLM configs")
+parser.add_argument("handler", help="the handler used in the model")
+parser.add_argument("model", help="The name of model")
 parser.add_argument("--engine",
-                    default="deepspeed",
+                    required=False,
                     type=str,
                     choices=["deepspeed", "huggingface", "fastertransformer"],
                     help="The engine used for inference")
 parser.add_argument("--dtype",
-                    default="fp16",
+                    required=False,
                     type=str,
                     help="The model data type")
 parser.add_argument("--tensor_parallel",
-                    default=1,
+                    required=False,
                     type=int,
                     help="The model tensor parallel degree")
 parser.add_argument("--batch_size",
-                    default=1,
+                    required=False,
                     type=int,
                     help="The batch size of inference requests")
 parser.add_argument("--in_tokens",
+                    required=False,
                     type=int,
                     help="The sequence length for input tokens")
 parser.add_argument("--out_tokens",
-                    default=256,
+                    required=False,
                     type=int,
                     help="The sequence length for output tokens")
 parser.add_argument("--count",
-                    default=25,
+                    required=False,
                     type=int,
                     help="Number of requests sent")
-parser.add_argument("--cpu_mem",
-                    default=-1,
+parser.add_argument("--cpu_memory",
+                    required=False,
+                    default=0,
                     type=int,
                     help="CPU Memory footprint")
 args = parser.parse_args()
@@ -265,49 +268,28 @@ def get_gpu_memory():
         command.split()).decode('ascii').split('\n')[:-1][1:]
     return [int(x.split()[0]) for i, x in enumerate(memory_free_info)]
 
-def get_total_memory(memory_snapshot):
-    memory_footprint = 0
-    for memory in memory_snapshot:
-        memory_footprint += float(memory)
-    return memory_footprint
 
-def log_metrics(arr):
-    p50 = np.percentile(arr, 50)
-    p90 = np.percentile(arr, 90)
-    p99 = np.percentile(arr, 99)
-    throughput = 1000 / (sum(arr) / len(arr))
-    tps = throughput * args.out_tokens * args.batch_size
-    max_memory = get_total_memory(get_gpu_memory())
-
-    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout)) # standard out so that this can be piped to a file
-    outputs = []
-    sanitized_model_name = args.model.split("/")[-1]
-    in_tokens = f"{args.in_tokens}-in-tokens_" if args.in_tokens else ""
-    metric_stem = f"{sanitized_model_name}_{args.dtype}_tp-{args.tensor_parallel}" \
-                  f"_batch-{args.batch_size}_{in_tokens}{args.out_tokens}-out-tokens"
-    outputs.append({"MetricName": f"{metric_stem}_p50", "Unit": "Milliseconds", "Value": p50})
-    outputs.append({"MetricName": f"{metric_stem}_p90", "Unit": "Milliseconds", "Value": p90})
-    outputs.append({"MetricName": f"{metric_stem}_p99", "Unit": "Milliseconds", "Value": p99})
-    outputs.append({"MetricName": f"{metric_stem}_throughput", "Unit": "Count/Second", "Value": throughput})
-    outputs.append({"MetricName": f"{metric_stem}_tokens-per-second", "Unit": "Count/Second", "Value": tps})
-    outputs.append({"MetricName": f"{metric_stem}_gpu-memory", "Unit": "Megabytes", "Value": max_memory})
-    if args.cpu_mem > 0:
-        outputs.append({"MetricName": f"{metric_stem}_cpu-memory", "Unit": "Kilobytes", "Value": args.cpu_mem})
-    logging.info(outputs)
+def fake_tokenizer(prompt, in_tokens):
+    tokenized = re.findall(r"[\w']+|[.,!?;]", prompt)
+    index_pointer = 0
+    token_count = 0
+    for token in tokenized:
+        target = token[-1]
+        index_pointer = prompt.find(target, index_pointer) + 1
+        token_count += 1
+        if token_count == in_tokens:
+            break
+    return prompt[:index_pointer]
 
 
 def prompt_generation(in_tokens):
-    in_characters = in_tokens * 4
     result = None
     with open(os.path.join(os.getcwd(), 'prompts.txt')) as f:
         result = '\n'.join(f.readlines())
     rot = result.find('. ', randrange(len(result))) + 2
     result = result[rot:] + result[:rot]
 
-    # Do we use a generic tokenizer for length determination instead?
-    while len(result) < in_characters:
-        result += result
-    return result[:in_characters]
+    return fake_tokenizer(result, in_tokens)
 
 
 def batch_generation(batch_size):
@@ -348,6 +330,54 @@ def t5_batch_generation(batch_size):
     if batch_size > len(input_sentences):
         input_sentences *= math.ceil(batch_size / len(input_sentences))
     return input_sentences[:batch_size]
+
+
+def get_total_memory(memory_snapshot):
+    memory_footprint = 0
+    for memory in memory_snapshot:
+        memory_footprint += float(memory)
+    return memory_footprint
+
+
+def build_metric_label():
+    sanitized_model_name = args.model.split("/")[-1]
+    dtype = f"{args.dtype}"
+    tp = f"tp-{args.tensor_parallel}" if args.tensor_parallel else ""
+    batch_size = f"batch-{args.batch_size}" if args.batch_size else ""
+    in_tokens = f"{args.in_tokens}-in-tokens" if args.in_tokens else ""
+    out_tokens = f"{args.out_tokens}-out-tokens" if args.out_tokens else ""
+    output = [sanitized_model_name, dtype, tp, batch_size, in_tokens, out_tokens]
+    while "" in output:
+        output.remove("")
+    return "_".join(output)
+
+
+def log_metrics(response_times):
+    required_args = ["batch_size", "out_tokens"]
+    for arg in required_args:
+        if arg not in args:
+            raise ValueError(f"Logging metrics requires the following arguments: {required_args}")
+
+    p50 = np.percentile(response_times, 50)
+    p90 = np.percentile(response_times, 90)
+    p99 = np.percentile(response_times, 99)
+    throughput = 1000 / (sum(response_times) / len(response_times))
+    tps = throughput * args.out_tokens * args.batch_size
+    max_memory = get_total_memory(get_gpu_memory())
+
+    outputs = []
+    metric_stem = build_metric_label()
+    outputs.append({"MetricName": f"{metric_stem}_p50", "Unit": "Milliseconds", "Value": p50})
+    outputs.append({"MetricName": f"{metric_stem}_p90", "Unit": "Milliseconds", "Value": p90})
+    outputs.append({"MetricName": f"{metric_stem}_p99", "Unit": "Milliseconds", "Value": p99})
+    outputs.append({"MetricName": f"{metric_stem}_throughput", "Unit": "Count/Second", "Value": throughput})
+    outputs.append({"MetricName": f"{metric_stem}_tokens-per-second", "Unit": "Count/Second", "Value": tps})
+    outputs.append({"MetricName": f"{metric_stem}_gpu-memory", "Unit": "Megabytes", "Value": max_memory})
+    if args.cpu_memory > 0:
+        outputs.append({"MetricName": f"{metric_stem}_cpu-memory", "Unit": "Kilobytes", "Value": args.cpu_memory})
+    with open("llm/metrics.log", "w") as f:
+        f.write(str(outputs))
+        f.close()
 
 
 def test_handler(model, model_spec):
@@ -407,6 +437,22 @@ def test_ds_raw_model(model, model_spec):
             logging.info(memory_usage)
             for memory in memory_usage:
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
+
+
+def test_performance():
+    response_times = []
+    for i in range(args.count):
+        req = {"inputs": batch_generation(args.batch_size)}
+        params = {"max_new_tokens": args.out_tokens}
+        req["parameters"] = params
+        logging.info(f"req: {req}")
+        start = datetime.now()
+        res = send_json(req)
+        delta = (datetime.now() - start).total_seconds() * 1000
+        response_times.append(delta)
+        res = res.json()
+        logging.info(f"res: {res}")
+    log_metrics(response_times)
 
 
 def test_sd_handler(model, model_spec):
@@ -525,27 +571,7 @@ def test_transformers_neuronx_handler(model, model_spec):
                 assert len(result) == batch_size
 
 
-def test_performance():
-    response_times = []
-    for i in range(args.count):
-        req = {"inputs": batch_generation(args.batch_size)}
-        total_length = args.out_tokens
-        if args.in_tokens:
-            total_length += args.in_tokens
-        params = {"max_length": total_length}
-        req["parameters"] = params
-        logging.info(f"req: {req}")
-        start = datetime.now()
-        res = send_json(req)
-        delta = (datetime.now() - start).total_seconds() * 1000
-        response_times.append(delta)
-        res = res.json()
-        logging.info(f"res: {res}")
-    log_metrics(response_times)
-
-
-if __name__ == '__main__':
-    args = parser.parse_args()
+if __name__ == "__main__":
     if args.handler == "deepspeed_raw":
         test_ds_raw_model(args.model, ds_raw_model_spec)
     elif args.handler == "huggingface":
@@ -560,12 +586,12 @@ if __name__ == '__main__':
         test_ft_handler(args.model, ft_raw_model_spec)
     elif args.handler == "deepspeed_aot":
         test_ds_raw_model(args.model, ds_aot_model_spec)
-    elif args.handler == "transformers_neuronx_raw":
-        test_transformers_neuronx_raw(args.model,
-                                      transformers_neuronx_raw_model_spec)
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)
+    elif args.handler == "transformers_neuronx_raw":
+        test_transformers_neuronx_raw(args.model,
+                                      transformers_neuronx_raw_model_spec)
     elif args.handler == "performance":
         test_performance()
     else:

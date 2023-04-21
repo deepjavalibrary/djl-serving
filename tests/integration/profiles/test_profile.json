@@ -1,0 +1,12 @@
+{
+	"test_series":"performance",
+	"engine":["deepspeed","huggingface","fastertransformer"],
+	"model": ["opt-30b", "gpt-j-6b", "gpt-neox-20b", "bloom-7b1"],
+	"dtype": ["fp16","bf16","int8"],
+	"tensor_parallel": [4],
+	"batch_size": [1, 4],
+	"in_tokens": [256, 512],
+	"out_tokens": [50, 256],
+	"count": [25],
+	"log_metrics": true
+}
