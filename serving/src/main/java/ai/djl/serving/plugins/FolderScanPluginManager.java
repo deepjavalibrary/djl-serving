@@ -72,9 +72,10 @@ public class FolderScanPluginManager implements PluginManager {
     /**
      * Loads all plugins from the plugin folder and register them.
      *
+     * @param failOnInit throw exception if failed to initialize the plugin
      * @throws IOException when error during IO operation occurs.
      */
-    public void loadPlugins() throws IOException {
+    public void loadPlugins(boolean failOnInit) throws IOException {
         logger.info("scanning for plugins...");
         URL[] pluginUrls = listPluginJars();
 
@@ -100,6 +101,9 @@ public class FolderScanPluginManager implements PluginManager {
                     }
                     plugin.changeState(Lifecycle.INITIALIZED);
                 } catch (Throwable t) {
+                    if (failOnInit) {
+                        throw new IllegalArgumentException("Failed to initialize plugin", t);
+                    }
                     plugin.changeState(
                             Lifecycle.FAILED,
                             "failed to initialize plugin; caused by " + t.getMessage());

@@ -191,7 +191,7 @@ public class ModelServer {
             throw new ServerStartupException(
                     "Failed to initialize startup models and workflows", e);
         }
-        pluginManager.loadPlugins();
+        pluginManager.loadPlugins(true);
 
         Connector inferenceConnector =
                 configManager.getConnector(Connector.ConnectorType.INFERENCE);
