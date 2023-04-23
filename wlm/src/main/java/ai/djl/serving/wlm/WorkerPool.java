@@ -103,6 +103,22 @@ public class WorkerPool<I, O> {
     }
 
     /**
+     * Returns {@code true} if all workers are busy.
+     *
+     * @return {@code true} if all workers are busy
+     */
+    public boolean isAllWorkerBusy() {
+        for (WorkerGroup<I, O> group : workerGroups.values()) {
+            for (WorkerThread<?, ?> thread : group.getWorkers()) {
+                if (thread.getState() == WorkerState.WORKER_STARTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * Returns if the worker groups is fully scaled.
      *
      * @return true if the worker groups is fully scaled

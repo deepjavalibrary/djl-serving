@@ -92,12 +92,15 @@ public final class WorkerThread<I, O> implements Runnable {
             while (isRunning() && !aggregator.isFinished()) {
                 req = aggregator.getRequest();
                 if (req != null && !req.isEmpty()) {
+                    state = WorkerState.WORKER_BUSY;
                     try {
                         List<O> reply = predictor.batchPredict(req);
                         aggregator.sendResponse(reply);
                     } catch (TranslateException e) {
                         logger.warn("Failed to predict", e);
                         aggregator.sendError(e);
+                    } finally {
+                        state = WorkerState.WORKER_STARTED;
                     }
                 }
                 req = null;

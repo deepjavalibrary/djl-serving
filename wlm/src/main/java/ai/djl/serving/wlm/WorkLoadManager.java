@@ -101,28 +101,32 @@ public class WorkLoadManager {
             return result;
         }
         LinkedBlockingDeque<WorkerJob<I, O>> queue = pool.getJobQueue();
-        if (!queue.offer(new WorkerJob<>(job, result))) {
+        if ((queue.remainingCapacity() == 1 && pool.isAllWorkerBusy())
+                || !queue.offer(new WorkerJob<>(job, result))) {
             result.completeExceptionally(
                     new WlmCapacityException(
                             "Worker queue capacity exceeded for model: " + modelInfo));
+            scaleUp(pool, modelInfo, maxWorkers);
             return result;
         }
 
         int currentWorkers = getNumRunningWorkers(modelInfo);
         if (currentWorkers == 0
                 || currentWorkers < maxWorkers && queue.size() > modelInfo.getBatchSize() * 2) {
-            synchronized (pool) {
-                currentWorkers = getNumRunningWorkers(modelInfo); // check again
-                if (currentWorkers < maxWorkers) {
-                    logger.info(
-                            "Scaling up workers for model {} to {} ",
-                            modelInfo,
-                            currentWorkers + 1);
-                    pool.addThreads();
-                }
-            }
+            scaleUp(pool, modelInfo, maxWorkers);
         }
         return result;
+    }
+
+    private <I, O> void scaleUp(WorkerPool<I, O> pool, ModelInfo<I, O> modelInfo, int maxWorkers) {
+        synchronized (pool) {
+            int currentWorkers = getNumRunningWorkers(modelInfo); // check again
+            if (currentWorkers < maxWorkers) {
+                logger.info(
+                        "Scaling up workers for model {} to {} ", modelInfo, currentWorkers + 1);
+                pool.addThreads();
+            }
+        }
     }
 
     /**
