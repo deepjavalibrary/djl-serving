@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -93,7 +94,9 @@ public final class ModelManager {
                             dm.installEngine(engine);
                             wlm.registerModel(model);
 
-                            for (String deviceName : model.getLoadOnDevices()) {
+                            String[] devices = model.getLoadOnDevices();
+                            logger.info("Loading model on {}:{}", engine, Arrays.toString(devices));
+                            for (String deviceName : devices) {
                                 int minWorkers = model.getMinWorkers();
                                 int maxWorkers = model.getMaxWorkers();
                                 modelManager.initWorkers(model, deviceName, minWorkers, maxWorkers);
