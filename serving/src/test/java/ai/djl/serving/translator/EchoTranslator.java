@@ -18,6 +18,7 @@ import ai.djl.modality.Output;
 import ai.djl.ndarray.NDList;
 import ai.djl.translate.Batchifier;
 import ai.djl.translate.ServingTranslator;
+import ai.djl.translate.TranslateException;
 import ai.djl.translate.TranslatorContext;
 
 import java.nio.charset.StandardCharsets;
@@ -40,25 +41,50 @@ public class EchoTranslator implements ServingTranslator {
     }
 
     @Override
-    public Output processOutput(TranslatorContext ctx, NDList list) {
+    public Output processOutput(TranslatorContext ctx, NDList list) throws TranslateException {
         Input input = (Input) ctx.getAttachment("input");
         boolean streaming = Boolean.parseBoolean(input.getAsString("stream"));
-        long delay = Long.parseLong(input.getProperty("delay", "1000"));
-        String count = input.getAsString("count");
-        int numTokens = count == null ? 5 : Integer.parseInt(count);
+        boolean exception = Boolean.parseBoolean(input.getAsString("exception"));
+        String contentType = input.getProperty("content-type", null);
+        String accept = input.getProperty("accept", "*/*");
+        if (!accept.contains("*")) {
+            contentType = accept;
+        }
         Output output = new Output();
+        if (contentType != null) {
+            output.addProperty("content-type", contentType);
+        }
         if (streaming) {
+            long delay = getLongValue(input, "delay", 1000);
+            int numTokens = (int) getLongValue(input, "count", 5);
             ChunkedBytesSupplier cs = new ChunkedBytesSupplier();
             output.add(cs);
             new Thread(() -> sendToken(cs, delay, numTokens)).start();
+        } else if (exception) {
+            throw new TranslateException("predict failed");
         } else {
-            output.setProperties(input.getProperties());
+            long delay = getLongValue(input, "delay", 1000);
+            if (delay > 0) {
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
             output.add(input.getData());
         }
         return output;
     }
 
-    public void sendToken(ChunkedBytesSupplier cs, long delay, int count) {
+    private long getLongValue(Input input, String key, long def) {
+        String value = input.getAsString(key);
+        if (value == null) {
+            return def;
+        }
+        return Long.parseLong(value);
+    }
+
+    void sendToken(ChunkedBytesSupplier cs, long delay, int count) {
         try {
             for (int i = 0; i < count; ++i) {
                 cs.appendContent(("tok_" + i + '\n').getBytes(StandardCharsets.UTF_8), false);

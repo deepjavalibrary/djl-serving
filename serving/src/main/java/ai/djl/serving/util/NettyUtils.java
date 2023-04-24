@@ -90,9 +90,6 @@ public final class NettyUtils {
      * @param request the HTTP request
      */
     public static void requestReceived(Channel channel, HttpRequest request) {
-        Session session = channel.attr(SESSION_KEY).get();
-        assert session == null;
-
         SocketAddress address = channel.remoteAddress();
         String remoteIp;
         if (address == null) {
