@@ -70,7 +70,6 @@ hf_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2,
-        "stream_output": True,
     },
     "no-code/google/flan-t5-xl": {
         "max_memory_per_gpu": [7.0, 7.0, 7.0, 7.0],
