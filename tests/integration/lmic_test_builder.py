@@ -16,6 +16,7 @@ parser.add_argument("--engine",
                     type=str,
                     choices=["deepspeed", "huggingface", "fastertransformer"],
                     help="The engine used for inference")
+parser.add_argument("--platform", default="deepspeed", required=False, type=str, help="The model data type")
 parser.add_argument("--dtype", required=False, type=str, help="The model data type")
 parser.add_argument("--tensor_parallel", required=False, type=int, help="The model tensor parallel degree")
 parser.add_argument("--batch_size", required=False, type=int, help="The batch size of inference requests")
@@ -43,6 +44,7 @@ def flatten_object_on_keys(obj, flatten_keys):
 
 class LMITestSetupBuilder:
     """ Builds the test setup configuration for the test runner to run """
+
     def __init__(self, namespace):
         """
         :param namespace: Namespace object representing the parser arguments
@@ -75,8 +77,8 @@ class LMITestSetupBuilder:
         extended_requirements_test_series = ["performance"]
         for param in required_parameters:
             if param not in self.config or self.config[param] is None:
-                raise ValueError(f"The following parameters must be set in config "
-                                 f"with profile or args:{required_parameters}")
+                raise AttributeError(f"The following parameters must be set in config "
+                                     f"with profile or args:{required_parameters}")
         if self.config["test_series"] in extended_requirements_test_series:
             self._validate_test_series_config(self.config["test_series"])
 
@@ -86,12 +88,13 @@ class LMITestSetupBuilder:
             required_parameters = ["engine", "dtype", "tensor_parallel", "batch_size", "out_tokens", "count"]
         for param in required_parameters:
             if param not in self.config or self.config[param] is None:
-                raise ValueError(f"The following extended parameters must be set in config for the {series} tests "
-                                 f"with profile or args:{required_parameters}")
+                raise AttributeError(f"The following extended parameters must be set in config for the {series} tests "
+                                     f"with profile or args:{required_parameters}")
 
 
 class LMITestRunner:
     """ Runs a series of tests based on a LMITestSetupBuilder test series """
+
     def __init__(self, series):
         """
         :param series: LMITestSetupBuilder test series object
@@ -108,7 +111,7 @@ class LMITestRunner:
         output = []
         for arg in positional_args:
             if arg not in obj.keys():
-                raise ValueError(f"LMITestRunner requires the following arguments: {positional_args}")
+                raise AttributeError(f"LMITestRunner requires the following arguments: {positional_args}")
             output.append(obj[arg])
         return output
 
@@ -134,11 +137,11 @@ class LMITestRunner:
         sp.call(command, shell=True)
 
     def pull_docker_image(self, test):
-        command = f"docker pull {test.docker_image}"
+        command = f"docker pull {test['docker_image']}"
         sp.call(command, shell=True)
 
     def launch_container(self, test):
-        command = f"./launch_container.sh {test['docker_image']} {os.getcwd()}/models deepspeed " \
+        command = f"./launch_container.sh {test['docker_image']} {os.getcwd()}/models {test['platform']} " \
                   f"serve -m test=file:/opt/ml/model/test/"
         logging.info(command)
         try:
@@ -180,20 +183,41 @@ class LMITestRunner:
 
     def reset_error_logging(self):
         for error in self.errors:
-            logging.warning(error)
+            self.log_errors(error)
         self.errors = []
+
+    def check_errors(self):
+        filename = "llm/errors.log"
+        if os.path.exists(filename):
+            command = f"rm {filename}"
+            sp.call(command, shell=True)
+            raise AssertionError("Test Series failed with errors")  # Raise error to fail test series in pipeline
+
+    def log_errors(self, error):
+        logging.warning(error)
+        filename = "llm/errors.log"
+        append_write = 'a' if os.path.exists(filename) else 'w'
+        error_file = open(filename, append_write)
+        error_file.write(error)
+        error_file.close()
 
     def log_serving(self):
         command = "cat logs/*"
         sp.call(command, shell=True)
 
-    def log_metrics(self, engine):
-        file = open("llm/metrics.log", "r")
-        metrics = re.sub("'", r'"', file.readline())
-        command = f'aws cloudwatch put-metric-data --namespace "LMIC_performance_{engine}" ' \
-                  f'--region "us-east-1" --metric-data "{metrics}"'
+    def log_metrics(self, sequence):
+        if not os.path.exists("llm/metrics.log"):
+            logging.info(f"Metrics were not measured for this test sequence: {sequence}")
+            return
+        command = "cat llm/metrics.log"
+        if "log_metrics" in sequence:
+            file = open("llm/metrics.log", "r")
+            metrics = re.sub("'", r'"', file.readline())
+            command = f'aws cloudwatch put-metric-data --namespace "LMIC_performance_{sequence["engine"]}" ' \
+                      f'--region "us-east-1" --metric-data "{metrics}"'
         logging.info(command)
         sp.call(command, shell=True)
+        self.clean_metrics()
 
     def set_cpu_monitor_pid(self):
         command = "ps aux | grep -Pm1 'cpu_memory_monitor' | awk -F ' ' '{print $2}'"
@@ -229,6 +253,7 @@ class LMITestRunner:
                 continue
             self.run_test_sequences(test)
             self.teardown_test()
+        self.check_errors()
 
     def run_test_sequences(self, test_setup):
         test_sequences = flatten_object_on_keys(test_setup, self.test_iterable_opts)
@@ -238,9 +263,7 @@ class LMITestRunner:
             if len(self.errors) > 0:
                 self.clean_test_sequence(test_sequence)
                 continue
-            if "log_metrics" in test_sequence.keys() and test_sequence["test_series"] == "performance":
-                self.log_metrics(test_sequence["engine"])
-                self.clean_metrics()
+            self.log_metrics(test_sequence)
 
     def run_client_requests(self, test):
         test["cpu_memory"] = self.max_cpu_memory_used()

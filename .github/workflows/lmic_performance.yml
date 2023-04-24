@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
   schedule:
-    - cron: '0 15 * * 0'
+    - cron: '0 15 * * *'
 
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
 
   lmic-g5-test:
     runs-on: [ self-hosted, g5 ]
-    timeout-minutes: 360
+    timeout-minutes: 420
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
@@ -52,28 +52,25 @@ jobs:
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
       - name: Test bloom-7b
+        if: always()
         working-directory: tests/integration
         run: |
           python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/bloom_7b1.json
       - name: Test gpt-j-6b
+        if: always()
         working-directory: tests/integration
         run: |
           python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_j_6b.json
       - name: Test gpt-neox-20b
+        if: always()
         working-directory: tests/integration
         run: |
           python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_neox_20b.json
       - name: Test opt-30b
+        if: always()
         working-directory: tests/integration
         run: |
           python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/opt_30b.json
-      - name: On fail step
-        if: ${{ failure() }}
-        working-directory: tests/integration
-        run: |
-          docker rm -f $(docker ps -aq) || true
-          sudo rm -rf models
-          cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
