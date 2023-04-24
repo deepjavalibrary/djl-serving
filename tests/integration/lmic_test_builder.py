@@ -133,6 +133,10 @@ class LMITestRunner:
         logging.info(command)
         sp.call(command, shell=True)
 
+    def pull_docker_image(self, test):
+        command = f"docker pull {test.docker_image}"
+        sp.call(command, shell=True)
+
     def launch_container(self, test):
         command = f"./launch_container.sh {test['docker_image']} {os.getcwd()}/models deepspeed " \
                   f"serve -m test=file:/opt/ml/model/test/"
@@ -189,6 +193,7 @@ class LMITestRunner:
         command = f'aws cloudwatch put-metric-data --namespace "LMIC_performance_{engine}" ' \
                   f'--region "us-east-1" --metric-data "{metrics}"'
         logging.info(command)
+        sp.call(command, shell=True)
 
     def set_cpu_monitor_pid(self):
         command = "ps aux | grep -Pm1 'cpu_memory_monitor' | awk -F ' ' '{print $2}'"
@@ -217,6 +222,7 @@ class LMITestRunner:
         for test in self.test_series:
             self.run_cpu_monitor()
             self.prepare_settings(test)
+            self.pull_docker_image(test)
             self.launch_container(test)
             if len(self.errors) > 0:
                 self.clean_test_setup()
