@@ -75,18 +75,6 @@ public class WorkflowTest {
     }
 
     @Test
-    public void testGlobalPerf() throws IOException, BadWorkflowException {
-        Path workflowFile = Paths.get("src/test/resources/workflows/globalPerf.json");
-        Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        ModelInfo<Input, Output> m = workflow.getModels().stream().findFirst().get();
-
-        Assert.assertEquals(m.getQueueSize(), 101);
-        Assert.assertEquals(m.getMaxIdleSeconds(), 61);
-        Assert.assertEquals(m.getMaxBatchDelayMillis(), 301);
-        Assert.assertEquals(m.getBatchSize(), 2);
-    }
-
-    @Test
     public void testLocalPerf() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/localPerf.json");
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();

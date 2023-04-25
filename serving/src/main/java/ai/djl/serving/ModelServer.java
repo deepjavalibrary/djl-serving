@@ -54,8 +54,7 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -192,8 +191,7 @@ public class ModelServer {
 
         try {
             initModelStore();
-            initWorkflows();
-        } catch (URISyntaxException | BadWorkflowException e) {
+        } catch (BadWorkflowException e) {
             throw new ServerStartupException(
                     "Failed to initialize startup models and workflows", e);
         }
@@ -304,7 +302,7 @@ public class ModelServer {
         return f;
     }
 
-    private void initModelStore() throws IOException {
+    private void initModelStore() throws IOException, BadWorkflowException {
         Set<String> startupModels = ModelManager.getInstance().getStartupWorkflows();
 
         String loadModels = configManager.getLoadModels();
@@ -368,7 +366,7 @@ public class ModelServer {
             String version = null;
             String engineName = null;
             String deviceMapping = null;
-            String modelName;
+            String modelName = null;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
                 modelName = tokens[0];
@@ -381,26 +379,33 @@ public class ModelServer {
                 if (tokens.length > 3) {
                     deviceMapping = tokens[3];
                 }
-            } else {
-                modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
 
-            ModelInfo<Input, Output> modelInfo =
-                    new ModelInfo<>(
-                            modelName,
-                            modelUrl,
-                            version,
-                            engineName,
-                            deviceMapping,
-                            Input.class,
-                            Output.class,
-                            -1,
-                            -1,
-                            -1,
-                            -1,
-                            -1,
-                            -1);
-            Workflow workflow = new Workflow(modelInfo);
+            Workflow workflow;
+            URI uri = WorkflowDefinition.toWorkflowUri(modelUrl);
+            if (uri != null) {
+                workflow = WorkflowDefinition.parse(modelName, uri).toWorkflow();
+            } else {
+                if (modelName == null) {
+                    modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
+                }
+                ModelInfo<Input, Output> modelInfo =
+                        new ModelInfo<>(
+                                modelName,
+                                modelUrl,
+                                version,
+                                engineName,
+                                deviceMapping,
+                                Input.class,
+                                Output.class,
+                                -1,
+                                -1,
+                                -1,
+                                -1,
+                                -1,
+                                -1);
+                workflow = new Workflow(modelInfo);
+            }
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
@@ -426,60 +431,6 @@ public class ModelServer {
                 f.join();
             }
             startupModels.add(modelName);
-        }
-    }
-
-    private void initWorkflows() throws IOException, URISyntaxException, BadWorkflowException {
-        Set<String> startupWorkflows = ModelManager.getInstance().getStartupWorkflows();
-        String loadWorkflows = configManager.getLoadWorkflows();
-        if (loadWorkflows == null || loadWorkflows.isEmpty()) {
-            return;
-        }
-
-        ModelManager modelManager = ModelManager.getInstance();
-        String[] urls = loadWorkflows.split("[, ]+");
-
-        for (String url : urls) {
-            logger.info("Initializing workflow: {}", url);
-            Matcher matcher = MODEL_STORE_PATTERN.matcher(url);
-            if (!matcher.matches()) {
-                throw new AssertionError("Invalid model store url: " + url);
-            }
-            String endpoint = matcher.group(2);
-            String workflowUrlString = matcher.group(3);
-            String workflowName;
-            if (endpoint != null) {
-                String[] tokens = endpoint.split(":", -1);
-                workflowName = tokens[0];
-            } else {
-                workflowName = ModelInfo.inferModelNameFromUrl(workflowUrlString);
-            }
-
-            URL workflowUrl = new URL(workflowUrlString);
-            Workflow workflow =
-                    WorkflowDefinition.parse(workflowUrl.toURI(), workflowUrl.openStream())
-                            .toWorkflow();
-
-            CompletableFuture<Void> f =
-                    modelManager
-                            .registerWorkflow(workflow)
-                            .exceptionally(
-                                    t -> {
-                                        logger.error("Failed register workflow", t);
-                                        // delay 3 seconds, allows REST API to send PING
-                                        // response (health check)
-                                        try {
-                                            Thread.sleep(3000);
-                                        } catch (InterruptedException ignore) {
-                                            // ignore
-                                        }
-                                        stop();
-                                        return null;
-                                    });
-            if (configManager.waitModelLoading()) {
-                f.join();
-            }
-            startupWorkflows.add(workflowName);
         }
     }
 
