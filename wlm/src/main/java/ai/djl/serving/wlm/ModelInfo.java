@@ -74,8 +74,14 @@ public final class ModelInfo<I, O> {
     private int minWorkers = -1;
     private int maxWorkers = -1;
 
-    private Map<String, Object> arguments = new ConcurrentHashMap<>();
-    private Map<String, String> options = new ConcurrentHashMap<>();
+    // the following fields can be loaded from workflow json file
+    private Map<String, String> filters;
+    private Map<String, Object> arguments;
+    private Map<String, String> options;
+    private String application;
+    private String modelName;
+    private String translatorFactory;
+    private String translator;
 
     transient Path modelDir;
     private transient String artifactName;
@@ -193,9 +199,20 @@ public final class ModelInfo<I, O> {
                         Criteria.builder()
                                 .setTypes(inputClass, outputClass)
                                 .optModelUrls(modelUrl)
+                                .optModelName(modelName)
                                 .optEngine(engineName)
+                                .optFilters(filters)
                                 .optArguments(arguments)
                                 .optOptions(options);
+                if (application != null) {
+                    builder.optArgument("application", application);
+                }
+                if (translator != null) {
+                    builder.optArgument("translator", translator);
+                }
+                if (translatorFactory != null) {
+                    builder.optArgument("translatorFactory", translatorFactory);
+                }
                 if (batchSize > 1) {
                     builder.optArgument("batchifier", "stack");
                 }
@@ -451,6 +468,12 @@ public final class ModelInfo<I, O> {
         downloadS3();
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
+        if (options == null) {
+            options = new ConcurrentHashMap<>();
+        }
+        if (arguments == null) {
+            arguments = new ConcurrentHashMap<>();
+        }
         for (String key : prop.stringPropertyNames()) {
             if (key.startsWith("option.")) {
                 options.put(key.substring(7), prop.getProperty(key));
