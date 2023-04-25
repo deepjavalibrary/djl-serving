@@ -130,7 +130,8 @@ class DeepSpeedService(object):
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
         self.task = properties.get("task")
-        self.data_type = get_torch_dtype_from_str(properties.get("dtype", default_dtype()))
+        self.data_type = get_torch_dtype_from_str(
+            properties.get("dtype", default_dtype()))
         self.max_tokens = int(properties.get("max_tokens", 1024))
         self.device = int(os.getenv("LOCAL_RANK", 0))
         self.tensor_parallel_degree = int(
@@ -138,7 +139,7 @@ class DeepSpeedService(object):
         self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage",
                                                 "true").lower() == "true"
         self.enable_streaming = properties.get("enable_streaming",
-                                                    "false").lower() == "true"
+                                               "false").lower() == "true"
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
                 self.ds_config = json.load(f)
@@ -271,7 +272,8 @@ class DeepSpeedService(object):
         try:
             content_type = inputs.get_property("Content-Type")
             model_kwargs = {}
-            if content_type is not None and content_type.startswith("application/json"):
+            if content_type is not None and content_type.startswith(
+                    "application/json"):
                 json_input = inputs.get_as_json()
                 if isinstance(json_input, dict):
                     input_data = self.format_input_for_task(
@@ -297,7 +299,8 @@ class DeepSpeedService(object):
                 with torch.no_grad():
                     output_tokens = self.model.generate(
                         **tokenized_inputs, **model_kwargs)
-                generated_text = self.tokenizer.batch_decode(output_tokens, skip_special_tokens=True)
+                generated_text = self.tokenizer.batch_decode(
+                    output_tokens, skip_special_tokens=True)
                 outputs.add([{"generated_text": s} for s in generated_text])
                 return outputs
 
