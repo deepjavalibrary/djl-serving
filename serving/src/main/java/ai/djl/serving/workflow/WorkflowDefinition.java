@@ -14,9 +14,9 @@ package ai.djl.serving.workflow;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.wlm.ModelInfo;
-import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.WorkflowFunction;
 import ai.djl.util.ClassLoaderUtils;
@@ -70,11 +70,6 @@ public class WorkflowDefinition {
     @SerializedName("configs")
     Map<String, Map<String, Object>> configs;
 
-    int queueSize;
-    int maxIdleSeconds;
-    int maxBatchDelayMillis;
-    int batchSize;
-
     public static final Gson GSON =
             JsonUtils.builder()
                     .registerTypeAdapter(ModelInfo.class, new ModelDefinitionDeserializer())
@@ -90,30 +85,31 @@ public class WorkflowDefinition {
      * @throws IOException if it fails to load the file for parsing
      */
     public static WorkflowDefinition parse(Path path) throws IOException {
-        return parse(path.toUri(), Files.newBufferedReader(path));
+        return parse(null, path.toUri());
     }
 
     /**
      * Parses a new {@link WorkflowDefinition} from an input stream.
      *
+     * @param name the workflow name
      * @param uri the uri of the file
-     * @param input the input
      * @return the parsed {@link WorkflowDefinition}
+     * @throws IOException if read from uri failed
      */
-    public static WorkflowDefinition parse(URI uri, InputStream input) {
-        return parse(uri, new InputStreamReader(input, StandardCharsets.UTF_8));
+    public static WorkflowDefinition parse(String name, URI uri) throws IOException {
+        String type = FilenameUtils.getFileExtension(Objects.requireNonNull(uri.toString()));
+        try (InputStream is = uri.toURL().openStream();
+                Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+            WorkflowDefinition wd = parse(type, reader);
+            if (name != null) {
+                wd.name = name;
+            }
+            return wd;
+        }
     }
 
-    /**
-     * Parses a new {@link WorkflowDefinition} from a reader.
-     *
-     * @param uri the uri of the file
-     * @param input the input
-     * @return the parsed {@link WorkflowDefinition}
-     */
-    public static WorkflowDefinition parse(URI uri, Reader input) {
-        String fileName = Objects.requireNonNull(uri.toString());
-        if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
+    private static WorkflowDefinition parse(String type, Reader input) {
+        if ("yml".equalsIgnoreCase(type) || "yaml".equalsIgnoreCase(type)) {
             try {
                 ClassLoader cl = ClassLoaderUtils.getContextClassLoader();
                 Class<?> clazz = Class.forName("org.yaml.snakeyaml.Yaml", true, cl);
@@ -131,10 +127,10 @@ public class WorkflowDefinition {
                                 + " build.gradle.",
                         e);
             }
-        } else if (fileName.endsWith(".json")) {
+        } else if ("json".equalsIgnoreCase(type)) {
             return GSON.fromJson(input, WorkflowDefinition.class);
         } else {
-            throw new IllegalArgumentException("Unexpected file type in workflow file: " + uri);
+            throw new IllegalArgumentException("Unexpected file type: " + type);
         }
     }
 
@@ -194,23 +190,9 @@ public class WorkflowDefinition {
      */
     public Workflow toWorkflow() throws BadWorkflowException {
         if (models != null) {
-            WlmConfigManager wlmc = WlmConfigManager.getInstance();
             for (Entry<String, ModelInfo<Input, Output>> emd : models.entrySet()) {
                 ModelInfo<Input, Output> md = emd.getValue();
                 md.setId(emd.getKey());
-                md.setQueueSize(firstValid(md.getQueueSize(), queueSize, wlmc.getJobQueueSize()));
-                md.setMaxIdleSeconds(
-                        firstValid(
-                                md.getMaxIdleSeconds(), maxIdleSeconds, wlmc.getMaxIdleSeconds()));
-                md.setMaxBatchDelayMillis(
-                        firstValid(
-                                md.getMaxBatchDelayMillis(),
-                                maxBatchDelayMillis,
-                                wlmc.getMaxBatchDelayMillis()));
-                md.setBatchSize(firstValid(md.getBatchSize(), batchSize, wlmc.getBatchSize()));
-                if (name == null) {
-                    name = emd.getKey();
-                }
             }
         }
 
@@ -228,15 +210,6 @@ public class WorkflowDefinition {
         }
 
         return new Workflow(name, version, models, expressions, configs, loadedFunctions);
-    }
-
-    private int firstValid(int... inputs) {
-        for (int input : inputs) {
-            if (input > 0) {
-                return input;
-            }
-        }
-        return 0;
     }
 
     private static final class ModelDefinitionDeserializer

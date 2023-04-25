@@ -36,8 +36,6 @@ import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -195,7 +193,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         URI uri = WorkflowDefinition.toWorkflowUri(req.getModelUrl());
         if (uri != null) {
             try {
-                workflow = WorkflowDefinition.parse(uri, uri.toURL().openStream()).toWorkflow();
+                workflow = WorkflowDefinition.parse(req.getModelName(), uri).toWorkflow();
             } catch (IOException | BadWorkflowException e) {
                 NettyUtils.sendError(ctx, e.getCause());
                 return;
@@ -252,9 +250,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         NettyUtils.getParameter(decoder, LoadModelRequest.SYNCHRONOUS, "true"));
 
         try {
-            URL url = new URL(workflowUrl);
-            Workflow workflow =
-                    WorkflowDefinition.parse(url.toURI(), url.openStream()).toWorkflow();
+            URI uri = URI.create(workflowUrl);
+            Workflow workflow = WorkflowDefinition.parse(null, uri).toWorkflow();
             String workflowName = workflow.getName();
 
             final ModelManager modelManager = ModelManager.getInstance();
@@ -275,8 +272,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 NettyUtils.sendJsonResponse(
                         ctx, new StatusResponse(msg), HttpResponseStatus.ACCEPTED);
             }
-
-        } catch (URISyntaxException | IOException | BadWorkflowException e) {
+        } catch (IOException | BadWorkflowException e) {
             NettyUtils.sendError(ctx, e.getCause());
         }
     }

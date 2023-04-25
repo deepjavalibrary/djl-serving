@@ -353,7 +353,7 @@ public class ModelServer {
             String version = null;
             String engineName = null;
             String deviceMapping = null;
-            String modelName;
+            String modelName = null;
             if (endpoint != null) {
                 String[] tokens = endpoint.split(":", -1);
                 modelName = tokens[0];
@@ -366,15 +366,16 @@ public class ModelServer {
                 if (tokens.length > 3) {
                     deviceMapping = tokens[3];
                 }
-            } else {
-                modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
             }
 
             Workflow workflow;
             URI uri = WorkflowDefinition.toWorkflowUri(modelUrl);
             if (uri != null) {
-                workflow = WorkflowDefinition.parse(uri, uri.toURL().openStream()).toWorkflow();
+                workflow = WorkflowDefinition.parse(modelName, uri).toWorkflow();
             } else {
+                if (modelName == null) {
+                    modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
+                }
                 ModelInfo<Input, Output> modelInfo =
                         new ModelInfo<>(
                                 modelName,
