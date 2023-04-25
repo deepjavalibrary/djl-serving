@@ -25,7 +25,7 @@ public class DependencyManagerTest {
         dm.installEngine("OnnxRuntime");
         dm.installEngine("XGBoost");
 
-        dm.installDependency("ai.djl.pytorch:pytorch-jni:2.0.0-0.22.0");
+        dm.installDependency("ai.djl.pytorch:pytorch-jni:2.0.0-0.22.1");
 
         Assert.assertThrows(() -> dm.installDependency("ai.djl.pytorch:pytorch-jni"));
     }
