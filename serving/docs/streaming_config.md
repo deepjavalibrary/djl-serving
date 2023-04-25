@@ -1,6 +1,6 @@
 # Streaming configuration
 
-We explain various options that can be configured while using response streaming when running in [Python mode](https://github.com/deepjavalibrary/djl-serving/blob/e8b48c2bbeaad8d4e8b6b943769582c46ddc7002/serving/docs/modes.md#python-mode). Response streaming can be enabled in djl-serving by setting `enable_streaming` option in `serving.properties` file. 
+We explain various options that can be configured while using response streaming when running in [Python mode](modes.md#python-mode). Response streaming can be enabled in djl-serving by setting `enable_streaming` option in `serving.properties` file.
 
 E.g `serving.properties` file
 
@@ -9,10 +9,10 @@ engine=Python
 option.dtype=fp16
 option.model_id=stabilityai/stablelm-base-alpha-7b
 option.tensor_parallel_degree=1
-option.enable_streaming=True
+option.enable_streaming=true
 ```
 
-Currently, DeepSpeed and Python are the two supported options for engine for streaming. As you can see, `enable_streaming` option has been set to True in the above example `serving.properties` file. Users can either use default handlers in djl-serving or custom model.py handler to stream responses.
+Currently, DeepSpeed and Python are the two supported options for engine for streaming. As you can see, `enable_streaming` option has been set to true in the above example `serving.properties` file. Users can either use default handlers in djl-serving or custom model.py handler to stream responses.
 
 
 ## Default handlers
@@ -21,10 +21,10 @@ Default handlers facilitates no-code approach in djl-serving. With default handl
 
 ## Custom model.py handler
 
-djl-serving also supports custom handler that users can provide in a model.py file. Please refer to  [Python mode](https://github.com/deepjavalibrary/djl-serving/blob/e8b48c2bbeaad8d4e8b6b943769582c46ddc7002/serving/docs/modes.md#python-mode) for more details on contents of model.py. To stream responses, following key changes should be made in the handler
+djl-serving also supports custom handler that users can provide in a model.py file. Please refer to  [Python mode](modes.md#python-mode) for more details on contents of model.py. To stream responses, following key changes should be made in the handler
 
 * Import StreamingUtils module => `from djl_python.streaming_utils import StreamingUtils`
-* In the handler code where you would typically call inference functions like model.generate(), fetch one of the stream generator functions implemented in djl-serving using StreamingUtils.get_stream_generator(ENGINE) method. We currently support `DeepSpeed`, `Accelerate`, `transformers-neuronx`  for ENGINE argument. Stream generators follow the signature - `def stream_generator(model, tokenizer, inputs: List[str], **parameters) -> List[str]:`
+* In the handler code where you would typically call inference functions like `model.generate()`, fetch one of the stream generator functions implemented in djl-serving using StreamingUtils.get_stream_generator(ENGINE) method. We currently support `DeepSpeed`, `Accelerate`, `transformers-neuronx`  for ENGINE argument. Stream generators follow the signature - `def stream_generator(model, tokenizer, inputs: List[str], **parameters) -> List[str]:`
 * Add stream generator function fetched above to the `Output` object of djl-serving using `add_stream_content()` method.  `add_stream_content()` method of Output object follows the signature `def add_stream_content(stream_generator,  output_formatter=_default_stream_output_formatter):`. djl-serving uses a default output formatter to format model output before sending to the client. User can optionally add their own formatter. Details of output formatting is explained below.
 
 
