@@ -116,6 +116,15 @@ public class Workflow {
     }
 
     /**
+     * Returns the model map in the workflow.
+     *
+     * @return the model map in the workflow
+     */
+    public Map<String, ModelInfo<Input, Output>> getModelMap() {
+        return models;
+    }
+
+    /**
      * Executes a workflow with an input.
      *
      * @param wlm the wlm to run the workflow with

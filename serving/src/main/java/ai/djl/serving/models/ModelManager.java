@@ -83,7 +83,10 @@ public final class ModelManager {
 
         return CompletableFuture.supplyAsync(
                 () -> {
-                    for (ModelInfo<Input, Output> model : workflow.getModels()) {
+                    Map<String, ModelInfo<Input, Output>> models = workflow.getModelMap();
+                    for (Map.Entry<String, ModelInfo<Input, Output>> entry : models.entrySet()) {
+                        String key = entry.getKey();
+                        ModelInfo<Input, Output> model = entry.getValue();
                         try {
                             // download model and configure per model settings
                             model.initialize();
@@ -92,14 +95,21 @@ public final class ModelManager {
                             String engine = model.getEngineName();
                             DependencyManager dm = DependencyManager.getInstance();
                             dm.installEngine(engine);
-                            wlm.registerModel(model);
+                            WorkerPool<Input, Output> wp = wlm.getWorkerPool(model);
+                            if (wp != null) {
+                                models.put(key, wp.getModel());
+                                wp.increaseRef();
+                                logger.info("Model {} is registered by other workflow", model);
+                                continue;
+                            }
 
+                            wlm.registerModel(model);
                             String[] devices = model.getLoadOnDevices();
                             logger.info("Loading model on {}:{}", engine, Arrays.toString(devices));
                             for (String deviceName : devices) {
                                 int minWorkers = model.getMinWorkers();
                                 int maxWorkers = model.getMaxWorkers();
-                                modelManager.initWorkers(model, deviceName, minWorkers, maxWorkers);
+                                initWorkers(model, deviceName, minWorkers, maxWorkers);
                             }
                         } catch (IOException | ModelException e) {
                             throw new CompletionException(e);
