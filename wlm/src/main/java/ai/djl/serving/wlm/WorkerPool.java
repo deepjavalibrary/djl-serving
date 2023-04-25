@@ -28,6 +28,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +44,7 @@ public class WorkerPool<I, O> {
     private ExecutorService threadPool;
     private Map<Device, WorkerGroup<I, O>> workerGroups;
     private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
+    private AtomicInteger refCnt;
 
     /**
      * Construct and initial data structure.
@@ -54,9 +56,29 @@ public class WorkerPool<I, O> {
         this.model = model;
         this.threadPool = threadPool;
         workerGroups = new ConcurrentHashMap<>();
+        refCnt = new AtomicInteger(1);
     }
 
-    ModelInfo<I, O> getModel() {
+    /** Increases the reference count. */
+    public void increaseRef() {
+        refCnt.incrementAndGet();
+    }
+
+    /**
+     * Decrease the reference count and return the current count.
+     *
+     * @return the current count
+     */
+    public int decreaseRef() {
+        return refCnt.decrementAndGet();
+    }
+
+    /**
+     * Returns the model of the worker pool.
+     *
+     * @return the model of the worker pool
+     */
+    public ModelInfo<I, O> getModel() {
         return model;
     }
 

@@ -264,7 +264,7 @@ public class ModelServerTest {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
-            testPredictionsModels(channel);
+            testPredictions(channel, new String[] {"/predictions/m"});
             testPredictionsWorkflows(channel);
 
             channel.close().sync();

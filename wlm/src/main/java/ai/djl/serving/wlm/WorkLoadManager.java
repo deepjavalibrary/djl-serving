@@ -71,8 +71,11 @@ public class WorkLoadManager {
      */
     public void unregisterModel(ModelInfo<?, ?> model) {
         WorkerPool<?, ?> pool = getWorkerPool(model);
-        pool.shutdownWorkers();
-        workerPools.remove(model);
+        if (pool.decreaseRef() <= 0) {
+            logger.info("Unloading model: {}", model);
+            pool.shutdownWorkers();
+            workerPools.remove(model);
+        }
     }
 
     /**

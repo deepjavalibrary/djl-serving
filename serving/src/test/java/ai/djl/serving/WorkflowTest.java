@@ -78,7 +78,7 @@ public class WorkflowTest {
     public void testLocalPerf() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/localPerf.json");
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        ModelInfo<Input, Output> m = workflow.getModels().stream().findFirst().get();
+        ModelInfo<Input, Output> m = workflow.getModels().iterator().next();
 
         Assert.assertEquals(m.getQueueSize(), 102);
         Assert.assertEquals(m.getMaxIdleSeconds(), 62);
