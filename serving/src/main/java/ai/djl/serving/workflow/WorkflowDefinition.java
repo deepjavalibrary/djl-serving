@@ -41,6 +41,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -135,6 +136,54 @@ public class WorkflowDefinition {
         } else {
             throw new IllegalArgumentException("Unexpected file type in workflow file: " + uri);
         }
+    }
+
+    /**
+     * Returns the full workflow url if the url points to a workflow definition file.
+     *
+     * @param link the workflow url
+     * @return the workflow URL
+     */
+    public static URI toWorkflowUri(String link) {
+        if (link.startsWith("http") && link.endsWith(".json")
+                || link.endsWith(".yml")
+                || link.endsWith(".yaml")) {
+            return URI.create(link);
+        }
+        URI uri = URI.create(link);
+        String scheme = uri.getScheme();
+        if (scheme != null && !"file".equals(scheme)) {
+            return null;
+        }
+        String uriPath = uri.getPath();
+        if (uriPath == null) {
+            uriPath = uri.getSchemeSpecificPart();
+        }
+        if (uriPath.startsWith("/") && System.getProperty("os.name").startsWith("Win")) {
+            uriPath = uriPath.substring(1);
+        }
+        Path path = Paths.get(uriPath);
+        if (!Files.exists(path)) {
+            return null;
+        }
+        if (uriPath.endsWith(".json") || uriPath.endsWith(".yml") || uriPath.endsWith(".yaml")) {
+            return path.toUri();
+        }
+        if (Files.isDirectory(path)) {
+            Path file = path.resolve("workflow.json");
+            if (Files.isRegularFile(file)) {
+                return file.toUri();
+            }
+            file = path.resolve("workflow.yml");
+            if (Files.isRegularFile(file)) {
+                return file.toUri();
+            }
+            file = path.resolve("workflow.yaml");
+            if (Files.isRegularFile(file)) {
+                return file.toUri();
+            }
+        }
+        return null;
     }
 
     /**
