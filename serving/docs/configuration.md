@@ -25,7 +25,6 @@ usage: djl-serving [OPTIONS]
  -h,--help                         Print this help.
  -m,--models <MODELS>              Models to be loaded at startup.
  -s,--model-store <MODELS-STORE>   Model store location where models can be loaded.
- -w,--workflows <WORKFLOWS>   Workflows to be loaded at startup.
 ```
 
 Details about the models, model-store, and workflows can be found in the equivalent configuration properties.
@@ -65,7 +64,7 @@ model_store=build/models
 
 **Load Models**
 
-The `load_models` config property can be used to define a list of models to be loaded.
+The `load_models` config property can be used to define a list of models (or workflows) to be loaded.
 The list should be defined as a comma separated list of urls to load models from.
 
 Each model can be defined either as a URL directly or optionally with prepended endpoint data like `[EndpointData]=modelUrl`.
@@ -89,15 +88,10 @@ load_models=https://resources.djl.ai/test-models/mlp.tar.gz,[mlp:v1:MXNet:*]=htt
 
 **Workflows**
 
-Use the `load_workflows` config property to define initial workflows that should be loaded on startup.
-It should be a comma separated list of workflow URLs.
-
-You can also specify the device that the model should be loaded on by using `modelUrl:deviceNames`.
-The `deviceNames` matches the format used in the `load_models` property described above.
-An example is shown below:
+Use the `load_models` config property to define initial workflows that should be loaded on startup.
 
 ```properties
-load_workflows=https://resources.djl.ai/test-models/basic-serving-workflow.json
+load_models=https://resources.djl.ai/test-models/basic-serving-workflow.json
 ```
 
 View the [workflow documentation](workflows.md) to see more information about workflows and their configuration format.

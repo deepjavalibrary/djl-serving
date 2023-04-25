@@ -35,8 +35,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -190,22 +189,33 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             req = new LoadModelRequest(decoder);
         }
 
-        ModelInfo<Input, Output> modelInfo =
-                new ModelInfo<>(
-                        req.getModelName(),
-                        req.getModelUrl(),
-                        req.getVersion(),
-                        req.getEngineName(),
-                        req.getDeviceName(),
-                        Input.class,
-                        Output.class,
-                        req.getJobQueueSize(),
-                        req.getMaxIdleSeconds(),
-                        req.getMaxBatchDelayMillis(),
-                        req.getBatchSize(),
-                        req.getMinWorkers(),
-                        req.getMaxWorkers());
-        Workflow workflow = new Workflow(modelInfo);
+        Workflow workflow;
+        URI uri = WorkflowDefinition.toWorkflowUri(req.getModelUrl());
+        if (uri != null) {
+            try {
+                workflow = WorkflowDefinition.parse(req.getModelName(), uri).toWorkflow();
+            } catch (IOException | BadWorkflowException e) {
+                NettyUtils.sendError(ctx, e.getCause());
+                return;
+            }
+        } else {
+            ModelInfo<Input, Output> modelInfo =
+                    new ModelInfo<>(
+                            req.getModelName(),
+                            req.getModelUrl(),
+                            req.getVersion(),
+                            req.getEngineName(),
+                            req.getDeviceName(),
+                            Input.class,
+                            Output.class,
+                            req.getJobQueueSize(),
+                            req.getMaxIdleSeconds(),
+                            req.getMaxBatchDelayMillis(),
+                            req.getBatchSize(),
+                            req.getMinWorkers(),
+                            req.getMaxWorkers());
+            workflow = new Workflow(modelInfo);
+        }
         final ModelManager modelManager = ModelManager.getInstance();
         CompletableFuture<Void> f =
                 modelManager
@@ -240,9 +250,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         NettyUtils.getParameter(decoder, LoadModelRequest.SYNCHRONOUS, "true"));
 
         try {
-            URL url = new URL(workflowUrl);
-            Workflow workflow =
-                    WorkflowDefinition.parse(url.toURI(), url.openStream()).toWorkflow();
+            URI uri = URI.create(workflowUrl);
+            Workflow workflow = WorkflowDefinition.parse(null, uri).toWorkflow();
             String workflowName = workflow.getName();
 
             final ModelManager modelManager = ModelManager.getInstance();
@@ -263,8 +272,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                 NettyUtils.sendJsonResponse(
                         ctx, new StatusResponse(msg), HttpResponseStatus.ACCEPTED);
             }
-
-        } catch (URISyntaxException | IOException | BadWorkflowException e) {
+        } catch (IOException | BadWorkflowException e) {
             NettyUtils.sendError(ctx, e.getCause());
         }
     }
