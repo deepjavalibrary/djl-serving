@@ -178,12 +178,18 @@ public class PyEnv {
             };
             try {
                 logger.info("Found requirements.txt, start installing Python dependencies...");
-                Process process = Runtime.getRuntime().exec(cmd);
+                Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                String logOutput;
+                try (InputStream is = process.getInputStream()) {
+                    logOutput = Utils.toString(is);
+                }
                 int ret = process.waitFor();
                 if (ret == 0) {
                     logger.info("pip install requirements succeed!");
+                    logger.debug(logOutput);
                 } else {
                     logger.warn("requirements installation failed! With error code: {}", ret);
+                    logger.warn(logOutput);
                 }
             } catch (IOException | InterruptedException e) {
                 logger.warn("pip install requirements failed.", e);
