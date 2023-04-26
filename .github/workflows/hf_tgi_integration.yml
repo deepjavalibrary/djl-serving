@@ -1,0 +1,84 @@
+name: Huggingface TGI integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      tgi-version:
+        description: 'tgi version'
+        required: true
+        default: '0.5.0'
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new G5 instance
+        id: create_gpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+    outputs:
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
+
+  hf-tgi-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 30
+    needs: create-runners
+    env:
+      TGI_VERSION: ${{github.event.inputs.tgi-version}}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: us-east-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: "125045733377"
+      - name: Pull docker
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker pull ${REGISTRY}/djl-serving:tgi-${TGI_VERSION}
+      - name: Test bloom-560m
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          HF_MODEL_ID=bigscience/bloom-560m && \
+          SM_NUM_GPUS=2 && \
+          TGI_VERSION=0.5.0 && \
+          docker run --gpus all --shm-size 1g -itd --rm -p 8080:8080 \
+              -e SM_NUM_GPUS=$SM_NUM_GPUS -e HF_MODEL_ID=$HF_MODEL_ID ${REGISTRY}/djl-serving:tgi-${TGI_VERSION}
+          sleep 90
+          ret=$(curl http://localhost:8080/invocations -X POST \
+              -d '{"inputs":"What is Deep Learning?","parameters":{"max_new_tokens":17}}' \
+              -H 'Content-Type: application/json')
+          [[ $ret != '[{"generated_text":"What is Deep Learning? Deep learning is a set of computer algorithms that learn a set of data, in a"}]' ]] && exit 1
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        run: |
+          docker rm -f $(docker ps -aq) || true
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, hf-tgi-test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          ./stop_instance.sh $instance_id

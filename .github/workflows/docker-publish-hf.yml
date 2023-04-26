@@ -1,0 +1,86 @@
+name: Build and push HuggingFace TGI docker image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tgi-version:
+        description: 'tgi version'
+        required: true
+        default: '0.5.0'
+
+jobs:
+  create-runner:
+    runs-on: [ self-hosted, scheduler ]
+    steps:
+      - name: Create new CPU instance
+        id: create_cpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+    outputs:
+      cpu_instance_id: ${{ steps.create_cpu.outputs.action_cpu_instance_id }}
+
+  build-and-push-image:
+    runs-on: [ self-hosted, cpu ]
+    timeout-minutes: 150
+    needs: create-runner
+    env:
+      TGI_VERSION: ${{github.event.inputs.tgi-version}}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: huggingface/text-generation-inference
+          ref: v${{ env.TGI_VERSION }}
+      - uses: actions/checkout@v3
+        with:
+          repository: aws/deep-learning-containers
+          path: deep-learning-containers
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+      - name: Inject slug/short variables
+        uses: rlespinasse/github-slug-action@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: us-east-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: "125045733377"
+      - name: Clean docker env
+        working-directory: serving/docker
+        run: |
+          yes | docker system prune -a --volumes
+      - name: Build and push docker image
+        uses: docker/build-push-action@v4
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: djl-serving
+        with:
+          context: .
+          file: deep-learning-containers/huggingface/pytorch/tgi/docker/0.5/py3/cu118/Dockerfile.gpu
+          push: true
+          target: sagemaker
+          platforms: 'linux/amd64'
+          provenance: false
+          tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:tgi-${{ env.TGI_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  stop-runner:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [build-and-push-image, create-runner]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runner.outputs.cpu_instance_id }}
+          ./stop_instance.sh $instance_id
