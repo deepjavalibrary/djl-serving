@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
-ARG djl_version=0.22.1~SNAPSHOT
+ARG djl_version=0.23.0~SNAPSHOT
 ARG torch_version=1.12.1
 EXPOSE 8080
 
