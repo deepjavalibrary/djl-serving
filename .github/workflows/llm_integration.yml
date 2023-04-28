@@ -64,7 +64,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -121,7 +121,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -193,7 +193,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests pillow
+        run: pip3 install requests pillow numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -292,7 +292,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh fastertransformer ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -373,7 +373,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh fastertransformer ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -427,7 +427,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh fastertransformer ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -547,7 +547,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh fastertransformer ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -662,7 +662,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -726,7 +726,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
