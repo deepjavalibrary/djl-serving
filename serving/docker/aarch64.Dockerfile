@@ -30,7 +30,8 @@ CMD ["serve"]
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
-    mkdir -p /opt/djl/deps
+    mkdir -p /opt/djl/deps && \
+    mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 
 RUN scripts/install_djl_serving.sh $djl_version && \
