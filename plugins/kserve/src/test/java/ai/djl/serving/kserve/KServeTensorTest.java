@@ -26,15 +26,19 @@ public class KServeTensorTest {
     public void testKServeTensor() {
         Assert.assertEquals(KServeTensor.fromKServeDataType("BOOL"), DataType.BOOLEAN);
         Assert.assertEquals(KServeTensor.fromKServeDataType("UINT8"), DataType.UINT8);
+        Assert.assertEquals(KServeTensor.fromKServeDataType("UINT16"), DataType.UINT16);
+        Assert.assertEquals(KServeTensor.fromKServeDataType("UINT32"), DataType.UINT32);
+        Assert.assertEquals(KServeTensor.fromKServeDataType("UINT64"), DataType.UINT64);
         Assert.assertEquals(KServeTensor.fromKServeDataType("INT8"), DataType.INT8);
+        Assert.assertEquals(KServeTensor.fromKServeDataType("INT16"), DataType.INT16);
         Assert.assertEquals(KServeTensor.fromKServeDataType("INT32"), DataType.INT32);
         Assert.assertEquals(KServeTensor.fromKServeDataType("INT64"), DataType.INT64);
         Assert.assertEquals(KServeTensor.fromKServeDataType("FP16"), DataType.FLOAT16);
+        Assert.assertEquals(KServeTensor.fromKServeDataType("BF16"), DataType.BFLOAT16);
         Assert.assertEquals(KServeTensor.fromKServeDataType("FP32"), DataType.FLOAT32);
         Assert.assertEquals(KServeTensor.fromKServeDataType("FP64"), DataType.FLOAT64);
-        Assert.assertThrows(() -> KServeTensor.fromKServeDataType("UINT64"));
 
-        Assert.assertEquals(KServeTensor.toKServeDataType(DataType.STRING), "string");
+        Assert.assertEquals(KServeTensor.toKServeDataType(DataType.UNKNOWN), "unknown");
 
         Shape shape = new Shape(1, 10);
         double[] data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -42,7 +46,12 @@ public class KServeTensorTest {
             for (DataType type : DataType.values()) {
                 if (type != DataType.STRING
                         && type != DataType.UNKNOWN
-                        && type != DataType.COMPLEX64) {
+                        && type != DataType.COMPLEX64
+                        && type != DataType.BFLOAT16
+                        && type != DataType.INT16
+                        && type != DataType.UINT16
+                        && type != DataType.UINT32
+                        && type != DataType.UINT64) {
 
                     KServeTensor tensor = getKServeTensor(shape, type, data);
                     NDArray ndArray = tensor.toTensor(manager);
