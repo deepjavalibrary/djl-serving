@@ -7,5 +7,6 @@
 	"batch_size": 4,
 	"in_tokens": [256, 512],
 	"out_tokens": 256,
-	"count": 25
+	"count": 25,
+	"log_metrics": true
 }

@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
   schedule:
-    - cron: '0 15 * * *'
+    - cron: '0 15 * * 0'
 
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
 
   lmic-g5-test:
     runs-on: [ self-hosted, g5 ]
-    timeout-minutes: 420
+    timeout-minutes: 540
     needs: create-runners
     steps:
       - uses: actions/checkout@v3
@@ -72,6 +72,7 @@ jobs:
         run: |
           python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/opt_30b.json
       - name: Upload test logs
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: performance-logs
