@@ -39,7 +39,7 @@ CMD ["serve"]
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
-    mkdir -p /opt/djl/deps \
+    mkdir -p /opt/djl/deps && \
     mkdir -p /opt/djl/partition
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
