@@ -42,15 +42,6 @@ As the system is built in YAML, the overall structure is a configuration object 
 name: "MyWorkflow"
 version: "1.2.0"
 
-# Default model properties based on https://github.com/pytorch/serve/blob/master/docs/workflows.md#workflow-model-properties
-# optional
-minWorkers: 1
-maxWorkers: 4
-batchSize: 3
-maxBatchDelayMillis: 5000
-retryAttempts: 3
-timeout: 5000
-
 # Defined below
 models: ...
 functions: ...

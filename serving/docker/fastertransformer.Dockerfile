@@ -11,7 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
-ARG djl_version=0.22.1~SNAPSHOT
+ARG djl_version=0.23.0~SNAPSHOT
 ARG python_version=3.9
 ARG ft_version="release/v5.3_tag"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
@@ -39,7 +39,7 @@ CMD ["serve"]
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
-    mkdir -p /opt/djl/deps \
+    mkdir -p /opt/djl/deps && \
     mkdir -p /opt/djl/partition
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition

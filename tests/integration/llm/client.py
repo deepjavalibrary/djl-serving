@@ -101,20 +101,19 @@ hf_model_spec = {
         "stream_output": True,
     },
     "no-code/nomic-ai/gpt4all-j": {
-        "max_memory_per_gpu": [10.0, 10.0, 11.0, 12.0],
+        "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1
     },
     "no-code/databricks/dolly-v2-7b": {
-        "max_memory_per_gpu": [10.0, 10.0, 11.0, 12.0],
+        "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2,
-        "stream_output": True,
     },
     "no-code/google/flan-t5-xl": {
-        "max_memory_per_gpu": [7.0, 7.0, 7.0, 7.0],
+        "max_memory_per_gpu": [7.0, 7.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2
@@ -402,7 +401,9 @@ def test_handler(model, model_spec):
                     result
                 ) <= seq_length, "generated more takens than max_new_tokens"
                 result_0 = json.loads(result[0])['outputs']
-                assert len(result_0) == batch_size, "batch size number of tokens are not generated"
+                assert len(
+                    result_0
+                ) == batch_size, "batch size number of tokens are not generated"
             else:
                 res = res.json()
                 logging.info(f"res {res}")
@@ -563,7 +564,9 @@ def test_transformers_neuronx_handler(model, model_spec):
             if spec.get("stream_output", False):
                 logging.info(f"res: {res.content}")
                 result = res.content.decode().split("\n")[:-1]
-                assert len(result) <= seq_length, "generated more takens than max_new_tokens"
+                assert len(
+                    result
+                ) <= seq_length, "generated more takens than max_new_tokens"
             else:
                 res = res.json()
                 logging.info(f"res {res}")

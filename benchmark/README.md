@@ -43,25 +43,25 @@ sudo snap alias djlbench djl-bench
 - Or download .deb package from S3
 
 ```
-curl -O https://publish.djl.ai/djl-bench/0.22.0/djl-bench_0.22.0-1_all.deb
-sudo dpkg -i djl-bench_0.22.0-1_all.deb
+curl -O https://publish.djl.ai/djl-bench/0.22.1/djl-bench_0.22.1-1_all.deb
+sudo dpkg -i djl-bench_0.22.1-1_all.deb
 ```
 
 For macOS, centOS or Amazon Linux 2
 
-You can download djl-bench zip file from [here](https://publish.djl.ai/djl-bench/0.22.0/benchmark-0.22.0.zip).
+You can download djl-bench zip file from [here](https://publish.djl.ai/djl-bench/0.22.1/benchmark-0.22.1.zip).
 
 ```
-curl -O https://publish.djl.ai/djl-bench/0.22.0/benchmark-0.22.0.zip
-unzip benchmark-0.22.0.zip
-rm benchmark-0.22.0.zip
-sudo ln -s $PWD/benchmark-0.22.0/bin/benchmark /usr/bin/djl-bench
+curl -O https://publish.djl.ai/djl-bench/0.22.1/benchmark-0.22.1.zip
+unzip benchmark-0.22.1.zip
+rm benchmark-0.22.1.zip
+sudo ln -s $PWD/benchmark-0.22.1/bin/benchmark /usr/bin/djl-bench
 ```
 
 For Windows
 
 We are considering to create a `chocolatey` package for Windows. For the time being, you can
-download djl-bench zip file from [here](https://publish.djl.ai/djl-bench/0.22.0/benchmark-0.22.0.zip).
+download djl-bench zip file from [here](https://publish.djl.ai/djl-bench/0.22.1/benchmark-0.22.1.zip).
 
 Or you can run benchmark using gradle:
 

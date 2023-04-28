@@ -737,9 +737,9 @@ jobs:
         working-directory: tests/integration
         run: |
           echo -en "HF_MODEL_ID=nomic-ai/gpt4all-j" > docker_env
-          mkdir models
+          mkdir -p models/test
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve
+          serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py huggingface no-code/nomic-ai/gpt4all-j
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
@@ -747,9 +747,9 @@ jobs:
         working-directory: tests/integration
         run: |
           echo -en "HF_MODEL_ID=databricks/dolly-v2-7b\nTENSOR_PARALLEL_DEGREE=2" > docker_env
-          mkdir models
+          mkdir -p models/test
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve
+          serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py huggingface no-code/databricks/dolly-v2-7b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
@@ -757,9 +757,9 @@ jobs:
         working-directory: tests/integration
         run: |
           echo -en "HF_MODEL_ID=google/flan-t5-xl\nTENSOR_PARALLEL_DEGREE=2" > docker_env
-          mkdir models
+          mkdir -p models/test
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve
+          serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py huggingface no-code/google/flan-t5-xl
           docker rm -f $(docker ps -aq)
           sudo rm -rf models

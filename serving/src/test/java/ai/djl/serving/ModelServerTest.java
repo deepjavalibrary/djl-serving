@@ -44,6 +44,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -116,6 +117,7 @@ public class ModelServerTest {
     private byte[] testImage;
     private List<EventLoopGroup> eventLoopGroups;
     volatile CountDownLatch latch;
+    volatile CountDownLatch latch2;
     volatile HttpResponseStatus httpStatus;
     volatile String result;
     volatile HttpHeaders headers;
@@ -262,7 +264,7 @@ public class ModelServerTest {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
-            testPredictionsModels(channel);
+            testPredictions(channel, new String[] {"/predictions/m"});
             testPredictionsWorkflows(channel);
 
             channel.close().sync();
@@ -653,10 +655,9 @@ public class ModelServerTest {
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
         // send request
-        url = "/predictions/echo?stream=true";
+        url = "/predictions/echo?stream=true&delay=1";
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         req.headers().add("x-synchronous", "false");
-        req.headers().add("delay", "1");
         request(channel, req);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         String nextToken = headers.get("x-next-token");
@@ -678,10 +679,32 @@ public class ModelServerTest {
             assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         }
 
+        testThrottle(channel);
+
         // Unregister model
         url = "/models/echo";
         request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, url));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+    }
+
+    private void testThrottle(Channel channel) throws InterruptedException {
+        String url = "/predictions/echo?delay=1000";
+        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        reset();
+        ChannelFuture f = channel.writeAndFlush(req);
+
+        // send 2nd request use different connection
+        latch2 = new CountDownLatch(1);
+        Channel channel2 = connect(Connector.ConnectorType.MANAGEMENT, 1);
+        url = "/predictions/echo";
+        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        channel2.writeAndFlush(req).sync();
+        latch2.await();
+        assertEquals(httpStatus.code(), 503);
+
+        // wait for 1st response
+        f.sync();
+        latch.await();
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {
@@ -1102,6 +1125,10 @@ public class ModelServerTest {
     }
 
     private Channel connect(Connector.ConnectorType type) {
+        return connect(type, 0);
+    }
+
+    private Channel connect(Connector.ConnectorType type, int mode) {
         Logger logger = LoggerFactory.getLogger(ModelServerTest.class);
 
         final Connector connector = configManager.getConnector(type);
@@ -1131,7 +1158,7 @@ public class ModelServerTest {
                                     p.addLast(new HttpContentDecompressor());
                                     p.addLast(new ChunkedWriteHandler());
                                     p.addLast(new HttpObjectAggregator(6553600));
-                                    p.addLast(new TestHandler());
+                                    p.addLast(new TestHandler(mode));
                                 }
                             });
 
@@ -1152,13 +1179,19 @@ public class ModelServerTest {
     @ChannelHandler.Sharable
     private class TestHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
 
+        private int mode;
+
+        TestHandler(int mode) {
+            this.mode = mode;
+        }
+
         /** {@inheritDoc} */
         @Override
         public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
             httpStatus = msg.status();
             result = msg.content().toString(StandardCharsets.UTF_8);
             headers = msg.headers();
-            latch.countDown();
+            countDown();
         }
 
         /** {@inheritDoc} */
@@ -1167,7 +1200,15 @@ public class ModelServerTest {
             Logger logger = LoggerFactory.getLogger(TestHandler.class);
             logger.error("Unknown exception", cause);
             ctx.close();
-            latch.countDown();
+            countDown();
+        }
+
+        private void countDown() {
+            if (mode == 0) {
+                latch.countDown();
+            } else {
+                latch2.countDown();
+            }
         }
     }
 }

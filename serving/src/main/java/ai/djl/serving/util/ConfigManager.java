@@ -54,7 +54,6 @@ public final class ConfigManager {
     private static final String INFERENCE_ADDRESS = "inference_address";
     private static final String MANAGEMENT_ADDRESS = "management_address";
     private static final String LOAD_MODELS = "load_models";
-    private static final String LOAD_WORKFLOWS = "load_workflows";
     private static final String WAIT_MODEL_LOADING = "wait_model_loading";
     private static final String ALLOW_MULTI_STATUS = "allow_multi_status";
     private static final String NUMBER_OF_NETTY_THREADS = "number_of_netty_threads";
@@ -109,10 +108,6 @@ public final class ConfigManager {
         String[] models = args.getModels();
         if (models != null) {
             prop.setProperty(LOAD_MODELS, String.join(",", models));
-        }
-        String[] workflows = args.getWorkflows();
-        if (workflows != null) {
-            prop.setProperty(LOAD_WORKFLOWS, String.join(",", workflows));
         }
         for (Map.Entry<String, String> env : Utils.getenv().entrySet()) {
             String key = env.getKey();
@@ -264,15 +259,6 @@ public final class ConfigManager {
      */
     public String getLoadModels() {
         return prop.getProperty(LOAD_MODELS);
-    }
-
-    /**
-     * Returns the workflow urls that to be loaded at startup.
-     *
-     * @return the workflow urls that to be loaded at startup
-     */
-    public String getLoadWorkflows() {
-        return prop.getProperty(LOAD_WORKFLOWS);
     }
 
     /**
@@ -440,8 +426,6 @@ public final class ConfigManager {
                 + (getModelStore() == null ? "N/A" : getModelStore())
                 + "\nInitial Models: "
                 + (getLoadModels() == null ? "N/A" : getLoadModels())
-                + "\nInitial Workflows: "
-                + (getLoadWorkflows() == null ? "N/A" : getLoadWorkflows())
                 + "\nNetty threads: "
                 + getNettyThreads()
                 + "\nMaximum Request Size: "

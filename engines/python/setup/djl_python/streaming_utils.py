@@ -135,12 +135,15 @@ class StreamingUtils:
     def _validate_inputs(model, inputs):
         if not model.config.architectures:
             ## do best effort validation as there is no simple way to cover all the cases
-            logging.warning(f"Model config does not contain architectures field. Supported architectures: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}")
+            logging.warning(
+                f"Model config does not contain architectures field. Supported architectures: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}"
+            )
             model_arch_supported = True
         else:
             model_arch_list = model.config.architectures
             model_arch_supported = any(
-                model_arch.endswith(StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES)
+                model_arch.endswith(
+                    StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES)
                 for model_arch in model_arch_list)
         if not model_arch_supported:
             assert False, f"model archs: {model_arch_list} is not in supported list: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}"

@@ -16,7 +16,7 @@ import logging
 import os
 
 import torch
-from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoTokenizer
+from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -104,22 +104,13 @@ class HuggingFaceService(object):
             self.initialized = True
             return
 
-        if task:
-            self.hf_pipeline = self.get_pipeline(
-                task=task,
-                model_id_or_path=model_id_or_path,
-                device=device_id,
-                kwargs=kwargs)
-        elif "config.json" in os.listdir(model_id_or_path):
-            task = self.infer_task_from_model_architecture(
-                f"{model_id_or_path}/config.json")
-            self.hf_pipeline = self.get_pipeline(
-                task=task,
-                model_id_or_path=model_id_or_path,
-                device=device_id,
-                kwargs=kwargs)
-        else:
-            raise ValueError("You need to define 'task' options.")
+        if not task:
+            task = self.infer_task_from_model_architecture(model_id_or_path)
+
+        self.hf_pipeline = self.get_pipeline(task=task,
+                                             model_id_or_path=model_id_or_path,
+                                             device=device_id,
+                                             kwargs=kwargs)
 
         self.initialized = True
 
@@ -242,7 +233,8 @@ class HuggingFaceService(object):
                                          torch.cuda.current_device())
             with torch.no_grad():
                 output_tokens = model.generate(*args, **input_tokens, **kwargs)
-            generated_text = tokenizer.batch_decode(output_tokens, skip_special_tokens=True)
+            generated_text = tokenizer.batch_decode(output_tokens,
+                                                    skip_special_tokens=True)
 
             return [{"generated_text": s} for s in generated_text]
 
@@ -250,9 +242,8 @@ class HuggingFaceService(object):
 
     @staticmethod
     def infer_task_from_model_architecture(model_config_path: str):
-        with open(model_config_path, "r+") as config_file:
-            config = json.loads(config_file.read())
-            architecture = config.get("architectures", [None])[0]
+        model_config = AutoConfig.from_pretrained(model_config_path)
+        architecture = model_config.architectures[0]
 
         task = None
         for arch_options in ARCHITECTURES_2_TASK:
