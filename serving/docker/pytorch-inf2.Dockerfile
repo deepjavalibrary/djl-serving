@@ -14,6 +14,8 @@ ARG djl_version=0.23.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.8
 ARG torch_neuronx_version=1.13.0.1.4.0
+ARG transformers_version=4.28.1
+ARG accelerate_version=0.18.0
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -50,6 +52,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_djl_serving.sh $djl_version && \
     scripts/install_inferentia2.sh $torch_neuronx_version && \
+    pip install transformers==${transformers_version} accelerate==${accelerate_version} && \
     pip install git+https://github.com/aws-neuron/transformers-neuronx.git@v2.8.0 && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
