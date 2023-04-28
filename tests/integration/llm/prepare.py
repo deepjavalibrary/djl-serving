@@ -5,9 +5,22 @@ import shutil
 parser = argparse.ArgumentParser(description='Build the LLM configs')
 parser.add_argument('handler', help='the handler used in the model')
 parser.add_argument('model', help='model that works with certain handler')
+parser.add_argument('--engine',
+                    required=False,
+                    type=str,
+                    choices=['deepspeed', 'huggingface', 'fastertransformer'],
+                    help='The engine used for inference')
+parser.add_argument('--dtype',
+                    required=False,
+                    type=str,
+                    help='The model data type')
+parser.add_argument('--tensor_parallel',
+                    required=False,
+                    type=int,
+                    help='The model tensor parallel degree')
+args = parser.parse_args()
 
 ds_aot_list = {
-    # Keep option.s3url to test backward compatible case
     "opt-6.7b": {
         "option.s3url": "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree": 4,
@@ -157,6 +170,40 @@ ft_model_list = {
     }
 }
 
+default_accel_configs = {
+    "huggingface": {
+        "engine": "Python",
+        "option.entryPoint": "djl_python.huggingface"
+    },
+    "deepspeed": {
+        "engine": "DeepSpeed",
+        "option.entryPoint": "djl_python.deepspeed"
+    },
+    "fastertransformer": {
+        "engine": "FasterTransformer",
+        "entryPoint": "djl_python.fastertransformer"
+    }
+}
+
+performance_test_list = {
+    "opt-30b": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/opt-30b/"
+    },
+    "gpt-j-6b": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/"
+    },
+    "bloom-7b1": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/bloom-7b1/"
+    },
+    "gpt-neox-20b": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+    }
+}
+
 transformers_neuronx_model_list = {
     "gpt2": {
         "option.tensor_parallel_degree": 2,
@@ -247,6 +294,23 @@ def build_ds_aot_model(model):
     options["option.save_mp_checkpoint_path"] = "/opt/ml/model/partition-test"
     write_properties(options)
     shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
+
+
+def build_performance_model(model):
+    if model in performance_test_list.keys():
+        options = performance_test_list[model]
+    else:
+        options = {
+            "option.task": "text-generation",
+            "option.model_id": model
+        }
+    options["option.predict_timeout"] = 240
+    options["option.dtype"] = args.dtype
+    options["option.tensor_parallel_degree"] = args.tensor_parallel
+    for k, v in default_accel_configs[args.engine].items():
+        if k not in options:
+            options[k] = v
+    write_properties(options)
 
 
 def build_sd_handler_model(model):
@@ -340,11 +404,11 @@ supported_handler = {
     'fastertransformer_handler_aot': builder_ft_handler_aot_model,
     'deepspeed_aot': build_ds_aot_model,
     'transformers_neuronx_raw': build_transformers_neuronx_model,
-    'transformers_neuronx': build_transformers_neuronx_handler_model
+    'transformers_neuronx': build_transformers_neuronx_handler_model,
+    'performance': build_performance_model
 }
 
 if __name__ == '__main__':
-    args = parser.parse_args()
     if args.handler not in supported_handler:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler {list(supported_handler.keys())}"
