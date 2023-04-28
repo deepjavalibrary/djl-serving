@@ -31,6 +31,7 @@ jobs:
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 540
     needs: create-runners
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Clean env
@@ -52,25 +53,28 @@ jobs:
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
       - name: Test bloom-7b
-        if: always()
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/bloom_7b1.json
+          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          --profile profiles/bloom_7b1.json
       - name: Test gpt-j-6b
         if: always()
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_j_6b.json
+          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+            --profile profiles/gpt_j_6b.json
       - name: Test gpt-neox-20b
         if: always()
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/gpt_neox_20b.json
+          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+            --profile profiles/gpt_neox_20b.json
       - name: Test opt-30b
         if: always()
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER_TAG --profile profiles/opt_30b.json
+          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+            --profile profiles/opt_30b.json
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v3
@@ -88,4 +92,4 @@ jobs:
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_g5 }}
-          ./stop_instance.sh $instance_id
+          ./stop_instance.sh $instance_id "us-west-2"
