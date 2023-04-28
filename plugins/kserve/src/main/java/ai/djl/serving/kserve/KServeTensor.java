@@ -45,18 +45,30 @@ class KServeTensor {
                 return DataType.BOOLEAN;
             case "UINT8":
                 return DataType.UINT8;
+            case "UINT16":
+                return DataType.UINT16;
+            case "UINT32":
+                return DataType.UINT32;
+            case "UINT64":
+                return DataType.UINT64;
             case "INT8":
                 return DataType.INT8;
+            case "INT16":
+                return DataType.INT16;
             case "INT32":
                 return DataType.INT32;
             case "INT64":
                 return DataType.INT64;
             case "FP16":
                 return DataType.FLOAT16;
+            case "BF16":
+                return DataType.BFLOAT16;
             case "FP32":
                 return DataType.FLOAT32;
             case "FP64":
                 return DataType.FLOAT64;
+            case "BYTES":
+                return DataType.STRING;
             default:
                 throw new IllegalArgumentException("Invalid KServe data type: " + type);
         }
@@ -68,18 +80,30 @@ class KServeTensor {
                 return "BOOL";
             case UINT8:
                 return "UINT8";
+            case UINT16:
+                return "UINT16";
+            case UINT32:
+                return "UINT32";
+            case UINT64:
+                return "UINT64";
             case INT8:
                 return "INT8";
+            case INT16:
+                return "INT16";
             case INT32:
                 return "INT32";
             case INT64:
                 return "INT64";
             case FLOAT16:
                 return "FP16";
+            case BFLOAT16:
+                return "BF16";
             case FLOAT32:
                 return "FP32";
             case FLOAT64:
                 return "FP64";
+            case STRING:
+                return "BYTES";
             default:
                 return type.toString();
         }
@@ -120,10 +144,16 @@ class KServeTensor {
                     bb.put((byte) d);
                     break;
                 case INT32:
+                case UINT32:
                     bb.putInt((int) d);
                     break;
                 case INT64:
+                case UINT64:
                     bb.putLong((long) d);
+                    break;
+                case INT16:
+                case UINT16:
+                    bb.putShort((short) d);
                     break;
                 case FLOAT16:
                     bb.putShort(Float16Utils.floatToHalf((float) d));
@@ -134,8 +164,12 @@ class KServeTensor {
                 case FLOAT64:
                     bb.putDouble(d);
                     break;
+                case BFLOAT16:
+                case COMPLEX64:
+                case STRING:
+                case UNKNOWN:
                 default:
-                    break;
+                    throw new UnsupportedOperationException("Unsupported data type: " + type);
             }
         }
         bb.rewind();
