@@ -18,7 +18,8 @@ ARG torch_version=2.0.0
 ARG torch_vision_version=0.15.1
 ARG python_version=3.9
 
-RUN mkdir -p /opt/djl/conf
+RUN mkdir -p /opt/djl/conf && \
+    mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 

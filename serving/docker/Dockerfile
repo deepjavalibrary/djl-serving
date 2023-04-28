@@ -13,7 +13,8 @@ FROM ubuntu:20.04 AS base
 ARG djl_version=0.22.1~SNAPSHOT
 
 COPY scripts scripts/
-RUN mkdir -p /opt/djl/conf
+RUN mkdir -p /opt/djl/conf && \
+    mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_s5cmd.sh x64 && \
