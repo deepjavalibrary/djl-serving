@@ -45,7 +45,8 @@ CMD ["serve"]
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
-    mkdir -p /opt/djl/deps
+    mkdir -p /opt/djl/deps && \
+    mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
