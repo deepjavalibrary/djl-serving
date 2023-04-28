@@ -55,7 +55,7 @@ class PropertiesManager(object):
             with open(properties_file, 'r') as f:
                 for line in f:
                     # ignoring line starting with #
-                    if line.startswith("#"):
+                    if line.startswith("#") or not line.strip():
                         continue
                     key, value = line.strip().split('=', 1)
                     self.properties[key.split(".", 1)[-1]] = value
