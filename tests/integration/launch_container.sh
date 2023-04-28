@@ -16,6 +16,10 @@ if [[ $4 == "partition" ]]; then
   is_partition=true
 fi
 
+if [[ "$model_path" == "no_code" ]]; then
+  unset model_path
+fi
+
 is_llm=false
 if [[ "$platform" == *"cu1"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
@@ -55,7 +59,7 @@ if $is_partition; then
     -t \
     --rm \
     --network="host" \
-    -v ${model_path}:/opt/ml/model \
+    ${model_path:+-v ${model_path}:/opt/ml/model} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
     ${env_file} \
@@ -76,7 +80,7 @@ else
     -itd \
     --rm \
     --network="host" \
-    -v ${model_path}:/opt/ml/model \
+    ${model_path:+-v ${model_path}:/opt/ml/model} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/home/djl/.aws \
     ${env_file} \
