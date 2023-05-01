@@ -209,6 +209,12 @@ ds_aot_model_spec = {
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "use_pipeline": True
+    },
+    "bloom-7b1": {
+        "max_memory_per_gpu": [12.0, 12.0, 12.0, 12.0],
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "use_pipeline": False
     }
 }
 
@@ -589,6 +595,8 @@ if __name__ == "__main__":
         test_ft_handler(args.model, ft_raw_model_spec)
     elif args.handler == "deepspeed_aot":
         test_ds_raw_model(args.model, ds_aot_model_spec)
+    elif args.handler == "deepspeed_handler_aot":
+        test_handler(args.model, ds_aot_model_spec)
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)

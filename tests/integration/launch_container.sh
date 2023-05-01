@@ -12,7 +12,7 @@ platform=$3     #required
 args=${@:4}     #optional
 
 is_partition=false
-if [[ $4 == "partition" ]]; then
+if [[ $4 == "partition" ]] || [[ $4 == "train" ]]; then
   is_partition=true
 fi
 
@@ -59,7 +59,7 @@ if $is_partition; then
     -t \
     --rm \
     --network="host" \
-    ${model_path:+-v ${model_path}:/opt/ml/model} \
+    ${model_path:+-v ${model_path}/test:/opt/ml/input/data/training} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
     ${env_file} \
