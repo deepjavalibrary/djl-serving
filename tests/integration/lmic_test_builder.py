@@ -214,7 +214,7 @@ class LMITestRunner:
             file = open("llm/metrics.log", "r")
             metrics = re.sub("'", r'"', file.readline())
             command = f'aws cloudwatch put-metric-data --namespace "LMIC_performance_{sequence["engine"]}" ' \
-                      f'--region "us-east-1" --metric-data "{metrics}"'
+                      f'--region "us-east-1" --metric-data \'{metrics}\''
         logging.info(command)
         sp.call(command, shell=True)
         self.clean_metrics()
