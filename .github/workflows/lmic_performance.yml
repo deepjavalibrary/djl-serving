@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
   schedule:
-    - cron: '0 15 * * 0'
+    - cron: '0 8 * * 0'
 
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
 
   lmic-g5-test:
     runs-on: [ self-hosted, g5 ]
-    timeout-minutes: 540
+    timeout-minutes: 720
     needs: create-runners
     continue-on-error: true
     steps:
