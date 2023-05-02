@@ -12,6 +12,7 @@
 import logging
 import os
 import glob
+import json
 import torch
 import requests
 
@@ -90,6 +91,35 @@ class PropertiesManager(object):
                     'Please specify the option.model_dir or option.model_id or include model files in the model-dir.'
                 )
 
+    def validate_and_correct_checkpoints_json(self):
+        """
+        Removes base_dir from ds_inference_checkpoints.json file.
+
+        DeepSpeed writes base_dir directory, which is the path of checkpoints saved to the file.
+        Removing the base_dir since the user's deployment environment could be different from partition environment.
+        User can specify base_dir argument in deepspeed.init_inference while using this file.
+
+        :return:
+        """
+        if self.properties['engine'] == 'DeepSpeed':
+            config_file = os.path.join(
+                self.properties['save_mp_checkpoint_path'],
+                'ds_inference_config.json')
+            if not os.path.exists(config_file):
+                raise Exception("Checkpoints json file was not generated."
+                                "Partition was not successful.")
+
+            configs = {}
+            with open(config_file) as f:
+                configs = json.load(f)
+
+            if not configs.get('base_dir'):
+                return
+
+            configs.pop('base_dir')
+            with open(config_file, "w") as f:
+                json.dump(configs, f)
+
     def generate_properties_file(self):
         checkpoint_path = self.properties.get('save_mp_checkpoint_path')
         configs = {
@@ -145,7 +175,7 @@ class PropertiesManager(object):
                     self.properties['entryPoint'] = 'model.py'
                 else:
                     engine = self.properties['engine']
-                    if engine == "Deepspeed":
+                    if engine == "DeepSpeed":
                         entry_point = "djl_python.deepspeed"
                     elif engine == "FasterTransformer":
                         entry_point = "djl_python.fastertransformer"

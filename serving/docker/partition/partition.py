@@ -140,6 +140,9 @@ class PartitionService(object):
         if not saved_checkpoints_dir.endswith('/'):
             saved_checkpoints_dir = saved_checkpoints_dir + '/'
 
+        if not s3url.endswith('/'):
+            s3url = s3url + '/'
+
         if Path("/opt/djl/bin/s5cmd").is_file():
             commands = [
                 "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync",
@@ -167,6 +170,7 @@ class PartitionService(object):
         logging.info(result)
         if result.returncode == 0:
             logging.info(f"Partitioning done.")
+            self.properties_manager.validate_and_correct_checkpoints_json()
             self.properties_manager.generate_properties_file()
             self.copy_config_files()
             self.upload_checkpoints_to_s3()
@@ -185,6 +189,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--model-dir',
         type=str,
+        required=False,
+        default='/opt/ml/input/data/training',
         help='path of the model directory containing model/properties file')
 
     args = parser.parse_args()

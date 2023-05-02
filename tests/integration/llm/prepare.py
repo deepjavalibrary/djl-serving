@@ -12,13 +12,32 @@ ds_aot_list = {
         "option.s3url": "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
-        "option.dtype": "float16"
+        "option.dtype": "float16",
+        "option.save_mp_checkpoint_path": "/opt/ml/input/data/training/partition-test"
     },
-    "gpt-neox-20b": {
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+    "bloom-7b1": {
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
-        "option.dtype": "float16"
+        "option.dtype": "float16",
+        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4"
+    }
+}
+
+ds_aot_handler_list = {
+    "opt-6.7b": {
+        "option.s3url": "s3://djl-llm/opt-6b7/",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.save_mp_checkpoint_path": "/opt/ml/input/data/training/partition-test"
+    },
+    "bloom-7b1": {
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4"
     }
 }
 
@@ -244,9 +263,19 @@ def build_ds_aot_model(model):
 
     options = ds_aot_list[model]
     options["engine"] = "DeepSpeed"
-    options["option.save_mp_checkpoint_path"] = "/opt/ml/model/partition-test"
     write_properties(options)
     shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
+
+
+def build_ds_aot_handler_model(model):
+    if model not in ds_aot_handler_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(ds_aot_handler_list.keys())}"
+        )
+
+    options = ds_aot_handler_list[model]
+    options["engine"] = "DeepSpeed"
+    write_properties(options)
 
 
 def build_sd_handler_model(model):
@@ -289,7 +318,10 @@ def build_ft_raw_aot_model(model):
         )
     options = ft_model_list[model]
     options["engine"] = "FasterTransformer"
-    options["option.save_mp_checkpoint_path"] = "/opt/ml/model/partition-test"
+    if model == 't5-small':
+        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4"
+    else:
+        options["option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
     write_properties(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
@@ -302,7 +334,10 @@ def builder_ft_handler_aot_model(model):
     options = ft_model_list[model]
     options["engine"] = "FasterTransformer"
     # options["entryPoint"] = "djl_python.fastertransformer"
-    options["option.save_mp_checkpoint_path"] = "/opt/ml/model/partition-test"
+    if model == 't5-small':
+        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4"
+    else:
+        options["option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
     write_properties(options)
 
 
@@ -339,6 +374,7 @@ supported_handler = {
     'fastertransformer_raw_aot': build_ft_raw_aot_model,
     'fastertransformer_handler_aot': builder_ft_handler_aot_model,
     'deepspeed_aot': build_ds_aot_model,
+    'deepspeed_handler_aot': build_ds_aot_handler_model,
     'transformers_neuronx_raw': build_transformers_neuronx_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model
 }
