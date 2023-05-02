@@ -13,7 +13,8 @@ FROM ubuntu:20.04
 ARG djl_version=0.23.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.8
-ARG torch_neuronx_version=1.13.0.1.4.0
+ARG torch_neuronx_version=1.13.1.1.7.0
+ARG transformers_neuronx_version=0.3.32
 ARG transformers_version=4.28.1
 ARG accelerate_version=0.18.0
 EXPOSE 8080
@@ -52,9 +53,10 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_inferentia2.sh $torch_neuronx_version && \
-    pip install transformers==${transformers_version} accelerate==${accelerate_version} && \
-    pip install git+https://github.com/aws-neuron/transformers-neuronx.git@v2.8.0 && \
+    scripts/install_inferentia2.sh && \
+    pip install transformers==${transformers_version} accelerate==${accelerate_version} \
+    neuronx-cc==2.6.* torch_neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
+    --extra-index-url=https://pip.repos.neuron.amazonaws.com && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \

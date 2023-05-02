@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-TORCH_NEURONX_VERSION=$1
 
 set -ex
 
@@ -15,12 +14,9 @@ echo "deb https://apt.repos.neuron.amazonaws.com ${VERSION_CODENAME} main" >/etc
 curl -L https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB | apt-key add -
 
 # https://awsdocs-neuron.readthedocs-hosted.com/en/latest/release-notes/releasecontent.html#inf2-packages
-apt-get update -y && apt-get install -y linux-headers-$(uname -r) && apt-get install -y aws-neuronx-dkms=2.8.4.* \
-    aws-neuronx-collectives=2.12.27.* \
-    aws-neuronx-runtime-lib=2.12.16.* \
-    aws-neuronx-tools=2.9.5.*
+apt-get update -y && apt-get install -y linux-headers-$(uname -r) && apt-get install -y aws-neuronx-dkms=2.9.*.* \
+    aws-neuronx-collectives=2.13.*.* \
+    aws-neuronx-runtime-lib=2.13.*.* \
+    aws-neuronx-tools=2.10.*.*
 
 export PATH=/opt/aws/neuron/bin:$PATH
-
-python3 -m pip install numpy awscli
-python3 -m pip install neuronx-cc==2.4.* torch_neuronx==${TORCH_NEURONX_VERSION} --extra-index-url=https://pip.repos.neuron.amazonaws.com
