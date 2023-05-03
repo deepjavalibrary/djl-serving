@@ -7,23 +7,58 @@ import subprocess as sp
 from itertools import product
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description="Script for building and running the LMI container tests")
-parser.add_argument("--docker_image", required=True, type=str, help="Docker image under test")
-parser.add_argument("--test_series", required=False, type=str, help="Test series used for testing the model")
-parser.add_argument("--model", required=False, type=str, help="The name of test model")
+parser = argparse.ArgumentParser(
+    description="Script for building and running the LMI container tests")
+parser.add_argument("--docker_image",
+                    required=True,
+                    type=str,
+                    help="Docker image under test")
+parser.add_argument("--test_series",
+                    required=False,
+                    type=str,
+                    help="Test series used for testing the model")
+parser.add_argument("--model",
+                    required=False,
+                    type=str,
+                    help="The name of test model")
 parser.add_argument("--engine",
                     required=False,
                     type=str,
                     choices=["deepspeed", "huggingface", "fastertransformer"],
                     help="The engine used for inference")
-parser.add_argument("--platform", default="deepspeed", required=False, type=str, help="The model data type")
-parser.add_argument("--dtype", required=False, type=str, help="The model data type")
-parser.add_argument("--tensor_parallel", required=False, type=int, help="The model tensor parallel degree")
-parser.add_argument("--batch_size", required=False, type=int, help="The batch size of inference requests")
-parser.add_argument("--in_tokens", required=False, type=int, help="The sequence length for input tokens")
-parser.add_argument("--out_tokens", required=False, type=int, help="The sequence length for output tokens")
-parser.add_argument("--count", required=False, type=int, help="Number of requests sent")
-parser.add_argument("--profile", required=False, type=str, help="Path to profile json for pre-configured tests")
+parser.add_argument("--platform",
+                    default="deepspeed",
+                    required=False,
+                    type=str,
+                    help="The model data type")
+parser.add_argument("--dtype",
+                    required=False,
+                    type=str,
+                    help="The model data type")
+parser.add_argument("--tensor_parallel",
+                    required=False,
+                    type=int,
+                    help="The model tensor parallel degree")
+parser.add_argument("--batch_size",
+                    required=False,
+                    type=int,
+                    help="The batch size of inference requests")
+parser.add_argument("--in_tokens",
+                    required=False,
+                    type=int,
+                    help="The sequence length for input tokens")
+parser.add_argument("--out_tokens",
+                    required=False,
+                    type=int,
+                    help="The sequence length for output tokens")
+parser.add_argument("--count",
+                    required=False,
+                    type=int,
+                    help="Number of requests sent")
+parser.add_argument("--profile",
+                    required=False,
+                    type=str,
+                    help="Path to profile json for pre-configured tests")
 args = parser.parse_args()
 
 
@@ -49,7 +84,9 @@ class LMITestSetupBuilder:
         """
         :param namespace: Namespace object representing the parser arguments
         """
-        self.setup_iterable_opts = ["engine", "model", "dtype", "tensor_parallel"]
+        self.setup_iterable_opts = [
+            "engine", "model", "dtype", "tensor_parallel"
+        ]
         self.config = {}
         self.config_from_args(namespace)
         if namespace.profile is not None:
@@ -77,19 +114,24 @@ class LMITestSetupBuilder:
         extended_requirements_test_series = ["performance"]
         for param in required_parameters:
             if param not in self.config or self.config[param] is None:
-                raise AttributeError(f"The following parameters must be set in config "
-                                     f"with profile or args:{required_parameters}")
+                raise AttributeError(
+                    f"The following parameters must be set in config "
+                    f"with profile or args:{required_parameters}")
         if self.config["test_series"] in extended_requirements_test_series:
             self._validate_test_series_config(self.config["test_series"])
 
     def _validate_test_series_config(self, series):
         required_parameters = []
         if series == "performance":
-            required_parameters = ["engine", "dtype", "tensor_parallel", "batch_size", "out_tokens", "count"]
+            required_parameters = [
+                "engine", "dtype", "tensor_parallel", "batch_size",
+                "out_tokens", "count"
+            ]
         for param in required_parameters:
             if param not in self.config or self.config[param] is None:
-                raise AttributeError(f"The following extended parameters must be set in config for the {series} tests "
-                                     f"with profile or args:{required_parameters}")
+                raise AttributeError(
+                    f"The following extended parameters must be set in config for the {series} tests "
+                    f"with profile or args:{required_parameters}")
 
 
 class LMITestRunner:
@@ -102,16 +144,22 @@ class LMITestRunner:
         self.test_series = series
         self.cpu_mem_pid = None
         self.errors = []
-        self.test_iterable_opts = ["in_tokens", "out_tokens", "count", "batch_size"]
+        self.test_iterable_opts = [
+            "in_tokens", "out_tokens", "count", "batch_size"
+        ]
         self.setup_keys = ["engine", "dtype", "tensor_parallel"]
-        self.test_sequence_keys = self.setup_keys + ["batch_size", "in_tokens", "out_tokens", "count", "cpu_memory"]
+        self.test_sequence_keys = self.setup_keys + [
+            "batch_size", "in_tokens", "out_tokens", "count", "cpu_memory"
+        ]
 
     def arg_builder(self, obj):
         positional_args = ["test_series", "model"]
         output = []
         for arg in positional_args:
             if arg not in obj.keys():
-                raise AttributeError(f"LMITestRunner requires the following arguments: {positional_args}")
+                raise AttributeError(
+                    f"LMITestRunner requires the following arguments: {positional_args}"
+                )
             output.append(obj[arg])
         return output
 
@@ -147,7 +195,8 @@ class LMITestRunner:
         try:
             output = sp.check_output([command], shell=True, stderr=sp.STDOUT)
         except sp.CalledProcessError as cpe:
-            self.errors.append(f"Error:LMITestRunner.launch_container: {cpe.output.decode()}")
+            self.errors.append(
+                f"Error:LMITestRunner.launch_container: {cpe.output.decode()}")
         else:
             logging.info(output.decode())
 
@@ -191,7 +240,9 @@ class LMITestRunner:
         if os.path.exists(filename):
             command = f"rm {filename}"
             sp.call(command, shell=True)
-            raise AssertionError("Test Series failed with errors")  # Raise error to fail test series in pipeline
+            raise AssertionError(
+                "Test Series failed with errors"
+            )  # Raise error to fail test series in pipeline
 
     def log_errors(self, error):
         logging.warning(error)
@@ -207,7 +258,9 @@ class LMITestRunner:
 
     def log_metrics(self, sequence):
         if not os.path.exists("llm/metrics.log"):
-            logging.info(f"Metrics were not measured for this test sequence: {sequence}")
+            logging.info(
+                f"Metrics were not measured for this test sequence: {sequence}"
+            )
             return
         command = "cat llm/metrics.log"
         if "log_metrics" in sequence:
@@ -237,7 +290,8 @@ class LMITestRunner:
                     total_memory = int(line.split()[1])
                     available_memory = total_memory
                 else:
-                    available_memory = min(int(line.split()[1]), available_memory)
+                    available_memory = min(int(line.split()[1]),
+                                           available_memory)
         if total_memory == 0:
             return total_memory
         return total_memory - available_memory
@@ -256,7 +310,8 @@ class LMITestRunner:
         self.check_errors()
 
     def run_test_sequences(self, test_setup):
-        test_sequences = flatten_object_on_keys(test_setup, self.test_iterable_opts)
+        test_sequences = flatten_object_on_keys(test_setup,
+                                                self.test_iterable_opts)
         for test_sequence in test_sequences:
             test_sequence["cpu_memory"] = self.max_cpu_memory_used()
             self.run_client_requests(test_sequence)
@@ -272,7 +327,9 @@ class LMITestRunner:
         try:
             output = sp.check_output(command, shell=True, stderr=sp.STDOUT)
         except sp.CalledProcessError as cpe:
-            self.errors.append(f"Error:LMITestRunner.run_client_requests: {cpe.output.decode()}")
+            self.errors.append(
+                f"Error:LMITestRunner.run_client_requests: {cpe.output.decode()}"
+            )
         else:
             logging.info(output.decode())
 

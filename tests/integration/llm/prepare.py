@@ -259,6 +259,11 @@ transformers_neuronx_handler_list = {
         "option.model_loading_timeout": 600,
         "option.enable_streaming": True
     },
+    "stable-diffusion-2.1-base-neuron": {
+        "option.model_id": "s3://djl-llm/stable-diffusion-2-1-base-compiled/",
+        "option.tensor_parallel_degree": 2,
+        "option.use_stable_diffusion": True
+    }
 }
 
 

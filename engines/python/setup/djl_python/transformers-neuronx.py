@@ -22,6 +22,7 @@ from transformers_neuronx.gpt2.model import GPT2ForSampling
 from transformers_neuronx.module import save_pretrained_split
 from transformers_neuronx.opt.model import OPTForSampling
 from djl_python import Input, Output
+from djl_python.stable_diffusion_inf2 import StableDiffusionService
 from djl_python.streaming_utils import StreamingUtils
 
 model = None
@@ -61,6 +62,7 @@ class TransformersNeuronXService(object):
             block.fc1.to(dtype)
             block.fc2.to(dtype)
         self.model.lm_head.to(dtype)
+        logging.info(f"Saving to INF2 model to {load_path} ...")
         logging.info(f"Saving to INF2 model to {load_path} ...")
         save_pretrained_split(self.model, load_path)
         with open(os.path.join(load_path, "verify"), "w") as f:
@@ -207,7 +209,10 @@ _service = TransformersNeuronXService()
 
 
 def handle(inputs: Input):
+    global _service
     if not _service.initialized:
+        if "use_stable_diffusion" in inputs.get_properties():
+            _service = StableDiffusionService()
         _service.initialize(inputs.get_properties())
 
     if inputs.is_empty():
