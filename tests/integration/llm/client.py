@@ -200,6 +200,11 @@ sd_model_spec = {
         "size": [512],
         "num_inference_steps": [50],
         "depth": True
+    },
+    "stable-diffusion-2.1-base-neuron": {
+        "worker": 2,
+        "size": [512],
+        "num_inference_steps": [50, 100]
     }
 }
 
@@ -351,7 +356,9 @@ def build_metric_label():
     batch_size = f"batch-{args.batch_size}" if args.batch_size else ""
     in_tokens = f"{args.in_tokens}-in-tokens" if args.in_tokens else ""
     out_tokens = f"{args.out_tokens}-out-tokens" if args.out_tokens else ""
-    output = [sanitized_model_name, dtype, tp, batch_size, in_tokens, out_tokens]
+    output = [
+        sanitized_model_name, dtype, tp, batch_size, in_tokens, out_tokens
+    ]
     while "" in output:
         output.remove("")
     return "_".join(output)
@@ -361,7 +368,9 @@ def log_metrics(response_times):
     required_args = ["batch_size", "out_tokens"]
     for arg in required_args:
         if arg not in args:
-            raise ValueError(f"Logging metrics requires the following arguments: {required_args}")
+            raise ValueError(
+                f"Logging metrics requires the following arguments: {required_args}"
+            )
 
     p50 = np.percentile(response_times, 50)
     p90 = np.percentile(response_times, 90)
@@ -372,14 +381,42 @@ def log_metrics(response_times):
 
     outputs = []
     metric_stem = build_metric_label()
-    outputs.append({"MetricName": f"{metric_stem}_p50", "Unit": "Milliseconds", "Value": p50})
-    outputs.append({"MetricName": f"{metric_stem}_p90", "Unit": "Milliseconds", "Value": p90})
-    outputs.append({"MetricName": f"{metric_stem}_p99", "Unit": "Milliseconds", "Value": p99})
-    outputs.append({"MetricName": f"{metric_stem}_throughput", "Unit": "Count/Second", "Value": throughput})
-    outputs.append({"MetricName": f"{metric_stem}_tokens-per-second", "Unit": "Count/Second", "Value": tps})
-    outputs.append({"MetricName": f"{metric_stem}_gpu-memory", "Unit": "Megabytes", "Value": max_memory})
+    outputs.append({
+        "MetricName": f"{metric_stem}_p50",
+        "Unit": "Milliseconds",
+        "Value": p50
+    })
+    outputs.append({
+        "MetricName": f"{metric_stem}_p90",
+        "Unit": "Milliseconds",
+        "Value": p90
+    })
+    outputs.append({
+        "MetricName": f"{metric_stem}_p99",
+        "Unit": "Milliseconds",
+        "Value": p99
+    })
+    outputs.append({
+        "MetricName": f"{metric_stem}_throughput",
+        "Unit": "Count/Second",
+        "Value": throughput
+    })
+    outputs.append({
+        "MetricName": f"{metric_stem}_tokens-per-second",
+        "Unit": "Count/Second",
+        "Value": tps
+    })
+    outputs.append({
+        "MetricName": f"{metric_stem}_gpu-memory",
+        "Unit": "Megabytes",
+        "Value": max_memory
+    })
     if args.cpu_memory > 0:
-        outputs.append({"MetricName": f"{metric_stem}_cpu-memory", "Unit": "Kilobytes", "Value": args.cpu_memory})
+        outputs.append({
+            "MetricName": f"{metric_stem}_cpu-memory",
+            "Unit": "Kilobytes",
+            "Value": args.cpu_memory
+        })
     with open("llm/metrics.log", "w") as f:
         f.write(str(outputs))
         f.close()
@@ -499,10 +536,11 @@ def test_sd_handler(model, model_spec):
                 img = Image.open(BytesIO(res.content)).convert("RGB")
             except Exception as e:
                 raise IOError("failed to deserialize image from response", e)
-            memory_usage = get_gpu_memory()
-            logging.info(memory_usage)
-            for memory in memory_usage:
-                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
+            if "max_memory_per_gpu" in spec:
+                memory_usage = get_gpu_memory()
+                logging.info(memory_usage)
+                for memory in memory_usage:
+                    assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
 def test_ft_handler(model, model_spec):
