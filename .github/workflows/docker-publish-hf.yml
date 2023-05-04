@@ -44,7 +44,7 @@ jobs:
         with:
           install: true
       - name: Inject slug/short variables
-        uses: rlespinasse/github-slug-action@v4
+        uses: rlespinasse/github-slug-action@v4.4.1
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -55,7 +55,6 @@ jobs:
         with:
           registries: "125045733377"
       - name: Clean docker env
-        working-directory: serving/docker
         run: |
           yes | docker system prune -a --volumes
       - name: Build and push docker image
