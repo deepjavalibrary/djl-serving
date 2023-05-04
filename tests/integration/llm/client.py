@@ -159,6 +159,11 @@ sd_model_spec = {
         "size": [512],
         "num_inference_steps": [50],
         "depth": True
+    },
+    "stable-diffusion-2.1-base-neuron": {
+        "worker": 2,
+        "size": [512],
+        "num_inference_steps": [50, 100]
     }
 }
 
@@ -359,10 +364,11 @@ def test_sd_handler(model, model_spec):
                 img = Image.open(BytesIO(res.content)).convert("RGB")
             except Exception as e:
                 raise IOError("failed to deserialize image from response", e)
-            memory_usage = get_gpu_memory()
-            logging.info(memory_usage)
-            for memory in memory_usage:
-                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
+            if "max_memory_per_gpu" in spec:
+                memory_usage = get_gpu_memory()
+                logging.info(memory_usage)
+                for memory in memory_usage:
+                    assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
 def test_ft_handler(model, model_spec):

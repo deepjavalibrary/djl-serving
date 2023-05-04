@@ -17,6 +17,7 @@ ARG torch_neuronx_version=1.13.1.1.7.0
 ARG transformers_neuronx_version=0.3.32
 ARG transformers_version=4.28.1
 ARG accelerate_version=0.18.0
+ARG diffusers_version=0.14.0
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -26,7 +27,6 @@ COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-ENV OMP_NUM_THREADS=1
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HUGGINGFACE_HUB_CACHE=/tmp
@@ -56,7 +56,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_inferentia2.sh && \
     pip install transformers==${transformers_version} accelerate==${accelerate_version} \
     neuronx-cc==2.6.* torch_neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
-    --extra-index-url=https://pip.repos.neuron.amazonaws.com && \
+    diffusers==${diffusers_version}  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
