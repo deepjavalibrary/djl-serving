@@ -8,13 +8,22 @@ on:
         required: false
         default: ''
   schedule:
-    - cron: '0 15 * * 0'
+    - cron: '0 8 * * 0'
 
 
 jobs:
   create-runners:
     runs-on: [self-hosted, scheduler]
     steps:
+      - name: Create new G5XL instance
+        id: create_gpu_xl
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_g5 $token djl-serving
       - name: Create new G5 instance
         id: create_gpu
         run: |
@@ -23,13 +32,71 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_lmic_g5 $token djl-serving
+          ./start_instance.sh action_g5 $token djl-serving
+      - name: Create new G5 instance
+        id: create_gpu2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+      - name: Create new G5 instance
+        id: create_gpu3
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
     outputs:
-      gpu_instance_id_g5: ${{ steps.create_gpu.outputs.action_lmic_g5_instance_id }}
+      gpu_instance_id_g5xl: ${{ steps.create_gpu_xl.outputs.action_lmic_g5_instance_id }}
+      gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
+      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g5_instance_id }}
+      gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g5_instance_id }}
 
-  lmic-g5-test:
+  lmic-neox-g5-test:
+    runs-on: [ self-hosted, g5xl ]
+    timeout-minutes: 240
+    needs: create-runners
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy datetime
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gpt-neox-20b
+        working-directory: tests/integration
+        run: |
+          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+            --profile profiles/gpt_neox_20b.json
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-gpt-neox-logs
+          path: tests/integration/logs/
+
+  lmic-bloom-g5-test:
     runs-on: [ self-hosted, g5 ]
-    timeout-minutes: 540
+    timeout-minutes: 180
     needs: create-runners
     continue-on-error: true
     steps:
@@ -57,20 +124,76 @@ jobs:
         run: |
           python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
           --profile profiles/bloom_7b1.json
-      - name: Test gpt-j-6b
+      - name: Upload test logs
         if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-bloom-7b-logs
+          path: tests/integration/logs/
+
+  lmic-gptj-g5-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 180
+    needs: create-runners
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy datetime
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gpt-j-6b
         working-directory: tests/integration
         run: |
           python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
             --profile profiles/gpt_j_6b.json
-      - name: Test gpt-neox-20b
+      - name: Upload test logs
         if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-gpt-j-logs
+          path: tests/integration/logs/
+
+  lmic-opt-g5-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 180
+    needs: create-runners
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy datetime
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
-            --profile profiles/gpt_neox_20b.json
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
       - name: Test opt-30b
-        if: always()
         working-directory: tests/integration
         run: |
           python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
@@ -79,17 +202,31 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: performance-logs
+          name: performance-opt-30b-logs
           path: tests/integration/logs/
 
-
-  stop-runners:
+  stop-g5xl-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, lmic-g5-test ]
+    needs: [ create-runners, lmic-neox-g5-test ]
     steps:
-      - name: Stop all instances
+      - name: Stop g5xl instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_g5 }}
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_g5xl }}
           ./stop_instance.sh $instance_id "us-west-2"
+
+  stop-g5-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test, lmic-opt-g5-test ]
+    steps:
+      - name: Stop g5 instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
+          ./stop_instance.sh $instance_id
