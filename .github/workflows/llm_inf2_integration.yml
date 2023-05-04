@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: '3.8.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests numpy pillow
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
