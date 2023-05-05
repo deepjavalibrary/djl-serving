@@ -27,7 +27,6 @@ COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-ENV OMP_NUM_THREADS=1
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HUGGINGFACE_HUB_CACHE=/tmp
