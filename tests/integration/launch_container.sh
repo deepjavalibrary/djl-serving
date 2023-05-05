@@ -99,9 +99,9 @@ echo "Launching ${container_id}..."
 
 total=24
 if $is_llm; then
-  echo "extra sleep for 5 min on LLM models"
-  total=36
-  sleep 300
+  echo "extra sleep for 2 min on LLM models"
+  total=48
+  sleep 120
 fi
 
 # retrying to connect, till djl serving started.
