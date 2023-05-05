@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: '3.8.x'
       - name: Install pip dependencies
-        run: pip3 install requests
+        run: pip3 install requests numpy pillow
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -109,6 +109,17 @@ jobs:
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx opt-1.3b-streaming
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: Test stable diffusion with handler
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx stable-diffusion-2.1-base-neuron
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py stable-diffusion stable-diffusion-2.1-base-neuron
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: On fail step
