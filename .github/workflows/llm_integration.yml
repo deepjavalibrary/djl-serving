@@ -463,7 +463,7 @@ jobs:
           train
 
           # checking if checkpoint files are generated.
-          sudo /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/t5-small-tp4/* $PWD/models/partition-test
+          sudo /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/t5-small-tp4/ft-aot/* $PWD/models/partition-test
           if grep -q t5-small-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test t5-small-inference
         working-directory: tests/integration
@@ -590,7 +590,7 @@ jobs:
           train
           
           # checking if checkpoint files are generated.
-          /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/t5-small-tp4/* $PWD/models/partition-test
+          /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/t5-small-tp4/ft-aot-handler/* $PWD/models/partition-test
           if grep -q t5-small-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
       - name: Test t5-small-inference
         working-directory: tests/integration
@@ -727,7 +727,7 @@ jobs:
           
           # checking if pt files are generated.
           mkdir $PWD/models/partition-test
-          /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/bloom-7b1-tp4/* $PWD/models/partition-test
+          /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/bloom-7b1-tp4/ds-aot/* $PWD/models/partition-test
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
           if ls $PWD/models/partition-test/ds_inference_config.json &>/dev/null ; \
           then echo "ds_inference_config.json generated"; else exit 1;  fi
@@ -818,7 +818,7 @@ jobs:
 
           # checking if pt files are generated.
           # downloads the uploaded partitioned checkpoints from s3url.
-          /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/bloom-7b1-tp4/* $PWD/models/partition-test
+          /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/bloom-7b1-tp4/ds-aot-handler/* $PWD/models/partition-test
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
           if ls $PWD/models/partition-test/ds_inference_config.json &>/dev/null ; \
           then echo "ds_inference_config.json generated"; else exit 1;  fi

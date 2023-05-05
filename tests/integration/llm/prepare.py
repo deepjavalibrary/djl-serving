@@ -33,7 +33,7 @@ ds_aot_list = {
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "float16",
-        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4"
+        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4/ds-aot/"
     }
 }
 
@@ -50,7 +50,7 @@ ds_aot_handler_list = {
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4"
+        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4/ds-aot-handler/"
     }
 }
 
@@ -388,7 +388,7 @@ def build_ft_raw_aot_model(model):
     options = ft_model_list[model]
     options["engine"] = "FasterTransformer"
     if model == 't5-small':
-        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4"
+        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot/"
     else:
         options["option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
     write_properties(options)
@@ -404,7 +404,7 @@ def builder_ft_handler_aot_model(model):
     options["engine"] = "FasterTransformer"
     # options["entryPoint"] = "djl_python.fastertransformer"
     if model == 't5-small':
-        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4"
+        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot-handler/"
     else:
         options["option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
     write_properties(options)
