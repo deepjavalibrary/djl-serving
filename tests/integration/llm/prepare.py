@@ -234,6 +234,14 @@ transformers_neuronx_model_list = {
 }
 
 transformers_neuronx_handler_list = {
+    "gpt2": {
+        "option.model_id": "gpt2",
+        "option.batch_size": 4,
+        "option.tensor_parallel_degree": 2,
+        "option.n_positions": 256,
+        "option.dtype": "fp16",
+        "option.model_loading_timeout": 600
+    },
     "opt-1.3b": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
         "option.batch_size": 4,

@@ -22,8 +22,6 @@ class StreamingUtils:
         ## The engine here refers to backend model parallel framework.
         if execution_engine in {"DeepSpeed", "Accelerate"}:
             return StreamingUtils._hf_model_stream_generator
-        elif execution_engine == "transformers-neuronx":
-            return StreamingUtils._transformers_neuronx_stream_generator
         else:
             raise ValueError(
                 f"{execution_engine} engine is not supported for streaming")
@@ -88,40 +86,6 @@ class StreamingUtils:
 
             stop_generation = StreamingUtils._has_met_stopping_criteria(
                 not_eos_token_ids, new_tokens_count, max_new_tokens)
-            yield token_text
-
-    @staticmethod
-    @torch.inference_mode()
-    def _transformers_neuronx_stream_generator(model, tokenizer, inputs,
-                                               **kwargs):
-        sequence_length = kwargs.get("seq_length",
-                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
-        top_k = kwargs.get("top_k", 50)
-        tokenized_inputs = tokenizer(inputs, return_tensors="pt", padding=True)
-        input_ids = tokenized_inputs["input_ids"]
-        model.reset()
-        eos_token_id = model.config.eos_token_id
-        # populate key/value caches according to the prompt text
-        _, start = input_ids.shape
-        position_ids = torch.arange(start, dtype=torch.int32)
-        next_token_scores = model(input_ids, position_ids)
-
-        tokens = [input_ids]
-        for cur_len in range(start, sequence_length):
-            # don't sample EOS
-            next_token_scores[:, eos_token_id] = -float('inf')
-
-            # Remove all tokens with a probability less than the last token of the top-k
-            topk_values, topk_indices = torch.topk(next_token_scores, top_k)
-            probs = torch.nn.functional.softmax(topk_values, dim=-1)
-            inputs_in_topk = torch.multinomial(probs,
-                                               num_samples=1,
-                                               replacement=True)
-            inputs = torch.gather(topk_indices, 1, inputs_in_topk)
-            tokens.append(inputs)
-            token_text = tokenizer.batch_decode(inputs)
-            position_ids = torch.as_tensor([cur_len], dtype=torch.int32)
-            next_token_scores = model(inputs, position_ids)
             yield token_text
 
     @staticmethod
