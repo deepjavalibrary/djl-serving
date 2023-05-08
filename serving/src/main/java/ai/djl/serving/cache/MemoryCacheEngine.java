@@ -99,7 +99,7 @@ public class MemoryCacheEngine implements CacheEngine {
         List<byte[]> list = new ArrayList<>();
         int size = 0;
         for (int i = 0; i < limit; ++i) {
-            byte[] buf = cbs.poll();
+            byte[] buf = cbs.pollChunk();
             if (buf == null) {
                 break;
             }

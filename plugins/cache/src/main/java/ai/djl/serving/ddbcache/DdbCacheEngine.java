@@ -174,7 +174,7 @@ public final class DdbCacheEngine implements CacheEngine {
                                 o.setProperties(output.getProperties());
                                 ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) supplier;
                                 int index = 0;
-                                writeDdb(key, o, cbs.poll(), index++, ttl, !cbs.hasNext());
+                                writeDdb(key, o, cbs.pollChunk(), index++, ttl, !cbs.hasNext());
                                 List<byte[]> list = new ArrayList<>(writeBatch);
                                 while (cbs.hasNext()) {
                                     try {
