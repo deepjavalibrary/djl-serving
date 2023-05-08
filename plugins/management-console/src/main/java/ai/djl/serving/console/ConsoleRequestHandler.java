@@ -43,9 +43,11 @@ import io.netty.util.internal.StringUtil;
 
 import org.apache.commons.compress.utils.Charsets;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -411,7 +413,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
             return "";
         }
 
-        StringBuilder builder = new StringBuilder();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             int readLines = 0;
             raf.seek(fileLength);
@@ -425,19 +427,31 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
                         break;
                     }
                 }
-                builder.append(c);
+                bos.write(c);
                 fileLength = fileLength - pointer;
             }
-            builder.reverse();
         } catch (IOException e) {
             throw new InternalServerException("Failed to read log file.", e);
         }
-        return builder.toString();
+        return new String(reverse(bos.toByteArray()), StandardCharsets.UTF_8);
     }
 
     private static void requiresGet(HttpMethod method) {
         if (method != HttpMethod.GET) {
             throw new MethodNotAllowedException();
         }
+    }
+
+    private static byte[] reverse(byte[] array) {
+        int i = 0;
+        int j = array.length - 1;
+        while (j > i) {
+            byte tmp = array[j];
+            array[j] = array[i];
+            array[i] = tmp;
+            j--;
+            i++;
+        }
+        return array;
     }
 }
