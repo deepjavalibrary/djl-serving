@@ -1,0 +1,148 @@
+name: SageMaker PythonSDK Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      sagemaker-repository:
+        description: 'Link to Github repository for SageMaker Python SDK. Can be a personal fork.'
+        required: false
+        default: ''
+      repository-branch:
+        description: 'The branch from the SagMaker Python SDK fork to use for testing'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 4 * * *'
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new CPU instance
+        id: create_cpu1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+      - name: Create new CPU instance
+        id: create_cpu2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_cpu $token djl-serving
+    outputs:
+      cpu_instance_id1: ${{ steps.create_cpu1.outputs.action_cpu_instance_id }}
+      cpu_instance_id2: ${{ steps.create_cpu2.outputs.action_cpu_instance_id }}
+
+  # These tests are SLOW, and we only have 2 ml.g5.12xlarge instances available for testing
+  # We parallelize the tests into two separate tracks, each using 1 instance for a few tests.
+  # There's probably a better way to do this, but for now this works.
+  # If you add a test, please try to keep the groups balanced
+  endpoint-tests-group-1:
+    runs-on: [ self-hosted, cpu ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install -U boto3 awscli
+      - name: Install SageMaker Python SDK
+        working-directory: tests/integration
+        run: |
+          ./install_sagemaker_pysdk.sh ${{ github.event.inputs.sagemaker-repository }} $ {{ github.event.inputs.repository-branch }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: us-east-1
+      - name: Test gpt2xl
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py gpt2-xl djl
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
+      - name: Test stable diffusion
+        if: success() || failure()
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py stable-diffusion-2-1-base djl
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
+      - name: Test opt-1.3b
+        if: success() || failure()
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py opt-1-3-b djl
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
+      - name: Test flan-t5-xxl
+        if: success() || failure()
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py flan-t5-xxl djl
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
+        
+  endpoint-tests-group-2:
+    runs-on: [ self-hosted, cpu ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install -U boto3 awscli
+      - name: Install SageMaker Python SDK
+        working-directory: tests/integration
+        run: |
+          ./install_sagemaker_pysdk.sh ${{ github.event.inputs.sagemaker-repository }} $ {{ github.event.inputs.repository-branch }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: us-east-1
+      - name: Test gpt-j-6b
+        if: success() || failure()
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py gpt-j-6b djl
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
+      - name: Test gpt-neo-2.7b no code DeepSpeed
+        if: success() || failure()
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py gpt-neo-2-7-b no_code
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
+      - name: Test bloom-7b1 no code FasterTransformer
+        if: success() || failure()
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py bloom-7b1 no_code
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, endpoint-tests-group-1, endpoint-tests-group-2 ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.cpu_instance_id2 }}
+          ./stop_instance.sh $instance_id
