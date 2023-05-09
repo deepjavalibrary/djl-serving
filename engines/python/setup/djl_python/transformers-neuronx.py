@@ -187,9 +187,11 @@ class TransformersNeuronXService(object):
 
             if self.enable_streaming:
                 stream_generator = StreamingUtils.get_stream_generator(
-                    "Accelerate")
+                    "transformers-neuronx")
+                model_kwargs["seq_length"] = parameters.get("max_length", 128)
+                # TODO: switch to new HF model interface
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer, input_text,
+                    stream_generator(self.model.model, self.tokenizer, input_text,
                                      **model_kwargs))
                 return outputs
 

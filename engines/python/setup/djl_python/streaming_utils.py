@@ -22,6 +22,8 @@ class StreamingUtils:
         ## The engine here refers to backend model parallel framework.
         if execution_engine in {"DeepSpeed", "Accelerate"}:
             return StreamingUtils._hf_model_stream_generator
+        elif execution_engine == "transformers-neuronx":
+            return StreamingUtils._transformers_neuronx_stream_generator
         else:
             raise ValueError(
                 f"{execution_engine} engine is not supported for streaming")
@@ -35,7 +37,7 @@ class StreamingUtils:
         is_pad_token_equal_to_eos_token = tokenizer.pad_token == tokenizer.eos_token
         tokenized_inputs = tokenizer(inputs, return_tensors="pt",
                                      padding=True).to(
-                                         StreamingUtils._get_current_device())
+            StreamingUtils._get_current_device())
         input_ids = tokenized_inputs["input_ids"]
         input_length = input_ids.shape[1]
         all_input_ids = tokenized_inputs["input_ids"]
@@ -44,8 +46,8 @@ class StreamingUtils:
         attention_mask = input_ids.new_zeros(len(inputs),
                                              input_length + max_new_tokens)
         attention_mask[:, :
-                       input_length] = 1 if is_pad_token_equal_to_eos_token else tokenized_inputs[
-                           "attention_mask"]
+                          input_length] = 1 if is_pad_token_equal_to_eos_token else tokenized_inputs[
+            "attention_mask"]
         past_key_values = None
         decoding_method = StreamingUtils._get_decoding_method(**kwargs)
         stop_generation = False
@@ -89,6 +91,40 @@ class StreamingUtils:
             yield token_text
 
     @staticmethod
+    @torch.inference_mode()
+    def _transformers_neuronx_stream_generator(model, tokenizer, inputs,
+                                               **kwargs):
+        sequence_length = kwargs.get("seq_length",
+                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
+        top_k = kwargs.get("top_k", 50)
+        tokenized_inputs = tokenizer(inputs, return_tensors="pt", padding=True)
+        input_ids = tokenized_inputs["input_ids"]
+        model.reset()
+        eos_token_id = model.config.eos_token_id
+        # populate key/value caches according to the prompt text
+        _, start = input_ids.shape
+        position_ids = torch.arange(start, dtype=torch.int32)
+        next_token_scores = model(input_ids, position_ids)
+
+        tokens = [input_ids]
+        for cur_len in range(start, sequence_length):
+            # don't sample EOS
+            next_token_scores[:, eos_token_id] = -float('inf')
+
+            # Remove all tokens with a probability less than the last token of the top-k
+            topk_values, topk_indices = torch.topk(next_token_scores, top_k)
+            probs = torch.nn.functional.softmax(topk_values, dim=-1)
+            inputs_in_topk = torch.multinomial(probs,
+                                               num_samples=1,
+                                               replacement=True)
+            inputs = torch.gather(topk_indices, 1, inputs_in_topk)
+            tokens.append(inputs)
+            token_text = tokenizer.batch_decode(inputs)
+            position_ids = torch.as_tensor([cur_len], dtype=torch.int32)
+            next_token_scores = model(inputs, position_ids)
+            yield token_text
+
+    @staticmethod
     def _has_met_stopping_criteria(not_eos_token_ids, current_token_count,
                                    max_new_tokens):
         if not_eos_token_ids.sum(
@@ -96,6 +132,7 @@ class StreamingUtils:
             return True
         return False
 
+    @staticmethod
     def _validate_inputs(model, inputs):
         if not model.config.architectures:
             ## do best effort validation as there is no simple way to cover all the cases
@@ -116,10 +153,11 @@ class StreamingUtils:
         else:
             assert False, "inputs to stream generator must be a list of strings"
 
+    @staticmethod
     def _greedy_decoding(logits, input_ids, **kwargs):
         processors = LogitsProcessorList()
         if "repetition_penalty" in kwargs and kwargs[
-                "repetition_penalty"] != 1.0:
+            "repetition_penalty"] != 1.0:
             processors.append(
                 RepetitionPenaltyLogitsProcessor(
                     penalty=kwargs["repetition_penalty"]))
@@ -127,10 +165,11 @@ class StreamingUtils:
         logits[-1:, :] = processors(input_ids, logits[-1:, :])
         return logits[-1].argmax()
 
+    @staticmethod
     def _sampling_decoding(logits, input_ids, **kwargs):
         processors = LogitsProcessorList()
         if "repetition_penalty" in kwargs and kwargs[
-                "repetition_penalty"] != 1.0:
+            "repetition_penalty"] != 1.0:
             processors.append(
                 RepetitionPenaltyLogitsProcessor(
                     penalty=kwargs["repetition_penalty"]))
@@ -151,6 +190,7 @@ class StreamingUtils:
         probs = torch.nn.functional.softmax(logits[-1])
         return torch.multinomial(probs, num_samples=1, generator=generator)
 
+    @staticmethod
     def _get_decoding_method(**kwargs):
         if "beam_size" in kwargs:
             logging.warning(
@@ -163,6 +203,7 @@ class StreamingUtils:
         else:
             return StreamingUtils._greedy_decoding
 
+    @staticmethod
     def _get_current_device():
         if torch.cuda.is_available():
             return torch.device(torch.cuda.current_device())
