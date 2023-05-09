@@ -37,7 +37,7 @@ class StreamingUtils:
         is_pad_token_equal_to_eos_token = tokenizer.pad_token == tokenizer.eos_token
         tokenized_inputs = tokenizer(inputs, return_tensors="pt",
                                      padding=True).to(
-                                         StreamingUtils._get_current_device())
+            StreamingUtils._get_current_device())
         input_ids = tokenized_inputs["input_ids"]
         input_length = input_ids.shape[1]
         all_input_ids = tokenized_inputs["input_ids"]
@@ -46,8 +46,8 @@ class StreamingUtils:
         attention_mask = input_ids.new_zeros(len(inputs),
                                              input_length + max_new_tokens)
         attention_mask[:, :
-                       input_length] = 1 if is_pad_token_equal_to_eos_token else tokenized_inputs[
-                           "attention_mask"]
+                          input_length] = 1 if is_pad_token_equal_to_eos_token else tokenized_inputs[
+            "attention_mask"]
         past_key_values = None
         decoding_method = StreamingUtils._get_decoding_method(**kwargs)
         stop_generation = False
@@ -132,6 +132,7 @@ class StreamingUtils:
             return True
         return False
 
+    @staticmethod
     def _validate_inputs(model, inputs):
         if not model.config.architectures:
             ## do best effort validation as there is no simple way to cover all the cases
@@ -152,10 +153,11 @@ class StreamingUtils:
         else:
             assert False, "inputs to stream generator must be a list of strings"
 
+    @staticmethod
     def _greedy_decoding(logits, input_ids, **kwargs):
         processors = LogitsProcessorList()
         if "repetition_penalty" in kwargs and kwargs[
-                "repetition_penalty"] != 1.0:
+            "repetition_penalty"] != 1.0:
             processors.append(
                 RepetitionPenaltyLogitsProcessor(
                     penalty=kwargs["repetition_penalty"]))
@@ -163,10 +165,11 @@ class StreamingUtils:
         logits[-1:, :] = processors(input_ids, logits[-1:, :])
         return logits[-1].argmax()
 
+    @staticmethod
     def _sampling_decoding(logits, input_ids, **kwargs):
         processors = LogitsProcessorList()
         if "repetition_penalty" in kwargs and kwargs[
-                "repetition_penalty"] != 1.0:
+            "repetition_penalty"] != 1.0:
             processors.append(
                 RepetitionPenaltyLogitsProcessor(
                     penalty=kwargs["repetition_penalty"]))
@@ -187,6 +190,7 @@ class StreamingUtils:
         probs = torch.nn.functional.softmax(logits[-1])
         return torch.multinomial(probs, num_samples=1, generator=generator)
 
+    @staticmethod
     def _get_decoding_method(**kwargs):
         if "beam_size" in kwargs:
             logging.warning(
@@ -199,6 +203,7 @@ class StreamingUtils:
         else:
             return StreamingUtils._greedy_decoding
 
+    @staticmethod
     def _get_current_device():
         if torch.cuda.is_available():
             return torch.device(torch.cuda.current_device())
