@@ -62,6 +62,19 @@ class NeuronUNet(nn.Module):
         return UNet2DConditionOutput(sample=sample)
 
 
+class NeuronTextEncoder(nn.Module):
+
+    def __init__(self, text_encoder):
+        super().__init__()
+        self.neuron_text_encoder = text_encoder
+        self.config = text_encoder.config
+        self.dtype = text_encoder.dtype
+        self.device = text_encoder.device
+
+    def forward(self, emb, attention_mask=None):
+        return [self.neuron_text_encoder(emb)['last_hidden_state']]
+
+
 def get_torch_dtype_from_str(dtype: str):
     if dtype == "fp32":
         return torch.float32
@@ -165,6 +178,23 @@ class StableDiffusionService(object):
         )
         logging.info("Model compilation started...")
         COMPILER_WORKDIR_ROOT = "/tmp/neuron_compiler"
+
+        self.pipeline.text_encoder = NeuronTextEncoder(
+            self.pipeline.text_encoder)
+
+        emb = torch.tensor([[
+            49406, 18376, 525, 7496, 49407, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]])
+        self.pipeline.text_encoder.neuron_text_encoder = torch_neuronx.trace(
+            self.pipeline.text_encoder.neuron_text_encoder,
+            emb,
+            compiler_workdir=os.path.join(COMPILER_WORKDIR_ROOT,
+                                          'text_encoder'),
+        )
+
         self.pipeline.unet = NeuronUNet(UNetWrap(self.pipeline.unet))
 
         sample_1b = torch.randn([1, 4, 64, 64])
@@ -207,6 +237,10 @@ class StableDiffusionService(object):
     def save_compiled(self, saved_dir):
         if not os.path.exists(saved_dir):
             os.makedirs(saved_dir)
+        # save compiled text encoder
+        text_encoder_filename = os.path.join(saved_dir, 'text_encoder.pt')
+        torch.jit.save(self.pipeline.text_encoder.neuron_text_encoder,
+                       text_encoder_filename)
         # save compiled unet
         unet_filename = os.path.join(saved_dir, 'unet.pt')
         torch.jit.save(self.pipeline.unet.unetwrap, unet_filename)
@@ -220,6 +254,11 @@ class StableDiffusionService(object):
         torch.jit.save(self.pipeline.vae.decoder, decoder_filename)
 
     def load_compiled(self, saved_dir):
+        text_encoder_filename = os.path.join(saved_dir, 'text_encoder.pt')
+        self.pipeline.text_encoder = NeuronTextEncoder(
+            self.pipeline.text_encoder)
+        self.pipeline.text_encoder.neuron_text_encoder = torch.jit.load(
+            text_encoder_filename)
         post_quant_conv_filename = os.path.join(saved_dir,
                                                 'vae_post_quant_conv.pt')
         self.pipeline.vae.post_quant_conv = torch.jit.load(
