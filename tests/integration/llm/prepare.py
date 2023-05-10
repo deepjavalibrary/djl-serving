@@ -271,6 +271,12 @@ transformers_neuronx_handler_list = {
         "option.model_id": "s3://djl-llm/stable-diffusion-2-1-base-compiled/",
         "option.tensor_parallel_degree": 2,
         "option.use_stable_diffusion": True
+    },
+    "stable-diffusion-2.1-base-neuron-bf16": {
+        "option.model_id": "s3://djl-llm/stable-diffusion-2-1-base-compiled-bf16/",
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "bf16",
+        "option.use_stable_diffusion": True
     }
 }
 
