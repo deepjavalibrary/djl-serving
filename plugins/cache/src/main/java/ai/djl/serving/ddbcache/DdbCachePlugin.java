@@ -12,6 +12,8 @@
  */
 package ai.djl.serving.ddbcache;
 
+import ai.djl.aws.s3.S3RepositoryFactory;
+import ai.djl.repository.Repository;
 import ai.djl.serving.cache.CacheManager;
 import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.util.Utils;
@@ -32,6 +34,7 @@ public class DdbCachePlugin implements RequestHandler<Void> {
 
     /** Constructs a new {@code DdbCachePlugin} instance. */
     public DdbCachePlugin() {
+        Repository.registerRepositoryFactory(new S3RepositoryFactory());
         if (Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_DDB_CACHE"))) {
             try {
                 DdbCacheEngine engine = DdbCacheEngine.newInstance();

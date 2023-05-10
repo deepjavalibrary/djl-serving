@@ -3,9 +3,11 @@ configurations {
 }
 
 dependencies {
+    api platform("ai.djl:bom:${project.version}")
     implementation project(":serving")
     api platform("software.amazon.awssdk:bom:${awssdk_version}")
     api "software.amazon.awssdk:dynamodb"
+    api "ai.djl.aws:aws-ai"
 
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
