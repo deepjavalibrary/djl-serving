@@ -56,9 +56,10 @@ class NeuronUNet(nn.Module):
                 timestep,
                 encoder_hidden_states,
                 cross_attention_kwargs=None):
-        sample = self.unetwrap(sample,
-                               timestep.float().expand((sample.shape[0], )),
-                               encoder_hidden_states)[0]
+        sample = self.unetwrap(
+            sample,
+            timestep.to(sample.dtype).expand((sample.shape[0], )),
+            encoder_hidden_states)[0]
         return UNet2DConditionOutput(sample=sample)
 
 
@@ -78,10 +79,10 @@ class NeuronTextEncoder(nn.Module):
 def get_torch_dtype_from_str(dtype: str):
     if dtype == "fp32":
         return torch.float32
-    elif dtype == "fp16":
-        return torch.float16
+    elif dtype == "bf16":
+        return torch.bfloat16
     raise ValueError(
-        f"Invalid data type: {dtype}. DeepSpeed currently only supports fp16 for stable diffusion"
+        f"Invalid data type: {dtype}. NeuronX currently only supports fp32 and bf16 for stable diffusion"
     )
 
 
@@ -197,9 +198,11 @@ class StableDiffusionService(object):
 
         self.pipeline.unet = NeuronUNet(UNetWrap(self.pipeline.unet))
 
-        sample_1b = torch.randn([1, 4, 64, 64])
-        timestep_1b = torch.tensor(999).float().expand((1, ))
-        encoder_hidden_states_1b = torch.randn([1, 77, 1024])
+        sample_1b = torch.randn([1, 4, 64, 64]).to(self.data_type)
+        timestep_1b = torch.tensor(999).float().expand(
+            (1, )).to(self.data_type)
+        encoder_hidden_states_1b = torch.randn([1, 77,
+                                                1024]).to(self.data_type)
         example_inputs = sample_1b, timestep_1b, encoder_hidden_states_1b
 
         logging.info("Compiling UNET...")
@@ -214,7 +217,7 @@ class StableDiffusionService(object):
 
         logging.info("Compiling post_quant_conv_in...")
         # Compile vae post_quant_conv
-        post_quant_conv_in = torch.randn([1, 4, 64, 64])
+        post_quant_conv_in = torch.randn([1, 4, 64, 64]).to(self.data_type)
         self.pipeline.vae.post_quant_conv = torch_neuronx.trace(
             self.pipeline.vae.post_quant_conv,
             post_quant_conv_in,
@@ -223,7 +226,7 @@ class StableDiffusionService(object):
 
         logging.info("Compiling VAE Decoder...")
         # Compile vae decoder
-        decoder_in = torch.randn([1, 4, 64, 64])
+        decoder_in = torch.randn([1, 4, 64, 64]).to(self.data_type)
         self.pipeline.vae.decoder = torch_neuronx.trace(
             self.pipeline.vae.decoder,
             decoder_in,
