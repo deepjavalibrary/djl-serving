@@ -183,13 +183,14 @@ public class ModelServer {
         Dimension dim = new Dimension("Version", version);
         SERVER_METRIC.info("{}", new Metric("djl-serving", 1, Unit.COUNT, dim));
 
+        pluginManager.loadPlugins(true);
+
         try {
             initModelStore();
         } catch (BadWorkflowException e) {
             throw new ServerStartupException(
                     "Failed to initialize startup models and workflows", e);
         }
-        pluginManager.loadPlugins(true);
 
         Connector inferenceConnector =
                 configManager.getConnector(Connector.ConnectorType.INFERENCE);
