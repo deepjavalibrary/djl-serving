@@ -14,7 +14,8 @@ class StreamingUtils:
 
     DEFAULT_MAX_NEW_TOKENS = 50
     SUPPORTED_MODEL_ARCH_SUFFIXES_CAUSAL_LM = ("CausalLM", "GPT2LMHeadModel")
-    SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM = ("T5ForConditionalGeneration",)
+    SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM = (
+        "T5ForConditionalGeneration", )
     SUPPORTED_MODEL_ARCH_SUFFIXES = SUPPORTED_MODEL_ARCH_SUFFIXES_CAUSAL_LM + SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM
 
     @staticmethod
@@ -70,8 +71,10 @@ class StreamingUtils:
             attention_mask = tokenized_inputs["attention_mask"]
             decoder_attention_mask = None
             encoder_last_hidden_state = None
-            decoder_input_ids = torch.tensor(tokenizer.bos_token_id,
-                                    device=StreamingUtils._get_current_device()).repeat(len(inputs)).view(-1, 1)
+            decoder_input_ids = torch.tensor(
+                tokenizer.bos_token_id,
+                device=StreamingUtils._get_current_device()).repeat(
+                    len(inputs)).view(-1, 1)
             all_decoder_input_ids = decoder_input_ids
 
         while True:
@@ -84,13 +87,14 @@ class StreamingUtils:
                                         use_cache=True)
 
             if generic_model_class == "Seq2SeqLM":
-                outputs = model.forward(input_ids=input_ids,
-                                        attention_mask=attention_mask,
-                                        decoder_input_ids=decoder_input_ids,
-                                        decoder_attention_mask=decoder_attention_mask,
-                                        encoder_outputs=encoder_last_hidden_state,
-                                        past_key_values=past_key_values,
-                                        use_cache=True)
+                outputs = model.forward(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    decoder_input_ids=decoder_input_ids,
+                    decoder_attention_mask=decoder_attention_mask,
+                    encoder_outputs=encoder_last_hidden_state,
+                    past_key_values=past_key_values,
+                    use_cache=True)
 
             next_token_ids = []
             ## TODO: batch decoding
@@ -100,17 +104,19 @@ class StreamingUtils:
                 next_token_ids.append(next_token_id.view(1, 1))
             token_ids = torch.cat(next_token_ids)
 
-            all_decoder_input_ids = torch.cat([all_decoder_input_ids, token_ids], dim=1)
+            all_decoder_input_ids = torch.cat(
+                [all_decoder_input_ids, token_ids], dim=1)
             past_key_values = outputs.past_key_values
             new_tokens_count += 1
 
             not_eos_token_ids = (token_ids != tokenizer.eos_token_id).view(
-                    len(inputs), 1)
+                len(inputs), 1)
             unfinished_sequences = unfinished_sequences.mul(not_eos_token_ids)
 
             if generic_model_class == "CausalLM":
                 input_ids = token_ids.view(len(inputs), 1)
-                input_ids = input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not()
+                input_ids = input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not(
+                )
                 token_text = tokenizer.batch_decode(input_ids)
                 attention_mask[:, curr_length] = 1
                 curr_length += 1
@@ -118,7 +124,8 @@ class StreamingUtils:
             if generic_model_class == "Seq2SeqLM":
                 input_ids = None
                 decoder_input_ids = token_ids.view(len(inputs), 1)
-                decoder_input_ids = decoder_input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not()
+                decoder_input_ids = decoder_input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not(
+                )
                 encoder_last_hidden_state = [outputs.encoder_last_hidden_state]
                 token_text = tokenizer.batch_decode(decoder_input_ids)
 
@@ -128,7 +135,6 @@ class StreamingUtils:
             if stop_generation:
                 return
             yield token_text
-
 
     @staticmethod
     @torch.inference_mode()
@@ -176,12 +182,15 @@ class StreamingUtils:
     def _validate_inputs(model, inputs):
         if not model.config.architectures:
             ## do best effort validation as there is no simple way to cover all the cases
-            logging.warning(f"Model config does not contain architectures field. Supported architectures: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}")
+            logging.warning(
+                f"Model config does not contain architectures field. Supported architectures: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}"
+            )
             model_arch_supported = True
         else:
             model_arch_list = model.config.architectures
             model_arch_supported = any(
-                model_arch.endswith(StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES)
+                model_arch.endswith(
+                    StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES)
                 for model_arch in model_arch_list)
         if not model_arch_supported:
             assert False, f"model archs: {model_arch_list} is not in supported list: *{StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES}"
@@ -194,14 +203,18 @@ class StreamingUtils:
     def _get_generic_model_class(model):
         if not model.config.architectures:
             ## do best effort validation as there is no simple way to cover all the cases
-            logging.warning(f"Model config does not contain architectures field. Assuming it is CausalLM type")
+            logging.warning(
+                f"Model config does not contain architectures field. Assuming it is CausalLM type"
+            )
             return "CausalLM"
         else:
             model_arch_list = model.config.architectures
             if any(
-                model_arch.endswith(StreamingUtils.SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM)
+                    model_arch.endswith(
+                        StreamingUtils.
+                        SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM)
                     for model_arch in model_arch_list):
-                return  "Seq2SeqLM"
+                return "Seq2SeqLM"
             else:
                 return "CausalLM"
 
