@@ -78,6 +78,8 @@ class StreamingUtils:
             all_decoder_input_ids = decoder_input_ids
 
         while True:
+            if stop_generation:
+                return
 
             if generic_model_class == "CausalLM":
                 attention_mask_curr = attention_mask[:, :curr_length]
@@ -132,8 +134,6 @@ class StreamingUtils:
             stop_generation = StreamingUtils._has_met_stopping_criteria(
                 unfinished_sequences, new_tokens_count, max_new_tokens)
 
-            if stop_generation:
-                return
             yield token_text
 
     @staticmethod
