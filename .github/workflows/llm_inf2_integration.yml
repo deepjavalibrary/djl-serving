@@ -122,6 +122,17 @@ jobs:
           python3 llm/client.py stable-diffusion stable-diffusion-2.1-base-neuron
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
+      - name: Test stable diffusion bf16 with handler
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx stable-diffusion-2.1-base-neuron-bf16
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py stable-diffusion stable-diffusion-2.1-base-neuron
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
