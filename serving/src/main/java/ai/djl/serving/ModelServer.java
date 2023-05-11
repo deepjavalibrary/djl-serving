@@ -19,6 +19,7 @@ import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.FilenameUtils;
+import ai.djl.repository.Repository;
 import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.DependencyManager;
@@ -124,6 +125,9 @@ public class ModelServer {
                 }
                 return;
             }
+
+            // TODO: remove this in 0.23.0
+            Repository.registerRepositoryFactory(new TempLocalRepositoryFactory());
 
             ConfigManager.init(arguments);
 
