@@ -51,6 +51,7 @@ LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
+LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 
 FROM base AS cpu-full
 
