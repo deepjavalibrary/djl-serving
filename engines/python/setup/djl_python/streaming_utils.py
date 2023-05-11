@@ -13,7 +13,10 @@ from transformers import (
 class StreamingUtils:
 
     DEFAULT_MAX_NEW_TOKENS = 50
-    SUPPORTED_MODEL_ARCH_SUFFIXES = ("CausalLM", "GPT2LMHeadModel")
+    SUPPORTED_MODEL_ARCH_SUFFIXES_CAUSAL_LM = ("CausalLM", "GPT2LMHeadModel")
+    SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM = (
+        "T5ForConditionalGeneration", )
+    SUPPORTED_MODEL_ARCH_SUFFIXES = SUPPORTED_MODEL_ARCH_SUFFIXES_CAUSAL_LM + SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM
 
     @staticmethod
     def get_stream_generator(execution_engine: str):
@@ -32,62 +35,105 @@ class StreamingUtils:
     @torch.inference_mode()
     def _hf_model_stream_generator(model, tokenizer, inputs, **kwargs):
         StreamingUtils._validate_inputs(model, inputs)
+        generic_model_class = StreamingUtils._get_generic_model_class(model)
         if not tokenizer.pad_token:
             tokenizer.pad_token = tokenizer.eos_token
-        is_pad_token_equal_to_eos_token = tokenizer.pad_token == tokenizer.eos_token
-        tokenized_inputs = tokenizer(inputs, return_tensors="pt",
-                                     padding=True).to(
-            StreamingUtils._get_current_device())
-        input_ids = tokenized_inputs["input_ids"]
-        input_length = input_ids.shape[1]
-        all_input_ids = tokenized_inputs["input_ids"]
+
+        if generic_model_class == "Seq2SeqLM":
+            tokenizer.bos_token_id = model.config.decoder_start_token_id
+
         max_new_tokens = kwargs.get("max_new_tokens",
                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
-        attention_mask = input_ids.new_zeros(len(inputs),
-                                             input_length + max_new_tokens)
-        attention_mask[:, :
-                          input_length] = 1 if is_pad_token_equal_to_eos_token else tokenized_inputs[
-            "attention_mask"]
+        tokenized_inputs = tokenizer(inputs, return_tensors="pt",
+                                     padding=True).to(
+                                         StreamingUtils._get_current_device())
+        input_ids = tokenized_inputs["input_ids"]
         past_key_values = None
         decoding_method = StreamingUtils._get_decoding_method(**kwargs)
-        stop_generation = False
-        curr_length = input_length
         new_tokens_count = 0
         unfinished_sequences = torch.ones((len(inputs), 1),
                                           dtype=torch.long,
                                           device=input_ids.device)
+        stop_generation = False
+
+        if generic_model_class == "CausalLM":
+            input_length = input_ids.shape[1]
+            all_decoder_input_ids = tokenized_inputs["input_ids"]
+            is_pad_token_equal_to_eos_token = tokenizer.pad_token == tokenizer.eos_token
+            attention_mask = input_ids.new_zeros(len(inputs),
+                                                 input_length + max_new_tokens)
+            attention_mask[:, :
+                           input_length] = 1 if is_pad_token_equal_to_eos_token else tokenized_inputs[
+                               "attention_mask"]
+            curr_length = input_length
+
+        if generic_model_class == "Seq2SeqLM":
+            attention_mask = tokenized_inputs["attention_mask"]
+            decoder_attention_mask = None
+            encoder_last_hidden_state = None
+            decoder_input_ids = torch.tensor(
+                tokenizer.bos_token_id,
+                device=StreamingUtils._get_current_device()).repeat(
+                    len(inputs)).view(-1, 1)
+            all_decoder_input_ids = decoder_input_ids
+
         while True:
             if stop_generation:
                 return
 
-            attention_mask_curr = attention_mask[:, :curr_length]
-            outputs = model.forward(input_ids=input_ids,
-                                    attention_mask=attention_mask_curr,
-                                    past_key_values=past_key_values,
-                                    use_cache=True)
+            if generic_model_class == "CausalLM":
+                attention_mask_curr = attention_mask[:, :curr_length]
+                outputs = model.forward(input_ids=input_ids,
+                                        attention_mask=attention_mask_curr,
+                                        past_key_values=past_key_values,
+                                        use_cache=True)
+
+            if generic_model_class == "Seq2SeqLM":
+                outputs = model.forward(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    decoder_input_ids=decoder_input_ids,
+                    decoder_attention_mask=decoder_attention_mask,
+                    encoder_outputs=encoder_last_hidden_state,
+                    past_key_values=past_key_values,
+                    use_cache=True)
+
             next_token_ids = []
+            ## TODO: batch decoding
             for i, logits in enumerate(outputs.logits):
                 next_token_id = decoding_method(
-                    logits, all_input_ids[i, :].view(1, -1), **kwargs)
+                    logits, all_decoder_input_ids[i, :].view(1, -1), **kwargs)
                 next_token_ids.append(next_token_id.view(1, 1))
             token_ids = torch.cat(next_token_ids)
+
+            all_decoder_input_ids = torch.cat(
+                [all_decoder_input_ids, token_ids], dim=1)
             past_key_values = outputs.past_key_values
-            attention_mask[:, curr_length] = 1
-            curr_length += 1
             new_tokens_count += 1
 
             not_eos_token_ids = (token_ids != tokenizer.eos_token_id).view(
                 len(inputs), 1)
             unfinished_sequences = unfinished_sequences.mul(not_eos_token_ids)
 
-            input_ids = token_ids.view(len(inputs), 1)
-            input_ids = input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not(
-            )
-            all_input_ids = torch.cat([all_input_ids, token_ids], dim=1)
-            token_text = tokenizer.batch_decode(input_ids)
+            if generic_model_class == "CausalLM":
+                input_ids = token_ids.view(len(inputs), 1)
+                input_ids = input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not(
+                )
+                token_text = tokenizer.batch_decode(input_ids)
+                attention_mask[:, curr_length] = 1
+                curr_length += 1
+
+            if generic_model_class == "Seq2SeqLM":
+                input_ids = None
+                decoder_input_ids = token_ids.view(len(inputs), 1)
+                decoder_input_ids = decoder_input_ids * unfinished_sequences + tokenizer.pad_token_id * unfinished_sequences.logical_not(
+                )
+                encoder_last_hidden_state = [outputs.encoder_last_hidden_state]
+                token_text = tokenizer.batch_decode(decoder_input_ids)
 
             stop_generation = StreamingUtils._has_met_stopping_criteria(
-                not_eos_token_ids, new_tokens_count, max_new_tokens)
+                unfinished_sequences, new_tokens_count, max_new_tokens)
+
             yield token_text
 
     @staticmethod
@@ -154,14 +200,32 @@ class StreamingUtils:
             assert False, "inputs to stream generator must be a list of strings"
 
     @staticmethod
+    def _get_generic_model_class(model):
+        if not model.config.architectures:
+            ## do best effort validation as there is no simple way to cover all the cases
+            logging.warning(
+                f"Model config does not contain architectures field. Assuming it is CausalLM type"
+            )
+            return "CausalLM"
+        else:
+            model_arch_list = model.config.architectures
+            if any(
+                    model_arch.endswith(
+                        StreamingUtils.
+                        SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM)
+                    for model_arch in model_arch_list):
+                return "Seq2SeqLM"
+            else:
+                return "CausalLM"
+
+    @staticmethod
     def _greedy_decoding(logits, input_ids, **kwargs):
         processors = LogitsProcessorList()
         if "repetition_penalty" in kwargs and kwargs[
-            "repetition_penalty"] != 1.0:
+                "repetition_penalty"] != 1.0:
             processors.append(
                 RepetitionPenaltyLogitsProcessor(
                     penalty=kwargs["repetition_penalty"]))
-
         logits[-1:, :] = processors(input_ids, logits[-1:, :])
         return logits[-1].argmax()
 
@@ -169,7 +233,7 @@ class StreamingUtils:
     def _sampling_decoding(logits, input_ids, **kwargs):
         processors = LogitsProcessorList()
         if "repetition_penalty" in kwargs and kwargs[
-            "repetition_penalty"] != 1.0:
+                "repetition_penalty"] != 1.0:
             processors.append(
                 RepetitionPenaltyLogitsProcessor(
                     penalty=kwargs["repetition_penalty"]))
@@ -185,10 +249,12 @@ class StreamingUtils:
 
         logits[-1:, :] = processors(input_ids, logits[-1:, :])
         generator = torch.Generator(StreamingUtils._get_current_device())
+        probs = torch.nn.functional.softmax(logits[-1])
         if "manual_seed" in kwargs:
             generator.manual_seed(kwargs["manual_seed"])
-        probs = torch.nn.functional.softmax(logits[-1])
-        return torch.multinomial(probs, num_samples=1, generator=generator)
+            torch.multinomial(probs, num_samples=1, generator=generator)
+
+        return torch.multinomial(probs, num_samples=1)
 
     @staticmethod
     def _get_decoding_method(**kwargs):
