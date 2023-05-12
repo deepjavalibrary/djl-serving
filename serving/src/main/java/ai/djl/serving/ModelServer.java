@@ -50,7 +50,7 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileOutputStream;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -346,7 +346,10 @@ public class ModelServer {
 
         String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
         if (huggingFaceModelId != null) {
-            urls.add(createHuggingFaceModel(huggingFaceModelId));
+            String url = createHuggingFaceModel(huggingFaceModelId);
+            if (url != null) {
+                urls.add(url);
+            }
         }
 
         for (String url : urls) {
@@ -467,7 +470,7 @@ public class ModelServer {
         parent = parent.resolve(modelId);
         Path huggingFaceModelDir = parent.resolve(hash);
         if (Files.exists(huggingFaceModelDir)) {
-            logger.info("HuggingFace Model {} already exists", huggingFaceModelDir);
+            logger.warn("HuggingFace Model {} already exists", huggingFaceModelDir);
             return null;
         }
         Properties huggingFaceProperties = new Properties();
@@ -477,12 +480,12 @@ public class ModelServer {
             huggingFaceProperties.put("option.task", task);
         }
         Files.createDirectories(huggingFaceModelDir);
-        Path huggingFacePropertiesPath = Paths.get(huggingFaceModelDir.toString(), "serving.properties");
-        Files.createFile(huggingFacePropertiesPath);
-        try (FileOutputStream os = new FileOutputStream(huggingFacePropertiesPath.toString())) {
-            huggingFaceProperties.store(os, null);
+        Path propertiesFile = huggingFaceModelDir.resolve("serving.properties");
+        Files.createFile(propertiesFile);
+        try (BufferedWriter writer = Files.newBufferedWriter(propertiesFile)) {
+            huggingFaceProperties.store(writer, null);
         }
-        logger.info("Created serving.properties for model at path {}", huggingFacePropertiesPath);
+        logger.info("Created serving.properties for model at path {}", propertiesFile);
         return huggingFaceModelDir.toString();
     }
 }
