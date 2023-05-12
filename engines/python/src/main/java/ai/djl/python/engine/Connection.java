@@ -185,10 +185,21 @@ class Connection {
 
     private static String getVisibleDevices(int workerId, int tensorParallelDegree) {
         StringBuilder sb = new StringBuilder(20);
-        sb.append(workerId * tensorParallelDegree);
-        for (int i = 1; i < tensorParallelDegree; ++i) {
-            sb.append(',').append(workerId * tensorParallelDegree + i);
+        // CUDA_VISIBLE_DEVICES=0,2,3,7 TP2
+        // -> 0,2 and 3,7
+        if (Utils.getenv("CUDA_VISIBLE_DEVICES") != null) {
+            String[] devices = Utils.getenv("CUDA_VISIBLE_DEVICES").split(",");
+            sb.append(devices[tensorParallelDegree]);
+            for (int i = 1; i < tensorParallelDegree; ++i) {
+                sb.append(',').append(devices[workerId * tensorParallelDegree + i]);
+            }
+        } else {
+            sb.append(workerId * tensorParallelDegree);
+            for (int i = 1; i < tensorParallelDegree; ++i) {
+                sb.append(',').append(workerId * tensorParallelDegree + i);
+            }
         }
+
         return sb.toString();
     }
 
