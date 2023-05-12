@@ -322,36 +322,31 @@ public class ModelServer {
                 return;
             }
 
-            String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-            String url = null;
-            if (huggingFaceModelId != null) {
-                url = createHuggingFaceModel(huggingFaceModelId);
-            }
-            if (url != null) {
-                urls.add(url);
-            }
-
-            if (!Files.isDirectory(modelStore) || urls.isEmpty()) {
-                logger.warn("Model store path is not found: {}", modelStore);
-                return;
-            }
-
-            // Check if root model store folder contains a model
-            url = mapModelUrl(modelStore);
-            if (url == null) {
-                // Check folders to see if they can be models as well
-                try (Stream<Path> stream = Files.list(modelStore)) {
-                    urls.addAll(
-                            stream.map(this::mapModelUrl)
-                                    .filter(Objects::nonNull)
-                                    .collect(Collectors.toList()));
+            if (!Files.isDirectory(modelStore)) {
+                // Check if root model store folder contains a model
+                String url = mapModelUrl(modelStore);
+                if (url == null) {
+                    // Check folders to see if they can be models as well
+                    try (Stream<Path> stream = Files.list(modelStore)) {
+                        urls.addAll(
+                                stream.map(this::mapModelUrl)
+                                        .filter(Objects::nonNull)
+                                        .collect(Collectors.toList()));
+                    }
+                } else {
+                    urls.add(url);
                 }
             } else {
-                urls.add(url);
+                logger.warn("Model store path is not found: {}", modelStore);
             }
         } else {
             String[] modelsUrls = loadModels.split("[, ]+");
-            urls = Arrays.asList(modelsUrls);
+            urls.addAll(Arrays.asList(modelsUrls));
+        }
+
+        String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
+        if (huggingFaceModelId != null) {
+            urls.add(createHuggingFaceModel(huggingFaceModelId));
         }
 
         for (String url : urls) {
@@ -435,16 +430,20 @@ public class ModelServer {
 
     String mapModelUrl(Path path) {
         try {
-            logger.info("Found file in model_store: {}", path);
             if (Files.isHidden(path)
                     || (!Files.isDirectory(path)
                             && !FilenameUtils.isArchiveFile(path.toString()))) {
                 return null;
             }
 
+            if (Files.list(path).findFirst().isEmpty()) {
+                return null;
+            }
+
             path = Utils.getNestedModelDir(path);
             String url = path.toUri().toURL().toString();
             String modelName = ModelInfo.inferModelNameFromUrl(url);
+            logger.info("Found model {}={}", modelName, url);
             return modelName + '=' + url;
         } catch (MalformedURLException e) {
             throw new AssertionError("Invalid path: " + path, e);
