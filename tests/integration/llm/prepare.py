@@ -238,7 +238,7 @@ transformers_neuronx_handler_list = {
         "option.model_id": "gpt2",
         "option.batch_size": 4,
         "option.tensor_parallel_degree": 2,
-        "option.n_positions": 256,
+        "option.n_positions": 512,
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600
     },
@@ -246,7 +246,7 @@ transformers_neuronx_handler_list = {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
         "option.batch_size": 4,
         "option.tensor_parallel_degree": 4,
-        "option.n_positions": 256,
+        "option.n_positions": 512,
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600
     },
@@ -262,7 +262,7 @@ transformers_neuronx_handler_list = {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
         "option.batch_size": 1,
         "option.tensor_parallel_degree": 4,
-        "option.n_positions": 256,
+        "option.n_positions": 512,
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600,
         "option.enable_streaming": True
