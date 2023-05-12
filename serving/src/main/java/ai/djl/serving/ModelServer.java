@@ -50,17 +50,19 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -310,7 +312,7 @@ public class ModelServer {
         }
 
         ModelManager modelManager = ModelManager.getInstance();
-        List<String> urls;
+        List<String> urls = new ArrayList<>();
         if ("NONE".equalsIgnoreCase(loadModels)) {
             // to disable load all models from model store
             return;
@@ -320,27 +322,34 @@ public class ModelServer {
                 return;
             }
 
-            if (!Files.isDirectory(modelStore)) {
-                logger.warn("Model store path is not found: {}", modelStore);
-                return;
-            }
-
-            // Check if root model store folder contains a model
-            String url = mapModelUrl(modelStore);
-            if (url == null) {
-                // Check folders to see if they can be models as well
-                try (Stream<Path> stream = Files.list(modelStore)) {
-                    urls =
-                            stream.map(this::mapModelUrl)
-                                    .filter(Objects::nonNull)
-                                    .collect(Collectors.toList());
+            if (Files.isDirectory(modelStore)) {
+                // Check if root model store folder contains a model
+                String url = mapModelUrl(modelStore);
+                if (url == null) {
+                    // Check folders to see if they can be models as well
+                    try (Stream<Path> stream = Files.list(modelStore)) {
+                        urls.addAll(
+                                stream.map(this::mapModelUrl)
+                                        .filter(Objects::nonNull)
+                                        .collect(Collectors.toList()));
+                    }
+                } else {
+                    urls.add(url);
                 }
             } else {
-                urls = Collections.singletonList(url);
+                logger.warn("Model store path is not found: {}", modelStore);
             }
         } else {
             String[] modelsUrls = loadModels.split("[, ]+");
-            urls = Arrays.asList(modelsUrls);
+            urls.addAll(Arrays.asList(modelsUrls));
+        }
+
+        String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
+        if (huggingFaceModelId != null) {
+            String url = createHuggingFaceModel(huggingFaceModelId);
+            if (url != null) {
+                urls.add(url);
+            }
         }
 
         for (String url : urls) {
@@ -424,16 +433,20 @@ public class ModelServer {
 
     String mapModelUrl(Path path) {
         try {
-            logger.info("Found file in model_store: {}", path);
             if (Files.isHidden(path)
                     || (!Files.isDirectory(path)
                             && !FilenameUtils.isArchiveFile(path.toString()))) {
                 return null;
             }
 
+            if (Files.list(path).findFirst().isEmpty()) {
+                return null;
+            }
+
             path = Utils.getNestedModelDir(path);
             String url = path.toUri().toURL().toString();
             String modelName = ModelInfo.inferModelNameFromUrl(url);
+            logger.info("Found model {}={}", modelName, url);
             return modelName + '=' + url;
         } catch (MalformedURLException e) {
             throw new AssertionError("Invalid path: " + path, e);
@@ -448,5 +461,30 @@ public class ModelServer {
         formatter.setLeftPadding(1);
         formatter.setWidth(120);
         formatter.printHelp(msg, options);
+    }
+
+    private String createHuggingFaceModel(String modelId) throws IOException {
+        String hash = Utils.hash(modelId);
+        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
+        Path huggingFaceModelDir = parent.resolve(hash);
+        if (Files.exists(huggingFaceModelDir)) {
+            logger.warn("HuggingFace Model {} already exists", modelId);
+            return null;
+        }
+        Properties huggingFaceProperties = new Properties();
+        huggingFaceProperties.put("option.model_id", modelId);
+        String task = Utils.getEnvOrSystemProperty("HF_TASK");
+        if (task != null) {
+            huggingFaceProperties.put("option.task", task);
+        }
+        Files.createDirectories(huggingFaceModelDir);
+        Path propertiesFile = huggingFaceModelDir.resolve("serving.properties");
+        Files.createFile(propertiesFile);
+        try (BufferedWriter writer = Files.newBufferedWriter(propertiesFile)) {
+            huggingFaceProperties.store(writer, null);
+        }
+        logger.debug("Created serving.properties for model at path {}", propertiesFile);
+        return huggingFaceModelDir.toString();
     }
 }
