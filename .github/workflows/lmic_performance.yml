@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
   schedule:
-    - cron: '0 8 * * 0'
+    - cron: '0 12 * * 0'
 
 
 jobs:
@@ -42,20 +42,10 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g5 $token djl-serving
-      - name: Create new G5 instance
-        id: create_gpu3
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g5 $token djl-serving
     outputs:
       gpu_instance_id_g5xl: ${{ steps.create_gpu_xl.outputs.action_lmic_g5_instance_id }}
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
       gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g5_instance_id }}
-      gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g5_instance_id }}
 
   lmic-neox-g5-test:
     runs-on: [ self-hosted, g5xl ]
@@ -169,7 +159,7 @@ jobs:
           path: tests/integration/logs/
 
   lmic-opt-g5-test:
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g5xl ]
     timeout-minutes: 180
     needs: create-runners
     continue-on-error: true
@@ -208,7 +198,7 @@ jobs:
   stop-g5xl-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, lmic-neox-g5-test ]
+    needs: [ create-runners, lmic-neox-g5-test, lmic-opt-g5-test ]
     steps:
       - name: Stop g5xl instances
         run: |
@@ -219,7 +209,7 @@ jobs:
   stop-g5-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test, lmic-opt-g5-test ]
+    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test ]
     steps:
       - name: Stop g5 instances
         run: |
@@ -227,6 +217,4 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
           ./stop_instance.sh $instance_id
