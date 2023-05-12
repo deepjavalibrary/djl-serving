@@ -592,7 +592,7 @@ public final class ModelInfo<I, O> {
         return Files.isDirectory(modelDir.resolve("MAR-INF"))
                 || Files.isRegularFile(modelDir.resolve("model.py"))
                 || Files.isRegularFile(modelDir.resolve(prefix + ".py"))
-                || Utils.getEnvOrSystemProperty("HF_MODEL_ID") != null
+                || prop.getProperty("option.model_id") != null
                 || Files.isRegularFile(modelDir.resolve("config.json"));
     }
 

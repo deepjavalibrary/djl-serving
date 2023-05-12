@@ -83,10 +83,6 @@ public final class LmiUtils {
         if (tensorParallelDegree > 0) {
             prop.setProperty("option.tensor_parallel_degree", String.valueOf(tensorParallelDegree));
         }
-        String huggingFaceTask = Utils.getEnvOrSystemProperty("HF_TASK");
-        if (huggingFaceTask != null) {
-            prop.setProperty("option.task", huggingFaceTask);
-        }
 
         if ("stable-diffusion".equals(modelConfig.getModelType())) {
             // TODO: Move this from hardcoded to deduced in PyModel
@@ -140,10 +136,7 @@ public final class LmiUtils {
 
     private static HuggingFaceModelConfig getHuggingFaceModelConfig(ModelInfo<?, ?> modelInfo)
             throws ModelException {
-        String modelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-        if (modelId == null) {
-            modelId = modelInfo.prop.getProperty("option.model_id");
-        }
+        String modelId = modelInfo.prop.getProperty("option.model_id");
         if (modelId == null) {
             // Deprecated but for backwards compatibility
             modelId = modelInfo.prop.getProperty("option.s3url");

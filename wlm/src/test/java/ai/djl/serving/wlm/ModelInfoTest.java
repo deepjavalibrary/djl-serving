@@ -23,10 +23,9 @@ import ai.djl.modality.Output;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.translate.TranslateException;
+import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
-
-import com.google.gson.JsonObject;
 
 import org.testng.Assert;
 import org.testng.annotations.AfterSuite;
@@ -38,11 +37,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ModelInfoTest {
 
@@ -254,29 +254,34 @@ public class ModelInfoTest {
         Path modelDir = modelStore.resolve("lmi_test_model");
         Files.createDirectories(modelDir);
 
-        System.setProperty("HF_MODEL_ID", "gpt2-xl");
+        Path prop = modelDir.resolve("serving.properties");
+        try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
+            writer.write("option.model_id=gpt2-xl");
+        }
         ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
         assertEquals(model.prop.getProperty("option.model_id"), "gpt2-xl");
 
-        System.setProperty("HF_MODEL_ID", "invalid-model-id");
+        try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
+            writer.write("option.model_id=invalid-model-id");
+        }
         model = new ModelInfo<>("build/models/lmi_test_model");
         Assert.assertThrows(model::initialize);
 
-        JsonObject modelConfig = new JsonObject();
-        modelConfig.addProperty("model_type", "codegen");
-        modelConfig.addProperty("num_heads", "12");
+        Map<String, String> modelConfig = new ConcurrentHashMap<>();
+        modelConfig.put("model_type", "codegen");
+        modelConfig.put("num_heads", "12");
         System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
-        Files.write(
-                modelDir.resolve("config.json"),
-                modelConfig.toString().getBytes(StandardCharsets.UTF_8));
-        System.clearProperty("HF_MODEL_ID");
-        model = new ModelInfo<>("build/models/lmi_test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "Python");
-
-        System.clearProperty("HF_MODEL_ID");
-        System.clearProperty("TENSOR_PARALLEL_DEGREE");
+        try {
+            Files.writeString(
+                    modelDir.resolve("config.json"), JsonUtils.GSON_PRETTY.toJson(modelConfig));
+            Files.delete(prop);
+            model = new ModelInfo<>("build/models/lmi_test_model");
+            model.initialize();
+            assertEquals(model.getEngineName(), "Python");
+        } finally {
+            System.clearProperty("TENSOR_PARALLEL_DEGREE");
+        }
     }
 }
