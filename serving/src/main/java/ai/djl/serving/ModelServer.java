@@ -50,17 +50,19 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -310,7 +312,7 @@ public class ModelServer {
         }
 
         ModelManager modelManager = ModelManager.getInstance();
-        List<String> urls;
+        List<String> urls = new ArrayList<>();
         if ("NONE".equalsIgnoreCase(loadModels)) {
             // to disable load all models from model store
             return;
@@ -320,23 +322,32 @@ public class ModelServer {
                 return;
             }
 
-            if (!Files.isDirectory(modelStore)) {
+            String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
+            String url = null;
+            if (huggingFaceModelId != null) {
+                url = createHuggingFaceModel(huggingFaceModelId);
+            }
+            if (url != null) {
+                urls.add(url);
+            }
+
+            if (!Files.isDirectory(modelStore) || urls.isEmpty()) {
                 logger.warn("Model store path is not found: {}", modelStore);
                 return;
             }
 
             // Check if root model store folder contains a model
-            String url = mapModelUrl(modelStore);
+            url = mapModelUrl(modelStore);
             if (url == null) {
                 // Check folders to see if they can be models as well
                 try (Stream<Path> stream = Files.list(modelStore)) {
-                    urls =
+                    urls.addAll(
                             stream.map(this::mapModelUrl)
                                     .filter(Objects::nonNull)
-                                    .collect(Collectors.toList());
+                                    .collect(Collectors.toList()));
                 }
             } else {
-                urls = Collections.singletonList(url);
+                urls.add(url);
             }
         } else {
             String[] modelsUrls = loadModels.split("[, ]+");
@@ -448,5 +459,31 @@ public class ModelServer {
         formatter.setLeftPadding(1);
         formatter.setWidth(120);
         formatter.printHelp(msg, options);
+    }
+
+    private String createHuggingFaceModel(String modelId) throws IOException {
+        String hash = Utils.hash(modelId);
+        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
+        parent = parent.resolve(modelId);
+        Path huggingFaceModelDir = parent.resolve(hash);
+        if (Files.exists(huggingFaceModelDir)) {
+            logger.info("HuggingFace Model {} already exists", huggingFaceModelDir);
+            return null;
+        }
+        Properties huggingFaceProperties = new Properties();
+        huggingFaceProperties.put("option.model_id", modelId);
+        String task = Utils.getEnvOrSystemProperty("HF_TASK");
+        if (task != null) {
+            huggingFaceProperties.put("option.task", task);
+        }
+        Files.createDirectories(huggingFaceModelDir);
+        Path huggingFacePropertiesPath = Paths.get(huggingFaceModelDir.toString(), "serving.properties");
+        Files.createFile(huggingFacePropertiesPath);
+        try (FileOutputStream os = new FileOutputStream(huggingFacePropertiesPath.toString())) {
+            huggingFaceProperties.store(os, null);
+        }
+        logger.info("Created serving.properties for model at path {}", huggingFacePropertiesPath);
+        return huggingFaceModelDir.toString();
     }
 }
