@@ -322,7 +322,7 @@ public class ModelServer {
                 return;
             }
 
-            if (!Files.isDirectory(modelStore)) {
+            if (Files.isDirectory(modelStore)) {
                 // Check if root model store folder contains a model
                 String url = mapModelUrl(modelStore);
                 if (url == null) {
@@ -467,23 +467,24 @@ public class ModelServer {
         String hash = Utils.hash(modelId);
         String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
-        parent = parent.resolve(modelId);
         Path huggingFaceModelDir = parent.resolve(hash);
-        if (!Files.exists(huggingFaceModelDir)) {
-            Properties huggingFaceProperties = new Properties();
-            huggingFaceProperties.put("option.model_id", modelId);
-            String task = Utils.getEnvOrSystemProperty("HF_TASK");
-            if (task != null) {
-                huggingFaceProperties.put("option.task", task);
-            }
-            Files.createDirectories(huggingFaceModelDir);
-            Path propertiesFile = huggingFaceModelDir.resolve("serving.properties");
-            Files.createFile(propertiesFile);
-            try (BufferedWriter writer = Files.newBufferedWriter(propertiesFile)) {
-                huggingFaceProperties.store(writer, null);
-            }
-            logger.info("Created serving.properties for model at path {}", propertiesFile);
+        if (Files.exists(huggingFaceModelDir)) {
+            logger.warn("HuggingFace Model {} already exists", modelId);
+            return null;
         }
+        Properties huggingFaceProperties = new Properties();
+        huggingFaceProperties.put("option.model_id", modelId);
+        String task = Utils.getEnvOrSystemProperty("HF_TASK");
+        if (task != null) {
+            huggingFaceProperties.put("option.task", task);
+        }
+        Files.createDirectories(huggingFaceModelDir);
+        Path propertiesFile = huggingFaceModelDir.resolve("serving.properties");
+        Files.createFile(propertiesFile);
+        try (BufferedWriter writer = Files.newBufferedWriter(propertiesFile)) {
+            huggingFaceProperties.store(writer, null);
+        }
+        logger.debug("Created serving.properties for model at path {}", propertiesFile);
         return huggingFaceModelDir.toString();
     }
 }
