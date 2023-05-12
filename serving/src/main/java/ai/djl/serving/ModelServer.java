@@ -469,23 +469,21 @@ public class ModelServer {
         Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
         parent = parent.resolve(modelId);
         Path huggingFaceModelDir = parent.resolve(hash);
-        if (Files.exists(huggingFaceModelDir)) {
-            logger.warn("HuggingFace Model {} already exists", huggingFaceModelDir);
-            return null;
+        if (!Files.exists(huggingFaceModelDir)) {
+            Properties huggingFaceProperties = new Properties();
+            huggingFaceProperties.put("option.model_id", modelId);
+            String task = Utils.getEnvOrSystemProperty("HF_TASK");
+            if (task != null) {
+                huggingFaceProperties.put("option.task", task);
+            }
+            Files.createDirectories(huggingFaceModelDir);
+            Path propertiesFile = huggingFaceModelDir.resolve("serving.properties");
+            Files.createFile(propertiesFile);
+            try (BufferedWriter writer = Files.newBufferedWriter(propertiesFile)) {
+                huggingFaceProperties.store(writer, null);
+            }
+            logger.info("Created serving.properties for model at path {}", propertiesFile);
         }
-        Properties huggingFaceProperties = new Properties();
-        huggingFaceProperties.put("option.model_id", modelId);
-        String task = Utils.getEnvOrSystemProperty("HF_TASK");
-        if (task != null) {
-            huggingFaceProperties.put("option.task", task);
-        }
-        Files.createDirectories(huggingFaceModelDir);
-        Path propertiesFile = huggingFaceModelDir.resolve("serving.properties");
-        Files.createFile(propertiesFile);
-        try (BufferedWriter writer = Files.newBufferedWriter(propertiesFile)) {
-            huggingFaceProperties.store(writer, null);
-        }
-        logger.info("Created serving.properties for model at path {}", propertiesFile);
         return huggingFaceModelDir.toString();
     }
 }
