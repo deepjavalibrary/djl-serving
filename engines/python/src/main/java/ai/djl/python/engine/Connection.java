@@ -189,7 +189,7 @@ class Connection {
         // -> 0,2 and 3,7
         if (Utils.getenv("CUDA_VISIBLE_DEVICES") != null) {
             String[] devices = Utils.getenv("CUDA_VISIBLE_DEVICES").split(",");
-            sb.append(devices[tensorParallelDegree]);
+            sb.append(devices[workerId * tensorParallelDegree]);
             for (int i = 1; i < tensorParallelDegree; ++i) {
                 sb.append(',').append(devices[workerId * tensorParallelDegree + i]);
             }
