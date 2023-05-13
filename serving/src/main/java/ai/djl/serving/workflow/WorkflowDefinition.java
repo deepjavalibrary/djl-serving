@@ -58,6 +58,7 @@ public class WorkflowDefinition {
 
     String name;
     String version;
+    String baseUri;
 
     Map<String, ModelInfo<Input, Output>> models;
 
@@ -103,6 +104,9 @@ public class WorkflowDefinition {
             WorkflowDefinition wd = parse(type, reader);
             if (name != null) {
                 wd.name = name;
+            }
+            if (wd.baseUri == null) {
+                wd.baseUri = uri.toString();
             }
             return wd;
         }
@@ -189,10 +193,14 @@ public class WorkflowDefinition {
      * @throws BadWorkflowException if the workflow could not be parsed successfully
      */
     public Workflow toWorkflow() throws BadWorkflowException {
+        int pos = baseUri.lastIndexOf('/');
+        String workflowDir = baseUri.substring(0, pos);
+
         if (models != null) {
             for (Entry<String, ModelInfo<Input, Output>> emd : models.entrySet()) {
                 ModelInfo<Input, Output> md = emd.getValue();
                 md.setId(emd.getKey());
+                md.postWorkflowParsing(workflowDir);
             }
         }
 

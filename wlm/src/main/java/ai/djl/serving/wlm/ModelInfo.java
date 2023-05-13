@@ -33,6 +33,8 @@ import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
+import com.google.gson.JsonParseException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -167,6 +169,18 @@ public final class ModelInfo<I, O> {
         this.batchSize = batchSize;
         this.minWorkers = minWorkers;
         this.maxWorkers = maxWorkers;
+    }
+
+    /**
+     * Performs post workflow parsing initialization.
+     *
+     * @param workflowDir the workflow parent directory
+     */
+    public void postWorkflowParsing(String workflowDir) {
+        if (modelUrl == null) {
+            throw new JsonParseException("modelUrl is required in workflow definition.");
+        }
+        modelUrl = modelUrl.replaceAll("\\{model_dir}", workflowDir);
     }
 
     /**

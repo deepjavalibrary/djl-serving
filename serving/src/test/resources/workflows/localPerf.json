@@ -1,7 +1,7 @@
 {
   "models": {
     "m": {
-      "modelUrls": "https://resources.djl.ai/test-models/mlp.tar.gz",
+      "modelUrl": "https://resources.djl.ai/test-models/mlp.tar.gz",
       "queueSize": 102,
       "maxIdleSeconds": 62,
       "maxBatchDelayMillis": 302,
