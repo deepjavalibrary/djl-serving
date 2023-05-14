@@ -206,14 +206,30 @@ public class WorkflowDefinition {
 
         Map<String, WorkflowFunction> loadedFunctions = new ConcurrentHashMap<>();
         if (funcs != null) {
-            for (Entry<String, String> f : funcs.entrySet()) {
-                ClassLoader cl = MutableClassLoader.getInstance();
-                WorkflowFunction func =
-                        ClassLoaderUtils.initClass(cl, WorkflowFunction.class, f.getValue());
-                if (func == null) {
-                    throw new BadWorkflowException("Could not load function " + f.getKey());
+            String uriPath = URI.create(workflowDir).getPath();
+            if (uriPath.startsWith("/") && System.getProperty("os.name").startsWith("Win")) {
+                uriPath = uriPath.substring(1);
+            }
+            Path path = Paths.get(uriPath).resolve("libs");
+            Path classDir = path.resolve("classes");
+            if (Files.exists(classDir)) {
+                ClassLoaderUtils.compileJavaClass(path);
+            }
+            ClassLoader mcl = MutableClassLoader.getInstance();
+            ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+            try {
+                Thread.currentThread().setContextClassLoader(mcl);
+                for (Entry<String, String> f : funcs.entrySet()) {
+                    WorkflowFunction func =
+                            ClassLoaderUtils.findImplementation(
+                                    path, WorkflowFunction.class, f.getValue());
+                    if (func == null) {
+                        throw new BadWorkflowException("Could not load function " + f.getKey());
+                    }
+                    loadedFunctions.put(f.getKey(), func);
                 }
-                loadedFunctions.put(f.getKey(), func);
+            } finally {
+                Thread.currentThread().setContextClassLoader(ccl);
             }
         }
 
