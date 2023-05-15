@@ -275,6 +275,29 @@ public class ModelServerTest {
         }
     }
 
+    @Test
+    public void testInitEmptyModelStore()
+            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
+                    InterruptedException {
+        Path modelStore = Paths.get("build/models");
+        Utils.deleteQuietly(modelStore);
+        Files.createDirectories(modelStore);
+        ModelServer server = initTestServer("src/test/resources/emptyStore.config.properties");
+        try {
+            assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+            request(
+                    channel,
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models"));
+
+            ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
+            Assert.assertNull(resp.getNextPageToken());
+            assertTrue(resp.getModels().isEmpty());
+        } finally {
+            server.stop();
+        }
+    }
+
     private ModelServer initTestServer(String configFile)
             throws ParseException, ServerStartupException, GeneralSecurityException, IOException,
                     InterruptedException {
