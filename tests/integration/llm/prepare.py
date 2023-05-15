@@ -99,6 +99,12 @@ hf_handler_list = {
         "option.enable_streaming": True,
         "gpu.maxWorkers": 1,
     },
+    "t5-large": {
+        "option.model_id": "t5-large",
+        "option.tensor_parallel_degree": 1,
+        "option.device_map": "auto",
+        "option.enable_streaming": True,
+    },
 }
 
 ds_handler_list = {

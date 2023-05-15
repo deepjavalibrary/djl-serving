@@ -100,6 +100,13 @@ hf_model_spec = {
         "worker": 1,
         "stream_output": True,
     },
+    "t5-large": {
+        "max_memory_per_gpu": [5.0],
+        "batch_size": [1],
+        "seq_length": [32],
+        "worker": 1,
+        "stream_output": True,
+    },
     "no-code/nomic-ai/gpt4all-j": {
         "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
@@ -437,7 +444,10 @@ def test_handler(model, model_spec):
         check_worker_number(spec["worker"])
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            req = {"inputs": batch_generation(batch_size)}
+            if "t5" in model:
+                req = {"inputs": t5_batch_generation(batch_size)}
+            else:
+                req = {"inputs": batch_generation(batch_size)}
             params = {"max_new_tokens": seq_length}
             req["parameters"] = params
             logging.info(f"req {req}")
