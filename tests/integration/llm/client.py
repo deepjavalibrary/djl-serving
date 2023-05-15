@@ -4,13 +4,13 @@ import subprocess as sp
 import logging
 import re
 import os
-import sys
 import math
 import json
 from random import randrange
 import numpy as np
 from datetime import datetime
 from io import BytesIO
+import hashlib
 
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description="Build the LLM configs")
@@ -52,7 +52,13 @@ parser.add_argument("--cpu_memory",
                     help="CPU Memory footprint")
 args = parser.parse_args()
 
-endpoint = "http://127.0.0.1:8080/predictions/test"
+
+def compute_model_name_hash(model_name):
+    # This mirrors the Utils.hash implementation from DJL Core
+    m = hashlib.sha256()
+    m.update(model_name)
+    return m.hexdigest()[:40]
+
 
 ds_raw_model_spec = {
     "gpt-j-6b": {
@@ -104,19 +110,22 @@ hf_model_spec = {
         "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
-        "worker": 1
+        "worker": 1,
+        "model_name": compute_model_name_hash(b"nomic-ai/gpt4all-j"),
     },
     "no-code/databricks/dolly-v2-7b": {
         "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2,
+        "model_name": compute_model_name_hash(b"databricks/dolly-v2-7b"),
     },
     "no-code/google/flan-t5-xl": {
         "max_memory_per_gpu": [7.0, 7.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
-        "worker": 2
+        "worker": 2,
+        "model_name": compute_model_name_hash(b"google/flan-t5-xl")
     }
 }
 
@@ -250,8 +259,8 @@ transformers_neuronx_model_spec = {
 }
 
 
-def check_worker_number(desired):
-    endpoint = "http://127.0.0.1:8080/models/test"
+def check_worker_number(desired, model_name="test"):
+    endpoint = f"http://127.0.0.1:8080/models/{model_name}"
     res = requests.get(endpoint).json()
     if desired == len(res[0]["models"][0]["workerGroups"]):
         return
@@ -262,17 +271,19 @@ def check_worker_number(desired):
             f"Worker number does not meet requirements! {res}")
 
 
-def send_json(data):
+def send_json(data, model_name="test"):
     headers = {'content-type': 'application/json'}
+    endpoint = f"http://127.0.0.1:8080/predictions/{model_name}"
     res = requests.post(endpoint, headers=headers, json=data)
     return res
 
 
-def send_image_json(img_url, data):
+def send_image_json(img_url, data, model_name="test"):
     multipart_form_data = {
         'data': BytesIO(requests.get(img_url, stream=True).content),
         'json': (None, json.dumps(data), 'application/json')
     }
+    endpoint = f"http://127.0.0.1:8080/predictions/{model_name}"
     response = requests.post(endpoint, files=multipart_form_data)
     return response
 
@@ -434,14 +445,14 @@ def test_handler(model, model_spec):
         )
     spec = model_spec[args.model]
     if "worker" in spec:
-        check_worker_number(spec["worker"])
+        check_worker_number(spec["worker"], model_name=spec.get("model_name", "test"))
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}
             params = {"max_new_tokens": seq_length}
             req["parameters"] = params
             logging.info(f"req {req}")
-            res = send_json(req)
+            res = send_json(req, model_name=spec.get("model_name", "test"))
             if spec.get("stream_output", False):
                 logging.info(f"res: {res.content}")
                 result = res.content.decode().split("\n")[:-1]
