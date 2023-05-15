@@ -56,7 +56,9 @@ public class FunctionsApply extends WorkflowFunction {
                                     .toArray(CompletableFuture[]::new);
                     CompletableFuture.allOf(futures);
                     List<Item> outputs =
-                            Arrays.stream(futures).map(m -> m.join()).collect(Collectors.toList());
+                            Arrays.stream(futures)
+                                    .map(CompletableFuture::join)
+                                    .collect(Collectors.toList());
 
                     return new Item(new WorkflowExpression(outputs));
                 });
