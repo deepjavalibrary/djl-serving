@@ -16,7 +16,7 @@ import logging
 import os
 
 import torch
-from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -199,8 +199,13 @@ class HuggingFaceService(object):
     def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_id_or_path, **kwargs)
+        model_config = AutoConfig.from_pretrained(model_id_or_path)
+        architectures = model_config.architectures
+        if architectures and architectures[0].endswith("ForConditionalGeneration"):
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_id_or_path, **kwargs)
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_id_or_path, **kwargs)
 
     @staticmethod
     def wrap_conversation_pipeline(hf_pipeline):
