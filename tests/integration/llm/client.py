@@ -309,7 +309,6 @@ def fake_tokenizer(prompt, in_tokens):
 
 
 def prompt_generation(in_tokens):
-    result = None
     with open(os.path.join(os.getcwd(), 'prompts.txt')) as f:
         result = '\n'.join(f.readlines())
     rot = result.find('. ', randrange(len(result))) + 2
@@ -445,7 +444,8 @@ def test_handler(model, model_spec):
         )
     spec = model_spec[args.model]
     if "worker" in spec:
-        check_worker_number(spec["worker"], model_name=spec.get("model_name", "test"))
+        check_worker_number(spec["worker"],
+                            model_name=spec.get("model_name", "test"))
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}
@@ -549,7 +549,7 @@ def test_sd_handler(model, model_spec):
                 res = send_json(req)
             assert res.status_code == 200
             try:
-                img = Image.open(BytesIO(res.content)).convert("RGB")
+                Image.open(BytesIO(res.content)).convert("RGB")
             except Exception as e:
                 raise IOError("failed to deserialize image from response", e)
             if "max_memory_per_gpu" in spec:

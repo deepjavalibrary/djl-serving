@@ -22,11 +22,16 @@ args = parser.parse_args()
 
 ds_aot_list = {
     "opt-6.7b": {
-        "option.s3url": "s3://djl-llm/opt-6b7/",
-        "option.tensor_parallel_degree": 4,
-        "option.task": "text-generation",
-        "option.dtype": "float16",
-        "option.save_mp_checkpoint_path": "/opt/ml/input/data/training/partition-test"
+        "option.s3url":
+        "s3://djl-llm/opt-6b7/",
+        "option.tensor_parallel_degree":
+        4,
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "float16",
+        "option.save_mp_checkpoint_path":
+        "/opt/ml/input/data/training/partition-test"
     },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
@@ -39,18 +44,28 @@ ds_aot_list = {
 
 ds_aot_handler_list = {
     "opt-6.7b": {
-        "option.s3url": "s3://djl-llm/opt-6b7/",
-        "option.tensor_parallel_degree": 4,
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.save_mp_checkpoint_path": "/opt/ml/input/data/training/partition-test"
+        "option.s3url":
+        "s3://djl-llm/opt-6b7/",
+        "option.tensor_parallel_degree":
+        4,
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.save_mp_checkpoint_path":
+        "/opt/ml/input/data/training/partition-test"
     },
     "bloom-7b1": {
-        "option.model_id": "s3://djl-llm/bloom-7b1/",
-        "option.tensor_parallel_degree": 4,
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4/ds-aot-handler/"
+        "option.model_id":
+        "s3://djl-llm/bloom-7b1/",
+        "option.tensor_parallel_degree":
+        4,
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.save_mp_checkpoint_path":
+        "s3://djl-llm/bloom-7b1-tp4/ds-aot-handler/"
     }
 }
 
@@ -273,7 +288,8 @@ transformers_neuronx_handler_list = {
         "option.use_stable_diffusion": True
     },
     "stable-diffusion-2.1-base-neuron-bf16": {
-        "option.model_id": "s3://djl-llm/stable-diffusion-2-1-base-compiled-bf16/",
+        "option.model_id":
+        "s3://djl-llm/stable-diffusion-2-1-base-compiled-bf16/",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "bf16",
         "option.use_stable_diffusion": True
@@ -337,10 +353,7 @@ def build_performance_model(model):
     if model in performance_test_list.keys():
         options = performance_test_list[model]
     else:
-        options = {
-            "option.task": "text-generation",
-            "option.model_id": model
-        }
+        options = {"option.task": "text-generation", "option.model_id": model}
     options["option.predict_timeout"] = 240
     options["option.dtype"] = args.dtype
     options["option.tensor_parallel_degree"] = args.tensor_parallel
@@ -402,9 +415,11 @@ def build_ft_raw_aot_model(model):
     options = ft_model_list[model]
     options["engine"] = "FasterTransformer"
     if model == 't5-small':
-        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot/"
+        options[
+            "option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot/"
     else:
-        options["option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
+        options[
+            "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
     write_properties(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
@@ -418,9 +433,11 @@ def builder_ft_handler_aot_model(model):
     options["engine"] = "FasterTransformer"
     # options["entryPoint"] = "djl_python.fastertransformer"
     if model == 't5-small':
-        options["option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot-handler/"
+        options[
+            "option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot-handler/"
     else:
-        options["option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
+        options[
+            "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
     write_properties(options)
 
 

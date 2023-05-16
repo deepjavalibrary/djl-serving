@@ -201,8 +201,10 @@ class HuggingFaceService(object):
                                                        padding_side="left")
         model_config = AutoConfig.from_pretrained(model_id_or_path)
         architectures = model_config.architectures
-        if architectures and architectures[0].endswith("ForConditionalGeneration"):
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_id_or_path, **kwargs)
+        if architectures and architectures[0].endswith(
+                "ForConditionalGeneration"):
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(
+                model_id_or_path, **kwargs)
         else:
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_id_or_path, **kwargs)
