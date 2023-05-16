@@ -168,7 +168,8 @@ class TransformersNeuronXService(object):
         elif "gptj" == model_config.model_type:
             self.load_gptj(amp, unroll, n_positions)
         # HuggingFace compatible generate model
-        self.model = HuggingFaceGenerationModelAdapter(model_config, self.model)
+        self.model = HuggingFaceGenerationModelAdapter(model_config,
+                                                       self.model)
         self.initialized = True
 
     def infer(self, inputs):
@@ -191,19 +192,22 @@ class TransformersNeuronXService(object):
                 model_kwargs["seq_length"] = parameters.get("max_length", 128)
                 # TODO: switch to new HF model interface
                 outputs.add_stream_content(
-                    stream_generator(self.model.model, self.tokenizer, input_text,
-                                     **model_kwargs))
+                    stream_generator(self.model.model, self.tokenizer,
+                                     input_text, **model_kwargs))
                 return outputs
 
             encoded_inputs = self.tokenizer.batch_encode_plus(
                 input_text, return_tensors="pt", padding=True)
-            output_tokens = self.model.generate(input_ids=encoded_inputs.input_ids,
-                                                attention_mask=encoded_inputs.attention_mask,
-                                                **parameters)
-            generated_text = self.tokenizer.batch_decode(output_tokens,
-                                                    skip_special_tokens=True)
+            output_tokens = self.model.generate(
+                input_ids=encoded_inputs.input_ids,
+                attention_mask=encoded_inputs.attention_mask,
+                **parameters)
+            generated_text = self.tokenizer.batch_decode(
+                output_tokens, skip_special_tokens=True)
 
-            return Output().add([{"generated_text": s} for s in generated_text])
+            return Output().add([{
+                "generated_text": s
+            } for s in generated_text])
 
         except Exception as e:
             logging.exception("TransformerNeuronX inference failed")
