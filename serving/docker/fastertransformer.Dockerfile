@@ -47,7 +47,7 @@ COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 
 # Install all dependencies
-RUN apt-get update && apt-get install -y wget git zlib1g-dev rapidjson-dev && \
+RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjson-dev && \
     mkdir ompi && cd ompi && \
     wget -q -O - https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-${ompi_version}.tar.gz | tar xzf - && \
     cd openmpi-${ompi_version} && \
