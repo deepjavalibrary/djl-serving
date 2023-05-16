@@ -166,6 +166,17 @@ jobs:
           python3 llm/client.py huggingface bigscience/bloom-3b
           rm -rf docker_env
           docker rm -f $(docker ps -aq)
+      - name: Test streaming t5-large
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "CUDA_VISIBLE_DEVICES=1" > docker_env
+          python3 llm/prepare.py huggingface t5-large
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py huggingface t5-large
+          rm -rf docker_env
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
