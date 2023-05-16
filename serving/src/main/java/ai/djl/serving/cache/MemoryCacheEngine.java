@@ -12,16 +12,13 @@
  */
 package ai.djl.serving.cache;
 
-import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Output;
-import ai.djl.ndarray.BytesSupplier;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -30,14 +27,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Note that this is not suitable if you expect the cache to work with a horizontally scaled
  * system.
  */
-public class MemoryCacheEngine implements CacheEngine {
+public class MemoryCacheEngine extends BaseCacheEngine {
 
-    private Map<String, Output> cache;
+    private Map<String, Item> cache;
     private boolean multiTenant;
+    private boolean cleanOnAccess;
 
     /** Constructs a {@link MemoryCacheEngine}. */
     public MemoryCacheEngine() {
-        cache = new ConcurrentHashMap<>();
+        this(false);
     }
 
     /**
@@ -46,7 +44,7 @@ public class MemoryCacheEngine implements CacheEngine {
      * @param multiTenant whether to combine entries from multiple users
      */
     public MemoryCacheEngine(boolean multiTenant) {
-        this();
+        cache = new ConcurrentHashMap<>();
         this.multiTenant = multiTenant;
     }
 
@@ -63,7 +61,7 @@ public class MemoryCacheEngine implements CacheEngine {
                 new LinkedHashMap<>(capacity + 1, .75f, true) {
                     /** {@inheritDoc} */
                     @Override
-                    public boolean removeEldestEntry(Map.Entry<String, Output> eldest) {
+                    public boolean removeEldestEntry(Map.Entry<String, Item> eldest) {
                         return size() > capacity;
                     }
                 };
@@ -78,65 +76,84 @@ public class MemoryCacheEngine implements CacheEngine {
 
     /** {@inheritDoc} */
     @Override
-    public CompletableFuture<Void> put(String key, Output output) {
-        cache.put(key, output);
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public Output get(String key, int limit) {
-        Output output = cache.get(key);
-        if (output == null) {
+    public Output get(String key, int start, int limit) {
+        Item item = cache.get(key);
+        if (item == null) {
             return null;
         }
-        BytesSupplier supplier = output.getData();
-        if (!(supplier instanceof ChunkedBytesSupplier)) {
-            return output;
+
+        Output output = new Output();
+        List<byte[]> contents = new ArrayList<>();
+
+        // Maybe add first contents from output
+        if (start == 0) {
+            output.setCode(item.output.getCode());
+            output.setMessage(item.output.getMessage());
+            output.setProperties(item.output.getProperties());
+            if (item.output.getData() != null) {
+                contents.add(item.output.getData().getAsBytes());
+                limit--;
+            }
         }
 
-        ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
-        List<byte[]> list = new ArrayList<>();
-        int size = 0;
-        for (int i = 0; i < limit; ++i) {
-            byte[] buf = cbs.pollChunk();
-            if (buf == null) {
-                break;
-            }
-            size += buf.length;
-            list.add(buf);
+        // Add rest of contents from subsequent
+        start++;
+        int maxI = Math.min(start + limit, item.subsequent.size() + 1);
+        maxI = maxI < 0 ? item.subsequent.size() + 1 : maxI; // Handle underflow on limit
+        for (int i = start; i < maxI; i++) {
+            contents.add(item.subsequent.get(i - 1));
         }
-        byte[] data = null;
-        if (list.size() > 1) {
-            data = new byte[size];
-            int pos = 0;
-            for (byte[] array : list) {
-                System.arraycopy(array, 0, data, pos, array.length);
-                pos += array.length;
-            }
-        } else if (list.size() == 1) {
-            data = list.get(0);
+        if (!contents.isEmpty()) {
+            output.add(joinBytes(contents));
         }
-        Output o = new Output();
-        o.setCode(output.getCode());
-        o.setMessage(output.getMessage());
-        o.getProperties().putAll(output.getProperties());
-        if (data != null) {
-            o.add(data);
-        }
-        if (cbs.hasNext()) {
-            o.addProperty("x-next-token", key);
-            o.addProperty("X-Amzn-SageMaker-Custom-Attributes", "x-next-token=" + key);
-        } else {
-            // clean up cache
+
+        // Handle if last of data or not
+        boolean returnedLastItem = item.last && maxI == item.subsequent.size() + 1;
+        if (!returnedLastItem && !output.getProperties().containsKey("x-next-token")) {
+            output.addProperty("x-next-token", key + (maxI - 1));
+            output.addProperty("X-Amzn-SageMaker-Custom-Attributes", "x-next-token=" + key);
+        } else if (cleanOnAccess) { // Last item and should clean on access
             remove(key);
         }
-        return o;
+
+        return output;
+    }
+
+    @Override
+    protected void putSingle(String key, Output output, boolean last) {
+        cache.put(key, new Item(output));
+    }
+
+    @Override
+    protected void putStream(String key, Output output, byte[] buf, int index, boolean last) {
+        cache.compute(
+                key,
+                (k, item) -> {
+                    if (output != null || item == null) {
+                        item = new Item(output);
+                    }
+                    if (buf != null) {
+                        item.subsequent.add(buf);
+                    }
+                    item.last = last;
+                    return item;
+                });
     }
 
     /** {@inheritDoc} */
     @Override
     public void remove(String key) {
         cache.remove(key);
+    }
+
+    private static class Item {
+        Output output;
+        List<byte[]> subsequent;
+        boolean last;
+
+        public Item(Output output) {
+            this.output = output;
+            this.subsequent = new ArrayList<>();
+        }
     }
 }

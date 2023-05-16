@@ -5,14 +5,17 @@ configurations {
 dependencies {
     api platform("ai.djl:bom:${project.version}")
     implementation project(":serving")
+    api "ai.djl.aws:aws-ai"
+
     api platform("software.amazon.awssdk:bom:${awssdk_version}")
     api "software.amazon.awssdk:dynamodb"
-    api "ai.djl.aws:aws-ai"
+    api "software.amazon.awssdk:s3"
 
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
     }
     testImplementation "com.amazonaws:DynamoDBLocal:1.21.1"
+    testImplementation "cloud.localstack:localstack-utils:0.2.15"
 
     exclusion project(":serving")
 }
