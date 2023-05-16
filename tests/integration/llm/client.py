@@ -274,8 +274,12 @@ def check_worker_number(desired, model_name="test"):
 def send_json(data, model_name="test"):
     headers = {'content-type': 'application/json'}
     endpoint = f"http://127.0.0.1:8080/predictions/{model_name}"
-    res = requests.post(endpoint, headers=headers, json=data)
-    return res
+    resp = requests.post(endpoint, headers=headers, json=data)
+
+    if resp.status_code >= 300:
+        logging.exception(f"HTTP error: {resp}")
+        raise ValueError("Failed to send reqeust to model server")
+    return resp
 
 
 def send_image_json(img_url, data, model_name="test"):
@@ -284,8 +288,12 @@ def send_image_json(img_url, data, model_name="test"):
         'json': (None, json.dumps(data), 'application/json')
     }
     endpoint = f"http://127.0.0.1:8080/predictions/{model_name}"
-    response = requests.post(endpoint, files=multipart_form_data)
-    return response
+    resp = requests.post(endpoint, files=multipart_form_data)
+
+    if resp.status_code >= 300:
+        logging.exception(f"HTTP error: {resp}")
+        raise ValueError("Failed to send reqeust to model server")
+    return resp
 
 
 def get_gpu_memory():
@@ -547,7 +555,6 @@ def test_sd_handler(model, model_spec):
                 req["parameters"] = params
                 logging.info(f"req: {req}")
                 res = send_json(req)
-            assert res.status_code == 200
             try:
                 Image.open(BytesIO(res.content)).convert("RGB")
             except Exception as e:
