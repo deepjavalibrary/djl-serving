@@ -20,8 +20,10 @@ import cloud.localstack.awssdkv2.TestUtils;
 import cloud.localstack.docker.annotation.LocalstackDockerAnnotationProcessor;
 import cloud.localstack.docker.annotation.LocalstackDockerConfiguration;
 import cloud.localstack.docker.annotation.LocalstackDockerProperties;
+import cloud.localstack.docker.exception.LocalstackDockerException;
 
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.Test;
 
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -90,6 +92,9 @@ public class CacheEngineTest {
             engine.createBucketIfNotExists().join();
             testCacheEngine(engine);
 
+        } catch (IllegalStateException | LocalstackDockerException e) {
+            throw new SkipException(
+                    "Skipping testS3CacheEngine because it failed to start localstack");
         } finally {
             if (localstack.isRunning()) {
                 localstack.stop();

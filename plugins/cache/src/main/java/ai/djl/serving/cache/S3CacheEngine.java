@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-/** A {@link CacheEngine} that stores elements in DynamoDB. */
+/** A {@link CacheEngine} that stores elements in S3. */
 public class S3CacheEngine extends BaseCacheEngine {
 
     S3AsyncClient asyncClient;
