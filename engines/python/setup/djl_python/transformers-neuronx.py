@@ -63,8 +63,7 @@ class TransformersNeuronXService(object):
             block.fc1.to(dtype)
             block.fc2.to(dtype)
         self.model.lm_head.to(dtype)
-        logging.info(f"Saving to INF2 model to {load_path} ...")
-        logging.info(f"Saving to INF2 model to {load_path} ...")
+        logging.info(f"Saving INF2 model to {load_path} ...")
         save_pretrained_split(self.model, load_path)
         with open(os.path.join(load_path, "verify"), "w") as f:
             f.writelines("opt-converted")
