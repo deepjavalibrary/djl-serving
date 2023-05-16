@@ -13,7 +13,8 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.23.0~SNAPSHOT
 ARG python_version=3.9
-ARG ft_version="release/v5.3_tag"
+ARG ft_version="main"
+ARG triton_version="r23.04"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
 ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-nightly-py3-none-any.whl"
 ARG ompi_version=4.1.4
@@ -46,7 +47,7 @@ COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 
 # Install all dependencies
-RUN apt-get update && apt-get install -y wget git zlib1g-dev && \
+RUN apt-get update && apt-get install -y wget git zlib1g-dev rapidjson-dev && \
     mkdir ompi && cd ompi && \
     wget -q -O - https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-${ompi_version}.tar.gz | tar xzf - && \
     cd openmpi-${ompi_version} && \
@@ -67,19 +68,14 @@ RUN apt-get update && apt-get install -y wget git zlib1g-dev && \
 
 ENV PATH=/usr/local/mpi/bin:${PATH} LD_LIBRARY_PATH=/usr/local/mpi/lib:${LD_LIBRARY_PATH}
 
-# Supporting build g4,g5,p3,p4
-RUN git clone https://github.com/NVIDIA/FasterTransformer.git -b ${ft_version} \
-    && mkdir -p FasterTransformer/build \
-    && cd FasterTransformer/build \
-    && git submodule init && git submodule update \
-    && cmake -DCMAKE_BUILD_TYPE=Release -DSM=70,75,80,86 -DBUILD_PYT=ON -DBUILD_MULTI_GPU=ON .. \
-    && make -j$(nproc) install \
-    && rm -rf lib/*TritonBackend.so \
-    && cp lib/*.so /usr/local/backends/fastertransformer/ \
-    && mkdir -p /usr/local/backends/fastertransformer/bin \
-    && cp -r bin/*_gemm /usr/local/backends/fastertransformer/bin/ \
-    && cp ../LICENSE /root/FASTERTRANSFORMER_LICENSE \
-    && cd ../../ && rm -rf FasterTransformer
+# Install fastertransformer and triton
+RUN mkdir -p /usr/local/backends/fastertransformer && mkdir -p /usr/local/tritonserver && \
+    curl -o /usr/local/tritonserver/libtritonserver.so https://publish.djl.ai/triton/${triton_version}/libtritonserver.so && \
+    curl -o /usr/local/backends/fastertransformer/libth_transformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libth_transformer.so && \
+    curl -o /usr/local/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/${ft_version}/libtransformer-shared.so && \
+    curl -o /usr/local/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libtriton_fastertransformer.so && \
+    curl -o /root/FASTERTRANSFORMER_LICENSE https://raw.githubusercontent.com/NVIDIA/FasterTransformer/main/LICENSE
+
 
 RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \
