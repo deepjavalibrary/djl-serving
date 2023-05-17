@@ -275,7 +275,7 @@ transformers_neuronx_handler_list = {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.batch_size": 4,
         "option.tensor_parallel_degree": 8,
-        "option.n_positions": 768,
+        "option.n_positions": 1024,
         "option.dtype": "fp32",
         "option.model_loading_timeout": 720
     },
