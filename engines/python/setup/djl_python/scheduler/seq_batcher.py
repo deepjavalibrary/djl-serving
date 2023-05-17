@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, Union
 
 from djl_python.scheduler.batch import Batch
 import torch
@@ -27,82 +27,76 @@ class SeqBatcher(object):
         self.offsets = offsets
         self.exit_index_end_position = {}
 
-        output_ids_size = batch.past_output_ids.size()
-        self.batch_size = output_ids_size.size[0]
-        self.seq_len = output_ids_size[1]
+        past_key_values_size = batch.past_key_values[0][0].size()
+        self.batch_size = past_key_values_size[0]
+        self.seq_len = past_key_values_size[2]
 
-    def get_batch(self) -> Batch:
-        return self.batch
+    def add_batch(self, seq_batcher: SeqBatcher):
+        return self.merge_symmetric(self, seq_batcher)
 
-    def add_batch(self, new_seq_batcher: SeqBatcher):
-        seq_delta = self.seq_len - new_seq_batcher.seq_len
-        if seq_delta >= 0:
-            self.batch = self.batch.merge(new_seq_batcher.batch, seq_delta)
-        else:
-            self.batch = new_seq_batcher.batch.merge(self.batch, -seq_delta)
+    def merge_symmetric(self, seq_batcher1, seq_batcher2):
+        seq_delta = seq_batcher1.seq_len - seq_batcher2.seq_len
+        if seq_delta < 0:
+            seq_batcher1, seq_batcher2 = seq_batcher2, seq_batcher1
+            seq_delta = -seq_delta
 
-        self.batch_size = self.batch_size + new_seq_batcher.batch_size
+        self.batch = seq_batcher1.batch.merge(seq_batcher2.batch, seq_delta)
+
+        # update other batch control variables
+        self.batch_size = seq_batcher1.batch_size + seq_batcher2.batch_size
         self.request_uids = torch.cat(
-            [self.request_uids, new_seq_batcher.request_uids], dim=0)
-        self.offsets = torch.cat([self.offsets, new_seq_batcher.offsets],
+            [seq_batcher1.request_uids, seq_batcher2.request_uids], dim=0)
+        self.offsets = torch.cat([seq_batcher1.offsets, seq_batcher2.offsets + seq_delta],
                                  dim=0)
+        self.seq_len = max(seq_batcher1.seq_len, seq_batcher2.seq_len)
 
-    def exit_criteria(self, output_ids: torch.Tensor, max_length: int,
-                      eos_token_id: int):
-        output_ids_list = output_ids.tolist()
-        offsets_list = self.offsets.tolist()
-        for i in range(len(output_ids_list)):
-            if self.seq_len - offsets_list[i] >= max_length or output_ids_list[
-                    i] == eos_token_id:
-                if i not in self.exit_index_end_position:
-                    self.exit_index_end_position[i] = self.seq_len
-
-    def collect_and_trim(self) -> Dict[int, torch.Tensor]:
+    def collect_and_trim(self) -> Union[Dict[int, torch.Tensor], None]:
         if len(self.exit_index_end_position) == 0:
             return None
 
         finished_sequences = {}
-        exit_indices = set()
 
-        # Adds the finished requests to the finished_sequences
-        # Batch index is added to the set to be removed from batch later.
+        # collect the finished requests to the finished_sequences
+        exit_indices = set()
         for batch_index, seq_end_position in self.exit_index_end_position.items(
         ):
             uid = self.request_uids[batch_index]
             offset = self.offsets[batch_index]
-            output = self.batch.past_output_ids[batch_index,
-                                                offset:seq_end_position]
+            output = self.batch.past_output_ids[batch_index, offset:seq_end_position]
             finished_sequences[uid] = output
             exit_indices.add(batch_index)
 
-        # finding the row with non-finished sequences.
-        keep_indices = []
-        j = 0
-        for i in range(self.batch_size):
-            if i not in exit_indices:
-                keep_indices[j] = i
-                j += 1
+        # find the batch indices of the non-finished requests.
+        keep_indices = torch.tensor(list(set(range(self.batch_size)) - exit_indices), dtype=torch.int64)
 
         # if all the requests finished generating sequences, then reset the batch and return
         if len(keep_indices) == 0:
-            self.request_uids = torch.zeros([0, 1],
+            self.request_uids = torch.empty([0, 1],
                                             dtype=self.request_uids.dtype)
-            self.offsets = torch.zeros([0, 1], dtype=self.offsets.dtype)
+            self.offsets = torch.empty([0, 1], dtype=self.offsets.dtype)
             self.batch = None
             self.batch_size = 0
             self.seq_len = 0
-            self.exit_index_end_position = None
-            return finished_sequences
+        else:
+            self.request_uids = self.request_uids[keep_indices]
+            self.offsets = self.offsets[keep_indices]
+            trim_seq_len = torch.min(self.offsets, dim=0).values.item()
+            self.offsets = self.offsets - trim_seq_len
 
-        self.request_uids = torch.index_select(
-            self.request_uids, 0,
-            torch.LongTensor(keep_indices)).resize(-1, 1)
-        self.offsets = torch.index_select(
-            self.offsets, 0, torch.LongTensor(keep_indices)).resize(-1, 1)
-        trim_sequence = torch.min(self.offsets, dim=0).tolist()[0]
-        self.offsets = torch.subtract(self.offsets, trim_sequence)
+            self.batch = self.batch.trim(keep_indices, trim_seq_len)
+            self.batch_size -= len(exit_indices)
+            self.seq_len -= trim_seq_len
 
-        # Trim batch and sequence dimension if needed.
+        self.exit_index_end_position = {}
+
+        return finished_sequences
+
+    def exit_criteria(self, output_ids: torch.Tensor, max_length: int,
+                      eos_token_id: int):
+        for i in range(len(output_ids)):
+            if self.seq_len - self.offsets[i] >= max_length or output_ids[i] == eos_token_id:
+                if i not in self.exit_index_end_position:
+                    self.exit_index_end_position[i] = self.seq_len
 
     def seq_complete(self) -> bool:
         return len(self.exit_index_end_position) > 0
