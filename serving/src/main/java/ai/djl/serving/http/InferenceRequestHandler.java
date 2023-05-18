@@ -14,6 +14,7 @@ package ai.djl.serving.http;
 
 import ai.djl.ModelException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
+import ai.djl.inference.streaming.PublisherBytesSupplier;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -385,6 +386,27 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 logger.warn("Chunk reading interrupted", e);
                 ctx.newFailedFuture(e);
             }
+            return;
+        }
+        if (data instanceof PublisherBytesSupplier) {
+            HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, true);
+            for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
+                resp.headers().set(entry.getKey(), entry.getValue());
+            }
+            NettyUtils.sendHttpResponse(ctx, resp, true);
+            PublisherBytesSupplier supplier = (PublisherBytesSupplier) data;
+            supplier.subscribe(
+                    buf -> {
+                        if (buf == null) {
+                            // End stream
+                            ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+
+                        } else if (buf.length > 0) {
+                            // Continue stream
+                            ByteBuf bb = Unpooled.wrappedBuffer(buf);
+                            ctx.writeAndFlush(new DefaultHttpContent(bb));
+                        }
+                    });
             return;
         }
 
