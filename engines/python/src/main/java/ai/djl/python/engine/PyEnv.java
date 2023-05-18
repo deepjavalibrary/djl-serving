@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -167,17 +168,27 @@ public class PyEnv {
         }
         Path file = modelDir.resolve("requirements.txt");
         if (Files.isRegularFile(file)) {
-            String[] cmd = {
-                pythonExecutable,
-                "-m",
-                "pip",
-                "-q",
-                "install",
-                "-r",
-                file.toAbsolutePath().toString()
-            };
+            List<String> cmd = new ArrayList<>(9);
+            cmd.add(pythonExecutable);
+            cmd.add("-m");
+            cmd.add("pip");
+            if (!logger.isDebugEnabled()) {
+                cmd.add("-q");
+            }
+            cmd.add("install");
+            cmd.add("-r");
+            cmd.add(file.toAbsolutePath().toString());
+            if (Boolean.getBoolean("offline")) {
+                cmd.add("--no-deps");
+            }
+            Path dir = modelDir.resolve("requirements");
+            if (Files.isDirectory(dir)) {
+                cmd.add("-f");
+                cmd.add(file.toAbsolutePath().toString());
+            }
             try {
                 logger.info("Found requirements.txt, start installing Python dependencies...");
+                logger.debug("{}", cmd);
                 Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
                 String logOutput;
                 try (InputStream is = process.getInputStream()) {
@@ -186,10 +197,10 @@ public class PyEnv {
                 int ret = process.waitFor();
                 if (ret == 0) {
                     logger.info("pip install requirements succeed!");
-                    logger.debug(logOutput);
+                    logger.debug("{}", logOutput);
                 } else {
-                    logger.warn("requirements installation failed! With error code: {}", ret);
-                    logger.warn(logOutput);
+                    logger.warn("pip install failed with error code: {}", ret);
+                    logger.warn("{}", logOutput);
                 }
             } catch (IOException | InterruptedException e) {
                 logger.warn("pip install requirements failed.", e);
