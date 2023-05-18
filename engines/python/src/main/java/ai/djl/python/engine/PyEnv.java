@@ -178,14 +178,18 @@ public class PyEnv {
             cmd.add("install");
             cmd.add("-r");
             cmd.add(file.toAbsolutePath().toString());
-            if (Boolean.getBoolean("offline")) {
-                cmd.add("--no-deps");
-            }
             Path dir = modelDir.resolve("requirements");
             if (Files.isDirectory(dir)) {
+                if (Boolean.getBoolean("offline")) {
+                    // if folder exists, we assume user want to resolve dependencies in the folder
+                    cmd.add("--no-index");
+                }
                 cmd.add("-f");
-                cmd.add(file.toAbsolutePath().toString());
+                cmd.add(dir.toAbsolutePath().toString());
+            } else if (Boolean.getBoolean("offline")) {
+                cmd.add("--no-deps");
             }
+
             try {
                 logger.info("Found requirements.txt, start installing Python dependencies...");
                 logger.debug("{}", cmd);
