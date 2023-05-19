@@ -73,7 +73,7 @@ RUN mkdir -p /usr/local/backends/fastertransformer && mkdir -p /usr/local/triton
     curl -o /usr/local/tritonserver/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
     curl -o /usr/local/backends/fastertransformer/libth_transformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libth_transformer.so && \
     curl -o /usr/local/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/${ft_version}/libtransformer-shared.so && \
-    curl -o /usr/local/backends/fastertransformer/libTransformerTritonBackend.so https://publish.djl.ai/fastertransformer/${ft_version}/libTransformerTritonBackend.so && \
+    curl -o /usr/local/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libtriton_fastertransformer.so && \
     curl -o /root/FASTERTRANSFORMER_LICENSE https://raw.githubusercontent.com/NVIDIA/FasterTransformer/main/LICENSE
 
 
