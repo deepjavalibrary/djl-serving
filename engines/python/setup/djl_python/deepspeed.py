@@ -298,7 +298,9 @@ class DeepSpeedService(object):
                     return_tensors="pt").to(torch.cuda.current_device())
                 with torch.no_grad():
                     output_tokens = self.model.generate(
-                        **tokenized_inputs, **model_kwargs)
+                        input_id=tokenized_inputs.input_id,
+                        attention_mask=tokenized_inputs.attention_mask,
+                        **model_kwargs)
                 generated_text = self.tokenizer.batch_decode(
                     output_tokens, skip_special_tokens=True)
                 outputs.add([{"generated_text": s} for s in generated_text])
