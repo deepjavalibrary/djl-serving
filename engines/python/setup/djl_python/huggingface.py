@@ -241,7 +241,7 @@ class HuggingFaceService(object):
             with torch.no_grad():
                 output_tokens = model.generate(
                     *args,
-                    input_id=input_tokens.input_id,
+                    input_ids=input_tokens.input_ids,
                     attention_mask=input_tokens.attention_mask,
                     **kwargs)
             generated_text = tokenizer.batch_decode(output_tokens,
