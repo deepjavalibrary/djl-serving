@@ -69,14 +69,14 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
 ENV PATH=/usr/local/mpi/bin:${PATH} LD_LIBRARY_PATH=/usr/local/mpi/lib:${LD_LIBRARY_PATH}
 
 # Install fastertransformer and triton
-RUN mkdir -p /usr/local/backends/fastertransformer && mkdir -p /usr/local/tritonserver && \
-    curl -o /usr/local/tritonserver/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
-    curl -o /usr/local/backends/fastertransformer/libth_transformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libth_transformer.so && \
-    curl -o /usr/local/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/${ft_version}/libtransformer-shared.so && \
-    curl -o /usr/local/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libtriton_fastertransformer.so && \
+RUN mkdir -p /opt/tritonserver/backends/fastertransformer && mkdir -p /opt/tritonserver/lib && \
+    curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
+    curl -o /opt/tritonserver/backends/fastertransformer/libth_transformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libth_transformer.so && \
+    curl -o /opt/tritonserver/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/${ft_version}/libtransformer-shared.so && \
+    curl -o /opt/tritonserver/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libtriton_fastertransformer.so && \
     curl -o /root/FASTERTRANSFORMER_LICENSE https://raw.githubusercontent.com/NVIDIA/FasterTransformer/main/LICENSE
 
-ENV LD_LIBRARY_PATH=/usr/local/tritonserver:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:${LD_LIBRARY_PATH}
 
 RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \
