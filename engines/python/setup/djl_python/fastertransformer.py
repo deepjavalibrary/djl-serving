@@ -58,7 +58,7 @@ class FasterTransformerService(object):
         self.model = None
         self.is_t5 = False
 
-    def inititalize_properties(self, properties):
+    def initialize_properties(self, properties):
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
         self.pipeline_parallel_degree = int(
@@ -68,7 +68,7 @@ class FasterTransformerService(object):
             "model_dir")
 
     def initialize(self, properties):
-        self.inititalize_properties(properties)
+        self.initialize_properties(properties)
         self.model = self.load_model()
         self.initialized = True
         model_config = AutoConfig.from_pretrained(self.model_id_or_path)
@@ -130,7 +130,7 @@ _service = FasterTransformerService()
 
 def partition(inputs: Input):
     properties = inputs.get_properties()
-    _service.inititalize_properties(properties)
+    _service.initialize_properties(properties)
     ft.save_checkpoint(_service.model_id_or_path,
                        _service.tensor_parallel_degree,
                        _service.pipeline_parallel_degree,
