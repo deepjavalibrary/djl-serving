@@ -1,18 +1,12 @@
 import unittest
-from scheduler.lm_block import PtLMBlock, GPT_config, HuggingfaceGTP2Block
-from scheduler.seq_batch_scheduler_impl import GreedySeqBatchScheduler
-from scheduler.search_config import SearchConfig
+from scheduler.lm_block import HuggingfaceGTP2Block
 import torch
 
 class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
-        model_urls = ["/Users/fenkexin/Desktop/tasks/HuggingFaceQa_relavant/transformer/traced_GPT2_init_hidden.pt",
-                      "/Users/fenkexin/Desktop/tasks/HuggingFaceQa_relavant/transformer/traced_GPT2_hidden.pt"]
-
-        # input w.o. kv_cache
-        gpt_config = GPT_config()
-        lm_block = PtLMBlock(model_urls, gpt_config)
+        model_name = "gpt2"
+        lm_block = HuggingfaceGTP2Block([model_name], {})
 
         input0 = [torch.tensor([[40, 2883, 6155, 351, 616, 13779, 3290]]),
                   torch.arange(7)[None, :],
