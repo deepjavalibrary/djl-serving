@@ -1,7 +1,7 @@
 # DJL Serving Architecture
 
 DJL serving is built on top of [Deep Java Library](https://djl.ai). You can visit the
-[DJL github repository](https://github.com/deepjavalibrary/djl) to learn more.
+[DJL github repository](https://github.com/deepjavalibrary/djl) to learn more. For module, dependency and class overview refer to [generated diagrams](https://sourcespy.com/github/deepjavalibrarydjlserving/).
 
 DJL Serving uses a [Netty](https://netty.io/) frontend on top of backend worker thread pools.
 The frontend uses a single Netty setup with multiple [HttpRequestHandler](https://javadoc.io/doc/ai.djl.serving/serving/latest/ai/djl/serving/http/HttpRequestHandler.html)s.
