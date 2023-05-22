@@ -21,11 +21,11 @@ import torch
 class GPTConfig:
 
     def __init__(self):
-        self.numAttentionHeads = 12
-        self.numLayers = 12
-        self.hiddenStateDim = 768
-        self.logitsDim = 50257
-        self.kvDim = 64
+        self.num_attention_heads = 12
+        self.num_layers = 12
+        self.hidden_state_dim = 768
+        self.logits_dim = 50257
+        self.kv_dim = 64
 
 
 class LMBlock(ABC):
