@@ -55,6 +55,8 @@ def decode(inputs: Input, content_type: str):
         return inputs.get_as_json()
     elif content_type == "text/csv":
         return decode_csv(inputs)
+    elif content_type == "text/plain":
+        return {"inputs": [inputs.get_as_string()]}
     if content_type.startswith("image/"):
         return {"inputs": inputs.get_as_image()}
     elif content_type.startswith("audio/"):
