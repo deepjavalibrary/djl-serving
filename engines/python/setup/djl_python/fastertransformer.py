@@ -115,7 +115,7 @@ class FasterTransformerService(object):
                     batch_size=len(input_text),
                     output_len=output_len,
                     beam_width=beam_width,
-                    **parameters)[0]
+                    **parameters)
             result = [{"generated_text": s} for s in result]
             outputs = Output().add(result)
         except Exception as e:
