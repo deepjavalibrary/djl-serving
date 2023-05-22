@@ -419,7 +419,7 @@ public class ModelServerTest {
             channel.writeAndFlush(encoder).sync();
         }
 
-        latch.await();
+        Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
 
         Type type = new TypeToken<List<Classification>>() {}.getType();
         List<Classification> classifications = JsonUtils.GSON.fromJson(result, type);
@@ -695,12 +695,14 @@ public class ModelServerTest {
         request(channel, req);
         assertEquals(result, "tok_0\n");
 
-        while (headers.contains("x-next-token")) {
+        int maxPoll = 10;
+        while (headers.contains("x-next-token") && --maxPoll > 0) {
             nextToken = headers.get("x-next-token");
             req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
             req.headers().add("x-starting-token", nextToken);
             request(channel, req);
             assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+            Thread.sleep(1000);
         }
 
         testThrottle(channel);
@@ -723,12 +725,12 @@ public class ModelServerTest {
         url = "/predictions/echo";
         req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         channel2.writeAndFlush(req).sync();
-        latch2.await();
+        Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
         assertEquals(httpStatus.code(), 503);
 
         // wait for 1st response
         f.sync();
-        latch.await();
+        Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {
@@ -1145,7 +1147,7 @@ public class ModelServerTest {
     private void request(Channel channel, HttpRequest req) throws InterruptedException {
         reset();
         channel.writeAndFlush(req).sync();
-        latch.await();
+        Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
     }
 
     private Channel connect(Connector.ConnectorType type) {
