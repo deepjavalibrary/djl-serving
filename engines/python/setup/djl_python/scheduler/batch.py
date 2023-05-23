@@ -14,10 +14,11 @@ from __future__ import annotations
 from typing import List
 
 import torch
-from scheduler.static_methods import merge_tensors, trim_tensor
+from djl_python.scheduler.utils import merge_tensors, trim_tensor
 
 
 class Batch:
+
     def __init__(self,
                  seq_dim_order: List[int],
                  past_output_ids: torch.Tensor = None,
@@ -51,18 +52,22 @@ class Batch:
                                seq_order=-1)
 
         past_key_values = []
-        for kv_pair1, kv_pair2 in zip(self.past_key_values, batch.past_key_values):
+        for kv_pair1, kv_pair2 in zip(self.past_key_values,
+                                      batch.past_key_values):
             kv = tuple()
             for kv1, kv2 in zip(kv_pair1, kv_pair2):
-                kv += (merge_tensors(kv1, kv2, seq_delta=seq_delta, seq_order=2),)
+                kv += (merge_tensors(kv1,
+                                     kv2,
+                                     seq_delta=seq_delta,
+                                     seq_order=2), )
             past_key_values.append(kv)
         past_key_values = tuple(past_key_values)
 
         return Batch(seq_dim_order=self.seq_dim_order,
-                           past_output_ids=past_output_ids,
-                           past_attention_mask=past_attention_mask,
-                           logits=logits,
-                           past_key_values=past_key_values)
+                     past_output_ids=past_output_ids,
+                     past_attention_mask=past_attention_mask,
+                     logits=logits,
+                     past_key_values=past_key_values)
 
     def trim(self, keep_indices: torch.Tensor, trim_seq_len: int):
         past_output_ids = trim_tensor(self.past_output_ids,
@@ -84,7 +89,10 @@ class Batch:
         for kv_pair in self.past_key_values:
             kv_out = tuple()
             for kv in kv_pair:
-                kv_out += (trim_tensor(kv, keep_indices=keep_indices, trim_seq_len=trim_seq_len, seq_order=2),)
+                kv_out += (trim_tensor(kv,
+                                       keep_indices=keep_indices,
+                                       trim_seq_len=trim_seq_len,
+                                       seq_order=2), )
             past_key_values.append(kv_out)
 
         return Batch(seq_dim_order=self.seq_dim_order,

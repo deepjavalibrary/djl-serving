@@ -1,8 +1,9 @@
 import unittest
-from scheduler.lm_block import PtLMBlock, GPT_config, HuggingfaceGTP2Block
-from scheduler.seq_batch_scheduler_impl import GreedySeqBatchScheduler
-from scheduler.search_config import SearchConfig
+from djl_python.scheduler.lm_block import HuggingfaceGTP2Block
+from djl_python.scheduler.seq_batch_scheduler_impl import GreedySeqBatchScheduler
+from djl_python.scheduler.search_config import SearchConfig
 import torch
+
 
 class TestScheduler(unittest.TestCase):
 
@@ -33,20 +34,29 @@ class TestScheduler(unittest.TestCase):
 
         scheduler = GreedySeqBatchScheduler(lm_block, SearchConfig())
 
-        input_ids = torch.tensor([[13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460]], dtype=torch.int64)
+        input_ids = torch.tensor(
+            [[13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460]],
+            dtype=torch.int64)
         request_ids = torch.tensor([[0]])
 
         # Test init_forward
         kv_cache_file = "./kv_cache.pt"
-        batch = scheduler.init_forward(input_ids, request_ids, kv_cache=None,
+        batch = scheduler.init_forward(input_ids,
+                                       request_ids,
+                                       kv_cache=None,
                                        save_kv_cache_path=kv_cache_file)
         scheduler.add_request(input_ids, request_ids, kv_cache=None)
 
         # Test merging longer sequences
-        input_ids = torch.tensor([[2215, 534, 7405, 836, 470, 670, 588, 484, 973, 284, 878, 843, 314, 460, 470,
-                                   16085, 345, 572],
-                                  [220, 220, 220, 220, 220, 1858, 338, 257, 640, 326, 314, 3505, 11, 618, 314, 750,
-                                   407, 760]])
+        input_ids = torch.tensor([[
+            2215, 534, 7405, 836, 470, 670, 588, 484, 973, 284, 878, 843, 314,
+            460, 470, 16085, 345, 572
+        ],
+                                  [
+                                      220, 220, 220, 220, 220, 1858, 338, 257,
+                                      640, 326, 314, 3505, 11, 618, 314, 750,
+                                      407, 760
+                                  ]])
         request_ids = torch.tensor([[1], [2]])
         scheduler.add_request(input_ids, request_ids, kv_cache=None)
         for out in scheduler.increment_forward(2):

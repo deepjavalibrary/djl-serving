@@ -44,7 +44,9 @@ if __name__ == '__main__':
 
     requirements = ['psutil', 'packaging', 'wheel']
 
-    test_requirements = ['numpy', 'requests', 'Pillow']
+    test_requirements = [
+        'numpy', 'requests', 'Pillow', 'transformers', 'torch'
+    ]
 
     setup(name='djl_python',
           version=version,
