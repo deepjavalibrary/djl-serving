@@ -15,7 +15,7 @@ package ai.djl.python.engine;
 import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
-import ai.djl.inference.streaming.ChunkedBytesSupplier;
+import ai.djl.inference.streaming.PublisherBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -353,7 +353,7 @@ class Connection {
 
         private int maxBufferSize;
         private boolean hasMoreChunk;
-        private ChunkedBytesSupplier data;
+        private PublisherBytesSupplier data;
 
         OutputDecoder(int maxBufferSize) {
             this.maxBufferSize = maxBufferSize;
@@ -381,7 +381,7 @@ class Connection {
                     int contentSize = in.readShort();
                     if (contentSize == -1) {
                         hasMoreChunk = true;
-                        data = new ChunkedBytesSupplier();
+                        data = new PublisherBytesSupplier();
                         output.add(data);
                     } else {
                         for (int i = 0; i < contentSize; ++i) {

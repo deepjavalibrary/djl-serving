@@ -13,6 +13,7 @@
 package ai.djl.serving.cache;
 
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
+import ai.djl.inference.streaming.PublisherBytesSupplier;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
 import ai.djl.util.Utils;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** A helper for creating a {@link CacheEngine}. */
 public abstract class BaseCacheEngine implements CacheEngine {
@@ -83,6 +85,48 @@ public abstract class BaseCacheEngine implements CacheEngine {
                                         byte[] batch = joinBytes(list);
                                         putStream(key, null, batch, index, true);
                                     }
+                                } else if (supplier instanceof PublisherBytesSupplier) {
+                                    Output o = new Output();
+                                    o.setCode(output.getCode());
+                                    o.setMessage(output.getMessage());
+                                    o.setProperties(output.getProperties());
+                                    PublisherBytesSupplier pub = (PublisherBytesSupplier) supplier;
+                                    AtomicInteger index = new AtomicInteger();
+                                    List<byte[]> list = new ArrayList<>(writeBatch);
+                                    putStream(key, o, null, index.incrementAndGet(), false);
+                                    pub.subscribe(
+                                            buf -> {
+                                                try {
+                                                    if (buf == null) {
+                                                        putStream(
+                                                                key,
+                                                                null,
+                                                                null,
+                                                                index.incrementAndGet(),
+                                                                true);
+                                                    } else if (buf.length > 0) {
+                                                        list.add(buf);
+                                                        if (list.size() >= writeBatch) {
+                                                            byte[] batch = joinBytes(list);
+                                                            putStream(
+                                                                    key,
+                                                                    null,
+                                                                    batch,
+                                                                    index.incrementAndGet(),
+                                                                    false);
+                                                            list.clear();
+                                                        }
+                                                        putStream(
+                                                                key,
+                                                                o,
+                                                                buf,
+                                                                index.incrementAndGet(),
+                                                                false);
+                                                    }
+                                                } catch (IOException e) {
+                                                    throw new CompletionException(e);
+                                                }
+                                            });
                                 } else {
                                     boolean last = output.getCode() != 202;
                                     putSingle(key, output, last);

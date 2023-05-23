@@ -16,7 +16,7 @@ import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
-import ai.djl.inference.streaming.ChunkedBytesSupplier;
+import ai.djl.inference.streaming.PublisherBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -42,14 +42,13 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class PyEngineTest {
 
@@ -200,11 +199,19 @@ public class PyEngineTest {
             input.add("stream", "true");
             Output out = predictor.predict(input);
             BytesSupplier supplier = out.getData();
-            Assert.assertTrue(supplier instanceof ChunkedBytesSupplier);
-            ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) supplier;
-            Assert.assertTrue(cbs.hasNext());
-            byte[] buf = cbs.nextChunk(1, TimeUnit.MINUTES);
-            Assert.assertEquals(new String(buf, StandardCharsets.UTF_8), "t-0\n");
+            Assert.assertTrue(supplier instanceof PublisherBytesSupplier);
+            PublisherBytesSupplier pub = (PublisherBytesSupplier) supplier;
+            List<byte[]> dat = new ArrayList<>();
+            pub.subscribe(
+                    d -> {
+                        if (d != null) {
+                            dat.add(d);
+                        }
+                    });
+            pub.waitToRead();
+            byte[] buf = pub.getAsBytes();
+            Assert.assertEquals(dat.stream().mapToInt(d -> d.length).sum(), 20);
+            Assert.assertEquals(buf.length, 20);
         }
     }
 
