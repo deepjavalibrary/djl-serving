@@ -396,40 +396,56 @@ public final class ConfigManager {
     public String dumpConfigurations() {
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         Runtime runtime = Runtime.getRuntime();
-        return "\nModel server home: "
-                + getModelServerHome()
-                + "\nCurrent directory: "
-                + getCanonicalPath(".")
-                + "\nTemp directory: "
-                + System.getProperty("java.io.tmpdir")
-                + "\nCommand line: "
-                + String.join(" ", ManagementFactory.getRuntimeMXBean().getInputArguments())
-                + "\nNumber of CPUs: "
-                + runtime.availableProcessors()
-                + "\nMax heap size: "
-                + (runtime.maxMemory() / 1024 / 1024)
-                + "\nConfig file: "
-                + prop.getProperty("configFile", "N/A")
-                + "\nInference address: "
-                + getConnector(Connector.ConnectorType.INFERENCE)
-                + "\nManagement address: "
-                + getConnector(Connector.ConnectorType.MANAGEMENT)
-                + "\nDefault job_queue_size: "
-                + wlmc.getJobQueueSize()
-                + "\nDefault batch_size: "
-                + wlmc.getBatchSize()
-                + "\nDefault max_batch_delay: "
-                + wlmc.getMaxBatchDelayMillis()
-                + "\nDefault max_idle_time: "
-                + wlmc.getMaxIdleSeconds()
-                + "\nModel Store: "
-                + (getModelStore() == null ? "N/A" : getModelStore())
-                + "\nInitial Models: "
-                + (getLoadModels() == null ? "N/A" : getLoadModels())
-                + "\nNetty threads: "
-                + getNettyThreads()
-                + "\nMaximum Request Size: "
-                + prop.getProperty(MAX_REQUEST_SIZE, String.valueOf(getMaxRequestSize()));
+        StringBuilder sb = new StringBuilder(2048);
+        sb.append("\nModel server home: ")
+                .append(getModelServerHome())
+                .append("\nCurrent directory: ")
+                .append(getCanonicalPath("."))
+                .append("\nTemp directory: ")
+                .append(System.getProperty("java.io.tmpdir"))
+                .append("\nCommand line: ")
+                .append(String.join(" ", ManagementFactory.getRuntimeMXBean().getInputArguments()))
+                .append("\nNumber of CPUs: ")
+                .append(runtime.availableProcessors())
+                .append("\nMax heap size: ")
+                .append((runtime.maxMemory() / 1024 / 1024))
+                .append("\nConfig file: ")
+                .append(prop.getProperty("configFile", "N/A"))
+                .append("\nInference address: ")
+                .append(getConnector(Connector.ConnectorType.INFERENCE))
+                .append("\nManagement address: ")
+                .append(getConnector(Connector.ConnectorType.MANAGEMENT))
+                .append("\nDefault job_queue_size: ")
+                .append(wlmc.getJobQueueSize())
+                .append("\nDefault batch_size: ")
+                .append(wlmc.getBatchSize())
+                .append("\nDefault max_batch_delay: ")
+                .append(wlmc.getMaxBatchDelayMillis())
+                .append("\nDefault max_idle_time: ")
+                .append(wlmc.getMaxIdleSeconds())
+                .append("\nModel Store: ")
+                .append((getModelStore() == null ? "N/A" : getModelStore()))
+                .append("\nInitial Models: ")
+                .append((getLoadModels() == null ? "N/A" : getLoadModels()))
+                .append("\nNetty threads: ")
+                .append(getNettyThreads())
+                .append("\nMaximum Request Size: ")
+                .append(prop.getProperty(MAX_REQUEST_SIZE, String.valueOf(getMaxRequestSize())))
+                .append("\nEnvironment variables:");
+        for (Map.Entry<String, String> entry : System.getenv().entrySet()) {
+            String key = entry.getKey();
+            if (key.startsWith("SERVING")
+                    || key.startsWith("PYTHON")
+                    || key.startsWith("DJL_")
+                    || key.startsWith("HF_")
+                    || key.contains("SAGEMAKER")
+                    || "TENSOR_PARALLEL_DEGREE".equals(key)
+                    || "OMP_NUM_THREADS".equals(key)
+                    || "CUDA_VISIBLE_DEVICES".equals(key)) {
+                sb.append("\n\t").append(key).append(": ").append(entry.getValue());
+            }
+        }
+        return sb.toString();
     }
 
     /**

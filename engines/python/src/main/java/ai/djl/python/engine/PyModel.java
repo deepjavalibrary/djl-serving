@@ -298,6 +298,7 @@ public class PyModel extends BaseModel {
         if (parallelLoading) {
             pool = Executors.newFixedThreadPool(mpiWorkers);
         }
+        logger.info("Start {} mpiWorkers ...", mpiWorkers);
         for (int i = 0; i < mpiWorkers; ++i) {
             logger.debug("Pre-creating python worker: {} ", i);
             PyProcess worker = new PyProcess(this, pyEnv, i);
