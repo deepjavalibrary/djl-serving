@@ -41,6 +41,7 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
             "dtype": "fp32",
             "number_of_partitions": 1,
         },
+        "partition": True,
         "cls_to_use": HuggingFaceAccelerateModel,
     },
     "flan-t5-xxl": {
@@ -49,6 +50,7 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
             "dtype": "fp32",
             "tensor_parallel_degree": 4,
         },
+        "partition": True,
         "cls_to_use": FasterTransformerModel,
     },
     "gpt-j-6b": {
@@ -58,8 +60,20 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
             "tensor_parallel_degree": 2,
             "parallel_loading": True,
         },
+        "partition": True,
         "cls_to_use": DeepSpeedModel,
     },
+    "pythia-12b": {
+        "model_id": "EleutherAI/pythia-12b",
+        "model_kwargs": {
+            "dtype": "fp16",
+            "tensor_parallel_degree": 4,
+            "parallel_loading": True,
+        },
+        "partition": True,
+        "partition_s3_uri": "s3://djl-llm/pythia-12b-4p/",
+        "cls_to_use": DeepSpeedModel,
+    }
 }
 
 HUGGING_FACE_NO_CODE_CONFIGS = {
@@ -139,7 +153,8 @@ def single_model_endpoint_test(name, sagemaker_session):
         )
 
         if config.get("partition", False):
-            model.partition()
+            model.partition(instance_type=DEFAULT_INSTANCE_TYPE,
+                            s3_output_uri=config.get("partition_s3_uri"))
 
         predictor = model.deploy(
             DEFAULT_INSTANCE_TYPE,
