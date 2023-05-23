@@ -167,8 +167,7 @@ public class WorkerPool<I, O> {
             try {
                 model.initialize();
                 device = model.withDefaultDevice(deviceName);
-                logger.info(
-                        "initWorkers for {} ({}): {}, {}", model, device, minWorkers, maxWorkers);
+                logger.info("loading model {} on {} ...", model, device);
                 model.load(device);
             } catch (ModelException | IOException e) {
                 throw new CompletionException(e);
@@ -187,6 +186,7 @@ public class WorkerPool<I, O> {
         WorkerGroup<I, O> group =
                 workerGroups.computeIfAbsent(device, d -> new WorkerGroup<>(this, d));
         group.configureWorkers(minWorkers, maxWorkers);
+        logger.info("scale workers: {} - {}", group.maxWorkers, group.maxWorkers);
         doScaleWorker(group);
         log();
     }

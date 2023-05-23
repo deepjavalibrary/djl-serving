@@ -476,9 +476,6 @@ public final class ModelInfo<I, O> {
     public void initialize() throws IOException, ModelException {
         downloadModel();
         loadServingProperties();
-        if (engineName == null) {
-            engineName = inferEngine();
-        }
         downloadS3();
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
@@ -623,7 +620,7 @@ public final class ModelInfo<I, O> {
         artifactName = artifact.getName();
     }
 
-    private void loadServingProperties() {
+    private void loadServingProperties() throws ModelException {
         if (prop == null) {
             Path file = modelDir.resolve("serving.properties");
             prop = new Properties();
@@ -638,7 +635,7 @@ public final class ModelInfo<I, O> {
         }
     }
 
-    private void configPerModelSettings() {
+    private void configPerModelSettings() throws ModelException {
         // per model settings can only be configured once
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         if (queueSize <= 0) {
@@ -656,17 +653,36 @@ public final class ModelInfo<I, O> {
         if (loadOnDevices == null) {
             loadOnDevices = prop.getProperty("load_on_devices", wlmc.getLoadOnDevices());
         }
+        if (engineName == null) {
+            engineName = inferEngine();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<Object, Object> entry : prop.entrySet()) {
+            String key = entry.getKey().toString();
+            if (!"job_queue_size".equals(key)
+                    && !"batch_size".equals(key)
+                    && !"max_idle_time".equals(key)
+                    && !"max_batch_delay".equals(key)
+                    && !"load_on_devices".equals(key)
+                    && !"engine".equals(key)
+                    && !"option.entryPoint".equals(key)) {
+                sb.append("\n\t").append(key).append(": ").append(entry.getValue());
+            }
+        }
+
         logger.info(
-                "Apply per model settings:\n\tqueueSize: {}\n\tbatchSize: {}"
-                        + "\n\tmaxBatchDelay: {}\n\tmaxIdle: {}\n\tloadOnDevices: {}"
-                        + "\n\tengine: {}\n\tentrypoint: {}",
+                "Apply per model settings:\n\tjob_queue_size: {}\n\tbatch_size: {}"
+                        + "\n\tmax_batch_delay: {}\n\tmax_idle_time: {}\n\tload_on_devices: {}"
+                        + "\n\tengine: {}\n\toption.entryPoint: {}{}",
                 queueSize,
                 batchSize,
                 maxBatchDelayMillis,
                 maxIdleSeconds,
                 loadOnDevices,
                 engineName,
-                prop.get("option.entryPoint"));
+                prop.get("option.entryPoint"),
+                sb);
     }
 
     void checkAvailableMemory(Device device) throws IOException {
