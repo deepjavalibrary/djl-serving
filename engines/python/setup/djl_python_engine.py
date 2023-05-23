@@ -118,7 +118,11 @@ class PythonEngine(object):
                     outputs = Output(code=204, message="No content")
             except Exception as e:
                 logging.exception("Failed invoke service.invoke_handler()")
-                outputs = Output().error(str(e))
+                if type(e).__name__ == "OutOfMemoryError" or type(
+                        e).__name__ == "MemoryError":
+                    outputs = Output(code=507, message=str(e))
+                else:
+                    outputs = Output().error(str(e))
 
             outputs.send(cl_socket)
             logging.debug("Outputs is sent to DJL engine.")

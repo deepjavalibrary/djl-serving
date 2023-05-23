@@ -398,7 +398,7 @@ public class PyEngineTest {
             Assert.assertNull(model.getProperty("failed"));
             Input input = new Input();
             input.add("exit", "true");
-            Assert.assertThrows(TranslateException.class, () -> predictor.predict(input));
+            Assert.assertThrows(EngineException.class, () -> predictor.predict(input));
             Assert.assertEquals(model.getProperty("failed"), "true");
 
             Input input2 = new Input();

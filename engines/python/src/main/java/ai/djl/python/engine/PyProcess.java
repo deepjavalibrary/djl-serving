@@ -17,7 +17,6 @@ import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.translate.TranslateException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +70,7 @@ class PyProcess {
         retryThreshold = Integer.parseInt(model.getProperty("retry_threshold", "10"));
     }
 
-    Output predict(Input inputs, int timeout, boolean initialLoad) throws TranslateException {
+    Output predict(Input inputs, int timeout, boolean initialLoad) {
         try {
             if (inputs.getProperty("handler", null) == null) {
                 String handler = pyEnv.getHandler();
@@ -89,9 +88,13 @@ class PyProcess {
             for (CompletableFuture<Output> future : futures) {
                 output = future.get(timeout, TimeUnit.SECONDS);
                 if (initialLoad) {
-                    if (output.getCode() >= 300) {
+                    int code = output.getCode();
+                    if (code >= 300) {
+                        if (code == 507) {
+                            throw new EngineException("OOM");
+                        }
                         if (pyEnv.isFailOnInitialize()) {
-                            throw new TranslateException(
+                            throw new EngineException(
                                     "Failed to initialize model: " + output.getMessage());
                         }
                         logger.warn("Model doesn't support initialize: {}", output.getMessage());
@@ -109,7 +112,10 @@ class PyProcess {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
             }
-            throw new TranslateException(e);
+            if (e instanceof EngineException) {
+                throw (EngineException) e;
+            }
+            throw new EngineException(e);
         }
     }
 
