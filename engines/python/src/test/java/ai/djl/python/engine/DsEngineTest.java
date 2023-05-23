@@ -206,7 +206,7 @@ public class DsEngineTest {
                 Predictor<Input, Output> predictor = model.newPredictor()) {
             Input input = new Input();
             input.add("exit", "true");
-            Assert.assertThrows(TranslateException.class, () -> predictor.predict(input));
+            Assert.assertThrows(EngineException.class, () -> predictor.predict(input));
 
             Input input2 = new Input();
             input2.add("data", "input");

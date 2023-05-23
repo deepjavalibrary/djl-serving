@@ -13,6 +13,7 @@
 package ai.djl.serving.util;
 
 import ai.djl.ModelException;
+import ai.djl.engine.EngineException;
 import ai.djl.modality.Input;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -246,6 +247,13 @@ public final class NettyUtils {
             BadRequestException e = (BadRequestException) t;
             HttpResponseStatus status = HttpResponseStatus.valueOf(e.getCode(), e.getMessage());
             NettyUtils.sendError(ctx, status, t);
+        } else if (t instanceof EngineException) {
+            if ("OOM".equals(t.getMessage())) {
+                logger.warn("CUDA out of memory", t);
+                NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
+            }
+            logger.error("", t);
+            NettyUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
         } else if (t instanceof WlmOutOfMemoryException) {
             logger.warn("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
