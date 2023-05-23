@@ -17,16 +17,19 @@ from typing import List, Dict
 
 import torch
 
-class GPT_config:
+
+class GPTConfig:
+
     def __init__(self):
-        self.numAttentionHeads = 12
-        self.numLayers = 12
-        self.hiddenStateDim = 768
-        self.logitsDim = 50257
-        self.kvDim = 64
+        self.num_attention_heads = 12
+        self.num_layers = 12
+        self.hidden_state_dim = 768
+        self.logits_dim = 50257
+        self.kv_dim = 64
 
 
 class LMBlock(ABC):
+
     @abstractmethod
     def __init__(self):
         pass
@@ -37,17 +40,21 @@ class LMBlock(ABC):
 
 
 class PtLMBlock(LMBlock):
-    def __init__(self, model_urls: List[str], gpt_config: GPT_config):
+
+    def __init__(self, model_urls: List[str], gpt_config: GPTConfig):
         super(PtLMBlock, self).__init__()
         self.blocks = [torch.jit.load(url) for url in model_urls]
         self.gpt_config = gpt_config
 
     def forward(self, input: List[torch.tensor], past_key_values):
-        return self.blocks[0](*input) if past_key_values is None else self.blocks[1](*input, past_key_values)
+        return self.blocks[0](
+            *input) if past_key_values is None else self.blocks[1](
+                *input, past_key_values)
 
 
 class OrtLMBlock(LMBlock):
-    def __init__(self, model_urls: List[str], gpt_config: GPT_config):
+
+    def __init__(self, model_urls: List[str], gpt_config: GPTConfig):
         super(OrtLMBlock, self).__init__()
         self.blocks = [torch.jit.load(url) for url in model_urls]
         self.gpt_config = gpt_config
@@ -57,14 +64,18 @@ class OrtLMBlock(LMBlock):
 
 
 class HuggingfaceGTP2Block(LMBlock):
+
     def __init__(self, model_urls: List[str], config: Dict):
         super(HuggingfaceGTP2Block, self).__init__()
-        self.config = {'use_cache': config.get('use_cache', True),
-                       'token_type_ids': config.get('token_type_ids', None),
-                       'return_dict': config.get('return_dict', False),
-                       'output_attentions': config.get('output_attentions', False),
-                       'output_hidden_states': config.get('output_hidden_states', True)}
-        model = GPT2LMHeadModel.from_pretrained(model_urls[0])  # it contains model.eval()
+        self.config = {
+            'use_cache': config.get('use_cache', True),
+            'token_type_ids': config.get('token_type_ids', None),
+            'return_dict': config.get('return_dict', False),
+            'output_attentions': config.get('output_attentions', False),
+            'output_hidden_states': config.get('output_hidden_states', True)
+        }
+        model = GPT2LMHeadModel.from_pretrained(
+            model_urls[0])  # it contains model.eval()
         self.blocks = [model]
 
     def forward(self, input: List[torch.tensor], past_key_values):

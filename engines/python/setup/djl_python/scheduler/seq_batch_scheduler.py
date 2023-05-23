@@ -29,17 +29,17 @@ class SeqBatchScheduler(ABC):
         self.config = config
 
     @abstractmethod
-    def init_forward(self, input_ids: torch.Tensor,
-                     batch_uids: torch.Tensor,
+    def init_forward(self, input_ids: torch.Tensor, batch_uids: torch.Tensor,
                      kv_cache: Union[List[torch.Tensor], None]) -> SeqBatcher:
         pass
 
     def increment_forward(self, count: int) -> torch.Tensor:
         i = 0
-        intermediate = None
         while i < count:
             if self.seq_batcher is None or self.seq_batcher.batch is None:
-                print(f"SeqBatcher not set. Please call add_batch. Current inference order is {i}")
+                print(
+                    f"SeqBatcher not set. Please call add_batch. Current inference order is {i}"
+                )
                 break
 
             yield self.inference_call()
@@ -63,69 +63,3 @@ class SeqBatchScheduler(ABC):
         output = self.results
         self.results = {}
         return output
-
-    @staticmethod
-    def compute_offsets(input_ids: torch.Tensor,
-                        config: SearchConfig) -> torch.Tensor:
-        num_batch = input_ids.shape[0]
-        seq_size = input_ids.shape[1]
-
-        offsets = []
-        for i in range(num_batch):
-            sequence = input_ids[i].tolist()
-            index = 0
-            while index < seq_size:
-                if sequence[index] != config.pad_token_id:
-                    break
-                index += 1
-
-            offsets.append(index)
-
-        return torch.tensor(offsets, dtype=torch.int64).view(-1, 1)
-
-    @staticmethod
-    def compute_attention_mask(input_ids, config):
-        num_batch = input_ids.shape[0]
-        seq_size = input_ids.shape[1]
-
-        # attention_mask
-        attention_mask = torch.repeat_interleave(torch.ones(
-            [1, input_ids.shape[-1]], dtype=torch.int64).reshape(1, -1),
-                                                 dim=0,
-                                                 repeats=num_batch)
-
-        # Linear searches the offset and set the mask
-        for i in range(num_batch):
-            sequence = input_ids[i].tolist()
-            index = 0
-            while index < seq_size:
-                if sequence[index] != config.pad_token_id:
-                    break
-                index += 1
-
-            attention_mask[i][0:index] = 0
-
-        return attention_mask
-
-    @staticmethod
-    def compute_position_ids(input_ids: torch.Tensor,
-                             offsets: torch.Tensor,
-                             past_seq_len: int,
-                             repeat: int):
-        position_range = torch.arange(
-            start=past_seq_len,
-            end=past_seq_len + input_ids.shape[-1],
-            step=1,
-            dtype=torch.int64).view(1, -1)
-
-        position_ids = torch.repeat_interleave(position_range,
-                                               dim=0,
-                                               repeats=input_ids.shape[0])
-
-        position_ids_shifted = position_ids - torch.repeat_interleave(
-            offsets.view(-1, 1),
-            dim=0,
-            repeats=repeat)
-
-        position_ids = torch.maximum(position_ids_shifted, torch.zeros_like(position_ids_shifted))
-        return position_ids
