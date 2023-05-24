@@ -31,6 +31,8 @@ DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16"}
 
 SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj"}
 
+SUPPORTED_CKPT_MODEL_TYPES = set("gpt")
+
 
 class TransformersNeuronXService(object):
 
@@ -42,6 +44,7 @@ class TransformersNeuronXService(object):
         self.model = None
         self.tokenizer = None
         self.enable_streaming = False
+        self.model_type = None
 
     def convert_opt(self, amp):
         logging.warning(
@@ -150,20 +153,21 @@ class TransformersNeuronXService(object):
             raise ValueError(f"{dtype} data type not supported!")
         amp = DTYPE_MAPPER[dtype]
         model_config = AutoConfig.from_pretrained(self.model_id_or_path)
-        if model_config.model_type not in SUPPORTED_MODEL_TYPES:
+        self.model_type = model_config.model_type
+        if self.model_type not in SUPPORTED_MODEL_TYPES:
             raise ValueError(
-                f"{model_config.model_type} type not supported for model {self.model_id_or_path}"
+                f"{self.model_type} type not supported for model {self.model_id_or_path}"
                 f"Supported model arch: {SUPPORTED_MODEL_TYPES}")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
         self.tokenizer.padding_side = 'left'
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        if "opt" == model_config.model_type:
+        if "opt" == self.model_type:
             self.load_opt(amp, unroll, n_positions)
-        elif "gpt2" == model_config.model_type:
+        elif "gpt2" == self.model_type:
             self.load_gpt2(amp, unroll, n_positions)
-        elif "gptj" == model_config.model_type:
+        elif "gptj" == self.model_type:
             self.load_gptj(amp, unroll, n_positions)
         # HuggingFace compatible generate model
         self.model = HuggingFaceGenerationModelAdapter(model_config,
@@ -214,6 +218,22 @@ class TransformersNeuronXService(object):
 
 
 _service = TransformersNeuronXService()
+
+
+def partition(inputs: Input):
+    properties = inputs.get_properties()
+    if "use_stable_diffusion" in properties:
+        _service = StableDiffusionService()
+        _service.initialize(properties)
+        _service.save_compiled(properties.get("save_mp_checkpoint_path"))
+    else:
+        _service = TransformersNeuronXService()
+        _service.initialize(properties)
+        if self.model_type not in SUPPORTED_CKPT_MODEL_TYPES:
+            raise ValueError(
+                f"{self.model_type} type not supported for checkpointing model {self.model_id_or_path}"
+                f"Supported model arch: {SUPPORTED_CKPT_MODEL_TYPES}")
+        _service.model._save_compiled_artifacts(properties.get("save_mp_checkpoint_path"))
 
 
 def handle(inputs: Input):
