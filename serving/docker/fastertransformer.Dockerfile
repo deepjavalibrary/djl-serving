@@ -20,6 +20,7 @@ ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.23.0-
 ARG ompi_version=4.1.4
 ARG transformers_version=4.27.3
 ARG accelerate_version=0.17.1
+ARG bitsandbytes_version=0.38.1
 
 EXPOSE 8080
 
@@ -57,7 +58,7 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh ${python_version} && \
     pip3 install ${torch_wheel} ${ft_wheel} && \
-    pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes && \
+    pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes=${bitsandbytes_version} && \
     pip3 install cmake sentencepiece && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
