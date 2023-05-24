@@ -192,7 +192,8 @@ public final class WlmConfigManager {
         }
 
         if (Device.Type.GPU.equals(device.getDeviceType())) {
-            if ("MXNet".equals(manager.getEngine().getEngineName())) {
+            String engineName = manager.getEngine().getEngineName();
+            if ("MXNet".equals(engineName) || "Python".equals(engineName)) {
                 // FIXME: MXNet GPU Model doesn't support multi-threading
                 return 1;
             }

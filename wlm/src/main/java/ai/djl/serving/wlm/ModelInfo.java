@@ -699,18 +699,17 @@ public final class ModelInfo<I, O> {
         if (requiredMemory <= 0
                 && tpDegree < 1
                 && "true".equals(Utils.getenv("SAGEMAKER_MULTI_MODEL"))) {
-            // TODO: handle LMI use case in future
+            // TODO:
+            // 1. handle LMI use case in future
+            // 2. if huggingface model_id is specified, the model is downloaded
+            // in the python process, current file size based estimation doesn't work
             logger.warn("No reserved_memory_mb defined, estimating memory usage ...");
             try (Stream<Path> walk = Files.walk(modelDir)) {
-                requiredMemory =
-                        walk.filter(Files::isRegularFile).mapToLong(ModelInfo::getFileSize).sum();
+                requiredMemory = walk.mapToLong(ModelInfo::getFileSize).sum();
             }
             if (downloadS3Dir != null) {
                 try (Stream<Path> walk = Files.walk(downloadS3Dir)) {
-                    requiredMemory +=
-                            walk.filter(Files::isRegularFile)
-                                    .mapToLong(ModelInfo::getFileSize)
-                                    .sum();
+                    requiredMemory += walk.mapToLong(ModelInfo::getFileSize).sum();
                 }
             }
             // estimate the memory to be 1.2x of file size
@@ -808,7 +807,10 @@ public final class ModelInfo<I, O> {
 
     private static long getFileSize(Path path) {
         try {
-            return Files.size(path);
+            if (Files.isRegularFile(path) && !Files.isHidden(path)) {
+                return Files.size(path);
+            }
+            return 0;
         } catch (IOException e) {
             logger.warn("Failed to get size of: " + path, e);
         }
