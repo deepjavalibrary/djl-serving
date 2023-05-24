@@ -58,7 +58,7 @@ public final class DdbCacheEngine extends BaseCacheEngine {
     private static final Logger logger = LoggerFactory.getLogger(DdbCacheEngine.class);
 
     private static final String TABLE_NAME =
-            Utils.getenv("DDB_TABLE_NAME", "djl-serving-pagination-table");
+            Utils.getenv("SERVING_DDB_TABLE_NAME", "djl-serving-pagination-table");
     private static final String CACHE_ID = "CACHE_ID";
     private static final String INDEX = "INDEX_KEY";
     private static final String HEADER = "HEADER";
