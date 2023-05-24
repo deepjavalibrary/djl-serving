@@ -133,6 +133,13 @@ jobs:
           python3 llm/sagemaker-endpoint-tests.py bloom-7b1 no_code
           echo "sleep 10 seconds to allow endpoint deletion"
           sleep 10
+      - name: Test DeepSpeed pythia-12b
+        if: success() || failure()
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py pythia-12b djl
+          echo "sleep 10 seconds to allow endpoint deletion"
+          sleep 10
 
   stop-runners:
     if: always()
