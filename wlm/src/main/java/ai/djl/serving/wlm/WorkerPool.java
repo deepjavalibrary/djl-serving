@@ -186,7 +186,6 @@ public class WorkerPool<I, O> {
         WorkerGroup<I, O> group =
                 workerGroups.computeIfAbsent(device, d -> new WorkerGroup<>(this, d));
         group.configureWorkers(minWorkers, maxWorkers);
-        logger.info("scale workers: {} - {}", group.maxWorkers, group.maxWorkers);
         doScaleWorker(group);
         log();
     }
@@ -226,9 +225,15 @@ public class WorkerPool<I, O> {
         int activeThreads = fixedPoolThreads.size();
         if (activeThreads < minWorkers) {
             // scale up the fixed pool
+            logger.info(
+                    "scale up {} workers ({} - {})",
+                    minWorkers - activeThreads,
+                    minWorkers,
+                    getMaxWorkers());
             group.addThreads(minWorkers - activeThreads, true);
         } else {
             // scale down the fixed pool
+            logger.info("scale down from workers {} to {}", activeThreads, minWorkers);
             fixedPoolThreads
                     .subList(minWorkers, activeThreads)
                     .forEach(t -> t.shutdown(WorkerState.WORKER_SCALED_DOWN));

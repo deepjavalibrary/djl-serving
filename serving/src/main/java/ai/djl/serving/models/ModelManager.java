@@ -192,8 +192,6 @@ public final class ModelManager {
      */
     public void scaleWorkers(
             ModelInfo<Input, Output> model, String deviceName, int minWorkers, int maxWorkers) {
-        logger.info(
-                "scaleWorkers for {} (dev: {}): {}, {}", model, deviceName, minWorkers, maxWorkers);
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
         wlm.getWorkerPool(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
     }
