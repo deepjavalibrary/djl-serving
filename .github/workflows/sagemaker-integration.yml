@@ -11,6 +11,10 @@ on:
         description: 'The branch from the SagMaker Python SDK fork to use for testing'
         required: false
         default: ''
+      run_benchmark:
+        description: 'Runs benchmark and upload to cloud watch mertcis if set to true.'
+        required: false
+        default: true
   schedule:
     - cron: '0 4 * * *'
 
@@ -48,6 +52,8 @@ jobs:
     runs-on: [ self-hosted, cpu ]
     timeout-minutes: 120
     needs: create-runners
+    env:
+      run_benchmark: ${{ github.event.inputs.run_benchmark }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python3
@@ -100,6 +106,8 @@ jobs:
     runs-on: [ self-hosted, cpu ]
     timeout-minutes: 120
     needs: create-runners
+    env:
+      run_benchmark: ${{ github.event.inputs.run_benchmark }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python3
