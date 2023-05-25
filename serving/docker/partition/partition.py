@@ -191,12 +191,31 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default='/opt/ml/input/data/training',
+        dest='properties_dir',
         help='path of the model directory containing model/properties file')
+    parser.add_argument('--model-id',
+                        type=str,
+                        required=False,
+                        help='HuggingFace model_id or s3_uri')
+    parser.add_argument('--engine',
+                        type=str,
+                        required=False,
+                        default='Python',
+                        help='engine')
+    parser.add_argument(
+        '--save-mp-checkpoint-path',
+        type=str,
+        required=False,
+        help='local path or s3 uri to save/upload the partitioned checkpoints')
+    parser.add_argument('--tensor-parallel-degree',
+                        type=str,
+                        required=False,
+                        help='tensor parallel degree')
 
     args = parser.parse_args()
 
     extract_python_jar(PYTHON_CACHE_DIR)
 
-    properties_manager = PropertiesManager(args.model_dir)
+    properties_manager = PropertiesManager(vars(args))
     service = PartitionService(properties_manager)
     service.run_partition()

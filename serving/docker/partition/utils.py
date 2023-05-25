@@ -47,19 +47,11 @@ def get_partition_cmd(is_mpi_mode, properties):
 
 def get_engine_configs(properties):
     engine = properties['engine']
+    configs = {'option.parallel_loading': True}
     if engine == 'DeepSpeed':
-        checkpoint_path = properties.get('save_mp_checkpoint_path')
-        checkpoint_json = os.path.join(checkpoint_path,
-                                       'ds_inference_config.json')
-        if not os.path.exists(checkpoint_json):
-            raise Exception('Partition was not successful')
+        configs['option.checkpoint'] = 'ds_inference_config.json'
 
-        return {
-            'option.model_dir': checkpoint_path,
-            'option.checkpoint': 'ds_inference_config.json',
-        }
-    else:
-        return {}
+    return configs
 
 
 def extract_python_jar(target_dir):
@@ -75,12 +67,8 @@ def extract_python_jar(target_dir):
 def is_engine_mpi_mode(engine):
     if engine == 'DeepSpeed':
         return True
-    elif engine == 'FasterTransformer':
-        return False
     else:
-        raise NotImplementedError(
-            f'{engine} '
-            f'engine is not supported for ahead of time partitioning.')
+        return False
 
 
 def get_download_dir(properties_dir, suffix=""):

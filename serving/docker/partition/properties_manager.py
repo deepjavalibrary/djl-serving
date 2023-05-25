@@ -31,14 +31,13 @@ CHUNK_SIZE = 4096  # 4MB chunk size
 
 class PropertiesManager(object):
 
-    def __init__(self, properties_dir):
-        self.properties = {}
-        self.properties_dir = properties_dir
+    def __init__(self, properties):
+        self.properties = properties
+        self.properties_dir = properties.get('properties_dir')
         self.entry_point_url = None
 
         self.load_properties()
 
-        self.validate_engine()
         self.is_mpi_mode = is_engine_mpi_mode(self.properties['engine'])
 
         self.set_and_validate_model_dir()
@@ -60,15 +59,8 @@ class PropertiesManager(object):
                         continue
                     key, value = line.strip().split('=', 1)
                     self.properties[key.split(".", 1)[-1]] = value
-        else:
-            raise FileNotFoundError(
-                "serving.properties file does not exist in the path provided.")
 
     def set_and_validate_model_dir(self):
-        if 'model_id' in self.properties and 's3url' in self.properties:
-            raise KeyError(
-                'Both model_id and s3url cannot be in serving.properties')
-
         if 'model_dir' in self.properties:
             model_files = glob.glob(
                 os.path.join(self.properties['model_dir'], '*.bin'))
@@ -77,11 +69,6 @@ class PropertiesManager(object):
                     'No .bin files found in the given option.model_dir')
         elif 'model_id' in self.properties:
             self.properties['model_dir'] = self.properties_dir
-        elif 's3url' in self.properties:
-            # backward compatible only, should be replaced with model_id
-            self.properties['model_dir'] = self.properties_dir
-            self.properties['model_id'] = self.properties['s3url']
-            self.properties.pop('s3url')
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
             if model_files:
@@ -143,14 +130,6 @@ class PropertiesManager(object):
         with open(properties_file, "w") as f:
             for key, value in configs.items():
                 f.write(f"{key}={value}\n")
-
-    def validate_engine(self):
-        if 'engine' not in self.properties:
-            raise KeyError('Please specify engine in serving.properties')
-        elif self.properties['engine'] not in PARTITION_SUPPORTED_ENGINES:
-            raise NotImplementedError(
-                f'{self.properties["engine"]} '
-                f'engine is not supported for ahead of time partitioning.')
 
     def validate_tp_degree(self):
         if 'tensor_parallel_degree' not in self.properties:
