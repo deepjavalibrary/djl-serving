@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from abc import ABC, abstractmethod
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import torch
 
@@ -30,7 +30,7 @@ class SeqBatchScheduler(ABC):
 
     @abstractmethod
     def init_forward(self, input_ids: torch.Tensor, batch_uids: torch.Tensor,
-                     kv_cache: Union[List[torch.Tensor], None]) -> SeqBatcher:
+                     kv_cache: Union[Tuple, None]) -> SeqBatcher:
         pass
 
     def increment_forward(self, count: int) -> torch.Tensor:

@@ -27,14 +27,14 @@ class SeqBatcher(object):
         self.offsets = offsets
         self.exit_index_end_position = {}
 
-        past_key_values_size = batch.past_key_values[0][0].size()
+        past_key_values_size = batch.past_attention_mask.size()
         self.batch_size = past_key_values_size[0]
-        self.seq_len = past_key_values_size[2]
+        self.seq_len = past_key_values_size[1]
 
     def add_batch(self, seq_batcher: SeqBatcher):
         return self.merge_symmetric(self, seq_batcher)
 
-    def merge_symmetric(self, seq_batcher1, seq_batcher2):
+    def merge_symmetric(self, seq_batcher1: SeqBatcher, seq_batcher2: SeqBatcher):
         seq_delta = seq_batcher1.seq_len - seq_batcher2.seq_len
         if seq_delta < 0:
             seq_batcher1, seq_batcher2 = seq_batcher2, seq_batcher1
@@ -60,7 +60,7 @@ class SeqBatcher(object):
         exit_indices = set()
         for batch_index, seq_end_position in self.exit_index_end_position.items(
         ):
-            uid = self.request_uids[batch_index]
+            uid = self.request_uids[batch_index].item()
             offset = self.offsets[batch_index]
             output = self.batch.past_output_ids[batch_index,
                                                 offset:seq_end_position]
@@ -86,7 +86,7 @@ class SeqBatcher(object):
             trim_seq_len = torch.min(self.offsets, dim=0).values.item()
             self.offsets = self.offsets - trim_seq_len
 
-            self.batch = self.batch.trim(keep_indices, trim_seq_len)
+            self.batch.trim(keep_indices, trim_seq_len)
             self.batch_size -= len(exit_indices)
             self.seq_len -= trim_seq_len
 
