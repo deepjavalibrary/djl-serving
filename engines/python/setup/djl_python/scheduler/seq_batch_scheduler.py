@@ -29,7 +29,7 @@ class SeqBatchScheduler(ABC):
         self.config = config
 
     @abstractmethod
-    def init_forward(self, input_ids: torch.Tensor, request_uids: torch.Tensor,
+    def init_forward(self, input_ids: torch.Tensor, batch_uids: torch.Tensor,
                      kv_cache: Union[Tuple, None]) -> SeqBatcher:
         pass
 
@@ -42,25 +42,18 @@ class SeqBatchScheduler(ABC):
                 )
                 break
 
-            output_ids = self.inference_call()
+            yield self.inference_call()
 
-            for request_uid, output_id in zip(self.seq_batcher.request_uids, output_ids):
-                self.results[request_uid.item()].append(output_id.item())
-
-            self.seq_batcher.collect_and_trim()
+            if self.seq_batcher.seq_complete():
+                self.results.update(self.seq_batcher.collect_and_trim())
             i += 1
 
-            yield output_ids
-
     @abstractmethod
-    def inference_call(self) -> Tuple[torch.Tensor, set]:
+    def inference_call(self) -> torch.Tensor:
         pass
 
-    def add_request(self, input_ids, request_uids, kv_cache=None):
-        new_seq_batcher, output_ids = self.init_forward(input_ids, request_uids, kv_cache)
-        for request_uid, output_id in zip(request_uids, output_ids):
-            self.results[request_uid.item()] = output_id.tolist()
-
+    def add_request(self, input_ids, batch_uids, kv_cache=None):
+        new_seq_batcher = self.init_forward(input_ids, batch_uids, kv_cache)
         if self.seq_batcher:
             self.seq_batcher.add_batch(new_seq_batcher)
         else:
