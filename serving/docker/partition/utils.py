@@ -11,7 +11,8 @@ FILES_TO_EXTRACT = [
     'djl_python/', 'djl_python/__init__.py', 'djl_python/deepspeed.py',
     'djl_python/inputs.py', 'djl_python/outputs.py', 'djl_python/pair_list.py',
     'djl_python/np_util.py', 'djl_python/service_loader.py',
-    'djl_python/fastertransformer.py', 'djl_python/streaming_utils.py'
+    'djl_python/fastertransformer.py', 'djl_python/streaming_utils.py',
+    'djl_python/transformers-neuronx.py'
 ]
 
 
@@ -75,7 +76,7 @@ def extract_python_jar(target_dir):
 def is_engine_mpi_mode(engine):
     if engine == 'DeepSpeed':
         return True
-    elif engine == 'FasterTransformer':
+    elif engine in ['FasterTransformer', 'TransformersNeuronX']:
         return False
     else:
         raise NotImplementedError(

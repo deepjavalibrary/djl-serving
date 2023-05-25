@@ -24,7 +24,9 @@ EXCLUDE_PROPERTIES = [
     'engine', 'upload_checkpoints_s3url'
 ]
 
-PARTITION_SUPPORTED_ENGINES = ['DeepSpeed', 'FasterTransformer']
+PARTITION_SUPPORTED_ENGINES = [
+    'DeepSpeed', 'FasterTransformer', 'TransformersNeuronX'
+]
 
 CHUNK_SIZE = 4096  # 4MB chunk size
 
@@ -179,6 +181,8 @@ class PropertiesManager(object):
                         entry_point = "djl_python.deepspeed"
                     elif engine == "FasterTransformer":
                         entry_point = "djl_python.fastertransformer"
+                    elif engine == "TransformersNeuronX":
+                        entry_point = "djl_python.transformers-neuronx"
                     else:
                         raise FileNotFoundError(
                             f"model.py not found in model path {self.properties_dir}"

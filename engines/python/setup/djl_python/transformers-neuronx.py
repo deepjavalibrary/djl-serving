@@ -233,7 +233,8 @@ def partition(inputs: Input):
             raise ValueError(
                 f"{self.model_type} type not supported for checkpointing model {self.model_id_or_path}"
                 f"Supported model arch: {SUPPORTED_CKPT_MODEL_TYPES}")
-        _service.model._save_compiled_artifacts(properties.get("save_mp_checkpoint_path"))
+        _service.model._save_compiled_artifacts(
+            properties.get("save_mp_checkpoint_path"))
 
 
 def handle(inputs: Input):
