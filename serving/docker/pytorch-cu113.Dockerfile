@@ -15,6 +15,7 @@ FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.19.0~SNAPSHOT
 ARG torch_version=1.12.1
+ARG bitsandbytes_version=0.38.1
 
 RUN mkdir -p /opt/djl/conf
 COPY config.properties /opt/djl/conf/
@@ -56,7 +57,7 @@ ARG transformers_version=4.23.1
 ARG parallelformers_version=1.2.6
 
 COPY scripts scripts/
-RUN pip3 install transformers==${transformers_version} parallelformers==${parallelformers_version} accelerate bitsandbytes && \
+RUN pip3 install transformers==${transformers_version} parallelformers==${parallelformers_version} accelerate bitsandbytes==${bitsandbytes_version} && \
     scripts/patch_oss_dlc.sh python && \
     pip cache purge && rm -rf scripts
 
