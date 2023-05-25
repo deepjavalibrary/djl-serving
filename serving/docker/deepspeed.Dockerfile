@@ -17,6 +17,7 @@ ARG accelerate_version=0.13.2
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.7.5%2Bbf16-py2.py3-none-any.whl"
 ARG transformers_version=4.23.1
 ARG diffusers_version=0.7.2
+ARG bitsandbytes_version=0.38.1
 
 EXPOSE 8080
 
@@ -47,7 +48,7 @@ RUN apt-get update && \
     pip3 install ${torch_wheel} && \
     pip3 install ${deepspeed_wheel} &&  \
     pip3 install transformers==${transformers_version} && \
-    pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
+    pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} && \
     pip3 install diffusers[torch]==${diffusers_version} && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
