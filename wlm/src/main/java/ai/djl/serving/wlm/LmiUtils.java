@@ -59,12 +59,14 @@ public final class LmiUtils {
     static String inferLmiEngine(ModelInfo<?, ?> modelInfo) throws ModelException {
         // MMS/Torchserve
         if (Files.isDirectory(modelInfo.modelDir.resolve("MAR-INF"))) {
+            logger.info("Found legacy torchserve model, use Python engine.");
             return "Python";
         }
 
         Properties prop = modelInfo.prop;
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
         if (modelConfig == null) {
+            logger.info("No config.json found, use Python engine.");
             return "Python";
         }
 
@@ -84,22 +86,24 @@ public final class LmiUtils {
             prop.setProperty("option.tensor_parallel_degree", String.valueOf(tensorParallelDegree));
         }
 
-        if ("stable-diffusion".equals(modelConfig.getModelType())) {
+        String modelType = modelConfig.getModelType();
+        String engineName;
+        if ("stable-diffusion".equals(modelType)) {
             // TODO: Move this from hardcoded to deduced in PyModel
             prop.setProperty("option.entryPoint", "djl_python.stable-diffusion");
-            return "DeepSpeed";
+            engineName = "DeepSpeed";
+        } else if (!isTensorParallelSupported(
+                modelConfig.getNumAttentionHeads(), tensorParallelDegree)) {
+            engineName = "Python";
+        } else if (isDeepSpeedRecommended(modelType)) {
+            engineName = "DeepSpeed";
+        } else if (isFasterTransformerRecommended(modelType)) {
+            engineName = "FasterTransformer";
+        } else {
+            engineName = "Python";
         }
-
-        if (!isTensorParallelSupported(modelConfig.getNumAttentionHeads(), tensorParallelDegree)) {
-            return "Python";
-        }
-        if (isDeepSpeedRecommended(modelConfig.getModelType())) {
-            return "DeepSpeed";
-        }
-        if (isFasterTransformerRecommended(modelConfig.getModelType())) {
-            return "FasterTransformer";
-        }
-        return "Python";
+        logger.info("Detected engine: {}, modelType: {}", engineName, modelType);
+        return engineName;
     }
 
     private static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId)
