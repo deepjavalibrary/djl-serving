@@ -129,6 +129,10 @@ MME_CONFIGS = {
     }
 }
 
+ENGINE_TO_METRIC_CONFIG_ENGINE = {
+    "Python" : "Accelerate"
+}
+
 
 def get_sagemaker_session(default_bucket=DEFAULT_BUCKET,
                           default_bucket_prefix=None):
@@ -177,19 +181,23 @@ def _upload_metrics(data):
                        }])
 
 
-def _get_metric_name(name, config):
-    engine_name = config.get("metrics_config").get("engine")
+def _get_metric_name(name, model):
+
+    engine = model.engine.value[0]
+    metric_config_engine = ENGINE_TO_METRIC_CONFIG_ENGINE.get(engine, engine)
+
     num_partitions = 1
-    model_kwargs = config.get('model_kwargs')
-    if model_kwargs:
-        num_partitions = model_kwargs.get(
-            'number_of_partitions') or model_kwargs.get(
-            "tensor_parallel_degree")
+    if model.number_of_partitions:
+        num_partitions = model.number_of_partitions
 
-    return f"{name}-{engine_name}-{num_partitions}p"
+    return f"{name}-{metric_config_engine}-{num_partitions}p"
 
 
-def _run_benchmarks(predictor, config, model_name):
+def _run_benchmarks(predictor, config, metric_name):
+
+    for _ in range(10):
+        predictor.predict(config.get("payload", DEFAULT_PAYLOAD))
+
     latencies = []
     iterations = 100
     begin = time.time()
@@ -202,12 +210,12 @@ def _run_benchmarks(predictor, config, model_name):
     elapsed = (time.time() - begin) * 1000
 
     benchmark_data = {}
-    benchmark_data['metric_name'] = _get_metric_name(model_name, config)
-    benchmark_data['throughput'] = (iterations - 10) / elapsed * 1000
-    benchmark_data['avg'] = sum(latencies[10:]) / iterations
-    benchmark_data['p50'] = np.percentile(latencies[10:], 50)
-    benchmark_data['p90'] = np.percentile(latencies[10:], 90)
-    benchmark_data['p99'] = np.percentile(latencies[10:], 99)
+    benchmark_data['metric_name'] = metric_name
+    benchmark_data['throughput'] = iterations / elapsed * 1000
+    benchmark_data['avg'] = sum(latencies) / iterations
+    benchmark_data['p50'] = np.percentile(latencies, 50)
+    benchmark_data['p90'] = np.percentile(latencies, 90)
+    benchmark_data['p99'] = np.percentile(latencies, 99)
 
     _upload_metrics(benchmark_data)
 
@@ -290,7 +298,7 @@ def no_code_endpoint_test(name):
         if os.getenv("run_benchmark") and config.get("metrics_config"):
             _run_benchmarks(predictor=predictor,
                             config=config,
-                            model_name=name)
+                            metric_name=_get_metric_name(name, model))
     except Exception as e:
         print(f"Encountered error for creating model {name}. Exception: {e}")
         raise e
@@ -333,7 +341,7 @@ def single_model_endpoint_test(name):
         if os.getenv("run_benchmark") and config.get("metrics_config"):
             _run_benchmarks(predictor=predictor,
                             config=config,
-                            model_name=name)
+                            metric_name=_get_metric_name(name, model))
 
     except Exception as e:
         print(f"Encountered error for creating model {name}. Exception: {e}")
