@@ -94,10 +94,10 @@ class SeqBatcher(object):
 
         return finished_sequences
 
-    def exit_criteria(self, output_ids: torch.Tensor, max_length: int,
+    def exit_criteria(self, output_ids: torch.Tensor, max_gen_seqlen: int,
                       eos_token_id: int):
         for i in range(len(output_ids)):
-            if self.seq_len - self.offsets[i] >= max_length or output_ids[
+            if self.seq_len - self.offsets[i] >= max_gen_seqlen or output_ids[
                     i] == eos_token_id:
                 if i not in self.exit_index_end_position:
                     self.exit_index_end_position[i] = self.seq_len

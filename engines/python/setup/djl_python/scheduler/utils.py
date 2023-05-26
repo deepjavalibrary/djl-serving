@@ -160,9 +160,9 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask, kv_cache: 
 
     if kv_cache[0][0].shape[0] > 1:
         raise Exception(
-            "When kv_cache that precedes the input_ids is provided, the init_forward is restricted"
-            " to process one sequence at a time, which is not padded. This avoids the padding "
-            "bubble between the precedent kv_cache and the input_ids.")
+            "When kv_cache as a fixed prefix to the input_ids is provided, the init_forward is restricted"
+            " to apply this common kv_cache to all inputs. If you have different kv_cache, do it in a "
+            "different add_request() call")
 
     init_kv_cache_len = kv_cache[0][0].shape[2]
     batch_size = input_ids.shape[0]

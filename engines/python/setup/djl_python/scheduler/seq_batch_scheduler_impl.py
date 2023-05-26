@@ -81,12 +81,12 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
         ],
             dim=1)
 
-        # output: list(logits, past_kv, hidden_states), where logits: [batch, sequence, vocab_dim]
+        # Forward pass
         logits, past_key_values, _ = self.lm_block.forward([output_ids, position_ids, past_attention_mask],
                                                            past_key_values=batch.past_key_values)
 
         # Create SeqBatcher
-        last_logits = logits[:, -1, :]
+        last_logits = logits[:, -1, :]  # logits: [batch, sequence, vocab_dim]
         past_output_ids = torch.cat([batch.past_output_ids, output_ids], dim=1)
         self.seq_batcher.batch = Batch(past_output_ids=past_output_ids,
                                        past_attention_mask=past_attention_mask,
@@ -94,8 +94,8 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
                                        past_key_values=past_key_values)
         self.seq_batcher.seq_len += 1
 
-        # exit check
-        self.seq_batcher.exit_criteria(output_ids, self.config.max_seq_length,
+        # Exit check
+        self.seq_batcher.exit_criteria(output_ids, self.config.max_gen_seqlen,
                                        self.config.pad_token_id)
 
         return output_ids

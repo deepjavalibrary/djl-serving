@@ -1,7 +1,7 @@
 import unittest
 from djl_python.scheduler.lm_block import HuggingfaceGPT2Block
 from djl_python.scheduler.seq_batch_scheduler_impl import GreedySeqBatchScheduler
-from djl_python.scheduler.search_config import SearchConfig
+from djl_python.scheduler.search_config import SearchConfig, GreedySearchConfig
 import torch
 
 
@@ -32,7 +32,7 @@ class TestScheduler(unittest.TestCase):
         model_name = "gpt2"
         lm_block = HuggingfaceGPT2Block([model_name], {})
 
-        search_config = SearchConfig()
+        search_config = GreedySearchConfig()
         PAD = search_config.pad_token_id
         scheduler = GreedySeqBatchScheduler(lm_block, search_config)
 
@@ -47,7 +47,7 @@ class TestScheduler(unittest.TestCase):
                                        request_ids,
                                        kv_cache=None,
                                        save_kv_cache_path=kv_cache_file)
-        scheduler.add_request(input_ids, request_ids, kv_cache=None)
+        scheduler.add_request(request_ids, input_ids, kv_cache=None)
 
         # Test merging longer sequences
         input_ids = torch.tensor([
@@ -61,7 +61,7 @@ class TestScheduler(unittest.TestCase):
                 407, 760
             ]])
         request_ids = torch.tensor([[1], [2]])
-        scheduler.add_request(input_ids, request_ids, kv_cache=None)
+        scheduler.add_request(request_ids, input_ids, kv_cache=None)
         for out in scheduler.increment_forward(10):
             pass
 
@@ -72,7 +72,7 @@ class TestScheduler(unittest.TestCase):
                                     [4]])
         # Here the kv_cache_file simulates a fixed resusable prefix whose kv_cache is pre-calculated
         kv_cache = torch.load(kv_cache_file)
-        scheduler.add_request(input_ids, request_ids, kv_cache=kv_cache)
+        scheduler.add_request(request_ids, input_ids, kv_cache=kv_cache)
 
         # Test trim_and_collect
         for output in scheduler.increment_forward(100):

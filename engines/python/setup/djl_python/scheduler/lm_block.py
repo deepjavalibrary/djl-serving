@@ -17,6 +17,7 @@ from typing import List, Dict
 
 import torch
 
+
 class LMBlock(ABC):
 
     @abstractmethod

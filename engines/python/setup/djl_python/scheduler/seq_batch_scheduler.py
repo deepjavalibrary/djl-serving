@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from abc import ABC, abstractmethod
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict
 
 import torch
 
@@ -27,6 +27,7 @@ class SeqBatchScheduler(ABC):
         self.results = {}
         self.seq_batcher = None
         self.config = config
+        self.search_configs = None
 
     @abstractmethod
     def init_forward(self, input_ids: torch.Tensor, batch_uids: torch.Tensor,
@@ -52,14 +53,24 @@ class SeqBatchScheduler(ABC):
     def inference_call(self) -> torch.Tensor:
         pass
 
-    def add_request(self, input_ids, batch_uids, kv_cache=None):
+    def add_request(self, batch_uids: torch.Tensor,
+                    input_ids: torch.Tensor,
+                    search_configs: Dict[int, SearchConfig] = None,
+                    kv_cache: Union[Tuple, None] = None):
+        # Each request may have their own search_config
+        # input1={‘text’:‘Hello’, ‘parameters’: {‘temperature’:1}}
+        # input2={‘text’:’Goodbye, ‘parameters’: {‘temperature’:0.5}}
         new_seq_batcher = self.init_forward(input_ids, batch_uids, kv_cache)
         if self.seq_batcher:
             self.seq_batcher.add_batch(new_seq_batcher)
+            self.search_configs.update(search_configs if search_configs else {})
         else:
             self.seq_batcher = new_seq_batcher
+            self.search_configs = search_configs if search_configs else {}
 
     def collect_results(self):
         output = self.results
         self.results = {}
+        for batch_uid in output:
+            self.search_configs.pop(batch_uid, None)
         return output
