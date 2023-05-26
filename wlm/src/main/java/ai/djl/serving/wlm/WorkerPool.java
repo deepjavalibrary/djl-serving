@@ -229,7 +229,7 @@ public class WorkerPool<I, O> {
                     "scale up {} workers ({} - {})",
                     minWorkers - activeThreads,
                     minWorkers,
-                    getMaxWorkers());
+                    group.getMaxWorkers());
             group.addThreads(minWorkers - activeThreads, true);
         } else {
             // scale down the fixed pool
