@@ -17,6 +17,7 @@ ARG accelerate_version=0.16.0
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.8.3-py2.py3-none-any.whl"
 ARG transformers_version=4.26.0
 ARG diffusers_version=0.12.0
+ARG bitsandbytes_version=0.38.1
 
 EXPOSE 8080
 
@@ -49,7 +50,7 @@ RUN apt-get update && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
     pip3 install ${deepspeed_wheel} &&  \
     pip3 install transformers==${transformers_version} && \
-    pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes && \
+    pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} && \
     pip3 install diffusers[torch]==${diffusers_version} && \
     scripts/install_aitemplate.sh && \
     apt-get install -yq git && \
