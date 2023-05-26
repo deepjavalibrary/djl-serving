@@ -17,6 +17,7 @@ ARG ft_version="main"
 ARG triton_version="r23.04"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
 ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.23.0-py3-none-any.whl"
+ARG tb_wheel="https://publish.djl.ai/tritonserver/r23.04/tritontoolkit-23.4-py3-none-any.whl"
 ARG ompi_version=4.1.4
 ARG transformers_version=4.27.3
 ARG accelerate_version=0.17.1
@@ -57,7 +58,7 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
     ln -s /usr/local/openmpi-${ompi_version} /usr/local/mpi && \
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh ${python_version} && \
-    pip3 install ${torch_wheel} ${ft_wheel} && \
+    pip3 install ${torch_wheel} ${ft_wheel} ${tb_wheel} && \
     pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} && \
     pip3 install cmake sentencepiece && \
     pip3 cache purge && \
