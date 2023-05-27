@@ -43,11 +43,13 @@ class SeqBatchScheduler(ABC):
                 )
                 break
 
-            yield self.inference_call()
+            output = self.inference_call()
 
             if self.seq_batcher.seq_complete():
                 self.results.update(self.seq_batcher.collect_and_trim())
             i += 1
+
+            yield output
 
     @abstractmethod
     def inference_call(self) -> torch.Tensor:

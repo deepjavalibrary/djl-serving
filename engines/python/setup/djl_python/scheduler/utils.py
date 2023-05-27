@@ -56,7 +56,7 @@ def merge_tensors(tensor1: torch.Tensor,
 def trim_tensor(tensor: torch.Tensor,
                 keep_indices: torch.Tensor,
                 trim_seq_len: int,
-                seq_order=1) -> torch.Tensor:
+                seq_order: object = 1) -> torch.Tensor:
     if trim_seq_len == 0:
         return tensor[keep_indices]
 

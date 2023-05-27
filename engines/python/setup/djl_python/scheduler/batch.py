@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import torch
 from djl_python.scheduler.utils import merge_tensors, trim_tensor, nudge_tensor
-from typing import List
+from typing import List, Tuple
 
 
 class Batch:
@@ -22,8 +22,8 @@ class Batch:
     def __init__(self,
                  past_output_ids: torch.Tensor = None,
                  past_attention_mask: torch.Tensor = None,
-                 logits: torch.Tensor = None,
-                 past_key_values=None):
+                 past_key_values=None,
+                 logits: torch.Tensor = None):
         self.past_output_ids = past_output_ids
         self.past_key_values = past_key_values
         self.past_attention_mask = past_attention_mask
@@ -58,10 +58,8 @@ class Batch:
             past_key_values.append(kv)
         past_key_values = tuple(past_key_values)
 
-        return Batch(past_output_ids=past_output_ids,
-                     past_attention_mask=past_attention_mask,
-                     logits=logits,
-                     past_key_values=past_key_values)
+        return Batch(past_output_ids=past_output_ids, past_attention_mask=past_attention_mask,
+                     past_key_values=past_key_values, logits=logits)
 
     def trim(self, keep_indices: torch.Tensor, trim_seq_len: int):
         self.past_output_ids = trim_tensor(self.past_output_ids,
@@ -87,7 +85,8 @@ class Batch:
         self.past_key_values = tuple(past_key_values)
 
     def nudge_to_squeeze_bubble_padding(self, offsets: torch.Tensor, init_kv_cache_len: int):
-
+        # Here past_output_ids is not nudged to squeeze the bubble padding because it would just swap the dummy_input
+        # part and left-padded part.
         self.past_attention_mask = nudge_tensor(self.past_attention_mask, offsets, init_kv_cache_len, seq_order=1)
 
         past_key_values = []
@@ -104,57 +103,32 @@ class ContrastiveBatch(Batch):
             past_output_ids: torch.Tensor = None,
             past_attention_mask: torch.Tensor = None,
             past_hidden_states: torch.Tensor = None,
-            logits: torch.Tensor = None,
-            past_key_values: List[torch.Tensor] = None,
-    ):
+            past_key_values: Tuple = None,
+            logits: torch.Tensor = None):
         self.past_hidden_states = past_hidden_states
-        self.logits = logits
+        super().__init__(past_output_ids=past_output_ids, past_attention_mask=past_attention_mask,
+                         past_key_values=past_key_values, logits=logits)
 
-        super().__init__(past_output_ids=past_output_ids,
-                         past_attention_mask=past_attention_mask,
-                         past_key_values=past_key_values)
-
-    def merge(self, batch: ContrastiveBatch, seq_delta) -> ContrastiveBatch:
-        past_output_ids = merge_tensors(self.past_output_ids,
-                                        batch.past_output_ids,
-                                        seq_delta=seq_delta,
-                                        seq_order=1,
-                                        is_pad_token=True)
-        past_attention_mask = merge_tensors(self.past_attention_mask,
-                                            batch.past_attention_mask,
-                                            seq_delta=seq_delta,
-                                            seq_order=1)
-
+    # merges another batch with itself.
+    def merge(self, batch: ContrastiveBatch, seq_delta: int) -> ContrastiveBatch:
         past_hidden_states = merge_tensors(self.past_hidden_states,
                                            batch.past_hidden_states,
                                            seq_delta=seq_delta,
                                            seq_order=1)
-        logits = merge_tensors(self.logits,
-                               batch.logits,
-                               seq_delta=seq_delta,
-                               seq_order=-1)
 
-        past_key_values = []
-        for i in range(len(self.past_key_values)):
-            past_key_values.append(
-                merge_tensors(self.past_key_values[i],
-                              batch.past_key_values[i],
-                              seq_delta=seq_delta,
-                              seq_order=2))
+        batch = super().merge(batch, seq_delta)
 
-        return ContrastiveBatch(past_output_ids=past_output_ids,
-                                past_attention_mask=past_attention_mask,
-                                past_hidden_states=past_hidden_states,
-                                logits=logits,
-                                past_key_values=past_key_values)
+        return ContrastiveBatch(past_output_ids=batch.past_output_ids, past_attention_mask=batch.past_attention_mask,
+                                past_key_values=batch.past_key_values, logits=batch.logits,
+                                past_hidden_states=past_hidden_states)
 
-    @staticmethod
-    def trim_tensor(trim_sequence: int, keep_indices: List[int], seq_dim_order,
-                    tensor: torch.Tensor):
-        pass
-
-    def trim(self, trim_sequence: int, keep_indices: List[int]):
-        pass
+    def trim(self, keep_indices: torch.Tensor, trim_seq_len: int):
+        self.past_hidden_states = trim_tensor(self.past_hidden_states,
+                                              keep_indices=keep_indices,
+                                              trim_seq_len=trim_seq_len,
+                                              seq_order=1)
+        super().trim(keep_indices, trim_seq_len)
 
     def nudge_to_squeeze_bubble_padding(self, offsets: torch.Tensor, init_kv_cache_len: int):
-        pass
+        # The past_hidden_states doesn't have the sequence length of the prefix_kv_cache part.
+        super().nudge_to_squeeze_bubble_padding(offsets, init_kv_cache_len)

@@ -45,8 +45,9 @@ class HuggingfaceGPT2Block(LMBlock):
         self.blocks = [model]
 
     def forward(self, input: List[torch.tensor], past_key_values):
-        return self.blocks[0].forward(input_ids=input[0],
-                                      position_ids=input[1],
-                                      attention_mask=input[2],
-                                      past_key_values=past_key_values,
-                                      **self.config)
+        logits, past_key_values, hidden_states = self.blocks[0].forward(input_ids=input[0],
+                                                                        position_ids=input[1],
+                                                                        attention_mask=input[2],
+                                                                        past_key_values=past_key_values,
+                                                                        **self.config)
+        return logits, past_key_values, hidden_states[0]  # take the lowest hidden_states as token embedding
