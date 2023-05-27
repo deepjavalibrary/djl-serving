@@ -16,9 +16,46 @@ import torch
 
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from djl_python.scheduler.seq_batcher import SeqBatcher
-from djl_python.scheduler.batch import Batch
+from djl_python.scheduler.batch import Batch, ContrastiveBatch
 from djl_python.scheduler.step_generation import greedy_step_generate
-from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, assemble_prefix_kv_cache
+from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, \
+    assemble_prefix_kv_cache
+
+
+class ContrastiveSeqBatchScheduler(SeqBatchScheduler):
+    def init_forward(self, input_ids: torch.Tensor, request_ids: torch.Tensor, kv_cache=None, save_kv_cache_path="") -> \
+            SeqBatcher:
+        initial_offsets = compute_offsets(input_ids, self.config)
+        attention_mask = compute_attention_mask(input_ids, self.config)
+        position_ids = compute_position_ids(input_ids, initial_offsets, past_seq_len=0, repeat_offset=1)
+
+        # TODO: later add forward method here after LMBlock is implemented
+        output = None
+
+        last_logits = output.logits[:, -1, :]
+
+        seq_dim_order = [1 for _ in range(3)]
+        seq_dim_order.append(-1)
+        seq_dim_order.extend([2 for _ in range(4, 28)])
+
+        batch = ContrastiveBatch(
+            past_output_ids=input_ids,
+            past_attention_mask=attention_mask,
+            past_key_values=output.past_key_values,
+            logits=last_logits,
+        )
+
+        seq_batcher = SeqBatcher(batch, request_ids, initial_offsets)
+        return seq_batcher
+
+    def inference_call(self) -> torch.Tensor:
+        logits = self.seq_batcher.batch.logits
+        top_k_ids = torch.topk(logits, k=self.config.topk, dim=-1, largest=True, sorted=False)[1]
+        batch = self.seq_batcher.batch
+
+        candidate_input_ids = torch.flatten(top_k_ids).reshape(-1, 1)
+        assert candidate_input_ids.dtype == torch.int64
+        assert len(candidate_input_ids.shape) == 2
 
 
 class GreedySeqBatchScheduler(SeqBatchScheduler):
