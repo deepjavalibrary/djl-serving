@@ -11,9 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import json
 import logging
-import os
 
 import torch
 from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
@@ -64,6 +62,7 @@ class HuggingFaceService(object):
         self.initialized = False
         self.enable_streaming = False
         self.model = None
+        self.device_id = -1
         self.tokenizer = None
 
     def initialize(self, properties: dict):
@@ -72,7 +71,7 @@ class HuggingFaceService(object):
         # Otherwise we assume model artifacts are in the model_dir
         model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        device_id = int(properties.get("device_id", "-1"))
+        self.device_id = int(properties.get("device_id", "-1"))
         task = properties.get("task")
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         self.enable_streaming = properties.get("enable_streaming",
@@ -83,7 +82,7 @@ class HuggingFaceService(object):
         if "device_map" in properties:
             kwargs["device_map"] = properties.get("device_map")
             logging.info(f"Using device map {kwargs['device_map']}")
-        elif tp_degree > 0:
+        elif tp_degree > 0 and torch.cuda.device_count() > 0:
             kwargs["device_map"] = "auto"
             world_size = torch.cuda.device_count()
             assert world_size == tp_degree, f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
@@ -109,7 +108,7 @@ class HuggingFaceService(object):
 
         self.hf_pipeline = self.get_pipeline(task=task,
                                              model_id_or_path=model_id_or_path,
-                                             device=device_id,
+                                             device=self.device_id,
                                              kwargs=kwargs)
 
         self.initialized = True
@@ -121,7 +120,7 @@ class HuggingFaceService(object):
             if not accept:
                 accept = content_type if content_type.startswith(
                     "tensor/") else "application/json"
-            elif accept == "*/*":
+            elif "*/*" in accept:
                 accept = "application/json"
 
             input_map = decode(inputs, content_type)
@@ -229,15 +228,14 @@ class HuggingFaceService(object):
 
         return wrapped_pipeline
 
-    @staticmethod
-    def wrap_text_generation_pipeline(hf_pipeline):
+    def wrap_text_generation_pipeline(self, hf_pipeline):
 
         def wrapped_pipeline(inputs, *args, **kwargs):
             model = hf_pipeline.model
             tokenizer = hf_pipeline.tokenizer
-            input_tokens = tokenizer(inputs, padding=True,
-                                     return_tensors="pt").to(
-                                         torch.cuda.current_device())
+            input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
+            if self.device_id >= 0:
+                input_tokens.to(torch.cuda.current_device())
             with torch.no_grad():
                 output_tokens = model.generate(
                     *args,
