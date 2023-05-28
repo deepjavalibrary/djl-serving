@@ -805,6 +805,15 @@ public final class ModelInfo<I, O> {
         return new String[] {"-1"};
     }
 
+    /**
+     * Returns if the model can be load parallel on multiple devices.
+     *
+     * @return if the model can be load parallel on multiple devices
+     */
+    public boolean isParallelLoading() {
+        return Boolean.parseBoolean(prop.getProperty("option.parallel_loading"));
+    }
+
     private static long getFileSize(Path path) {
         try {
             if (Files.isRegularFile(path) && !Files.isHidden(path)) {
