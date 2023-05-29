@@ -30,6 +30,7 @@ import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
+import ai.djl.util.RandomUtils;
 import ai.djl.util.Utils;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -346,10 +347,7 @@ public class ModelServer {
 
         String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
         if (huggingFaceModelId != null) {
-            String url = createHuggingFaceModel(huggingFaceModelId);
-            if (url != null) {
-                urls.add(url);
-            }
+            urls.add(createHuggingFaceModel(huggingFaceModelId));
         }
 
         for (String url : urls) {
@@ -468,9 +466,10 @@ public class ModelServer {
         String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
         Path huggingFaceModelDir = parent.resolve(hash);
+        String modelName = modelId.replaceAll("(\\W|^_)", "_");
         if (Files.exists(huggingFaceModelDir)) {
-            logger.warn("HuggingFace Model {} already exists", modelId);
-            return null;
+            logger.warn("HuggingFace Model {} already exists, use random model name", modelId);
+            return modelName + '_' + RandomUtils.nextInt() + '=' + huggingFaceModelDir;
         }
         Properties huggingFaceProperties = new Properties();
         huggingFaceProperties.put("option.model_id", modelId);
@@ -485,6 +484,6 @@ public class ModelServer {
             huggingFaceProperties.store(writer, null);
         }
         logger.debug("Created serving.properties for model at path {}", propertiesFile);
-        return huggingFaceModelDir.toString();
+        return modelName + '=' + huggingFaceModelDir;
     }
 }
