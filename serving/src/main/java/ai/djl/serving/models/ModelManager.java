@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -40,6 +41,10 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /** A class that in charge of managing models. */
@@ -106,10 +111,38 @@ public final class ModelManager {
                             wlm.registerModel(model);
                             String[] devices = model.getLoadOnDevices();
                             logger.info("Loading model on {}:{}", engine, Arrays.toString(devices));
+                            ExecutorService pool = null;
+                            List<Future<?>> futures = new ArrayList<>();
+                            if (model.isParallelLoading()) {
+                                pool = Executors.newFixedThreadPool(devices.length);
+                            }
+                            int minWorkers = model.getMinWorkers();
+                            int maxWorkers = model.getMaxWorkers();
                             for (String deviceName : devices) {
-                                int minWorkers = model.getMinWorkers();
-                                int maxWorkers = model.getMaxWorkers();
-                                initWorkers(model, deviceName, minWorkers, maxWorkers);
+                                if (pool != null) {
+                                    futures.add(
+                                            pool.submit(
+                                                    () ->
+                                                            initWorkers(
+                                                                    model,
+                                                                    deviceName,
+                                                                    minWorkers,
+                                                                    maxWorkers)));
+                                } else {
+                                    initWorkers(model, deviceName, minWorkers, maxWorkers);
+                                }
+                            }
+                            if (pool != null) {
+                                pool.shutdown();
+                                for (Future<?> future : futures) {
+                                    try {
+                                        future.get();
+                                    } catch (ExecutionException e) {
+                                        throw new CompletionException(e.getCause()); // NOPMD
+                                    } catch (InterruptedException e) {
+                                        throw new AssertionError("Worker startup interrupted.", e);
+                                    }
+                                }
                             }
                         } catch (IOException | ModelException e) {
                             throw new CompletionException(e);
