@@ -205,10 +205,6 @@ export default {
       this.resultText = ''
       let fileData = new FormData()
       if (this.dataType == 'form') {
-        if (this.fileList.length < 1) {
-          this.$message.error("File list is empty ")
-          return
-        }
         this.fileList.forEach(file => {
           fileData.append("data", file.raw)
         })
