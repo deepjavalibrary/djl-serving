@@ -16,6 +16,13 @@ from transformers import AutoConfig
 from djl_python import Input, Output
 import logging
 from typing import Optional
+import torch
+
+
+def default_tp_size():
+    if torch.cuda.is_available():
+        return torch.cuda.device_count()
+    return 1
 
 
 class FasterTransformerService(object):
@@ -60,7 +67,7 @@ class FasterTransformerService(object):
 
     def initialize_properties(self, properties):
         self.tensor_parallel_degree = int(
-            properties.get("tensor_parallel_degree", 1))
+            properties.get("tensor_parallel_degree", default_tp_size()))
         self.pipeline_parallel_degree = int(
             properties.get("pipeline_parallel_degree", 1))
         self.dtype = properties.get("dtype", "fp32")

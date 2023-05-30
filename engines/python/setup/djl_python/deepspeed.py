@@ -92,6 +92,12 @@ def default_dtype():
     return "fp32"
 
 
+def default_tp_size():
+    if torch.cuda.is_available():
+        return torch.cuda.device_count()
+    return 1
+
+
 class DeepSpeedService(object):
 
     def __init__(self):
@@ -135,7 +141,7 @@ class DeepSpeedService(object):
         self.max_tokens = int(properties.get("max_tokens", 1024))
         self.device = int(os.getenv("LOCAL_RANK", 0))
         self.tensor_parallel_degree = int(
-            properties.get("tensor_parallel_degree", 1))
+            properties.get("tensor_parallel_degree", default_tp_size()))
         self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage",
                                                 "true").lower() == "true"
         self.enable_streaming = properties.get("enable_streaming",
