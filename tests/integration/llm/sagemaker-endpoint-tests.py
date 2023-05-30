@@ -129,9 +129,7 @@ MME_CONFIGS = {
     }
 }
 
-ENGINE_TO_METRIC_CONFIG_ENGINE = {
-    "Python" : "Accelerate"
-}
+ENGINE_TO_METRIC_CONFIG_ENGINE = {"Python": "Accelerate"}
 
 
 def get_sagemaker_session(default_bucket=DEFAULT_BUCKET,
