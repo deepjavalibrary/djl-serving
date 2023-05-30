@@ -21,7 +21,6 @@ COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-ENV OMP_NUM_THREADS=1
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HUGGINGFACE_HUB_CACHE=/tmp
@@ -40,7 +39,7 @@ CMD ["serve"]
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
-    mkdir -p /opt/ml/model 
+    mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 RUN scripts/install_djl_serving.sh $djl_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
