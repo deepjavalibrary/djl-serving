@@ -10,7 +10,6 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import torch
 import tempfile
 import os
 import logging
@@ -188,10 +187,9 @@ class TransformersNeuronXService(object):
             if self.enable_streaming:
                 stream_generator = StreamingUtils.get_stream_generator(
                     "transformers-neuronx")
-                model_kwargs["seq_length"] = parameters.get("max_length", 128)
-                # TODO: switch to new HF model interface
+                model_kwargs["engine"] = "transformers-neuronx"
                 outputs.add_stream_content(
-                    stream_generator(self.model.model, self.tokenizer,
+                    stream_generator(self.model, self.tokenizer,
                                      input_text, **model_kwargs))
                 return outputs
 
