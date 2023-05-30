@@ -51,35 +51,37 @@ def encode_csv(content):  # type: (str) -> np.array
 
 
 def decode(inputs: Input, content_type: str):
-    if not content_type or content_type == "application/json":
+    if not content_type or "application/json" in content_type:
         return inputs.get_as_json()
-    elif content_type == "text/csv":
+    elif "text/csv" in content_type:
         return decode_csv(inputs)
-    elif content_type == "text/plain":
+    elif "text/plain" in content_type:
         return {"inputs": [inputs.get_as_string()]}
     if content_type.startswith("image/"):
         return {"inputs": inputs.get_as_image()}
     elif content_type.startswith("audio/"):
         return {"inputs": inputs.get_as_bytes()}
-    elif content_type == "tensor/npz":
+    elif "tensor/npz" in content_type:
         return {"inputs": inputs.get_as_npz()}
     elif content_type in {"tensor/ndlist", "application/x-npy"}:
         return {"inputs": inputs.get_as_numpy()}
+    elif content_type == "application/x-www-form-urlencoded":
+        return {"inputs": inputs.get_as_string()}
     else:
         # "application/octet-stream"
         return {"inputs": inputs.get_as_bytes()}
 
 
 def encode(outputs: Output, prediction, content_type: str):
-    if content_type == "application/json":
+    if not content_type or "application/json" in content_type:
         outputs.add_as_json(prediction)
-        outputs.add_property("Content-Type", content_type)
-    elif content_type == "text/csv":
+        outputs.add_property("Content-Type", "application/json")
+    elif "text/csv" in content_type:
         outputs.add_as_string(encode_csv(prediction))
-        outputs.add_property("Content-Type", content_type)
-    elif content_type == "tensor/npz":
+        outputs.add_property("Content-Type", "text/csv")
+    elif "tensor/npz" in content_type:
         outputs.add_as_npz(prediction)
-        outputs.add_property("Content-Type", content_type)
+        outputs.add_property("Content-Type", "tensor/npz")
     else:
         outputs.add_as_numpy(prediction)
         outputs.add_property("Content-Type", "tensor/ndlist")
