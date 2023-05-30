@@ -333,7 +333,7 @@ def single_model_endpoint_test(name):
         outputs = predictor.predict(data=data)
         print(outputs)
 
-        if os.getenv("run_benchmark") and config.get("metrics_config"):
+        if os.getenv("run_benchmark"):
             _run_benchmarks(predictor=predictor,
                             config=config,
                             metric_name=_get_metric_name(name, model))
