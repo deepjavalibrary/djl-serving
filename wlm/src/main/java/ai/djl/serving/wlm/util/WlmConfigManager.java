@@ -15,6 +15,7 @@ package ai.djl.serving.wlm.util;
 import ai.djl.Device;
 import ai.djl.Model;
 import ai.djl.ndarray.NDManager;
+import ai.djl.util.Utils;
 
 /** This manages some configurations used by the {@link ai.djl.serving.wlm.WorkLoadManager}. */
 public final class WlmConfigManager {
@@ -199,7 +200,16 @@ public final class WlmConfigManager {
             }
             return 2;
         }
-        return Runtime.getRuntime().availableProcessors();
+
+        int cpuCores = Runtime.getRuntime().availableProcessors();
+        int ompThreads = Integer.parseInt(Utils.getenv("OMP_NUM_THREADS", "-1"));
+        if (ompThreads > 0) {
+            if (ompThreads > cpuCores) {
+                ompThreads = cpuCores;
+            }
+            return cpuCores * 2 / ompThreads;
+        }
+        return 2;
     }
 
     private static int getWorkersProperty(Model model, String key, int def) {
