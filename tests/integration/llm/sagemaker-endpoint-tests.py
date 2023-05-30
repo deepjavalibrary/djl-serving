@@ -1,10 +1,13 @@
+import os
 import sagemaker
 import boto3
+import time
 from sagemaker.djl_inference import DJLModel, HuggingFaceAccelerateModel, DeepSpeedModel, FasterTransformerModel
 from sagemaker.huggingface import HuggingFaceModel
 from sagemaker.multidatamodel import MultiDataModel
 from sagemaker.utils import unique_name_from_base
 from argparse import ArgumentParser
+import numpy as np
 
 parser = ArgumentParser(
     description=
@@ -126,6 +129,10 @@ MME_CONFIGS = {
     }
 }
 
+ENGINE_TO_METRIC_CONFIG_ENGINE = {
+    "Python" : "Accelerate"
+}
+
 
 def get_sagemaker_session(default_bucket=DEFAULT_BUCKET,
                           default_bucket_prefix=None):
@@ -146,6 +153,71 @@ def get_name_for_resource(name):
     cleaned_name = ''.join(filter(str.isalnum, name))
     base_name = "sm-integration-test-{}".format(cleaned_name)
     return unique_name_from_base(base_name)
+
+
+def _upload_metrics(data):
+    cw = boto3.client('cloudwatch')
+    cw.put_metric_data(Namespace='LLM',
+                       MetricData=[{
+                           'MetricName': f"{data['metric_name']}-throughput",
+                           'Unit': 'Count/Second',
+                           'Value': data['throughput']
+                       }, {
+                           'MetricName': f"{data['metric_name']}-avg",
+                           'Unit': 'Milliseconds',
+                           'Value': data['avg']
+                       }, {
+                           'MetricName': f"{data['metric_name']}-p50",
+                           'Unit': 'Milliseconds',
+                           'Value': data['p50']
+                       }, {
+                           'MetricName': f"{data['metric_name']}-p90",
+                           'Unit': 'Milliseconds',
+                           'Value': data['p90']
+                       }, {
+                           'MetricName': f"{data['metric_name']}_p99",
+                           'Unit': 'Milliseconds',
+                           'Value': data['p99']
+                       }])
+
+
+def _get_metric_name(name, model):
+
+    engine = model.engine.value[0]
+    metric_config_engine = ENGINE_TO_METRIC_CONFIG_ENGINE.get(engine, engine)
+
+    num_partitions = 1
+    if model.number_of_partitions:
+        num_partitions = model.number_of_partitions
+
+    return f"{name}-{metric_config_engine}-{num_partitions}p"
+
+
+def _run_benchmarks(predictor, config, metric_name):
+
+    for _ in range(10):
+        predictor.predict(config.get("payload", DEFAULT_PAYLOAD))
+
+    latencies = []
+    iterations = 100
+    begin = time.time()
+
+    for _ in range(iterations):
+        start = time.time()
+        predictor.predict(config.get("payload", DEFAULT_PAYLOAD))
+        latencies.append((time.time() - start) * 1000)
+
+    elapsed = (time.time() - begin) * 1000
+
+    benchmark_data = {}
+    benchmark_data['metric_name'] = metric_name
+    benchmark_data['throughput'] = iterations / elapsed * 1000
+    benchmark_data['avg'] = sum(latencies) / iterations
+    benchmark_data['p50'] = np.percentile(latencies, 50)
+    benchmark_data['p90'] = np.percentile(latencies, 90)
+    benchmark_data['p99'] = np.percentile(latencies, 99)
+
+    _upload_metrics(benchmark_data)
 
 
 def mme_test(name):
@@ -260,6 +332,12 @@ def single_model_endpoint_test(name):
                                  deserializer=config.get("deserializer", None))
         outputs = predictor.predict(data=data)
         print(outputs)
+
+        if os.getenv("run_benchmark"):
+            _run_benchmarks(predictor=predictor,
+                            config=config,
+                            metric_name=_get_metric_name(name, model))
+
     except Exception as e:
         print(f"Encountered error for creating model {name}. Exception: {e}")
         raise e
