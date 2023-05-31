@@ -261,6 +261,14 @@ public class PyEnv {
 
     int getMpiWorkers() {
         int gpuCount = CudaUtils.getGpuCount();
+        String visibleDevices = Utils.getenv("CUDA_VISIBLE_DEVICES");
+        if (gpuCount > 0 && visibleDevices != null) {
+            int visibleCount = visibleDevices.split(",").length;
+            if (visibleCount > gpuCount || visibleCount < 1) {
+                throw new AssertionError("Invalid CUDA_VISIBLE_DEVICES: " + visibleDevices);
+            }
+            gpuCount = visibleCount;
+        }
         return gpuCount / getTensorParallelDegree();
     }
 
