@@ -7,6 +7,10 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
+      run_test:
+        description: 'Run only the tests you need [ft, ds, hf, aot, all]'
+        required: false
+        default: 'all'
   schedule:
     - cron: '0 15 * * *'
 
@@ -48,6 +52,7 @@ jobs:
       gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g5_instance_id }}
 
   ds-raw-test:
+    if: contains(fromJson('["all", "ds"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -102,6 +107,7 @@ jobs:
           path: tests/integration/logs/
 
   hf-handler-test:
+    if: contains(fromJson('["all", "hf"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -190,6 +196,7 @@ jobs:
           path: tests/integration/logs/
 
   ds-handler-test:
+    if: contains(fromJson('["all", "ds"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -291,6 +298,7 @@ jobs:
           path: tests/integration/logs/
 
   ft-raw-test:
+    if: contains(fromJson('["all", "ft"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -372,6 +380,7 @@ jobs:
           path: tests/integration/logs/
 
   ft-handler-test:
+    if: contains(fromJson('["all", "ft"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -426,6 +435,7 @@ jobs:
           path: tests/integration/logs/
 
   ft-aot-raw-test:
+    if: contains(fromJson('["all", "aot"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -554,6 +564,7 @@ jobs:
           path: tests/integration/logs/
 
   ft-aot-handler-test:
+    if: contains(fromJson('["all", "aot"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -677,6 +688,7 @@ jobs:
           path: tests/integration/logs/
 
   ds-aot-test:
+    if: contains(fromJson('["all", "aot"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -770,6 +782,7 @@ jobs:
 
 
   ds-handler-aot-test:
+    if: contains(fromJson('["all", "aot"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -854,6 +867,7 @@ jobs:
           name: ds-aot-handler-logs
 
   huggingface-test:
+    if: contains(fromJson('["all", "hf"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
