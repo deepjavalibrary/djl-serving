@@ -14,8 +14,8 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.23.0~SNAPSHOT
-ARG torch_version=2.0.0
-ARG torch_vision_version=0.15.1
+ARG torch_version=2.0.1
+ARG torch_vision_version=0.15.2
 ARG python_version=3.9
 
 RUN mkdir -p /opt/djl/conf && \

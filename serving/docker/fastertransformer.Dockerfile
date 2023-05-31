@@ -19,8 +19,8 @@ ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaw
 ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.23.0-py3-none-any.whl"
 ARG tb_wheel="https://publish.djl.ai/tritonserver/r23.04/tritontoolkit-23.4-py3-none-any.whl"
 ARG ompi_version=4.1.4
-ARG transformers_version=4.27.3
-ARG accelerate_version=0.17.1
+ARG transformers_version=4.29.2
+ARG accelerate_version=0.19.0
 ARG bitsandbytes_version=0.38.1
 
 EXPOSE 8080
