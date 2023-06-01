@@ -119,22 +119,18 @@ class TestScheduler(unittest.TestCase):
 
         scheduler = GreedySeqBatchScheduler(lm_block, SearchConfig())
 
+        # Initialize the SeqBatcher
         input_ids = torch.tensor(
             [[13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460]],
             dtype=torch.int64)
-
         request_ids = torch.tensor([[0]])
-
-        # Initialize the SeqBatcher
         seq_batcher = scheduler.init_forward(input_ids, request_ids)[0]
 
         input_ids_new = torch.tensor([
             [2215, 534, 7405, 836, 470, 670, 588, 484, 973, 284, 878, 843, 314,
              460, 470, 16085, 345, 572
              ]])
-
         request_ids_new = torch.tensor([[1]])
-
         seq_batcher_new = scheduler.init_forward(input_ids_new, request_ids_new)[0]
 
         # Test SeqBatcher.add_batch
@@ -174,7 +170,7 @@ class TestScheduler(unittest.TestCase):
         offsets = compute_offsets(input_ids1, config)
         assert torch.all(offsets == torch.tensor([[6], [0]]))
 
-        attention_mask = compute_attention_mask(input_ids1, config)
+        attention_mask = compute_attention_mask(offsets, input_ids1.shape[-1])
         assert torch.all(attention_mask == torch.tensor(
             [[0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]))

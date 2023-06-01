@@ -123,15 +123,14 @@ def compute_position_ids(batch_size: int, input_seq_len: int,
     return position_ids
 
 
-def compute_attention_mask(offsets, seq_len, repeat_offset: int = 1):
+def compute_attention_mask(offsets, seq_len, repeat_offset: int=1):
     if len(offsets.shape) != 2:
         raise Exception("wrong shape of offsets")
 
     batch_size = len(offsets) * repeat_offset
     past_attention_mask = torch.ones(batch_size, seq_len, dtype=torch.int64)
     for i, offset in enumerate(offsets):
-        repeat_part = slice(i * repeat_offset, (i + 1) * repeat_offset)
-        past_attention_mask[repeat_part, :offset.item()] = 0
+        past_attention_mask[i, :offset.item()] = 0
 
     return past_attention_mask
 
