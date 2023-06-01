@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh ${python_version} && \
     pip3 install ${torch_wheel} ${ft_wheel} ${tb_wheel} && \
-    pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} && \
+    pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} einops && \
     pip3 install cmake sentencepiece && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \

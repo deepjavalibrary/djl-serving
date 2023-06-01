@@ -56,7 +56,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu117 \
     ${deepspeed_wheel} transformers==${transformers_version} \
-    triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
+    triton==2.0.0.dev20221202 mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
