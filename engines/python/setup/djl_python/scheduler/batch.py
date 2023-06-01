@@ -53,7 +53,7 @@ class Batch:
                 kv += (merge_tensors(kv1,
                                      kv2,
                                      seq_delta=seq_delta,
-                                     seq_order=2),)
+                                     seq_order=2), )
             past_key_values.append(kv)
         past_key_values = tuple(past_key_values)
 
@@ -80,17 +80,33 @@ class Batch:
 
         past_key_values = []
         for k, v in self.past_key_values:
-            k = trim_tensor(k, keep_indices=keep_indices, trim_seq_len=trim_seq_len, seq_order=2)
-            v = trim_tensor(v, keep_indices=keep_indices, trim_seq_len=trim_seq_len, seq_order=2)
+            k = trim_tensor(k,
+                            keep_indices=keep_indices,
+                            trim_seq_len=trim_seq_len,
+                            seq_order=2)
+            v = trim_tensor(v,
+                            keep_indices=keep_indices,
+                            trim_seq_len=trim_seq_len,
+                            seq_order=2)
             past_key_values.append((k, v))
         self.past_key_values = tuple(past_key_values)
 
-    def nudge_to_squeeze_bubble_padding(self, offsets: torch.Tensor, init_kv_cache_len: int):
+    def nudge_to_squeeze_bubble_padding(self, offsets: torch.Tensor,
+                                        init_kv_cache_len: int):
 
-        self.past_attention_mask = nudge_tensor(self.past_attention_mask, offsets, init_kv_cache_len, seq_order=1)
+        self.past_attention_mask = nudge_tensor(self.past_attention_mask,
+                                                offsets,
+                                                init_kv_cache_len,
+                                                seq_order=1)
 
         past_key_values = []
         for k, v in self.past_key_values:
-            past_key_values.append((nudge_tensor(k, offsets, init_kv_cache_len, seq_order=2),
-                                    nudge_tensor(v, offsets, init_kv_cache_len, seq_order=2)))
+            past_key_values.append((nudge_tensor(k,
+                                                 offsets,
+                                                 init_kv_cache_len,
+                                                 seq_order=2),
+                                    nudge_tensor(v,
+                                                 offsets,
+                                                 init_kv_cache_len,
+                                                 seq_order=2)))
         self.past_key_values = tuple(past_key_values)
