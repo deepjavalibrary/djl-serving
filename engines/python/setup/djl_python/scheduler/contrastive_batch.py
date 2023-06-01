@@ -21,12 +21,12 @@ from djl_python.scheduler.batch import Batch
 class ContrastiveBatch(Batch):
 
     def __init__(
-            self,
-            past_output_ids: torch.Tensor = None,
-            past_attention_mask: torch.Tensor = None,
-            past_hidden_states: torch.Tensor = None,
-            logits: torch.Tensor = None,
-            past_key_values: List[torch.Tensor] = None,
+        self,
+        past_output_ids: torch.Tensor = None,
+        past_attention_mask: torch.Tensor = None,
+        past_hidden_states: torch.Tensor = None,
+        logits: torch.Tensor = None,
+        past_key_values: List[torch.Tensor] = None,
     ):
         self.past_hidden_states = past_hidden_states
         self.logits = logits
@@ -41,5 +41,6 @@ class ContrastiveBatch(Batch):
     def trim(self, trim_sequence: int, keep_indices: List[int]):
         pass
 
-    def nudge_to_squeeze_bubble_padding(self, offsets: torch.Tensor, init_kv_cache_len: int):
+    def nudge_to_squeeze_bubble_padding(self, offsets: torch.Tensor,
+                                        init_kv_cache_len: int):
         pass

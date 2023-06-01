@@ -34,7 +34,8 @@ class SeqBatcher(object):
     def add_batch(self, seq_batcher: SeqBatcher):
         return self.merge_symmetric(self, seq_batcher)
 
-    def merge_symmetric(self, seq_batcher1: SeqBatcher, seq_batcher2: SeqBatcher):
+    def merge_symmetric(self, seq_batcher1: SeqBatcher,
+                        seq_batcher2: SeqBatcher):
         seq_delta = seq_batcher1.seq_len - seq_batcher2.seq_len
         if seq_delta < 0:
             seq_batcher1, seq_batcher2 = seq_batcher2, seq_batcher1

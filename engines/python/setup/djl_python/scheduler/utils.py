@@ -16,7 +16,8 @@ import torch
 
 from djl_python.scheduler.search_config import SearchConfig
 
-PAD_TOKEN_ID = 220
+#TODO: Remove this here and use Search config's pad_token_id
+PAD_TOKEN_ID = 50256
 
 
 def merge_tensors(tensor1: torch.Tensor,
@@ -68,10 +69,8 @@ def trim_tensor(tensor: torch.Tensor,
         return tensor[keep_indices]
 
 
-def nudge_tensor(tensor: torch.Tensor,
-                 offsets: torch.Tensor,
-                 init_seq_len: int,
-                 seq_order: int):
+def nudge_tensor(tensor: torch.Tensor, offsets: torch.Tensor,
+                 init_seq_len: int, seq_order: int):
     if len(offsets.shape) < 2:
         offsets = offsets.view(-1, 1)
 
@@ -82,10 +81,12 @@ def nudge_tensor(tensor: torch.Tensor,
     for i in range(offsets.shape[0]):
         offset = offsets[i].item()
         if seq_order == 1:
-            tensor_new[i, offset: offset + init_seq_len, ...] = tensor[i, :init_seq_len, ...]
+            tensor_new[i, offset:offset + init_seq_len,
+                       ...] = tensor[i, :init_seq_len, ...]
             tensor_new[i, :offset, ...] = 0
         elif seq_order == 2:
-            tensor_new[i, :, offset: offset + init_seq_len, ...] = tensor[i, :, :init_seq_len, ...]
+            tensor_new[i, :, offset:offset + init_seq_len,
+                       ...] = tensor[i, :, :init_seq_len, ...]
 
     return tensor_new
 
@@ -133,7 +134,8 @@ def compute_attention_mask(input_ids, config: SearchConfig):
     return attention_mask
 
 
-def compute_position_ids(batch_size: int, input_seq_len: int, offsets: torch.Tensor, past_seq_len: int,
+def compute_position_ids(batch_size: int, input_seq_len: int,
+                         offsets: torch.Tensor, past_seq_len: int,
                          repeat_offset: int):
     # past_seq_len: the starting position of the whole batch
     # repeat_offset: interleave_repeat the offsets to match the batch size of input_ids
@@ -154,7 +156,8 @@ def compute_position_ids(batch_size: int, input_seq_len: int, offsets: torch.Ten
     return position_ids
 
 
-def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask, kv_cache: Tuple):
+def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
+                             kv_cache: Tuple):
     if kv_cache is None:
         return None, position_ids, attention_mask, None
 
@@ -170,7 +173,8 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask, kv_cache: 
     attention_mask = torch.cat([
         torch.ones(
             (batch_size, init_kv_cache_len), dtype=torch.int64), attention_mask
-    ], dim=1)
+    ],
+                               dim=1)
     position_ids += init_kv_cache_len
     dummy_input_ids = torch.full([batch_size, init_kv_cache_len],
                                  fill_value=0,
@@ -178,12 +182,8 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask, kv_cache: 
 
     kv_cache_copied = []
     for k, v in kv_cache:
-        k_copied = torch.repeat_interleave(k,
-                                           dim=0,
-                                           repeats=batch_size)
-        v_copied = torch.repeat_interleave(v,
-                                           dim=0,
-                                           repeats=batch_size)
+        k_copied = torch.repeat_interleave(k, dim=0, repeats=batch_size)
+        v_copied = torch.repeat_interleave(v, dim=0, repeats=batch_size)
         kv_cache_copied.append((k_copied, v_copied))
     kv_cache = tuple(kv_cache_copied)
 

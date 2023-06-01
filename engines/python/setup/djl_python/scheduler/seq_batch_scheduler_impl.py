@@ -36,15 +36,19 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
 
         init_offsets = compute_offsets(input_ids, self.config)
         attention_mask = compute_attention_mask(input_ids, self.config)
-        position_ids = compute_position_ids(input_ids.shape[0], input_ids.shape[-1], init_offsets, past_seq_len=0,
+        position_ids = compute_position_ids(input_ids.shape[0],
+                                            input_ids.shape[-1],
+                                            init_offsets,
+                                            past_seq_len=0,
                                             repeat_offset=1)
 
-        dummy_input_ids, position_ids, attention_mask, kv_cache = assemble_prefix_kv_cache(input_ids, position_ids,
-                                                                                           attention_mask, kv_cache)
+        dummy_input_ids, position_ids, attention_mask, kv_cache = assemble_prefix_kv_cache(
+            input_ids, position_ids, attention_mask, kv_cache)
 
         # output: list(logits, past_kv, hidden_state), where logits: [batch, sequence, vocab_dim]
         model_input = [input_ids, position_ids, attention_mask]
-        logits, past_key_values, _ = self.lm_block.forward(model_input, past_key_values=kv_cache)
+        logits, past_key_values, _ = self.lm_block.forward(
+            model_input, past_key_values=kv_cache)
 
         # Create SeqBatcher
         if save_kv_cache_path:
@@ -59,7 +63,8 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
                       past_key_values=past_key_values)
 
         if kv_cache is not None:
-            batch.nudge_to_squeeze_bubble_padding(init_offsets, kv_cache[0][0].shape[2])
+            batch.nudge_to_squeeze_bubble_padding(init_offsets,
+                                                  kv_cache[0][0].shape[2])
 
         return SeqBatcher(batch, request_ids, init_offsets)
 
@@ -71,18 +76,22 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
         assert len(output_ids.shape) == 2
 
         # prepare the next model_input
-        position_ids = compute_position_ids(output_ids.shape[0], output_ids.shape[-1], self.seq_batcher.offsets,
-                                            past_seq_len=self.seq_batcher.seq_len,
-                                            repeat_offset=1)
+        position_ids = compute_position_ids(
+            output_ids.shape[0],
+            output_ids.shape[-1],
+            self.seq_batcher.offsets,
+            past_seq_len=self.seq_batcher.seq_len,
+            repeat_offset=1)
         past_attention_mask = torch.cat([
             batch.past_attention_mask,
             torch.ones_like(output_ids, dtype=torch.int64)
         ],
-            dim=1)
+                                        dim=1)
 
         # output: list(logits, past_kv, hidden_states), where logits: [batch, sequence, vocab_dim]
-        logits, past_key_values, _ = self.lm_block.forward([output_ids, position_ids, past_attention_mask],
-                                                           past_key_values=batch.past_key_values)
+        logits, past_key_values, _ = self.lm_block.forward(
+            [output_ids, position_ids, past_attention_mask],
+            past_key_values=batch.past_key_values)
 
         # Create SeqBatcher
         last_logits = logits[:, -1, :]
