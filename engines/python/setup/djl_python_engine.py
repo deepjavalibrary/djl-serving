@@ -117,7 +117,8 @@ class PythonEngine(object):
                 if outputs is None:
                     outputs = Output(code=204, message="No content")
                 elif not isinstance(outputs, Output):
-                    outputs = Output().error(f"Invalid output type: {type(outputs)}")
+                    outputs = Output().error(
+                        f"Invalid output type: {type(outputs)}")
             except Exception as e:
                 logging.exception("Failed invoke service.invoke_handler()")
                 if type(e).__name__ == "OutOfMemoryError" or type(

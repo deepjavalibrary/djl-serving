@@ -108,7 +108,8 @@ class DeepSpeedService(object):
         self.model_config = None
         self.low_cpu_mem_usage = False
         self.enable_streaming = False
-        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE", "FALSE").lower() == 'true'
+        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
+                                                "FALSE").lower() == 'true'
         self.model = None
         self.tokenizer = None
 
@@ -142,7 +143,8 @@ class DeepSpeedService(object):
         self.enable_streaming = properties.get("enable_streaming",
                                                "false").lower() == "true"
         if "trust_remote_code" in properties:
-            self.trust_remote_code = properties.get("trust_remote_code").lower() == "true"
+            self.trust_remote_code = properties.get(
+                "trust_remote_code").lower() == "true"
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
                 self.ds_config = json.load(f)
@@ -290,8 +292,9 @@ class DeepSpeedService(object):
 
             outputs = Output()
             if self.enable_streaming:
-                stream_generator = StreamingUtils.get_stream_generator(
+                stream_generator, ctype = StreamingUtils.get_stream_generator(
                     "DeepSpeed")
+                outputs.add_property("content-type", ctype)
                 outputs.add_stream_content(
                     stream_generator(self.model, self.tokenizer, input_data,
                                      **model_kwargs))

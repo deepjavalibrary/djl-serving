@@ -185,12 +185,13 @@ class TransformersNeuronXService(object):
             model_kwargs = {}
 
             if self.enable_streaming:
-                stream_generator = StreamingUtils.get_stream_generator(
+                stream_generator, c_type = StreamingUtils.get_stream_generator(
                     "transformers-neuronx")
+                outputs.add_property("content-type", ctype)
                 model_kwargs["engine"] = "transformers-neuronx"
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer,
-                                     input_text, **model_kwargs))
+                    stream_generator(self.model, self.tokenizer, input_text,
+                                     **model_kwargs))
                 return outputs
 
             encoded_inputs = self.tokenizer.batch_encode_plus(

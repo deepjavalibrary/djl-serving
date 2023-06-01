@@ -17,16 +17,15 @@ class StreamingUtils:
     SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM = (
         "T5ForConditionalGeneration", )
     SUPPORTED_MODEL_ARCH_SUFFIXES = SUPPORTED_MODEL_ARCH_SUFFIXES_CAUSAL_LM + SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM
+    BUILTIN_ENGINES = {"DeepSpeed", "Accelerate", "transformers-neuronx"}
 
     @staticmethod
     def get_stream_generator(execution_engine: str):
         ## execution_engine passed to this function is not the same engine specified in serving.properties
         ## in djl-serving. For e.g Accelerate and neuronx use Python as the engine serving.properties
         ## The engine here refers to backend model parallel framework.
-        if execution_engine in {
-                "DeepSpeed", "Accelerate", "transformers-neuronx"
-        }:
-            return StreamingUtils._hf_model_stream_generator
+        if execution_engine in StreamingUtils.BUILTIN_ENGINES:
+            return StreamingUtils._hf_model_stream_generator, "application/jsonlines"
         else:
             raise ValueError(
                 f"{execution_engine} engine is not supported for streaming")

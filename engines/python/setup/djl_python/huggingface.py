@@ -77,9 +77,11 @@ class HuggingFaceService(object):
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         self.enable_streaming = properties.get("enable_streaming",
                                                "false").lower() == "true"
-        trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE", "FALSE").lower() == 'true'
+        trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
+                                           "FALSE").lower() == 'true'
         if "trust_remote_code" in properties:
-            trust_remote_code = properties.get("trust_remote_code").lower() == "true"
+            trust_remote_code = properties.get(
+                "trust_remote_code").lower() == "true"
         # HF Acc handling
         kwargs = {"trust_remote_code": trust_remote_code}
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
@@ -133,8 +135,9 @@ class HuggingFaceService(object):
             outputs = Output()
 
             if self.enable_streaming:
-                stream_generator = StreamingUtils.get_stream_generator(
+                stream_generator, ctype = StreamingUtils.get_stream_generator(
                     "Accelerate")
+                outputs.add_property("content-type", ctype)
                 outputs.add_stream_content(
                     stream_generator(self.model, self.tokenizer, data,
                                      **parameters))
