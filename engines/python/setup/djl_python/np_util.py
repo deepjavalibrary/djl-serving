@@ -141,10 +141,11 @@ def from_nd_list(encoded: bytearray) -> list:
     for _ in range(num_ele):
         magic, idx = get_str(encoded, idx)
         if magic != MAGIC_NUMBER:
-            raise AssertionError("magic number is not NDAR, actual " + magic)
+            raise AssertionError(f"magic number is not NDAR, actual {magic}")
         version, idx = get_int(encoded, idx)
         if version != VERSION:
-            raise AssertionError(f"require version {VERSION}, actual " + str(version))
+            raise AssertionError(
+                f"require version {VERSION}, actual {version}")
         flag, idx = get_byte_as_int(encoded, idx)
         if flag == 1:
             _, idx = get_str(encoded, idx)
