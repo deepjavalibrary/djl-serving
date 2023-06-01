@@ -2,7 +2,8 @@ import unittest
 from djl_python.scheduler import HuggingfaceBlock
 from djl_python.scheduler import GreedySeqBatchScheduler
 from djl_python.scheduler import SearchConfig
-from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, trim_tensor
+from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
+    trim_tensor
 from transformers import AutoConfig, GPT2LMHeadModel, GPT2Tokenizer
 import torch
 
@@ -111,6 +112,49 @@ class TestScheduler(unittest.TestCase):
                                                                    2652, 13,
                                                                    314, 1101, 994, 284, 2652, 13]))
 
+    def test_seq_batcher(self):
+        model_id = "gpt2"
+        model = GPT2LMHeadModel.from_pretrained(model_id)
+        lm_block = HuggingfaceBlock(model)
+
+        scheduler = GreedySeqBatchScheduler(lm_block, SearchConfig())
+
+        input_ids = torch.tensor(
+            [[13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460]],
+            dtype=torch.int64)
+
+        request_ids = torch.tensor([[0]])
+
+        # Initialize the SeqBatcher
+        seq_batcher = scheduler.init_forward(input_ids, request_ids)[0]
+
+        input_ids_new = torch.tensor([
+            [2215, 534, 7405, 836, 470, 670, 588, 484, 973, 284, 878, 843, 314,
+             460, 470, 16085, 345, 572
+             ]])
+
+        request_ids_new = torch.tensor([[1]])
+
+        seq_batcher_new = scheduler.init_forward(input_ids_new, request_ids_new)[0]
+
+        # Test SeqBatcher.add_batch
+        seq_batcher.add_batch(seq_batcher_new)
+
+        assert torch.all(seq_batcher.offsets == torch.tensor([[0], [8]]))
+        assert torch.all(seq_batcher.request_uids == torch.tensor([[1], [0]]))
+        assert seq_batcher.seq_len == 18
+        assert len(seq_batcher.exit_index) == 0
+        assert seq_batcher.batch_size == 2
+
+        # Test collect_and_trim
+        seq_batcher.exit_index.add(0)  # suppose the 0th sequence should exit
+        seq_batcher.collect_and_trim()
+        assert torch.all(seq_batcher.offsets == torch.tensor([[0]]))
+        assert torch.all(seq_batcher.request_uids == torch.tensor([[0]]))
+        assert seq_batcher.seq_len == 10
+        assert len(seq_batcher.exit_index) == 0
+        assert seq_batcher.batch_size == 1
+
     def test_utils(self):
         model_name = 'gpt2'
         tokenizer = GPT2Tokenizer.from_pretrained(model_name,
@@ -160,8 +204,8 @@ class TestScheduler(unittest.TestCase):
 
         # removed the second row which has the largest sequence length
         trimmed_tensor = trim_tensor(merged_tensor,
-                                    keep_indices=torch.tensor([0, 2]),
-                                    trim_seq_len=5)
+                                     keep_indices=torch.tensor([0, 2]),
+                                     trim_seq_len=5)
         assert torch.all(trimmed_tensor == torch.tensor(
             [[50256, 29744, 28478, 5834, 318], [37, 1603, 7645, 16354, 318]]))
 
