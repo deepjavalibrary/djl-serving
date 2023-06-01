@@ -384,6 +384,11 @@ public class PyEngineTest {
             String error = json.getAsJsonObject().get("error").getAsString();
             Assert.assertEquals(error, "model error");
 
+            input = new Input();
+            input.add("typeerror", "type error");
+            output = predictor.predict(input);
+            Assert.assertEquals(output.getCode(), 424);
+
             // Test empty input
             input = new Input();
             input.add("exception", "");

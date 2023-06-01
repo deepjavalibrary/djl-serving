@@ -35,6 +35,8 @@ def handle(inputs: Input):
     if inputs.contains_key("exception"):
         ex = inputs.get_as_string("exception")
         raise ValueError(ex)
+    elif inputs.contains_key("typeerror"):
+        return "invalid_type"
     elif inputs.contains_key("exit"):
         sys.exit()
 
