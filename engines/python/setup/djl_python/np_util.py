@@ -144,7 +144,7 @@ def from_nd_list(encoded: bytearray) -> list:
             raise AssertionError("magic number is not NDAR, actual " + magic)
         version, idx = get_int(encoded, idx)
         if version != VERSION:
-            raise AssertionError("require version 2, actual " + str(version))
+            raise AssertionError(f"require version {VERSION}, actual " + str(version))
         flag, idx = get_byte_as_int(encoded, idx)
         if flag == 1:
             _, idx = get_str(encoded, idx)
