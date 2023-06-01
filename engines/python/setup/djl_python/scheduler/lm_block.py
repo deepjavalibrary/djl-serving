@@ -12,8 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 from abc import ABC, abstractmethod
-from transformers import GPT2LMHeadModel
-from typing import List, Dict
+from typing import List
 
 import torch
 
@@ -25,29 +24,41 @@ class LMBlock(ABC):
         pass
 
     @abstractmethod
-    def forward(self, input, past_key_values):
+    def forward(self, inputs, past_key_values):
         pass
 
 
-class HuggingfaceGPT2Block(LMBlock):
+class HuggingfaceBlock(LMBlock):
 
-    def __init__(self, model_urls: List[str], config: Dict):
-        super(HuggingfaceGPT2Block, self).__init__()
-        self.config = {
-            'use_cache': config.get('use_cache', True),
-            'token_type_ids': config.get('token_type_ids', None),
-            'return_dict': config.get('return_dict', False),
-            'output_attentions': config.get('output_attentions', False),
-            'output_hidden_states': config.get('output_hidden_states', True)
-        }
-        model = GPT2LMHeadModel.from_pretrained(
-            model_urls[0])  # it contains model.eval()
-        self.blocks = [model]
+    def __init__(self,
+                 model,
+                 use_cache=True,
+                 output_attentions=False,
+                 output_hidden_states=True,
+                 **kwargs):
+        super(HuggingfaceBlock, self).__init__()
 
-    def forward(self, input: List[torch.tensor], past_key_values):
-        logits, past_key_values, hidden_states = self.blocks[0].forward(input_ids=input[0],
-                                                                        position_ids=input[1],
-                                                                        attention_mask=input[2],
-                                                                        past_key_values=past_key_values,
-                                                                        **self.config)
+        self.model = model
+        self.use_cache = use_cache
+        self.output_attentions = output_attentions
+        self.output_hidden_states = output_hidden_states
+        self.token_type_ids = None
+        self.return_dict = False
+        self.kwargs = kwargs
+
+    def forward(self, inputs: List[torch.tensor], past_key_values):
+        logits, past_key_values, hidden_states = self.model.forward(
+            input_ids=inputs[0],
+            position_ids=inputs[1],
+            attention_mask=inputs[2],
+            past_key_values=past_key_values,
+            use_cache=self.use_cache,
+            output_attentions=self.output_attentions,
+            output_hidden_states=self.output_hidden_states,
+            return_dict=self.return_dict,
+            token_type_ids=self.token_type_ids,
+            **self.kwargs)
+
         return logits, past_key_values, hidden_states[0]  # take the lowest hidden_states as token embedding
+
+

@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from abc import ABC, abstractmethod
-from typing import List, Union, Tuple, Dict
+from typing import Union, Tuple, Dict
 
 import torch
 
@@ -30,7 +30,7 @@ class SeqBatchScheduler(ABC):
         self.search_configs = None
 
     @abstractmethod
-    def init_forward(self, input_ids: torch.Tensor, batch_uids: torch.Tensor,
+    def init_forward(self, input_ids: torch.Tensor, request_uids: torch.Tensor,
                      kv_cache: Union[Tuple, None]) -> SeqBatcher:
         pass
 
@@ -43,27 +43,30 @@ class SeqBatchScheduler(ABC):
                 )
                 break
 
-            output = self.inference_call()
+            output_ids = self.inference_call()
 
-            if self.seq_batcher.seq_complete():
-                self.results.update(self.seq_batcher.collect_and_trim())
+            for request_uid, output_id in zip(self.seq_batcher.request_uids, output_ids):
+                self.results[request_uid.item()].append(output_id.item())
+
+            self.seq_batcher.collect_and_trim()
             i += 1
 
-            yield output
+            yield output_ids
 
     @abstractmethod
     def inference_call(self) -> torch.Tensor:
         pass
 
-    def add_request(self, batch_uids: torch.Tensor,
+    def add_request(self, request_uids: torch.Tensor,
                     input_ids: torch.Tensor,
                     search_configs: Dict[int, SearchConfig] = None,
                     kv_cache: Union[Tuple, None] = None):
-        # Each request may have their own search_config
-        # input1={‘text’:‘Hello’, ‘parameters’: {‘temperature’:1}}
-        # input2={‘text’:’Goodbye, ‘parameters’: {‘temperature’:0.5}}
-        new_seq_batcher = self.init_forward(input_ids, batch_uids, kv_cache)
-        if self.seq_batcher:
+
+        new_seq_batcher, output_ids = self.init_forward(input_ids, request_uids, kv_cache)
+        for request_uid, output_id in zip(request_uids, output_ids):
+            self.results[request_uid.item()] = output_id.tolist()
+
+        if self.seq_batcher and self.seq_batcher.batch:
             self.seq_batcher.add_batch(new_seq_batcher)
             self.search_configs.update(search_configs if search_configs else {})
         else:
