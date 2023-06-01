@@ -82,7 +82,7 @@ To see examples, see the [starting page](serving/docs/starting.md).
 ### More examples
 
 - [Serving a Python model](https://github.com/deepjavalibrary/djl-demo/tree/master/huggingface/python)
-- [Serving on Inf1 EC2 instance](https://github.com/deepjavalibrary/djl-demo/tree/master/huggingface/inferentia)
+- [Serving on Inferentia EC2 instance](https://github.com/deepjavalibrary/djl-demo/tree/master/huggingface/inferentia)
 - [Serving with docker](https://github.com/deepjavalibrary/djl-serving/tree/master/serving/docker)
 
 ### More command line options

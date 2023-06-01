@@ -51,6 +51,6 @@ docker run -it --runtime=nvidia --shm-size 2g -v $PWD:/opt/ml/model -p 8080:8080
 mkdir models
 cd models
 
-curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_inf1.tar.gz
-docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.22.1-inf1
+curl -O https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz
+docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.22.1-pytorch-inf2
 ```
