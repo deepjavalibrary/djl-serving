@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Union, Tuple
+from typing import List, Union, Tuple
 
 import torch
 
@@ -56,12 +56,12 @@ class SeqBatchScheduler(ABC):
     def inference_call(self) -> Tuple[torch.Tensor, set]:
         pass
 
-    def add_request(self, request_uids, input_ids, kv_cache=None):
+    def add_request(self, input_ids, request_uids, kv_cache=None):
         new_seq_batcher, output_ids = self.init_forward(input_ids, request_uids, kv_cache)
         for request_uid, output_id in zip(request_uids, output_ids):
             self.results[request_uid.item()] = output_id.tolist()
 
-        if self.seq_batcher and self.seq_batcher.batch:
+        if self.seq_batcher:
             self.seq_batcher.add_batch(new_seq_batcher)
         else:
             self.seq_batcher = new_seq_batcher

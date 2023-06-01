@@ -12,6 +12,8 @@
 # the specific language governing permissions and limitations under the License.
 from __future__ import annotations
 
+from typing import Dict, Union
+
 from djl_python.scheduler.batch import Batch
 import torch
 
@@ -25,11 +27,10 @@ class SeqBatcher(object):
         self.offsets = offsets
         self.exit_index = set()
 
-        past_key_values_size = batch.past_key_values[0][0].size()
+        past_key_values_size = batch.past_attention_mask.size()
         self.batch_size = past_key_values_size[0]
-        self.seq_len = past_key_values_size[2]
+        self.seq_len = past_key_values_size[1]
 
-    @torch.no_grad()
     def add_batch(self, seq_batcher: SeqBatcher):
         return self.merge_symmetric(self, seq_batcher)
 
@@ -50,8 +51,7 @@ class SeqBatcher(object):
             [seq_batcher1.offsets, seq_batcher2.offsets + seq_delta], dim=0)
         self.seq_len = max(seq_batcher1.seq_len, seq_batcher2.seq_len)
 
-    @torch.no_grad()
-    def collect_and_trim(self) -> None:
+    def collect_and_trim(self) -> Union[Dict[int, torch.Tensor], None]:
         if len(self.exit_index) == 0:
             return
 

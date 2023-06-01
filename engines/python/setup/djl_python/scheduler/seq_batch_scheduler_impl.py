@@ -24,7 +24,6 @@ from djl_python.scheduler.utils import compute_offsets, compute_position_ids, co
 
 class GreedySeqBatchScheduler(SeqBatchScheduler):
 
-    @torch.no_grad()
     def init_forward(self,
                      input_ids,
                      request_ids,
@@ -36,10 +35,9 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
                 "request_ids.shape does not match input_ids.shape or is illegal"
             )
 
-        batch_size, init_seq_len = input_ids.shape
         init_offsets = compute_offsets(input_ids, self.config)
-        attention_mask = compute_attention_mask(init_offsets, init_seq_len)
-        position_ids = compute_position_ids(batch_size, init_seq_len, init_offsets, past_seq_len=0,
+        attention_mask = compute_attention_mask(input_ids, self.config)
+        position_ids = compute_position_ids(input_ids.shape[0], input_ids.shape[-1], init_offsets, past_seq_len=0,
                                             repeat_offset=1)
 
         dummy_input_ids, position_ids, attention_mask, kv_cache = assemble_prefix_kv_cache(input_ids, position_ids,
@@ -53,7 +51,8 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
         if save_kv_cache_path:
             torch.save(past_key_values, save_kv_cache_path)
 
-        batch = Batch(logits=logits[:, -1, :],
+        batch = Batch(past_attention_mask=attention_mask,
+                      logits=logits[:, -1, :],
                       past_key_values=past_key_values)
 
         if kv_cache is not None:
@@ -68,7 +67,6 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
 
         return SeqBatcher(batch, request_ids, init_offsets), input_ids_list
 
-    @torch.no_grad()
     def inference_call(self) -> Tuple[torch.Tensor, set]:
         batch = self.seq_batcher.batch
 
@@ -80,8 +78,10 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
         position_ids = compute_position_ids(output_ids.shape[0], output_ids.shape[-1], self.seq_batcher.offsets,
                                             past_seq_len=self.seq_batcher.seq_len,
                                             repeat_offset=1)
-
-        past_attention_mask = compute_attention_mask(self.seq_batcher.offsets, self.seq_batcher.seq_len + 1)
+        past_attention_mask = torch.cat([
+            batch.past_attention_mask,
+            torch.ones_like(output_ids, dtype=torch.int64)
+        ], dim=1)
 
         # output: list(logits, past_kv, hidden_states), where logits: [batch, sequence, vocab_dim]
         logits, past_key_values, _ = self.lm_block.forward([output_ids, position_ids, past_attention_mask],
@@ -89,7 +89,8 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
 
         # Create SeqBatcher
         last_logits = logits[:, -1, :]
-        self.seq_batcher.batch = Batch(logits=last_logits,
+        self.seq_batcher.batch = Batch(past_attention_mask=past_attention_mask,
+                                       logits=last_logits,
                                        past_key_values=past_key_values)
         self.seq_batcher.seq_len += 1
 
