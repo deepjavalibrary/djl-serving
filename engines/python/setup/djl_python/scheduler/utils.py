@@ -16,15 +16,11 @@ import torch
 
 from djl_python.scheduler.search_config import SearchConfig
 
-#TODO: Remove this here and use Search config's pad_token_id
-PAD_TOKEN_ID = 50256
-
 
 def merge_tensors(tensor1: torch.Tensor,
                   tensor2: torch.Tensor,
                   seq_delta,
-                  seq_order,
-                  is_pad_token=False) -> torch.Tensor:
+                  seq_order=1) -> torch.Tensor:
     if seq_delta == 0:
         return torch.cat([tensor1, tensor2], dim=0)
 
@@ -34,12 +30,7 @@ def merge_tensors(tensor1: torch.Tensor,
     delta_shape = list(shape1)
     delta_shape[0] = shape2[0]
 
-    if is_pad_token:
-        delta_tensor = torch.full(delta_shape,
-                                  fill_value=PAD_TOKEN_ID,
-                                  dtype=tensor1.dtype)
-    else:
-        delta_tensor = torch.zeros(delta_shape, dtype=tensor1.dtype)
+    delta_tensor = torch.zeros(delta_shape, dtype=tensor1.dtype)
 
     # augment the batch 1
     tensor1 = torch.cat([tensor1, delta_tensor], dim=0)
@@ -110,30 +101,6 @@ def compute_offsets(input_ids: torch.Tensor,
     return torch.tensor(offsets, dtype=torch.int64).view(-1, 1)
 
 
-def compute_attention_mask(input_ids, config: SearchConfig):
-    num_batch = input_ids.shape[0]
-    seq_size = input_ids.shape[1]
-
-    # attention_mask
-    attention_mask = torch.repeat_interleave(torch.ones(
-        [1, input_ids.shape[-1]], dtype=torch.int64).reshape(1, -1),
-                                             dim=0,
-                                             repeats=num_batch)
-
-    # Linear searches the offset and set the mask
-    for i in range(num_batch):
-        sequence = input_ids[i].tolist()
-        index = 0
-        while index < seq_size:
-            if sequence[index] != config.pad_token_id:
-                break
-            index += 1
-
-        attention_mask[i][0:index] = 0
-
-    return attention_mask
-
-
 def compute_position_ids(batch_size: int, input_seq_len: int,
                          offsets: torch.Tensor, past_seq_len: int,
                          repeat_offset: int):
@@ -154,6 +121,19 @@ def compute_position_ids(batch_size: int, input_seq_len: int,
     position_ids = torch.maximum(position_ids_shifted,
                                  torch.zeros_like(position_ids_shifted))
     return position_ids
+
+
+def compute_attention_mask(offsets, seq_len, repeat_offset: int = 1):
+    if len(offsets.shape) != 2:
+        raise Exception("wrong shape of offsets")
+
+    batch_size = len(offsets) * repeat_offset
+    past_attention_mask = torch.ones(batch_size, seq_len, dtype=torch.int64)
+    for i, offset in enumerate(offsets):
+        repeat_part = slice(i * repeat_offset, (i + 1) * repeat_offset)
+        past_attention_mask[repeat_part, :offset.item()] = 0
+
+    return past_attention_mask
 
 
 def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
