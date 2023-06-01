@@ -16,6 +16,7 @@ import os
 
 import torch
 from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -65,6 +66,8 @@ class HuggingFaceService(object):
         self.model = None
         self.device_id = -1
         self.tokenizer = None
+        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
+                                                "FALSE").lower() == 'true'
 
     def initialize(self, properties: dict):
         # model_id can point to huggingface model_id or local directory.
@@ -77,13 +80,11 @@ class HuggingFaceService(object):
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         self.enable_streaming = properties.get("enable_streaming",
                                                "false").lower() == "true"
-        trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
-                                           "FALSE").lower() == 'true'
         if "trust_remote_code" in properties:
-            trust_remote_code = properties.get(
+            self.trust_remote_code = properties.get(
                 "trust_remote_code").lower() == "true"
         # HF Acc handling
-        kwargs = {"trust_remote_code": trust_remote_code}
+        kwargs = {"trust_remote_code": self.trust_remote_code}
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         if "device_map" in properties:
             kwargs["device_map"] = properties.get("device_map")
@@ -101,9 +102,13 @@ class HuggingFaceService(object):
         if "low_cpu_mem_usage" in properties:
             kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage")
 
+        if "data_type" in properties:
+            kwargs["torch_dtype"] = get_torch_dtype_from_str(
+                properties.get("data_type"))
         if "dtype" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
                 properties.get("dtype"))
+
         if self.enable_streaming:
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             self.initialized = True
@@ -195,9 +200,11 @@ class HuggingFaceService(object):
             hf_pipeline = self.wrap_conversation_pipeline(hf_pipeline)
 
         if task == "text-generation":
-            hf_pipeline.tokenizer.padding_side = "left"
-            if not hf_pipeline.tokenizer.pad_token:
-                hf_pipeline.tokenizer.pad_token = hf_pipeline.tokenizer.eos_token
+            if issubclass(type(hf_pipeline.tokenizer),
+                          PreTrainedTokenizerBase):
+                hf_pipeline.tokenizer.padding_side = "left"
+                if not hf_pipeline.tokenizer.pad_token:
+                    hf_pipeline.tokenizer.pad_token = hf_pipeline.tokenizer.eos_token
             hf_pipeline = self.wrap_text_generation_pipeline(hf_pipeline)
 
         return hf_pipeline
@@ -205,7 +212,8 @@ class HuggingFaceService(object):
     def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
-        model_config = AutoConfig.from_pretrained(model_id_or_path)
+        model_config = AutoConfig.from_pretrained(model_id_or_path,
+                                                  kwargs=kwargs)
         architectures = model_config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
@@ -256,9 +264,9 @@ class HuggingFaceService(object):
 
         return wrapped_pipeline
 
-    @staticmethod
-    def infer_task_from_model_architecture(model_config_path: str):
-        model_config = AutoConfig.from_pretrained(model_config_path)
+    def infer_task_from_model_architecture(self, model_config_path: str):
+        model_config = AutoConfig.from_pretrained(
+            model_config_path, trust_remote_code=self.trust_remote_code)
         architecture = model_config.architectures[0]
 
         task = None

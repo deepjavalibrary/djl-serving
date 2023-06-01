@@ -185,13 +185,15 @@ class DeepSpeedService(object):
                 raise ValueError(
                     f"{self.model_id_or_path} does not contain a config.json. "
                     f"This is required for loading models from local storage")
-            self.model_config = AutoConfig.from_pretrained(config_file)
+            self.model_config = AutoConfig.from_pretrained(
+                config_file, trust_remote_code=self.trust_remote_code)
         else:
             self.model_config = AutoConfig.from_pretrained(
-                self.model_id_or_path)
+                self.model_id_or_path,
+                trust_remote_code=self.trust_remote_code)
 
         if self.model_config.model_type not in OPTIMIZED_MODEL_TYPES:
-            self.logger.warn(
+            self.logger.warning(
                 f"DeepSpeed does not currently support optimized CUDA kernels for the model type "
                 f"{self.model_config.model_type}, and may not support this model for inference. Please "
                 f"check the DeepSpeed documentation to verify. Attempting to load model with DeepSpeed."
