@@ -19,11 +19,16 @@ parser.add_argument(
 parser.add_argument("test_case",
                     help="The test case to execute",
                     choices=["djl", "no_code", "djl_mme"])
+parser.add_argument(
+    "image_type",
+    help="Whether to use release or nightly images for testing",
+    choices=["nightly", "release"])
 
 ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
 DEFAULT_INSTANCE_TYPE = "ml.g5.12xlarge"
 DEFAULT_PAYLOAD = {"inputs": "Deep Learning is"}
 DEFAULT_BUCKET = "sm-integration-tests-rubikon"
+RELEASE_VERSION = "0.22.1"
 
 SINGLE_MODEL_ENDPOINT_CONFIGS = {
     "stable-diffusion-2-1-base": {
@@ -91,19 +96,13 @@ HUGGING_FACE_NO_CODE_CONFIGS = {
             "HF_MODEL_ID": "EleutherAI/gpt-neo-2.7B",
             "TENSOR_PARALLEL_DEGREE": "1",
         },
-        "image_uri":
-        sagemaker.image_uris.retrieve(framework="djl-deepspeed",
-                                      version="0.22.1",
-                                      region="us-east-1")
+        "framework": "deepspeed"
     },
     "bloom-7b1": {
         "env": {
             "HF_MODEL_ID": "bigscience/bloom-7b1"
         },
-        "image_uri":
-        sagemaker.image_uris.retrieve(framework="djl-fastertransformer",
-                                      version="0.22.1",
-                                      region="us-east-1")
+        "framework": "fastertransformer"
     }
 }
 
@@ -124,12 +123,21 @@ MME_CONFIGS = {
         }],
         "instance_type":
         "ml.g5.8xlarge",
-        "image_uri":
-        "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving:0.22.1-deepspeed",
+        "framework":
+        "deepspeed",
     }
 }
 
 ENGINE_TO_METRIC_CONFIG_ENGINE = {"Python": "Accelerate"}
+
+NIGHTLY_IMAGES = {
+    "python":
+    "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving:deepspeed-nightly",
+    "deepspeed":
+    "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving:deepspeed-nightly",
+    "fastertransformer":
+    "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving:fastertransformer-nightly"
+}
 
 
 def get_sagemaker_session(default_bucket=DEFAULT_BUCKET,
@@ -218,7 +226,7 @@ def _run_benchmarks(predictor, config, metric_name):
     _upload_metrics(benchmark_data)
 
 
-def mme_test(name):
+def mme_test(name, image_type):
     config = MME_CONFIGS.get(name)
     session = get_sagemaker_session(
         default_bucket_prefix=get_name_for_resource("mme-tests"))
@@ -230,7 +238,6 @@ def mme_test(name):
         for model_config in models:
             model = DJLModel(model_config.get("model_id"),
                              ROLE,
-                             image_uri=config.get("image_uri"),
                              name=get_name_for_resource(
                                  model_config.get("model_id") + '-mme'),
                              sagemaker_session=session,
@@ -238,11 +245,18 @@ def mme_test(name):
             model.create()
             created_models.append(model)
 
+        if image_type == "nightly":
+            mme_image_uri = NIGHTLY_IMAGES[config.get("framework")]
+        else:
+            mme_image_uri = sagemaker.image_uris.retrieve(
+                framework="djl-" + config.get("framework"),
+                version=RELEASE_VERSION,
+                region="us-east-1")
         mme = MultiDataModel(get_name_for_resource(name),
                              "s3://" + session.default_bucket() + '/' +
                              session.default_bucket_prefix,
                              config.get("prefix"),
-                             image_uri=config.get("image_uri"),
+                             image_uri=mme_image_uri,
                              role=ROLE,
                              sagemaker_session=session,
                              predictor_cls=sagemaker.predictor.Predictor)
@@ -269,19 +283,26 @@ def mme_test(name):
             predictor.delete_endpoint()
 
 
-def no_code_endpoint_test(name):
+def no_code_endpoint_test(name, image_type):
     config = HUGGING_FACE_NO_CODE_CONFIGS.get(name)
     data = config.get("payload", DEFAULT_PAYLOAD)
     session = get_sagemaker_session(
         default_bucket_prefix=get_name_for_resource("no-code-tests"))
     model = None
     predictor = None
+    if image_type == "nightly":
+        image_uri = NIGHTLY_IMAGES[config.get("framework")]
+    else:
+        image_uri = sagemaker.image_uris.retrieve(framework="djl-" +
+                                                  config.get("framework"),
+                                                  version=RELEASE_VERSION,
+                                                  region="us-east-1")
     try:
         model = HuggingFaceModel(
             role=ROLE,
             env=config.get("env"),
             sagemaker_session=session,
-            image_uri=config.get("image_uri"),
+            image_uri=image_uri,
             name=get_name_for_resource(name),
         )
 
@@ -303,7 +324,7 @@ def no_code_endpoint_test(name):
             model.delete_model()
 
 
-def single_model_endpoint_test(name):
+def single_model_endpoint_test(name, image_type):
     config = SINGLE_MODEL_ENDPOINT_CONFIGS.get(name)
     data = config.get("payload", DEFAULT_PAYLOAD)
     session = get_sagemaker_session(
@@ -319,6 +340,8 @@ def single_model_endpoint_test(name):
             name=get_name_for_resource(name),
             **config.get("model_kwargs"),
         )
+        if image_type == "nightly":
+            model.image_uri = NIGHTLY_IMAGES[model.engine.value[0].lower()]
 
         if config.get("partition", False):
             model.partition(instance_type=DEFAULT_INSTANCE_TYPE,
@@ -351,12 +374,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model_name = args.model_name
     test_case = args.test_case
+    image_type = args.image_type
     if test_case == "djl":
-        single_model_endpoint_test(model_name)
+        single_model_endpoint_test(model_name, image_type)
     elif test_case == "no_code":
-        no_code_endpoint_test(model_name)
+        no_code_endpoint_test(model_name, image_type)
     elif test_case == "djl_mme":
-        mme_test(model_name)
+        mme_test(model_name, image_type)
     else:
         raise ValueError(
             f"{test_case} is not a valid test case. Valid choices: [djl, no_code, djl_mme])"

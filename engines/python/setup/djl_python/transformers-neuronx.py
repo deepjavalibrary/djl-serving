@@ -189,8 +189,8 @@ class TransformersNeuronXService(object):
                     "transformers-neuronx")
                 model_kwargs["engine"] = "transformers-neuronx"
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer,
-                                     input_text, **model_kwargs))
+                    stream_generator(self.model, self.tokenizer, input_text,
+                                     **model_kwargs))
                 return outputs
 
             encoded_inputs = self.tokenizer.batch_encode_plus(
