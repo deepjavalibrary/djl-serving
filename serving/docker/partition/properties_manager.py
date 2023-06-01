@@ -17,7 +17,7 @@ import torch
 import requests
 
 # Properties to exclude while generating serving.properties
-from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir
+from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir, load_properties
 
 EXCLUDE_PROPERTIES = [
     'model_id', 'checkpoint', 's3url', 'save_mp_checkpoint_path', 'model_dir',
@@ -36,7 +36,7 @@ class PropertiesManager(object):
         self.properties_dir = properties.get('properties_dir')
         self.entry_point_url = None
 
-        self.load_properties()
+        load_properties(self.properties_dir, self.properties)
 
         self.is_mpi_mode = is_engine_mpi_mode(self.properties['engine'])
 
@@ -48,17 +48,6 @@ class PropertiesManager(object):
         self.set_and_validate_entry_point()
         self.set_and_validate_save_mp_checkpoint_path()
 
-    def load_properties(self):
-        properties_file = os.path.join(self.properties_dir,
-                                       'serving.properties')
-        if os.path.exists(properties_file):
-            with open(properties_file, 'r') as f:
-                for line in f:
-                    # ignoring line starting with #
-                    if line.startswith("#") or not line.strip():
-                        continue
-                    key, value = line.strip().split('=', 1)
-                    self.properties[key.split(".", 1)[-1]] = value
 
     def set_and_validate_model_dir(self):
         if 'model_dir' in self.properties:

@@ -19,6 +19,8 @@ import argparse
 import subprocess
 
 from pathlib import Path
+
+import utils
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
 
@@ -173,10 +175,23 @@ class PartitionService(object):
             self.properties_manager.validate_and_correct_checkpoints_json()
             self.properties_manager.generate_properties_file()
             self.copy_config_files()
+            self.load_the_generated_checkpoints()
             self.upload_checkpoints_to_s3()
             self.cleanup()
         else:
             raise Exception("Partitioning was not successful.")
+
+    def load_the_generated_checkpoints(self):
+        if self.properties['engine'] == 'DeepSpeed':
+            saved_checkpoints_dir = self.properties["save_mp_checkpoint_path"]
+            properties = utils.load_properties(saved_checkpoints_dir)
+            commands = get_partition_cmd(True, properties)
+            self.set_environmental_vars()
+            result = subprocess.run(commands)
+            logging.info(result)
+            if result.returncode != 0:
+                raise Exception("DeepSpeed does not support partitioning. "
+                                "Please use a different engine")
 
 
 if __name__ == "__main__":

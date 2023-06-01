@@ -78,3 +78,17 @@ def get_download_dir(properties_dir, suffix=""):
         download_dir = properties_dir
 
     return download_dir
+
+
+def load_properties(properties_dir, properties={}):
+    properties_file = os.path.join(properties_dir,
+                                   'serving.properties')
+    if os.path.exists(properties_file):
+        with open(properties_file, 'r') as f:
+            for line in f:
+                # ignoring line starting with #
+                if line.startswith("#") or not line.strip():
+                    continue
+                key, value = line.strip().split('=', 1)
+                properties[key.split(".", 1)[-1]] = value
+    return properties
