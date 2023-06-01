@@ -108,6 +108,7 @@ class DeepSpeedService(object):
         self.model_config = None
         self.low_cpu_mem_usage = False
         self.enable_streaming = False
+        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE", "FALSE").lower() == 'true'
         self.model = None
         self.tokenizer = None
 
@@ -140,6 +141,8 @@ class DeepSpeedService(object):
                                                 "true").lower() == "true"
         self.enable_streaming = properties.get("enable_streaming",
                                                "false").lower() == "true"
+        if "trust_remote_code" in properties:
+            self.trust_remote_code = properties.get("trust_remote_code").lower() == "true"
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
                 self.ds_config = json.load(f)
@@ -225,6 +228,7 @@ class DeepSpeedService(object):
             model = TASK_TO_MODEL[self.task].from_pretrained(
                 self.model_id_or_path,
                 low_cpu_mem_usage=self.low_cpu_mem_usage,
+                trust_remote_code=self.trust_remote_code,
                 **kwargs)
         if self.data_type:
             self.ds_config["dtype"] = self.data_type

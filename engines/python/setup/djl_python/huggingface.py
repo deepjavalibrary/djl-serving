@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 import logging
+import os
 
 import torch
 from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
@@ -76,8 +77,11 @@ class HuggingFaceService(object):
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         self.enable_streaming = properties.get("enable_streaming",
                                                "false").lower() == "true"
+        trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE", "FALSE").lower() == 'true'
+        if "trust_remote_code" in properties:
+            trust_remote_code = properties.get("trust_remote_code").lower() == "true"
         # HF Acc handling
-        kwargs = {}
+        kwargs = {"trust_remote_code": trust_remote_code}
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         if "device_map" in properties:
             kwargs["device_map"] = properties.get("device_map")
