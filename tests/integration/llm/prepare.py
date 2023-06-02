@@ -281,7 +281,7 @@ transformers_neuronx_handler_list = {
     },
     "opt-1.3b-streaming": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
-        "option.batch_size": 1,
+        "option.batch_size": 2,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.dtype": "fp16",

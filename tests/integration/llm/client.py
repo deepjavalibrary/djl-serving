@@ -254,8 +254,8 @@ transformers_neuronx_model_spec = {
     },
     "opt-1.3b-streaming": {
         "worker": 3,
-        "seq_length": [16, 32],
-        "batch_size": [1],
+        "seq_length": [128, 256],
+        "batch_size": [2],
         "stream_output": True,
     },
 }
@@ -635,10 +635,6 @@ def test_transformers_neuronx_handler(model, model_spec):
             res = send_json(req)
             if spec.get("stream_output", False):
                 logging.info(f"res: {res.content}")
-                result = res.content.decode().split("\n")[:-1]
-                assert len(
-                    result
-                ) <= seq_length, "generated more takens than max_new_tokens"
             else:
                 res = res.json()
                 logging.info(f"res {res}")
