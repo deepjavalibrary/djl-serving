@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
       run_test:
-        description: 'Run only the tests you need [ft, ds, hf, aot, all]'
+        description: 'Run only the tests you need [ft, ds, hf, aot]'
         required: false
         default: ''
   schedule:
