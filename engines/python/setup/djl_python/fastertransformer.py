@@ -117,7 +117,9 @@ class FasterTransformerService(object):
                     beam_width=beam_width,
                     **parameters)
             result = [{"generated_text": s} for s in result]
-            outputs = Output().add(result)
+            outputs = Output()
+            outputs.add_property("content-type", "application/json")
+            outputs.add(result)
         except Exception as e:
             logging.exception("FasterTransformer inference failed")
             outputs = Output().error((str(e)))
