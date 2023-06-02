@@ -313,6 +313,7 @@ class DeepSpeedService(object):
                 generated_text = self.tokenizer.batch_decode(
                     output_tokens, skip_special_tokens=True)
                 outputs.add([{"generated_text": s} for s in generated_text])
+                outputs.add_property("content-type", "application/json")
                 return outputs
 
             result = self.pipeline(input_data, **model_kwargs)
@@ -324,6 +325,7 @@ class DeepSpeedService(object):
                         "generated_responses": result.generated_responses,
                     },
                 }
+                outputs.add_property("content-type", "application/json")
 
             outputs.add(result)
         except Exception as e:
