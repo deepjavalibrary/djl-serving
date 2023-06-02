@@ -207,7 +207,7 @@ public final class WlmConfigManager {
             if (ompThreads > cpuCores) {
                 ompThreads = cpuCores;
             }
-            return cpuCores * 2 / ompThreads;
+            return cpuCores / ompThreads;
         }
         return 2;
     }
