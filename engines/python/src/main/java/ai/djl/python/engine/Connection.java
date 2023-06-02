@@ -151,12 +151,15 @@ class Connection {
 
         // TP settings
         Device device = model.getNDManager().getDevice();
+        String deviceId = String.valueOf(device.getDeviceId());
         if (tensorParallelDegree > 0 && device.isGpu()) {
+            deviceId = "0";
             String cudaDevices = getVisibleDevices(device.getDeviceId(), tensorParallelDegree);
             pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
         }
         if ("nc".equals(device.getDeviceType())) {
+            deviceId = "0";
             String visibleCores;
             if (tensorParallelDegree > 0) {
                 visibleCores = getNeuronVisibleCores(device.getDeviceId(), tensorParallelDegree);
@@ -179,7 +182,7 @@ class Connection {
         args[8] = "--entry-point";
         args[9] = pyEnv.getEntryPoint();
         args[10] = "--device-id";
-        args[11] = String.valueOf(device.getDeviceId());
+        args[11] = deviceId;
         return args;
     }
 

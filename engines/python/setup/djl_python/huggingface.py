@@ -119,7 +119,6 @@ class HuggingFaceService(object):
 
         self.hf_pipeline = self.get_pipeline(task=task,
                                              model_id_or_path=model_id_or_path,
-                                             device=self.device_id,
                                              kwargs=kwargs)
 
         self.initialized = True
@@ -158,8 +157,7 @@ class HuggingFaceService(object):
 
         return outputs
 
-    def get_pipeline(self, task: str, device: int, model_id_or_path: str,
-                     kwargs):
+    def get_pipeline(self, task: str, model_id_or_path: str, kwargs):
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
         if task in {
                 "automatic-speech-recognition",
@@ -186,7 +184,7 @@ class HuggingFaceService(object):
             else:
                 hf_pipeline = pipeline(task=task,
                                        model=model_id_or_path,
-                                       device=device,
+                                       device=self.device_id,
                                        **kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
@@ -250,7 +248,7 @@ class HuggingFaceService(object):
             tokenizer = hf_pipeline.tokenizer
             input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
             if self.device_id >= 0:
-                input_tokens.to(torch.cuda.current_device())
+                input_tokens.to(f"cuda:{self.device_id}")
             with torch.no_grad():
                 output_tokens = model.generate(
                     *args,
