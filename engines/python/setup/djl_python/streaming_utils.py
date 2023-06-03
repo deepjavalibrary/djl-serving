@@ -1,3 +1,19 @@
+#!/usr/bin/env python
+#
+# Copyright 2023 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file
+# except in compliance with the License. A copy of the License is located at
+#
+# http://aws.amazon.com/apache2.0/
+#
+# or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
+# BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
+# the specific language governing permissions and limitations under the License.
+
+from queue import Queue
+from threading import Thread
+
 import torch
 import logging
 from transformers import (
@@ -8,6 +24,38 @@ from transformers import (
     TypicalLogitsWarper,
     RepetitionPenaltyLogitsProcessor,
 )
+from transformers.generation.streamers import BaseStreamer
+
+
+class HFStreamer(BaseStreamer):
+
+    def __init__(self, tokenizer, **decode_kwargs):
+        self.started = False
+        self.stop_signal = None
+        self.tokenizer = tokenizer
+        self.decode_kwargs = decode_kwargs
+        self.queue = Queue()
+
+    def put(self, value):
+        self.started = True
+        text = self.tokenizer.batch_decode(value, **self.decode_kwargs)
+        self.queue.put(text)
+
+    def put_text(self, value):
+        self.queue.put(value)
+
+    def end(self):
+        self.queue.put(self.stop_signal)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        value = self.queue.get()
+        if value == self.stop_signal:
+            raise StopIteration()
+        else:
+            return value
 
 
 class StreamingUtils:
@@ -20,12 +68,36 @@ class StreamingUtils:
     BUILTIN_ENGINES = {"DeepSpeed", "Accelerate", "transformers-neuronx"}
 
     @staticmethod
+    def use_hf_default_streamer(model, tokenizer, inputs, device_id, **kwargs):
+        if not tokenizer.pad_token:
+            tokenizer.pad_token = tokenizer.eos_token
+        input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
+        if device_id >= 0:
+            input_tokens.to(torch.cuda.current_device())
+        streamer = HFStreamer(tokenizer, skip_special_token=True)
+        generation_kwargs = dict(input_tokens, streamer=streamer, **kwargs)
+
+        def run_generation(model, **kwargs):
+            try:
+                model.generate(**kwargs)
+            except Exception as e:
+                streamer.put_text(str(e))
+            finally:
+                streamer.end()
+
+        thread = Thread(target=run_generation,
+                        args=[model],
+                        kwargs=generation_kwargs)
+        thread.start()
+        return streamer
+
+    @staticmethod
     def get_stream_generator(execution_engine: str):
         ## execution_engine passed to this function is not the same engine specified in serving.properties
         ## in djl-serving. For e.g Accelerate and neuronx use Python as the engine serving.properties
         ## The engine here refers to backend model parallel framework.
         if execution_engine in StreamingUtils.BUILTIN_ENGINES:
-            return StreamingUtils._hf_model_stream_generator, "application/jsonlines"
+            return StreamingUtils._hf_model_stream_generator
         else:
             raise ValueError(
                 f"{execution_engine} engine is not supported for streaming")
@@ -144,6 +216,7 @@ class StreamingUtils:
                 encoder_last_hidden_state = [outputs.encoder_last_hidden_state]
                 token_text = tokenizer.batch_decode(decoder_input_ids)
 
+            # TODO: Support other stopping criteria
             stop_generation = StreamingUtils._has_met_stopping_criteria(
                 unfinished_sequences, new_tokens_count, max_new_tokens)
 
@@ -236,13 +309,12 @@ class StreamingUtils:
 
     @staticmethod
     def _get_decoding_method(**kwargs):
-        if "beam_size" in kwargs:
-            logging.warning(
-                "beam search is not supported yet, using greedy search instead."
-            )
-            return StreamingUtils._greedy_decoding
+        if "beam_size" in kwargs and kwargs["beam_size"] > 1:
+            raise NotImplementedError("beam search is not supported yet!")
         elif any(param in kwargs
                  for param in ["temperature", "top_p", "top_k", "typical_p"]):
+            return StreamingUtils._sampling_decoding
+        elif "do_sample" in kwargs and kwargs["do_sample"]:
             return StreamingUtils._sampling_decoding
         else:
             return StreamingUtils._greedy_decoding

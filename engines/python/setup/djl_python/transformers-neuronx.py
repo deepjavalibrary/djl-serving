@@ -41,7 +41,7 @@ class TransformersNeuronXService(object):
         self.tensor_parallel_degree = None
         self.model = None
         self.tokenizer = None
-        self.enable_streaming = False
+        self.enable_streaming = None
 
     def convert_opt(self, amp):
         logging.warning(
@@ -141,8 +141,9 @@ class TransformersNeuronXService(object):
             properties.get("tensor_parallel_degree", 1))
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        self.enable_streaming = properties.get("enable_streaming",
-                                               "false").lower() == "true"
+        self.enable_streaming = properties.get("enable_streaming", None)
+        if self.enable_streaming and self.enable_streaming.lower() == "false":
+            self.enable_streaming = None
         dtype = properties.get("dtype", "fp32")
         n_positions = int(properties.get("n_positions", 128))
         unroll = properties.get("unroll", None)
@@ -185,13 +186,19 @@ class TransformersNeuronXService(object):
             model_kwargs = {}
 
             if self.enable_streaming:
-                stream_generator, ctype = StreamingUtils.get_stream_generator(
-                    "transformers-neuronx")
-                outputs.add_property("content-type", ctype)
-                model_kwargs["engine"] = "transformers-neuronx"
-                outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer, input_text,
-                                     **model_kwargs))
+                outputs.add_property("content-type", "application/jsonlines")
+                if self.enable_streaming == "huggingface":
+                    outputs.add_stream_content(
+                        StreamingUtils.use_hf_default_streamer(
+                            self.model, self.tokenizer, input_text, -1,
+                            **model_kwargs))
+                else:
+                    stream_generator = StreamingUtils.get_stream_generator(
+                        "transformers-neuronx")
+                    model_kwargs["engine"] = "transformers-neuronx"
+                    outputs.add_stream_content(
+                        stream_generator(self.model, self.tokenizer,
+                                         input_text, **model_kwargs))
                 return outputs
 
             encoded_inputs = self.tokenizer.batch_encode_plus(
