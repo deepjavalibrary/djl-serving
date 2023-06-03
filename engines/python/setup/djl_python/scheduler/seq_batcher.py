@@ -29,6 +29,7 @@ class SeqBatcher(object):
         self.batch_size = past_key_values_size[0]
         self.seq_len = past_key_values_size[2]
 
+    @torch.no_grad()
     def add_batch(self, seq_batcher: SeqBatcher):
         return self.merge_symmetric(self, seq_batcher)
 
@@ -49,6 +50,7 @@ class SeqBatcher(object):
             [seq_batcher1.offsets, seq_batcher2.offsets + seq_delta], dim=0)
         self.seq_len = max(seq_batcher1.seq_len, seq_batcher2.seq_len)
 
+    @torch.no_grad()
     def collect_and_trim(self) -> None:
         if len(self.exit_index) == 0:
             return

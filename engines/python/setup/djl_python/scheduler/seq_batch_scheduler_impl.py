@@ -152,6 +152,7 @@ class ContrastiveSeqBatchScheduler(SeqBatchScheduler):
 
 class GreedySeqBatchScheduler(SeqBatchScheduler):
 
+    @torch.no_grad()
     def init_forward(self,
                      input_ids,
                      request_ids,
@@ -195,7 +196,8 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
 
         return SeqBatcher(batch, request_ids, init_offsets), input_ids_list
 
-    def inference_call(self) -> torch.Tensor:
+    @torch.no_grad()
+    def inference_call(self) -> Tuple[torch.Tensor, set]:
         batch = self.seq_batcher.batch
 
         # [batch, seq=1]
