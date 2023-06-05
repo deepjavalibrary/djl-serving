@@ -107,7 +107,7 @@ class DeepSpeedService(object):
         self.tensor_parallel_degree = None
         self.model_config = None
         self.low_cpu_mem_usage = False
-        self.enable_streaming = False
+        self.enable_streaming = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
         self.model = None
@@ -140,8 +140,9 @@ class DeepSpeedService(object):
             properties.get("tensor_parallel_degree", 1))
         self.low_cpu_mem_usage = properties.get("low_cpu_mem_usage",
                                                 "true").lower() == "true"
-        self.enable_streaming = properties.get("enable_streaming",
-                                               "false").lower() == "true"
+        self.enable_streaming = properties.get("enable_streaming", None)
+        if self.enable_streaming and self.enable_streaming.lower() == "false":
+            self.enable_streaming = None
         if "trust_remote_code" in properties:
             self.trust_remote_code = properties.get(
                 "trust_remote_code").lower() == "true"
@@ -294,12 +295,18 @@ class DeepSpeedService(object):
 
             outputs = Output()
             if self.enable_streaming:
-                stream_generator, ctype = StreamingUtils.get_stream_generator(
-                    "DeepSpeed")
-                outputs.add_property("content-type", ctype)
-                outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer, input_data,
-                                     **model_kwargs))
+                outputs.add_property("content-type", "application/jsonlines")
+                if self.enable_streaming == "huggingface":
+                    outputs.add_stream_content(
+                        StreamingUtils.use_hf_default_streamer(
+                            self.model, self.tokenizer, input_data, 0,
+                            **model_kwargs))
+                else:
+                    stream_generator = StreamingUtils.get_stream_generator(
+                        "DeepSpeed")
+                    outputs.add_stream_content(
+                        stream_generator(self.model, self.tokenizer,
+                                         input_data, **model_kwargs))
                 return outputs
             if self.task == "text-generation":
                 tokenized_inputs = self.tokenizer(
