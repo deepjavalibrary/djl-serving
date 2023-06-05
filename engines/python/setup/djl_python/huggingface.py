@@ -149,9 +149,10 @@ class HuggingFaceService(object):
                 else:
                     stream_generator = StreamingUtils.get_stream_generator(
                         "Accelerate")
+                    device = "cpu" if self.device_id < 0 else f"cuda:{self.device_id}"
                     outputs.add_stream_content(
                         stream_generator(self.model, self.tokenizer, data,
-                                         **parameters))
+                                         device, **parameters))
                 return outputs
 
             prediction = self.hf_pipeline(data, **parameters)
@@ -198,7 +199,10 @@ class HuggingFaceService(object):
             kwargs.pop("tokenizer", None)
             model = AutoModelForCausalLM.from_pretrained(
                 model_id_or_path, **kwargs)
-            hf_pipeline = pipeline(task=task, model=model, tokenizer=tokenizer)
+            hf_pipeline = pipeline(task=task,
+                                   model=model,
+                                   tokenizer=tokenizer,
+                                   device=self.device_id)
 
         # wrap specific pipeline to support better ux
         if task == "conversational":
@@ -217,16 +221,17 @@ class HuggingFaceService(object):
     def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
+        device = "cpu" if self.device_id < 0 else f"cuda:{self.device_id}"
         model_config = AutoConfig.from_pretrained(model_id_or_path,
                                                   kwargs=kwargs)
         architectures = model_config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
             self.model = AutoModelForSeq2SeqLM.from_pretrained(
-                model_id_or_path, **kwargs)
+                model_id_or_path, **kwargs).to(device)
         else:
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path, **kwargs)
+                model_id_or_path, **kwargs).to(device)
 
     @staticmethod
     def wrap_conversation_pipeline(hf_pipeline):
