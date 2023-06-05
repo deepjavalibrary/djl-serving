@@ -185,11 +185,16 @@ class PartitionService(object):
         if self.properties['engine'] == 'DeepSpeed':
             saved_checkpoints_dir = self.properties["save_mp_checkpoint_path"]
             properties = utils.load_properties(saved_checkpoints_dir)
+            properties['model_dir'] = saved_checkpoints_dir
+            properties['entryPoint'] = self.properties['entryPoint']
+            properties['partition_handler'] = 'handle'
             commands = get_partition_cmd(True, properties)
             self.set_environmental_vars()
             result = subprocess.run(commands)
             logging.info(result)
-            if result.returncode != 0:
+            if result.returncode == 0:
+                logging.info("Successfully loaded the partitioned checkpoints.")
+            else:
                 raise Exception("DeepSpeed does not support partitioning. "
                                 "Please use a different engine")
 

@@ -34,7 +34,6 @@ def invoke_partition(properties):
         model_service = load_model_service(properties['model_dir'],
                                            properties['entryPoint'], None)
         model_service.invoke_handler(handler, inputs)
-        logging.info("Partitioning is successful")
     except Exception as e:
         logging.exception(f"Partitioning failed {str(e)}")
         raise Exception("Partitioning failed.")
