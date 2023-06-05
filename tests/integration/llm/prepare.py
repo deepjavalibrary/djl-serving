@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 ds_aot_list = {
     "opt-6.7b": {
-        "option.s3url":
+        "option.model_id":
         "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree":
         4,
@@ -44,7 +44,7 @@ ds_aot_list = {
 
 ds_aot_handler_list = {
     "opt-6.7b": {
-        "option.s3url":
+        "option.model_id":
         "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree":
         4,

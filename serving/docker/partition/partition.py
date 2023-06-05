@@ -188,6 +188,12 @@ class PartitionService(object):
             properties['model_dir'] = saved_checkpoints_dir
             properties['entryPoint'] = self.properties['entryPoint']
             properties['partition_handler'] = 'handle'
+
+            entry_point_file = None
+            if properties['entryPoint'] == 'model.py':
+                entry_point_file = os.path.join(self.properties['properties_dir'], 'model.py')
+                shutil.copy(entry_point_file, saved_checkpoints_dir)
+
             commands = get_partition_cmd(True, properties)
             self.set_environmental_vars()
             result = subprocess.run(commands)
@@ -197,6 +203,8 @@ class PartitionService(object):
             else:
                 raise Exception("DeepSpeed does not support partitioning. "
                                 "Please use a different engine")
+            if entry_point_file:
+                os.remove(os.path.join(saved_checkpoints_dir, 'model.py'))
 
 
 if __name__ == "__main__":

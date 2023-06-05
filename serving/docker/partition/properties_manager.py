@@ -21,7 +21,7 @@ from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir, load
 
 EXCLUDE_PROPERTIES = [
     'model_id', 'checkpoint', 's3url', 'save_mp_checkpoint_path', 'model_dir',
-    'engine', 'upload_checkpoints_s3url'
+    'engine', 'upload_checkpoints_s3url', 'properties_dir'
 ]
 
 PARTITION_SUPPORTED_ENGINES = ['DeepSpeed', 'FasterTransformer']
