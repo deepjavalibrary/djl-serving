@@ -280,18 +280,36 @@ class DeepSpeedService(object):
     def inference(self, inputs: Input):
         try:
             content_type = inputs.get_property("Content-Type")
+            input_data = []
+            input_size = []
             model_kwargs = {}
+            batch = inputs.get_batches()
             if content_type is not None and content_type.startswith(
                     "application/json"):
-                json_input = inputs.get_as_json()
-                if isinstance(json_input, dict):
-                    input_data = self.format_input_for_task(
-                        json_input.pop("inputs"))
-                    model_kwargs = json_input.pop("parameters", {})
-                else:
-                    input_data = json_input
+                first = True
+                for item in batch:
+                    json_input = item.get_as_json()
+                    if isinstance(json_input, dict):
+                        input_size.append(len(json_input.get("inputs")))
+                        input_data.extend(
+                            self.format_input_for_task(
+                                json_input.pop("inputs")))
+                        if first:
+                            model_kwargs = json_input.pop("parameters", {})
+                            first = False
+                        else:
+                            if model_kwargs != json_input.pop(
+                                    "parameters", {}):
+                                return Output().error(
+                                    "In order to enable dynamic batching, all input batches must have the same parameters"
+                                )
+                    else:
+                        input_size.append(len(json_input))
+                        input_data.extend(json_input)
             else:
-                input_data = inputs.get_as_string()
+                for item in batch:
+                    input_size.append(1)
+                    input_data.extend(item.get_as_string())
 
             outputs = Output()
             if self.enable_streaming:
@@ -320,22 +338,32 @@ class DeepSpeedService(object):
                         **model_kwargs)
                 generated_text = self.tokenizer.batch_decode(
                     output_tokens, skip_special_tokens=True)
-                outputs.add([{"generated_text": s} for s in generated_text])
                 outputs.add_property("content-type", "application/json")
+                offset = 0
+                for i in range(inputs.get_batch_size()):
+                    result = [{
+                        "generated_text": s
+                    } for s in generated_text[offset:offset + input_size[i]]]
+                    outputs.add(result, key=inputs.get_content().key_at(i))
+                    offset += input_size[i]
                 return outputs
 
             result = self.pipeline(input_data, **model_kwargs)
-            if self.task == "conversational":
-                result = {
-                    "generated_text": result.generated_responses[-1],
-                    "conversation": {
-                        "past_user_inputs": result.past_user_inputs,
-                        "generated_responses": result.generated_responses,
-                    },
-                }
-                outputs.add_property("content-type", "application/json")
+            offset = 0
+            for i in range(inputs.get_batch_size()):
+                res = result[offset:offset + input_size[i]]
+                if self.task == "conversational":
+                    res = [{
+                        "generated_text": s.generated_responses[-1],
+                        "conversation": {
+                            "past_user_inputs": s.past_user_inputs,
+                            "generated_responses": s.generated_responses,
+                        },
+                    } for s in res]
+                outputs.add(res, key=inputs.get_content().key_at(i))
+                offset += input_size[i]
 
-            outputs.add(result)
+            outputs.add_property("content-type", "application/json")
         except Exception as e:
             logging.exception("DeepSpeed inference failed")
             outputs = Output().error((str(e)))

@@ -134,9 +134,24 @@ class HuggingFaceService(object):
             elif "*/*" in accept:
                 accept = "application/json"
 
-            input_map = decode(inputs, content_type)
-            data = input_map.pop("inputs", input_map)
-            parameters = input_map.pop("parameters", {})
+            input_data = []
+            input_size = []
+            parameters = {}
+            batch = inputs.get_batches()
+            first = True
+            for item in batch:
+                input_map = decode(item, content_type)
+                input_size.append(len(input_map.get("inputs")))
+                input_data.extend(input_map.pop("inputs", input_map))
+                if first:
+                    parameters = input_map.pop("parameters", {})
+                    first = False
+                else:
+                    if parameters != input_map.pop("parameters", {}):
+                        return Output().error(
+                            "In order to enable dynamic batching, all input batches must have the same parameters"
+                        )
+
             outputs = Output()
 
             if self.enable_streaming:
@@ -144,20 +159,26 @@ class HuggingFaceService(object):
                 if self.enable_streaming == "huggingface":
                     outputs.add_stream_content(
                         StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, data, self.device_id,
+                            self.model, self.tokenizer, input_data, self.device_id,
                             **parameters))
                 else:
                     stream_generator = StreamingUtils.get_stream_generator(
                         "Accelerate")
                     device = "cpu" if self.device_id < 0 else f"cuda:{self.device_id}"
                     outputs.add_stream_content(
-                        stream_generator(self.model, self.tokenizer, data,
+                        stream_generator(self.model, self.tokenizer, input_data,
                                          device, **parameters))
                 return outputs
 
-            prediction = self.hf_pipeline(data, **parameters)
+            prediction = self.hf_pipeline(input_data, **parameters)
 
-            encode(outputs, prediction, accept)
+            offset = 0
+            for i in range(inputs.get_batch_size()):
+                encode(outputs,
+                       prediction[offset:offset + input_size[i]],
+                       accept,
+                       key=inputs.get_content().key_at(i))
+                offset += input_size[i]
         except Exception as e:
             logging.exception("Huggingface inference failed")
             # error handling
