@@ -98,28 +98,49 @@ class FasterTransformerService(object):
     def inference(self, inputs: Input):
         try:
             # TODO: Add support for more content types
-            input_map = inputs.get_as_json()
-            input_text = input_map.pop("inputs", input_map)
-            parameters = input_map.pop("parameters", {})
-            if isinstance(input_text, str):
-                input_text = [input_text]
+            input_data = []
+            input_size = []
+            parameters = {}
+            batches = inputs.get_batches()
+            first = True
+            for item in batches:
+                input_map = item.get_as_json()
+                input_text = input_map.pop("inputs", input_map)
+                if isinstance(input_text, str):
+                    input_text = [input_text]
+                input_size.append(len(input_text))
+                input_data.extend(input_text)
+                if first:
+                    parameters = input_map.pop("parameters", {})
+                    first = False
+                else:
+                    if parameters != input_map.pop("parameters", {}):
+                        return Output().error(
+                            "In order to enable dynamic batching, all input batches must have the same parameters"
+                        )
+
             parameters = self.param_mapper(parameters)
             if self.is_t5:
-                result = self.model.pipeline_generate(input_text, **parameters)
+                result = self.model.pipeline_generate(input_data, **parameters)
             else:
                 output_len = parameters.pop("max_seq_len", 50)
                 beam_width = parameters.pop("beam_width", 1)
                 # TODO: remove after fixes in FT python package
                 result = self.model.pipeline_generate(
-                    input_text,
-                    batch_size=len(input_text),
+                    input_data,
+                    batch_size=len(input_data),
                     output_len=output_len,
                     beam_width=beam_width,
                     **parameters)
-            result = [{"generated_text": s} for s in result]
+
+            offset = 0
             outputs = Output()
             outputs.add_property("content-type", "application/json")
-            outputs.add(result)
+            for i in range(inputs.get_batch_size()):
+                generated_text = [{
+                    "generated_text": s
+                } for s in result[offset:offset + input_size[i]]]
+                outputs.add(generated_text, key=inputs.get_content().key_at(i))
         except Exception as e:
             logging.exception("FasterTransformer inference failed")
             outputs = Output().error((str(e)))

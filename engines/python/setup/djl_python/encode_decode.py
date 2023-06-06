@@ -50,38 +50,38 @@ def encode_csv(content):  # type: (str) -> np.array
     return stream.getvalue()
 
 
-def decode(inputs: Input, content_type: str):
+def decode(inputs: Input, content_type: str, key=None):
     if not content_type or "application/json" in content_type:
-        return inputs.get_as_json()
+        return inputs.get_as_json(key=key)
     elif "text/csv" in content_type:
         return decode_csv(inputs)
     elif "text/plain" in content_type:
-        return {"inputs": [inputs.get_as_string()]}
+        return {"inputs": [inputs.get_as_string(key=key)]}
     if content_type.startswith("image/"):
-        return {"inputs": inputs.get_as_image()}
+        return {"inputs": inputs.get_as_image(key=key)}
     elif content_type.startswith("audio/"):
-        return {"inputs": inputs.get_as_bytes()}
+        return {"inputs": inputs.get_as_bytes(key=key)}
     elif "tensor/npz" in content_type:
-        return {"inputs": inputs.get_as_npz()}
+        return {"inputs": inputs.get_as_npz(key=key)}
     elif content_type in {"tensor/ndlist", "application/x-npy"}:
-        return {"inputs": inputs.get_as_numpy()}
+        return {"inputs": inputs.get_as_numpy(key=key)}
     elif content_type == "application/x-www-form-urlencoded":
-        return {"inputs": inputs.get_as_string()}
+        return {"inputs": inputs.get_as_string(key=key)}
     else:
         # "application/octet-stream"
-        return {"inputs": inputs.get_as_bytes()}
+        return {"inputs": inputs.get_as_bytes(key=key)}
 
 
-def encode(outputs: Output, prediction, content_type: str):
+def encode(outputs: Output, prediction, content_type: str, key=None):
     if not content_type or "application/json" in content_type:
-        outputs.add_as_json(prediction)
+        outputs.add_as_json(prediction, key=key)
         outputs.add_property("Content-Type", "application/json")
     elif "text/csv" in content_type:
-        outputs.add_as_string(encode_csv(prediction))
+        outputs.add_as_string(encode_csv(prediction), key=key)
         outputs.add_property("Content-Type", "text/csv")
     elif "tensor/npz" in content_type:
-        outputs.add_as_npz(prediction)
+        outputs.add_as_npz(prediction, key=key)
         outputs.add_property("Content-Type", "tensor/npz")
     else:
-        outputs.add_as_numpy(prediction)
+        outputs.add_as_numpy(prediction, key=key)
         outputs.add_property("Content-Type", "tensor/ndlist")
