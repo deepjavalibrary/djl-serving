@@ -13,12 +13,12 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.23.0~SNAPSHOT
 ARG python_version=3.9
-ARG torch_version=1.13.1
-ARG torch_vision_version=0.14.1
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.9.2rc-py2.py3-none-any.whl"
-ARG transformers_version=4.28.1
-ARG accelerate_version=0.18.0
-ARG diffusers_version=0.14.0
+ARG torch_version=2.0.1
+ARG torch_vision_version=0.15.2
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.9.2-py2.py3-none-any.whl"
+ARG transformers_version=4.29.2
+ARG accelerate_version=0.19.0
+ARG diffusers_version=0.15.0
 ARG bitsandbytes_version=0.38.1
 
 EXPOSE 8080
@@ -54,9 +54,9 @@ RUN apt-get update && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu117 \
+    pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
     ${deepspeed_wheel} transformers==${transformers_version} \
-    triton==2.0.0.dev20221202 mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
+    mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
