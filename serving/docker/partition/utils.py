@@ -27,12 +27,12 @@ def get_partition_cmd(is_mpi_mode, properties):
     if is_mpi_mode:
         return [
             "mpirun", "-N",
-            properties.get("tensor_parallel_degree", 1), "--allow-run-as-root",
-            "--mca", "btl_vader_single_copy_mechanism", "none", "--tag-output",
-            "-x", "FI_PROVIDER=efa", "-x", "RDMAV_FORK_SAFE=1", "-x",
-            "FI_EFA_USE_DEVICE_RDMA=1", "-x", "LD_LIBRARY_PATH", "-x",
-            f"MASTER_ADDR={MASTER_ADDR}", "-x", f"MASTER_PORT={MASTER_PORT}",
-            "-x", "PYTHONPATH",
+            properties.get("option.tensor_parallel_degree", "1"),
+            "--allow-run-as-root", "--mca", "btl_vader_single_copy_mechanism",
+            "none", "--tag-output", "-x", "FI_PROVIDER=efa", "-x",
+            "RDMAV_FORK_SAFE=1", "-x", "FI_EFA_USE_DEVICE_RDMA=1", "-x",
+            "LD_LIBRARY_PATH", "-x", f"MASTER_ADDR={MASTER_ADDR}", "-x",
+            f"MASTER_PORT={MASTER_PORT}", "-x", "PYTHONPATH",
             get_python_executable(), "/opt/djl/partition/run_partition.py",
             "--properties",
             str(json.dumps(properties))
@@ -46,7 +46,7 @@ def get_partition_cmd(is_mpi_mode, properties):
 
 
 def get_engine_configs(properties):
-    engine = properties['engine']
+    engine = properties.get('engine')
     configs = {'option.parallel_loading': True}
     if engine == 'DeepSpeed':
         configs['option.checkpoint'] = 'ds_inference_config.json'
@@ -80,9 +80,9 @@ def get_download_dir(properties_dir, suffix=""):
     return download_dir
 
 
-def load_properties(properties_dir, properties={}):
-    properties_file = os.path.join(properties_dir,
-                                   'serving.properties')
+def load_properties(properties_dir):
+    properties = {}
+    properties_file = os.path.join(properties_dir, 'serving.properties')
     if os.path.exists(properties_file):
         with open(properties_file, 'r') as f:
             for line in f:

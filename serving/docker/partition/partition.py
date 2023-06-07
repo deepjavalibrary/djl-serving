@@ -48,7 +48,7 @@ class PartitionService(object):
 
         download_dir = os.environ.get(
             "SERVING_DOWNLOAD_DIR",
-            get_download_dir(properties_manager.properties_dir, 'model'))
+            get_download_dir(self.properties_manager.properties_dir, 'model'))
 
         s3url = model_id
         if Path("/opt/djl/bin/s5cmd").is_file():
@@ -167,6 +167,7 @@ class PartitionService(object):
     def run_partition(self):
         commands = get_partition_cmd(self.properties_manager.is_mpi_mode,
                                      self.properties)
+        logging.info(f"cmd: {commands}")
         self.set_environmental_vars()
         result = subprocess.run(commands)
         logging.info(result)
@@ -191,7 +192,8 @@ class PartitionService(object):
 
             entry_point_file = None
             if properties['entryPoint'] == 'model.py':
-                entry_point_file = os.path.join(self.properties['properties_dir'], 'model.py')
+                entry_point_file = os.path.join(
+                    self.properties['properties_dir'], 'model.py')
                 shutil.copy(entry_point_file, saved_checkpoints_dir)
 
             commands = get_partition_cmd(True, properties)
@@ -199,7 +201,8 @@ class PartitionService(object):
             result = subprocess.run(commands)
             logging.info(result)
             if result.returncode == 0:
-                logging.info("Successfully loaded the partitioned checkpoints.")
+                logging.info(
+                    "Successfully loaded the partitioned checkpoints.")
             else:
                 raise Exception("DeepSpeed does not support partitioning. "
                                 "Please use a different engine")
@@ -207,7 +210,7 @@ class PartitionService(object):
                 os.remove(os.path.join(saved_checkpoints_dir, 'model.py'))
 
 
-if __name__ == "__main__":
+def main():
     logging.basicConfig(stream=sys.stdout,
                         format="%(message)s",
                         level=logging.INFO)
@@ -225,11 +228,7 @@ if __name__ == "__main__":
                         type=str,
                         required=False,
                         help='HuggingFace model_id or s3_uri')
-    parser.add_argument('--engine',
-                        type=str,
-                        required=False,
-                        default='Python',
-                        help='engine')
+    parser.add_argument('--engine', type=str, required=False, help='engine')
     parser.add_argument(
         '--save-mp-checkpoint-path',
         type=str,
@@ -242,8 +241,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    try:
+        properties_manager = PropertiesManager(args)
+    except ValueError as e:
+        logging.error(str(e))
+        parser.print_usage()
+        return
+
     extract_python_jar(PYTHON_CACHE_DIR)
 
-    properties_manager = PropertiesManager(vars(args))
     service = PartitionService(properties_manager)
     service.run_partition()
+
+
+if __name__ == "__main__":
+    main()
