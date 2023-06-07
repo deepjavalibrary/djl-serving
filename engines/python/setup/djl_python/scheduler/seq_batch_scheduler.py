@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+from collections import defaultdict
 from abc import ABC, abstractmethod
 from typing import Union, Tuple, Dict
 
@@ -27,7 +28,7 @@ class SeqBatchScheduler(ABC):
         self.results = {}
         self.seq_batcher = None
         self.config = config
-        self.search_configs = None
+        self.search_configs = defaultdict(lambda : config)
 
     @abstractmethod
     def init_forward(self, input_ids: torch.Tensor, request_uids: torch.Tensor,
@@ -68,14 +69,13 @@ class SeqBatchScheduler(ABC):
 
         if self.seq_batcher and self.seq_batcher.batch:
             self.seq_batcher.add_batch(new_seq_batcher)
-            self.search_configs.update(search_configs if search_configs else {})
         else:
             self.seq_batcher = new_seq_batcher
-            self.search_configs = search_configs if search_configs else {}
+        self.search_configs.update(search_configs if search_configs else {})
 
     def collect_results(self):
         output = self.results
         self.results = {}
-        for batch_uid in output:
-            self.search_configs.pop(batch_uid, None)
+        for request_uid in output:
+            self.search_configs.pop(request_uid, None)
         return output

@@ -4,7 +4,7 @@ from djl_python.scheduler.utils import compute_offsets, compute_position_ids, co
     trim_tensor
 from transformers import AutoConfig
 from djl_python.scheduler.seq_batch_scheduler_impl import GreedySeqBatchScheduler, ContrastiveSeqBatchScheduler
-from djl_python.scheduler.search_config import SearchConfig, GreedySearchConfig, ContrastiveSearchConfig
+from djl_python.scheduler.search_config import SearchConfig
 import torch
 
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -43,7 +43,7 @@ class TestScheduler(unittest.TestCase):
         model = GPT2LMHeadModel.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
-        search_config = GreedySearchConfig()
+        search_config = SearchConfig()
         PAD = search_config.pad_token_id
         scheduler = GreedySeqBatchScheduler(lm_block, search_config)
 
@@ -119,7 +119,7 @@ class TestScheduler(unittest.TestCase):
         model = GPT2LMHeadModel.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
-        config = ContrastiveSearchConfig()
+        config = SearchConfig()
         PAD = config.pad_token_id
         scheduler = ContrastiveSeqBatchScheduler(lm_block, config)
 
@@ -166,11 +166,9 @@ class TestScheduler(unittest.TestCase):
                                                                         588, 314, 373, 1016, 284, 4656, 13, 314, 1422]))
 
         assert torch.all(torch.tensor(results[0])[:30] == torch.tensor([13579, 1749, 1061, 502, 1364, 290, 826, 13,
-                                                                        314,
-                                                                        460,
-                                                                        470, 3505, 262, 938, 640, 314, 2497, 607, 13,
-                                                                        198,
-                                                                        198, 1, 2061, 466, 345, 1612, 1701, 1965, 616,
+                                                                        314, 460, 470, 3505, 262, 938, 640, 314,
+                                                                        2497, 607, 13, 198, 198, 1, 2061, 466, 345,
+                                                                        1612, 1701, 1965, 616,
                                                                         2802]))
 
         # Load a kv_cache from file
@@ -202,12 +200,40 @@ class TestScheduler(unittest.TestCase):
         for i, ret in results.items():
             print('\n{}:'.format(i), tokenizer.decode(ret))
 
+    def test_inhomogeneous_search_config(self):
+        model_id = "gpt2"
+        model = GPT2LMHeadModel.from_pretrained(model_id)
+        lm_block = HuggingfaceBlock(model)
+
+        config = SearchConfig()
+        scheduler = ContrastiveSeqBatchScheduler(lm_block, config)
+
+        input_ids = torch.tensor(
+            [[13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460]],
+            dtype=torch.int64)
+        request_ids = torch.tensor([[0]])
+        search_config_0 = SearchConfig()
+        search_config_0.max_seqlen = 11
+
+        # init_forward
+        scheduler.add_request(request_ids, input_ids, search_configs={0: search_config_0})
+
+        # Forward pass
+        for _ in scheduler.increment_forward(50):
+            pass
+
+        results = scheduler.results
+
+        assert torch.all(
+            torch.tensor(results[0])[:30] == torch.tensor([13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460,
+                                                           470, 3505, 262, 938, 640, 314, 2497, 607, 13, 198]))
+
     def test_seq_batcher(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
-        scheduler = ContrastiveSeqBatchScheduler(lm_block, ContrastiveSearchConfig())
+        scheduler = ContrastiveSeqBatchScheduler(lm_block, SearchConfig())
 
         # Initialize the SeqBatcher
         input_ids = torch.tensor(
@@ -255,7 +281,7 @@ class TestScheduler(unittest.TestCase):
         input_ids1 = tokenizer(input1, return_tensors='pt',
                                padding=True).input_ids
 
-        config = GreedySearchConfig()
+        config = SearchConfig()
         config.pad_token_id = 50256
         offsets = compute_offsets(input_ids1, config)
         assert torch.all(offsets == torch.tensor([[6], [0]]))

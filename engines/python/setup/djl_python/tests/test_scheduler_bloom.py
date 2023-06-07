@@ -5,10 +5,9 @@ import torch
 
 from transformers import AutoTokenizer, BloomForCausalLM
 
-from djl_python.scheduler import GreedySeqBatchScheduler
-from djl_python.scheduler.lm_block import BloomBlock
-from scheduler.search_config import SearchConfig
-from djl_python.scheduler.seq_batch_scheduler_impl import ContrastiveSeqBatchScheduler
+from scheduler import SearchConfig
+from scheduler.lm_block import BloomBlock
+from scheduler.seq_batch_scheduler_impl import ContrastiveSeqBatchScheduler
 
 
 class TestSchedulerBloom(unittest.TestCase):

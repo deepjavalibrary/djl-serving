@@ -12,8 +12,11 @@
 # the specific language governing permissions and limitations under the License.
 from __future__ import annotations
 
+from typing import Dict
+
 from djl_python.scheduler.batch import Batch
 import torch
+
 
 
 class SeqBatcher(object):
@@ -80,10 +83,11 @@ class SeqBatcher(object):
 
         self.exit_index = set()
 
-    def exit_criteria(self, output_ids: torch.Tensor, max_gen_seqlen: int,
-                      eos_token_id: int):
+    def exit_criteria(self, output_ids: torch.Tensor, search_configs):
         for i in range(len(output_ids)):
-            if self.seq_len - self.offsets[i] >= max_gen_seqlen or output_ids[i] == eos_token_id:
+            request_uid = self.request_uids[i].item()
+            if self.seq_len - self.offsets[i] >= search_configs[request_uid].max_seqlen \
+                    or output_ids[i] == search_configs[request_uid].eos_token_id:
                 if i not in self.exit_index:
                     self.exit_index.add(i)
 

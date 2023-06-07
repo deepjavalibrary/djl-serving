@@ -148,7 +148,7 @@ class ContrastiveSeqBatchScheduler(SeqBatchScheduler):
                                                   logits=next_logits)
 
         # Exit
-        self.seq_batcher.exit_criteria(output_ids, self.config.max_gen_seqlen, self.config.eos_token_id)
+        self.seq_batcher.exit_criteria(output_ids, self.search_configs)
 
         return output_ids
 
@@ -225,7 +225,6 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
         self.seq_batcher.seq_len += 1
 
         # Exit check
-        self.seq_batcher.exit_criteria(output_ids, self.config.max_gen_seqlen,
-                                       self.config.pad_token_id)
+        self.seq_batcher.exit_criteria(output_ids, self.search_configs)
 
         return output_ids
