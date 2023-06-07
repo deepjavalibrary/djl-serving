@@ -324,8 +324,8 @@ class DeepSpeedService(object):
                         "DeepSpeed")
                     device = torch.cuda.current_device()
                     outputs.add_stream_content(
-                        stream_generator(self.model, self.tokenizer, device,
-                                         input_data, **model_kwargs))
+                        stream_generator(self.model, self.tokenizer, input_data,
+                                         device, **model_kwargs))
                 return outputs
             if self.task == "text-generation":
                 tokenized_inputs = self.tokenizer(
