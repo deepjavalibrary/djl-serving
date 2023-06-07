@@ -41,6 +41,7 @@ ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=1.13.1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -Xss2m -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError"
+ENV PYTORCH_KERNEL_CACHE_PATH=/tmp
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]

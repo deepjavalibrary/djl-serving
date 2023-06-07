@@ -37,6 +37,7 @@ ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HUGGINGFACE_HUB_CACHE=/tmp
 ENV TRANSFORMERS_CACHE=/tmp
+ENV PYTORCH_KERNEL_CACHE_PATH=/tmp
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
