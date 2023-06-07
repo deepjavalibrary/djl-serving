@@ -334,9 +334,15 @@ public final class ModelInfo<I, O> {
         } else if (status == Status.FAILED) {
             return Status.FAILED;
         }
+
         for (Model m : getModels().values()) {
-            if (Boolean.parseBoolean(m.getProperty("failed"))) {
-                return Status.FAILED;
+            int failures = Integer.parseInt(m.getProperty("failed", "0"));
+            if (failures > 0) {
+                String def = Utils.getenv("SERVING_RETRY_THRESHOLD", "10");
+                int threshold = Integer.parseInt(m.getProperty("retry_threshold", def));
+                if (failures > threshold) {
+                    return Status.FAILED;
+                }
             }
         }
         return status;

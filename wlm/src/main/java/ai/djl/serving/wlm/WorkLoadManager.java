@@ -105,6 +105,7 @@ public class WorkLoadManager {
         }
         LinkedBlockingDeque<WorkerJob<I, O>> queue = pool.getJobQueue();
         if ((queue.remainingCapacity() == 1 && pool.isAllWorkerBusy())
+                || pool.isAllWorkerDied()
                 || !queue.offer(new WorkerJob<>(job, result))) {
             result.completeExceptionally(
                     new WlmCapacityException(

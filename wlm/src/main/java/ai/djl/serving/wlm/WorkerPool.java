@@ -125,6 +125,22 @@ public class WorkerPool<I, O> {
     }
 
     /**
+     * Return if all workers died.
+     *
+     * @return true if all workers died
+     */
+    public boolean isAllWorkerDied() {
+        for (WorkerGroup<I, O> group : workerGroups.values()) {
+            for (WorkerThread<?, ?> thread : group.getWorkers()) {
+                if (thread.isRunning()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * Returns {@code true} if all workers are busy.
      *
      * @return {@code true} if all workers are busy
