@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from typing import Tuple
+from typing import Tuple, Dict, List
 
 import torch
 
@@ -83,16 +83,17 @@ def nudge_tensor(tensor: torch.Tensor, offsets: torch.Tensor,
 
 
 def compute_offsets(input_ids: torch.Tensor,
-                    config: SearchConfig) -> torch.Tensor:
+                    pad_token_ids: List[int]) -> torch.Tensor:
     num_batch = input_ids.shape[0]
     seq_size = input_ids.shape[1]
 
     offsets = []
     for i in range(num_batch):
         sequence = input_ids[i].tolist()
+        pad_token_id = pad_token_ids[i]
         index = 0
         while index < seq_size:
-            if sequence[index] != config.pad_token_id:
+            if sequence[index] != pad_token_id:
                 break
             index += 1
 
@@ -136,8 +137,6 @@ def compute_attention_mask(offsets, seq_len, repeat_offset: int = 1):
     return past_attention_mask
 
 
-# TODO: This step and nudging can be detached from init_forward. Should have an init_forward just for kv_cache. Then
-#  do a forward pass to infer the kv_cache.
 def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
                              kv_cache: Tuple):
     if kv_cache is None:

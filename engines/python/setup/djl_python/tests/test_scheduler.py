@@ -1,4 +1,5 @@
 import unittest
+
 from djl_python.scheduler import HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
     trim_tensor
@@ -41,78 +42,71 @@ class TestScheduler(unittest.TestCase):
     def test_greedy_scheduler(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
+        search_config.max_seqlen = 30
         PAD = search_config.pad_token_id
         scheduler = GreedySeqBatchScheduler(lm_block, search_config)
 
-        input_ids = torch.tensor(
-            [[13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460]],
-            dtype=torch.int64)
+        input_ids_0 = tokenizer.encode('Memories follow me left and right. I can', return_tensors='pt')
         request_ids = torch.tensor([[0]])
 
-        # Test init_forward
+        # Save a kv_cache to file for later use
         kv_cache_file = "./kv_cache.pt"
-        batch = scheduler.init_forward(input_ids,
-                                       request_ids,
-                                       kv_cache=None,
-                                       save_kv_cache_path=kv_cache_file)
-        scheduler.add_request(request_ids, input_ids, kv_cache=None)
+        scheduler.init_forward(input_ids_0,
+                               request_ids,
+                               save_kv_cache_path=kv_cache_file)
+
+        # Test add_request
+        scheduler.add_request(request_ids, input_ids_0)
+
+        input_ids_1 = tokenizer.encode("When your legs don't work like they used to before And I can't sweep you off",
+                                       return_tensors='pt')
+        input_ids_2 = torch.concat([torch.tensor([PAD, PAD, PAD, PAD, PAD]),
+                                    tokenizer.encode("There's a time that I remember, when I did not know",
+                                                     return_tensors='pt')[0]]).view(1, -1)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
 
         # Test merging longer sequences
-        input_ids = torch.tensor([
-            [
-                2215, 534, 7405, 836, 470, 670, 588, 484, 973, 284, 878, 843, 314,
-                460, 470, 16085, 345, 572
-            ],
-            [
-                PAD, PAD, PAD, PAD, PAD, 1858, 338, 257,
-                640, 326, 314, 3505, 11, 618, 314, 750,
-                407, 760
-            ]])
         request_ids = torch.tensor([[1], [2]])
-        scheduler.add_request(request_ids, input_ids, kv_cache=None)
-        for out in scheduler.increment_forward(10):
+        scheduler.add_request(request_ids, input_ids)
+        for _ in scheduler.increment_forward(20):
             pass
 
+        results = scheduler.results
+
+        assert tokenizer.decode(torch.tensor(results[1][:30])) == "When your legs don't work like they used to before " \
+                                                                  "And I can't sweep you off my feet, I can't do anything about it.\n"
+        assert tokenizer.decode(torch.tensor(results[2][:30])) == "There's a time that I remember, when I did not " \
+                                                                  "know what to do with my life. I was in a very bad mood. I was"
+        assert tokenizer.decode(torch.tensor(results[0][:30])) == "Memories follow me left and right. I can't " \
+                                                                  "remember the last time I saw a girl in a dress. I can't remember the last time"
+
         # Load a kv_cache from file and test merging a shorter sequence
-        input_ids = torch.tensor([[2215, 534, 7405, 836, 470, 670],
-                                  [PAD, PAD, 1858, 338, 257, 640]])
-        request_ids = torch.tensor([[3],
-                                    [4]])
-        # Here the kv_cache_file simulates a fixed resusable prefix whose kv_cache is pre-calculated
+        input_ids_1 = tokenizer.encode("When your legs don't work",
+                                       return_tensors='pt')
+        input_ids_2 = torch.concat([torch.tensor([PAD, PAD]),
+                                    tokenizer.encode("There's a time",
+                                                     return_tensors='pt')[0]]).view(1, -1)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        request_ids = torch.tensor([[3], [4]])
+
+        # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
         kv_cache = torch.load(kv_cache_file)
         scheduler.add_request(request_ids, input_ids, kv_cache=kv_cache)
 
         # Test trim_and_collect
-        for output in scheduler.increment_forward(100):
+        for _ in scheduler.increment_forward(100):
             pass
 
         results = scheduler.results
         assert len(results) == 5
-
-        assert torch.all(torch.tensor(results[1]) == torch.tensor([2215, 534, 7405, 836, 470, 670, 588, 484, 973, 284,
-                                                                   878, 843, 314, 460, 470, 16085, 345, 572, 616, 3625,
-                                                                   11, 314, 460, 470, 466, 1997, 546, 340, 13, 198]))
-
-        assert torch.all(torch.tensor(results[2]) == torch.tensor([1858, 338, 257, 640, 326, 314, 3505, 11, 618, 314,
-                                                                   750, 407, 760, 644, 284, 466, 351, 616, 1204, 13,
-                                                                   314, 373, 287, 257, 845, 2089, 10038, 13, 314, 373]))
-
-        assert torch.all(torch.tensor(results[0]) == torch.tensor([13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460,
-                                                                   470, 3505, 262, 938, 640, 314, 2497, 257, 2576, 287,
-                                                                   257, 6576, 13, 314, 460, 470, 3505, 262, 938, 640]))
-
-        assert torch.all(torch.tensor(results[3]) == torch.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                                   2215, 534, 7405, 836, 470, 670, 11, 345, 821, 1016,
-                                                                   284, 307, 257, 1310, 1643, 517, 10032, 13, 314,
-                                                                   1101]))
-
-        assert torch.all(torch.tensor(results[4]) == torch.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1858, 338,
-                                                                   257, 640, 290, 257, 1295, 13, 314, 1101, 994, 284,
-                                                                   2652, 13,
-                                                                   314, 1101, 994, 284, 2652, 13]))
+        assert tokenizer.decode(torch.tensor(results[3][:30])) == "!!!!!!!!!!When your legs don't work, you're going " \
+                                                                  "to be a little bit more tired. I'm"
+        assert tokenizer.decode(torch.tensor(results[4][:30])) == "!!!!!!!!!!There's a time and a place. I'm here to " \
+                                                                  "stay. I'm here to stay."
 
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
@@ -132,9 +126,8 @@ class TestScheduler(unittest.TestCase):
         kv_cache_file = "./kv_cache.pt"
         batch = scheduler.init_forward(input_ids,
                                        request_ids,
-                                       kv_cache=None,
                                        save_kv_cache_path=kv_cache_file)
-        scheduler.add_request(request_ids, input_ids, kv_cache=None)
+        scheduler.add_request(request_ids, input_ids)
 
         # Test merging longer sequences
         input_ids = torch.tensor([
@@ -148,7 +141,7 @@ class TestScheduler(unittest.TestCase):
                 407, 760
             ]])
         request_ids = torch.tensor([[1], [2]])
-        scheduler.add_request(request_ids, input_ids, kv_cache=None)
+        scheduler.add_request(request_ids, input_ids)
 
         # Forward pass
         for _ in scheduler.increment_forward(20):
@@ -203,30 +196,34 @@ class TestScheduler(unittest.TestCase):
     def test_inhomogeneous_search_config(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id, padding_side='left')
+        tokenizer.pad_token = "[PAD]"
+
         lm_block = HuggingfaceBlock(model)
 
-        config = SearchConfig()
-        scheduler = ContrastiveSeqBatchScheduler(lm_block, config)
+        default_config = SearchConfig()
+        default_config.pad_token_id = 50256
+        scheduler = ContrastiveSeqBatchScheduler(lm_block, default_config)
 
-        input_ids = torch.tensor(
-            [[13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460]],
-            dtype=torch.int64)
-        request_ids = torch.tensor([[0]])
-        search_config_0 = SearchConfig()
-        search_config_0.max_seqlen = 11
+        input = [r"When your legs don't work like they used to before And I can't sweep you off",
+                 r"There's a time that I remember, when I did not know"]
+        input_ids = tokenizer(input, return_tensors='pt', padding=True).input_ids
+
+        request_ids = torch.tensor([[1], [2]])
+
+        search_config = SearchConfig()
+        search_config.max_seqlen = 37
 
         # init_forward
-        scheduler.add_request(request_ids, input_ids, search_configs={0: search_config_0})
+        scheduler.add_request(request_ids, input_ids, search_configs=[default_config, search_config])
 
         # Forward pass
         for _ in scheduler.increment_forward(50):
             pass
 
         results = scheduler.results
-
-        assert torch.all(
-            torch.tensor(results[0])[:30] == torch.tensor([13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460,
-                                                           470, 3505, 262, 938, 640, 314, 2497, 607, 13, 198]))
+        assert len(results[1]) == default_config.max_seqlen
+        assert len(results[2]) == 37
 
     def test_seq_batcher(self):
         model_id = "gpt2"
@@ -270,8 +267,7 @@ class TestScheduler(unittest.TestCase):
     def test_utils(self):
         model_name = 'gpt2'
         tokenizer = GPT2Tokenizer.from_pretrained(model_name,
-                                                  padding_side='left',
-                                                  pad_token_id=220)
+                                                  padding_side='left')
 
         input1 = [
             r'DeepMind Company is',
@@ -281,9 +277,7 @@ class TestScheduler(unittest.TestCase):
         input_ids1 = tokenizer(input1, return_tensors='pt',
                                padding=True).input_ids
 
-        config = SearchConfig()
-        config.pad_token_id = 50256
-        offsets = compute_offsets(input_ids1, config)
+        offsets = compute_offsets(input_ids1, pad_token_ids=[50256, 50256])
         assert torch.all(offsets == torch.tensor([[6], [0]]))
 
         attention_mask = compute_attention_mask(offsets, input_ids1.shape[-1], repeat_offset=2)

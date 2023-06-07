@@ -35,7 +35,7 @@ class ContrastiveSeqBatchScheduler(SeqBatchScheduler):
                 "request_ids.shape does not match input_ids.shape or is illegal"
             )
 
-        initial_offsets = compute_offsets(input_ids, self.config)
+        initial_offsets = compute_offsets(input_ids, [self.search_configs[r.item()].pad_token_id for r in request_ids])
         attention_mask = compute_attention_mask(initial_offsets, input_ids.shape[-1])
         position_ids = compute_position_ids(input_ids.shape[0], input_ids.shape[1], initial_offsets, past_seq_len=0,
                                             repeat_offset=1)
@@ -168,7 +168,7 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
             )
 
         batch_size, init_seq_len = input_ids.shape
-        init_offsets = compute_offsets(input_ids, self.config)
+        init_offsets = compute_offsets(input_ids, [self.search_configs[r.item()].pad_token_id for r in request_ids])
         attention_mask = compute_attention_mask(init_offsets, init_seq_len)
         position_ids = compute_position_ids(batch_size, init_seq_len, init_offsets, past_seq_len=0,
                                             repeat_offset=1)

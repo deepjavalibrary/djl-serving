@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 from collections import defaultdict
 from abc import ABC, abstractmethod
-from typing import Union, Tuple, Dict
+from typing import Union, Tuple, Dict, List
 
 import torch
 
@@ -23,12 +23,12 @@ from djl_python.scheduler.lm_block import LMBlock
 
 class SeqBatchScheduler(ABC):
 
-    def __init__(self, lm_block: LMBlock, config: SearchConfig):
+    def __init__(self, lm_block: LMBlock, default_config: SearchConfig):
         self.lm_block = lm_block
         self.results = {}
         self.seq_batcher = None
-        self.config = config
-        self.search_configs = defaultdict(lambda : config)
+        self.config = default_config
+        self.search_configs = defaultdict(lambda: default_config)
 
     @abstractmethod
     def init_forward(self, input_ids: torch.Tensor, request_uids: torch.Tensor,
@@ -46,9 +46,11 @@ class SeqBatchScheduler(ABC):
 
             output_ids = self.inference_call()
 
+            # collect output
             for request_uid, output_id in zip(self.seq_batcher.request_uids, output_ids):
                 self.results[request_uid.item()].append(output_id.item())
 
+            # trim the sequence batcher
             self.seq_batcher.collect_and_trim()
             i += 1
 
@@ -60,9 +62,8 @@ class SeqBatchScheduler(ABC):
 
     def add_request(self, request_uids: torch.Tensor,
                     input_ids: torch.Tensor,
-                    search_configs: Dict[int, SearchConfig] = None,
+                    search_configs: List[SearchConfig] = None,
                     kv_cache: Union[Tuple, None] = None):
-
         new_seq_batcher, output_ids = self.init_forward(input_ids, request_uids, kv_cache)
         for request_uid, output_id in zip(request_uids, output_ids):
             self.results[request_uid.item()] = output_id.tolist()
@@ -71,7 +72,10 @@ class SeqBatchScheduler(ABC):
             self.seq_batcher.add_batch(new_seq_batcher)
         else:
             self.seq_batcher = new_seq_batcher
-        self.search_configs.update(search_configs if search_configs else {})
+
+        if search_configs:
+            for request, search_config in zip(request_uids, search_configs):
+                self.search_configs[request.item()] = search_config
 
     def collect_results(self):
         output = self.results
