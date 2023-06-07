@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from typing import Tuple, List
+from typing import Tuple, List, Union, Dict
 
 import torch
 
@@ -23,6 +23,8 @@ from djl_python.scheduler.utils import compute_offsets, compute_position_ids, co
 
 
 class ContrastiveSeqBatchScheduler(SeqBatchScheduler):
+
+    @torch.no_grad()
     def init_forward(self, input_ids: torch.Tensor,
                      request_ids: torch.Tensor,
                      kv_cache: Tuple = None,
@@ -73,6 +75,7 @@ class ContrastiveSeqBatchScheduler(SeqBatchScheduler):
 
         return SeqBatcher(batch, request_ids, initial_offsets), input_ids_list
 
+    @torch.no_grad()
     def inference_call(self) -> torch.Tensor:
         batch = self.seq_batcher.batch
         # [batch, topK]
@@ -197,7 +200,7 @@ class GreedySeqBatchScheduler(SeqBatchScheduler):
         return SeqBatcher(batch, request_ids, init_offsets), input_ids_list
 
     @torch.no_grad()
-    def inference_call(self) -> Tuple[torch.Tensor, set]:
+    def inference_call(self) -> torch.Tensor:
         batch = self.seq_batcher.batch
 
         # [batch, seq=1]

@@ -57,7 +57,7 @@ class SeqBatcher(object):
 
         # find the batch indices of the non-finished requests.
         keep_indices = torch.tensor(
-            list(set(range(self.batch_size)) - self.exit_index),
+            list(set(range(self.request_uids.shape[0])) - self.exit_index),
             dtype=torch.int64)
 
         # if all the requests finished generating sequences, then reset the batch and return

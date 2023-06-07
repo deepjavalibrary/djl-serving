@@ -130,12 +130,14 @@ def compute_attention_mask(offsets, seq_len, repeat_offset: int = 1):
     batch_size = len(offsets) * repeat_offset
     past_attention_mask = torch.ones(batch_size, seq_len, dtype=torch.int64)
     for i, offset in enumerate(offsets):
-        repeat_part = slice(i*repeat_offset, (i+1) * repeat_offset)
+        repeat_part = slice(i * repeat_offset, (i + 1) * repeat_offset)
         past_attention_mask[repeat_part, :offset.item()] = 0
 
     return past_attention_mask
 
 
+# TODO: This step and nudging can be detached from init_forward. Should have an init_forward just for kv_cache. Then
+#  do a forward pass to infer the kv_cache.
 def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
                              kv_cache: Tuple):
     if kv_cache is None:
