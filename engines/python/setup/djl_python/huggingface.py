@@ -159,15 +159,15 @@ class HuggingFaceService(object):
                 if self.enable_streaming == "huggingface":
                     outputs.add_stream_content(
                         StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, input_data, self.device_id,
-                            **parameters))
+                            self.model, self.tokenizer, input_data,
+                            self.device_id, **parameters))
                 else:
                     stream_generator = StreamingUtils.get_stream_generator(
                         "Accelerate")
                     device = "cpu" if self.device_id < 0 else f"cuda:{self.device_id}"
                     outputs.add_stream_content(
-                        stream_generator(self.model, self.tokenizer, input_data,
-                                         device, **parameters))
+                        stream_generator(self.model, self.tokenizer,
+                                         input_data, device, **parameters))
                 return outputs
 
             prediction = self.hf_pipeline(input_data, **parameters)

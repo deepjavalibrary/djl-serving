@@ -19,6 +19,8 @@ import argparse
 import subprocess
 
 from pathlib import Path
+
+import utils
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
 
@@ -46,7 +48,7 @@ class PartitionService(object):
 
         download_dir = os.environ.get(
             "SERVING_DOWNLOAD_DIR",
-            get_download_dir(properties_manager.properties_dir, 'model'))
+            get_download_dir(self.properties_manager.properties_dir, 'model'))
 
         s3url = model_id
         if Path("/opt/djl/bin/s5cmd").is_file():
@@ -165,6 +167,7 @@ class PartitionService(object):
     def run_partition(self):
         commands = get_partition_cmd(self.properties_manager.is_mpi_mode,
                                      self.properties)
+        logging.info(f"cmd: {commands}")
         self.set_environmental_vars()
         result = subprocess.run(commands)
         logging.info(result)
@@ -173,13 +176,41 @@ class PartitionService(object):
             self.properties_manager.validate_and_correct_checkpoints_json()
             self.properties_manager.generate_properties_file()
             self.copy_config_files()
+            self.load_the_generated_checkpoints()
             self.upload_checkpoints_to_s3()
             self.cleanup()
         else:
             raise Exception("Partitioning was not successful.")
 
+    def load_the_generated_checkpoints(self):
+        if self.properties['engine'] == 'DeepSpeed':
+            saved_checkpoints_dir = self.properties["save_mp_checkpoint_path"]
+            properties = utils.load_properties(saved_checkpoints_dir)
+            properties['model_dir'] = saved_checkpoints_dir
+            properties['entryPoint'] = self.properties['entryPoint']
+            properties['partition_handler'] = 'handle'
 
-if __name__ == "__main__":
+            entry_point_file = None
+            if properties['entryPoint'] == 'model.py':
+                entry_point_file = os.path.join(
+                    self.properties['properties_dir'], 'model.py')
+                shutil.copy(entry_point_file, saved_checkpoints_dir)
+
+            commands = get_partition_cmd(True, properties)
+            self.set_environmental_vars()
+            result = subprocess.run(commands)
+            logging.info(result)
+            if result.returncode == 0:
+                logging.info(
+                    "Successfully loaded the partitioned checkpoints.")
+            else:
+                raise Exception("DeepSpeed does not support partitioning. "
+                                "Please use a different engine")
+            if entry_point_file:
+                os.remove(os.path.join(saved_checkpoints_dir, 'model.py'))
+
+
+def main():
     logging.basicConfig(stream=sys.stdout,
                         format="%(message)s",
                         level=logging.INFO)
@@ -191,12 +222,37 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default='/opt/ml/input/data/training',
+        dest='properties_dir',
         help='path of the model directory containing model/properties file')
+    parser.add_argument('--model-id',
+                        type=str,
+                        required=False,
+                        help='HuggingFace model_id or s3_uri')
+    parser.add_argument('--engine', type=str, required=False, help='engine')
+    parser.add_argument(
+        '--save-mp-checkpoint-path',
+        type=str,
+        required=False,
+        help='local path or s3 uri to save/upload the partitioned checkpoints')
+    parser.add_argument('--tensor-parallel-degree',
+                        type=str,
+                        required=False,
+                        help='tensor parallel degree')
 
     args = parser.parse_args()
 
+    try:
+        properties_manager = PropertiesManager(args)
+    except ValueError as e:
+        logging.error(str(e))
+        parser.print_usage()
+        return
+
     extract_python_jar(PYTHON_CACHE_DIR)
 
-    properties_manager = PropertiesManager(args.model_dir)
     service = PartitionService(properties_manager)
     service.run_partition()
+
+
+if __name__ == "__main__":
+    main()

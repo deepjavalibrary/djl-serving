@@ -42,7 +42,7 @@ def load_model(properties):
         with deepspeed.OnDevice(dtype=dtype, device="meta"):
             model = AutoModelForCausalLM.from_config(config, **kwargs)
 
-        ds_kwargs["checkpoint"] = properties['checkpoint']
+        ds_kwargs["checkpoint"] = checkpoint
         ds_kwargs["base_dir"] = model_location
     else:
         model = AutoModelForCausalLM.from_pretrained(model_location,

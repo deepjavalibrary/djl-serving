@@ -34,13 +34,12 @@ def invoke_partition(properties):
         model_service = load_model_service(properties['model_dir'],
                                            properties['entryPoint'], None)
         model_service.invoke_handler(handler, inputs)
-        logging.info("Partitioning is successful")
     except Exception as e:
         logging.exception(f"Partitioning failed {str(e)}")
         raise Exception("Partitioning failed.")
 
 
-if __name__ == '__main__':
+def main():
     logging.basicConfig(stream=sys.stdout,
                         format="%(message)s",
                         level=logging.INFO)
@@ -51,4 +50,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
     properties = json.loads(args.properties)
 
-    invoke_partition(properties)
+    # DJL handler expect 'option.' is removed
+    input_prop = {}
+    for key, value in properties.items():
+        if key.startswith("option."):
+            input_prop[key[7:]] = value
+        else:
+            input_prop[key] = value
+
+    invoke_partition(input_prop)
+
+
+if __name__ == '__main__':
+    main()

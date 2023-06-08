@@ -730,7 +730,7 @@ jobs:
           sudo mv $PWD/models/test/partition-test $PWD/models/
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
           
-          # checking whether reqirements.txt download is successful
+          # checking whether requirements.txt download is successful
           if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
           then echo "requirements.txt install was successful"; else exit 1; fi
       - name: Test opt-6.7b inference
@@ -824,7 +824,7 @@ jobs:
           sudo mv $PWD/models/test/partition-test $PWD/models/
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
 
-          # checking whether reqirements.txt download is successful
+          # checking whether requirements.txt download is successful
           if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
           then echo "requirements.txt install was successful"; else exit 1; fi
       - name: Test opt-6.7b inference
