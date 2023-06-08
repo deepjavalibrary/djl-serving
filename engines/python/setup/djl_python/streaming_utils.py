@@ -67,12 +67,13 @@ class StreamingUtils:
     BUILTIN_ENGINES = {"DeepSpeed", "Accelerate", "transformers-neuronx"}
 
     @staticmethod
-    def use_hf_default_streamer(model, tokenizer, inputs, device_id, **kwargs):
+    def use_hf_default_streamer(model, tokenizer, inputs, device, **kwargs):
         if not tokenizer.pad_token:
             tokenizer.pad_token = tokenizer.eos_token
         input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
-        if device_id >= 0:
-            input_tokens.to(torch.cuda.current_device())
+        if device:
+            input_tokens.to(device)
+
         streamer = HFStreamer(tokenizer, skip_special_token=True)
         generation_kwargs = dict(input_tokens, streamer=streamer, **kwargs)
 
@@ -115,7 +116,10 @@ class StreamingUtils:
         max_new_tokens = kwargs.get("max_new_tokens",
                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
         tokenized_inputs = tokenizer(inputs, return_tensors="pt", padding=True)
-        input_ids = tokenized_inputs["input_ids"].to(device)
+        input_ids = tokenized_inputs["input_ids"]
+        if device:
+            input_ids.to(device)
+
         past_key_values = None
         decoding_method = StreamingUtils._get_decoding_method(**kwargs)
         new_tokens_count = 0
@@ -142,7 +146,10 @@ class StreamingUtils:
             curr_length = input_length
 
         if generic_model_class == "Seq2SeqLM":
-            attention_mask = tokenized_inputs["attention_mask"].to(device)
+            attention_mask = tokenized_inputs["attention_mask"]
+            if device:
+                attention_mask.to(device)
+
             decoder_attention_mask = None
             encoder_last_hidden_state = None
             decoder_input_ids = torch.tensor(tokenizer.bos_token_id,

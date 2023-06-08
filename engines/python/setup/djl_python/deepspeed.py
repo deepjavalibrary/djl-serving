@@ -317,15 +317,15 @@ class DeepSpeedService(object):
                 if self.enable_streaming == "huggingface":
                     outputs.add_stream_content(
                         StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, input_data, 0,
-                            **model_kwargs))
+                            self.model, self.tokenizer, input_data,
+                            self.device, **model_kwargs))
                 else:
                     stream_generator = StreamingUtils.get_stream_generator(
                         "DeepSpeed")
-                    device = torch.cuda.current_device()
                     outputs.add_stream_content(
-                        stream_generator(self.model, self.tokenizer, input_data,
-                                         device, **model_kwargs))
+                        stream_generator(self.model, self.tokenizer,
+                                         input_data, self.device,
+                                         **model_kwargs))
                 return outputs
             if self.task == "text-generation":
                 tokenized_inputs = self.tokenizer(
