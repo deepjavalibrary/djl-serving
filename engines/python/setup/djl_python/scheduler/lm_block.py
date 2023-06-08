@@ -20,7 +20,7 @@ import torch
 class LMBlock(ABC):
 
     @abstractmethod
-    def __init__(self, model):
+    def __init__(self):
         """
         Set self.model to the input language model.
         """

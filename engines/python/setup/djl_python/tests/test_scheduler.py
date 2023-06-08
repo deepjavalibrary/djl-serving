@@ -77,11 +77,11 @@ class TestScheduler(unittest.TestCase):
 
         results = scheduler.results
 
-        assert tokenizer.decode(torch.tensor(results[1][:30])) == "When your legs don't work like they used to before " \
+        assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before " \
                                                                   "And I can't sweep you off my feet, I can't do anything about it.\n"
-        assert tokenizer.decode(torch.tensor(results[2][:30])) == "There's a time that I remember, when I did not " \
+        assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not " \
                                                                   "know what to do with my life. I was in a very bad mood. I was"
-        assert tokenizer.decode(torch.tensor(results[0][:30])) == "Memories follow me left and right. I can't " \
+        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't " \
                                                                   "remember the last time I saw a girl in a dress. I can't remember the last time"
 
         # Load a kv_cache from file and test merging a shorter sequence
@@ -103,9 +103,9 @@ class TestScheduler(unittest.TestCase):
 
         results = scheduler.results
         assert len(results) == 5
-        assert tokenizer.decode(torch.tensor(results[3][:30])) == "!!!!!!!!!!When your legs don't work, you're going " \
+        assert tokenizer.decode(results[3][:30]) == "!!!!!!!!!!When your legs don't work, you're going " \
                                                                   "to be a little bit more tired. I'm"
-        assert tokenizer.decode(torch.tensor(results[4][:30])) == "!!!!!!!!!!There's a time and a place. I'm here to " \
+        assert tokenizer.decode(results[4][:30]) == "!!!!!!!!!!There's a time and a place. I'm here to " \
                                                                   "stay. I'm here to stay."
 
     def test_contrastive_scheduler(self):

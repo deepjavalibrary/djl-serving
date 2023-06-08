@@ -35,6 +35,9 @@ class SeqBatchScheduler(ABC):
                      kv_cache: Union[Tuple, None]) -> SeqBatcher:
         pass
 
+    def is_empty(self):
+        return self.seq_batcher is None or self.seq_batcher.batch is None
+
     def increment_forward(self, count: int) -> torch.Tensor:
         i = 0
         while i < count:

@@ -18,7 +18,7 @@ class SearchConfig:
     def __init__(self):
         self.max_seqlen = 30
         self.eos_token_id = 50256
-        self.pad_token_id = 220
+        self.pad_token_id = 50256
         self.topk = 4
         self.alpha = 0.6
         self.beam = 3
