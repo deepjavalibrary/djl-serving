@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 
 import torch
 
@@ -20,11 +20,36 @@ import torch
 class LMBlock(ABC):
 
     @abstractmethod
-    def __init__(self):
+    def __init__(self, model):
+        """
+        Set self.model to the input language model.
+        """
         pass
 
     @abstractmethod
-    def forward(self, inputs, past_key_values):
+    def forward(self, inputs: List[torch.tensor], past_key_values: Tuple) -> Tuple[torch.tensor, Tuple, torch.tensor]:
+        """
+        Convert the variables between that used in the internal model's forward call and that used in the
+        autoregressive search.
+
+        Args:
+            inputs (`List[torch.tensor]`):
+                Contains [input_ids, position_ids, attention_mask], order preserved.
+                `input_ids` and `position_ids` are of size (batch_size, input_seq_len),
+                `attention_mask` is of size (batch_size, past_seq_len + input_seq_len).
+            past_key_values (`Tuple`):
+                The kv_cache. The required form of kv_cache used in the autoregressive search is Tuple[Tuple[key,
+                value] * num_layers].
+                key: (batch_size, num_heads, seq_len, kv_dim),
+                value: (batch_size, num_heads, seq_len, kv_dim).
+        Return:
+            logits (`torch.tensor`):
+                (batch_size, vocab_dim)
+            past_key_values (`Tuple`):
+                same as above.
+            hidden_state ('torch.tensor`):
+                (batch_size, seq_len, hidden_dim), the embedding of the tokens.
+        """
         pass
 
 
