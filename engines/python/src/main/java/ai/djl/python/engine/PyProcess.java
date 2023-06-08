@@ -51,7 +51,6 @@ class PyProcess {
     private ReaderThread out;
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
-    private int retryThreshold;
 
     PyProcess(Model model, PyEnv pyEnv, int workerId) {
         this.model = model;
@@ -67,7 +66,6 @@ class PyProcess {
             connections = Collections.singletonList(new Connection(pyEnv, workerId, -1));
         }
         restartCount = new AtomicInteger(0);
-        retryThreshold = Integer.parseInt(model.getProperty("retry_threshold", "10"));
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) {
@@ -175,9 +173,8 @@ class PyProcess {
     synchronized void stopPythonProcess() {
         int id = restartCount.getAndIncrement();
         logger.info("Stop process: {}:{}", workerId, id);
-        if (id >= retryThreshold) {
-            model.setProperty("failed", "true");
-        }
+        int failures = Integer.parseInt(model.getProperty("failed", "0"));
+        model.setProperty("failed", String.valueOf(failures + 1));
 
         if (restartFuture != null) {
             try {
