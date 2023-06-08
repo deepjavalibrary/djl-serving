@@ -4,9 +4,9 @@ DJL Serving provides a set of API allow user to manage models at runtime:
 
 1. [Register a model](#register-a-model)
 2. [Increase/decrease number of workers for specific model](#scale-workers)
-3. [Describe a model's status](#describe-model)
-4. [Unregister a model](#unregister-a-model)
-5. [List registered models](#list-models)
+3. [Describe a model's status](#describe-model-or-workflow)
+4. [Unregister a model](#unregister-a-model-or-workflow)
+5. [List registered models](#list-workflows)
 
 Management API is listening on port 8080 and only accessible from localhost by default. To change the default setting, see [DJL Serving Configuration](configuration.md).
 
@@ -35,7 +35,7 @@ Registers a new model as a single model workflow. The workflow name and version 
 * max_idle_time - the maximum idle time in seconds before the worker thread is scaled down, default is `60` seconds.
 * min_worker - the minimum number of worker processes, DJL will auto detect minimum workers if not specified.
 * max_worker - the maximum number of worker processes, DJL will auto detect maximum workers if not specified.
-* synchronous - whether or not the creation of worker is synchronous, the default is `true`.
+* synchronous - if the creation of worker is synchronous, the default is `true`.
 
 ```bash
 curl -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai%2Ftest-models%2Fmlp.tar.gz"
@@ -78,7 +78,7 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
     * Neuron core: nc1, nc2, ...
 * min_worker - the minimum number of worker processes. The default value is `1`.
 * max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
-* synchronous - whether or not the creation of worker is synchronous. The default value is true.
+* synchronous - if the creation of worker is synchronous. The default value is true.
 
 ```bash
 curl -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.tar.gz"
@@ -121,6 +121,7 @@ curl -v -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl
 
 * min_worker - the minimum number of worker processes. The default value is `1`.
 * max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
+* synchronous - if the creation of worker is synchronous. The default value is true.
 
 Use the Scale Worker API to dynamically adjust the number of workers to better serve different inference request loads.
 
@@ -129,7 +130,7 @@ There are two different flavour of this API, synchronous vs asynchronous.
 The asynchronous call will return immediately with HTTP code 202:
 
 ```bash
-curl -v -X PUT "http://localhost:8080/workflows/mlp?min_worker=3"
+curl -v -X PUT "http://localhost:8080/workflows/mlp?min_worker=3&synchronous=false"
 
 < HTTP/1.1 202 Accepted
 < content-type: application/json
@@ -153,25 +154,41 @@ Use the Describe Model API to get detail runtime status of a model or workflow:
 ```bash
 curl http://localhost:8080/models/mlp
 
-{
-  "modelName": "mlp",
-  "modelUrl": "https://resources.djl.ai/test-models/mlp.tar.gz",
-  "minWorkers": 1,
-  "maxWorkers": 1,
-  "batchSize": 1,
-  "maxBatchDelayMillis": 100,
-  "maxIdleSeconds": 60,
-  "status": "Healthy",
-  "loadedAtStartup": false,
-  "workers": [
-    {
-      "id": 1,
-      "startTime": "2021-07-14T09:01:17.199Z",
-      "status": "READY",
-      "gpu": false
-    }
-  ]
-}
+[
+  {
+    "workflowName": "mlp",
+    "models": [
+      {
+        "modelName": "mlp",
+        "modelUrl": "https://resources.djl.ai/test-models/mlp.tar.gz",
+        "batchSize": 1,
+        "maxBatchDelayMillis": 100,
+        "maxIdleSeconds": 60,
+        "queueSize": 1000,
+        "requestInQueue": 0,
+        "status": "Healthy",
+        "loadedAtStartup": true,
+        "workerGroups": [
+          {
+            "device": {
+              "deviceType": "cpu",
+              "deviceId": -1
+            },
+            "minWorkers": 1,
+            "maxWorkers": 12,
+            "workers": [
+              {
+                "id": 1,
+                "startTime": "2023-06-08T08:14:16.999Z",
+                "status": "READY"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
 ```
 
 ### Unregister a model or workflow
@@ -214,7 +231,8 @@ curl "http://localhost:8080/models?limit=2&next_page_token=0"
   "models": [
     {
       "modelName": "mlp",
-      "modelUrl": "https://resources.djl.ai/test-models/mlp.tar.gz"
+      "modelUrl": "https://resources.djl.ai/test-models/mlp.tar.gz",
+      "status": "READY"
     }
   ]
 }
