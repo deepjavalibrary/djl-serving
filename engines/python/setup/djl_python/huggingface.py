@@ -209,7 +209,7 @@ class HuggingFaceService(object):
         if use_pipeline:
                 hf_pipeline = pipeline(task=task,
                                        model=model_id_or_path,
-                                       device=device
+                                       device=device,
                                        **kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
