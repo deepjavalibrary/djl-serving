@@ -64,7 +64,7 @@ class HuggingFaceService(object):
         self.initialized = False
         self.enable_streaming = None
         self.model = None
-        self.device_id = -1
+        self.device = None
         self.tokenizer = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
@@ -75,7 +75,8 @@ class HuggingFaceService(object):
         # Otherwise we assume model artifacts are in the model_dir
         model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        self.device_id = int(properties.get("device_id", "-1"))
+        device_id = int(properties.get("device_id", "-1"))
+        self.device = f"cuda:{device_id}" if device_id >= 0 else None
         task = properties.get("task")
         tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
         self.enable_streaming = properties.get("enable_streaming", None)
@@ -89,9 +90,11 @@ class HuggingFaceService(object):
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         if "device_map" in properties:
             kwargs["device_map"] = properties.get("device_map")
+            self.device = None
             logging.info(f"Using device map {kwargs['device_map']}")
         elif tp_degree > 0 and torch.cuda.device_count() > 0:
             kwargs["device_map"] = "auto"
+            self.device = None
             world_size = torch.cuda.device_count()
             assert world_size == tp_degree, f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
             logging.info(f"Using {world_size} gpus")
@@ -160,14 +163,14 @@ class HuggingFaceService(object):
                     outputs.add_stream_content(
                         StreamingUtils.use_hf_default_streamer(
                             self.model, self.tokenizer, input_data,
-                            self.device_id, **parameters))
+                            self.device, **parameters))
                 else:
                     stream_generator = StreamingUtils.get_stream_generator(
                         "Accelerate")
-                    device = "cpu" if self.device_id < 0 else f"cuda:{self.device_id}"
                     outputs.add_stream_content(
                         stream_generator(self.model, self.tokenizer,
-                                         input_data, device, **parameters))
+                                         input_data, self.device,
+                                         **parameters))
                 return outputs
 
             prediction = self.hf_pipeline(input_data, **parameters)
@@ -204,13 +207,12 @@ class HuggingFaceService(object):
         for element in ["load_in_8bit", "low_cpu_mem_usage"]:
             if element in kwargs:
                 use_pipeline = False
-        device = None if "device_map" in kwargs else self.device_id
         # build pipeline
         if use_pipeline:
-                hf_pipeline = pipeline(task=task,
-                                       model=model_id_or_path,
-                                       device=device,
-                                       **kwargs)
+            hf_pipeline = pipeline(task=task,
+                                   model=model_id_or_path,
+                                   device=self.device,
+                                   **kwargs)
         else:
             tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
             kwargs.pop("tokenizer", None)
@@ -219,7 +221,7 @@ class HuggingFaceService(object):
             hf_pipeline = pipeline(task=task,
                                    model=model,
                                    tokenizer=tokenizer,
-                                   device=device)
+                                   device=self.device)
 
         # wrap specific pipeline to support better ux
         if task == "conversational":
@@ -238,17 +240,19 @@ class HuggingFaceService(object):
     def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
-        device = "cpu" if self.device_id < 0 else f"cuda:{self.device_id}"
         model_config = AutoConfig.from_pretrained(model_id_or_path,
                                                   kwargs=kwargs)
         architectures = model_config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
             self.model = AutoModelForSeq2SeqLM.from_pretrained(
-                model_id_or_path, **kwargs).to(device)
+                model_id_or_path, **kwargs)
         else:
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path, **kwargs).to(device)
+                model_id_or_path, **kwargs)
+
+        if self.device:
+            self.model.to(self.device)
 
     @staticmethod
     def wrap_conversation_pipeline(hf_pipeline):
@@ -276,8 +280,9 @@ class HuggingFaceService(object):
             model = hf_pipeline.model
             tokenizer = hf_pipeline.tokenizer
             input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
-            if self.device_id >= 0:
-                input_tokens.to(f"cuda:{self.device_id}")
+            if self.device:
+                input_tokens.to(self.device)
+
             with torch.no_grad():
                 output_tokens = model.generate(
                     *args,
