@@ -35,6 +35,7 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu118-precxx11
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
+ENV PYTORCH_KERNEL_CACHE_PATH=/tmp
 
 COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
