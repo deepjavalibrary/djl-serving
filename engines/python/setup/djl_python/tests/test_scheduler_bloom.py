@@ -24,8 +24,13 @@ class TestSchedulerBloom(unittest.TestCase):
 
         input0 = [
             torch.repeat_interleave(input_ids_0, dim=0, repeats=2),
-            torch.repeat_interleave(torch.arange(seq_len)[None, :], dim=0, repeats=2),
-            torch.repeat_interleave(torch.ones(seq_len, dtype=torch.int64)[None, :], dim=0, repeats=2)
+            torch.repeat_interleave(torch.arange(seq_len)[None, :],
+                                    dim=0,
+                                    repeats=2),
+            torch.repeat_interleave(torch.ones(seq_len,
+                                               dtype=torch.int64)[None, :],
+                                    dim=0,
+                                    repeats=2)
         ]
 
         output0 = lm_block.forward(input0, None)
@@ -56,18 +61,23 @@ class TestSchedulerBloom(unittest.TestCase):
         PAD = search_config.pad_token_id
         scheduler = ContrastiveSeqBatchScheduler(lm_block, search_config)
 
-        input_ids_0 = tokenizer.encode('Memories follow me left and right. I can', return_tensors='pt')
+        input_ids_0 = tokenizer.encode(
+            'Memories follow me left and right. I can', return_tensors='pt')
         request_ids = torch.tensor([[0]])
 
         # Test init_forward
         scheduler.add_request(request_ids, input_ids_0)
 
         # Merge longer sequences
-        input_ids_1 = tokenizer.encode("When your legs don't work like they used to before And I can't sweep you off",
-                                     return_tensors='pt')
-        input_ids_2 = torch.concat([torch.tensor([PAD, PAD, PAD, PAD]),
-                                    tokenizer.encode("There's a time that I remember, when I did not know",
-                                     return_tensors='pt')[0]]).view(1, -1)
+        input_ids_1 = tokenizer.encode(
+            "When your legs don't work like they used to before And I can't sweep you off",
+            return_tensors='pt')
+        input_ids_2 = torch.concat([
+            torch.tensor([PAD, PAD, PAD, PAD]),
+            tokenizer.encode(
+                "There's a time that I remember, when I did not know",
+                return_tensors='pt')[0]
+        ]).view(1, -1)
         input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
 
         request_ids = torch.tensor([[1], [2]])
@@ -79,16 +89,23 @@ class TestSchedulerBloom(unittest.TestCase):
 
         results = scheduler.results
 
-        assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before And I can't sweep you off my lap But if you're still here I'll take care of it If you're"
-        assert tokenizer.decode(results[2][:20]) == "There's a time that I remember, when I did not know what it was like to live in this"
-        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can feel them moving around in my body, like they’re trying to tell me something about where I’m going"
+        assert tokenizer.decode(
+            results[1][:30]
+        ) == "When your legs don't work like they used to before And I can't sweep you off my lap But if you're still here I'll take care of it If you're"
+        assert tokenizer.decode(
+            results[2][:20]
+        ) == "There's a time that I remember, when I did not know what it was like to live in this"
+        assert tokenizer.decode(
+            results[0][:30]
+        ) == "Memories follow me left and right. I can feel them moving around in my body, like they’re trying to tell me something about where I’m going"
 
         # Merge shorter sequences
         input_ids_1 = tokenizer.encode("When your legs don't work",
-                                     return_tensors='pt')
-        input_ids_2 = torch.concat([torch.tensor([PAD, PAD]),
-                                    tokenizer.encode("There's a time",
-                                     return_tensors='pt')[0]]).view(1, -1)
+                                       return_tensors='pt')
+        input_ids_2 = torch.concat([
+            torch.tensor([PAD, PAD]),
+            tokenizer.encode("There's a time", return_tensors='pt')[0]
+        ]).view(1, -1)
         input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
         request_ids = torch.tensor([[3], [4]])
 

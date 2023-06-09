@@ -50,7 +50,8 @@ class SeqBatchScheduler(ABC):
             output_ids = self.inference_call().to("cpu")
 
             # collect output
-            for request_uid, output_id in zip(self.seq_batcher.request_uids, output_ids):
+            for request_uid, output_id in zip(self.seq_batcher.request_uids,
+                                              output_ids):
                 self.results[request_uid.item()].append(output_id.item())
 
             # trim the sequence batcher
@@ -63,7 +64,8 @@ class SeqBatchScheduler(ABC):
     def inference_call(self) -> torch.Tensor:
         pass
 
-    def add_request(self, request_uids: torch.Tensor,
+    def add_request(self,
+                    request_uids: torch.Tensor,
                     input_ids: torch.Tensor,
                     search_configs: List[SearchConfig] = None,
                     kv_cache: Union[Tuple, None] = None):
@@ -78,7 +80,8 @@ class SeqBatchScheduler(ABC):
                 kv_list.append((k_new, v_new))
             kv_cache = tuple(kv_list)
 
-        new_seq_batcher, output_ids = self.init_forward(input_ids, request_uids, kv_cache)
+        new_seq_batcher, output_ids = self.init_forward(
+            input_ids, request_uids, kv_cache)
         for request_uid, output_id in zip(request_uids, output_ids):
             self.results[request_uid.item()] = output_id.tolist()
 

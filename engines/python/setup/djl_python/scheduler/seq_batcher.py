@@ -18,7 +18,6 @@ from djl_python.scheduler.batch import Batch
 import torch
 
 
-
 class SeqBatcher(object):
 
     def __init__(self, batch: Batch, request_uids: torch.Tensor,
@@ -61,13 +60,17 @@ class SeqBatcher(object):
         # find the batch indices of the non-finished requests.
         keep_indices = torch.tensor(
             list(set(range(self.request_uids.shape[0])) - self.exit_index),
-            dtype=torch.int64, device=self.offsets.device)
+            dtype=torch.int64,
+            device=self.offsets.device)
 
         # if all the requests finished generating sequences, then reset the batch and return
         if len(keep_indices) == 0:
             self.request_uids = torch.empty([0, 1],
-                                            dtype=self.request_uids.dtype, device=self.request_uids.device)
-            self.offsets = torch.empty([0, 1], dtype=self.offsets.dtype, device=self.offsets.device)
+                                            dtype=self.request_uids.dtype,
+                                            device=self.request_uids.device)
+            self.offsets = torch.empty([0, 1],
+                                       dtype=self.offsets.dtype,
+                                       device=self.offsets.device)
             self.batch = None
             self.batch_size = 0
             self.seq_len = 0
