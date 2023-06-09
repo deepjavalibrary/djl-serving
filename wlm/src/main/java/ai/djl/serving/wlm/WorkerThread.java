@@ -67,7 +67,7 @@ public final class WorkerThread<I, O> implements Runnable {
         ZooModel<I, O> model = builder.model.getModel(device);
 
         predictor = model.newPredictor();
-        modelName = model.getName();
+        modelName = builder.model.getId();
         logModelMetric = Boolean.parseBoolean(model.getProperty("log_model_metric"));
         metricsAggregation = Integer.parseInt(model.getProperty("metrics_aggregation", "1000"));
     }
