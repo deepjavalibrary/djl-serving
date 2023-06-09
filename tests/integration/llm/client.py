@@ -168,6 +168,11 @@ ft_model_spec = {
         "batch_size": [1, 2],
         "seq_length": [64, 128],
         "max_memory_per_gpu": [15.0, 15.0, 15.0, 15.0]
+    },
+    "EleutherAI/pythia-2.8b": {
+        "batch_size": [1, 2],
+        "seq_length": [64, 128],
+        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0]
     }
 }
 
@@ -178,7 +183,7 @@ ft_raw_model_spec = {
     },
     "gpt2-xl": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 7.0
+        "max_memory_per_gpu": 8.0
     },
     "facebook/opt-6.7b": {
         "batch_size": [1, 2],
@@ -188,9 +193,9 @@ ft_raw_model_spec = {
         "batch_size": [1, 2],
         "max_memory_per_gpu": 6.0
     },
-    "flan-t5-xxl": {
+    "nomic-ai/gpt4all-j": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 15.0
+        "max_memory_per_gpu": 6.0
     }
 }
 
