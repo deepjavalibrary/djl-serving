@@ -180,6 +180,12 @@ ft_handler_list = {
         "option.model_id": "s3://djl-llm/flan-t5-xxl/",
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp32"
+    },
+    "EleutherAI/pythia-2.8b": {
+        "option.model_id": "s3://djl-llm/pythia-2.8b/",
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "fp16",
+        "gpu.maxWorkers": 1
     }
 }
 
@@ -203,10 +209,11 @@ ft_model_list = {
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1,
     },
-    "flan-t5-xxl": {
-        "option.model_id": "s3://djl-llm/flan-t5-xxl/",
+    "nomic-ai/gpt4all-j": {
+        "option.model_id": "s3://djl-llm/gpt4all-j/",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp32"
+        "option.dtype": "fp32",
+        "option.use_triton": True
     }
 }
 
@@ -409,6 +416,8 @@ def build_ft_raw_model(model):
         )
     options = ft_model_list[model]
     options["engine"] = "FasterTransformer"
+    if "option.use_triton" in options and options["option.use_triton"]:
+        options["engine"] = "Python"
     write_properties(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 

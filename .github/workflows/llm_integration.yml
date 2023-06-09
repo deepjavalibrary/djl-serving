@@ -358,14 +358,14 @@ jobs:
           serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py fastertransformer_raw bigscience/bloom-3b
           docker rm -f $(docker ps -aq)
-      - name: Test flan-t5-xxl
+      - name: Test nomic-ai/gpt4all-j
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py fastertransformer_raw flan-t5-xxl
+          python3 llm/prepare.py fastertransformer_raw nomic-ai/gpt4all-j
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py fastertransformer_raw flan-t5-xxl
+          python3 llm/client.py fastertransformer_raw nomic-ai/gpt4all-j
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
@@ -421,6 +421,15 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py fastertransformer bigscience/bloom-3b
+          docker rm -f $(docker ps -aq)
+      - name: Test EleutherAI/pythia-2.8b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer EleutherAI/pythia-2.8b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer EleutherAI/pythia-2.8b
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
