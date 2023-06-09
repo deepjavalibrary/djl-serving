@@ -47,7 +47,7 @@ class SeqBatchScheduler(ABC):
                 )
                 break
 
-            output_ids = self.inference_call()
+            output_ids = self.inference_call().to("cpu")
 
             # collect output
             for request_uid, output_id in zip(self.seq_batcher.request_uids, output_ids):
@@ -67,6 +67,17 @@ class SeqBatchScheduler(ABC):
                     input_ids: torch.Tensor,
                     search_configs: List[SearchConfig] = None,
                     kv_cache: Union[Tuple, None] = None):
+        device = self.lm_block.model.device
+        request_uids = request_uids.to(device)
+        input_ids = input_ids.to(device)
+        if kv_cache:
+            kv_list = []
+            for k, v in kv_cache:
+                k_new = k.to(device)
+                v_new = v.to(device)
+                kv_list.append((k_new, v_new))
+            kv_cache = tuple(kv_list)
+
         new_seq_batcher, output_ids = self.init_forward(input_ids, request_uids, kv_cache)
         for request_uid, output_id in zip(request_uids, output_ids):
             self.results[request_uid.item()] = output_id.tolist()

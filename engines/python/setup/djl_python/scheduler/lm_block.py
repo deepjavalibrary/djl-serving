@@ -62,7 +62,6 @@ class HuggingfaceBlock(LMBlock):
                  output_hidden_states=True,
                  **kwargs):
         super(HuggingfaceBlock, self).__init__()
-
         self.model = model
         self.use_cache = use_cache
         self.output_attentions = output_attentions
@@ -95,7 +94,6 @@ class BloomBlock(LMBlock):
                  output_hidden_states=True,
                  **kwargs):
         super(BloomBlock, self).__init__()
-
         self.model = model
         self.use_cache = use_cache
         self.output_attentions = output_attentions

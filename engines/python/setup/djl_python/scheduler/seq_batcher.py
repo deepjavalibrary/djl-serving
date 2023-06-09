@@ -61,13 +61,13 @@ class SeqBatcher(object):
         # find the batch indices of the non-finished requests.
         keep_indices = torch.tensor(
             list(set(range(self.request_uids.shape[0])) - self.exit_index),
-            dtype=torch.int64)
+            dtype=torch.int64, device=self.offsets.device)
 
         # if all the requests finished generating sequences, then reset the batch and return
         if len(keep_indices) == 0:
             self.request_uids = torch.empty([0, 1],
-                                            dtype=self.request_uids.dtype)
-            self.offsets = torch.empty([0, 1], dtype=self.offsets.dtype)
+                                            dtype=self.request_uids.dtype, device=self.request_uids.device)
+            self.offsets = torch.empty([0, 1], dtype=self.offsets.dtype, device=self.offsets.device)
             self.batch = None
             self.batch_size = 0
             self.seq_len = 0
@@ -86,8 +86,8 @@ class SeqBatcher(object):
     def exit_criteria(self, output_ids: torch.Tensor, search_configs):
         for i in range(len(output_ids)):
             request_uid = self.request_uids[i].item()
-            if self.seq_len - self.offsets[i] >= search_configs[request_uid].max_seqlen \
-                    or output_ids[i] == search_configs[request_uid].eos_token_id:
+            if self.seq_len - self.offsets[i].item() >= search_configs[request_uid].max_seqlen \
+                    or output_ids[i].item() == search_configs[request_uid].eos_token_id:
                 if i not in self.exit_index:
                     self.exit_index.add(i)
 

@@ -30,7 +30,8 @@ def merge_tensors(tensor1: torch.Tensor,
     delta_shape = list(shape1)
     delta_shape[0] = shape2[0]
 
-    delta_tensor = torch.zeros(delta_shape, dtype=tensor1.dtype)
+    delta_tensor = torch.zeros(delta_shape, dtype=tensor1.dtype, device=tensor1.device)
+    assert tensor1.device == tensor2.device
 
     # augment the batch 1
     tensor1 = torch.cat([tensor1, delta_tensor], dim=0)
@@ -99,7 +100,7 @@ def compute_offsets(input_ids: torch.Tensor,
 
         offsets.append(index)
 
-    return torch.tensor(offsets, dtype=torch.int64).view(-1, 1)
+    return torch.tensor(offsets, dtype=torch.int64, device=input_ids.device).view(-1, 1)
 
 
 def compute_position_ids(batch_size: int, input_seq_len: int,
@@ -110,7 +111,8 @@ def compute_position_ids(batch_size: int, input_seq_len: int,
     position_range = torch.arange(start=past_seq_len,
                                   end=past_seq_len + input_seq_len,
                                   step=1,
-                                  dtype=torch.int64).view(1, -1)
+                                  dtype=torch.int64,
+                                  device=offsets.device).view(1, -1)
 
     position_ids = torch.repeat_interleave(position_range,
                                            dim=0,
@@ -120,16 +122,16 @@ def compute_position_ids(batch_size: int, input_seq_len: int,
         offsets.view(-1, 1), dim=0, repeats=repeat_offset)
 
     position_ids = torch.maximum(position_ids_shifted,
-                                 torch.zeros_like(position_ids_shifted))
+                                 torch.zeros_like(position_ids_shifted, device=position_ids_shifted.device))
     return position_ids
 
 
-def compute_attention_mask(offsets, seq_len, repeat_offset: int = 1):
+def compute_attention_mask(offsets: torch.tensor, seq_len: int, repeat_offset: int = 1):
     if len(offsets.shape) != 2:
         raise Exception("wrong shape of offsets")
 
     batch_size = len(offsets) * repeat_offset
-    past_attention_mask = torch.ones(batch_size, seq_len, dtype=torch.int64)
+    past_attention_mask = torch.ones(batch_size, seq_len, dtype=torch.int64, device=offsets.device)
     for i, offset in enumerate(offsets):
         repeat_part = slice(i * repeat_offset, (i + 1) * repeat_offset)
         past_attention_mask[repeat_part, :offset.item()] = 0
@@ -153,13 +155,13 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
 
     attention_mask = torch.cat([
         torch.ones(
-            (batch_size, init_kv_cache_len), dtype=torch.int64), attention_mask
+            (batch_size, init_kv_cache_len), dtype=torch.int64, device=attention_mask.device), attention_mask
     ],
         dim=1)
     position_ids += init_kv_cache_len
     dummy_input_ids = torch.full([batch_size, init_kv_cache_len],
                                  fill_value=0,
-                                 dtype=input_ids.dtype)
+                                 dtype=input_ids.dtype, device=input_ids.device)
 
     kv_cache_copied = []
     for k, v in kv_cache:
