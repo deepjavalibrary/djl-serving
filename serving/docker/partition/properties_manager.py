@@ -20,8 +20,8 @@ import requests
 from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir, load_properties
 
 EXCLUDE_PROPERTIES = [
-    'option.model_id', 'option.save_mp_checkpoint_path', 'option.model_dir',
-    'option.upload_checkpoints_s3url', 'properties_dir'
+    'option.model_id', 'option.save_mp_checkpoint_path', 'model_dir',
+    'upload_checkpoints_s3url', 'properties_dir'
 ]
 
 
@@ -54,18 +54,18 @@ class PropertiesManager(object):
         self.set_and_validate_save_mp_checkpoint_path()
 
     def set_and_validate_model_dir(self):
-        if 'option.model_dir' in self.properties:
-            model_dir = self.properties['option.model_dir']
+        if 'model_dir' in self.properties:
+            model_dir = self.properties['model_dir']
             model_files = glob.glob(os.path.join(model_dir, '*.bin'))
             if not model_files:
                 raise ValueError(
                     f'No .bin files found in the dir: {model_dir}')
         elif 'option.model_id' in self.properties:
-            self.properties['option.model_dir'] = self.properties_dir
+            self.properties['model_dir'] = self.properties_dir
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
             if model_files:
-                self.properties['option.model_dir'] = self.properties_dir
+                self.properties['model_dir'] = self.properties_dir
             else:
                 raise ValueError('Please specify the model_dir or model_id')
 
@@ -166,7 +166,7 @@ class PropertiesManager(object):
             raise ValueError("Please specify save_mp_checkpoint_path")
         if save_mp_checkpoint_path.startswith("s3://"):
             self.properties[
-                "option.upload_checkpoints_s3url"] = save_mp_checkpoint_path
+                "upload_checkpoints_s3url"] = save_mp_checkpoint_path
             self.properties[
                 "option.save_mp_checkpoint_path"] = get_download_dir(
                     self.properties_dir, "partition-model")

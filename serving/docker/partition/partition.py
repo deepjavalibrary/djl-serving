@@ -99,8 +99,8 @@ class PartitionService(object):
         if os.environ.get("PYTHONPATH"):
             python_path.append(os.environ.get("PYTHONPATH"))
         python_path.append(PYTHON_CACHE_DIR)
-        if 'option.model_dir' in self.properties:
-            python_path.append(self.properties['option.model_dir'])
+        if 'model_dir' in self.properties:
+            python_path.append(self.properties['model_dir'])
         environments['PYTHONPATH'] = ':'.join(python_path)
         os.environ.update(environments)
 
@@ -121,7 +121,7 @@ class PartitionService(object):
         return downloaded_dir
 
     def copy_config_files(self):
-        model_dir = self.properties['option.model_dir']
+        model_dir = self.properties['model_dir']
         if 'option.model_id' in self.properties:
             model_dir = self.download_config_from_hf()
 
@@ -134,10 +134,10 @@ class PartitionService(object):
                         dst=self.properties['option.save_mp_checkpoint_path'])
 
     def upload_checkpoints_to_s3(self):
-        if 'option.upload_checkpoints_s3url' not in self.properties:
+        if 'upload_checkpoints_s3url' not in self.properties:
             return
 
-        s3url = self.properties['option.upload_checkpoints_s3url']
+        s3url = self.properties['upload_checkpoints_s3url']
         saved_checkpoints_dir = self.properties[
             "option.save_mp_checkpoint_path"]
 
@@ -189,7 +189,7 @@ class PartitionService(object):
             saved_checkpoints_dir = self.properties[
                 "option.save_mp_checkpoint_path"]
             properties = utils.load_properties(saved_checkpoints_dir)
-            properties['option.model_dir'] = saved_checkpoints_dir
+            properties['model_dir'] = saved_checkpoints_dir
             properties['option.entryPoint'] = self.properties[
                 'option.entryPoint']
             properties['partition_handler'] = 'handle'
