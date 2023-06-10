@@ -281,7 +281,7 @@ class HuggingFaceService(object):
             tokenizer = hf_pipeline.tokenizer
             input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
             if self.device:
-                input_tokens.to(self.device)
+                input_tokens = input_tokens.to(self.device)
 
             with torch.no_grad():
                 output_tokens = model.generate(

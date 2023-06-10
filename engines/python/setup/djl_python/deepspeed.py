@@ -330,7 +330,7 @@ class DeepSpeedService(object):
             if self.task == "text-generation":
                 tokenized_inputs = self.tokenizer(
                     input_data, padding=True,
-                    return_tensors="pt").to(torch.cuda.current_device())
+                    return_tensors="pt").to(self.device)
                 with torch.no_grad():
                     output_tokens = self.model.generate(
                         input_ids=tokenized_inputs.input_ids,
