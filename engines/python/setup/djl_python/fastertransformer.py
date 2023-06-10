@@ -57,28 +57,33 @@ class FasterTransformerService(object):
         self.model_id_or_path = None
         self.model = None
         self.is_t5 = False
+        self.use_triton = None
 
     def initialize_properties(self, properties):
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
         self.pipeline_parallel_degree = int(
             properties.get("pipeline_parallel_degree", 1))
+        self.dtype = properties.get("data_type", self.dtype)
         self.dtype = properties.get("dtype", "fp32")
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
+        self.use_triton = properties.get("engine", "Python") == "Python"
 
     def initialize(self, properties):
         self.initialize_properties(properties)
         self.model = self.load_model()
-        self.initialized = True
         model_config = AutoConfig.from_pretrained(self.model_id_or_path)
         self.is_t5 = model_config.model_type == "t5"
+        self.initialized = True
 
     def load_model(self):
         logging.info(f"Loading model: {self.model_id_or_path}")
         return ft.init_inference(self.model_id_or_path,
                                  self.tensor_parallel_degree,
-                                 self.pipeline_parallel_degree, self.dtype)
+                                 self.pipeline_parallel_degree,
+                                 self.dtype,
+                                 use_triton=self.use_triton)
 
     @staticmethod
     def param_mapper(parameters: dict):
@@ -120,18 +125,26 @@ class FasterTransformerService(object):
                         )
 
             parameters = self.param_mapper(parameters)
-            if self.is_t5:
-                result = self.model.pipeline_generate(input_data, **parameters)
+            max_length = parameters.pop("max_length", 50)
+            output_len = parameters.pop("max_seq_len", max_length)
+            if self.use_triton:
+                output_length = [output_len] * len(input_data)
+                result = self.model.pipeline_generate(input_data,
+                                                      output_length,
+                                                      **parameters)
             else:
-                output_len = parameters.pop("max_seq_len", 50)
-                beam_width = parameters.pop("beam_width", 1)
-                # TODO: remove after fixes in FT python package
-                result = self.model.pipeline_generate(
-                    input_data,
-                    batch_size=len(input_data),
-                    output_len=output_len,
-                    beam_width=beam_width,
-                    **parameters)
+                if self.is_t5:
+                    result = self.model.pipeline_generate(
+                        input_data, **parameters)
+                else:
+                    beam_width = parameters.pop("beam_width", 1)
+                    # TODO: remove after fixes in FT python package
+                    result = self.model.pipeline_generate(
+                        input_data,
+                        batch_size=len(input_data),
+                        output_len=output_len,
+                        beam_width=beam_width,
+                        **parameters)
 
             offset = 0
             outputs = Output()

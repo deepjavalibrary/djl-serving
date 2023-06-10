@@ -9,7 +9,7 @@ def load_model(properties):
     tensor_parallel_degree = properties["tensor_parallel_degree"]
     pipeline_parallel_degree = 1  # TODO: add tests for pp_degree > 1
     model_id = properties.get('model_id') or properties.get('model_dir')
-    use_triton = properties.get("use_triton", False)
+    use_triton = properties.get("engine", "Python") == "Python"
     dtype = properties.get("dtype", "fp32")
     return fastertransformer.init_inference(model_id,
                                             tensor_parallel_degree,
