@@ -90,5 +90,5 @@ def load_properties(properties_dir):
                 if line.startswith("#") or not line.strip():
                     continue
                 key, value = line.strip().split('=', 1)
-                properties[key.split(".", 1)[-1]] = value
+                properties[key] = value
     return properties

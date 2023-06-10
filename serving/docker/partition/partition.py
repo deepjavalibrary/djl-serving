@@ -42,7 +42,7 @@ class PartitionService(object):
         self.download_model_from_s3()
 
     def download_model_from_s3(self):
-        model_id = self.properties.get("model_id")
+        model_id = self.properties.get("option.model_id")
         if not model_id or not model_id.startswith("s3://"):
             return
 
@@ -71,7 +71,7 @@ class PartitionService(object):
         if not glob.glob(os.path.join(download_dir, '*')):
             raise Exception('Model download from s3url failed')
 
-        self.properties['model_id'] = download_dir
+        self.properties['option.model_id'] = download_dir
 
     def install_requirements_file(self):
         req_file_dir = self.properties_manager.properties_dir
@@ -106,13 +106,13 @@ class PartitionService(object):
 
     def download_config_from_hf(self):
         # checks if model_id is a path
-        if glob.glob(self.properties['model_id']):
-            return self.properties['model_id']
+        if glob.glob(self.properties['option.model_id']):
+            return self.properties['option.model_id']
 
         download_dir = os.environ.get("SERVING_DOWNLOAD_DIR",
                                       '/tmp/download/model/')
 
-        model_name = self.properties['model_id']
+        model_name = self.properties['option.model_id']
         downloaded_dir = snapshot_download(
             repo_id=model_name,
             cache_dir=download_dir,
@@ -122,7 +122,7 @@ class PartitionService(object):
 
     def copy_config_files(self):
         model_dir = self.properties['model_dir']
-        if 'model_id' in self.properties:
+        if 'option.model_id' in self.properties:
             model_dir = self.download_config_from_hf()
 
         config_files = []
@@ -130,14 +130,16 @@ class PartitionService(object):
             config_files += glob.glob(os.path.join(model_dir, pattern))
 
         for file in config_files:
-            shutil.copy(file, dst=self.properties['save_mp_checkpoint_path'])
+            shutil.copy(file,
+                        dst=self.properties['option.save_mp_checkpoint_path'])
 
     def upload_checkpoints_to_s3(self):
         if 'upload_checkpoints_s3url' not in self.properties:
             return
 
         s3url = self.properties['upload_checkpoints_s3url']
-        saved_checkpoints_dir = self.properties["save_mp_checkpoint_path"]
+        saved_checkpoints_dir = self.properties[
+            "option.save_mp_checkpoint_path"]
 
         if not saved_checkpoints_dir.endswith('/'):
             saved_checkpoints_dir = saved_checkpoints_dir + '/'
@@ -154,7 +156,7 @@ class PartitionService(object):
             commands = ["aws", "s3", "sync", saved_checkpoints_dir, s3url]
 
         subprocess.run(commands)
-        shutil.rmtree(self.properties["save_mp_checkpoint_path"])
+        shutil.rmtree(self.properties["option.save_mp_checkpoint_path"])
 
     def cleanup(self):
         """
@@ -184,16 +186,18 @@ class PartitionService(object):
 
     def load_the_generated_checkpoints(self):
         if self.properties['engine'] == 'DeepSpeed':
-            saved_checkpoints_dir = self.properties["save_mp_checkpoint_path"]
+            saved_checkpoints_dir = self.properties[
+                "option.save_mp_checkpoint_path"]
             properties = utils.load_properties(saved_checkpoints_dir)
             properties['model_dir'] = saved_checkpoints_dir
-            properties['entryPoint'] = self.properties['entryPoint']
+            properties['option.entryPoint'] = self.properties[
+                'option.entryPoint']
             properties['partition_handler'] = 'handle'
 
             entry_point_file = None
-            if properties['entryPoint'] == 'model.py':
+            if properties['option.entryPoint'] == 'model.py':
                 entry_point_file = os.path.join(
-                    self.properties['properties_dir'], 'model.py')
+                    self.properties_manager.properties_dir, 'model.py')
                 shutil.copy(entry_point_file, saved_checkpoints_dir)
 
             commands = get_partition_cmd(True, properties)

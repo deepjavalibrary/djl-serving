@@ -20,22 +20,17 @@ import requests
 from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir, load_properties
 
 EXCLUDE_PROPERTIES = [
-    'option.model_id', 'save_mp_checkpoint_path', 'model_dir',
+    'option.model_id', 'option.save_mp_checkpoint_path', 'model_dir',
     'upload_checkpoints_s3url', 'properties_dir'
 ]
-
-PARTITION_SUPPORTED_ENGINES = ['DeepSpeed', 'FasterTransformer']
-
-CHUNK_SIZE = 4096  # 4MB chunk size
 
 
 class PropertiesManager(object):
 
     def __init__(self, args):
         self.entry_point_url = None
-        self.properties = {}
         self.properties_dir = args.properties_dir
-        load_properties(self.properties_dir)
+        self.properties = load_properties(self.properties_dir)
 
         if args.model_id:
             self.properties['option.model_id'] = args.model_id
@@ -43,7 +38,7 @@ class PropertiesManager(object):
             self.properties['engine'] = args.engine
         if args.save_mp_checkpoint_path:
             self.properties[
-                'save_mp_checkpoint_path'] = args.save_mp_checkpoint_path
+                'option.save_mp_checkpoint_path'] = args.save_mp_checkpoint_path
         if args.tensor_parallel_degree:
             self.properties[
                 'option.tensor_parallel_degree'] = args.tensor_parallel_degree
@@ -86,7 +81,7 @@ class PropertiesManager(object):
         """
         if self.properties.get('engine') == 'DeepSpeed':
             config_file = os.path.join(
-                self.properties['save_mp_checkpoint_path'],
+                self.properties['option.save_mp_checkpoint_path'],
                 'ds_inference_config.json')
             if not os.path.exists(config_file):
                 raise ValueError("Checkpoints json file was not generated."
@@ -103,17 +98,17 @@ class PropertiesManager(object):
                 json.dump(configs, f)
 
     def generate_properties_file(self):
-        checkpoint_path = self.properties.get('save_mp_checkpoint_path')
+        checkpoint_path = self.properties.get('option.save_mp_checkpoint_path')
         configs = get_engine_configs(self.properties)
 
         for key, value in self.properties.items():
             if key not in EXCLUDE_PROPERTIES:
-                if key == "entryPoint":
-                    entry_point = self.properties.get("entryPoint")
+                if key == "option.entryPoint":
+                    entry_point = self.properties.get("option.entryPoint")
                     if entry_point == "model.py":
                         continue
                     elif self.entry_point_url:
-                        configs["entryPoint"] = self.entry_point_url
+                        configs["option.entryPoint"] = self.entry_point_url
                 else:
                     configs[key] = value
 
@@ -135,14 +130,14 @@ class PropertiesManager(object):
             )
 
     def set_and_validate_entry_point(self):
-        entry_point = self.properties.get('entryPoint')
+        entry_point = self.properties.get('option.entryPoint')
         if entry_point is None:
             entry_point = os.environ.get("DJL_ENTRY_POINT")
             if entry_point is None:
                 entry_point_file = glob.glob(
                     os.path.join(self.properties_dir, 'model.py'))
                 if entry_point_file:
-                    self.properties['entryPoint'] = 'model.py'
+                    self.properties['option.entryPoint'] = 'model.py'
                 else:
                     engine = self.properties.get('engine')
                     if engine == "DeepSpeed":
@@ -151,7 +146,7 @@ class PropertiesManager(object):
                         entry_point = "djl_python.fastertransformer"
                     else:
                         raise ValueError("Please specify engine")
-                    self.properties['entryPoint'] = entry_point
+                    self.properties['option.entryPoint'] = entry_point
         elif entry_point.lower().startswith('http'):
             logging.info(f'Downloading entrypoint file.')
             self.entry_point_url = entry_point
@@ -161,16 +156,17 @@ class PropertiesManager(object):
             with requests.get(entry_point) as r:
                 with open(model_file, 'wb') as f:
                     f.write(r.content)
-            self.properties['entryPoint'] = model_file
+            self.properties['option.entryPoint'] = model_file
             logging.info(f'Entrypoint file downloaded successfully')
 
     def set_and_validate_save_mp_checkpoint_path(self):
         save_mp_checkpoint_path = self.properties.get(
-            "save_mp_checkpoint_path")
+            "option.save_mp_checkpoint_path")
         if not save_mp_checkpoint_path:
             raise ValueError("Please specify save_mp_checkpoint_path")
         if save_mp_checkpoint_path.startswith("s3://"):
             self.properties[
                 "upload_checkpoints_s3url"] = save_mp_checkpoint_path
-            self.properties["save_mp_checkpoint_path"] = get_download_dir(
-                self.properties_dir, "partition-model")
+            self.properties[
+                "option.save_mp_checkpoint_path"] = get_download_dir(
+                    self.properties_dir, "partition-model")
