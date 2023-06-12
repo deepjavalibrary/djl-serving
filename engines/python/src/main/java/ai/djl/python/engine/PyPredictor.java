@@ -38,6 +38,8 @@ class PyPredictor<I, O> extends Predictor<I, O> {
 
     private PyProcess process;
     private int timeout;
+    private boolean isRollingBatch;
+    private RollingBatch rollingBatch;
 
     public PyPredictor(
             Model model,
@@ -48,6 +50,12 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         super(model, translator, device, false);
         this.process = process;
         this.timeout = timeout;
+        isRollingBatch = Boolean.parseBoolean(model.getProperty("rolling_batch", "false"));
+        if (isRollingBatch) {
+            int maxRollingBatchSize =
+                    Integer.parseInt(model.getProperty("max_rolling_batch_size", "3"));
+            rollingBatch = new RollingBatch(process, maxRollingBatchSize, timeout);
+        }
     }
 
     /** {@inheritDoc} */
@@ -62,7 +70,12 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         if (first instanceof Input) {
             int size = inputs.size();
             if (size == 1) {
-                Output output = process.predict((Input) first, timeout, false);
+                Output output;
+                if (isRollingBatch) {
+                    output = rollingBatch.addInput((Input) first, timeout);
+                } else {
+                    output = process.predict((Input) first, timeout, false);
+                }
                 return Collections.singletonList((O) output);
             }
 
@@ -120,8 +133,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
 
     /** {@inheritDoc} */
     @Override
-    protected NDList predictInternal(TranslatorContext ctx, NDList ndList)
-            throws TranslateException {
+    protected NDList predictInternal(TranslatorContext ctx, NDList ndList) {
         Input inputs = new Input();
         inputs.addProperty("Content-Type", "tensor/ndlist");
         inputs.add(ndList.encode());
@@ -135,5 +147,8 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     public void close() {
         super.close();
         process.stopPythonProcess();
+        if (rollingBatch != null) {
+            rollingBatch.shutdown();
+        }
     }
 }
