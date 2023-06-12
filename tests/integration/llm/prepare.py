@@ -191,19 +191,23 @@ ft_handler_list = {
 
 ft_model_list = {
     "t5-small": {
+        "engine": "FasterTransformer",
         "option.model_id": "t5-small",
         "option.tensor_parallel_degree": 4,
     },
     "gpt2-xl": {
+        "engine": "FasterTransformer",
         "option.model_id": "gpt2-xl",
         "option.tensor_parallel_degree": 1,
     },
     "facebook/opt-6.7b": {
+        "engine": "FasterTransformer",
         "option.model_id": "s3://djl-llm/opt-6b7/",
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp16",
     },
     "bigscience/bloom-3b": {
+        "engine": "FasterTransformer",
         "option.model_id": "s3://djl-llm/bloom-3b/",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16",
@@ -212,8 +216,7 @@ ft_model_list = {
     "nomic-ai/gpt4all-j": {
         "option.model_id": "s3://djl-llm/gpt4all-j/",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp32",
-        "option.use_triton": True
+        "option.dtype": "fp32"
     }
 }
 
@@ -415,9 +418,9 @@ def build_ft_raw_model(model):
             f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
         )
     options = ft_model_list[model]
-    options["engine"] = "FasterTransformer"
-    if "option.use_triton" in options and options["option.use_triton"]:
+    if "engine" not in options:
         options["engine"] = "Python"
+
     write_properties(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 

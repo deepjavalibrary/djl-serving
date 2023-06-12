@@ -42,17 +42,20 @@ public final class LmiUtils {
 
     private static final List<String> DEEPSPEED_MODELS =
             List.of(
-                    "roberta",
-                    "xlm-roberta",
-                    "gpt2",
                     "bert",
+                    "bloom",
                     "gpt_neo",
+                    "gpt_neox",
+                    "gpt2",
                     "gptj",
                     "opt",
-                    "gpt_neox",
-                    "bloom");
+                    "roberta",
+                    "xlm-roberta");
 
-    private static final List<String> FASTERTRANSFORMER_MODELS = List.of("t5");
+    private static final List<String> FASTERTRANSFORMER_MODELS =
+            List.of("bloom", "gpt_neox", "gpt2", "t5", "opt");
+
+    private static final List<String> TRITON_MODELS = List.of("gptj");
 
     private LmiUtils() {}
 
@@ -97,8 +100,12 @@ public final class LmiUtils {
             engineName = "Python";
         } else if (isDeepSpeedRecommended(modelType)) {
             engineName = "DeepSpeed";
+        } else if (isTritonRecommended(modelType)) {
+            engineName = "Python";
+            prop.setProperty("option.entryPoint", "djl_python.fastertransformer");
         } else if (isFasterTransformerRecommended(modelType)) {
             engineName = "FasterTransformer";
+            prop.setProperty("engine", engineName); // FT handler requires engine property
         } else {
             engineName = "Python";
         }
@@ -158,9 +165,14 @@ public final class LmiUtils {
         }
     }
 
+    private static boolean isTritonRecommended(String modelType) {
+        return isPythonDependencyInstalled("/opt/tritonserver/lib/", "tritontoolkit")
+                && TRITON_MODELS.contains(modelType);
+    }
+
     private static boolean isFasterTransformerRecommended(String modelType) {
         return isPythonDependencyInstalled(
-                        "/usr/local/backends/fastertransformer", "fastertransformer")
+                        "/opt/tritonserver/backends/fastertransformer/", "fastertransformer")
                 && FASTERTRANSFORMER_MODELS.contains(modelType);
     }
 
