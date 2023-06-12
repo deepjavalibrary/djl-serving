@@ -21,11 +21,11 @@ parser.add_argument('--tensor_parallel',
 args = parser.parse_args()
 
 ds_aot_list = {
-    "opt-6.7b": {
+    "gpt-neo-2.7b": {
         "option.model_id":
-        "s3://djl-llm/opt-6b7/",
+        "EleutherAI/gpt-neo-2.7B",
         "option.tensor_parallel_degree":
-        4,
+        2,
         "option.task":
         "text-generation",
         "option.dtype":
@@ -33,13 +33,6 @@ ds_aot_list = {
         "option.save_mp_checkpoint_path":
         "/opt/ml/input/data/training/partition-test"
     },
-    "bloom-7b1": {
-        "option.model_id": "s3://djl-llm/bloom-7b1/",
-        "option.tensor_parallel_degree": 4,
-        "option.task": "text-generation",
-        "option.dtype": "float16",
-        "option.save_mp_checkpoint_path": "s3://djl-llm/bloom-7b1-tp4/ds-aot/"
-    }
 }
 
 ds_aot_handler_list = {

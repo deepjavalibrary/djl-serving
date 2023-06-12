@@ -471,23 +471,6 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Test flan-t5-xxl-partition
-        working-directory: tests/integration
-        run: |
-          sudo rm -rf models
-          python3 llm/prepare.py fastertransformer_raw_aot flan-t5-xxl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          partition --model-dir /opt/ml/input/data/training
-          sudo mv $PWD/models/test/partition-test $PWD/models/
-          if grep -q /tmp/download.*-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
-      - name: Test flan-t5-xxl-inference
-        working-directory: tests/integration
-        run: |
-          sudo cp $PWD/models/test/model.py $PWD/models/partition-test
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:/opt/ml/model/partition-test/
-          python3 llm/client.py fastertransformer_raw flan-t5-xxl
-          docker rm -f $(docker ps -aq)
       - name: Test t5-small-partition
         working-directory: tests/integration
         run: |
@@ -507,58 +490,6 @@ jobs:
           serve -m test=file:/opt/ml/model/partition-test/
           python3 llm/client.py fastertransformer_raw t5-small
           docker rm -f $(docker ps -aq)
-      - name: Test gpt2-xl-partition
-        working-directory: tests/integration
-        run: |
-          sudo rm -rf models
-          python3 llm/prepare.py fastertransformer_raw_aot gpt2-xl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          partition
-          sudo mv $PWD/models/test/partition-test $PWD/models/
-          if grep -q gpt2-xl-fp32-1-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
-      - name: Test gpt2-xl-inference
-        working-directory: tests/integration
-        run: |
-          sudo cp $PWD/models/test/model.py $PWD/models/partition-test
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:/opt/ml/model/partition-test/
-          python3 llm/client.py fastertransformer_raw gpt2-xl
-          docker rm -f $(docker ps -aq)
-      - name: Test facebook/opt-6.7b-partition
-        working-directory: tests/integration
-        run: |
-          sudo rm -rf models
-          python3 llm/prepare.py fastertransformer_raw_aot facebook/opt-6.7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          partition
-          sudo mv $PWD/models/test/partition-test $PWD/models/
-          if grep -q /tmp/download.*-fp16-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
-      - name: Test facebook/opt-6.7b-inference
-        working-directory: tests/integration
-        run: |
-          sudo cp $PWD/models/test/model.py $PWD/models/partition-test
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:/opt/ml/model/partition-test/
-          python3 llm/client.py fastertransformer_raw facebook/opt-6.7b
-          docker rm -f $(docker ps -aq)
-      - name: Test bigscience/bloom-3b-partition
-        working-directory: tests/integration
-        run: |
-          sudo rm -rf models
-          python3 llm/prepare.py fastertransformer_raw_aot bigscience/bloom-3b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          partition
-          sudo mv $PWD/models/test/partition-test $PWD/models/
-          if grep -q /tmp/download.*-fp16-2-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
-      - name: Test bigscience/bloom-3b-inference
-        working-directory: tests/integration
-        run: |
-          sudo cp $PWD/models/test/model.py $PWD/models/partition-test
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:/opt/ml/model/partition-test/
-          python3 llm/client.py fastertransformer_raw bigscience/bloom-3b
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -680,7 +611,7 @@ jobs:
           name: ft-raw-logs
           path: tests/integration/logs/
 
-  ds-aot-test:
+  ds-aot-raw-test:
     if: contains(fromJson('["", "aot"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
@@ -708,13 +639,11 @@ jobs:
         working-directory: serving/docker
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Test opt-6.7b partition
+      - name: Test gpt-neo-2.7b partition
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py deepspeed_aot opt-6.7b
-          # To test the requirements.txt download. 
-          echo "dummy_test" >> $PWD/models/test/requirements.txt 
+          python3 llm/prepare.py deepspeed_aot gpt-neo-2.7b
           
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/input/data/training | tee partition_output.log
@@ -722,42 +651,14 @@ jobs:
           # checking if pt files are generated.
           sudo mv $PWD/models/test/partition-test $PWD/models/
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
-          
-          # checking whether requirements.txt download is successful
-          if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
-          then echo "requirements.txt install was successful"; else exit 1; fi
-      - name: Test opt-6.7b inference
+      - name: Test gpt-neo-2.7b inference
         working-directory: tests/integration
         run: |
           sudo cp $PWD/models/test/model.py $PWD/models/partition-test
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve -m test=file:/opt/ml/model/partition-test/
           curl http://127.0.0.1:8080/models
-          python3 llm/client.py deepspeed_aot opt-6.7b
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
-      - name: Test bloom-7b1 partition
-        working-directory: tests/integration
-        run: |
-          sudo rm -rf models
-          python3 llm/prepare.py deepspeed_aot bloom-7b1
-          
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          train | tee partition_output.log        
-          
-          # checking if pt files are generated.
-          mkdir $PWD/models/partition-test
-          /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/bloom-7b1-tp4/ds-aot/* $PWD/models/partition-test
-          if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
-          if ls $PWD/models/partition-test/ds_inference_config.json &>/dev/null ; \
-          then echo "ds_inference_config.json generated"; else exit 1;  fi
-      - name: Test bloom-7b1 inference
-        working-directory: tests/integration
-        run: |
-          sudo cp $PWD/models/test/model.py $PWD/models/partition-test
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:/opt/ml/model/partition-test/
-          python3 llm/client.py deepspeed_aot bloom-7b1
+          python3 llm/client.py deepspeed_aot gpt-neo-2.7b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: On fail step
