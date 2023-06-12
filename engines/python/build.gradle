@@ -28,8 +28,19 @@ processResources {
         def propFile = file("${project.buildDir}/classes/java/main/native/lib/python.properties")
         def sb = new StringBuilder()
         sb.append("version=${version}\nlibraries=djl_python_engine.py")
-        for (String name : file("setup/djl_python").list().sort()) {
-            sb.append(",djl_python/").append(name)
+
+        def list = []
+        def dir = file("setup/djl_python")
+        dir.eachFileRecurse(groovy.io.FileType.FILES) { file ->
+            if (file.isFile()) {
+                list.add(dir.relativePath(file))
+            }
+        }
+        list.sort()
+        for (String name : list) {
+            if (!name.contains("__pycache__")) {
+                sb.append(",djl_python/").append(name)
+            }
         }
         propFile.text = sb.toString()
     }
@@ -46,6 +57,8 @@ clean.doFirst {
     delete "setup/djl_python.egg-info/"
     delete "setup/__pycache__/"
     delete "setup/djl_python/__pycache__/"
+    delete "setup/djl_python/tests/__pycache__/"
+    delete "setup/djl_python/scheduler/__pycache__/"
     delete "src/test/resources/accumulate/__pycache__/"
     delete System.getProperty("user.home") + "/.djl.ai/python"
 }

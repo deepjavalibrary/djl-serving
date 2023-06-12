@@ -102,7 +102,13 @@ public class PyEnv {
                     if (is == null) {
                         throw new AssertionError("Python engine script not found: " + libPath);
                     }
-                    Files.copy(is, tmp.resolve(file), StandardCopyOption.REPLACE_EXISTING);
+                    Path f = tmp.resolve(file);
+                    Path dir = f.getParent();
+                    if (dir == null) {
+                        throw new AssertionError("Parent direct cannot be null");
+                    }
+                    Files.createDirectories(dir);
+                    Files.copy(is, f, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
             Utils.moveQuietly(tmp, path);
