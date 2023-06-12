@@ -135,6 +135,7 @@ class Output(object):
                            output_formatter=_default_stream_output_formatter):
         self.stream_content = stream_content
         self.stream_output_formatter = output_formatter
+        return self
 
     @staticmethod
     def _encode_json(val) -> bytes:
