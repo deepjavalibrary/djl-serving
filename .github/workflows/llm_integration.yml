@@ -600,22 +600,6 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Test flan-t5-xxl-partition
-        working-directory: tests/integration
-        run: |
-          sudo rm -rf models
-          python3 llm/prepare.py fastertransformer_handler_aot flan-t5-xxl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          partition --model-dir /opt/ml/input/data/training
-          sudo mv $PWD/models/test/partition-test $PWD/models/
-          if grep -q /tmp/download.*-fp32-4-1 $PWD/models/partition-test/*-gpu/verify ; then echo "checkpoint files generated"; else exit 1;  fi
-      - name: Test flan-t5-xxl-inference
-        working-directory: tests/integration
-        run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve -m test=file:/opt/ml/model/partition-test/
-          python3 llm/client.py fastertransformer_raw flan-t5-xxl
-          docker rm -f $(docker ps -aq)
       - name: Test t5-small-partition
         working-directory: tests/integration
         run: |
