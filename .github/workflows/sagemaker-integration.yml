@@ -73,7 +73,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-region: us-east-1
+          aws-region: us-west-2
       - name: MME Test
         working-directory: tests/integration
         run: |
@@ -127,7 +127,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-region: us-east-1
+          aws-region: us-west-2
       - name: Test gpt-j-6b
         if: success() || failure()
         working-directory: tests/integration
@@ -165,7 +165,7 @@ jobs:
       - name: Cleanup dangling SageMaker resources
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          ./cleanup_sagemaker_resources.sh sm-integration-test us-east-1
+          ./cleanup_sagemaker_resources.sh sm-integration-test us-west-2
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
