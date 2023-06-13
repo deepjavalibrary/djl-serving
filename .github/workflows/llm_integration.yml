@@ -491,14 +491,15 @@ jobs:
           python3 llm/client.py fastertransformer_raw t5-small
           docker rm -f $(docker ps -aq)
       - name: Remove models dir
+        working-directory: tests/integration
         run: |
           sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
-          docker rm -f $(docker ps -aq) || true
           sudo rm -rf models
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -601,14 +602,15 @@ jobs:
           python3 llm/client.py fastertransformer_raw bigscience/bloom-3b
           docker rm -f $(docker ps -aq)
       - name: Remove models dir
+        working-directory: tests/integration
         run: |
           sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
-          docker rm -f $(docker ps -aq) || true
           sudo rm -rf models
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -666,14 +668,15 @@ jobs:
           python3 llm/client.py deepspeed_aot gpt-neo-2.7b
           docker rm -f $(docker ps -aq)
       - name: Remove models dir
+        working-directory: tests/integration
         run: |
           sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
-          docker rm -f $(docker ps -aq) || true
           sudo rm -rf models
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -759,6 +762,7 @@ jobs:
           python3 llm/client.py deepspeed_handler_aot bloom-7b1
           docker rm -f $(docker ps -aq)
       - name: Remove models dir
+        working-directory: tests/integration
         run: |
           sudo rm -rf models
       - name: On fail step
