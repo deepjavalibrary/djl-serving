@@ -27,8 +27,9 @@ parser.add_argument(
 ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
 DEFAULT_INSTANCE_TYPE = "ml.g5.12xlarge"
 DEFAULT_PAYLOAD = {"inputs": "Deep Learning is"}
-DEFAULT_BUCKET = "sm-integration-tests-rubikon"
+DEFAULT_BUCKET = "sm-integration-tests-rubikon-usw2"
 RELEASE_VERSION = "0.22.1"
+REGION = "us-west-2"
 
 SINGLE_MODEL_ENDPOINT_CONFIGS = {
     "stable-diffusion-2-1-base": {
@@ -50,7 +51,7 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
         }
     },
     "opt-1-3-b": {
-        "model_id": "s3://djl-llm/opt-1.3b/",
+        "model_id": "s3://djl-llm-sm-endpoint-tests/opt-1.3b/",
         "model_kwargs": {
             "dtype": "fp32",
             "number_of_partitions": 1,
@@ -59,7 +60,7 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
         "cls_to_use": HuggingFaceAccelerateModel,
     },
     "flan-t5-xxl": {
-        "model_id": "s3://djl-llm/flan-t5-xxl/",
+        "model_id": "s3://djl-llm-sm-endpoint-tests/flan-t5-xxl/",
         "model_kwargs": {
             "dtype": "fp32",
             "tensor_parallel_degree": 4,
@@ -68,7 +69,7 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
         "cls_to_use": FasterTransformerModel,
     },
     "gpt-j-6b": {
-        "model_id": "s3://djl-llm/gpt-j-6b/",
+        "model_id": "s3://djl-llm-sm-endpoint-tests/gpt-j-6b/",
         "model_kwargs": {
             "dtype": "bf16",
             "tensor_parallel_degree": 2,
@@ -85,7 +86,7 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
             "parallel_loading": True,
         },
         "partition": True,
-        "partition_s3_uri": "s3://djl-llm/pythia-12b-4p/",
+        "partition_s3_uri": "s3://djl-llm-sm-endpoint-tests/pythia-12b-4p/",
         "cls_to_use": DeepSpeedModel,
     }
 }
@@ -115,7 +116,7 @@ MME_CONFIGS = {
                 "number_of_partitions": 1,
             }
         }, {
-            "model_id": "s3://djl-llm/opt-1.3b/",
+            "model_id": "s3://djl-llm-sm-endpoint-tests/opt-1.3b/",
             "model_kwargs": {
                 "dtype": "fp16",
                 "number_of_partitions": 1,
@@ -132,11 +133,11 @@ ENGINE_TO_METRIC_CONFIG_ENGINE = {"Python": "Accelerate"}
 
 NIGHTLY_IMAGES = {
     "python":
-    "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving:deepspeed-nightly",
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:deepspeed-nightly",
     "deepspeed":
-    "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving:deepspeed-nightly",
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:deepspeed-nightly",
     "fastertransformer":
-    "125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving:fastertransformer-nightly"
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:fastertransformer-nightly"
 }
 
 
@@ -251,7 +252,7 @@ def mme_test(name, image_type):
             mme_image_uri = sagemaker.image_uris.retrieve(
                 framework="djl-" + config.get("framework"),
                 version=RELEASE_VERSION,
-                region="us-east-1")
+                region=REGION)
         mme = MultiDataModel(get_name_for_resource(name),
                              "s3://" + session.default_bucket() + '/' +
                              session.default_bucket_prefix,
@@ -296,7 +297,7 @@ def no_code_endpoint_test(name, image_type):
         image_uri = sagemaker.image_uris.retrieve(framework="djl-" +
                                                   config.get("framework"),
                                                   version=RELEASE_VERSION,
-                                                  region="us-east-1")
+                                                  region=REGION)
     try:
         model = HuggingFaceModel(
             role=ROLE,
