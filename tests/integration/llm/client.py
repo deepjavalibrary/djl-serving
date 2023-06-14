@@ -236,6 +236,12 @@ ds_aot_model_spec = {
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
         "use_pipeline": False
+    },
+    "gpt-neo-2.7b": {
+        "max_memory_per_gpu": [12.0, 12.0, 12.0, 17.0],
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+        "use_pipeline": True
     }
 }
 
