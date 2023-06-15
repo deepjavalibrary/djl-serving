@@ -23,7 +23,6 @@ import ai.djl.modality.Output;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.translate.TranslateException;
-import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
 
@@ -40,9 +39,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ModelInfoTest {
 
@@ -268,20 +265,5 @@ public class ModelInfoTest {
         }
         model = new ModelInfo<>("build/models/lmi_test_model");
         Assert.assertThrows(model::initialize);
-
-        Map<String, String> modelConfig = new ConcurrentHashMap<>();
-        modelConfig.put("model_type", "codegen");
-        modelConfig.put("num_heads", "12");
-        System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
-        try {
-            Files.writeString(
-                    modelDir.resolve("config.json"), JsonUtils.GSON_PRETTY.toJson(modelConfig));
-            Files.delete(prop);
-            model = new ModelInfo<>("build/models/lmi_test_model");
-            model.initialize();
-            assertEquals(model.getEngineName(), "Python");
-        } finally {
-            System.clearProperty("TENSOR_PARALLEL_DEGREE");
-        }
     }
 }

@@ -124,7 +124,6 @@ ds_handler_list = {
     },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
-        "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "fp16"
     },
@@ -186,7 +185,6 @@ ft_model_list = {
     "t5-small": {
         "engine": "FasterTransformer",
         "option.model_id": "t5-small",
-        "option.tensor_parallel_degree": 4,
     },
     "gpt2-xl": {
         "engine": "FasterTransformer",
