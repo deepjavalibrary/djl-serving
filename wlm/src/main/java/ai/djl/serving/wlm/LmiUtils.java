@@ -16,7 +16,6 @@ import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
-import ai.djl.util.cuda.CudaUtils;
 
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
@@ -32,7 +31,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 
 /** A utility class to detect optimal engine for LMI model. */
@@ -73,31 +71,12 @@ public final class LmiUtils {
             return "Python";
         }
 
-        int tensorParallelDegree;
-        if (Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE") != null) {
-            tensorParallelDegree =
-                    Integer.parseInt(Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE"));
-        } else if (prop.getProperty("option.tensor_parallel_degree") != null) {
-            tensorParallelDegree =
-                    Integer.parseInt(prop.getProperty("option.tensor_parallel_degree"));
-        } else {
-            // TODO: Assume use all GPUs for TP
-            tensorParallelDegree = CudaUtils.getGpuCount();
-        }
-
-        if (tensorParallelDegree > 0) {
-            prop.setProperty("option.tensor_parallel_degree", String.valueOf(tensorParallelDegree));
-        }
-
         String modelType = modelConfig.getModelType();
         String engineName;
         if ("stable-diffusion".equals(modelType)) {
             // TODO: Move this from hardcoded to deduced in PyModel
             prop.setProperty("option.entryPoint", "djl_python.stable-diffusion");
             engineName = "DeepSpeed";
-        } else if (!isTensorParallelSupported(
-                modelConfig.getNumAttentionHeads(), tensorParallelDegree)) {
-            engineName = "Python";
         } else if (isDeepSpeedRecommended(modelType)) {
             engineName = "DeepSpeed";
         } else if (isTritonRecommended(modelType)) {
@@ -181,11 +160,6 @@ public final class LmiUtils {
                 && DEEPSPEED_MODELS.contains(modelType);
     }
 
-    private static boolean isTensorParallelSupported(
-            long numAttentionHeads, int tensorParallelDegree) {
-        return tensorParallelDegree > 0 && numAttentionHeads % tensorParallelDegree == 0;
-    }
-
     private static boolean isPythonDependencyInstalled(
             String dependencyPath, String dependencyName) {
         Path expectedPath = Paths.get(dependencyPath);
@@ -221,15 +195,6 @@ public final class LmiUtils {
 
         @SerializedName("_diffusers_version")
         private String diffusersVersion;
-
-        @SerializedName(
-                value = "num_attention_heads",
-                alternate = {"n_head", "num_heads"})
-        private Long numAttentionHeads;
-
-        public long getNumAttentionHeads() {
-            return Objects.requireNonNullElse(numAttentionHeads, Long.MAX_VALUE);
-        }
 
         public String getModelType() {
             if (modelType == null) {

@@ -260,7 +260,7 @@ public class ModelInfoTest {
         }
         ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
-        assertEquals(model.getEngineName(), "Python");
+        assertEquals(model.getEngineName(), "DeepSpeed");
         assertEquals(model.prop.getProperty("option.model_id"), "gpt2-xl");
 
         try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
@@ -271,17 +271,11 @@ public class ModelInfoTest {
 
         Map<String, String> modelConfig = new ConcurrentHashMap<>();
         modelConfig.put("model_type", "codegen");
-        modelConfig.put("num_heads", "12");
-        System.setProperty("TENSOR_PARALLEL_DEGREE", "4");
-        try {
-            Files.writeString(
-                    modelDir.resolve("config.json"), JsonUtils.GSON_PRETTY.toJson(modelConfig));
-            Files.delete(prop);
-            model = new ModelInfo<>("build/models/lmi_test_model");
-            model.initialize();
-            assertEquals(model.getEngineName(), "Python");
-        } finally {
-            System.clearProperty("TENSOR_PARALLEL_DEGREE");
-        }
+        Files.writeString(
+                modelDir.resolve("config.json"), JsonUtils.GSON_PRETTY.toJson(modelConfig));
+        Files.delete(prop);
+        model = new ModelInfo<>("build/models/lmi_test_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "Python");
     }
 }

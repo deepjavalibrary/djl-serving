@@ -21,6 +21,7 @@ import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.translate.Translator;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.stream.Stream;
 
 /** {@code PyModel} is the Python engine implementation of {@link Model}. */
 public class PyModel extends BaseModel {
@@ -181,27 +181,16 @@ public class PyModel extends BaseModel {
         }
         pyEnv.setEntryPoint(entryPoint);
 
+        int partitions = pyEnv.getTensorParallelDegree();
+        if (partitions == 0) {
+            partitions = CudaUtils.getGpuCount();
+            pyEnv.setTensorParallelDegree(partitions);
+            logger.info("No tensor parallel degree specified. Defaulting to all available GPUs.");
+        }
+        if (getProperty("option.tensor_parallel_degree") == null) {
+            setProperty("option.tensor_parallel_degree", String.valueOf(partitions));
+        }
         if (pyEnv.isMpiMode()) {
-            int partitions = pyEnv.getTensorParallelDegree();
-            if (partitions == 0) {
-                // TODO: avoid use hardcoded "partitioned_model_" name
-                try (Stream<Path> stream = Files.list(modelPath)) {
-                    partitions =
-                            (int)
-                                    stream.filter(
-                                                    p ->
-                                                            p.toFile()
-                                                                    .getName()
-                                                                    .startsWith(
-                                                                            "partitioned_model_"))
-                                            .count();
-                }
-                if (partitions == 0) {
-                    throw new FileNotFoundException(
-                            "partitioned_model_ file not found in: " + modelPath);
-                }
-                pyEnv.setTensorParallelDegree(partitions);
-            }
             logger.info("Loading model in MPI mode with TP: {}.", partitions);
 
             int mpiWorkers = pyEnv.getMpiWorkers();
@@ -233,8 +222,7 @@ public class PyModel extends BaseModel {
 
             createAllPyProcesses(mpiWorkers);
         } else {
-            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
-            if (tensorParallelDegree > 0) {
+            if (partitions > 0) {
                 setProperty("gpu.minWorkers", "1");
                 setProperty("gpu.maxWorkers", "1");
             }
