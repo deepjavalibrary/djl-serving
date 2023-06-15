@@ -34,13 +34,11 @@ class TestKit:
                                    search_configs=search_configs)
 
         while not self.scheduler.is_empty():
-            output_ids, _ = self.scheduler.inference_call()
+            output_ids, request_uids, _ = self.scheduler.inference_call()
 
             # collect output
-            for output_ids_list in output_ids.values():
-                for request_uid, output_id in zip(
-                        request_uids.view(-1).tolist(), output_ids_list):
-                    results[request_uid].extend(output_id)
+            for request_uid, output_id in zip(request_uids, output_ids):
+                results[request_uid].extend(output_id)
 
         return results
 

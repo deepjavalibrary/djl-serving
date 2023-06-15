@@ -31,21 +31,23 @@ class LMBlock(ABC):
 
     @abstractmethod
     def forward(
-            self, inputs: List[torch.tensor],
+            self, input_ids: torch.tensor, position_ids: torch.tensor,
+            attention_mask: torch.tensor,
             past_key_values: Union[Tuple, None]) -> Tuple[torch.tensor, Tuple]:
         """
         Convert the variables between that used in the internal model's forward call and that used in the
         autoregressive search.
 
         Args:
-            inputs (`List[torch.tensor]`):
-                [input_ids, position_ids, attention_mask], order preserved.
-                `input_ids`: [batch_size, input_seq_len]
-                `position_ids`: [batch_size, input_seq_len],
-                `attention_mask`: [batch_size, past_seq_len + input_seq_len].
+            input_ids (`torch.tensor`):
+                [batch_size, input_seq_len]
+            position_ids (`torch.tensor`):
+                [batch_size, input_seq_len],
+            attention_mask (`torch.tensor`):
+                [batch_size, past_seq_len + input_seq_len].
             past_key_values (`Tuple`):
                 The kv_cache. The required form of kv_cache used in the autoregressive search is
-                Tuple[Tuple[key, value] * num_layers]  TODO: It should be serialized to List[torch.tensor]
+                Tuple[Tuple[key, value] * num_layers]
                 key: (batch_size, num_heads, seq_len, kv_dim),
                 value: (batch_size, num_heads, seq_len, kv_dim).
 
@@ -105,10 +107,10 @@ class HuggingfaceBlock(LMBlock):
             'output_hidden_states': False
         }
 
-    def forward(self, inputs: List[torch.tensor],
-                past_key_values: Union[Tuple, None]):
+    def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
+                attention_mask: torch.tensor, past_key_values: Union[Tuple,
+                                                                     None]):
         # Pre-process
-        inputs = [input.contiguous() for input in inputs]
         if past_key_values is not None:
             new_kv_list = []
             for k, v in past_key_values:
@@ -118,15 +120,12 @@ class HuggingfaceBlock(LMBlock):
             past_key_values = tuple(new_kv_list)
 
         # Forward
-        output = self.model.forward(input_ids=inputs[0],
-                                    position_ids=inputs[1],
-                                    attention_mask=inputs[2],
+        output = self.model.forward(input_ids=input_ids,
+                                    position_ids=position_ids,
+                                    attention_mask=attention_mask,
                                     past_key_values=past_key_values,
                                     **self.config)
-        logits, past_key_values = output['logits'], output['past_key_values']
-
-        # Post-process
-        return logits, past_key_values
+        return output
 
 
 class BloomBlock(LMBlock):
@@ -140,13 +139,13 @@ class BloomBlock(LMBlock):
             'output_hidden_states': False
         }
 
-    def forward(self, inputs: List[torch.tensor], past_key_values):
-        # inputs: [input_ids, position_ids, attention_mask]
+    def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
+                attention_mask: torch.tensor, past_key_values):
         # kv: (batch, num_head, seq_len, kv_dim)
         # <->
         # k: (batch*num_head, kv_dim, seq_len),
         # v: (batch*num_head, seq_len, kv_dim)
-        batch_size = inputs[0].shape[0]
+        batch_size = input_ids.shape[0]
 
         # Pre-process
         if past_key_values is not None:
@@ -161,15 +160,13 @@ class BloomBlock(LMBlock):
                 new_kv_list.append((k_new, v_new))
             past_key_values = tuple(new_kv_list)
 
-        inputs = [input.contiguous() for input in inputs]
-
         # Forward
-        output = self.model.forward(input_ids=inputs[0],
-                                    position_ids=inputs[1],
-                                    attention_mask=inputs[2],
+        output = self.model.forward(input_ids=input_ids,
+                                    position_ids=position_ids,
+                                    attention_mask=attention_mask,
                                     past_key_values=past_key_values,
                                     **self.config)
-        logits, past_key_values = output['logits'], output['past_key_values']
+        past_key_values = output.past_key_values
 
         # Post-process
         _, kv_dim, seq_len = past_key_values[0][0].shape
@@ -180,5 +177,6 @@ class BloomBlock(LMBlock):
             v_new = v.view(batch_size, -1, seq_len, kv_dim)
             new_kv_list.append((k_new, v_new))
         past_key_values = tuple(new_kv_list)
+        output.past_key_values = past_key_values
 
-        return logits, past_key_values
+        return output

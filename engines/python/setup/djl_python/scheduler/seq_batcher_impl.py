@@ -68,8 +68,8 @@ class GreedySeqBatcher(SeqBatcher):
 
         # Forward call
         model_input = [input_ids, position_ids, attention_mask]
-        logits, past_key_values = lm_block.forward(model_input,
-                                                   past_key_values=kv_cache)
+        lm_output = lm_block.forward(*model_input, past_key_values=kv_cache)
+        logits, past_key_values = lm_output.logits, lm_output.past_key_values
         last_logits = logits[:, -1, :]
 
         # Save kv_cache of input_ids
@@ -116,9 +116,12 @@ class GreedySeqBatcher(SeqBatcher):
                                                      self.seq_len + 1)
 
         # Forward pass
-        logits, past_key_values = self.lm_block.forward(
-            [output_ids, position_ids, past_attention_mask],
+        lm_output = self.lm_block.forward(
+            output_ids,
+            position_ids,
+            past_attention_mask,
             past_key_values=batch.past_key_values)
+        logits, past_key_values = lm_output.logits, lm_output.past_key_values
 
         # Create SeqBatcher
         last_logits = logits[:, -1, :]  # logits: [batch, sequence, vocab_dim]
@@ -177,8 +180,10 @@ class ContrastiveSeqBatcher(SeqBatcher):
 
         # Forward call
         model_input = [input_ids, position_ids, attention_mask]
-        logits, past_key_values = lm_block.forward(model_input,
-                                                   past_key_values=kv_cache)
+        lm_output = lm_block.forward(*model_input, past_key_values=kv_cache)
+        logits, past_key_values = lm_output['logits'], lm_output[
+            'past_key_values']
+
         last_logits = logits[:, -1, :]
 
         # Save kv_cache of input_ids
@@ -229,9 +234,8 @@ class ContrastiveSeqBatcher(SeqBatcher):
 
         # [batch, topK]
         top_k_ids = batch.next_input_ids
-        '''
-        Prepare candidate model input
-        '''
+
+        # Prepare candidate model input
         # [batch, topK] -> [batch * topk, seq_len=1]
         candidate_input_ids = top_k_ids.view(-1, 1)
         assert candidate_input_ids.dtype == torch.int64
@@ -258,11 +262,13 @@ class ContrastiveSeqBatcher(SeqBatcher):
             past_seq_len=self.seq_len,
             repeat_offset=config.topk)
 
+        # Forward
+        lm_output = self.lm_block.forward(candidate_input_ids,
+                                          candidate_position_ids,
+                                          k_copy_past_attention_mask,
+                                          k_copy_past_key_values)
         # [batch * topK, ..., seq_past + 1, ...]
-        candidate_logits, candidate_past_key_values = self.lm_block.forward([
-            candidate_input_ids, candidate_position_ids,
-            k_copy_past_attention_mask
-        ], k_copy_past_key_values)
+        candidate_logits, candidate_past_key_values = lm_output.logits, lm_output.past_key_values
 
         # [batch, 1]
         output_ids, select = contrastive_step_generate(
@@ -273,9 +279,8 @@ class ContrastiveSeqBatcher(SeqBatcher):
                 batch.past_output_ids),
             offsets=self.offsets,
             alpha=config.alpha)
-        '''
-        Select from the topk candidates and generate output and the new batch
-        '''
+
+        # Select from the topk candidates and generate output and the new batch
         logits_dim = candidate_logits.shape[-1]
         _, num_heads, _, kv_dim = batch.past_key_values[0][0].shape
         past_seq_len = self.seq_len

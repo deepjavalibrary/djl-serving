@@ -96,7 +96,7 @@ class SeqBatcher(ABC):
         self.search_configs = seq_batcher1.search_configs
 
     @torch.no_grad()
-    def collect_and_trim(self) -> List:
+    def collect_and_trim(self) -> List[int]:
         if len(self.exit_index) == 0:
             return []
 

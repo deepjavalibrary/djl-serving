@@ -26,20 +26,20 @@ class TestScheduler(unittest.TestCase):
             torch.ones(7, dtype=torch.int64)[None, :]
         ]
 
-        output0 = lm_block.forward(input0, None)
+        lm_output = lm_block.forward(*input0, None)
 
         model_config = AutoConfig.from_pretrained(model_id)
-        assert len(output0[1]) == model_config.n_layer
+        assert len(lm_output.past_key_values) == model_config.n_layer
 
         # input with kv_cache
-        past_key_values = output0[1]
+        past_key_values = lm_output.past_key_values
         input_ids = torch.tensor([[404]])
         past_seq = past_key_values[0][0].shape[-2]
         position_ids = torch.tensor([[past_seq]])
         attention_mask = torch.ones(past_seq + 1, dtype=torch.int64)
-        output1 = lm_block.forward([input_ids, position_ids, attention_mask],
+        output1 = lm_block.forward(input_ids, position_ids, attention_mask,
                                    past_key_values)
-        assert len(output1[1]) == model_config.n_layer
+        assert len(output1.past_key_values) == model_config.n_layer
 
     def test_greedy_scheduler(self):
         model_id = "gpt2"

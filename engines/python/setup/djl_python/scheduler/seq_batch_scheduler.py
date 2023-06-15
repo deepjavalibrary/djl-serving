@@ -32,7 +32,7 @@ class SeqBatchScheduler:
         self.default_search_configs = defaultdict(lambda: default_config)
         self.default_seq_batcher_cls = default_seq_batcher_cls
         self.lm_block = lm_block
-        self.results: Dict[int, List[int]] = {}
+        self.results: Dict[int, List[int]] = defaultdict(list)
 
         self.seq_batchers: Dict[
             Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
@@ -87,63 +87,56 @@ class SeqBatchScheduler:
                    for seq_batcher_list in self.seq_batchers.values()
                    for seq_batcher in seq_batcher_list)
 
-    def inference_call(self):
+    def inference_call(
+            self) -> Tuple[List[List[int]], List[int], List[List[int]]]:
         """
         A sweep of inference calls on all seq_batchers in the scheduler
         Returns:
-            output_ids (`Dict[Type[SeqBatcher]: List[List[int]]]`):
+            output_ids (`List[List[int]`):
                 About List[List[int]] structure, the outermost List[] corresponds to request_uid: List[int]. The
-                inner List[int] is used to extend the output_ids sequences: past_output_ids: List[int].extend(List[
-                int]). This is the same form as the output from @add_request.
-            exist_request_uids (`Dict[Type[SeqBatcher]: List[int]]`):
+                inner List[int] is used to extend the past_output_ids: past_output_ids.extend(List[
+                int]). This is the same form as the output from `add_request`.
+            request_uids (`List[int]`):
+                The request_uids that correspond to output_ids. Ordering may be different from input since
+                batch_merge or batch_trim operation.
+            exist_request_uids (`List[int]`):
                 List[int] a list of request_uids that have finished.
         """
 
-        output: Dict[Type[SeqBatcher]:List[List[int]]] = defaultdict(list)
-        exit_request_uids: Dict[Type[SeqBatcher]:List[int]] = defaultdict(list)
+        output: List[List[int]] = []
+        request_uids: List[int] = []
+        exit_request_uids: List[int] = []
         for seq_batcher_cls in self.seq_batchers:
             seq_batcher_list_new = []
             for seq_batcher in self.seq_batchers[seq_batcher_cls]:
-                output[seq_batcher_cls] += seq_batcher.forward()
-                exit_request_uids[seq_batcher_cls].extend(
-                    seq_batcher.collect_and_trim())
+                output += seq_batcher.forward()
+                request_uids += seq_batcher.request_uids.view(-1).tolist()
 
+                exit_request_uids += seq_batcher.collect_and_trim()
                 if not seq_batcher.is_empty():
                     seq_batcher_list_new.append(seq_batcher)
 
             self.seq_batchers[seq_batcher_cls] = seq_batcher_list_new
 
-        return output, exit_request_uids
+        return output, request_uids, exit_request_uids
 
     def increment_forward(self, count: int):
         # This serves as a demo of how to use this scheduler
         # -> Dict[Type[SeqBatcher]: List[List[int]]]
         i = 0
         while i < count and not self.is_empty():
-            # Need to have a request_uids here before calling self.inference_call() since request_uids is modified
-            # therein.
-            request_uids: Dict[Type[SeqBatcher]:List[int]] = defaultdict(list)
-            for seq_batcher_cls, seq_batcher_list in self.seq_batchers.items():
-                for seq_batcher in seq_batcher_list:
-                    request_uids[
-                        seq_batcher_cls] += seq_batcher.request_uids.view(
-                            -1).tolist()  # List[List[int]]
-
-            output_ids, _ = self.inference_call()
+            output_ids, request_uids, _ = self.inference_call()
 
             # collect output
-            for request_uids_list, output_ids_list in zip(
-                    request_uids.values(), output_ids.values()):
-                for request_uid, output_id in zip(request_uids_list,
-                                                  output_ids_list):
-                    self.results[request_uid].extend(output_id)
+            for request_uid, output_id in zip(request_uids, output_ids):
+                self.results[request_uid].extend(output_id)
 
             i += 1
             yield output_ids
 
     def collect_results(self):
         output = self.results
-        self.results = {}
+        self.results = defaultdict(list)
         return output
 
     def seq_batcher_split(self, seq_batcher_cls: Type[SeqBatcher],

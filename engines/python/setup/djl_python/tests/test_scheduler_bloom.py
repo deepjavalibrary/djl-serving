@@ -20,7 +20,7 @@ class TestSchedulerBloom(unittest.TestCase):
         input_ids_0 = encoding.data['input_ids']
         seq_len = input_ids_0.shape[1]
 
-        lm_block = HuggingfaceBlock(model)
+        lm_block = BloomBlock(model)
 
         input0 = [
             torch.repeat_interleave(input_ids_0, dim=0, repeats=2),
@@ -33,21 +33,21 @@ class TestSchedulerBloom(unittest.TestCase):
                                     repeats=2)
         ]
 
-        output0 = lm_block.forward(input0, None)
+        output0 = lm_block.forward(*input0, None)
 
         model_config = AutoConfig.from_pretrained(model_id)
-        assert len(output0[1]) == model_config.n_layer
+        assert len(output0.past_key_values) == model_config.n_layer
 
         # input with kv_cache
         # k: [32, 64, 6], v: [32, 6, 64], [batch*head, kvDim, seq]
-        past_key_values = output0[1]
+        past_key_values = output0.past_key_values
         input_ids = torch.tensor([[404], [405]])
-        past_seq = past_key_values[0][0].shape[-1]
+        past_seq = past_key_values[0][0].shape[-2]
         position_ids = torch.tensor([[past_seq], [past_seq]])
         attention_mask = torch.ones(2, past_seq + 1, dtype=torch.int64)
-        output1 = lm_block.forward([input_ids, position_ids, attention_mask],
+        output1 = lm_block.forward(input_ids, position_ids, attention_mask,
                                    past_key_values)
-        assert len(output1[1]) == model_config.n_layer
+        assert len(output1.past_key_values) == model_config.n_layer
 
     def test_contrastive_scheduler(self):
         model_id = "bigscience/bloom-560m"
