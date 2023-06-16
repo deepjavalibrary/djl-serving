@@ -174,10 +174,10 @@ def main(args):
           f"tot_tokens: {tokens}, "
           f"seq_thru_put: {seq_thru_put_stat['avg']:.3g} reqs/sec, \n"
           f"\t err: {seq_thru_put_stat['std']:.3g}, \n"
-          f"\t conf_intv: {seq_thru_put_stat['conf_intv']:.3g}, \n"
+          f"\t conf_intv: {seq_thru_put_stat['conf_intv'][0]:.3g}, {seq_thru_put_stat['conf_intv'][1]:.3g} \n"
           f"token_latency: {token_latency_stat['avg']:.3g} ms/token \n"
           f"\t err: {token_latency_stat['std']:.3g}, \n"
-          f"\t conf_intv: {token_latency_stat['conf_intv']:.3g}, \n"
+          f"\t conf_intv: {token_latency_stat['conf_intv'][0]:.3g}, {token_latency_stat['conf_intv'][1]:.3g} \n"
           )
 
 
