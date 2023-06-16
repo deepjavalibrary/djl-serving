@@ -85,9 +85,9 @@ def stat_tool(experiment_results):
                            average + margin_of_error)
 
     stat_result = {
-        "avg": average,
-        "std": standard_error,
-        "conf_intv": confidence_interval
+        "avg": average if ~np.isnan(average) else -1,
+        "std": standard_error if ~np.isnan(standard_error) else -1,
+        "conf_intv": confidence_interval if ~np.any(np.isnan(np.array(confidence_interval))) else [-1, -1]
     }
     return stat_result
 
@@ -184,7 +184,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Benchmark')
 
-    parser.add_argument('-r', '--reps', dest='reps', type=int, default=1)
+    parser.add_argument('-r', '--reps', dest='reps', type=int, default=2)
     parser.add_argument('--max_gen_len', type=int, default=256)
     parser.add_argument('-c',
                         '--concurrency',
