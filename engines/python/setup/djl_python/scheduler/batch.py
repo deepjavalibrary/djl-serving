@@ -19,7 +19,9 @@ from abc import ABC, abstractmethod
 
 class Batch:
     """
-    Batch is a data class consisting of fields of tensors like past_output_ids, past_key_values. It's a compact collection of variables that need to be updated in each incremental inference call.
+    Batch is a data class consisting of fields of tensors like past_hidden_states, past_key_values. It's a compact
+    collection of
+    variables that need to be updated in each incremental inference call.
     """
 
     def __init__(self,
@@ -32,7 +34,7 @@ class Batch:
 
         # Fields in children class
         self.top_k_probs = None
-        self.past_output_ids = None
+        self.past_hidden_states = None
         self.beam_prob = None
 
     @classmethod
@@ -109,30 +111,30 @@ class ContrastiveBatch(Batch):
     def __init__(self,
                  next_input_ids: torch.tensor = None,
                  past_key_values=None,
-                 past_output_ids: torch.tensor = None,
+                 past_hidden_states: torch.tensor = None,
                  top_k_probs: torch.tensor = None):
         super(ContrastiveBatch,
               self).__init__(past_key_values=past_key_values,
                              next_input_ids=next_input_ids)  # [batch, topk]
         # [batch, past_seq]
-        self.past_output_ids = past_output_ids
+        self.past_hidden_states = past_hidden_states
         # [batch, topk]
         self.top_k_probs: torch.Tensor = top_k_probs
 
     @classmethod
-    def from_super_class(cls, batch: Batch, past_output_ids, top_k_probs):
+    def from_super_class(cls, batch: Batch, past_hidden_states, top_k_probs):
         return cls(batch.next_input_ids, batch.past_key_values,
-                   past_output_ids, top_k_probs)
+                   past_hidden_states, top_k_probs)
 
     # merges another batch with itself.
     def merge(self, batch: ContrastiveBatch,
               seq_delta: int) -> ContrastiveBatch:
         super().merge(batch, seq_delta)
 
-        self.past_output_ids = merge_tensors(self.past_output_ids,
-                                             batch.past_output_ids,
-                                             seq_delta=seq_delta,
-                                             seq_order=1)
+        self.past_hidden_states = merge_tensors(self.past_hidden_states,
+                                                batch.past_hidden_states,
+                                                seq_delta=seq_delta,
+                                                seq_order=1)
         self.top_k_probs = merge_tensors(self.top_k_probs,
                                          batch.top_k_probs,
                                          seq_delta=seq_delta,
@@ -142,21 +144,22 @@ class ContrastiveBatch(Batch):
     def trim(self, keep_indices: torch.Tensor, trim_seq_len: int):
         batch_super = super().trim(keep_indices, trim_seq_len)
 
-        past_output_ids = trim_tensor(self.past_output_ids,
-                                      keep_indices=keep_indices,
-                                      trim_seq_len=trim_seq_len,
-                                      seq_order=1)
+        past_hidden_states = trim_tensor(self.past_hidden_states,
+                                         keep_indices=keep_indices,
+                                         trim_seq_len=trim_seq_len,
+                                         seq_order=1)
         top_k_probs = trim_tensor(self.top_k_probs,
                                   keep_indices=keep_indices,
                                   trim_seq_len=trim_seq_len,
                                   seq_order=-1)
 
-        return self.from_super_class(batch_super, past_output_ids, top_k_probs)
+        return self.from_super_class(batch_super, past_hidden_states,
+                                     top_k_probs)
 
     def nudge_to_squeeze_bubble_padding(self, offsets: torch.Tensor,
                                         init_kv_cache_len: int):
-        self.past_output_ids = nudge_tensor(self.past_output_ids,
-                                            offsets,
-                                            init_kv_cache_len,
-                                            seq_order=1)
+        self.past_hidden_states = nudge_tensor(self.past_hidden_states,
+                                               offsets,
+                                               init_kv_cache_len,
+                                               seq_order=1)
         super().nudge_to_squeeze_bubble_padding(offsets, init_kv_cache_len)

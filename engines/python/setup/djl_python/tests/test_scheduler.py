@@ -156,17 +156,18 @@ class TestScheduler(unittest.TestCase):
         for _ in scheduler.increment_forward(20):
             pass
 
-        results = scheduler.results
+        results = scheduler.collect_results()
 
         assert tokenizer.decode(
             results[1][:30]
-        ) == "When your legs don't work like they used to before And I can't sweep you off my face, but if it hurts so much that I need"
+        ) == "When your legs don't work like they used to before And I can't sweep you off my feet, but I can tell you that if you're"
 
-        assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not know what to do," \
-                                                    "\" she said. \"I was very nervous about it and didn't"
+        assert tokenizer.decode(
+            results[2][:30]
+        ) == "There's a time that I remember, when I did not know what to do with myself. I felt like I was going to die. I didn"
 
-        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't remember what " \
-                                                    "happened last night but it was pretty bad. The whole place smelled like burnt flesh.\""
+        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't remember the last " \
+                                                    "time I saw her.\n\n\"What do you mean?\" asked my mother"
 
         # Load a kv_cache from file
         input_ids = torch.tensor([[2215, 534, 7405, 836, 470, 670],
@@ -181,11 +182,12 @@ class TestScheduler(unittest.TestCase):
         for _ in scheduler.increment_forward(100):
             pass
 
-        assert tokenizer.decode(results[3][:30]) == "!!!!!!!!!!When your legs don't work out, I'll be right here with " \
-                                                    "you.\"<|endoftext|>"
+        results = scheduler.collect_results()
+        assert tokenizer.decode(results[3][:30]) == "!!!!!!!!!!When your legs don't work, I'll tell you how to fix " \
+                                                    "them.\n\nI'm"
         assert tokenizer.decode(
             results[4][:30]
-        ) == "!!!!!!!!!!There's a time when I feel like my life is over. But then it happens again and you"
+        ) == "!!!!!!!!!!There's a time and place where I feel like I'm going to die. It's not that"
 
         # print
         model_name = 'gpt2'

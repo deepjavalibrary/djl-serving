@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Union
 
@@ -19,21 +20,17 @@ import torch
 class LMBlock(ABC):
 
     @abstractmethod
-    def __init__(self, model, embedder=None):
+    def __init__(self, model):
         """
         Set self.model to the input language model.
         """
         self.model = model
 
-        # Used only in contrastive search. Requiring model to expose get_input_embeddings is a less tight requirement
-        # than requiring model to output_hidden_states.
-        self.embedder = embedder
-
     @abstractmethod
     def forward(
-            self, input_ids: torch.tensor, position_ids: torch.tensor,
-            attention_mask: torch.tensor,
-            past_key_values: Union[Tuple, None]) -> Tuple[torch.tensor, Tuple]:
+        self, input_ids: torch.tensor, position_ids: torch.tensor,
+        attention_mask: torch.tensor, past_key_values: Union[Tuple, None]
+    ) -> Tuple[torch.tensor, Tuple, torch.tensor]:
         """
         Convert the variables between that used in the internal model's forward call and that used in the
         autoregressive search.
@@ -64,47 +61,16 @@ class LMBlock(ABC):
         """
         pass
 
-    def get_embedder(self):
-        if hasattr(self.model, 'get_input_embeddings'):
-            self.embedder = self.model.get_input_embeddings()
-        else:
-            raise Exception(
-                f"self.model.get_input_embeddings is not found. In following, the hidden_states is used as "
-                f"embedding. But it is slow!")
-
-    def embedding(self, input_ids: torch.tensor):
-        """
-        Get the embedding of input_ids. This is used only in contrastive search.
-        Users can choose one of the following three ways to provide an embedder
-        (Assume that requiring model to expose get_input_embeddings is a less
-        tight requirement than requiring model to output_hidden_states):
-        1. make sure self.model.get_input_embedding() works.
-        2. provide an embedder at instantiation.
-        3. self.model.forward() allows output_hidden_states. But this is slow.
-
-        Args:
-            input_ids (`torch.tensor`):
-                [batch, seq_len]
-
-        Returns:
-            (`torch.tensor`): [batch, seq_len, hidden_dim]
-        """
-        if self.embedder is None:
-            self.get_embedder()
-
-        # [input_ids.shape, hidden_dim]
-        return self.embedder(input_ids).view(input_ids.shape + (-1, ))
-
 
 class HuggingfaceBlock(LMBlock):
 
-    def __init__(self, *args):
-        super(HuggingfaceBlock, self).__init__(*args)
+    def __init__(self, model):
+        super(HuggingfaceBlock, self).__init__(model)
         self.config = {
             'use_cache': True,
             'return_dict': True,
             'output_attentions': False,
-            'output_hidden_states': False
+            'output_hidden_states': True
         }
 
     def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
@@ -130,13 +96,13 @@ class HuggingfaceBlock(LMBlock):
 
 class BloomBlock(LMBlock):
 
-    def __init__(self, *args):
-        super(BloomBlock, self).__init__(*args)
+    def __init__(self, model):
+        super(BloomBlock, self).__init__(model)
         self.config = {
             'use_cache': True,
             'return_dict': True,
             'output_attentions': False,
-            'output_hidden_states': False
+            'output_hidden_states': True
         }
 
     def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
