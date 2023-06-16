@@ -98,7 +98,7 @@ def timeit(repetitions=5):
         @wraps(func)
         def wrapper(*args, **kwargs):
             total_time = 0.0
-            annealing = 3
+            annealing = 1
             data = []
             for idx in range(repetitions + annealing):
                 start_time = time.perf_counter()
