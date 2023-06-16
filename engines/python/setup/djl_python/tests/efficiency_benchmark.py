@@ -1,6 +1,5 @@
 from djl_python.scheduler import HuggingfaceBlock, BloomBlock
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
-from transformers import AutoConfig
 import torch
 from collections import defaultdict
 
@@ -14,6 +13,9 @@ from typing import List
 from functools import wraps
 import time
 import argparse
+
+import numpy as np
+import scipy.stats as stats
 
 
 class TestKit:
@@ -65,6 +67,31 @@ def get_model_tokenizer(model_id):
     return lm_block, tokenizer
 
 
+def stat_tool(experiment_results):
+    # Compute the average
+    average = np.mean(experiment_results)
+
+    # Compute the standard error using the standard deviation and sample size
+    standard_deviation = np.std(experiment_results)
+    sample_size = len(experiment_results)
+    standard_error = standard_deviation / np.sqrt(sample_size)
+
+    # Compute the confidence interval using a t-distribution
+    confidence_level = 0.95  # 95% confidence level
+    degrees_of_freedom = sample_size - 1
+    t_value = stats.t.ppf((1 + confidence_level) / 2, degrees_of_freedom)
+    margin_of_error = t_value * standard_error
+    confidence_interval = (average - margin_of_error,
+                           average + margin_of_error)
+
+    stat_result = {
+        "avg": average,
+        "std": standard_error,
+        "conf_intv": confidence_interval
+    }
+    return stat_result
+
+
 def timeit(repetitions=5):
 
     def decorator(func):
@@ -73,13 +100,16 @@ def timeit(repetitions=5):
         def wrapper(*args, **kwargs):
             total_time = 0.0
             annealing = 3
+            data = []
             for idx in range(repetitions + annealing):
                 start_time = time.perf_counter()
                 func(*args, **kwargs)
                 end_time = time.perf_counter()
                 if idx >= annealing:
                     total_time += end_time - start_time
+                    data.append(end_time - start_time)
             avg_time = total_time / repetitions
+            data_time = np.array(data)
             print(
                 f'Function: {func.__name__}\nAverage time for {repetitions} repetitions: {avg_time:.4f} seconds'
             )
@@ -89,10 +119,11 @@ def timeit(repetitions=5):
                 batch_size, init_seq_len = args[2].shape
                 max_gen_len = args[0].scheduler.default_search_configs[
                     "$"].max_seqlen - init_seq_len
-                seq_thru_put = batch_size / avg_time  # req/sec
-                token_latency = avg_time / (batch_size * max_gen_len
-                                            )  # sec/token
-                return avg_time, batch_size * max_gen_len, seq_thru_put, token_latency * 1000
+                seq_thru_put_data = batch_size / data_time  # req/sec
+                token_latency_data = 1000 * data_time / (
+                    batch_size * max_gen_len)  # sec/token
+                return avg_time, batch_size * max_gen_len, stat_tool(
+                    seq_thru_put_data), stat_tool(token_latency_data),
             else:
                 return None
 
@@ -138,12 +169,18 @@ def main(args):
     def test_run(test_kit, request_uids, input_ids):
         test_kit.pure_inference(request_uids, input_ids)
 
-    avg_time, tokens, seq_thru_put, token_latency = test_run(
+    avg_time, tokens, seq_thru_put_stat, token_latency_stat = test_run(
         test_kit, request_uids, input_ids)
     print(f"avg_time: {avg_time}, "
           f"tot_tokens: {tokens}, "
-          f"seq_thru_put: {seq_thru_put} reqs/sec, "
-          f"token_latency: {token_latency} ms/token")
+          "\n"
+          f"seq_thru_put: {seq_thru_put_stat['avg']} reqs/sec, "
+          f"seq_thru_put_err: {seq_thru_put_stat['std']}, "
+          f"seq_thru_put_intv: {seq_thru_put_stat['conf_intv']}, "
+          "\n"
+          f"token_latency: {token_latency_stat['avg']} ms/token"
+          f"token_latency_err: {token_latency_stat['std']}, "
+          f"token_latency_intv: {token_latency_stat['conf_intv']}, ")
 
 
 if __name__ == '__main__':
