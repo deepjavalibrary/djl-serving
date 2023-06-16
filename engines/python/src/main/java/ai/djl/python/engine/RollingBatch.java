@@ -73,12 +73,15 @@ class RollingBatch implements Runnable {
 
                 Input batch = new Input();
                 int size = list.size();
-                batch.addProperty("batch_size", String.valueOf(size));
                 for (int i = 0; i < size; ++i) {
                     Request req = list.get(i);
                     String prefix = "batch_" + i + ".data";
+                    if (i == 0) {
+                        batch.setProperties(req.input.getProperties());
+                    }
                     batch.add(prefix, req.getRequest());
                 }
+                batch.addProperty("batch_size", String.valueOf(size));
 
                 // TODO: Handler error case
 
@@ -153,7 +156,7 @@ class RollingBatch implements Runnable {
 
         BytesSupplier getRequest() {
             if (nextToken != null) {
-                return BytesSupplier.wrap("{\"inputs\": [\"" + nextToken + "\"]}");
+                return BytesSupplier.wrap("{\"inputs\": [\"\"]}");
             }
             return input.getData();
         }

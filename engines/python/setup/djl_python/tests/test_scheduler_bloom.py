@@ -1,9 +1,7 @@
 import unittest
 
-from djl_python.scheduler import HuggingfaceBlock
 from djl_python.scheduler import BloomBlock
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
-from djl_python.scheduler.seq_batcher_impl import ContrastiveSeqBatcher
 from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
 from djl_python.scheduler.search_config import SearchConfig
 import torch
@@ -61,7 +59,7 @@ class TestSchedulerBloom(unittest.TestCase):
         search_config = SearchConfig()
         search_config.pad_token_id = tokenizer.pad_token_id
         PAD = search_config.pad_token_id
-        scheduler = SeqBatchScheduler(lm_block, ContrastiveSeqBatcher,
+        scheduler = SeqBatchScheduler(lm_block, "contrastive",
                                       search_config)
 
         input_ids_0 = tokenizer.encode(

@@ -63,7 +63,8 @@ class PropertiesManager(object):
         elif 'option.model_id' in self.properties:
             self.properties['model_dir'] = self.properties_dir
         elif 'option.s3url' in self.properties:
-            self.properties['option.model_id'] = self.properties['option.s3url']
+            self.properties['option.model_id'] = self.properties[
+                'option.s3url']
             self.properties['model_dir'] = self.properties_dir
             self.properties.pop('option.s3url')
         else:

@@ -13,3 +13,4 @@
 
 from .lm_block import HuggingfaceBlock, BloomBlock
 from .search_config import SearchConfig
+from .seq_batch_scheduler import SeqBatchScheduler
