@@ -209,9 +209,6 @@ class ContrastiveSeqBatcher(SeqBatcher):
             ],
                                               dim=1)
 
-        output_ids = input_ids if not kv_cache else torch.cat(
-            [dummy_input_ids, input_ids], dim=1)
-
         # Generate next token and batch
         topk = search_configs["non_exist_key"].topk
         # [batch, vocab_size=50257]
