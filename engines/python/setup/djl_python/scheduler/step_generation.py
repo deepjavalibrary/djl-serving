@@ -39,21 +39,14 @@ def contrastive_step_generate(top_k_ids: torch.Tensor,
     top_k_hidden_states = normalize(top_k_hidden_states, p=2, dim=2)
     context_hidden_states = normalize(context_hidden_states, p=2, dim=2)
 
-    # torch.bmm is slower than per batch matmul on gpu
-    # cos_similarity = torch.bmm(top_k_hidden_states,
-    # context_hidden_states.permute(0, 2, 1))
+    cos_similarity = torch.bmm(top_k_hidden_states,
+                               context_hidden_states.permute(0, 2, 1))
 
-    context_hidden_states = context_hidden_states.permute(0, 2, 1)
-    cos_similarity_max = torch.empty(batch_size,
-                                     top_k_hidden_states.shape[1],
-                                     device=top_k_hidden_states.device)
-    for i in range(batch_size):
-        cos_similarity_max[i] = torch.max(torch.matmul(
-            top_k_hidden_states[i], context_hidden_states[i][:, offsets[i]:]),
-                                          dim=-1).values
+    for i in range(offsets.numel()):
+        cos_similarity[i, :, :offsets[i]] = -1
 
     # [batch, topK, past_seq] -> [batch, topK]
-    top_k_score_part1 = cos_similarity_max
+    top_k_score_part1 = torch.max(cos_similarity, dim=2).values
     top_k_score_part2 = top_k_probs
 
     top_k_score = top_k_score_part2.mul_(1 - alpha).sub_(
