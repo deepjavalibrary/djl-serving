@@ -93,7 +93,6 @@ def stat_tool(experiment_results):
 
 
 def timeit(repetitions=5):
-
     def decorator(func):
 
         @wraps(func)
@@ -118,10 +117,10 @@ def timeit(repetitions=5):
             if len(args) == 3:
                 batch_size, init_seq_len = args[2].shape
                 max_gen_len = args[0].scheduler.default_search_configs[
-                    "$"].max_seqlen - init_seq_len
+                                  "$"].max_seqlen - init_seq_len
                 seq_thru_put_data = batch_size / data_time  # req/sec
                 token_latency_data = 1000 * data_time / (
-                    batch_size * max_gen_len)  # sec/token
+                        batch_size * max_gen_len)  # sec/token
                 return avg_time, batch_size * max_gen_len, stat_tool(
                     seq_thru_put_data), stat_tool(token_latency_data),
             else:
@@ -173,14 +172,13 @@ def main(args):
         test_kit, request_uids, input_ids)
     print(f"avg_time: {avg_time}, "
           f"tot_tokens: {tokens}, "
-          "\n"
-          f"seq_thru_put: {seq_thru_put_stat['avg']} reqs/sec, \n"
-          f"seq_thru_put_err: {seq_thru_put_stat['std']}, \n"
-          f"seq_thru_put_intv: {seq_thru_put_stat['conf_intv']}, \n"
-          "\n"
-          f"token_latency: {token_latency_stat['avg']} ms/token \n"
-          f"token_latency_err: {token_latency_stat['std']}, \n"
-          f"token_latency_intv: {token_latency_stat['conf_intv']}, \n")
+          f"seq_thru_put: {seq_thru_put_stat['avg']:.3g} reqs/sec, \n"
+          f"\t err: {seq_thru_put_stat['std']:.3g}, \n"
+          f"\t conf_intv: {seq_thru_put_stat['conf_intv']:.3g}, \n"
+          f"token_latency: {token_latency_stat['avg']:.3g} ms/token \n"
+          f"\t err: {token_latency_stat['std']:.3g}, \n"
+          f"\t conf_intv: {token_latency_stat['conf_intv']:.3g}, \n"
+          )
 
 
 if __name__ == '__main__':
