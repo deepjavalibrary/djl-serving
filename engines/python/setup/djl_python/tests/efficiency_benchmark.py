@@ -72,12 +72,13 @@ def timeit(repetitions=5):
         @wraps(func)
         def wrapper(*args, **kwargs):
             total_time = 0.0
-            total_count = 0
-            for _ in range(repetitions):
+            annealing = 3
+            for idx in range(repetitions + annealing):
                 start_time = time.perf_counter()
                 func(*args, **kwargs)
                 end_time = time.perf_counter()
-                total_time += end_time - start_time
+                if idx >= annealing:
+                    total_time += end_time - start_time
             avg_time = total_time / repetitions
             print(
                 f'Function: {func.__name__}\nAverage time for {repetitions} repetitions: {avg_time:.4f} seconds'
