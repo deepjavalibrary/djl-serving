@@ -174,13 +174,13 @@ def main(args):
     print(f"avg_time: {avg_time}, "
           f"tot_tokens: {tokens}, "
           "\n"
-          f"seq_thru_put: {seq_thru_put_stat['avg']} reqs/sec, "
-          f"seq_thru_put_err: {seq_thru_put_stat['std']}, "
-          f"seq_thru_put_intv: {seq_thru_put_stat['conf_intv']}, "
+          f"seq_thru_put: {seq_thru_put_stat['avg']} reqs/sec, \n"
+          f"seq_thru_put_err: {seq_thru_put_stat['std']}, \n"
+          f"seq_thru_put_intv: {seq_thru_put_stat['conf_intv']}, \n"
           "\n"
-          f"token_latency: {token_latency_stat['avg']} ms/token"
-          f"token_latency_err: {token_latency_stat['std']}, "
-          f"token_latency_intv: {token_latency_stat['conf_intv']}, ")
+          f"token_latency: {token_latency_stat['avg']} ms/token \n"
+          f"token_latency_err: {token_latency_stat['std']}, \n"
+          f"token_latency_intv: {token_latency_stat['conf_intv']}, \n")
 
 
 if __name__ == '__main__':
