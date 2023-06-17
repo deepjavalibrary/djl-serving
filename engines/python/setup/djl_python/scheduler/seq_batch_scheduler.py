@@ -87,8 +87,21 @@ class SeqBatchScheduler:
                    for seq_batcher_list in self.seq_batchers.values()
                    for seq_batcher in seq_batcher_list)
 
-    def inference_call(
-            self) -> Tuple[List[List[int]], List[int], List[List[int]]]:
+    def total_seq_batcher_num(self):
+        # This is provided to the consumers, used as part of the max_seq_batcher thresholding mechanism.
+        return sum(
+            len(seq_batcher_list)
+            for seq_batcher_list in self.seq_batchers.values())
+
+    def total_batch_size(self) -> Dict[Type[SeqBatcher], int]:
+        # This is provided to the consumers, used as part of the max_batch_size thresholding mechanism.
+        batch_size = {}
+        for key, seq_batcher_list in self.seq_batchers.items():
+            batch_size[key] = sum(seq_batcher.batch_size
+                                  for seq_batcher in seq_batcher_list)
+        return batch_size
+
+    def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
         """
         A sweep of inference calls on all seq_batchers in the scheduler
         Returns:

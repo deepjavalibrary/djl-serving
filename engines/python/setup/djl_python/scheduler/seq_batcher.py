@@ -43,8 +43,15 @@ class SeqBatcher(ABC):
         self.request_uids = request_uids
         self.offsets = offsets
         self.search_configs = search_configs
+        self.search_config_list_cache = None
         self.batch_size, _, self.seq_len, _ = batch.past_key_values[0][0].size(
         )
+
+        # Used in GreedySeqBatcher
+        # This is cached output of sampler_bucket_sort result used through inferences.
+        self.sampler_bucket_sort_cache: Union[Tuple[Dict[str, torch.tensor],
+                                                    List[SearchConfig],
+                                                    List[SearchConfig]], None] = None
 
     @classmethod
     @abstractmethod
@@ -95,6 +102,9 @@ class SeqBatcher(ABC):
         seq_batcher1.search_configs.update(seq_batcher2.search_configs)
         self.search_configs = seq_batcher1.search_configs
 
+        self.search_config_list_cache = None
+        self.sampler_bucket_sort_cache = None
+
     @torch.no_grad()
     def collect_and_trim(self) -> List[int]:
         if len(self.exit_index) == 0:
@@ -137,6 +147,8 @@ class SeqBatcher(ABC):
             self.batch_size -= len(self.exit_index)
             self.seq_len -= trim_seq_len
 
+        self.search_config_list_cache = None
+        self.sampler_bucket_sort_cache = None
         self.exit_index = set()
         return exit_request_uids
 

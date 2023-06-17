@@ -10,10 +10,11 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+from collections import defaultdict
 
 import torch
 from torch.nn.functional import normalize, softmax
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from djl_python.scheduler.search_config import SearchConfig
 
 
@@ -59,13 +60,86 @@ def contrastive_step_generate(top_k_ids: torch.Tensor,
     return output_ids, select
 
 
-def greedy_step_generate(logits: torch.Tensor, k: int = 1):
-    return torch.topk(logits, k=k, dim=-1, largest=True, sorted=False)
+def sampling_step_generate(logits: torch.tensor, search_configs: List[SearchConfig], sampler_bucket_sort_cache=None):
+    """
+    Greedy, topK, topP
+
+    Args:
+        logits: [batch, vocab_size]
+        search_configs: [batch]
+        sampler_bucket_sort_cache: Tuple[collector, k_config_list, p_config_list].
+            This is cached output of sampler_bucket_sort result used through inferences.
+
+    Return:
+        token_id: [batch, 1]
+    """
+    collector, k_config_list, tmprtr_list_for_k, p_config_list, tmprtr_list_for_p = sampler_bucket_sort(
+        search_configs) if not sampler_bucket_sort_cache else sampler_bucket_sort_cache
+
+    output_ids_greedy = greedy_step_generate(logits[collector['greedy'], :])
+    output_ids_topk = topk_step_generate(logits[collector['topk'], :],
+                                      k_config_list, tmprtr_list_for_k)
+    output_ids_topp = topp_step_generate(logits[collector['topk'], :],
+                                      p_config_list, tmprtr_list_for_p)
+    output_ids = torch.empty(len(search_configs), dtype=torch.int64, device=logits.device)
+    output_ids[collector['greedy']] = output_ids_greedy.view(-1)
+    output_ids[collector['topk']] = output_ids_topk.view(-1)
+    output_ids[collector['topp']] = output_ids_topp.view(-1)
+
+    return output_ids.view(-1, 1)
 
 
-def sampling_step_generate(logits: torch.Tensor,
-                           search_configs: List[SearchConfig]):
-    pass
+def sampler_bucket_sort(search_configs: List[SearchConfig]):
+    """
+    Return:
+        collector: Dict[str: List[int]],
+        k_config_list: List[int],
+        p_config_list: List[float]
+    """
+
+    collector = defaultdict(list)
+    k_config_list = []
+    p_config_list = []
+    tmprtr_list_for_p = []
+    tmprtr_list_for_k = []
+    for idx, search_config in enumerate(search_configs):
+        if not search_config.sampling:
+            collector['greedy'].append(idx)
+        elif search_config.topk > 0:
+            collector['topk'].append(idx)
+            k_config_list.append(search_config.topk)
+            tmprtr_list_for_k.append(search_config.temperature)
+        else:
+            collector['topp'].append(idx)
+            p_config_list.append(search_config.topp)
+            tmprtr_list_for_p.append(search_config.temperature)
+    return collector, k_config_list, tmprtr_list_for_k, p_config_list, tmprtr_list_for_p
+
+
+def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
+    """
+    Args:
+        logtis: [batch, vocab_size].
+            This logits can also be probability inputs, since probs = softmax(logits, dim=1) .
+
+    Return:
+        indices: [batch, k]
+    """
+    return torch.topk(logits, k=k, dim=-1, largest=True, sorted=False).indices
+
+
+def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k):
+    """
+    If logits is tensor([]), the output should be tensor([]) too.
+    """
+    return torch.tensor([], dtype=torch.int64, device=logits.device)
+
+
+def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p):
+    """
+    If logits is tensor([]), the output should be tensor([]) too.
+    """
+    return torch.tensor([], dtype=torch.int64, device=logits.device)
 
 
 def beam_step_generate(last_probs: torch.Tensor, logits: torch.Tensor,

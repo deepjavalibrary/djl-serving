@@ -79,7 +79,7 @@ class TestScheduler(unittest.TestCase):
         # Test merging longer sequences
         request_ids = torch.tensor([[1], [2]])
         scheduler.add_request(input_ids, request_ids)
-        for _ in scheduler.increment_forward(20):
+        for idx, _ in enumerate(scheduler.increment_forward(20)):
             pass
 
         results = scheduler.results
@@ -106,7 +106,7 @@ class TestScheduler(unittest.TestCase):
         scheduler.add_request(input_ids, request_ids, kv_cache=kv_cache)
 
         # Test trim_and_collect
-        for _ in scheduler.increment_forward(100):
+        for idx, _ in enumerate(scheduler.increment_forward(100)):
             pass
 
         results = scheduler.results

@@ -22,3 +22,6 @@ class SearchConfig:
         self.topk = 4
         self.alpha = 0.6
         self.beam = 3
+        self.sampling = False
+        self.topp = 0.92
+        self.temperature = 1
