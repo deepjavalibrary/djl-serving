@@ -92,6 +92,11 @@ hf_model_spec = {
         "seq_length": [64, 128, 256],
         "worker": 2
     },
+    "open-llama-7b": {
+        "max_memory_per_gpu": [10.0, 7.0, 7.0, 17.0],
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256]
+    },
     "bloom-7b1": {
         "max_memory_per_gpu": [7.0, 7.0, 8.0, 9.0],
         "batch_size": [1, 2, 4, 8],
@@ -140,6 +145,11 @@ ds_model_spec = {
     },
     "bloom-7b1": {
         "max_memory_per_gpu": [7.0, 8.0, 8.0, 9.0],
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256]
+    },
+    "open-llama-7b": {
+        "max_memory_per_gpu": [8.0, 7.0, 7.0, 7.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256]
     },
