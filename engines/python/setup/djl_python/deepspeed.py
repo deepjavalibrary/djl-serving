@@ -36,6 +36,7 @@ OPTIMIZED_MODEL_TYPES = {
     "opt",
     "gpt_neox",
     "bloom",
+    "llama",
 }
 
 SUPPORTED_TASKS = {
