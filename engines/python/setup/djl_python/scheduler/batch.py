@@ -116,15 +116,14 @@ class ContrastiveBatch(Batch):
         super(ContrastiveBatch,
               self).__init__(past_key_values=past_key_values,
                              next_input_ids=next_input_ids)  # [batch, topk]
-        # [batch, past_seq]
+        # [batch, past_seq, hidden_size]
         self.past_hidden_states = past_hidden_states
         # [batch, topk]
         self.top_k_probs: torch.Tensor = top_k_probs
 
     @classmethod
-    def from_super_class(cls, batch: Batch, past_hidden_states, top_k_probs):
-        return cls(batch.next_input_ids, batch.past_key_values,
-                   past_hidden_states, top_k_probs)
+    def from_super_class(cls, batch: Batch, *args):
+        return cls(batch.next_input_ids, batch.past_key_values, *args)
 
     # merges another batch with itself.
     def merge(self, batch: ContrastiveBatch,

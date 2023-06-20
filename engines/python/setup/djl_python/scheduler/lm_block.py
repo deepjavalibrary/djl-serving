@@ -76,14 +76,6 @@ class HuggingfaceBlock(LMBlock):
     def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
                 attention_mask: torch.tensor, past_key_values: Union[Tuple,
                                                                      None]):
-        # Pre-process
-        if past_key_values is not None:
-            new_kv_list = []
-            for k, v in past_key_values:
-                k_new = k.contiguous()
-                v_new = v.contiguous()
-                new_kv_list.append((k_new, v_new))
-            past_key_values = tuple(new_kv_list)
 
         # Forward
         output = self.model.forward(input_ids=input_ids,
@@ -119,10 +111,8 @@ class BloomBlock(LMBlock):
             new_kv_list = []
             for k, v in past_key_values:
                 k_new = torch.permute(
-                    k.view(batch_size * num_head, seq_len, kv_dim),
-                    (0, 2, 1)).contiguous()
-                v_new = v.view(batch_size * num_head, seq_len,
-                               kv_dim).contiguous()
+                    k.view(batch_size * num_head, seq_len, kv_dim), (0, 2, 1))
+                v_new = v.view(batch_size * num_head, seq_len, kv_dim)
                 new_kv_list.append((k_new, v_new))
             past_key_values = tuple(new_kv_list)
 
