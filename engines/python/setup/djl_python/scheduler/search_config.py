@@ -16,7 +16,8 @@ from abc import ABC, abstractmethod
 class SearchConfig:
 
     def __init__(self):
-        self.max_seqlen = 30
+        self.max_new_seqlen = 30
+        self._max_seqlen = 0
         self.eos_token_id = 50256
         self.pad_token_id = 50256
         self.topk = 4

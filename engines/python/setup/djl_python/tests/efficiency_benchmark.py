@@ -122,7 +122,7 @@ def timeit(repetitions=5):
             if len(args) == 3:
                 batch_size, init_seq_len = args[2].shape
                 max_gen_len = args[0].scheduler.default_search_configs[
-                    "$"].max_seqlen - init_seq_len
+                    "$"].max_new_seqlen
                 seq_thru_put_data = batch_size / data_time  # req/sec
                 token_latency_data = 1000 * data_time / (
                     batch_size * max_gen_len)  # sec/token
@@ -161,7 +161,7 @@ def main(args):
     # search config
     config = SearchConfig()
     config.pad_token_id = tokenizer.pad_token_id
-    config.max_seqlen = args.max_gen_len + max([len(l) for l in input_ids])
+    config.max_new_seqlen = args.max_gen_len
     scheduler = SeqBatchScheduler(model, seq_batcher_cls, config)
 
     # Init test kit

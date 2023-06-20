@@ -158,7 +158,7 @@ class SeqBatcher(ABC):
                     output_ids.view(-1).tolist(),
                     self.request_uids.view(-1).tolist(),
                     self.offsets.view(-1).tolist())):
-            if self.seq_len - offset >= search_configs[request_uid].max_seqlen \
+            if self.seq_len - offset >= search_configs[request_uid]._max_seqlen \
                     or output_id == search_configs[request_uid].eos_token_id:
                 if i not in self.exit_index:
                     self.exit_index.add(i)
