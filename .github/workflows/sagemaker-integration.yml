@@ -81,7 +81,7 @@ jobs:
       - name: Test gpt2xl
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py gpt2-xl djl ${{ github.event.inputs.mode }}
+          python3 llm/sagemaker-endpoint-tests.py gpt2-xl djl ${{ github.event.inputs.mode || 'nightly' }}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test stable diffusion
