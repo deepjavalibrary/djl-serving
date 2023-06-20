@@ -190,7 +190,7 @@ class TransformersNeuronXService(object):
                 if self.enable_streaming == "huggingface":
                     outputs.add_stream_content(
                         StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, input_text, -1,
+                            self.model, self.tokenizer, input_text, None,
                             **model_kwargs))
                 else:
                     stream_generator = StreamingUtils.get_stream_generator(
