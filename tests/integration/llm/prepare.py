@@ -91,6 +91,13 @@ hf_handler_list = {
         "option.device_map": "auto",
         "option.dtype": "fp16"
     },
+    "open-llama-7b": {
+        "option.model_id": "s3://djl-llm/open-llama-7b/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.device_map": "auto",
+        "option.dtype": "fp16"
+    },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.tensor_parallel_degree": 4,
@@ -125,6 +132,12 @@ ds_handler_list = {
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.task": "text-generation",
+        "option.dtype": "fp16"
+    },
+    "open-llama-7b": {
+        "option.model_id": "s3://djl-llm/open-llama-7b/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
         "option.dtype": "fp16"
     },
     "opt-13b": {
