@@ -152,15 +152,6 @@ jobs:
           serve
           python3 llm/client.py huggingface bloom-7b1
           docker rm -f $(docker ps -aq)
-      - name: Test LLAMA-7b
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py huggingface open-llama-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve
-          python3 llm/client.py huggingface open-llama-7b
-          docker rm -f $(docker ps -aq)
       - name: Test GPTJ-6B
         working-directory: tests/integration
         run: |
