@@ -54,7 +54,7 @@ class RollingBatch implements Runnable {
         this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
         list = new ArrayList<>(3);
-        lock = new ReentrantLock();
+        lock = new ReentrantLock(true);
         canAdd = lock.newCondition();
         canRead = lock.newCondition();
         threadPool.submit(this);
@@ -66,7 +66,6 @@ class RollingBatch implements Runnable {
         currentThread = Thread.currentThread();
         while (!stop) {
             try {
-                Thread.yield();
                 lock.lock();
                 if (list.isEmpty()) {
                     canRead.await();
