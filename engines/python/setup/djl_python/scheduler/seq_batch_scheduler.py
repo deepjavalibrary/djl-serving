@@ -103,7 +103,6 @@ class SeqBatchScheduler:
                                   for seq_batcher in seq_batcher_list)
         return batch_size
 
-    def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
     def optimal_action(self,
                        input_ids: torch.Tensor,
                        request_uids: torch.Tensor,
@@ -126,12 +125,6 @@ class SeqBatchScheduler:
 
         # This is provided to the consumers to be used as part of the max_seq_batcher thresholding mechanism.
         pass
-
-    def total_seq_batcher_num(self):
-        # This is provided to the consumers to be used as part of the max_seq_batcher thresholding mechanism.
-        return sum(
-            len(seq_batcher_list)
-            for seq_batcher_list in self.seq_batchers.values())
 
     def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
         """
