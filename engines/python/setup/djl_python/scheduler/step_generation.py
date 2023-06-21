@@ -60,7 +60,9 @@ def contrastive_step_generate(top_k_ids: torch.Tensor,
     return output_ids, select
 
 
-def sampling_step_generate(logits: torch.tensor, search_configs: List[SearchConfig], sampler_bucket_sort_cache=None):
+def sampling_step_generate(logits: torch.tensor,
+                           search_configs: List[SearchConfig],
+                           sampler_bucket_sort_cache=None):
     """
     Greedy, topK, topP
 
@@ -74,14 +76,17 @@ def sampling_step_generate(logits: torch.tensor, search_configs: List[SearchConf
         token_id: [batch, 1]
     """
     collector, k_config_list, tmprtr_list_for_k, p_config_list, tmprtr_list_for_p = sampler_bucket_sort(
-        search_configs) if not sampler_bucket_sort_cache else sampler_bucket_sort_cache
+        search_configs
+    ) if not sampler_bucket_sort_cache else sampler_bucket_sort_cache
 
     output_ids_greedy = greedy_step_generate(logits[collector['greedy'], :])
     output_ids_topk = topk_step_generate(logits[collector['topk'], :],
-                                      k_config_list, tmprtr_list_for_k)
+                                         k_config_list, tmprtr_list_for_k)
     output_ids_topp = topp_step_generate(logits[collector['topk'], :],
-                                      p_config_list, tmprtr_list_for_p)
-    output_ids = torch.empty(len(search_configs), dtype=torch.int64, device=logits.device)
+                                         p_config_list, tmprtr_list_for_p)
+    output_ids = torch.empty(len(search_configs),
+                             dtype=torch.int64,
+                             device=logits.device)
     output_ids[collector['greedy']] = output_ids_greedy.view(-1)
     output_ids[collector['topk']] = output_ids_topk.view(-1)
     output_ids[collector['topp']] = output_ids_topp.view(-1)
