@@ -85,6 +85,7 @@ public class PyModel extends BaseModel {
                 String value = (String) entry.getValue();
                 if (!"env".equals(key)) {
                     pyEnv.addParameter(key, value);
+                    properties.put(key, value);
                 }
                 logger.debug("{}={}", key, value);
                 switch (key) {

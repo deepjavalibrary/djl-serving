@@ -16,6 +16,7 @@ import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
+import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.inference.streaming.PublisherBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -30,6 +31,7 @@ import ai.djl.training.util.DownloadUtils;
 import ai.djl.translate.NoopTranslator;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
+import ai.djl.util.RandomUtils;
 
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
@@ -362,6 +364,39 @@ public class PyEngineTest {
             Assert.assertEquals(
                     answer,
                     "gives freedom to the user and let people easily switch between frameworks");
+        }
+    }
+
+    @Test
+    public void testRollingBatch() throws TranslateException, IOException, ModelException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optEngine("Python")
+                        .optModelPath(Paths.get("src/test/resources/rolling_batch"))
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            List<Output> list = new ArrayList<>();
+            for (int i = 0; i < 5; ++i) {
+                Input input = new Input();
+                input.add(
+                        "{\"inputs\": \"request"
+                                + i
+                                + "\", \"parameters\": {\"max_length\": "
+                                + (RandomUtils.nextInt(10) + 5)
+                                + "}}");
+                input.addProperty("Content-Type", "application/json");
+                Output output = predictor.predict(input);
+                list.add(output);
+            }
+
+            Output output = list.get(4);
+            ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
+            Assert.assertNull(cbs.pollChunk());
+            String ret = cbs.getAsString();
+            System.out.println(ret);
+            Assert.assertTrue(ret.startsWith(" token_request4_"));
         }
     }
 
