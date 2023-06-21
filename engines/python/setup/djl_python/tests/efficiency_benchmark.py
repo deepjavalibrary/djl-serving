@@ -85,14 +85,19 @@ def stat_tool(experiment_results):
                            average + margin_of_error)
 
     stat_result = {
-        "avg": average if ~np.isnan(average) else -1,
-        "std": standard_error if ~np.isnan(standard_error) else -1,
-        "conf_intv": confidence_interval if ~np.any(np.isnan(np.array(confidence_interval))) else [-1, -1]
+        "avg":
+        average if ~np.isnan(average) else -1,
+        "std":
+        standard_error if ~np.isnan(standard_error) else -1,
+        "conf_intv":
+        confidence_interval
+        if ~np.any(np.isnan(np.array(confidence_interval))) else [-1, -1]
     }
     return stat_result
 
 
 def timeit(repetitions=5):
+
     def decorator(func):
 
         @wraps(func)
@@ -117,10 +122,10 @@ def timeit(repetitions=5):
             if len(args) == 3:
                 batch_size, init_seq_len = args[2].shape
                 max_gen_len = args[0].scheduler.default_search_configs[
-                                  "$"].max_seqlen - init_seq_len
+                    "$"].max_seqlen - init_seq_len
                 seq_thru_put_data = batch_size / data_time  # req/sec
                 token_latency_data = 1000 * data_time / (
-                        batch_size * max_gen_len)  # sec/token
+                    batch_size * max_gen_len)  # sec/token
                 return avg_time, batch_size * max_gen_len, stat_tool(
                     seq_thru_put_data), stat_tool(token_latency_data),
             else:
@@ -170,15 +175,16 @@ def main(args):
 
     avg_time, tokens, seq_thru_put_stat, token_latency_stat = test_run(
         test_kit, request_uids, input_ids)
-    print(f"avg_time: {avg_time}, "
-          f"tot_tokens: {tokens}, "
-          f"seq_thru_put: {seq_thru_put_stat['avg']:.3g} reqs/sec, \n"
-          f"\t err: {seq_thru_put_stat['std']:.3g}, \n"
-          f"\t conf_intv: {seq_thru_put_stat['conf_intv'][0]:.3g}, {seq_thru_put_stat['conf_intv'][1]:.3g} \n"
-          f"token_latency: {token_latency_stat['avg']:.3g} ms/token \n"
-          f"\t err: {token_latency_stat['std']:.3g}, \n"
-          f"\t conf_intv: {token_latency_stat['conf_intv'][0]:.3g}, {token_latency_stat['conf_intv'][1]:.3g} \n"
-          )
+    print(
+        f"avg_time: {avg_time}, "
+        f"tot_tokens: {tokens}, "
+        f"seq_thru_put: {seq_thru_put_stat['avg']:.3g} reqs/sec, \n"
+        f"\t err: {seq_thru_put_stat['std']:.3g}, \n"
+        f"\t conf_intv: {seq_thru_put_stat['conf_intv'][0]:.3g}, {seq_thru_put_stat['conf_intv'][1]:.3g} \n"
+        f"token_latency: {token_latency_stat['avg']:.3g} ms/token \n"
+        f"\t err: {token_latency_stat['std']:.3g}, \n"
+        f"\t conf_intv: {token_latency_stat['conf_intv'][0]:.3g}, {token_latency_stat['conf_intv'][1]:.3g} \n"
+    )
 
 
 if __name__ == '__main__':

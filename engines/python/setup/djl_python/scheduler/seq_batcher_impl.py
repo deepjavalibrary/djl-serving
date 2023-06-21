@@ -21,7 +21,8 @@ from djl_python.scheduler.lm_block import LMBlock
 import torch
 from torch.nn.functional import normalize, softmax
 
-from djl_python.scheduler.step_generation import greedy_step_generate, contrastive_step_generate
+from djl_python.scheduler.step_generation import greedy_step_generate, contrastive_step_generate, sampling_step_generate, \
+    sampler_bucket_sort
 from djl_python.scheduler.utils import compute_offsets, compute_attention_mask, compute_position_ids, \
     assemble_prefix_kv_cache
 from djl_python.scheduler import SearchConfig
@@ -77,8 +78,10 @@ class GreedySeqBatcher(SeqBatcher):
             torch.save(past_key_values, save_kv_cache_path)
 
         # Generate next token and batch
-        next_input_ids = greedy_step_generate(
-            last_logits).indices  # [batch, 1]
+        search_config_list = [
+            search_configs[r] for r in request_uids.view(-1).tolist()
+        ]
+        next_input_ids = sampling_step_generate(last_logits, search_configs=search_config_list)
         batch = Batch(next_input_ids=next_input_ids,
                       past_key_values=past_key_values)
         if kv_cache is not None:
@@ -125,8 +128,12 @@ class GreedySeqBatcher(SeqBatcher):
 
         # Create SeqBatcher
         last_logits = logits[:, -1, :]  # logits: [batch, sequence, vocab_dim]
-        next_input_ids = greedy_step_generate(
-            last_logits).indices  # [batch, 1]
+        if not self.search_config_list_cache:
+            self.search_config_list_cache =  [self.search_configs[r] for r in self.request_uids.view(-1).tolist()]
+        if not self.sampler_bucket_sort_cache:
+            self.sampler_bucket_sort_cache = sampler_bucket_sort(self.search_config_list_cache)
+        next_input_ids = sampling_step_generate(last_logits, search_configs=self.search_config_list_cache,
+                                                sampler_bucket_sort_cache=self.sampler_bucket_sort_cache)
         self.batch = self._get_batch_cls()(past_key_values=past_key_values,
                                            next_input_ids=next_input_ids)
         self.seq_len += 1
@@ -214,7 +221,11 @@ class ContrastiveSeqBatcher(SeqBatcher):
         # [batch, vocab_size=50257]
         last_probs = softmax(last_logits, dim=1)
         # [batch, topk]
-        top_k_probs, top_k_ids = greedy_step_generate(last_probs, topk)
+        top_k_probs, top_k_ids = torch.topk(last_probs,
+                                            k=topk,
+                                            dim=-1,
+                                            largest=True,
+                                            sorted=False)
         batch = cls._get_batch_cls()(next_input_ids=top_k_ids,
                                      past_key_values=past_key_values,
                                      past_hidden_states=past_hidden_states,
@@ -316,7 +327,11 @@ class ContrastiveSeqBatcher(SeqBatcher):
         # [batch, vocab_size]
         next_probs = softmax(next_logits, dim=1)
         # [batch, topk]
-        top_k_probs, top_k_ids = greedy_step_generate(next_probs, config.topk)
+        top_k_probs, top_k_ids = torch.topk(next_probs,
+                                            k=config.topk,
+                                            dim=-1,
+                                            largest=True,
+                                            sorted=False)
         self.batch = ContrastiveBatch(next_input_ids=top_k_ids,
                                       past_key_values=next_past_key_values,
                                       past_hidden_states=next_hidden_states,
