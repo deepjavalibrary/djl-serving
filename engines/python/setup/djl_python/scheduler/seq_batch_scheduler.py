@@ -45,6 +45,7 @@ class SeqBatchScheduler:
                     search_configs: List[SearchConfig] = None,
                     kv_cache: Union[Tuple, None] = None,
                     save_kv_cache_path: str = None):
+        # TODO: next, this will take an argument of `action`, computed by self.optimal_action.
         device = input_ids.device
         request_uids = request_uids.to(device)
         if kv_cache:
@@ -72,6 +73,7 @@ class SeqBatchScheduler:
             save_kv_cache_path=save_kv_cache_path)
 
         # merge
+        # TODO: next, an optimal action needs to be first computed, according to which the merge is done.
         if not self.seq_batchers[seq_batcher_cls]:
             self.seq_batchers[seq_batcher_cls].append(new_seq_batcher)
         else:
@@ -100,6 +102,29 @@ class SeqBatchScheduler:
             batch_size[key] = sum(seq_batcher.batch_size
                                   for seq_batcher in seq_batcher_list)
         return batch_size
+
+    def optimal_action(self,
+                       input_ids: torch.Tensor,
+                       request_uids: torch.Tensor,
+                       seq_batcher_cls: Type[SeqBatcher] = None,
+                       search_configs: List[SearchConfig] = None,
+                       kv_cache: Union[Tuple, None] = None,
+                       save_kv_cache_path: str = None):
+        """
+        Get the optimal merging action computed according to the added request and the current scheduler status.
+
+        Args:
+            The request information.
+
+        Return:
+            Optimal merging action: `Action`:
+                1. choose a seq_batcher to merge in
+                2. split a seq_batcher
+                3. rearrange the whole seq_batcher list
+        """
+
+        # This is provided to the consumers to be used as part of the max_seq_batcher thresholding mechanism.
+        pass
 
     def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
         """
@@ -154,6 +179,14 @@ class SeqBatchScheduler:
 
     def seq_batcher_split(self, seq_batcher_cls: Type[SeqBatcher],
                           seq_batcher_idx: int, partitions: List[List[int]]):
+        """
+        Split a seq_batcher in the seq_batcher_list located at seq_batcher_idx, into parts according to `partition`.
+        Args:
+            seq_batcher_cls: SeqBatcher type
+            seq_batcher_idx: idx in the seq_batcher_list
+            partitions: contains the seq_batcher_idx partitioned into lists.
+        """
+
         seq_batcher = self.seq_batchers[seq_batcher_cls].pop(seq_batcher_idx)
         self.seq_batchers[seq_batcher_cls].extend(
             seq_batcher.split(partitions))
