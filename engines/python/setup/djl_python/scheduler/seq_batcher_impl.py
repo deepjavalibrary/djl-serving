@@ -81,7 +81,8 @@ class GreedySeqBatcher(SeqBatcher):
         search_config_list = [
             search_configs[r] for r in request_uids.view(-1).tolist()
         ]
-        next_input_ids = sampling_step_generate(last_logits, search_configs=search_config_list)
+        next_input_ids = sampling_step_generate(
+            last_logits, search_configs=search_config_list)
         batch = Batch(next_input_ids=next_input_ids,
                       past_key_values=past_key_values)
         if kv_cache is not None:
@@ -129,11 +130,17 @@ class GreedySeqBatcher(SeqBatcher):
         # Create SeqBatcher
         last_logits = logits[:, -1, :]  # logits: [batch, sequence, vocab_dim]
         if not self.search_config_list_cache:
-            self.search_config_list_cache =  [self.search_configs[r] for r in self.request_uids.view(-1).tolist()]
+            self.search_config_list_cache = [
+                self.search_configs[r]
+                for r in self.request_uids.view(-1).tolist()
+            ]
         if not self.sampler_bucket_sort_cache:
-            self.sampler_bucket_sort_cache = sampler_bucket_sort(self.search_config_list_cache)
-        next_input_ids = sampling_step_generate(last_logits, search_configs=self.search_config_list_cache,
-                                                sampler_bucket_sort_cache=self.sampler_bucket_sort_cache)
+            self.sampler_bucket_sort_cache = sampler_bucket_sort(
+                self.search_config_list_cache)
+        next_input_ids = sampling_step_generate(
+            last_logits,
+            search_configs=self.search_config_list_cache,
+            sampler_bucket_sort_cache=self.sampler_bucket_sort_cache)
         self.batch = self._get_batch_cls()(past_key_values=past_key_values,
                                            next_input_ids=next_input_ids)
         self.seq_len += 1

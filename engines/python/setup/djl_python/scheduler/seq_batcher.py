@@ -51,7 +51,8 @@ class SeqBatcher(ABC):
         # This is cached output of sampler_bucket_sort result used through inferences.
         self.sampler_bucket_sort_cache: Union[Tuple[Dict[str, torch.tensor],
                                                     List[SearchConfig],
-                                                    List[SearchConfig]], None] = None
+                                                    List[SearchConfig]],
+                                              None] = None
 
     @classmethod
     @abstractmethod
