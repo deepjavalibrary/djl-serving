@@ -74,7 +74,7 @@ class SeqBatchScheduler:
 
         # Set the search_config._max_seqlen
         for idx, request in enumerate(request_uids.view(-1).tolist()):
-            init_seqlen = len(input_ids[idx]) - new_seq_batcher.offsets[idx]
+            init_seqlen = len(input_ids[idx]) - new_seq_batcher.offsets[idx].item()
             if kv_cache:
                 init_seqlen += kv_cache[0][0].shape[-2]
             # TODO: change search_configs dict to list
