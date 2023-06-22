@@ -48,7 +48,7 @@ class TestScheduler(unittest.TestCase):
         lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
-        search_config.max_seqlen = 30
+        search_config.max_new_seqlen = 30
         PAD = search_config.pad_token_id
         scheduler = SeqBatchScheduler(lm_block, GreedySeqBatcher,
                                       search_config)
@@ -219,7 +219,7 @@ class TestScheduler(unittest.TestCase):
         request_ids = torch.tensor([[1], [2]])
 
         search_config = SearchConfig()
-        search_config.max_seqlen = 37
+        search_config.max_new_seqlen = 25
 
         # init_forward
         scheduler.add_request(input_ids,
@@ -227,12 +227,12 @@ class TestScheduler(unittest.TestCase):
                               search_configs=[default_config, search_config])
 
         # Forward pass
-        for i, _ in enumerate(scheduler.increment_forward(50)):
+        for i, _ in enumerate(scheduler.increment_forward(70)):
             pass
 
         results = scheduler.results
-        assert len(results[1]) == default_config.max_seqlen
-        assert len(results[2]) == search_config.max_seqlen
+        assert len(results[1]) - len(tokenizer(input[0]).input_ids) == default_config.max_new_seqlen
+        assert len(results[2]) - len(tokenizer(input[1]).input_ids) == search_config.max_new_seqlen
 
     def test_seq_batcher(self):
         model_id = "gpt2"

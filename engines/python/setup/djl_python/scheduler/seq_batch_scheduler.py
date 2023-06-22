@@ -35,8 +35,8 @@ class SeqBatchScheduler:
         self.results: Dict[int, List[int]] = defaultdict(list)
 
         self.seq_batchers: Dict[
-            Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
-                list)  # {key: List[SeqBatcher]}
+                           Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
+            list)  # {key: List[SeqBatcher]}
 
     def add_request(self,
                     input_ids: torch.Tensor,
@@ -63,7 +63,7 @@ class SeqBatchScheduler:
 
         seq_batcher_cls = self.default_seq_batcher_cls if seq_batcher_cls is None else seq_batcher_cls
 
-        # prefill
+        # Prefill
         new_seq_batcher, output_ids = seq_batcher_cls.init_forward(
             input_ids=input_ids,
             request_uids=request_uids,
@@ -72,7 +72,16 @@ class SeqBatchScheduler:
             kv_cache=kv_cache,
             save_kv_cache_path=save_kv_cache_path)
 
-        # merge
+        # Set the search_config._max_seqlen
+        for idx, request in enumerate(request_uids.view(-1).tolist()):
+            init_seqlen = len(input_ids[idx]) - new_seq_batcher.offsets[idx]
+            if kv_cache:
+                init_seqlen += kv_cache[0][0].shape[-2]
+            # TODO: change search_configs dict to list
+            new_seq_batcher.search_configs[request]._max_seqlen = new_seq_batcher.search_configs[
+                                                                      request].max_new_seqlen + init_seqlen
+
+        # Merge
         # TODO: next, an optimal action needs to be first computed, according to which the merge is done.
         if not self.seq_batchers[seq_batcher_cls]:
             self.seq_batchers[seq_batcher_cls].append(new_seq_batcher)
