@@ -187,7 +187,7 @@ public class PyModel extends BaseModel {
             if (partitions == 0) {
                 partitions = CudaUtils.getGpuCount();
                 pyEnv.setTensorParallelDegree(partitions);
-                setProperty("option.tensor_parallel_degree", String.valueOf(partitions));
+                setProperty("tensor_parallel_degree", String.valueOf(partitions));
                 logger.info(
                         "No tensor parallel degree specified. Defaulting to all available GPUs.");
             }
@@ -226,7 +226,7 @@ public class PyModel extends BaseModel {
             if (tensorParallelDegree > 0) {
                 setProperty("gpu.minWorkers", "1");
                 setProperty("gpu.maxWorkers", "1");
-                setProperty("option.tensor_parallel_degree", String.valueOf(tensorParallelDegree));
+                setProperty("tensor_parallel_degree", String.valueOf(tensorParallelDegree));
             }
 
             properties.forEach((k, v) -> pyEnv.addParameter(k, v));
