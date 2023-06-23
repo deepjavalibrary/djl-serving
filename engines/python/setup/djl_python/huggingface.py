@@ -214,6 +214,7 @@ class HuggingFaceService(object):
                                    device=self.device,
                                    **kwargs)
         else:
+            kwargs.pop("tokenizer", None)
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             hf_pipeline = pipeline(task=task,
                                    model=self.model,
