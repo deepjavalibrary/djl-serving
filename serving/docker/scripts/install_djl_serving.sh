@@ -27,3 +27,18 @@ else
     rm -rf /opt/djl/logs
   fi
 fi
+
+cd /usr/local/djl-serving-*/lib
+rm netty*.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-transport-classes-epoll/4.1.94.Final/netty-transport-classes-epoll-4.1.94.Final.jar -f -o netty-transport-classes-epoll-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-transport-classes-kqueue/4.1.94.Final/netty-transport-classes-kqueue-4.1.94.Final.jar -f -o netty-transport-classes-kqueue-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.94.Final/netty-transport-native-epoll-4.1.94.Final-linux-aarch_64.jar -f -o netty-transport-native-epoll-4.1.94.Final-linux-aarch_64.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-buffer/4.1.94.Final/netty-buffer-4.1.94.Final.jar -f -o netty-buffer-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-codec/4.1.94.Final/netty-codec-4.1.94.Final.jar  -f -o netty-codec-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-codec-http/4.1.94.Final/netty-codec-http-4.1.94.Final.jar -f -o netty-codec-http-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-common/4.1.94.Final/netty-common-4.1.94.Final.jar -f -o netty-common-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-handler/4.1.94.Final/netty-handler-4.1.94.Final.jar -f -o netty-handler-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-resolver/4.1.94.Final/netty-resolver-4.1.94.Final.jar -f -o netty-resolver-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-transport/4.1.94.Final/netty-transport-4.1.94.Final.jar  -f -o netty-transport-4.1.94.Final.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.94.Final/netty-transport-native-epoll-4.1.94.Final-linux-x86_64.jar -f -o netty-transport-native-epoll-4.1.94.Final-linux-x86_64.jar
+curl https://repo1.maven.org/maven2/io/netty/netty-transport-native-unix-common/4.1.94.Final/netty-transport-native-unix-common-4.1.94.Final.jar -f -o netty-transport-native-unix-common-4.1.94.Final.jar
