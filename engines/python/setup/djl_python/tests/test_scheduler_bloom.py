@@ -59,8 +59,7 @@ class TestSchedulerBloom(unittest.TestCase):
         search_config = SearchConfig()
         search_config.pad_token_id = tokenizer.pad_token_id
         PAD = search_config.pad_token_id
-        scheduler = SeqBatchScheduler(lm_block, "contrastive",
-                                      search_config)
+        scheduler = SeqBatchScheduler(lm_block, "contrastive", search_config)
 
         input_ids_0 = tokenizer.encode(
             'Memories follow me left and right. I can', return_tensors='pt')

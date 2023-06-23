@@ -12,69 +12,16 @@
 # the specific language governing permissions and limitations under the License.
 
 from djl_python.scheduler import HuggingfaceBlock, BloomBlock, SearchConfig, SeqBatchScheduler
-
 from collections import namedtuple, defaultdict
+from djl_python.rolling_batch.rolling_batch import RollingBatch, Request
+
 import torch
 
+MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 
-MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock}
 
-
-class Request(object):
-    """
-    This class represents each request that comes to the handler.
-
-    In rolling batch, handler is called for each forward function.
-    So this class represents the states of each request until the
-    last token is generated.
-
-    """
-
-    def __init__(self, input_text: str):
-        """
-        Initialize a request
-
-        :param input_text: request's input text
-        """
-        self.input_text = input_text
-        self.next_token = None
-        self.last_token = False
-
-    def set_next_token(self, next_token: str, last_token: bool = False):
-        """
-        Sets the newly generated token.
-
-        :param next_token: next token to be set.
-        :param last_token: whether this token is the last of the sequence.
-        """
-        self.next_token = next_token
-        self.last_token = last_token
-
-    def get_next_token(self) -> str:
-        """
-        Gets the token generated for the request.
-
-        :return: next_token
-        """
-        return self.next_token
-
-    def is_last_token(self) -> bool:
-        """
-        Whether the generated token is the last one
-
-        :return: whether last token of the sequence.
-        """
-        return self.last_token
-
-
-class RollingBatch:
-    """
-    This class initializes and maintains the SequenceBatchScheduler.
-    Scheduler maintains the batch and also its search states such as past key values,
-    attention masks and position ids for each decoding strategy requests.
-
-    """
+class SchedulerRollingBatch(RollingBatch):
 
     def __init__(self, model, tokenizer, config, device, properties):
         """
@@ -86,10 +33,10 @@ class RollingBatch:
         :param device: model loaded device
         :param properties: other properties of the model, such as decoder strategy
         """
-        self.model = model
+
+        super().__init__(model, device)
         self.tokenizer = tokenizer
         self.config = config
-        self.device = device
 
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -106,7 +53,6 @@ class RollingBatch:
         self.scheduler = SeqBatchScheduler(self.lm_block,
                                            self.search_algorithm,
                                            self.search_config)
-        self.pending_requests = []
 
     def inference(self, input_data, parameters):
         """
@@ -117,48 +63,35 @@ class RollingBatch:
         :return: generated batch decoded tokens
         """
         batch_size = len(input_data)
-        new_requests = self._get_new_requests(input_data, parameters,
-                                              batch_size)
-        self._merge_request(new_requests)
-        results = []
-        for i in range(len(input_data)):
-            req = self.pending_requests[i]
-            res = {"data": req.get_next_token(), "last": req.is_last_token()}
-            results.append(res)
+        new_requests = self.get_new_requests(input_data, parameters,
+                                             batch_size)
 
-        for i in range(1, batch_size + 1):
-            if self.pending_requests[batch_size - i].is_last_token():
-                self.pending_requests.pop(batch_size - i)
+        preprocessed_new_requests = self.preprocess_requests(new_requests)
+        self._prefill_and_decode(preprocessed_new_requests)
+        return self.postprocess_results(batch_size)
 
-        return results
-
-    def _get_new_requests(self, input_data, parameters, batch_size):
+    def preprocess_requests(self, requests):
         Requests = namedtuple('Requests',
                               ['input_texts', 'search_configs', 'request_ids'])
         new_requests = Requests(defaultdict(list), defaultdict(list),
                                 defaultdict(list))
 
-        pending_req_len = len(self.pending_requests)
-        if batch_size > pending_req_len:
-            req_id_counter = _calculate_req_id_counter(self.scheduler)
-            for i in range(pending_req_len, batch_size):
-                data = input_data[i]
-                self.pending_requests.append(Request(data))
+        req_id_counter = _calculate_req_id_counter(self.scheduler)
+        for request in requests:
+            parameters = request.paramaters
+            search_algorithm = parameters.get('decoding_strategy',
+                                              self.search_algorithm)
+            new_requests.input_texts[search_algorithm].append(
+                request.input_text)
 
-                search_algorithm = parameters[i].get('decoding_strategy',
-                                                     self.search_algorithm)
-                new_requests.input_texts[search_algorithm].append(data)
-
-                search_config = self._construct_search_config(parameters[i])
-                new_requests.search_configs[search_algorithm].append(
-                    search_config)
-                new_requests.request_ids[search_algorithm].append(
-                    req_id_counter)
-                req_id_counter += 1
+            search_config = self._construct_search_config(parameters)
+            new_requests.search_configs[search_algorithm].append(search_config)
+            new_requests.request_ids[search_algorithm].append(req_id_counter)
+            req_id_counter += 1
 
         return new_requests
 
-    def _merge_request(self, new_requests):
+    def _prefill_and_decode(self, new_requests):
 
         for search_algorithm in new_requests.request_ids.keys():
             request_ids = new_requests.request_ids[search_algorithm]

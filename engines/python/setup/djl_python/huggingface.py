@@ -22,7 +22,7 @@ from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
-from djl_python.rolling_batch import RollingBatch
+from djl_python.rolling_batch import SchedulerRollingBatch
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -127,9 +127,11 @@ class HuggingFaceService(object):
             return
         elif self.enable_rolling_batch:
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
-            self.rolling_batch = RollingBatch(self.model, self.tokenizer,
-                                              self.model_config, self.device,
-                                              properties)
+            # TODO: Add logic to call appropriate scheduler backend for rolling batch
+            self.rolling_batch = SchedulerRollingBatch(self.model,
+                                                       self.tokenizer,
+                                                       self.model_config,
+                                                       self.device, properties)
             self.initialized = True
             return
 
