@@ -214,13 +214,10 @@ class HuggingFaceService(object):
                                    device=self.device,
                                    **kwargs)
         else:
-            tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
-            kwargs.pop("tokenizer", None)
-            model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path, **kwargs)
+            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             hf_pipeline = pipeline(task=task,
-                                   model=model,
-                                   tokenizer=tokenizer,
+                                   model=self.model,
+                                   tokenizer=self.tokenizer,
                                    device=self.device)
 
         # wrap specific pipeline to support better ux
