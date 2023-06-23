@@ -31,7 +31,7 @@ class Request(object):
         :param input_text: request's input text
         """
         self.input_text = input_text
-        self.paramaters = parameters
+        self.parameters = parameters
         self.next_token = None
         self.last_token = False
 
@@ -70,15 +70,13 @@ class RollingBatch(ABC):
 
     """
 
-    def __init__(self, model, device):
+    def __init__(self, device):
         """
         Initializes the rolling batch scheduler.
 
-        :param model: loaded model
-        :param device: model loaded device
+        :param device: device to load the model
         """
 
-        self.model = model
         self.device = device
         self.pending_requests = []
 

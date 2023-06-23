@@ -126,12 +126,10 @@ class HuggingFaceService(object):
             self.initialized = True
             return
         elif self.enable_rolling_batch:
-            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             # TODO: Add logic to call appropriate scheduler backend for rolling batch
-            self.rolling_batch = SchedulerRollingBatch(self.model,
-                                                       self.tokenizer,
-                                                       self.model_config,
-                                                       self.device, properties)
+            self.rolling_batch = SchedulerRollingBatch(model_id_or_path,
+                                                       self.device, properties,
+                                                       **kwargs)
             self.initialized = True
             return
 

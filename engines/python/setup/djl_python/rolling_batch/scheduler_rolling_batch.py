@@ -14,6 +14,7 @@
 from djl_python.scheduler import HuggingfaceBlock, BloomBlock, SearchConfig, SeqBatchScheduler
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, Request
+from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
 
 import torch
 
@@ -23,36 +24,19 @@ DEFAULT_SEARCH_ALGORITHM = 'greedy'
 
 class SchedulerRollingBatch(RollingBatch):
 
-    def __init__(self, model, tokenizer, config, device, properties):
+    def __init__(self, model_id_or_path, device, properties, **kwargs):
         """
         Initializes the rolling batch scheduler.
 
-        :param model: loaded model
-        :param tokenizer: tokenizer of the model
-        :param config: configuration of the model
+        :param model_id_or_path: model id or path
         :param device: model loaded device
         :param properties: other properties of the model, such as decoder strategy
+        :param kwargs passed while loading the model
         """
 
-        super().__init__(model, device)
-        self.tokenizer = tokenizer
-        self.config = config
-
-        if not self.tokenizer.pad_token:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-
-        lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
-                                              HuggingfaceBlock)
-        self.lm_block = lm_block_cls(self.model)
-        self.search_config = SearchConfig(
-            eos_token_id=self.tokenizer.eos_token,
-            pad_token_id=self.tokenizer.pad_token)
-        self.search_algorithm = properties.get('decoding_strategy',
-                                               DEFAULT_SEARCH_ALGORITHM)
-
-        self.scheduler = SeqBatchScheduler(self.lm_block,
-                                           self.search_algorithm,
-                                           self.search_config)
+        super().__init__(device)
+        self._init_model_and_tokenizer(kwargs, model_id_or_path)
+        self._init_scheduler(properties)
 
     def inference(self, input_data, parameters):
         """
@@ -78,7 +62,7 @@ class SchedulerRollingBatch(RollingBatch):
 
         req_id_counter = _calculate_req_id_counter(self.scheduler)
         for request in requests:
-            parameters = request.paramaters
+            parameters = request.parameters
             search_algorithm = parameters.get('decoding_strategy',
                                               self.search_algorithm)
             new_requests.input_texts[search_algorithm].append(
@@ -90,6 +74,38 @@ class SchedulerRollingBatch(RollingBatch):
             req_id_counter += 1
 
         return new_requests
+
+    def _init_model_and_tokenizer(self, kwargs, model_id_or_path):
+        self.config = AutoConfig.from_pretrained(model_id_or_path,
+                                                 kwargs=kwargs)
+        architectures = self.config.architectures
+        if architectures and architectures[0].endswith(
+                "ForConditionalGeneration"):
+            raise ValueError('Seq2Seq model is not supported by scheduler')
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_id_or_path, **kwargs)
+
+        if self.device:
+            self.model.to(self.device)
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
+                                                       padding_side="left")
+        if not self.tokenizer.pad_token:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+    def _init_scheduler(self, properties):
+        lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
+                                              HuggingfaceBlock)
+        self.lm_block = lm_block_cls(self.model)
+        self.search_config = SearchConfig(
+            eos_token_id=self.tokenizer.eos_token,
+            pad_token_id=self.tokenizer.pad_token)
+        self.search_algorithm = properties.get('decoding_strategy',
+                                               DEFAULT_SEARCH_ALGORITHM)
+        self.scheduler = SeqBatchScheduler(self.lm_block,
+                                           self.search_algorithm,
+                                           self.search_config)
 
     def _prefill_and_decode(self, new_requests):
 
