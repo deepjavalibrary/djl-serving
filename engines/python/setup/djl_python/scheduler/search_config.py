@@ -15,14 +15,14 @@ from abc import ABC, abstractmethod
 
 class SearchConfig:
 
-    def __init__(self):
-        self.max_new_seqlen = 30
+    def __init__(self, **kwargs):
+        self.max_new_seqlen = kwargs.get('max_new_tokens', 30)
         self._max_seqlen = 0
-        self.eos_token_id = 50256
-        self.pad_token_id = 50256
-        self.topk = 4
-        self.alpha = 0.6
-        self.beam = 3
-        self.sampling = False
-        self.topp = 0.92
-        self.temperature = 1
+        self.eos_token_id = kwargs.get('eos_token_id', 50256)
+        self.pad_token_id = kwargs.get('pad_token_id', 50256)
+        self.topk = kwargs.get('top_k', 4)
+        self.alpha = kwargs.get('penalty_alpha', 0.6)
+        self.beam = kwargs.get('num_beams', 3)
+        self.sampling = kwargs.get('do_sample', False)
+        self.topp = kwargs.get('top_p', 0.92)
+        self.temperature = kwargs.get('temperature', 1)

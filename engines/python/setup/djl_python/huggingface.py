@@ -22,6 +22,7 @@ from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
+from djl_python.rolling_batch import SchedulerRollingBatch
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -68,6 +69,9 @@ class HuggingFaceService(object):
         self.tokenizer = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
+        self.enable_rolling_batch = None
+        self.rolling_batch = None
+        self.model_config = None
 
     def initialize(self, properties: dict):
         # model_id can point to huggingface model_id or local directory.
@@ -112,9 +116,20 @@ class HuggingFaceService(object):
         if "dtype" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
                 properties.get("dtype"))
+        self.enable_rolling_batch = properties.get("rolling_batch", None)
+        if self.enable_rolling_batch and self.enable_rolling_batch.lower(
+        ) == "false":
+            self.enable_rolling_batch = None
 
         if self.enable_streaming:
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
+            self.initialized = True
+            return
+        elif self.enable_rolling_batch:
+            # TODO: Add logic to call appropriate scheduler backend for rolling batch
+            self.rolling_batch = SchedulerRollingBatch(model_id_or_path,
+                                                       self.device, properties,
+                                                       **kwargs)
             self.initialized = True
             return
 
@@ -139,15 +154,19 @@ class HuggingFaceService(object):
 
             input_data = []
             input_size = []
-            parameters = {}
+            parameters = []
             batch = inputs.get_batches()
             first = True
             for item in batch:
                 input_map = decode(item, content_type)
                 input_size.append(len(input_map.get("inputs")))
-                input_data.extend(input_map.pop("inputs", input_map))
-                if first:
-                    parameters = input_map.pop("parameters", {})
+                _inputs = input_map.pop("inputs", input_map)
+                if isinstance(_inputs, list):
+                    input_data.extend(_inputs)
+                else:
+                    input_data.append(_inputs)
+                if first or self.enable_rolling_batch:
+                    parameters.append(input_map.pop("parameters", {}))
                     first = False
                 else:
                     if parameters != input_map.pop("parameters", {}):
@@ -163,17 +182,24 @@ class HuggingFaceService(object):
                     outputs.add_stream_content(
                         StreamingUtils.use_hf_default_streamer(
                             self.model, self.tokenizer, input_data,
-                            self.device, **parameters))
+                            self.device, **parameters[0]))
                 else:
                     stream_generator = StreamingUtils.get_stream_generator(
                         "Accelerate")
                     outputs.add_stream_content(
                         stream_generator(self.model, self.tokenizer,
                                          input_data, self.device,
-                                         **parameters))
+                                         **parameters[0]))
+                return outputs
+            elif self.enable_rolling_batch:
+                result = self.rolling_batch.inference(input_data, parameters)
+                for i in range(len(batch)):
+                    res = result[i]
+                    outputs.add_as_json(res, batch_index=i)
+
                 return outputs
 
-            prediction = self.hf_pipeline(input_data, **parameters)
+            prediction = self.hf_pipeline(input_data, **parameters[0])
 
             offset = 0
             for i in range(inputs.get_batch_size()):
@@ -240,6 +266,7 @@ class HuggingFaceService(object):
                                                        padding_side="left")
         model_config = AutoConfig.from_pretrained(model_id_or_path,
                                                   kwargs=kwargs)
+        self.model_config = model_config
         architectures = model_config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):

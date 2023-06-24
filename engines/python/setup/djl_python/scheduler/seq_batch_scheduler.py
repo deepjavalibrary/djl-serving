@@ -18,6 +18,12 @@ import torch
 from djl_python.scheduler.search_config import SearchConfig
 from djl_python.scheduler.lm_block import LMBlock
 from djl_python.scheduler.seq_batcher import SeqBatcher
+from djl_python.scheduler.seq_batcher_impl import GreedySeqBatcher, ContrastiveSeqBatcher
+
+SEARCH_ALGORITHM_TO_CLASS = {
+    "greedy": GreedySeqBatcher,
+    "contrastive": ContrastiveSeqBatcher
+}
 
 
 class SeqBatchScheduler:
@@ -26,28 +32,30 @@ class SeqBatchScheduler:
     collectResults.
     """
 
-    def __init__(self, lm_block: LMBlock,
-                 default_seq_batcher_cls: Type[SeqBatcher],
+    def __init__(self, lm_block: LMBlock, default_search_algorithm: str,
                  default_config: SearchConfig):
         self.default_search_configs = defaultdict(lambda: default_config)
-        self.default_seq_batcher_cls = default_seq_batcher_cls
+        self.default_seq_batcher_cls = SEARCH_ALGORITHM_TO_CLASS[
+            default_search_algorithm]
         self.lm_block = lm_block
         self.results: Dict[int, List[int]] = defaultdict(list)
 
         self.seq_batchers: Dict[
-                           Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
-            list)  # {key: List[SeqBatcher]}
+            Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
+                list)  # {key: List[SeqBatcher]}
 
     def add_request(self,
                     input_ids: torch.Tensor,
                     request_uids: torch.Tensor,
-                    seq_batcher_cls: Type[SeqBatcher] = None,
+                    search_algorithm: str = None,
                     search_configs: List[SearchConfig] = None,
                     kv_cache: Union[Tuple, None] = None,
                     save_kv_cache_path: str = None):
         # TODO: next, this will take an argument of `action`, computed by self.optimal_action.
         device = input_ids.device
         request_uids = request_uids.to(device)
+        seq_batcher_cls = SEARCH_ALGORITHM_TO_CLASS.get(
+            search_algorithm, self.default_seq_batcher_cls)
         if kv_cache:
             kv_list = []
             for k, v in kv_cache:
@@ -199,3 +207,11 @@ class SeqBatchScheduler:
         seq_batcher = self.seq_batchers[seq_batcher_cls].pop(seq_batcher_idx)
         self.seq_batchers[seq_batcher_cls].extend(
             seq_batcher.split(partitions))
+
+    def get_request_ids(self):
+        request_uids = []
+        for seq_batcher_cls in self.seq_batchers:
+            for seq_batcher in self.seq_batchers[seq_batcher_cls]:
+                request_uids += seq_batcher.request_uids.view(-1).tolist()
+
+        return request_uids

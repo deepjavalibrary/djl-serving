@@ -5,7 +5,7 @@ from djl_python.scheduler import HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
     trim_tensor
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
-from djl_python.scheduler.seq_batcher_impl import GreedySeqBatcher, ContrastiveSeqBatcher
+from djl_python.scheduler.seq_batcher_impl import ContrastiveSeqBatcher
 from transformers import AutoConfig
 from djl_python.scheduler.search_config import SearchConfig
 import torch
@@ -50,8 +50,7 @@ class TestScheduler(unittest.TestCase):
         search_config = SearchConfig()
         search_config.max_new_seqlen = 30
         PAD = search_config.pad_token_id
-        scheduler = SeqBatchScheduler(lm_block, GreedySeqBatcher,
-                                      search_config)
+        scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
 
         input_ids_0 = tokenizer.encode(
             'Memories follow me left and right. I can', return_tensors='pt')
@@ -127,7 +126,7 @@ class TestScheduler(unittest.TestCase):
 
         config = SearchConfig()
         PAD = config.pad_token_id
-        scheduler = SeqBatchScheduler(lm_block, ContrastiveSeqBatcher, config)
+        scheduler = SeqBatchScheduler(lm_block, "contrastive", config)
 
         input_ids = tokenizer.encode(
             'Memories follow me left and right. I can', return_tensors='pt')
@@ -206,8 +205,7 @@ class TestScheduler(unittest.TestCase):
 
         default_config = SearchConfig()
         default_config.pad_token_id = 50256
-        scheduler = SeqBatchScheduler(lm_block, ContrastiveSeqBatcher,
-                                      default_config)
+        scheduler = SeqBatchScheduler(lm_block, "contrastive", default_config)
 
         input = [
             r"When your legs don't work like they used to before And I can't sweep you off",
@@ -231,8 +229,10 @@ class TestScheduler(unittest.TestCase):
             pass
 
         results = scheduler.results
-        assert len(results[1]) - len(tokenizer(input[0]).input_ids) == default_config.max_new_seqlen
-        assert len(results[2]) - len(tokenizer(input[1]).input_ids) == search_config.max_new_seqlen
+        assert len(results[1]) - len(tokenizer(
+            input[0]).input_ids) == default_config.max_new_seqlen
+        assert len(results[2]) - len(tokenizer(
+            input[1]).input_ids) == search_config.max_new_seqlen
 
     def test_seq_batcher(self):
         model_id = "gpt2"
@@ -285,7 +285,7 @@ class TestScheduler(unittest.TestCase):
         ContrastiveSeqBatcher.init_forward(input_ids_new, request_ids_new, lm_block, search_config_dict)[0]
         seq_batcher.add_batch(seq_batcher_new)
         seq_batcher_list = seq_batcher.split(
-            [[0], [1, 2]])  # 0, 1, 2 are indices intead of request_uids
+            [[0], [1, 2]])  # 0, 1, 2 are indices instead of request_uids
         assert len(seq_batcher_list) == 2
         assert seq_batcher_list[0].batch_size == 1
         assert seq_batcher_list[1].batch_size == 2
@@ -303,8 +303,7 @@ class TestScheduler(unittest.TestCase):
 
         default_config = SearchConfig()
         default_config.pad_token_id = 50256
-        scheduler = SeqBatchScheduler(lm_block, ContrastiveSeqBatcher,
-                                      default_config)
+        scheduler = SeqBatchScheduler(lm_block, "contrastive", default_config)
 
         # input1
         input = [
