@@ -316,6 +316,28 @@ transformers_neuronx_handler_list = {
     }
 }
 
+rolling_batch_model_list = {
+    "gpt2": {
+        "option.model_id": "gpt2",
+        "engine": "Python",
+        "option.max_rolling_batch_size": 4,
+        "load_on_devices": 0
+    },
+    "bloom-560m": {
+        "option.model_id": "bigscience/bloom-560m",
+        "engine": "Python",
+        "option.max_rolling_batch_size": 4,
+        "load_on_devices": 0
+    },
+    "gpt-j-6b": {
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "engine": "Python",
+        "option.max_rolling_batch_size": 4,
+        "option.tensor_parallel_degree": 4,
+        "load_on_devices": 0
+    }
+}
+
 
 def write_properties(properties):
     model_path = "models/test"
@@ -486,6 +508,16 @@ def build_transformers_neuronx_handler_model(model):
     write_properties(options)
 
 
+def build_rolling_batch_model(model):
+    if model not in rolling_batch_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(rolling_batch_model_list.keys())}"
+        )
+    options = rolling_batch_model_list[model]
+    options["rolling_batch"] = True
+    write_properties(options)
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
     'huggingface': build_hf_handler_model,
@@ -499,7 +531,8 @@ supported_handler = {
     'deepspeed_handler_aot': build_ds_aot_handler_model,
     'transformers_neuronx_raw': build_transformers_neuronx_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
-    'performance': build_performance_model
+    'performance': build_performance_model,
+    'rolling_batch_scheduler': build_rolling_batch_model
 }
 
 if __name__ == '__main__':

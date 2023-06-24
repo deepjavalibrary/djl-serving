@@ -1,0 +1,172 @@
+name: Rolling Batch Integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 15 * * *'
+
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new G5 instance
+        id: create_gpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+    outputs:
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
+
+
+  single-gpu-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          curl -OL https://github.com/frankfliu/junkyard/releases/download/v0.2.2/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gpt2
+        working-directory: tests/integration
+        run: |
+          # Correctness test
+          rm -rf models
+          python3 llm/prepare.py rolling_batch_scheduler gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 rb_client.py correctness gpt2
+          docker rm -f $(docker ps -aq)
+      - name: Test bloom-560m
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py rolling_batch_scheduler bloom-560m
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 rb_client.py scheduler_single_gpu bloom-560m
+          docker rm -f $(docker ps -aq)
+      - name: Print outputs
+        working-directory: tests/integration
+        run: for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf outputs
+          rm awscurl
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          rm -rf outputs && rm -rf models
+          rm awscurl
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: rb-single-gpu-logs
+          path: tests/integration/logs/
+
+  multi-gpu-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          curl -OL https://github.com/frankfliu/junkyard/releases/download/v0.2.2/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gptj-6b
+        working-directory: tests/integration
+        run: |
+          # Concurrent requests test
+          rm -rf models
+          python3 llm/prepare.py rolling_batch_scheduler gpt-j-6b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 rb_client.py scheduler_multi_gpu gpt-j-6b
+          docker rm -f $(docker ps -aq)
+      - name: Print outputs
+        working-directory: tests/integration
+        run: for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf models && rm -rf outputs
+          rm awscurl
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          rm -rf outputs && rm -rf models
+          rm awscurl
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: rb-multi-gpu-logs
+          path: tests/integration/logs/
+
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, single-gpu-test, multi-gpu-test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          ./stop_instance.sh $instance_id
