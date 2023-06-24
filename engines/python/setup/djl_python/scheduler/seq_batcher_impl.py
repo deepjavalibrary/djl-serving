@@ -42,8 +42,7 @@ class GreedySeqBatcher(SeqBatcher):
             lm_block: LMBlock,
             search_configs: defaultdict[Any, SearchConfig],
             kv_cache: Union[Tuple, None] = None,
-            kv_cache_input_ids: Union[torch.tensor, None] = None,
-            save_kv_cache_path=None) -> Tuple[SeqBatcher, List[List[int]]]:
+            kv_cache_input_ids: Union[torch.tensor, None] = None) -> Tuple[SeqBatcher, List[List[int]]]:
 
         if input_ids.shape[0] != request_uids.shape[0] or len(
                 request_uids.shape) != 2:
@@ -72,10 +71,6 @@ class GreedySeqBatcher(SeqBatcher):
         lm_output = lm_block.forward(*model_input, past_key_values=kv_cache)
         logits, past_key_values = lm_output.logits, lm_output.past_key_values
         last_logits = logits[:, -1, :]
-
-        # Save kv_cache of input_ids
-        if save_kv_cache_path:
-            torch.save(past_key_values, save_kv_cache_path)
 
         # Generate next token and batch
         search_config_list = [
@@ -166,8 +161,7 @@ class ContrastiveSeqBatcher(SeqBatcher):
             lm_block: LMBlock,
             search_configs: defaultdict[Any, SearchConfig],
             kv_cache: Union[Tuple, None] = None,
-            kv_cache_input_ids: Union[torch.tensor, None] = None,
-            save_kv_cache_path=None) -> Tuple[SeqBatcher, List[List[int]]]:
+            kv_cache_input_ids: Union[torch.tensor, None] = None) -> Tuple[SeqBatcher, List[List[int]]]:
 
         if input_ids.shape[0] != request_uids.shape[0] or len(
                 request_uids.shape) != 2:
@@ -199,10 +193,6 @@ class ContrastiveSeqBatcher(SeqBatcher):
                 'hidden_states'][0]
 
         last_logits = logits[:, -1, :]
-
-        # Save kv_cache of input_ids
-        if save_kv_cache_path:
-            torch.save(past_key_values, save_kv_cache_path)
 
         # ---- Specific to contrastive search ----#
         if kv_cache is not None and kv_cache_input_ids is None:

@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from djl_python.scheduler import HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
-    trim_tensor
+    trim_tensor, compute_kv_cache
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from djl_python.scheduler.seq_batcher_impl import ContrastiveSeqBatcher
 from transformers import AutoConfig
@@ -57,12 +57,13 @@ class TestScheduler(unittest.TestCase):
         request_ids = torch.tensor([[0]])
 
         # Save a kv_cache to file for later use
-        kv_cache_file = "./kv_cache.pt"
+        kv_cache_files = ["./kv_cache.pt", "./kv_cache_placeholder.pt"]
+        compute_kv_cache(torch.repeat_interleave(input_ids_0, dim=0, repeats=2),
+                         scheduler.lm_block, kv_cache_files, None)
 
-        # Test add_request
+        # Test add request
         scheduler.add_request(input_ids_0,
-                              request_ids,
-                              save_kv_cache_path=kv_cache_file)
+                              request_ids)
 
         input_ids_1 = tokenizer.encode(
             "When your legs don't work like they used to before And I can't sweep you off",
@@ -81,7 +82,7 @@ class TestScheduler(unittest.TestCase):
         for idx, _ in enumerate(scheduler.increment_forward(20)):
             pass
 
-        results = scheduler.results
+        results = scheduler.collect_results()
 
         assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before " \
                                                     "And I can't sweep you off my feet, I can't do anything about it.\n"
@@ -101,14 +102,14 @@ class TestScheduler(unittest.TestCase):
         request_ids = torch.tensor([[3], [4]])
 
         # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
-        kv_cache = torch.load(kv_cache_file)
+        kv_cache = torch.load(kv_cache_files[0])
         scheduler.add_request(input_ids, request_ids, kv_cache=kv_cache)
 
         # Test trim_and_collect
         for idx, _ in enumerate(scheduler.increment_forward(100)):
             pass
 
-        results = scheduler.results
+        results = scheduler.collect_results()
         assert len(results) == 5
         assert tokenizer.decode(results[3][:30]) == "!!!!!!!!!!When your legs don't work, you're going " \
                                                     "to be a little bit more tired. I'm"
@@ -132,16 +133,16 @@ class TestScheduler(unittest.TestCase):
             'Memories follow me left and right. I can', return_tensors='pt')
         request_ids = torch.tensor([[0]])
 
-        # Save the kv_cache to file
-        kv_cache_file = "./kv_cache.pt"
+        # Save a kv_cache to file for later use
+        kv_cache_files = ["./kv_cache.pt", "./kv_cache_placeholder.pt"]
+        compute_kv_cache(torch.repeat_interleave(input_ids, dim=0, repeats=2),
+                         scheduler.lm_block, kv_cache_files, None)
 
         # Test init_forward
         scheduler.add_request(input_ids,
-                              request_ids,
-                              save_kv_cache_path=kv_cache_file)
+                              request_ids)
 
         # Test merging longer sequences
-
         input_strs = [
             r"When your legs don't work like they used to before And I can't sweep you off",
             r"There's a time that I remember, when I did not know"
@@ -174,7 +175,7 @@ class TestScheduler(unittest.TestCase):
         request_ids = torch.tensor([[3], [4]])
 
         # The kv_cache_file simulates a fixed resusable prefix whose kv_cache is pre-calculated
-        kv_cache = torch.load(kv_cache_file)
+        kv_cache = torch.load(kv_cache_files[0])
         scheduler.add_request(input_ids, request_ids, kv_cache=kv_cache)
 
         # Forward pass
@@ -257,7 +258,7 @@ class TestScheduler(unittest.TestCase):
         ]])
         request_ids_new = torch.tensor([[1]])
         seq_batcher_new = \
-        ContrastiveSeqBatcher.init_forward(input_ids_new, request_ids_new, lm_block, search_config_dict)[0]
+            ContrastiveSeqBatcher.init_forward(input_ids_new, request_ids_new, lm_block, search_config_dict)[0]
 
         # Test SeqBatcher.add_batch
         seq_batcher.add_batch(seq_batcher_new)
@@ -282,7 +283,7 @@ class TestScheduler(unittest.TestCase):
                                       [588, 484, 973, 284, 878, 843]])
         request_ids_new = torch.tensor([[6], [7]])
         seq_batcher_new = \
-        ContrastiveSeqBatcher.init_forward(input_ids_new, request_ids_new, lm_block, search_config_dict)[0]
+            ContrastiveSeqBatcher.init_forward(input_ids_new, request_ids_new, lm_block, search_config_dict)[0]
         seq_batcher.add_batch(seq_batcher_new)
         seq_batcher_list = seq_batcher.split(
             [[0], [1, 2]])  # 0, 1, 2 are indices instead of request_uids
@@ -318,7 +319,7 @@ class TestScheduler(unittest.TestCase):
 
         # input2
         input2 = [r"There's a time that I remember, when I did not know"]
-        input_ids = tokenizer(input, return_tensors='pt',
+        input_ids = tokenizer(input2, return_tensors='pt',
                               padding=True).input_ids
 
         request_ids = torch.tensor([[2]])

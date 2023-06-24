@@ -49,8 +49,7 @@ class SeqBatchScheduler:
                     request_uids: torch.Tensor,
                     search_algorithm: str = None,
                     search_configs: List[SearchConfig] = None,
-                    kv_cache: Union[Tuple, None] = None,
-                    save_kv_cache_path: str = None):
+                    kv_cache: Union[Tuple, None] = None):
         # TODO: next, this will take an argument of `action`, computed by self.optimal_action.
         device = input_ids.device
         request_uids = request_uids.to(device)
@@ -77,8 +76,7 @@ class SeqBatchScheduler:
             request_uids=request_uids,
             lm_block=self.lm_block,
             search_configs=self.default_search_configs,
-            kv_cache=kv_cache,
-            save_kv_cache_path=save_kv_cache_path)
+            kv_cache=kv_cache)
 
         # Set the search_config._max_seqlen
         for idx, request in enumerate(request_uids.view(-1).tolist()):
