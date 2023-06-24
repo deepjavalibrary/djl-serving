@@ -60,7 +60,7 @@ class TestScheduler(unittest.TestCase):
         # Save a kv_cache to file for later use
         kv_cache_files = ["./kv_cache.pt", "./kv_cache_placeholder.pt"]
         compute_kv_cache(torch.repeat_interleave(input_ids_0, dim=0, repeats=2),
-                         scheduler.lm_block, kv_cache_files, pad_token_ids=[0, 0])
+                         scheduler.lm_block, kv_cache_files, None)
 
         # Test add request
         scheduler.add_request(input_ids_0,
@@ -137,7 +137,7 @@ class TestScheduler(unittest.TestCase):
         # Save a kv_cache to file for later use
         kv_cache_files = ["./kv_cache.pt", "./kv_cache_placeholder.pt"]
         compute_kv_cache(torch.repeat_interleave(input_ids, dim=0, repeats=2),
-                         scheduler.lm_block, kv_cache_files, pad_token_ids=None)
+                         scheduler.lm_block, kv_cache_files, None)
 
         # Test init_forward
         scheduler.add_request(input_ids,

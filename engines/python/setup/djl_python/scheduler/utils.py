@@ -200,16 +200,21 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
 def compute_kv_cache(input_ids: torch.Tensor,
                      lm_block: LMBlock,
                      save_kv_cache_paths: List[str],
-                     pad_token_ids: Union[List[int], None] = None
+                     search_configs: Union[List[SearchConfig], None] = None
                      ):
-    if input_ids.shape[0] != len(save_kv_cache_paths) or pad_token_ids and len(pad_token_ids) != len(
-            save_kv_cache_paths):
-        raise Exception("input_ids.shape does not match pad_token_ids shape or save_kv_cache_paths shape or is illegal")
+    if input_ids.shape[0] != len(save_kv_cache_paths):
+        raise Exception("input_ids.shape does not match save_kv_cache_paths shape or is illegal")
 
-    if not pad_token_ids:
-        # token_ids[0].item() + 2) // 2 is a dummy_pad_token. Then only requirement is it be not the same as
-        # token_ids[0] while not exceeding the vocabulary token id value range.
-        pad_token_ids = [(token_ids[0].item() + 2) // 2 if token_ids[0].item() != 2 else 0 for token_ids in input_ids]
+    pad_token_ids = []
+    if not search_configs:
+        # (first_token_id + 2) // 2 is a dummy_pad_token. Then only requirement is it be not the same as
+        # first_token_id while not exceeding the vocabulary token id value range.
+        for token_ids in input_ids:
+            first_token_id = token_ids[0].item()
+            pad_token_id = (first_token_id + 2) // 2 if first_token_id != 2 else 0
+            pad_token_ids.append(pad_token_id)
+    else:
+        pad_token_ids.append(search_config.pad_token_id for search_config in search_configs)
 
     initial_offsets = compute_offsets(input_ids, pad_token_ids)
     attention_mask = compute_attention_mask(initial_offsets,
