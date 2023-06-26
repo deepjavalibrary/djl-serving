@@ -58,6 +58,7 @@ class FasterTransformerService(object):
         self.model = None
         self.is_t5 = False
         self.use_triton = None
+        self.enable_streaming = None
 
     def initialize_properties(self, properties):
         self.tensor_parallel_degree = int(
@@ -69,6 +70,14 @@ class FasterTransformerService(object):
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
         self.use_triton = properties.get("engine", "Python") == "Python"
+        self.enable_streaming = properties.get("enable_streaming", None)
+        if self.enable_streaming and self.enable_streaming.lower() == "false":
+            self.enable_streaming = None
+        else:
+            if properties.get("engine", "Python") != "Python":
+                raise ValueError(
+                    "Please use Python engine for streaming use case")
+            self.use_triton = True
 
     def initialize(self, properties):
         self.initialize_properties(properties)
@@ -83,7 +92,8 @@ class FasterTransformerService(object):
                                  self.tensor_parallel_degree,
                                  self.pipeline_parallel_degree,
                                  self.dtype,
-                                 use_triton=self.use_triton)
+                                 use_triton=self.use_triton,
+                                 do_streaming=self.enable_streaming)
 
     @staticmethod
     def param_mapper(parameters: dict):
@@ -129,6 +139,14 @@ class FasterTransformerService(object):
             output_len = parameters.pop("max_seq_len", max_length)
             if self.use_triton:
                 output_length = [output_len] * len(input_data)
+                if self.enable_streaming:
+                    outputs = Output()
+                    outputs.add_property("content-type",
+                                         "application/jsonlines")
+                    outputs.add_stream_content(
+                        self.model.stream_generate(input_data, output_length,
+                                                   **parameters))
+                    return outputs
                 result = self.model.pipeline_generate(input_data,
                                                       output_length,
                                                       **parameters)
