@@ -12,3 +12,4 @@
 # the specific language governing permissions and limitations under the License.
 
 from .scheduler_rolling_batch import SchedulerRollingBatch
+from .lmi_dist_rolling_batch import LmiDistRollingBatch
