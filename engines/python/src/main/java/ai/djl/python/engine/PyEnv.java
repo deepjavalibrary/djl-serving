@@ -204,7 +204,7 @@ public class PyEnv {
     }
 
     /**
-     * Delete python virtual environment.
+     * Deletes python virtual environment.
      *
      * @param name the virtual environment name
      */
