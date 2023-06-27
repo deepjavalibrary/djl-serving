@@ -213,9 +213,7 @@ public class PyEnv {
             return;
         }
         Path path = getVenvDir().resolve(name);
-        if (path.toFile().exists()) {
-            Utils.deleteQuietly(path);
-        }
+        Utils.deleteQuietly(path);
     }
 
     /**
