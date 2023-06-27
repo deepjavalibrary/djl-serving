@@ -20,7 +20,7 @@ ARG protobuf_version=3.20.3
 ARG transformers_version=4.29.2
 ARG accelerate_version=0.19.0
 ARG diffusers_version=0.15.0
-ARG bitsandbytes_version=0.38.1
+ARG bitsandbytes_version=0.39.1
 
 EXPOSE 8080
 
@@ -59,7 +59,7 @@ RUN apt-get update && \
     pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
     ${deepspeed_wheel} protobuf==${protobuf_version} transformers==${transformers_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
-    diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors && \
+    diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \

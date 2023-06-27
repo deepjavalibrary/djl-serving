@@ -71,9 +71,7 @@ class FasterTransformerService(object):
             "model_dir")
         self.use_triton = properties.get("engine", "Python") == "Python"
         self.enable_streaming = properties.get("enable_streaming", None)
-        if self.enable_streaming and self.enable_streaming.lower() == "false":
-            self.enable_streaming = None
-        else:
+        if self.enable_streaming and self.enable_streaming.lower() != "false":
             if properties.get("engine", "Python") != "Python":
                 raise ValueError(
                     "Please use Python engine for streaming use case")

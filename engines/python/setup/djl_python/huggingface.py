@@ -107,6 +107,11 @@ class HuggingFaceService(object):
                 raise ValueError(
                     "device_map should set when load_in_8bit is set")
             kwargs["load_in_8bit"] = properties.get("load_in_8bit")
+        if "load_in_4bit" in properties:
+            if "device_map" not in kwargs:
+                raise ValueError(
+                    "device_map should set when load_in_4bit is set")
+            kwargs["load_in_8bit"] = properties.get("load_in_4bit")
         if "low_cpu_mem_usage" in properties:
             kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage")
 
@@ -230,7 +235,7 @@ class HuggingFaceService(object):
             kwargs["tokenizer"] = model_id_or_path
 
         use_pipeline = True
-        for element in ["load_in_8bit", "low_cpu_mem_usage"]:
+        for element in ["load_in_8bit", "load_in_4bit", "low_cpu_mem_usage"]:
             if element in kwargs:
                 use_pipeline = False
         # build pipeline
