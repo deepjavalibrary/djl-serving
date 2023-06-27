@@ -174,7 +174,7 @@ public class PyEnv {
         }
         Path path = getVenvDir().resolve(name).toAbsolutePath();
         if (path.toFile().exists()) {
-            logger.debug("Virtual environment already exists at {}.", path);
+            logger.info("Virtual environment already exists at {}.", path);
             venvCreated = true;
             return;
         }
