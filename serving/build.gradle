@@ -116,8 +116,12 @@ startScripts {
                 '    export TF_NUM_INTRAOP_THREADS=1\n' +
                 'fi\n' +
                 'exec env MXNET_ENGINE_TYPE="NaiveEngine" "$JAVACMD" "$@"')
-        text = text.replace('DEFAULT_JVM_OPTS=""', 'if [ "${MODEL_SERVER_HOME}" = "" ] ; then\n' +
+        text = text.replace('DEFAULT_JVM_OPTS=""',
+                'if [ "${MODEL_SERVER_HOME}" = "" ] ; then\n' +
                 '    export MODEL_SERVER_HOME=${APP_HOME}\n' +
+                'fi\n' +
+                'if [ -f "/opt/ml/.sagemaker_infra/endpoint-metadata.json" ]; then\n' +
+                '    export JAVA_OPTS="$JAVA_OPTS -XX:-UseContainerSupport"\n' +
                 'fi\n' +
                 'DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml"\n')
         text = text.replaceAll('CLASSPATH=\\$APP_HOME/lib/.*', 'CLASSPATH=\\$APP_HOME/lib/*')
