@@ -16,7 +16,7 @@ import torch
 from torch.nn.functional import normalize, softmax
 from typing import Tuple, List, Dict
 from djl_python.scheduler.search_config import SearchConfig
-
+import numpy, heapq
 
 def contrastive_step_generate(top_k_ids: torch.Tensor,
                               top_k_probs: torch.Tensor,
@@ -62,7 +62,8 @@ def contrastive_step_generate(top_k_ids: torch.Tensor,
 
 def sampling_step_generate(logits: torch.tensor,
                            search_configs: List[SearchConfig],
-                           sampler_bucket_sort_cache=None):
+                           sampler_bucket_sort_cache=None,
+                           seed=None):
     """
     Greedy, topK, topP
 
@@ -81,9 +82,9 @@ def sampling_step_generate(logits: torch.tensor,
 
     output_ids_greedy = greedy_step_generate(logits[collector['greedy'], :])
     output_ids_topk = topk_step_generate(logits[collector['topk'], :],
-                                         k_config_list, tmprtr_list_for_k)
+                                         k_config_list, tmprtr_list_for_k, seed)
     output_ids_topp = topp_step_generate(logits[collector['topk'], :],
-                                         p_config_list, tmprtr_list_for_p)
+                                         p_config_list, tmprtr_list_for_p, seed)
     output_ids = torch.empty(len(search_configs),
                              dtype=torch.int64,
                              device=logits.device)
@@ -124,7 +125,7 @@ def sampler_bucket_sort(search_configs: List[SearchConfig]):
 def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     """
     Args:
-        logtis: [batch, vocab_size].
+        logits: [batch, vocab_size].
             This logits can also be probability inputs, since probs = softmax(logits, dim=1) .
 
     Return:
@@ -133,18 +134,95 @@ def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     return torch.topk(logits, k=k, dim=-1, largest=True, sorted=False).indices
 
 
-def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k):
+def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List[float], seed: float):
     """
     If logits is tensor([]), the output should be tensor([]) too.
     """
-    return torch.tensor([], dtype=torch.int64, device=logits.device)
+    if logits.numel() == 0:
+        return torch.tensor([], dtype=torch.int64, device=logits.device)
+
+    batch_size, vocab_size = logits.size()
+
+    # random number
+    numpy.random.seed(seed)
+    random_array = numpy.random.rand(batch_size)
+
+    # result
+    indices = numpy.empty(batch_size)
+
+    # Find the candidate: O(k * log(vocab_size))
+    for i in range(batch_size):
+        k = k_config_list[i]
+        topk_values, topk_indices = torch.topk(logits[i], k=k, dim=-1, largest=True, sorted=True)
+        # At this step the truncated prob is normalized
+        probs = softmax(torch.tensor(topk_values, device=logits.device) / tmprtr_list_for_k[i])
+        cum_prob = 0
+        for idx, p in enumerate(probs):
+            cum_prob += p
+            if cum_prob > random_array[i].item():
+                indices[i] = topk_indices[idx]
+                break
+
+    return indices.view(-1, 1)
 
 
-def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p):
+def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: List[float], seed: float):
     """
-    If logits is tensor([]), the output should be tensor([]) too.
+    Returns the token ids of the top p selection. If logits is tensor([]), the output should be tensor([]) too.
+
+    Args:
+        logits: [batch, vocab_size].
+
+    Return:
+        indices: [batch, 1]
     """
-    return torch.tensor([], dtype=torch.int64, device=logits.device)
+    if logits.numel() == 0:
+        return torch.tensor([], dtype=torch.int64, device=logits.device)
+
+    batch_size, vocab_size = logits.size()
+
+    # Apply temperature to logits
+    temperature = torch.tensor(tmprtr_list_for_p, device=logits.device).view(-1, 1)
+    logits = logits / temperature
+
+    # Apply softmax to obtain probabilities
+    probabilities = softmax(logits, dim=-1)
+
+    # random number
+    numpy.random.seed(seed)
+    random_array = numpy.random.rand(batch_size)
+
+    # result
+    indices = numpy.empty(batch_size)
+
+    for i in range(batch_size):
+        cum_prob = 0
+        probs = [(probabilities[i, j], j) for j in range(vocab_size)]  # O(vocab_size)
+        heapq.heapify(probs)
+
+        # Find the candidates: O(k * log(vocab_size))
+        candidate_cum_probs = []
+        candidate_ids = []
+        while probs:
+            prob, index = heapq.heappop(probs)
+            cum_prob += prob
+            if cum_prob < p_config_list[i]:
+                candidate_cum_probs.append(cum_prob)
+                candidate_ids.append(index)
+            else:
+                break
+
+        # Renormalize and randomly select according to random_array
+        rand_number = random_array[i].item()
+        normalization_factor = candidate_cum_probs[-1]
+        for idx, cum_prob in enumerate(candidate_cum_probs):  # O(k)
+            if cum_prob / normalization_factor > rand_number:
+                indices[i] = candidate_ids[idx]
+                break
+
+    return indices.view(-1, 1)
+
+
 
 
 def beam_step_generate(last_probs: torch.Tensor, logits: torch.Tensor,

@@ -33,7 +33,7 @@ class SeqBatcher(ABC):
     def __init__(self, batch: Batch, request_uids: torch.Tensor,
                  offsets: torch.Tensor,
                  search_configs: defaultdict[Any,
-                                             SearchConfig], lm_block: LMBlock):
+                                             SearchConfig], lm_block: LMBlock, seed=None):
         # Utility variables
         self.lm_block = lm_block
         self.exit_index = set()
@@ -53,6 +53,9 @@ class SeqBatcher(ABC):
                                                     List[SearchConfig],
                                                     List[SearchConfig]],
                                               None] = None
+
+        # when Sampling is true
+        self.seed = seed
 
     @classmethod
     @abstractmethod
