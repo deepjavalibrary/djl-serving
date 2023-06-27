@@ -61,6 +61,7 @@ RUN apt-get update && \
     ${deepspeed_wheel} ${lmi_dist_wheel} protobuf==${protobuf_version} transformers==${transformers_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
+    scripts/install_flash_attn.sh && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
