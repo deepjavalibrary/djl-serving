@@ -207,11 +207,9 @@ def compute_kv_cache(input_ids: torch.Tensor,
 
     pad_token_ids = []
     if not search_configs:
-        # (first_token_id + 2) // 2 is a dummy_pad_token. Then only requirement is it be not the same as
-        # first_token_id while not exceeding the vocabulary token id value range.
         for token_ids in input_ids:
             first_token_id = token_ids[0].item()
-            pad_token_id = (first_token_id + 2) // 2 if first_token_id != 2 else 0
+            pad_token_id = (first_token_id - 1) if first_token_id != 0 else 0
             pad_token_ids.append(pad_token_id)
     else:
         pad_token_ids.append(search_config.pad_token_id for search_config in search_configs)
