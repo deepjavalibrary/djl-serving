@@ -122,6 +122,9 @@ class PyProcess {
             int id = restartCount.get();
             int port = connections.get(0).getPort();
             logger.info("Start process: {} - retry: {}", port, id);
+            if (pyEnv.isEnableVenv()) {
+                pyEnv.createVirtualEnv(model.getName());
+            }
             pyEnv.installDependency(model.getModelPath());
             process = Connection.startPython(pyEnv, model, workerId, port);
 
@@ -176,6 +179,9 @@ class PyProcess {
         int failures = Integer.parseInt(model.getProperty("failed", "0"));
         model.setProperty("failed", String.valueOf(failures + 1));
 
+        if (pyEnv.isEnableVenv()) {
+            pyEnv.deleteVirtualEnv(model.getName());
+        }
         if (restartFuture != null) {
             try {
                 if (!restartFuture.isDone()) {

@@ -129,6 +129,9 @@ public class PyModel extends BaseModel {
                     case "handler":
                         pyEnv.setHandler(value);
                         break;
+                    case "enable_venv":
+                        pyEnv.setEnableVenv(Boolean.parseBoolean(value));
+                        break;
                     default:
                         break;
                 }

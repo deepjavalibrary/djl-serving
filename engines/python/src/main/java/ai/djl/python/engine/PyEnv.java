@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,6 +58,9 @@ public class PyEnv {
 
     private boolean failOnInitialize = true;
 
+    private boolean enableVenv;
+    private boolean venvCreated;
+
     /**
      * Constructs a new {@code PyEnv} instance.
      *
@@ -64,10 +68,6 @@ public class PyEnv {
      */
     public PyEnv(boolean mpiMode) {
         this.mpiMode = mpiMode;
-        pythonExecutable = Utils.getenv("PYTHON_EXECUTABLE");
-        if (pythonExecutable == null) {
-            pythonExecutable = "python3";
-        }
         handler = "handle";
         envs = new ConcurrentHashMap<>();
         initParameters = new ConcurrentHashMap<>();
@@ -164,6 +164,61 @@ public class PyEnv {
     }
 
     /**
+     * Create python virtual environment if needed.
+     *
+     * @param name the virtual environment name
+     */
+    public synchronized void createVirtualEnv(String name) {
+        if (venvCreated) {
+            return;
+        }
+        Path path = getVenvDir().resolve(name).toAbsolutePath();
+        if (path.toFile().exists()) {
+            logger.debug("Virtual environment already exists at {}.", path);
+            venvCreated = true;
+            return;
+        }
+        String[] cmd = {
+            getPythonExecutable(), "-m", "venv", path.toString(), "--system-site-packages"
+        };
+
+        try {
+            Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            String logOutput;
+            try (InputStream is = process.getInputStream()) {
+                logOutput = Utils.toString(is);
+            }
+            int ret = process.waitFor();
+            if (ret == 0) {
+                logger.info("Python virtual environment created successfully at {}!", path);
+                logger.debug("{}", logOutput);
+                setPythonExecutable(path.resolve("bin").resolve("python").toString());
+                venvCreated = true;
+            } else {
+                logger.warn("Failed to create virtual environment with error code: {}", ret);
+                logger.warn("{}", logOutput);
+            }
+        } catch (IOException | InterruptedException e) {
+            logger.warn("Python virtual failed.", e);
+        }
+    }
+
+    /**
+     * Delete python virtual environment.
+     *
+     * @param name the virtual environment name
+     */
+    public synchronized void deleteVirtualEnv(String name) {
+        if (!venvCreated) {
+            return;
+        }
+        Path path = getVenvDir().resolve(name).toAbsolutePath();
+        if (path.toFile().exists()) {
+            Utils.deleteQuietly(path);
+        }
+    }
+
+    /**
      * Installs model dependencies if needed.
      *
      * @param modelDir the model directory
@@ -175,7 +230,7 @@ public class PyEnv {
         Path file = modelDir.resolve("requirements.txt");
         if (Files.isRegularFile(file)) {
             List<String> cmd = new ArrayList<>(9);
-            cmd.add(pythonExecutable);
+            cmd.add(getPythonExecutable());
             cmd.add("-m");
             cmd.add("pip");
             if (!logger.isDebugEnabled()) {
@@ -229,6 +284,12 @@ public class PyEnv {
      * @return the python executable path
      */
     public String getPythonExecutable() {
+        if (pythonExecutable == null) {
+            pythonExecutable = Utils.getenv("PYTHON_EXECUTABLE");
+            if (pythonExecutable == null) {
+                pythonExecutable = "python3";
+            }
+        }
         return pythonExecutable;
     }
 
@@ -366,6 +427,25 @@ public class PyEnv {
     }
 
     /**
+     * Returns whether the python virtual environment is enabled.
+     *
+     * @return {@code true} if the virtual environment is enabled, {@code false} otherwise.
+     */
+    public boolean isEnableVenv() {
+        return enableVenv;
+    }
+
+    /**
+     * Sets whether to enable the python virtual environment.
+     *
+     * @param enableVenv {@code true} to enable the virtual environment, {@code false} to disable
+     *     it.
+     */
+    public void setEnableVenv(boolean enableVenv) {
+        this.enableVenv = enableVenv;
+    }
+
+    /**
      * Sets the model loading timeout in seconds.
      *
      * @param modelLoadingTimeout the model loading timeout in seconds
@@ -404,5 +484,22 @@ public class PyEnv {
             logger.warn("Invalid timeout value: {}.", timeout);
         }
         return def;
+    }
+
+    /**
+     * Utility function to get python virtual env directory.
+     *
+     * @return DJL venv directory
+     */
+    private Path getVenvDir() {
+        String venvDir = Utils.getEnvOrSystemProperty("DJL_VENV_DIR");
+        if (venvDir == null || venvDir.isEmpty()) {
+            Path dir = Paths.get(System.getProperty("user.home"));
+            if (!Files.isWritable(dir)) {
+                dir = Paths.get(System.getProperty("java.io.tmpdir"));
+            }
+            return dir.resolve(".venv");
+        }
+        return Paths.get(venvDir);
     }
 }
