@@ -164,7 +164,7 @@ public class PyEnv {
     }
 
     /**
-     * Create python virtual environment if needed.
+     * Creates python virtual environment if needed.
      *
      * @param name the virtual environment name
      */
