@@ -172,37 +172,40 @@ public class PyEnv {
      *
      * @param name the virtual environment name
      */
-    public synchronized void createVirtualEnv(String name) {
-        if (venvCreated) {
-            return;
-        }
-        Path path = getVenvDir().resolve(name).toAbsolutePath();
-        if (Files.exists(path)) {
-            logger.info("Virtual environment already exists at {}.", path);
-            setPythonExecutable(path.resolve("bin").resolve("python").toString());
-            venvCreated = true;
-            return;
-        }
-        String[] cmd = {pythonExecutable, "-m", "venv", path.toString(), "--system-site-packages"};
-
-        try {
-            Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = process.getInputStream()) {
-                logOutput = Utils.toString(is);
+    public void createVirtualEnv(String name) {
+        synchronized (PyEnv.class) {
+            if (venvCreated) {
+                return;
             }
-            int ret = process.waitFor();
-            logger.debug("{}", logOutput);
-            if (ret != 0) {
-                throw new EngineException(
-                        "Failed to create virtual environment with error code: " + ret);
+            Path path = getVenvDir().resolve(name).toAbsolutePath();
+            if (Files.exists(path)) {
+                logger.info("Virtual environment already exists at {}.", path);
+                setPythonExecutable(path.resolve("bin").resolve("python").toString());
+                venvCreated = true;
+                return;
             }
+            String[] cmd = {
+                pythonExecutable, "-m", "venv", path.toString(), "--system-site-packages"
+            };
 
-            logger.info("Python virtual environment created successfully at {}!", path);
-            setPythonExecutable(path.resolve("bin").resolve("python").toString());
-            venvCreated = true;
-        } catch (IOException | InterruptedException e) {
-            throw new EngineException("Python virtual failed", e);
+            try {
+                Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                String logOutput;
+                try (InputStream is = process.getInputStream()) {
+                    logOutput = Utils.toString(is);
+                }
+                int ret = process.waitFor();
+                logger.debug("{}", logOutput);
+                if (ret != 0) {
+                    throw new EngineException("Failed to create venv with error code: " + ret);
+                }
+
+                logger.info("Python virtual environment created successfully at {}!", path);
+                setPythonExecutable(path.resolve("bin").resolve("python").toString());
+                venvCreated = true;
+            } catch (IOException | InterruptedException e) {
+                throw new EngineException("Create venv failed", e);
+            }
         }
     }
 
@@ -212,9 +215,6 @@ public class PyEnv {
      * @param name the virtual environment name
      */
     public synchronized void deleteVirtualEnv(String name) {
-        if (!venvCreated) {
-            return;
-        }
         Path path = getVenvDir().resolve(name);
         Utils.deleteQuietly(path);
     }

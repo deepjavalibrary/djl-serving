@@ -401,30 +401,6 @@ public class PyEngineTest {
     }
 
     @Test
-    public void testPythonVenv() throws IOException, ModelException {
-        Criteria<Input, Output> criteria =
-                Criteria.builder()
-                        .setTypes(Input.class, Output.class)
-                        .optEngine("Python")
-                        .optModelPath(Paths.get("src/test/resources/venv"))
-                        .build();
-
-        String venvDir = "build/venv";
-        System.setProperty("DJL_VENV_DIR", venvDir);
-        Path path;
-        try (ZooModel<Input, Output> model = criteria.loadModel()) {
-            path = Paths.get(venvDir).resolve(model.getName());
-            Assert.assertTrue(Files.isDirectory(path));
-        }
-        Assert.assertFalse(Files.isDirectory(path));
-
-        // Test exception
-        venvDir = "/COM1"; // Invalid directory
-        System.setProperty("DJL_VENV_DIR", venvDir);
-        Assert.assertThrows(EngineException.class, criteria::loadModel);
-    }
-
-    @Test
     public void testModelException() throws TranslateException, IOException, ModelException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()

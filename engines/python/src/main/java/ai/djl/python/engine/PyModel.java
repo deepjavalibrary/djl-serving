@@ -185,7 +185,7 @@ public class PyModel extends BaseModel {
         }
         pyEnv.setEntryPoint(entryPoint);
         if (pyEnv.isEnableVenv()) {
-            pyEnv.createVirtualEnv(getName());
+            pyEnv.createVirtualEnv(Utils.hash(modelDir.toString()));
         }
 
         if (pyEnv.isMpiMode()) {
@@ -325,12 +325,12 @@ public class PyModel extends BaseModel {
     }
 
     private void shutdown() {
-        if (pyEnv.isEnableVenv()) {
-            pyEnv.deleteVirtualEnv(getName());
-        }
         for (PyProcess process : workerQueue) {
             process.stopPythonProcess();
         }
         workerQueue.clear();
+        if (pyEnv.isEnableVenv()) {
+            pyEnv.deleteVirtualEnv(Utils.hash(modelDir.toString()));
+        }
     }
 }
