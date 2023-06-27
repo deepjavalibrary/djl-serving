@@ -129,7 +129,8 @@ class SchedulerRollingBatch(RollingBatch):
 
         # TODO: Deleting the finished results here temporarily
         for request_id in exit_req_ids:
-            del self.scheduler.results[request_id]
+            if request_id in self.scheduler.results:
+                del self.scheduler.results[request_id]
 
         generated_tokens = self.tokenizer.batch_decode(generated_token_ids)
 
