@@ -184,6 +184,9 @@ public class PyModel extends BaseModel {
             entryPoint = modelFile.toAbsolutePath().toString();
         }
         pyEnv.setEntryPoint(entryPoint);
+        if (pyEnv.isEnableVenv()) {
+            pyEnv.createVirtualEnv(getName());
+        }
 
         if (pyEnv.isMpiMode()) {
             int partitions = pyEnv.getTensorParallelDegree();
@@ -322,6 +325,9 @@ public class PyModel extends BaseModel {
     }
 
     private void shutdown() {
+        if (pyEnv.isEnableVenv()) {
+            pyEnv.deleteVirtualEnv(getName());
+        }
         for (PyProcess process : workerQueue) {
             process.stopPythonProcess();
         }
