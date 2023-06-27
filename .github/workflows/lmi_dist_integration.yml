@@ -42,7 +42,7 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, integration-test, multi-gpu-test ]
+    needs: [ create-runners, integration-test ]
     steps:
       - name: Stop all instances
         run: |
