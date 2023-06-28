@@ -13,7 +13,7 @@ DJL Serving is a high-performance serving system for deep learning models. DJL S
 In addition to the mode specific files, the `serving.properties` is a configuration file that can be used in all modes.
 Place `serving.properties` in the same directory with your model file to specify configuration for each model.
 
-In `serving.properties`, you can set options (prefixed with `options`) and properties. The options
+In `serving.properties`, you can set options (prefixed with `option`) and properties. The options
 will be passed to `Model.load(Path modelPath, String prefix, Map<String, ?> options)` API. It allows
 you set engine specific configurations, for example:
 
@@ -45,6 +45,7 @@ option.predict_timeout=120
 option.model_loading_timeout=10
 option.parallel_loading=true
 option.tensor_parallel_degree=2
+option.enable_venv=true
 ```
 
 In `serving.properties`, you can set the following properties. Model properties are accessible to `Translator`

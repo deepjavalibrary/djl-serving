@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,6 +57,9 @@ public class PyEnv {
     private boolean initialized;
 
     private boolean failOnInitialize = true;
+
+    private boolean enableVenv;
+    private boolean venvCreated;
 
     /**
      * Constructs a new {@code PyEnv} instance.
@@ -161,6 +165,58 @@ public class PyEnv {
      */
     public Map<String, String> getInitParameters() {
         return initParameters;
+    }
+
+    /**
+     * Creates python virtual environment if needed.
+     *
+     * @param name the virtual environment name
+     */
+    public synchronized void createVirtualEnv(String name) {
+        if (venvCreated) {
+            return;
+        }
+        Path path = getVenvDir().resolve(name).toAbsolutePath();
+        if (Files.exists(path)) {
+            logger.info("Virtual environment already exists at {}.", path);
+            setPythonExecutable(path.resolve("bin").resolve("python").toString());
+            venvCreated = true;
+            return;
+        }
+        String[] cmd = {pythonExecutable, "-m", "venv", path.toString(), "--system-site-packages"};
+
+        try {
+            Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            String logOutput;
+            try (InputStream is = process.getInputStream()) {
+                logOutput = Utils.toString(is);
+            }
+            int ret = process.waitFor();
+            logger.debug("{}", logOutput);
+            if (ret != 0) {
+                throw new EngineException(
+                        "Failed to create virtual environment with error code: " + ret);
+            }
+
+            logger.info("Python virtual environment created successfully at {}!", path);
+            setPythonExecutable(path.resolve("bin").resolve("python").toString());
+            venvCreated = true;
+        } catch (IOException | InterruptedException e) {
+            throw new EngineException("Python virtual failed", e);
+        }
+    }
+
+    /**
+     * Deletes python virtual environment.
+     *
+     * @param name the virtual environment name
+     */
+    public synchronized void deleteVirtualEnv(String name) {
+        if (!venvCreated) {
+            return;
+        }
+        Path path = getVenvDir().resolve(name);
+        Utils.deleteQuietly(path);
     }
 
     /**
@@ -366,6 +422,25 @@ public class PyEnv {
     }
 
     /**
+     * Returns whether the python virtual environment is enabled.
+     *
+     * @return {@code true} if the virtual environment is enabled, {@code false} otherwise.
+     */
+    public boolean isEnableVenv() {
+        return enableVenv;
+    }
+
+    /**
+     * Sets whether to enable the python virtual environment.
+     *
+     * @param enableVenv {@code true} to enable the virtual environment, {@code false} to disable
+     *     it.
+     */
+    public void setEnableVenv(boolean enableVenv) {
+        this.enableVenv = enableVenv;
+    }
+
+    /**
      * Sets the model loading timeout in seconds.
      *
      * @param modelLoadingTimeout the model loading timeout in seconds
@@ -404,5 +479,22 @@ public class PyEnv {
             logger.warn("Invalid timeout value: {}.", timeout);
         }
         return def;
+    }
+
+    /**
+     * Utility function to get python virtual env directory.
+     *
+     * @return DJL venv directory
+     */
+    private Path getVenvDir() {
+        String venvDir = Utils.getEnvOrSystemProperty("DJL_VENV_DIR");
+        if (venvDir == null || venvDir.isEmpty()) {
+            Path dir = Paths.get(System.getProperty("user.home"));
+            if (!Files.isWritable(dir)) {
+                dir = Paths.get(System.getProperty("java.io.tmpdir"));
+            }
+            return dir.resolve("venv");
+        }
+        return Paths.get(venvDir);
     }
 }
