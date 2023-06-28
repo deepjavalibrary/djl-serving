@@ -83,7 +83,7 @@ def sampling_step_generate(logits: torch.tensor,
     output_ids_greedy = greedy_step_generate(logits[collector['greedy'], :])
     output_ids_topk = topk_step_generate(logits[collector['topk'], :],
                                          k_config_list, tmprtr_list_for_k, seed)
-    output_ids_topp = topp_step_generate(logits[collector['topk'], :],
+    output_ids_topp = topp_step_generate(logits[collector['topp'], :],
                                          p_config_list, tmprtr_list_for_p, seed)
     output_ids = torch.empty(len(search_configs),
                              dtype=torch.int64,
@@ -148,14 +148,14 @@ def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List
     random_array = numpy.random.rand(batch_size)
 
     # result
-    indices = numpy.empty(batch_size)
+    indices = numpy.empty(batch_size, dtype=numpy.int64)
 
     # Find the candidate: O(k * log(vocab_size))
     for i in range(batch_size):
         k = k_config_list[i]
         topk_values, topk_indices = torch.topk(logits[i], k=k, dim=-1, largest=True, sorted=True)
         # At this step the truncated prob is normalized
-        probs = softmax(torch.tensor(topk_values, device=logits.device) / tmprtr_list_for_k[i])
+        probs = softmax(topk_values / tmprtr_list_for_k[i], dim=-1)
         cum_prob = 0
         for idx, p in enumerate(probs):
             cum_prob += p
@@ -163,7 +163,7 @@ def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List
                 indices[i] = topk_indices[idx]
                 break
 
-    return indices.view(-1, 1)
+    return torch.from_numpy(indices).view(-1, 1)
 
 
 def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: List[float], seed: float):
@@ -193,7 +193,7 @@ def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: Li
     random_array = numpy.random.rand(batch_size)
 
     # result
-    indices = numpy.empty(batch_size)
+    indices = numpy.empty(batch_size, dtype=numpy.int64)
 
     for i in range(batch_size):
         cum_prob = 0
@@ -220,9 +220,7 @@ def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: Li
                 indices[i] = candidate_ids[idx]
                 break
 
-    return indices.view(-1, 1)
-
-
+    return torch.from_numpy(indices).view(-1, 1)
 
 
 def beam_step_generate(last_probs: torch.Tensor, logits: torch.Tensor,
