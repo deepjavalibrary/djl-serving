@@ -34,9 +34,7 @@ jobs:
       - name: Install environment
         working-directory: tests/integration
         run: |
-          aws s3 cp s3://djl-misc/lmi_dist/lmi_dist_nightly.tar.gz .
-          tar -xvf lmi_dist_nightly.tar.gz
-          cd lmi_dist_nightly && pip install .
+          pip install https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl
 
 
   stop-runners:
