@@ -28,7 +28,6 @@ from lmi_dist.utils.types import (
 )
 
 import torch
-import logging
 
 ARCHITECTURE_2_BATCH_CLS = {
     "RWForCausalLM": FlashCausalLMBatch,
@@ -57,6 +56,7 @@ class LmiDistRollingBatch(RollingBatch):
         """
 
         super().__init__(device)
+        self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
         self.batch_id_counter = 0
@@ -66,9 +66,10 @@ class LmiDistRollingBatch(RollingBatch):
         self.config = AutoConfig.from_pretrained(model_id_or_path,
                                                  **kwargs)
         self.batch_cls = get_batch_cls_from_architecture(self.config.architectures[0])
+        sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
         self.model = get_model(model_id_or_path,
                                revision=None,
-                               sharded=True,
+                               sharded=sharded,
                                quantize=None,
                                trust_remote_code=kwargs.get("trust_remote_code"))
 
