@@ -46,12 +46,12 @@ class TestScheduler(unittest.TestCase):
     def test_greedy_scheduler(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
-        tokenizer = GPT2Tokenizer.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id, padding_side='left')
+        tokenizer.pad_token = "[PAD]"
         lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
         search_config.max_new_seqlen = 30
-        PAD = search_config.pad_token_id
         scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
 
         input_ids_0 = tokenizer.encode(
@@ -67,16 +67,9 @@ class TestScheduler(unittest.TestCase):
         # Test add request
         scheduler.add_request(input_ids_0, request_ids)
 
-        input_ids_1 = tokenizer.encode(
-            "When your legs don't work like they used to before And I can't sweep you off",
-            return_tensors='pt')
-        input_ids_2 = torch.concat([
-            torch.tensor([PAD, PAD, PAD, PAD, PAD]),
-            tokenizer.encode(
-                "There's a time that I remember, when I did not know",
-                return_tensors='pt')[0]
-        ]).view(1, -1)
-        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        input_ids = tokenizer([r"When your legs don't work like they used to before And I can't sweep you off",
+                               r"There's a time that I remember, when I did not know"],
+                              return_tensors='pt', padding=True).input_ids
 
         # Test merging longer sequences
         request_ids = torch.tensor([[1], [2]])
@@ -94,14 +87,10 @@ class TestScheduler(unittest.TestCase):
                                                     "remember the last time I saw a girl in a dress. I can't remember the last time"
 
         # Load a kv_cache from file and test merging a shorter sequence
-        input_ids_1 = tokenizer.encode("When your legs don't work",
-                                       return_tensors='pt')
-        input_ids_2 = torch.concat([
-            torch.tensor([PAD, PAD]),
-            tokenizer.encode("DeepMind Company is", return_tensors='pt')[0]
-        ]).view(1, -1)
-        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
-        request_ids = torch.tensor([[3], [4]])
+        input_ids = tokenizer([r"When your legs don't work",
+                               r"'t remember",
+                               r""], return_tensors='pt', padding=True).input_ids
+        request_ids = torch.tensor([[3], [4], [5]])
 
         # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
         kv_cache = torch.load(kv_cache_files[0])
