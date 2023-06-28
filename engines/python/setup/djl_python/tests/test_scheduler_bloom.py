@@ -122,7 +122,7 @@ class TestSchedulerBloom(unittest.TestCase):
 
     def test_lm_block_opt(self):
         model_id = "facebook/opt-350m"
-        model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float16).cuda()
+        model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float16)
 
         # the fast tokenizer currently does not work correctly
         tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=False)

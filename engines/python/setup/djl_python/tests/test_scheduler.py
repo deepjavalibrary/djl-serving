@@ -117,6 +117,55 @@ class TestScheduler(unittest.TestCase):
             results[4][:30]
         ) == '!!!!!!!!!!DeepMind Company is a company that is dedicated to the advancement of artificial intelligence. We are a company'
 
+    def test_sampling_scheduler(self):
+        model_id = "gpt2"
+        model = GPT2LMHeadModel.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id)
+        lm_block = HuggingfaceBlock(model)
+
+        scheduler = SeqBatchScheduler(lm_block, "greedy", SearchConfig())
+
+        search_config = SearchConfig(max_new_tokens=30, do_sample=True, topk=4)
+        PAD = search_config.pad_token_id
+        input_ids_0 = tokenizer.encode(
+            'Memories follow me left and right. I can', return_tensors='pt')
+        request_ids = torch.tensor([[0]])
+
+        # Test add request
+        scheduler.add_request(input_ids_0,
+                              request_ids, search_configs=[search_config])
+
+        input_ids_1 = tokenizer.encode(
+            "When your legs don't work like they used to before And I can't sweep you off",
+            return_tensors='pt')
+        input_ids_2 = torch.concat([
+            torch.tensor([PAD, PAD, PAD, PAD, PAD]),
+            tokenizer.encode(
+                "There's a time that I remember, when I did not know",
+                return_tensors='pt')[0]
+        ]).view(1, -1)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        config1 = SearchConfig(do_sample=True, top_k=0, top_p=0.92)
+        config2 = SearchConfig(do_sample=False)
+
+        # Test merging longer sequences
+        request_ids = torch.tensor([[1], [2]])
+        scheduler.add_request(input_ids, request_ids, search_configs=[config1, config2])
+
+        # Inference
+        for idx, _ in enumerate(scheduler.increment_forward(20)):
+            pass
+
+        results = scheduler.collect_results()
+
+        assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before " \
+                                                    "And I can't sweep you off my feet, I can't do anything about it.\n"
+        assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not " \
+                                                    "know what to do with my life. I was in a very bad mood. I was"
+        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't " \
+                                                    "remember the last time I saw a girl in a dress. I can't remember the last time"
+
+
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
