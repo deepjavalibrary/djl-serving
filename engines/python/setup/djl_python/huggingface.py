@@ -92,7 +92,7 @@ class HuggingFaceService(object):
         self.tokenizer = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
-        self.enable_rolling_batch = None
+        self.rolling_batch_type = None
         self.rolling_batch = None
         self.model_config = None
 
@@ -144,18 +144,17 @@ class HuggingFaceService(object):
         if "dtype" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
                 properties.get("dtype"))
-        self.enable_rolling_batch = properties.get("rolling_batch") is not None
+        self.rolling_batch_type = properties.get("rolling_batch", None)
 
         if self.enable_streaming:
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             self.initialized = True
             return
-        elif self.enable_rolling_batch:
-            if os.getenv('OMPI_COMM_WORLD_SIZE'):
+        elif self.rolling_batch_type:
+            if properties.get("engine") != "Python":
                 self.device = int(os.getenv("LOCAL_RANK", 0))
-            rolling_batch_type = properties.get("rolling_batch")
             model_config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
-            _rolling_batch_cls = get_rolling_batch_class_from_str(rolling_batch_type, model_config)
+            _rolling_batch_cls = get_rolling_batch_class_from_str(self.rolling_batch_type, model_config)
             self.rolling_batch = _rolling_batch_cls(model_id_or_path,
                                                     self.device, properties,
                                                     **kwargs)
@@ -195,7 +194,7 @@ class HuggingFaceService(object):
                     input_data.extend(_inputs)
                 else:
                     input_data.append(_inputs)
-                if first or self.enable_rolling_batch:
+                if first or self.rolling_batch_type:
                     parameters.append(input_map.pop("parameters", {}))
                     first = False
                 else:
@@ -221,7 +220,7 @@ class HuggingFaceService(object):
                                          input_data, self.device,
                                          **parameters[0]))
                 return outputs
-            elif self.enable_rolling_batch:
+            elif self.rolling_batch_type:
                 result = self.rolling_batch.inference(input_data, parameters)
                 for i in range(len(batch)):
                     res = result[i]
