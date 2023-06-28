@@ -41,6 +41,13 @@ ARCHITECTURES_2_TASK = {
     "BloomModel": "text-generation",
 }
 
+ARCHITECTURES_2_RB_CLS = {
+    "RWForCausalLM" : LmiDistRollingBatch,
+    "GPTNeoXForCausalLM" : LmiDistRollingBatch,
+    "T5ForConditionalGeneration" : LmiDistRollingBatch,
+    "LlamaForCausalLM": LmiDistRollingBatch
+}
+
 
 def get_torch_dtype_from_str(dtype: str):
     if dtype == "auto":
@@ -56,6 +63,21 @@ def get_torch_dtype_from_str(dtype: str):
     if dtype is None:
         return None
     raise ValueError(f"Invalid data type: {dtype}")
+
+
+def get_rolling_batch_class_from_str(rolling_batch_type: str, model_config):
+    if rolling_batch_type == "auto":
+        architecture = model_config.architectures[0]
+        if architecture in ARCHITECTURES_2_RB_CLS:
+            return ARCHITECTURES_2_RB_CLS[architecture]
+        else:
+            return SchedulerRollingBatch
+    elif rolling_batch_type == "scheduler":
+        return SchedulerRollingBatch
+    elif rolling_batch_type == "lmi-dist":
+        return LmiDistRollingBatch
+    raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
+
 
 
 class HuggingFaceService(object):
@@ -121,25 +143,22 @@ class HuggingFaceService(object):
         if "dtype" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
                 properties.get("dtype"))
-        self.enable_rolling_batch = properties.get("rolling_batch", None)
-        if self.enable_rolling_batch and self.enable_rolling_batch.lower(
-        ) == "false":
-            self.enable_rolling_batch = None
+        self.enable_rolling_batch = properties.get("rolling_batch") is not None
 
         if self.enable_streaming:
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             self.initialized = True
             return
         elif self.enable_rolling_batch:
-            # TODO: Add logic to call appropriate scheduler backend for rolling batch
-            if properties.get("enable_flash_attention", "false") == "true":
-                self.rolling_batch = LmiDistRollingBatch(model_id_or_path,
-                                                         self.device, properties,
-                                                         **kwargs)
-            else:
-                self.rolling_batch = SchedulerRollingBatch(model_id_or_path,
-                                                           self.device, properties,
-                                                           **kwargs)
+            if os.getenv('OMPI_COMM_WORLD_SIZE'):
+                self.device = int(os.getenv("LOCAL_RANK", 0))
+            rolling_batch_type = properties.get("rolling_batch")
+            model_config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
+            _rolling_batch_cls = get_rolling_batch_class_from_str(rolling_batch_type, model_config)
+            self.rolling_batch = _rolling_batch_cls(model_id_or_path,
+                                                    self.device, properties,
+                                                    **kwargs)
+
             self.initialized = True
             return
 

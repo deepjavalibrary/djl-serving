@@ -50,7 +50,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         super(model, translator, device, false);
         this.process = process;
         this.timeout = timeout;
-        isRollingBatch = Boolean.parseBoolean(model.getProperty("rolling_batch", "false"));
+        isRollingBatch = model.getProperty("rolling_batch") != null;
         if (isRollingBatch) {
             int maxRollingBatchSize =
                     Integer.parseInt(model.getProperty("max_rolling_batch_size", "3"));
