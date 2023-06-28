@@ -489,11 +489,7 @@ public class PyEnv {
     private Path getVenvDir() {
         String venvDir = Utils.getEnvOrSystemProperty("DJL_VENV_DIR");
         if (venvDir == null || venvDir.isEmpty()) {
-            Path dir = Paths.get(System.getProperty("user.home"));
-            if (!Files.isWritable(dir)) {
-                dir = Paths.get(System.getProperty("java.io.tmpdir"));
-            }
-            return dir.resolve("venv");
+            return Utils.getCacheDir().resolve("venv");
         }
         return Paths.get(venvDir);
     }

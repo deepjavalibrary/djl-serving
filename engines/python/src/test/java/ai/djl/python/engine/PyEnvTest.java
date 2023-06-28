@@ -65,10 +65,12 @@ public class PyEnvTest {
         }
         Assert.assertFalse(Files.exists(venvDir));
 
-        // Test exception
-        if (!System.getProperty("os.name").startsWith("Win")) {
-            System.setProperty("DJL_VENV_DIR", "/non_exist/venv");
-            Assert.assertThrows(EngineException.class, criteria::loadModel);
-        }
+        // Test exception cases
+        Criteria<Input, Output> criteria2 =
+                criteria.toBuilder().optOption("pythonExecutable", "non-exists").build();
+        Assert.assertThrows(EngineException.class, criteria2::loadModel);
+
+        System.setProperty("DJL_VENV_DIR", "/COM1"); // invalid path
+        Assert.assertThrows(EngineException.class, criteria::loadModel);
     }
 }
