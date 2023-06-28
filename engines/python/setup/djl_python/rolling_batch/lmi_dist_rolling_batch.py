@@ -107,7 +107,6 @@ class LmiDistRollingBatch(RollingBatch):
             generations, next_batch = self.model.generate_token(self.cache)
             self.cache = next_batch
 
-
         generation_dict = {}
         for generation in generations:
             generation_dict[generation.request_id] = generation
@@ -123,14 +122,6 @@ class LmiDistRollingBatch(RollingBatch):
         # filter the requests that are stopped.
         if self.cache:
             self.cache = self.cache.filter(req_ids)
-
-    def _get_input_ids(self, input_texts):
-        input_ids = self.tokenizer(input_texts,
-                                   return_tensors="pt",
-                                   padding=True).input_ids
-        if self.device is not None:
-            input_ids = input_ids.to(self.device)
-        return input_ids
 
     def preprocess_requests(self, requests, **kwargs):
         preprocessed_requests = []
