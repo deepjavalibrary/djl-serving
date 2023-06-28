@@ -6,7 +6,6 @@ from collections import defaultdict
 from transformers import AutoTokenizer, BloomForCausalLM
 
 from djl_python.scheduler import SearchConfig
-from djl_python.scheduler.seq_batcher_impl import GreedySeqBatcher, ContrastiveSeqBatcher
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from typing import List
 
@@ -144,11 +143,6 @@ def main(args):
     ## Test homogeneous request
     input = [r"The new movie that got Oscar this year"]
     input = input * args.concurrency
-    search_algo = {
-        "greedy": GreedySeqBatcher,
-        "contrastive": ContrastiveSeqBatcher
-    }
-    seq_batcher_cls = search_algo[args.batch_type]
     batch_size = len(input)
 
     # Prepare requests
@@ -162,7 +156,7 @@ def main(args):
     config = SearchConfig()
     config.pad_token_id = tokenizer.pad_token_id
     config.max_new_seqlen = args.max_gen_len
-    scheduler = SeqBatchScheduler(model, seq_batcher_cls, config)
+    scheduler = SeqBatchScheduler(model, args.batch_type, config)
 
     # Init test kit
     test_kit = TestKit(scheduler, tokenizer)
