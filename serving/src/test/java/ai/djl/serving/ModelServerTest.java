@@ -18,6 +18,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
+import ai.djl.engine.Engine;
 import ai.djl.modality.Classifications.Classification;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
@@ -650,7 +651,8 @@ public class ModelServerTest {
         assertFalse(model.isLoadedAtStartup());
 
         DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
-        assertEquals(group.getDevice().isGpu(), CudaUtils.hasCuda());
+        boolean hasGpu = Engine.getEngine("MXNet").getGpuCount() > 0;
+        assertEquals(group.getDevice().isGpu(), hasGpu);
         assertEquals(group.getMinWorkers(), 2);
         assertEquals(group.getMaxWorkers(), 4);
         List<DescribeWorkflowResponse.Worker> workers = group.getWorkers();
@@ -726,7 +728,10 @@ public class ModelServerTest {
         req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         channel2.writeAndFlush(req).sync();
         Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
-        assertEquals(httpStatus.code(), 503);
+        if (CudaUtils.getGpuCount() <= 1) {
+            // one request is not able to saturate workers in multi-GPU case
+            assertEquals(httpStatus.code(), 503);
+        }
 
         // wait for 1st response
         f.sync();
