@@ -68,6 +68,10 @@ public class PyEnv {
      */
     public PyEnv(boolean mpiMode) {
         this.mpiMode = mpiMode;
+        pythonExecutable = Utils.getenv("PYTHON_EXECUTABLE");
+        if (pythonExecutable == null) {
+            pythonExecutable = "python3";
+        }
         handler = "handle";
         envs = new ConcurrentHashMap<>();
         initParameters = new ConcurrentHashMap<>();
@@ -179,9 +183,7 @@ public class PyEnv {
             venvCreated = true;
             return;
         }
-        String[] cmd = {
-            getPythonExecutable(), "-m", "venv", path.toString(), "--system-site-packages"
-        };
+        String[] cmd = {pythonExecutable, "-m", "venv", path.toString(), "--system-site-packages"};
 
         try {
             Process process = new ProcessBuilder(cmd).redirectErrorStream(true).start();
@@ -190,17 +192,17 @@ public class PyEnv {
                 logOutput = Utils.toString(is);
             }
             int ret = process.waitFor();
-            if (ret == 0) {
-                logger.info("Python virtual environment created successfully at {}!", path);
-                logger.debug("{}", logOutput);
-                setPythonExecutable(path.resolve("bin").resolve("python").toString());
-                venvCreated = true;
-            } else {
-                logger.warn("Failed to create virtual environment with error code: {}", ret);
-                logger.warn("{}", logOutput);
+            logger.debug("{}", logOutput);
+            if (ret != 0) {
+                throw new EngineException(
+                        "Failed to create virtual environment with error code: " + ret);
             }
+
+            logger.info("Python virtual environment created successfully at {}!", path);
+            setPythonExecutable(path.resolve("bin").resolve("python").toString());
+            venvCreated = true;
         } catch (IOException | InterruptedException e) {
-            logger.warn("Python virtual failed.", e);
+            throw new EngineException("Python virtual failed", e);
         }
     }
 
@@ -229,7 +231,7 @@ public class PyEnv {
         Path file = modelDir.resolve("requirements.txt");
         if (Files.isRegularFile(file)) {
             List<String> cmd = new ArrayList<>(9);
-            cmd.add(getPythonExecutable());
+            cmd.add(pythonExecutable);
             cmd.add("-m");
             cmd.add("pip");
             if (!logger.isDebugEnabled()) {
@@ -283,12 +285,6 @@ public class PyEnv {
      * @return the python executable path
      */
     public String getPythonExecutable() {
-        if (pythonExecutable == null) {
-            pythonExecutable = Utils.getenv("PYTHON_EXECUTABLE");
-            if (pythonExecutable == null) {
-                pythonExecutable = "python3";
-            }
-        }
         return pythonExecutable;
     }
 
@@ -497,7 +493,7 @@ public class PyEnv {
             if (!Files.isWritable(dir)) {
                 dir = Paths.get(System.getProperty("java.io.tmpdir"));
             }
-            return dir.resolve(".venv");
+            return dir.resolve("venv");
         }
         return Paths.get(venvDir);
     }
