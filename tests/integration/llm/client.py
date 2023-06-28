@@ -205,7 +205,7 @@ ft_raw_model_spec = {
     },
     "nomic-ai/gpt4all-j": {
         "batch_size": [1, 2],
-        "max_memory_per_gpu": 6.0
+        "max_memory_per_gpu": 9.0
     }
 }
 
