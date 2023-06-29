@@ -101,6 +101,7 @@ class SeqBatchScheduler:
                                               search_algorithm,
                                               [search_config],
                                               kv_cache=self.lru_kv_cache[key])
+                            self.lru_kv_cache.move_to_end(key)
                 else:
                     index_not_use_prompt.append(idx)
                     search_configs_not_use_prompt.append(search_config)
