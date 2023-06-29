@@ -108,7 +108,7 @@ jobs:
 
   nightly-deepspeed:
     runs-on: [ self-hosted, cpu ]
-    timeout-minutes: 30
+    timeout-minutes: 60
     needs: create-runner
     steps:
       - uses: actions/checkout@v3
