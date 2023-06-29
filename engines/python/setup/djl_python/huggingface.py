@@ -151,6 +151,7 @@ class HuggingFaceService(object):
             self.initialized = True
             return
         elif self.rolling_batch_type:
+            self.rolling_batch_type = self.rolling_batch_type.lower()
             is_mpi = properties.get("engine") != "Python"
             if is_mpi:
                 self.device = int(os.getenv("LOCAL_RANK", 0))
