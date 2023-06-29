@@ -24,12 +24,14 @@ class Request(object):
 
     """
 
-    def __init__(self, input_text: str, parameters: dict):
+    def __init__(self, id: int, input_text: str, parameters: dict):
         """
         Initialize a request
 
+        :param id: request id
         :param input_text: request's input text
         """
+        self.id = id
         self.input_text = input_text
         self.parameters = parameters
         self.next_token = None
@@ -79,6 +81,7 @@ class RollingBatch(ABC):
 
         self.device = device
         self.pending_requests = []
+        self.req_id_counter = 0
 
     @abstractmethod
     def inference(self, input_data, parameters):
@@ -98,9 +101,10 @@ class RollingBatch(ABC):
             for i in range(pending_req_len, batch_size):
                 data = input_data[i]
                 params = parameters[i] if i < len(parameters) else {}
-                request = Request(data, params)
+                request = Request(self.req_id_counter, data, params)
                 self.pending_requests.append(request)
                 new_requests.append(request)
+                self.req_id_counter += 1
 
         return new_requests
 
@@ -118,5 +122,8 @@ class RollingBatch(ABC):
         for i in range(1, batch_size + 1):
             if self.pending_requests[batch_size - i].is_last_token():
                 self.pending_requests.pop(batch_size - i)
+
+        if len(self.pending_requests) == 0:
+            self.req_id_counter = 0
 
         return results

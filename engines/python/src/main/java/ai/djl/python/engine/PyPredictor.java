@@ -50,11 +50,13 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         super(model, translator, device, false);
         this.process = process;
         this.timeout = timeout;
-        isRollingBatch = Boolean.parseBoolean(model.getProperty("rolling_batch", "false"));
+        isRollingBatch = model.getProperty("rolling_batch") != null;
+        boolean enableStreaming =
+                Boolean.parseBoolean(model.getProperty("enable_streaming", "false"));
         if (isRollingBatch) {
             int maxRollingBatchSize =
                     Integer.parseInt(model.getProperty("max_rolling_batch_size", "3"));
-            rollingBatch = new RollingBatch(process, maxRollingBatchSize, timeout);
+            rollingBatch = new RollingBatch(process, maxRollingBatchSize, timeout, enableStreaming);
         }
     }
 

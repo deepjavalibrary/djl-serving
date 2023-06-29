@@ -41,6 +41,13 @@ ARCHITECTURES_2_TASK = {
     "BloomModel": "text-generation",
 }
 
+LMI_DIST_ADV_MODEL = {
+    "RWForCausalLM",
+    "GPTNeoXForCausalLM",
+    "T5ForConditionalGeneration",
+    "LlamaForCausalLM"
+}
+
 
 def get_torch_dtype_from_str(dtype: str):
     if dtype == "auto":
@@ -58,6 +65,22 @@ def get_torch_dtype_from_str(dtype: str):
     raise ValueError(f"Invalid data type: {dtype}")
 
 
+def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool, model_config):
+    if rolling_batch_type == "auto":
+        architecture = model_config.architectures[0]
+        if architecture in LMI_DIST_ADV_MODEL and is_mpi:
+            from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
+            return LmiDistRollingBatch
+        else:
+            return SchedulerRollingBatch
+    elif rolling_batch_type == "scheduler":
+        return SchedulerRollingBatch
+    elif rolling_batch_type == "lmi-dist":
+        from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
+        return LmiDistRollingBatch
+    raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
+
+
 class HuggingFaceService(object):
 
     def __init__(self):
@@ -69,7 +92,7 @@ class HuggingFaceService(object):
         self.tokenizer = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
-        self.enable_rolling_batch = None
+        self.rolling_batch_type = None
         self.rolling_batch = None
         self.model_config = None
 
@@ -121,20 +144,23 @@ class HuggingFaceService(object):
         if "dtype" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
                 properties.get("dtype"))
-        self.enable_rolling_batch = properties.get("rolling_batch", None)
-        if self.enable_rolling_batch and self.enable_rolling_batch.lower(
-        ) == "false":
-            self.enable_rolling_batch = None
+        self.rolling_batch_type = properties.get("rolling_batch", None)
 
-        if self.enable_streaming:
-            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
+        if self.rolling_batch_type:
+            self.rolling_batch_type = self.rolling_batch_type.lower()
+            is_mpi = properties.get("engine") != "Python"
+            if is_mpi:
+                self.device = int(os.getenv("LOCAL_RANK", 0))
+            model_config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
+            _rolling_batch_cls = get_rolling_batch_class_from_str(self.rolling_batch_type, is_mpi, model_config)
+            self.rolling_batch = _rolling_batch_cls(model_id_or_path,
+                                                    self.device, properties,
+                                                    **kwargs)
+
             self.initialized = True
             return
-        elif self.enable_rolling_batch:
-            # TODO: Add logic to call appropriate scheduler backend for rolling batch
-            self.rolling_batch = SchedulerRollingBatch(model_id_or_path,
-                                                       self.device, properties,
-                                                       **kwargs)
+        elif self.enable_streaming:
+            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             self.initialized = True
             return
 
@@ -169,7 +195,7 @@ class HuggingFaceService(object):
                 input_data.extend(_inputs)
             else:
                 input_data.append(_inputs)
-            if first or self.enable_rolling_batch:
+            if first or self.rolling_batch_type:
                 parameters.append(input_map.pop("parameters", {}))
                 first = False
             else:
@@ -180,7 +206,14 @@ class HuggingFaceService(object):
 
         outputs = Output()
 
-        if self.enable_streaming:
+        if self.rolling_batch_type:
+            result = self.rolling_batch.inference(input_data, parameters)
+            for i in range(len(batch)):
+                res = result[i]
+                outputs.add_as_json(res, batch_index=i)
+
+            return outputs
+        elif self.enable_streaming:
             outputs.add_property("content-type", "application/jsonlines")
             if self.enable_streaming == "huggingface":
                 outputs.add_stream_content(
@@ -194,13 +227,6 @@ class HuggingFaceService(object):
                     stream_generator(self.model, self.tokenizer,
                                         input_data, self.device,
                                         **parameters[0]))
-            return outputs
-        elif self.enable_rolling_batch:
-            result = self.rolling_batch.inference(input_data, parameters)
-            for i in range(len(batch)):
-                res = result[i]
-                outputs.add_as_json(res, batch_index=i)
-
             return outputs
 
         prediction = self.hf_pipeline(input_data, **parameters[0])
@@ -218,12 +244,12 @@ class HuggingFaceService(object):
     def get_pipeline(self, task: str, model_id_or_path: str, kwargs):
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
         if task in {
-                "automatic-speech-recognition",
-                "image-segmentation",
-                "image-classification",
-                "audio-classification",
-                "object-detection",
-                "zero-shot-image-classification",
+            "automatic-speech-recognition",
+            "image-segmentation",
+            "image-classification",
+            "audio-classification",
+            "object-detection",
+            "zero-shot-image-classification",
         }:
             kwargs["feature_extractor"] = model_id_or_path
         else:
@@ -265,7 +291,7 @@ class HuggingFaceService(object):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
         model_config = AutoConfig.from_pretrained(model_id_or_path,
-                                                  kwargs=kwargs)
+                                                  **kwargs)
         self.model_config = model_config
         architectures = model_config.architectures
         if architectures and architectures[0].endswith(
