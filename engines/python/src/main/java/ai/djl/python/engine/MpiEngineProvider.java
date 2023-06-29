@@ -15,17 +15,17 @@ package ai.djl.python.engine;
 import ai.djl.engine.EngineProvider;
 
 /** {@code DsEngineProvider} is the DeepSpeed implementation of {@link EngineProvider}. */
-public class DsEngineProvider extends PyEngineProvider {
+public class MpiEngineProvider extends PyEngineProvider {
 
-    /** Constructs a new {@code DsEngineProvider} instance. */
-    public DsEngineProvider() {
+    /** Constructs a new {@code MpiEngineProvider} instance. */
+    public MpiEngineProvider() {
         mpiMode = true;
     }
 
     /** {@inheritDoc} */
     @Override
     public String getEngineName() {
-        return "DeepSpeed";
+        return "MPI";
     }
 
     /** {@inheritDoc} */
@@ -34,13 +34,23 @@ public class DsEngineProvider extends PyEngineProvider {
         return PyEngine.RANK + 1;
     }
 
-    /** {@code FtEngineProvider} is the alias of {@link DsEngineProvider}. */
-    public static final class FtEngineProvider extends DsEngineProvider {
+    /** {@code FtEngineProvider} is the alias of {@link MpiEngineProvider}. */
+    public static final class FtEngineProvider extends MpiEngineProvider {
 
         /** {@inheritDoc} */
         @Override
         public String getEngineName() {
             return "FasterTransformer";
+        }
+    }
+
+    /** {@code DsEngineProvider} is the alias of {@link MpiEngineProvider}. */
+    public static final class DsEngineProvider extends MpiEngineProvider {
+
+        /** {@inheritDoc} */
+        @Override
+        public String getEngineName() {
+            return "DeepSpeed";
         }
     }
 }
