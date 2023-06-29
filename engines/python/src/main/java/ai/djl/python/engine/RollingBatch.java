@@ -146,7 +146,7 @@ class RollingBatch implements Runnable {
         Input input;
         ChunkedBytesSupplier data;
         Output output;
-        StringBuilder nextToken;
+        StringBuilder nextToken; // NOPMD
         boolean last;
 
         Request(Input input) {
@@ -167,13 +167,13 @@ class RollingBatch implements Runnable {
         void addResponse(String json, boolean enableStreaming) {
             JsonObject element = JsonUtils.GSON.fromJson(json, JsonObject.class);
             last = element.get("last").getAsBoolean();
-            if(enableStreaming) {
+            if (enableStreaming) {
                 nextToken.setLength(0);
                 nextToken.append(element.get("data").getAsString());
                 data.appendContent(BytesSupplier.wrap(nextToken.toString()), last);
             } else {
                 nextToken.append(element.get("data").getAsString());
-                if(last) {
+                if (last) {
                     data.appendContent(BytesSupplier.wrap(nextToken.toString()), true);
                 }
             }

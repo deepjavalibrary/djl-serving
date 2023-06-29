@@ -40,7 +40,6 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     private int timeout;
     private boolean isRollingBatch;
     private RollingBatch rollingBatch;
-    private boolean enableStreaming;
 
     public PyPredictor(
             Model model,
@@ -52,7 +51,8 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         this.process = process;
         this.timeout = timeout;
         isRollingBatch = model.getProperty("rolling_batch") != null;
-        enableStreaming = Boolean.parseBoolean(model.getProperty("enable_streaming", "false"));
+        boolean enableStreaming =
+                Boolean.parseBoolean(model.getProperty("enable_streaming", "false"));
         if (isRollingBatch) {
             int maxRollingBatchSize =
                     Integer.parseInt(model.getProperty("max_rolling_batch_size", "3"));
