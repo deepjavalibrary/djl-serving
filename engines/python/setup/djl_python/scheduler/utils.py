@@ -199,9 +199,9 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
 
 def compute_kv_cache(input_ids: torch.Tensor,
                      lm_block: LMBlock,
-                     save_kv_cache_paths: List[str],
+                     save_kv_cache_paths: List[str] = None,
                      search_configs: Union[List[SearchConfig], None] = None):
-    if input_ids.shape[0] != len(save_kv_cache_paths):
+    if save_kv_cache_paths and input_ids.shape[0] != len(save_kv_cache_paths):
         raise Exception(
             "input_ids.shape does not match save_kv_cache_paths shape or is illegal"
         )
@@ -231,11 +231,17 @@ def compute_kv_cache(input_ids: torch.Tensor,
     past_key_values = lm_output.past_key_values
 
     # Save kv_cache of input_ids
-    for idx, save_kv_cache_path in enumerate(save_kv_cache_paths):
+    last_kv_cache = None
+    for idx in range(initial_offsets.numel()):
         kv_cache_list = []
         for k, v in past_key_values:
             offset = initial_offsets[idx].item()
             k_idx = k[idx, :, offset:, :].unsqueeze(dim=0)
             v_idx = v[idx, :, offset:, :].unsqueeze(dim=0)
             kv_cache_list.append((k_idx, v_idx))
-        torch.save(tuple(kv_cache_list), save_kv_cache_path)
+
+        last_kv_cache = tuple(kv_cache_list)
+        if save_kv_cache_paths:
+            torch.save(last_kv_cache, save_kv_cache_paths[idx])
+
+    return last_kv_cache

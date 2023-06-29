@@ -434,5 +434,46 @@ class TestScheduler(unittest.TestCase):
             [[50256, 29744, 28478, 5834, 318], [37, 1603, 7645, 16354, 318]]))
 
 
+    def test_lru_kv_cache(self):
+        model_id = "gpt2"
+        model = GPT2LMHeadModel.from_pretrained(model_id)
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id, padding_side='left')
+        tokenizer.pad_token = "[PAD]"
+        lm_block = HuggingfaceBlock(model)
+
+        search_config = SearchConfig()
+        search_config.max_new_seqlen = 30
+        scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
+
+        prompt_ids = tokenizer(
+            'Memories follow me left and right. I can', return_tensors='pt', padding=True).input_ids
+        prompt_ids = prompt_ids.view(1, -1)
+        prompt_ids_dict = {1: prompt_ids, 2: prompt_ids}
+
+        # Load a kv_cache from file and test merging a shorter sequence
+        input_ids = tokenizer([r"When your legs don't work",
+                               r"'t remember",
+                               r""], return_tensors='pt', padding=True).input_ids
+        request_ids = torch.tensor([[0], [1], [2]])
+        search_configs = [SearchConfig(), SearchConfig(use_lru_kv_cache=True), SearchConfig(use_lru_kv_cache=True)]
+
+        # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
+        scheduler.add_request(input_ids, request_ids, search_configs=search_configs, kv_cache_prompt_ids=prompt_ids_dict)
+
+        # Test trim_and_collect
+        for idx, _ in enumerate(scheduler.increment_forward(100)):
+            pass
+
+        results = scheduler.collect_results()
+        assert tokenizer.decode(results[0][:30]) == "When your legs don't work, you can try to get them to " \
+                                                    "work.\n\nIf you're not sure how to do this, try this"
+        assert tokenizer.decode(
+            results[1][:30]
+        ) == "!!!!!!!!!!'t remember the last time I saw a girl in a dress. I can't remember the last time"
+        assert tokenizer.decode(
+            results[2][:30]
+        ) == '!!!!!!!!!!The story of the first time I saw a girl in a hospital. I was in the hospital with'
+
+
 if __name__ == '__main__':
     unittest.main()
