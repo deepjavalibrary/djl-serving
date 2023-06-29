@@ -77,7 +77,7 @@ class TestScheduler(unittest.TestCase):
         for idx, _ in enumerate(scheduler.increment_forward(20)):
             pass
 
-        results = scheduler.collect_results()
+        results = scheduler.results
 
         assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before " \
                                                     "And I can't sweep you off my feet, I can't do anything about it.\n"
@@ -101,7 +101,7 @@ class TestScheduler(unittest.TestCase):
             pass
 
         results = scheduler.collect_results()
-        assert len(results) == 5
+        assert len(results) == 6
         assert tokenizer.decode(results[3][:30]) == "!!!!!!!!!!When your legs don't work, you're going " \
                                                     "to be a little bit more tired. I'm"
         assert tokenizer.decode(
@@ -205,7 +205,7 @@ class TestScheduler(unittest.TestCase):
         for _ in scheduler.increment_forward(20):
             pass
 
-        results = scheduler.collect_results()
+        results = scheduler.results
 
         assert tokenizer.decode(
             results[1][:30]
@@ -432,7 +432,6 @@ class TestScheduler(unittest.TestCase):
                                      trim_seq_len=5)
         assert torch.all(trimmed_tensor == torch.tensor(
             [[50256, 29744, 28478, 5834, 318], [37, 1603, 7645, 16354, 318]]))
-
 
     def test_lru_kv_cache(self):
         model_id = "gpt2"

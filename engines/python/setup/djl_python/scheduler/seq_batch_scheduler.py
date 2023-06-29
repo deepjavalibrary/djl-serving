@@ -106,7 +106,7 @@ class SeqBatchScheduler:
                     index_not_use_prompt.append(idx)
                     search_configs_not_use_prompt.append(search_config)
         else:
-            index_not_use_prompt = [range(input_ids.shape[0])]
+            index_not_use_prompt = list(range(input_ids.shape[0]))
             search_configs_not_use_prompt = None
 
         index_not_use_prompt = torch.tensor(index_not_use_prompt)
