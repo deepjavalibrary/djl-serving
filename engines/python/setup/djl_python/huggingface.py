@@ -148,74 +148,70 @@ class HuggingFaceService(object):
         self.initialized = True
 
     def inference(self, inputs):
-        try:
-            content_type = inputs.get_property("Content-Type")
-            accept = inputs.get_property("Accept")
-            if not accept:
-                accept = content_type if content_type.startswith(
-                    "tensor/") else "application/json"
-            elif "*/*" in accept:
-                accept = "application/json"
+        content_type = inputs.get_property("Content-Type")
+        accept = inputs.get_property("Accept")
+        if not accept:
+            accept = content_type if content_type.startswith(
+                "tensor/") else "application/json"
+        elif "*/*" in accept:
+            accept = "application/json"
 
-            input_data = []
-            input_size = []
-            parameters = []
-            batch = inputs.get_batches()
-            first = True
-            for item in batch:
-                input_map = decode(item, content_type)
-                input_size.append(len(input_map.get("inputs")))
-                _inputs = input_map.pop("inputs", input_map)
-                if isinstance(_inputs, list):
-                    input_data.extend(_inputs)
-                else:
-                    input_data.append(_inputs)
-                if first or self.enable_rolling_batch:
-                    parameters.append(input_map.pop("parameters", {}))
-                    first = False
-                else:
-                    if parameters != input_map.pop("parameters", {}):
-                        return Output().error(
-                            "In order to enable dynamic batching, all input batches must have the same parameters"
-                        )
+        input_data = []
+        input_size = []
+        parameters = []
+        batch = inputs.get_batches()
+        first = True
+        for item in batch:
+            input_map = decode(item, content_type)
+            input_size.append(len(input_map.get("inputs")))
+            _inputs = input_map.pop("inputs", input_map)
+            if isinstance(_inputs, list):
+                input_data.extend(_inputs)
+            else:
+                input_data.append(_inputs)
+            if first or self.enable_rolling_batch:
+                parameters.append(input_map.pop("parameters", {}))
+                first = False
+            else:
+                if parameters != input_map.pop("parameters", {}):
+                    return Output().error(
+                        "In order to enable dynamic batching, all input batches must have the same parameters"
+                    )
 
-            outputs = Output()
+        outputs = Output()
 
-            if self.enable_streaming:
-                outputs.add_property("content-type", "application/jsonlines")
-                if self.enable_streaming == "huggingface":
-                    outputs.add_stream_content(
-                        StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, input_data,
-                            self.device, **parameters[0]))
-                else:
-                    stream_generator = StreamingUtils.get_stream_generator(
-                        "Accelerate")
-                    outputs.add_stream_content(
-                        stream_generator(self.model, self.tokenizer,
-                                         input_data, self.device,
-                                         **parameters[0]))
-                return outputs
-            elif self.enable_rolling_batch:
-                result = self.rolling_batch.inference(input_data, parameters)
-                for i in range(len(batch)):
-                    res = result[i]
-                    outputs.add_as_json(res, batch_index=i)
+        if self.enable_streaming:
+            outputs.add_property("content-type", "application/jsonlines")
+            if self.enable_streaming == "huggingface":
+                outputs.add_stream_content(
+                    StreamingUtils.use_hf_default_streamer(
+                        self.model, self.tokenizer, input_data,
+                        self.device, **parameters[0]))
+            else:
+                stream_generator = StreamingUtils.get_stream_generator(
+                    "Accelerate")
+                outputs.add_stream_content(
+                    stream_generator(self.model, self.tokenizer,
+                                        input_data, self.device,
+                                        **parameters[0]))
+            return outputs
+        elif self.enable_rolling_batch:
+            result = self.rolling_batch.inference(input_data, parameters)
+            for i in range(len(batch)):
+                res = result[i]
+                outputs.add_as_json(res, batch_index=i)
 
-                return outputs
+            return outputs
 
-            prediction = self.hf_pipeline(input_data, **parameters[0])
+        prediction = self.hf_pipeline(input_data, **parameters[0])
 
-            offset = 0
-            for i in range(inputs.get_batch_size()):
-                encode(outputs,
-                       prediction[offset:offset + input_size[i]],
-                       accept,
-                       key=inputs.get_content().key_at(i))
-                offset += input_size[i]
-        except Exception as e:
-            logging.exception("Huggingface inference failed")
-            raise e
+        offset = 0
+        for i in range(inputs.get_batch_size()):
+            encode(outputs,
+                    prediction[offset:offset + input_size[i]],
+                    accept,
+                    key=inputs.get_content().key_at(i))
+            offset += input_size[i]
 
         return outputs
 

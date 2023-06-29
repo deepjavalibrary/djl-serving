@@ -172,51 +172,46 @@ class TransformersNeuronXService(object):
         self.initialized = True
 
     def infer(self, inputs):
-        try:
-            input_map = inputs.get_as_json()
-            input_text = input_map.pop("inputs", input_map)
-            parameters = input_map.pop("parameters", {})
-            if isinstance(input_text, str):
-                input_text = [input_text]
-            if len(input_text) != self.batch_size:
-                raise ValueError(
-                    f"{self.batch_size} batch size not equal to {len(input_text)} prompt size"
-                )
-            outputs = Output()
-            model_kwargs = {}
+        input_map = inputs.get_as_json()
+        input_text = input_map.pop("inputs", input_map)
+        parameters = input_map.pop("parameters", {})
+        if isinstance(input_text, str):
+            input_text = [input_text]
+        if len(input_text) != self.batch_size:
+            raise ValueError(
+                f"{self.batch_size} batch size not equal to {len(input_text)} prompt size"
+            )
+        outputs = Output()
+        model_kwargs = {}
 
-            if self.enable_streaming:
-                outputs.add_property("content-type", "application/jsonlines")
-                if self.enable_streaming == "huggingface":
-                    outputs.add_stream_content(
-                        StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, input_text, None,
-                            **model_kwargs))
-                else:
-                    stream_generator = StreamingUtils.get_stream_generator(
-                        "transformers-neuronx")
-                    model_kwargs["engine"] = "transformers-neuronx"
-                    outputs.add_stream_content(
-                        stream_generator(self.model, self.tokenizer,
-                                         input_text, "cpu", **model_kwargs))
-                return outputs
+        if self.enable_streaming:
+            outputs.add_property("content-type", "application/jsonlines")
+            if self.enable_streaming == "huggingface":
+                outputs.add_stream_content(
+                    StreamingUtils.use_hf_default_streamer(
+                        self.model, self.tokenizer, input_text, None,
+                        **model_kwargs))
+            else:
+                stream_generator = StreamingUtils.get_stream_generator(
+                    "transformers-neuronx")
+                model_kwargs["engine"] = "transformers-neuronx"
+                outputs.add_stream_content(
+                    stream_generator(self.model, self.tokenizer,
+                                        input_text, "cpu", **model_kwargs))
+            return outputs
 
-            encoded_inputs = self.tokenizer.batch_encode_plus(
-                input_text, return_tensors="pt", padding=True)
-            output_tokens = self.model.generate(
-                input_ids=encoded_inputs.input_ids,
-                attention_mask=encoded_inputs.attention_mask,
-                **parameters)
-            generated_text = self.tokenizer.batch_decode(
-                output_tokens, skip_special_tokens=True)
+        encoded_inputs = self.tokenizer.batch_encode_plus(
+            input_text, return_tensors="pt", padding=True)
+        output_tokens = self.model.generate(
+            input_ids=encoded_inputs.input_ids,
+            attention_mask=encoded_inputs.attention_mask,
+            **parameters)
+        generated_text = self.tokenizer.batch_decode(
+            output_tokens, skip_special_tokens=True)
 
-            return Output().add([{
-                "generated_text": s
-            } for s in generated_text])
-
-        except Exception as e:
-            logging.exception("TransformerNeuronX inference failed")
-            raise e
+        return Output().add([{
+            "generated_text": s
+        } for s in generated_text])
 
 
 _service = TransformersNeuronXService()

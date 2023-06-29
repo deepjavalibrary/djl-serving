@@ -279,96 +279,93 @@ class DeepSpeedService(object):
         return batch_inputs
 
     def inference(self, inputs: Input):
-        try:
-            content_type = inputs.get_property("Content-Type")
-            input_data = []
-            input_size = []
-            model_kwargs = {}
-            batch = inputs.get_batches()
-            if content_type is not None and content_type.startswith(
-                    "application/json"):
-                first = True
-                for item in batch:
-                    json_input = item.get_as_json()
-                    if isinstance(json_input, dict):
-                        input_size.append(len(json_input.get("inputs")))
-                        input_data.extend(
-                            self.format_input_for_task(
-                                json_input.pop("inputs")))
-                        if first:
-                            model_kwargs = json_input.pop("parameters", {})
-                            first = False
-                        else:
-                            if model_kwargs != json_input.pop(
-                                    "parameters", {}):
-                                return Output().error(
-                                    "In order to enable dynamic batching, all input batches must have the same parameters"
-                                )
+        content_type = inputs.get_property("Content-Type")
+        input_data = []
+        input_size = []
+        model_kwargs = {}
+        batch = inputs.get_batches()
+        if content_type is not None and content_type.startswith(
+                "application/json"):
+            first = True
+            for item in batch:
+                json_input = item.get_as_json()
+                if isinstance(json_input, dict):
+                    input_size.append(len(json_input.get("inputs")))
+                    input_data.extend(
+                        self.format_input_for_task(
+                            json_input.pop("inputs")))
+                    if first:
+                        model_kwargs = json_input.pop("parameters", {})
+                        first = False
                     else:
-                        input_size.append(len(json_input))
-                        input_data.extend(json_input)
-            else:
-                for item in batch:
-                    input_size.append(1)
-                    input_data.extend(item.get_as_string())
-
-            outputs = Output()
-            if self.enable_streaming:
-                outputs.add_property("content-type", "application/jsonlines")
-                if self.enable_streaming == "huggingface":
-                    outputs.add_stream_content(
-                        StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, input_data,
-                            self.device, **model_kwargs))
+                        if model_kwargs != json_input.pop(
+                                "parameters", {}):
+                            return Output().error(
+                                "In order to enable dynamic batching, all input batches must have the same parameters"
+                            )
                 else:
-                    stream_generator = StreamingUtils.get_stream_generator(
-                        "DeepSpeed")
-                    outputs.add_stream_content(
-                        stream_generator(self.model, self.tokenizer,
-                                         input_data, self.device,
-                                         **model_kwargs))
-                return outputs
-            if self.task == "text-generation":
-                tokenized_inputs = self.tokenizer(input_data,
-                                                  padding=True,
-                                                  return_tensors="pt").to(
-                                                      self.device)
-                with torch.no_grad():
-                    output_tokens = self.model.generate(
-                        input_ids=tokenized_inputs.input_ids,
-                        attention_mask=tokenized_inputs.attention_mask,
-                        **model_kwargs)
-                generated_text = self.tokenizer.batch_decode(
-                    output_tokens, skip_special_tokens=True)
-                outputs.add_property("content-type", "application/json")
-                offset = 0
-                for i in range(inputs.get_batch_size()):
-                    result = [{
-                        "generated_text": s
-                    } for s in generated_text[offset:offset + input_size[i]]]
-                    outputs.add(result, key=inputs.get_content().key_at(i))
-                    offset += input_size[i]
-                return outputs
+                    input_size.append(len(json_input))
+                    input_data.extend(json_input)
+        else:
+            for item in batch:
+                input_size.append(1)
+                input_data.extend(item.get_as_string())
 
-            result = self.pipeline(input_data, **model_kwargs)
+        outputs = Output()
+        if self.enable_streaming:
+            outputs.add_property("content-type", "application/jsonlines")
+            if self.enable_streaming == "huggingface":
+                outputs.add_stream_content(
+                    StreamingUtils.use_hf_default_streamer(
+                        self.model, self.tokenizer, input_data,
+                        self.device, **model_kwargs))
+            else:
+                stream_generator = StreamingUtils.get_stream_generator(
+                    "DeepSpeed")
+                outputs.add_stream_content(
+                    stream_generator(self.model, self.tokenizer,
+                                        input_data, self.device,
+                                        **model_kwargs))
+            return outputs
+        if self.task == "text-generation":
+            tokenized_inputs = self.tokenizer(input_data,
+                                                padding=True,
+                                                return_tensors="pt").to(
+                                                    self.device)
+            with torch.no_grad():
+                output_tokens = self.model.generate(
+                    input_ids=tokenized_inputs.input_ids,
+                    attention_mask=tokenized_inputs.attention_mask,
+                    **model_kwargs)
+            generated_text = self.tokenizer.batch_decode(
+                output_tokens, skip_special_tokens=True)
+            outputs.add_property("content-type", "application/json")
             offset = 0
             for i in range(inputs.get_batch_size()):
-                res = result[offset:offset + input_size[i]]
-                if self.task == "conversational":
-                    res = [{
-                        "generated_text": s.generated_responses[-1],
-                        "conversation": {
-                            "past_user_inputs": s.past_user_inputs,
-                            "generated_responses": s.generated_responses,
-                        },
-                    } for s in res]
-                outputs.add(res, key=inputs.get_content().key_at(i))
+                result = [{
+                    "generated_text": s
+                } for s in generated_text[offset:offset + input_size[i]]]
+                outputs.add(result, key=inputs.get_content().key_at(i))
                 offset += input_size[i]
+            return outputs
 
-            outputs.add_property("content-type", "application/json")
-        except Exception as e:
-            logging.exception("DeepSpeed inference failed")
-            raise e
+        result = self.pipeline(input_data, **model_kwargs)
+        offset = 0
+        for i in range(inputs.get_batch_size()):
+            res = result[offset:offset + input_size[i]]
+            if self.task == "conversational":
+                res = [{
+                    "generated_text": s.generated_responses[-1],
+                    "conversation": {
+                        "past_user_inputs": s.past_user_inputs,
+                        "generated_responses": s.generated_responses,
+                    },
+                } for s in res]
+            outputs.add(res, key=inputs.get_content().key_at(i))
+            offset += input_size[i]
+
+        outputs.add_property("content-type", "application/json")
+        
         return outputs
 
 
