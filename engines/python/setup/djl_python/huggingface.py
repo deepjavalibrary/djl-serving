@@ -215,8 +215,7 @@ class HuggingFaceService(object):
                 offset += input_size[i]
         except Exception as e:
             logging.exception("Huggingface inference failed")
-            # error handling
-            outputs = Output().error(str(e))
+            raise e
 
         return outputs
 

@@ -216,8 +216,7 @@ class TransformersNeuronXService(object):
 
         except Exception as e:
             logging.exception("TransformerNeuronX inference failed")
-            outputs = Output().error((str(e)))
-        return outputs
+            raise e
 
 
 _service = TransformersNeuronXService()

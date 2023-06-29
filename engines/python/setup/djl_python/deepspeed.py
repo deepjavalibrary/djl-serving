@@ -368,7 +368,7 @@ class DeepSpeedService(object):
             outputs.add_property("content-type", "application/json")
         except Exception as e:
             logging.exception("DeepSpeed inference failed")
-            outputs = Output().error((str(e)))
+            raise e
         return outputs
 
 

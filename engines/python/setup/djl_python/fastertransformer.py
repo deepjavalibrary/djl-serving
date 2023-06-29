@@ -172,7 +172,7 @@ class FasterTransformerService(object):
                 outputs.add(generated_text, key=inputs.get_content().key_at(i))
         except Exception as e:
             logging.exception("FasterTransformer inference failed")
-            outputs = Output().error((str(e)))
+            raise e
 
         return outputs
 
