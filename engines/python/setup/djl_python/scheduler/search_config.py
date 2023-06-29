@@ -20,7 +20,7 @@ class SearchConfig:
         self._max_seqlen = 0
         self.eos_token_id = kwargs.get('eos_token_id', 50256)
         self.pad_token_id = kwargs.get('pad_token_id', 50256)
-        self.topk = kwargs.get('top_k', 0)
+        self.topk = kwargs.get('top_k', 4)
         self.alpha = kwargs.get('penalty_alpha', 0.6)
         self.beam = kwargs.get('num_beams', 3)
         self.sampling = kwargs.get('do_sample', False)
