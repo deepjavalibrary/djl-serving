@@ -124,7 +124,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input);
+            Request req = new Request(input, enableStreaming);
             list.add(req);
             canRead.signal();
             return req.output;
@@ -149,12 +149,16 @@ class RollingBatch implements Runnable {
         StringBuilder nextToken; // NOPMD
         boolean last;
 
-        Request(Input input) {
+        Request(Input input, boolean enableStreaming) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
             output.add(data);
-            nextToken = new StringBuilder();
+            if (enableStreaming) {
+                nextToken = new StringBuilder();
+            } else {
+                nextToken = new StringBuilder(1024);
+            }
         }
 
         BytesSupplier getRequest() {
