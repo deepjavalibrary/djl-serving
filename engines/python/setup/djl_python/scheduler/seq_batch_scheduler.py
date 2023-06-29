@@ -105,14 +105,16 @@ class SeqBatchScheduler:
                 else:
                     index_not_use_prompt.append(idx)
                     search_configs_not_use_prompt.append(search_config)
+        else:
+            index_not_use_prompt = [range(input_ids.shape[0])]
+            search_configs_not_use_prompt = None
 
-        if index_not_use_prompt:
-            index_not_use_prompt = torch.tensor(index_not_use_prompt)
-            self._add_request(input_ids[index_not_use_prompt],
-                              request_uids[index_not_use_prompt],
-                              search_algorithm,
-                              search_configs_not_use_prompt,
-                              kv_cache)
+        index_not_use_prompt = torch.tensor(index_not_use_prompt)
+        self._add_request(input_ids[index_not_use_prompt],
+                          request_uids[index_not_use_prompt],
+                          search_algorithm,
+                          search_configs_not_use_prompt,
+                          kv_cache)
 
     def _add_request(self,
                      input_ids: torch.Tensor,
