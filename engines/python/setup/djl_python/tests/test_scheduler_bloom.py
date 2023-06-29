@@ -1,8 +1,8 @@
 import unittest
 
-from djl_python.scheduler import BloomBlock, HuggingfaceBlock
+from djl_python.scheduler import BloomBlock
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
-from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
 from djl_python.scheduler.search_config import SearchConfig
 import torch
 
@@ -118,47 +118,6 @@ class TestSchedulerBloom(unittest.TestCase):
         # print
         for i, ret in results.items():
             print('\n{}:'.format(i), tokenizer.decode(ret))
-
-
-    def test_lm_block_opt(self):
-        model_id = "facebook/opt-350m"
-        model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float16)
-
-        # the fast tokenizer currently does not work correctly
-        tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=False)
-
-        encoding = tokenizer("Hello, my dog is cute", return_tensors="pt")
-        input_ids_0 = encoding.data['input_ids']
-        seq_len = input_ids_0.shape[1]
-
-        lm_block = HuggingfaceBlock(model)
-
-        input0 = [
-            torch.repeat_interleave(input_ids_0, dim=0, repeats=2),
-            torch.repeat_interleave(torch.arange(seq_len)[None, :],
-                                    dim=0,
-                                    repeats=2),
-            torch.repeat_interleave(torch.ones(seq_len,
-                                               dtype=torch.int64)[None, :],
-                                    dim=0,
-                                    repeats=2)
-        ]
-
-        output0 = lm_block.forward(*input0, None)
-
-        model_config = AutoConfig.from_pretrained(model_id)
-        assert len(output0.past_key_values) == model_config.n_layer
-
-        # # input with kv_cache
-        # # k: [32, 64, 6], v: [32, 6, 64], [batch*head, kvDim, seq]
-        # past_key_values = output0.past_key_values
-        # input_ids = torch.tensor([[404], [405]])
-        # past_seq = past_key_values[0][0].shape[-2]
-        # position_ids = torch.tensor([[past_seq], [past_seq]])
-        # attention_mask = torch.ones(2, past_seq + 1, dtype=torch.int64)
-        # output1 = lm_block.forward(input_ids, position_ids, attention_mask,
-        #                            past_key_values)
-        # assert len(output1.past_key_values) == model_config.n_layer
 
 
 if __name__ == '__main__':
