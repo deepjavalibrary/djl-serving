@@ -48,11 +48,13 @@ class RollingBatch implements Runnable {
     private ReentrantLock lock;
     private Condition canAdd;
     private Condition canRead;
+    private boolean enableStreaming;
 
-    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout) {
+    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, boolean enableStreaming) {
         this.process = process;
         this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
+        this.enableStreaming = enableStreaming;
         list = new ArrayList<>(3);
         lock = new ReentrantLock(true);
         canAdd = lock.newCondition();
@@ -97,7 +99,7 @@ class RollingBatch implements Runnable {
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
                     String json = content.get(i).getValue().getAsString();
-                    status.addResponse(json);
+                    status.addResponse(json, enableStreaming);
                 }
                 list.removeIf(status -> status.last);
                 if (list.size() < maxRollingBatchSize) {
@@ -144,7 +146,7 @@ class RollingBatch implements Runnable {
         Input input;
         ChunkedBytesSupplier data;
         Output output;
-        String nextToken;
+        StringBuilder nextToken;
         boolean last;
 
         Request(Input input) {
@@ -152,20 +154,29 @@ class RollingBatch implements Runnable {
             data = new ChunkedBytesSupplier();
             output = new Output();
             output.add(data);
+            nextToken = new StringBuilder();
         }
 
         BytesSupplier getRequest() {
-            if (nextToken != null) {
+            if (nextToken.length() != 0) {
                 return BytesSupplier.wrap("{\"inputs\": [\"\"]}");
             }
             return input.getData();
         }
 
-        void addResponse(String json) {
+        void addResponse(String json, boolean enableStreaming) {
             JsonObject element = JsonUtils.GSON.fromJson(json, JsonObject.class);
             last = element.get("last").getAsBoolean();
-            nextToken = element.get("data").getAsString();
-            data.appendContent(BytesSupplier.wrap(nextToken), last);
+            if(enableStreaming) {
+                nextToken.setLength(0);
+                nextToken.append(element.get("data").getAsString());
+                data.appendContent(BytesSupplier.wrap(nextToken.toString()), last);
+            } else {
+                nextToken.append(element.get("data").getAsString());
+                if(last) {
+                    data.appendContent(BytesSupplier.wrap(nextToken.toString()), true);
+                }
+            }
         }
     }
 }
