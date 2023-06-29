@@ -146,11 +146,7 @@ class HuggingFaceService(object):
                 properties.get("dtype"))
         self.rolling_batch_type = properties.get("rolling_batch", None)
 
-        if self.enable_streaming:
-            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
-            self.initialized = True
-            return
-        elif self.rolling_batch_type:
+        if self.rolling_batch_type:
             self.rolling_batch_type = self.rolling_batch_type.lower()
             is_mpi = properties.get("engine") != "Python"
             if is_mpi:
@@ -161,6 +157,10 @@ class HuggingFaceService(object):
                                                     self.device, properties,
                                                     **kwargs)
 
+            self.initialized = True
+            return
+        elif self.enable_streaming:
+            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             self.initialized = True
             return
 
@@ -207,7 +207,14 @@ class HuggingFaceService(object):
 
             outputs = Output()
 
-            if self.enable_streaming:
+            if self.rolling_batch_type:
+                result = self.rolling_batch.inference(input_data, parameters)
+                for i in range(len(batch)):
+                    res = result[i]
+                    outputs.add_as_json(res, batch_index=i)
+
+                return outputs
+            elif self.enable_streaming:
                 outputs.add_property("content-type", "application/jsonlines")
                 if self.enable_streaming == "huggingface":
                     outputs.add_stream_content(
@@ -221,13 +228,6 @@ class HuggingFaceService(object):
                         stream_generator(self.model, self.tokenizer,
                                          input_data, self.device,
                                          **parameters[0]))
-                return outputs
-            elif self.rolling_batch_type:
-                result = self.rolling_batch.inference(input_data, parameters)
-                for i in range(len(batch)):
-                    res = result[i]
-                    outputs.add_as_json(res, batch_index=i)
-
                 return outputs
 
             prediction = self.hf_pipeline(input_data, **parameters[0])
