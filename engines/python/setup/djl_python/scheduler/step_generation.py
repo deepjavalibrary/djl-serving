@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import bisect
 from collections import defaultdict
 
 import torch
@@ -62,8 +63,7 @@ def contrastive_step_generate(top_k_ids: torch.Tensor,
 
 def sampling_step_generate(logits: torch.tensor,
                            search_configs: List[SearchConfig],
-                           sampler_bucket_sort_cache=None,
-                           seed=None):
+                           sampler_bucket_sort_cache=None):
     """
     Greedy, topK, topP
 
@@ -82,9 +82,9 @@ def sampling_step_generate(logits: torch.tensor,
 
     output_ids_greedy = greedy_step_generate(logits[collector['greedy'], :])
     output_ids_topk = topk_step_generate(logits[collector['topk'], :],
-                                         k_config_list, tmprtr_list_for_k, seed)
+                                         k_config_list, tmprtr_list_for_k)
     output_ids_topp = topp_step_generate(logits[collector['topp'], :],
-                                         p_config_list, tmprtr_list_for_p, seed)
+                                         p_config_list, tmprtr_list_for_p)
     output_ids = torch.empty(len(search_configs),
                              dtype=torch.int64,
                              device=logits.device)
@@ -134,7 +134,7 @@ def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     return torch.topk(logits, k=k, dim=-1, largest=True, sorted=False).indices
 
 
-def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List[float], seed: float):
+def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List[float]):
     """
     If logits is tensor([]), the output should be tensor([]) too.
     """
@@ -144,7 +144,6 @@ def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List
     batch_size, vocab_size = logits.size()
 
     # random number
-    numpy.random.seed(seed)
     random_array = numpy.random.rand(batch_size)
 
     # result
@@ -166,7 +165,7 @@ def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List
     return torch.from_numpy(indices).view(-1, 1)
 
 
-def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: List[float], seed: float):
+def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: List[float]):
     """
     Returns the token ids of the top p selection. If logits is tensor([]), the output should be tensor([]) too.
 
@@ -189,7 +188,6 @@ def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: Li
     probabilities = softmax(logits, dim=-1)
 
     # random number
-    numpy.random.seed(seed)
     random_array = numpy.random.rand(batch_size)
 
     # result
@@ -197,28 +195,29 @@ def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: Li
 
     for i in range(batch_size):
         cum_prob = 0
-        probs = [(probabilities[i, j], j) for j in range(vocab_size)]  # O(vocab_size)
-        heapq.heapify(probs)
+        probs = [(-probabilities[i, j].item(), j) for j in range(vocab_size)]  # O(vocab_size)
+        heapq.heapify(probs)  # O(vocab_size)
 
         # Find the candidates: O(k * log(vocab_size))
         candidate_cum_probs = []
         candidate_ids = []
         while probs:
-            prob, index = heapq.heappop(probs)
-            cum_prob += prob
+            neg_prob, index = heapq.heappop(probs)
+            cum_prob -= neg_prob
             if cum_prob < p_config_list[i]:
                 candidate_cum_probs.append(cum_prob)
                 candidate_ids.append(index)
             else:
+                candidate_cum_probs.append(cum_prob)
+                candidate_ids.append(index)
                 break
 
         # Renormalize and randomly select according to random_array
         rand_number = random_array[i].item()
         normalization_factor = candidate_cum_probs[-1]
-        for idx, cum_prob in enumerate(candidate_cum_probs):  # O(k)
-            if cum_prob / normalization_factor > rand_number:
-                indices[i] = candidate_ids[idx]
-                break
+        # Find the smallest idx whose cum_prob > rand_number[0, 1]. Both idx=0 and -1 are accessible.
+        idx = bisect.bisect_right([prob / normalization_factor for prob in candidate_cum_probs], rand_number)
+        indices[i] = candidate_ids[idx]
 
     return torch.from_numpy(indices).view(-1, 1)
 

@@ -1,6 +1,8 @@
 import unittest
 from collections import defaultdict
 
+import numpy
+
 from djl_python.scheduler import HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
     trim_tensor, compute_kv_cache
@@ -118,6 +120,8 @@ class TestScheduler(unittest.TestCase):
         ) == '!!!!!!!!!!DeepMind Company is a company that is dedicated to the advancement of artificial intelligence. We are a company'
 
     def test_sampling_scheduler(self):
+        numpy.random.seed(20220611)
+
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
         tokenizer = GPT2Tokenizer.from_pretrained(model_id)
@@ -125,7 +129,7 @@ class TestScheduler(unittest.TestCase):
 
         scheduler = SeqBatchScheduler(lm_block, "greedy", SearchConfig())
 
-        search_config = SearchConfig(max_new_tokens=30, do_sample=True, topk=4)
+        search_config = SearchConfig(max_new_tokens=30, do_sample=True, top_k=4)
         PAD = search_config.pad_token_id
         input_ids_0 = tokenizer.encode(
             'Memories follow me left and right. I can', return_tensors='pt')
@@ -158,12 +162,10 @@ class TestScheduler(unittest.TestCase):
 
         results = scheduler.collect_results()
 
-        assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before " \
-                                                    "And I can't sweep you off my feet, I can't do anything about it.\n"
+        assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before And I can't sweep you off my chest, so all I need to do is repel"
         assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not " \
                                                     "know what to do with my life. I was in a very bad mood. I was"
-        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't " \
-                                                    "remember the last time I saw a girl in a dress. I can't remember the last time"
+        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't tell you the names of all the people who have died in my lifetime.\n\nI have"
 
 
     def test_contrastive_scheduler(self):

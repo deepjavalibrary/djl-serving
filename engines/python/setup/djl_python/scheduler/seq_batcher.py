@@ -54,9 +54,6 @@ class SeqBatcher(ABC):
                                                     List[SearchConfig]],
                                               None] = None
 
-        # when Sampling is true
-        self.seed = seed
-
     @classmethod
     @abstractmethod
     def init_forward(

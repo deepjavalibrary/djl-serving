@@ -135,8 +135,7 @@ class GreedySeqBatcher(SeqBatcher):
         next_input_ids = sampling_step_generate(
             last_logits,
             search_configs=self.search_config_list_cache,
-            sampler_bucket_sort_cache=self.sampler_bucket_sort_cache,
-                                                seed=self.seed)
+            sampler_bucket_sort_cache=self.sampler_bucket_sort_cache)
         self.batch = self._get_batch_cls()(past_key_values=past_key_values,
                                            next_input_ids=next_input_ids)
         self.seq_len += 1
