@@ -10,13 +10,14 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import bisect
 from collections import defaultdict
 
 import torch
 from torch.nn.functional import normalize, softmax
 from typing import Tuple, List, Dict
 from djl_python.scheduler.search_config import SearchConfig
-
+import numpy, heapq
 
 def contrastive_step_generate(top_k_ids: torch.Tensor,
                               top_k_probs: torch.Tensor,
@@ -82,7 +83,7 @@ def sampling_step_generate(logits: torch.tensor,
     output_ids_greedy = greedy_step_generate(logits[collector['greedy'], :])
     output_ids_topk = topk_step_generate(logits[collector['topk'], :],
                                          k_config_list, tmprtr_list_for_k)
-    output_ids_topp = topp_step_generate(logits[collector['topk'], :],
+    output_ids_topp = topp_step_generate(logits[collector['topp'], :],
                                          p_config_list, tmprtr_list_for_p)
     output_ids = torch.empty(len(search_configs),
                              dtype=torch.int64,
@@ -124,7 +125,7 @@ def sampler_bucket_sort(search_configs: List[SearchConfig]):
 def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     """
     Args:
-        logtis: [batch, vocab_size].
+        logits: [batch, vocab_size].
             This logits can also be probability inputs, since probs = softmax(logits, dim=1) .
 
     Return:
@@ -133,18 +134,94 @@ def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     return torch.topk(logits, k=k, dim=-1, largest=True, sorted=False).indices
 
 
-def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k):
+def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List[float]):
     """
-    If logits is tensor([]), the output should be tensor([]) too.
+    Returns the token ids of the top k selection. If logits is tensor([]), the output should be tensor([]) too.
     """
-    return torch.tensor([], dtype=torch.int64, device=logits.device)
+    if logits.numel() == 0:
+        return torch.tensor([], dtype=torch.int64, device=logits.device)
+
+    batch_size, vocab_size = logits.size()
+
+    # random number
+    random_array = numpy.random.rand(batch_size)
+
+    # result
+    indices = numpy.empty(batch_size, dtype=numpy.int64)
+
+    # Find the candidate: O(k * log(vocab_size))
+    for i in range(batch_size):
+        k = k_config_list[i]
+        topk_values, topk_indices = torch.topk(logits[i], k=k, dim=-1, largest=True, sorted=True)
+        # At this step the truncated prob is normalized
+        probs = softmax(topk_values / tmprtr_list_for_k[i], dim=-1)
+
+        # Find the smallest idx whose cum_prob > rand_number[0, 1]. Both idx=0 and -1 are accessible.
+        cum_prob = 0
+        for idx, p in enumerate(probs):
+            cum_prob += p
+            if cum_prob > random_array[i].item():
+                indices[i] = topk_indices[idx]
+                break
+
+    return torch.from_numpy(indices).view(-1, 1)
 
 
-def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p):
+def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: List[float]):
     """
-    If logits is tensor([]), the output should be tensor([]) too.
+    Returns the token ids of the top p selection. If logits is tensor([]), the output should be tensor([]) too.
+
+    Args:
+        logits: [batch, vocab_size].
+
+    Return:
+        indices: [batch, 1]
     """
-    return torch.tensor([], dtype=torch.int64, device=logits.device)
+    if logits.numel() == 0:
+        return torch.tensor([], dtype=torch.int64, device=logits.device)
+
+    batch_size, vocab_size = logits.size()
+
+    # Apply temperature to logits
+    temperature = torch.tensor(tmprtr_list_for_p, device=logits.device).view(-1, 1)
+    logits = logits / temperature
+
+    # Apply softmax to obtain probabilities
+    probabilities = softmax(logits, dim=-1)
+
+    # random number
+    random_array = numpy.random.rand(batch_size)
+
+    # result
+    indices = numpy.empty(batch_size, dtype=numpy.int64)
+
+    for i in range(batch_size):
+        cum_prob = 0
+        probs = [(-probabilities[i, j].item(), j) for j in range(vocab_size)]  # O(vocab_size)
+        heapq.heapify(probs)  # O(vocab_size)
+
+        # Find the candidates: O(k * log(vocab_size))
+        candidate_cum_probs = []
+        candidate_ids = []
+        while probs:
+            neg_prob, index = heapq.heappop(probs)
+            cum_prob -= neg_prob
+            if cum_prob < p_config_list[i]:
+                candidate_cum_probs.append(cum_prob)
+                candidate_ids.append(index)
+            else:
+                candidate_cum_probs.append(cum_prob)
+                candidate_ids.append(index)
+                break
+
+        # Renormalize and randomly select according to random_array
+        rand_number = random_array[i].item()
+        normalization_factor = candidate_cum_probs[-1]
+        # Find the smallest idx whose cum_prob > rand_number[0, 1]. Both idx=0 and -1 are accessible.
+        idx = bisect.bisect_right([prob / normalization_factor for prob in candidate_cum_probs], rand_number)
+        indices[i] = candidate_ids[idx]
+
+    return torch.from_numpy(indices).view(-1, 1)
 
 
 def beam_step_generate(last_probs: torch.Tensor, logits: torch.Tensor,

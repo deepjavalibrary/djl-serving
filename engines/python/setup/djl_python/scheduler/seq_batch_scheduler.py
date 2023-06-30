@@ -22,6 +22,7 @@ from djl_python.scheduler.seq_batcher_impl import GreedySeqBatcher, ContrastiveS
 
 SEARCH_ALGORITHM_TO_CLASS = {
     "greedy": GreedySeqBatcher,
+    "sampling": GreedySeqBatcher,
     "contrastive": ContrastiveSeqBatcher
 }
 
