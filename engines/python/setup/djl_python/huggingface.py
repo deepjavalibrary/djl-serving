@@ -189,12 +189,13 @@ class HuggingFaceService(object):
         first = True
         for item in batch:
             input_map = decode(item, content_type)
-            input_size.append(len(input_map.get("inputs")))
             _inputs = input_map.pop("inputs", input_map)
             if isinstance(_inputs, list):
                 input_data.extend(_inputs)
+                input_size.append(len(_inputs))
             else:
                 input_data.append(_inputs)
+                input_size.append(1)
             if first or self.rolling_batch_type:
                 parameters.append(input_map.pop("parameters", {}))
                 first = False
@@ -208,9 +209,12 @@ class HuggingFaceService(object):
 
         if self.rolling_batch_type:
             result = self.rolling_batch.inference(input_data, parameters)
-            for i in range(len(batch)):
+            for i in range(inputs.get_batch_size()):
                 res = result[i]
-                outputs.add_as_json(res, batch_index=i)
+                encode(outputs,
+                       res,
+                       accept,
+                       key=inputs.get_content().key_at(i))
 
             return outputs
         elif self.enable_streaming:

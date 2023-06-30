@@ -95,29 +95,27 @@ class LmiDistRollingBatch(RollingBatch):
 
             if self.cache:
                 decode_generations, decode_next_batch = self.model.generate_token(self.cache)
-                self.cache = decode_next_batch
                 generations.extend(decode_generations)
 
                 # concatenate with the existing batch of the model
-                self.cache = self.model.batch_type.concatenate([prefill_next_batch, self.cache])
-
-
+                if decode_next_batch:
+                    self.cache = self.model.batch_type.concatenate([prefill_next_batch, decode_next_batch])
+                else:
+                    self.cache = prefill_next_batch
             else:
                 self.cache = prefill_next_batch
         else:
             generations, next_batch = self.model.generate_token(self.cache)
             self.cache = next_batch
 
-        generation_dict = {}
-        for generation in generations:
-            generation_dict[generation.request_id] = generation
+        generation_dict = {generation.request_id: generation for generation in generations}
 
         req_ids = []
         for r in self.pending_requests:
             generation = generation_dict[r.id]
             is_last_token = generation.generated_text is not None
             if not is_last_token:
-                req_ids.append((r.id))
+                req_ids.append(r.id)
             r.set_next_token(generation.token_text, last_token=is_last_token)
 
         # filter the requests that are stopped.
