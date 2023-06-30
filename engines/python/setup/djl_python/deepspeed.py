@@ -25,6 +25,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
 from typing import Optional
+from peft import PeftConfig, PeftModel
 
 OPTIMIZED_MODEL_TYPES = {
     "roberta",
@@ -111,11 +112,13 @@ class DeepSpeedService(object):
         self.enable_streaming = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
+        self.peft_config = None
         self.model = None
         self.tokenizer = None
 
     def initialize(self, properties: dict):
         self._parse_properties(properties)
+        self._read_model_config()
         self._validate_model_type_and_task()
         self.create_model_pipeline()
         self.logger.info(
@@ -181,19 +184,6 @@ class DeepSpeedService(object):
         return ds_config
 
     def _validate_model_type_and_task(self):
-        if os.path.exists(self.model_id_or_path):
-            config_file = os.path.join(self.model_id_or_path, "config.json")
-            if not os.path.exists(config_file):
-                raise ValueError(
-                    f"{self.model_id_or_path} does not contain a config.json. "
-                    f"This is required for loading models from local storage")
-            self.model_config = AutoConfig.from_pretrained(
-                config_file, trust_remote_code=self.trust_remote_code)
-        else:
-            self.model_config = AutoConfig.from_pretrained(
-                self.model_id_or_path,
-                trust_remote_code=self.trust_remote_code)
-
         if self.model_config.model_type not in OPTIMIZED_MODEL_TYPES:
             self.logger.warning(
                 f"DeepSpeed does not currently support optimized CUDA kernels for the model type "
@@ -209,6 +199,25 @@ class DeepSpeedService(object):
         if self.task not in SUPPORTED_TASKS:
             raise ValueError(
                 f"task: {self.task} is not currently supported by DeepSpeed")
+
+    def _read_model_config(self):
+        try:
+            self.model_config = AutoConfig.from_pretrained(
+                self.model_id_or_path,
+                trust_remote_code=self.trust_remote_code)
+        except OSError:
+            self.logger.warning(
+                f"config.json not found for {self.model_id_or_path}. Attempting to load with peft"
+            )
+            self.peft_config = PeftConfig.from_pretrained(
+                self.model_id_or_path)
+            self.model_config = AutoConfig.from_pretrained(
+                self.peft_config.base_model_name_or_path)
+        except Exception as e:
+            self.logger.error(
+                f"{self.model_id_or_path} does not contain a config.json or adapter_config.json for lora models. "
+                f"This is required for loading huggingface models")
+            raise e
 
     def infer_task_from_model_architecture(self, config: PretrainedConfig):
         architecture = config.architectures[0]
@@ -230,6 +239,21 @@ class DeepSpeedService(object):
             with deepspeed.OnDevice(dtype=dtype, device="meta"):
                 model = TASK_TO_MODEL[self.task].from_config(
                     self.model_config, **kwargs)
+        elif self.peft_config is not None:
+            self.logger.info(
+                f"Peft Model detected. Instantiating base model {self.peft_config.base_model_name_or_path}"
+            )
+            base_model = TASK_TO_MODEL[self.task].from_pretrained(
+                self.peft_config.base_model_name_or_path,
+                low_cpu_mem_usage=self.low_cpu_mem_usage,
+                trust_remote_code=self.trust_remote_code,
+                **kwargs)
+            lora_model = PeftModel.from_pretrained(base_model,
+                                                   self.model_id_or_path)
+            model = lora_model.merge_and_unload()
+            self.logger.info(
+                f"Peft Model merged into base model for deepspeed compatibility"
+            )
         else:
             model = TASK_TO_MODEL[self.task].from_pretrained(
                 self.model_id_or_path,
@@ -243,7 +267,12 @@ class DeepSpeedService(object):
         if self.model_config.model_type in OPTIMIZED_MODEL_TYPES:
             self.ds_config["replace_with_kernel_inject"] = True
         self.model = deepspeed.init_inference(model, config=self.ds_config)
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
+        if self.peft_config:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.peft_config.base_model_name_or_path)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_id_or_path)
         if self.enable_streaming:
             return
         # Optimization for text-generation batch processing
