@@ -26,7 +26,7 @@ from lmi_dist.utils.types import (
     Request,
     Generation
 )
-
+import logging
 import torch
 
 ARCHITECTURE_2_BATCH_CLS = {
@@ -67,10 +67,15 @@ class LmiDistRollingBatch(RollingBatch):
                                                  **kwargs)
         self.batch_cls = get_batch_cls_from_architecture(self.config.architectures[0])
         sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
+        quantize = self.properties.get("quantize", None)
+        if quantize and quantize != "bitsanadbytes":
+            logging.info(f"Invalid value for quantize: {quantize}. Only `bitsandbytes` quantization is supported. "
+                         f"Setting quantization to None")
+            quantize = None
         self.model = get_model(model_id_or_path,
                                revision=None,
                                sharded=sharded,
-                               quantize=None,
+                               quantize=quantize,
                                trust_remote_code=kwargs.get("trust_remote_code"))
 
     def inference(self, input_data, parameters):
