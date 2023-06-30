@@ -74,6 +74,8 @@ class LmiDistRollingBatch(RollingBatch):
             raise ValueError(
                 f"Invalid value for quantize: {quantize}. Valid values are: {QUANTIZATION_SUPPORT_ALGO}"
             )
+        if quantize is None and dtype == "int8":
+            quantize = "bitsandbytes"
         self.model = get_model(
             model_id_or_path,
             revision=None,
