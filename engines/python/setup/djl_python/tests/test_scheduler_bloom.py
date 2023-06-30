@@ -144,7 +144,7 @@ class TestSchedulerBloom(unittest.TestCase):
             "When your legs don't work like they used to before And I can't sweep you off",
             return_tensors='pt')
         input_ids_2 = torch.concat([
-            torch.tensor([PAD, PAD, PAD, PAD]),
+            torch.tensor([PAD, PAD, PAD, PAD, PAD, PAD]),
             tokenizer.encode(
                 "There's a time that I remember, when I did not know",
                 return_tensors='pt')[0]

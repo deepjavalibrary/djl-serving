@@ -188,7 +188,7 @@ class FalconBlock(LMBlock):
         past_key_values = output.past_key_values
 
         # Post-process
-        _, kv_dim, seq_len = past_key_values[0][0].shape
+        _, seq_len, kv_dim = past_key_values[0][0].shape
         new_kv_list = []
         for k, v in past_key_values:
             k_new = k.view(batch_size, -1, seq_len, kv_dim)
