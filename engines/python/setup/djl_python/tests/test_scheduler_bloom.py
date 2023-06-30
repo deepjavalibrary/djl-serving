@@ -1,6 +1,6 @@
 import unittest
 
-from djl_python.scheduler import BloomBlock, FalconBlock
+from djl_python.scheduler.lm_block import BloomBlock, FalconBlock
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
 from djl_python.scheduler.search_config import SearchConfig
