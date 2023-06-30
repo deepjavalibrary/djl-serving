@@ -65,6 +65,11 @@ class SchedulerRollingBatch(RollingBatch):
             parameters = request.parameters
             search_algorithm = parameters.get('decoding_strategy',
                                               self.search_algorithm)
+
+            # TODO: This is not needed when search algorithm automatically chosen for the user.
+            if parameters.get("do_sample", self.search_config.sampling).lower() == "true":
+                search_algorithm = "sample"
+
             new_requests.input_texts[search_algorithm].append(
                 request.input_text)
 
