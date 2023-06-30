@@ -136,7 +136,7 @@ def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
 
 def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List[float]):
     """
-    If logits is tensor([]), the output should be tensor([]) too.
+    Returns the token ids of the top k selection. If logits is tensor([]), the output should be tensor([]) too.
     """
     if logits.numel() == 0:
         return torch.tensor([], dtype=torch.int64, device=logits.device)
@@ -155,6 +155,8 @@ def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List
         topk_values, topk_indices = torch.topk(logits[i], k=k, dim=-1, largest=True, sorted=True)
         # At this step the truncated prob is normalized
         probs = softmax(topk_values / tmprtr_list_for_k[i], dim=-1)
+
+        # Find the smallest idx whose cum_prob > rand_number[0, 1]. Both idx=0 and -1 are accessible.
         cum_prob = 0
         for idx, p in enumerate(probs):
             cum_prob += p
