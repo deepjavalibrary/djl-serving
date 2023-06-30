@@ -24,8 +24,6 @@ from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.rolling_batch import SchedulerRollingBatch
 
-os.environ["BITSANDBYTES_NOWELCOME"] = "1"
-
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
     "ForQuestionAnswering": "question-answering",
