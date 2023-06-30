@@ -77,7 +77,7 @@ class SchedulerRollingBatch(RollingBatch):
 
     def _init_model_and_tokenizer(self, kwargs, model_id_or_path):
         self.config = AutoConfig.from_pretrained(model_id_or_path,
-                                                 kwargs=kwargs)
+                                                 **kwargs)
         architectures = self.config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
