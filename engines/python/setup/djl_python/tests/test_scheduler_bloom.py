@@ -124,7 +124,7 @@ class TestSchedulerBloom(unittest.TestCase):
         model_name = "tiiuae/falcon-7b"
         tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, trust_remote_code=True)
+            "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True)
 
         lm_block = FalconBlock(model)
 
@@ -162,13 +162,13 @@ class TestSchedulerBloom(unittest.TestCase):
 
         assert tokenizer.decode(
             results[1][:30]
-        ) == "When your legs don't work like they used to before And I can't sweep you off of […].\n the: ( the"
+        ) == "When your legs don't work like they used to before And I can't sweep you offíc warr formats Tos Bruce advocacyyoungGP xxx522"
         assert tokenizer.decode(
             results[2][:20]
-        ) == "There's a time that I remember, when I did not know what\n 201-."
+        ) == "There's a time that I remember, when I did not know rents complimentaryigsiosis stimulate roads"
         assert tokenizer.decode(
             results[0][:30]
-        ) == "Memories follow me left and right. I can’s\nthe  fast- the best online casino games that of course, but not only one"
+        ) == 'Memories follow me left and right. I canHex pennednal hackers quali consists authoritative operates Nurse Scotland[@ Burns diminishing和 preNut comfortably drainage suddenly revised'
 
         # Merge shorter sequences
         input_ids_1 = tokenizer.encode("When your legs don't work",
