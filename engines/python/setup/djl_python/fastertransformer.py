@@ -109,70 +109,66 @@ class FasterTransformerService(object):
         return parameters
 
     def inference(self, inputs: Input):
-        try:
-            # TODO: Add support for more content types
-            input_data = []
-            input_size = []
-            parameters = {}
-            batches = inputs.get_batches()
-            first = True
-            for item in batches:
-                input_map = item.get_as_json()
-                input_text = input_map.pop("inputs", input_map)
-                if isinstance(input_text, str):
-                    input_text = [input_text]
-                input_size.append(len(input_text))
-                input_data.extend(input_text)
-                if first:
-                    parameters = input_map.pop("parameters", {})
-                    first = False
-                else:
-                    if parameters != input_map.pop("parameters", {}):
-                        return Output().error(
-                            "In order to enable dynamic batching, all input batches must have the same parameters"
-                        )
-
-            parameters = self.param_mapper(parameters)
-            max_length = parameters.pop("max_length", 50)
-            output_len = parameters.pop("max_seq_len", max_length)
-            if self.use_triton:
-                output_length = [output_len] * len(input_data)
-                if self.enable_streaming:
-                    outputs = Output()
-                    outputs.add_property("content-type",
-                                         "application/jsonlines")
-                    outputs.add_stream_content(
-                        self.model.stream_generate(input_data, output_length,
-                                                   **parameters))
-                    return outputs
-                result = self.model.pipeline_generate(input_data,
-                                                      output_length,
-                                                      **parameters)
+        # TODO: Add support for more content types
+        input_data = []
+        input_size = []
+        parameters = {}
+        batches = inputs.get_batches()
+        first = True
+        for item in batches:
+            input_map = item.get_as_json()
+            input_text = input_map.pop("inputs", input_map)
+            if isinstance(input_text, str):
+                input_text = [input_text]
+            input_size.append(len(input_text))
+            input_data.extend(input_text)
+            if first:
+                parameters = input_map.pop("parameters", {})
+                first = False
             else:
-                if self.is_t5:
-                    result = self.model.pipeline_generate(
-                        input_data, **parameters)
-                else:
-                    beam_width = parameters.pop("beam_width", 1)
-                    # TODO: remove after fixes in FT python package
-                    result = self.model.pipeline_generate(
-                        input_data,
-                        batch_size=len(input_data),
-                        output_len=output_len,
-                        beam_width=beam_width,
-                        **parameters)
+                if parameters != input_map.pop("parameters", {}):
+                    return Output().error(
+                        "In order to enable dynamic batching, all input batches must have the same parameters"
+                    )
 
-            offset = 0
-            outputs = Output()
-            outputs.add_property("content-type", "application/json")
-            for i in range(inputs.get_batch_size()):
-                generated_text = [{
-                    "generated_text": s
-                } for s in result[offset:offset + input_size[i]]]
-                outputs.add(generated_text, key=inputs.get_content().key_at(i))
-        except Exception as e:
-            logging.exception("FasterTransformer inference failed")
-            outputs = Output().error((str(e)))
+        parameters = self.param_mapper(parameters)
+        max_length = parameters.pop("max_length", 50)
+        output_len = parameters.pop("max_seq_len", max_length)
+        if self.use_triton:
+            output_length = [output_len] * len(input_data)
+            if self.enable_streaming:
+                outputs = Output()
+                outputs.add_property("content-type",
+                                        "application/jsonlines")
+                outputs.add_stream_content(
+                    self.model.stream_generate(input_data, output_length,
+                                                **parameters))
+                return outputs
+            result = self.model.pipeline_generate(input_data,
+                                                    output_length,
+                                                    **parameters)
+        else:
+            if self.is_t5:
+                result = self.model.pipeline_generate(
+                    input_data, **parameters)
+            else:
+                beam_width = parameters.pop("beam_width", 1)
+                # TODO: remove after fixes in FT python package
+                result = self.model.pipeline_generate(
+                    input_data,
+                    batch_size=len(input_data),
+                    output_len=output_len,
+                    beam_width=beam_width,
+                    **parameters)
+
+        offset = 0
+        outputs = Output()
+        outputs.add_property("content-type", "application/json")
+        for i in range(inputs.get_batch_size()):
+            generated_text = [{
+                "generated_text": s
+            } for s in result[offset:offset + input_size[i]]]
+            outputs.add(generated_text, key=inputs.get_content().key_at(i))
 
         return outputs
 
