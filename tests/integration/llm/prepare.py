@@ -120,6 +120,12 @@ hf_handler_list = {
         "option.device_map": "auto",
         "option.enable_streaming": True,
     },
+    "gpt4all-lora": {
+        "option.model_id": "nomic-ai/gpt4all-lora",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "fp16"
+    }
 }
 
 ds_handler_list = {
@@ -153,6 +159,12 @@ ds_handler_list = {
         "option.dtype": "fp16",
         "option.enable_streaming": True
     },
+    "gpt4all-lora": {
+        "option.model_id": "nomic-ai/gpt4all-lora",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "fp16"
+    }
 }
 
 sd_handler_list = {

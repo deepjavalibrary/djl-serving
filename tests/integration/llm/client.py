@@ -133,6 +133,12 @@ hf_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2,
+    },
+    "gpt4all-lora": {
+        "max_memory_per_gpu": [6.0, 8.0],
+        "batch_size": [1, 4],
+        "seq_length": [16, 32],
+        "worker": 1,
     }
 }
 
@@ -165,6 +171,12 @@ ds_model_spec = {
         "seq_length": [16],
         "worker": 1,
         "stream_output": True,
+    },
+    "gpt4all-lora": {
+        "max_memory_per_gpu": [6.0, 8.0],
+        "batch_size": [1, 4],
+        "seq_length": [16, 32],
+        "worker": 1,
     }
 }
 
