@@ -779,7 +779,8 @@ public final class ModelInfo<I, O> {
                         gpuCount = procs;
                     }
                 } else if ("DeepSpeed".equals(engineName)
-                        || "FasterTransformer".equals(engineName)) {
+                        || "FasterTransformer".equals(engineName)
+                        || "MPI".equals(engineName)) {
                     return new String[] {"0"};
                 }
 
