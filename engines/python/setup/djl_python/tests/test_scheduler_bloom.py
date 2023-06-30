@@ -160,15 +160,15 @@ class TestSchedulerBloom(unittest.TestCase):
 
         results = scheduler.results
 
-        # assert tokenizer.decode(
-        #     results[1][:30]
-        # ) == "When your legs don't work like they used to before And I can't sweep you off my lap But if you're still here I'll take care of it If you're"
-        # assert tokenizer.decode(
-        #     results[2][:20]
-        # ) == "There's a time that I remember, when I did not know what it was like to live in this"
-        # assert tokenizer.decode(
-        #     results[0][:30]
-        # ) == "Memories follow me left and right. I can feel them moving around in my body, like they’re trying to tell me something about where I’m going"
+        assert tokenizer.decode(
+            results[1][:30]
+        ) == "When your legs don't work like they used to before And I can't sweep you off of […].\n the: ( the"
+        assert tokenizer.decode(
+            results[2][:20]
+        ) == "There's a time that I remember, when I did not know what\n 201-."
+        assert tokenizer.decode(
+            results[0][:30]
+        ) == "Memories follow me left and right. I can’s\nthe  fast- the best online casino games that of course, but not only one"
 
         # Merge shorter sequences
         input_ids_1 = tokenizer.encode("When your legs don't work",
