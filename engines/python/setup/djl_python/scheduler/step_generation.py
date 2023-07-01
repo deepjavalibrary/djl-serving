@@ -175,57 +175,25 @@ def topp_step_generate(logits, p_config_list: List[float],
     Return:
         indices: [batch, 1]
     """
-    # TODO: the heap implementation here is not as efficient as torch.sort. See TopPLogitsWarper class in
-    #  transformers package for reference
     if logits.numel() == 0:
         return torch.tensor([], dtype=torch.int64, device=logits.device)
 
-    batch_size, vocab_size = logits.size()
+    cumulative_prob_tensor = torch.tensor(p_config_list, device=logits.device).view(-1, 1)
+    temperature_tensor = torch.tensor(tmprtr_list_for_p, device=logits.device).view(-1, 1)
+    logits /= temperature_tensor
 
-    # Apply temperature to logits
-    temperature = torch.tensor(tmprtr_list_for_p,
-                               device=logits.device).view(-1, 1)
-    logits = logits / temperature
+    sorted_logits, sorted_indices = torch.sort(logits, descending=False)
+    cumulative_probs = sorted_logits.softmax(dim=-1).cumsum(dim=-1)
 
-    # Apply softmax to obtain probabilities
-    probabilities = softmax(logits, dim=-1)
+    # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
+    sorted_indices_to_remove = cumulative_probs <= (1 - cumulative_prob_tensor)
+    # Keep at least 1 candidate token
+    sorted_indices_to_remove[..., -1:] = 0
 
-    # random number
-    random_array = numpy.random.rand(batch_size)
-
-    # result
-    indices = numpy.empty(batch_size, dtype=numpy.int64)
-
-    for i in range(batch_size):
-        cum_prob = 0
-        probs = [(-probabilities[i, j].item(), j)
-                 for j in range(vocab_size)]  # O(vocab_size)
-        heapq.heapify(probs)  # O(vocab_size)
-
-        # Find the candidates: O(k * log(vocab_size))
-        candidate_cum_probs = []
-        candidate_ids = []
-        while probs:
-            neg_prob, index = heapq.heappop(probs)
-            cum_prob -= neg_prob
-            if cum_prob < p_config_list[i]:
-                candidate_cum_probs.append(cum_prob)
-                candidate_ids.append(index)
-            else:
-                candidate_cum_probs.append(cum_prob)
-                candidate_ids.append(index)
-                break
-
-        # Renormalize and randomly select according to random_array
-        rand_number = random_array[i].item()
-        normalization_factor = candidate_cum_probs[-1]
-        # Find the smallest idx whose cum_prob > rand_number[0, 1]. Both idx=0 and -1 are accessible.
-        idx = bisect.bisect_right(
-            [prob / normalization_factor for prob in candidate_cum_probs],
-            rand_number)
-        indices[i] = candidate_ids[idx]
-
-    return torch.from_numpy(indices).view(-1, 1)
+    # scatter sorted tensors to original indexing
+    indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+    scores = logits.masked_fill(indices_to_remove, -float("Inf"))
+    return torch.multinomial(scores.softmax(dim=-1), 1).view(-1, 1)
 
 
 def beam_step_generate(last_probs: torch.Tensor, logits: torch.Tensor,
