@@ -49,16 +49,6 @@ class RollingBatch(object):
 
     def __init__(self):
         self.pending_requests = []
-        self.initialized = False
-        self.max_rolling_batch_size = None
-
-    def initialize(self, properties: dict):
-        """
-        Initialize model.
-        """
-        self.max_rolling_batch_size = int(
-            properties.get("max_rolling_batch_size", "3"))
-        self.initialized = True
 
     def inference(self, inputs):
         """
@@ -116,10 +106,6 @@ def handle(inputs: Input):
     """
     Default handler function
     """
-    if not _service.initialized:
-        # stateful model
-        _service.initialize(inputs.get_properties())
-
     if inputs.is_empty():
         # initialization request
         return None
