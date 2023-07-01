@@ -117,7 +117,8 @@ class TestScheduler(unittest.TestCase):
                                                     "to be a little bit more tired. I'm"
         assert tokenizer.decode(
             results[4][:30]
-        ) == '!!!!!!!!!!DeepMind Company is a company that is dedicated to the advancement of artificial intelligence. We are a company'
+        ) == '!!!!!!!!!!DeepMind Company is a company that is dedicated to the advancement of artificial ' \
+             'intelligence. We are a company '
 
     def test_sampling_scheduler(self):
         torch.manual_seed(20220611)
