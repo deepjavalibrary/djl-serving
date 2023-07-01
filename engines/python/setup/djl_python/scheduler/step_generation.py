@@ -175,6 +175,8 @@ def topp_step_generate(logits, p_config_list: List[float],
     Return:
         indices: [batch, 1]
     """
+    # TODO: the heap implementation here is not as efficient as torch.sort. See TopPLogitsWarper class in
+    #  transformers package for reference
     if logits.numel() == 0:
         return torch.tensor([], dtype=torch.int64, device=logits.device)
 
