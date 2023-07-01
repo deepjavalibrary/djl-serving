@@ -120,6 +120,7 @@ class RollingBatch implements Runnable {
         try {
             lock.lock();
             if (list.size() >= maxRollingBatchSize) {
+                logger.debug("exceed max_rolling_batch_size: {}", maxRollingBatchSize);
                 if (!canAdd.await(timeout, TimeUnit.SECONDS)) {
                     throw new TranslateException("Time out in: " + timeout);
                 }
