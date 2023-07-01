@@ -178,8 +178,10 @@ def topp_step_generate(logits, p_config_list: List[float],
     if logits.numel() == 0:
         return torch.tensor([], dtype=torch.int64, device=logits.device)
 
-    cumulative_prob_tensor = torch.tensor(p_config_list, device=logits.device).view(-1, 1)
-    temperature_tensor = torch.tensor(tmprtr_list_for_p, device=logits.device).view(-1, 1)
+    cumulative_prob_tensor = torch.tensor(p_config_list,
+                                          device=logits.device).view(-1, 1)
+    temperature_tensor = torch.tensor(tmprtr_list_for_p,
+                                      device=logits.device).view(-1, 1)
     logits /= temperature_tensor
 
     sorted_logits, sorted_indices = torch.sort(logits, descending=False)
@@ -191,7 +193,8 @@ def topp_step_generate(logits, p_config_list: List[float],
     sorted_indices_to_remove[..., -1:] = 0
 
     # scatter sorted tensors to original indexing
-    indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+    indices_to_remove = sorted_indices_to_remove.scatter(
+        1, sorted_indices, sorted_indices_to_remove)
     scores = logits.masked_fill(indices_to_remove, -float("Inf"))
     return torch.multinomial(scores.softmax(dim=-1), 1).view(-1, 1)
 

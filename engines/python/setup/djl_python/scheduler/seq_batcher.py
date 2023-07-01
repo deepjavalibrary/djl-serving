@@ -30,10 +30,13 @@ class SeqBatcher(ABC):
     the init_forward, inference_call along with the corresponding Batch.
     """
 
-    def __init__(self, batch: Batch, request_uids: torch.Tensor,
+    def __init__(self,
+                 batch: Batch,
+                 request_uids: torch.Tensor,
                  offsets: torch.Tensor,
-                 search_configs: defaultdict[Any,
-                                             SearchConfig], lm_block: LMBlock, seed=None):
+                 search_configs: defaultdict[Any, SearchConfig],
+                 lm_block: LMBlock,
+                 seed=None):
         # Utility variables
         self.lm_block = lm_block
         self.exit_index = set()
@@ -57,13 +60,14 @@ class SeqBatcher(ABC):
     @classmethod
     @abstractmethod
     def init_forward(
-            cls,
-            input_ids: torch.tensor,
-            request_uids: torch.tensor,
-            lm_block: LMBlock,
-            search_configs: defaultdict[Any, SearchConfig],
-            kv_cache: Union[Tuple, None] = None,
-            kv_cache_input_ids: Union[torch.tensor, None] = None) -> Tuple[SeqBatcher, List[List[int]]]:
+        cls,
+        input_ids: torch.tensor,
+        request_uids: torch.tensor,
+        lm_block: LMBlock,
+        search_configs: defaultdict[Any, SearchConfig],
+        kv_cache: Union[Tuple, None] = None,
+        kv_cache_input_ids: Union[torch.tensor, None] = None
+    ) -> Tuple[SeqBatcher, List[List[int]]]:
         pass
 
     @staticmethod
