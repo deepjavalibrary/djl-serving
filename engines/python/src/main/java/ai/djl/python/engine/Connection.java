@@ -56,14 +56,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
 class Connection {
 
     private static final Logger logger = LoggerFactory.getLogger(Connection.class);
     private static final String MASTER_ADDR = "127.0.0.1";
-
-    private static AtomicInteger counter = new AtomicInteger(0);
 
     private int port;
     private SocketAddress socketAddress;
@@ -72,11 +69,7 @@ class Connection {
 
     Connection(PyEnv pyEnv, int workerId, int rank) {
         requestHandler = new RequestHandler();
-        if (pyEnv.isMpiMode()) {
-            port = 128 * workerId + 29761;
-        } else {
-            port = 19000 + counter.getAndIncrement();
-        }
+        port = 19000 + workerId;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank);
     }
 
