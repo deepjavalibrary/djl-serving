@@ -172,8 +172,8 @@ class TestScheduler(unittest.TestCase):
                                                     "sweep you off my feet at such a time & it hurts — well,"
         assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not know what to do " \
                                                     "with my life. I was in a very bad mood. I was"
-        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can see you're not the " \
-                                                    "only one, but I've seen you before. You're the one who"
+        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't help myself. The " \
+                                                    "last time I saw the girl in her panties was in the bathroom. I"
 
     def test_contrastive_scheduler(self):
         model_id = "gpt2"

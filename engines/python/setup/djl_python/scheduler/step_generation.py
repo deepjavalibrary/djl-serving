@@ -146,7 +146,7 @@ def topk_step_generate(logits, k_config_list: List[int],
     batch_size, vocab_size = logits.size()
 
     # result
-    indices = numpy.empty(batch_size, dtype=numpy.int64)
+    indices = torch.empty(batch_size, dtype=torch.int64)
 
     # Find the candidate: O(k * log(vocab_size))
     for i in range(batch_size):
@@ -161,7 +161,7 @@ def topk_step_generate(logits, k_config_list: List[int],
 
         indices[i] = topk_indices[torch.multinomial(probs, 1)]
 
-    return torch.from_numpy(indices).view(-1, 1)
+    return indices.view(-1, 1)
 
 
 def topp_step_generate(logits, p_config_list: List[float],
