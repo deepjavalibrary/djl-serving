@@ -81,12 +81,14 @@ class SeqBatchScheduler:
 
         # Set the search_config._max_seqlen
         for idx, request in enumerate(request_uids.view(-1).tolist()):
-            init_seqlen = len(input_ids[idx]) - new_seq_batcher.offsets[idx].item()
+            init_seqlen = len(
+                input_ids[idx]) - new_seq_batcher.offsets[idx].item()
             if kv_cache:
                 init_seqlen += kv_cache[0][0].shape[-2]
             # TODO: change search_configs dict to list
-            new_seq_batcher.search_configs[request]._max_seqlen = new_seq_batcher.search_configs[
-                                                                      request].max_new_seqlen + init_seqlen
+            new_seq_batcher.search_configs[
+                request]._max_seqlen = new_seq_batcher.search_configs[
+                    request].max_new_seqlen + init_seqlen
 
         # Merge
         # TODO: next, an optimal action needs to be first computed, according to which the merge is done.
