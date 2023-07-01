@@ -174,6 +174,9 @@ class TestScheduler(unittest.TestCase):
         # assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't help but feel that " \
         #                                             "I've been given a chance to do something different. I've been told"
 
+        for i, ret in results.items():
+            print('\n{}:'.format(i), tokenizer.decode(ret))
+
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
