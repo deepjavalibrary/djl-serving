@@ -293,6 +293,29 @@ transformers_neuronx_model_spec = {
     },
 }
 
+lmi_dist_model_spec = {
+    "gpt-neox-20b": {
+        "max_memory_per_gpu": [15.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256]
+    },
+    "falcon-7b": {
+        "max_memory_per_gpu": [20.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256]
+    },
+    "open-llama-7b": {
+        "max_memory_per_gpu": [8.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256]
+    },
+    "flan-t5-xxl": {
+        "max_memory_per_gpu": [12.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256]
+    }
+}
+
 
 def check_worker_number(desired):
     model_name = get_model_name()
@@ -504,7 +527,7 @@ def test_handler(model, model_spec):
                 result = res.content.decode().split("\n")[:-1]
                 assert len(
                     result
-                ) <= seq_length, "generated more takens than max_new_tokens"
+                ) <= seq_length, "generated more tokens than max_new_tokens"
                 result_0 = json.loads(result[0])['outputs']
                 assert len(
                     result_0
@@ -675,6 +698,44 @@ def test_transformers_neuronx_handler(model, model_spec):
                 assert len(result) == batch_size
 
 
+def test_lmi_dist_handler(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            if "t5" in model:
+                req = {"inputs": t5_batch_generation(batch_size)}
+            else:
+                req = {"inputs": batch_generation(batch_size)}
+            params = {"max_new_tokens": seq_length}
+            req["parameters"] = params
+            logging.info(f"req {req}")
+            res = send_json(req)
+            if spec.get("stream_output", False):
+                logging.info(f"res: {res.content}")
+                result = res.content.decode().split("\n")[:-1]
+                assert len(
+                    result
+                ) <= seq_length, "generated more tokens than max_new_tokens"
+                result_0 = json.loads(result[0])['outputs']
+                assert len(
+                    result_0
+                ) == batch_size, "batch size number of tokens are not generated"
+            else:
+                res = res.text
+                logging.info(f"res {res}")
+                assert res is not None
+            memory_usage = get_gpu_memory()
+            logging.info(memory_usage)
+            for memory in memory_usage:
+                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
+
+
 if __name__ == "__main__":
     if args.handler == "deepspeed_raw":
         test_ds_raw_model(args.model, ds_raw_model_spec)
@@ -698,6 +759,8 @@ if __name__ == "__main__":
     elif args.handler == "transformers_neuronx_raw":
         test_transformers_neuronx_raw(args.model,
                                       transformers_neuronx_raw_model_spec)
+    elif args.handler == "lmi_dist":
+        test_lmi_dist_handler(args.model, lmi_dist_model_spec)
     elif args.handler == "performance":
         test_performance()
     else:
