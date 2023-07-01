@@ -19,6 +19,7 @@ from typing import Tuple, List, Dict
 from djl_python.scheduler.search_config import SearchConfig
 import numpy, heapq
 
+
 def contrastive_step_generate(top_k_ids: torch.Tensor,
                               top_k_probs: torch.Tensor,
                               top_k_hidden_states: torch.Tensor,
@@ -134,7 +135,8 @@ def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     return torch.topk(logits, k=k, dim=-1, largest=True, sorted=False).indices
 
 
-def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List[float]):
+def topk_step_generate(logits, k_config_list: List[int],
+                       tmprtr_list_for_k: List[float]):
     """
     Returns the token ids of the top k selection. If logits is tensor([]), the output should be tensor([]) too.
     """
@@ -143,31 +145,27 @@ def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k: List
 
     batch_size, vocab_size = logits.size()
 
-    # random number
-    random_array = numpy.random.rand(batch_size)
-
     # result
     indices = numpy.empty(batch_size, dtype=numpy.int64)
 
     # Find the candidate: O(k * log(vocab_size))
     for i in range(batch_size):
         k = k_config_list[i]
-        topk_values, topk_indices = torch.topk(logits[i], k=k, dim=-1, largest=True, sorted=True)
+        topk_values, topk_indices = torch.topk(logits[i],
+                                               k=k,
+                                               dim=-1,
+                                               largest=True,
+                                               sorted=True)
         # At this step the truncated prob is normalized
         probs = softmax(topk_values / tmprtr_list_for_k[i], dim=-1)
 
-        # Find the smallest idx whose cum_prob > rand_number[0, 1]. Both idx=0 and -1 are accessible.
-        cum_prob = 0
-        for idx, p in enumerate(probs):
-            cum_prob += p
-            if cum_prob > random_array[i].item():
-                indices[i] = topk_indices[idx]
-                break
+        indices[i] = topk_indices[torch.multinomial(probs, 1)]
 
     return torch.from_numpy(indices).view(-1, 1)
 
 
-def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: List[float]):
+def topp_step_generate(logits, p_config_list: List[float],
+                       tmprtr_list_for_p: List[float]):
     """
     Returns the token ids of the top p selection. If logits is tensor([]), the output should be tensor([]) too.
 
@@ -183,7 +181,8 @@ def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: Li
     batch_size, vocab_size = logits.size()
 
     # Apply temperature to logits
-    temperature = torch.tensor(tmprtr_list_for_p, device=logits.device).view(-1, 1)
+    temperature = torch.tensor(tmprtr_list_for_p,
+                               device=logits.device).view(-1, 1)
     logits = logits / temperature
 
     # Apply softmax to obtain probabilities
@@ -197,7 +196,8 @@ def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: Li
 
     for i in range(batch_size):
         cum_prob = 0
-        probs = [(-probabilities[i, j].item(), j) for j in range(vocab_size)]  # O(vocab_size)
+        probs = [(-probabilities[i, j].item(), j)
+                 for j in range(vocab_size)]  # O(vocab_size)
         heapq.heapify(probs)  # O(vocab_size)
 
         # Find the candidates: O(k * log(vocab_size))
@@ -218,7 +218,9 @@ def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p: Li
         rand_number = random_array[i].item()
         normalization_factor = candidate_cum_probs[-1]
         # Find the smallest idx whose cum_prob > rand_number[0, 1]. Both idx=0 and -1 are accessible.
-        idx = bisect.bisect_right([prob / normalization_factor for prob in candidate_cum_probs], rand_number)
+        idx = bisect.bisect_right(
+            [prob / normalization_factor for prob in candidate_cum_probs],
+            rand_number)
         indices[i] = candidate_ids[idx]
 
     return torch.from_numpy(indices).view(-1, 1)
