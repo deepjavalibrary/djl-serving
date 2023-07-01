@@ -167,6 +167,8 @@ class TestScheduler(unittest.TestCase):
 
         results = scheduler.collect_results()
 
+        print(tokenizer.decode(results[1][:30]))
+
         assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before And I can't " \
                                                     "sweep you off your feet, you're right, I'm done for the"
         assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not know what to do " \
