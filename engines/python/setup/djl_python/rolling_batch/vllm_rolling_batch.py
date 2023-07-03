@@ -13,7 +13,7 @@
 import logging
 from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
-from djl_python.rolling_batch.rolling_batch import RollingBatch
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 
 
 class VLLMRollingBatch(RollingBatch):
@@ -42,6 +42,7 @@ class VLLMRollingBatch(RollingBatch):
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = {}
 
+    @stop_on_any_exception
     def inference(self, input_data, parameters):
         batch_size = len(input_data)
         new_requests = self.get_new_requests(input_data, parameters,

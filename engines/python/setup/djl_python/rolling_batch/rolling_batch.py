@@ -64,6 +64,19 @@ class Request(object):
         return self.last_token
 
 
+def stop_on_any_exception(func):
+
+    def try_catch_handling(self, input_data, parameters):
+        try:
+            return func(self, input_data, parameters)
+        except Exception as e:
+            for request in self.pending_requests:
+                request.set_next_token(str(e), True)
+            return self.postprocess_results(len(self.pending_requests))
+
+    return try_catch_handling
+
+
 class RollingBatch(ABC):
     """
     This class initializes and maintains the SequenceBatchScheduler.
