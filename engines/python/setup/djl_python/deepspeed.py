@@ -321,14 +321,12 @@ class DeepSpeedService(object):
                 if isinstance(json_input, dict):
                     input_size.append(len(json_input.get("inputs")))
                     input_data.extend(
-                        self.format_input_for_task(
-                            json_input.pop("inputs")))
+                        self.format_input_for_task(json_input.pop("inputs")))
                     if first:
                         model_kwargs = json_input.pop("parameters", {})
                         first = False
                     else:
-                        if model_kwargs != json_input.pop(
-                                "parameters", {}):
+                        if model_kwargs != json_input.pop("parameters", {}):
                             return Output().error(
                                 "In order to enable dynamic batching, all input batches must have the same parameters"
                             )
@@ -346,21 +344,20 @@ class DeepSpeedService(object):
             if self.enable_streaming == "huggingface":
                 outputs.add_stream_content(
                     StreamingUtils.use_hf_default_streamer(
-                        self.model, self.tokenizer, input_data,
-                        self.device, **model_kwargs))
+                        self.model, self.tokenizer, input_data, self.device,
+                        **model_kwargs))
             else:
                 stream_generator = StreamingUtils.get_stream_generator(
                     "DeepSpeed")
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer,
-                                        input_data, self.device,
-                                        **model_kwargs))
+                    stream_generator(self.model, self.tokenizer, input_data,
+                                     self.device, **model_kwargs))
             return outputs
         if self.task == "text-generation":
             tokenized_inputs = self.tokenizer(input_data,
-                                                padding=True,
-                                                return_tensors="pt").to(
-                                                    self.device)
+                                              padding=True,
+                                              return_tensors="pt").to(
+                                                  self.device)
             with torch.no_grad():
                 output_tokens = self.model.generate(
                     input_ids=tokenized_inputs.input_ids,
@@ -394,7 +391,7 @@ class DeepSpeedService(object):
             offset += input_size[i]
 
         outputs.add_property("content-type", "application/json")
-        
+
         return outputs
 
 

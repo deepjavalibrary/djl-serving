@@ -236,15 +236,14 @@ class HuggingFaceService(object):
             if self.enable_streaming == "huggingface":
                 outputs.add_stream_content(
                     StreamingUtils.use_hf_default_streamer(
-                        self.model, self.tokenizer, input_data,
-                        self.device, **parameters[0]))
+                        self.model, self.tokenizer, input_data, self.device,
+                        **parameters[0]))
             else:
                 stream_generator = StreamingUtils.get_stream_generator(
                     "Accelerate")
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer,
-                                        input_data, self.device,
-                                        **parameters[0]))
+                    stream_generator(self.model, self.tokenizer, input_data,
+                                     self.device, **parameters[0]))
             return outputs
 
         prediction = self.hf_pipeline(input_data, **parameters[0])
@@ -252,9 +251,9 @@ class HuggingFaceService(object):
         offset = 0
         for i in range(inputs.get_batch_size()):
             encode(outputs,
-                    prediction[offset:offset + input_size[i]],
-                    accept,
-                    key=inputs.get_content().key_at(i))
+                   prediction[offset:offset + input_size[i]],
+                   accept,
+                   key=inputs.get_content().key_at(i))
             offset += input_size[i]
 
         return outputs
