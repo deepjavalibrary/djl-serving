@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
+import logging
 from abc import ABC, abstractmethod
 
 
@@ -62,6 +62,20 @@ class Request(object):
         :return: whether last token of the sequence.
         """
         return self.last_token
+
+
+def stop_on_any_exception(func):
+
+    def try_catch_handling(self, input_data, parameters):
+        try:
+            return func(self, input_data, parameters)
+        except Exception as e:
+            logging.error("Rolling batch inference error", e)
+            for request in self.pending_requests:
+                request.set_next_token(str(e), True)
+            return self.postprocess_results(len(self.pending_requests))
+
+    return try_catch_handling
 
 
 class RollingBatch(ABC):

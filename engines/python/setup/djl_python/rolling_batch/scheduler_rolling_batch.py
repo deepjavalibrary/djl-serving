@@ -13,8 +13,8 @@
 
 from djl_python.scheduler import HuggingfaceBlock, BloomBlock, SearchConfig, SeqBatchScheduler
 from collections import namedtuple, defaultdict
-from djl_python.rolling_batch.rolling_batch import RollingBatch, Request
-from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
 
@@ -38,6 +38,7 @@ class SchedulerRollingBatch(RollingBatch):
         self._init_model_and_tokenizer(kwargs, model_id_or_path)
         self._init_scheduler(properties)
 
+    @stop_on_any_exception
     def inference(self, input_data, parameters):
         """
         Performs prefill and decode operations for the batch.

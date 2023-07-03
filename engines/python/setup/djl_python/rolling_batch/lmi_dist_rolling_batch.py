@@ -11,8 +11,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.rolling_batch.rolling_batch import RollingBatch
-from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from transformers import AutoConfig
 from lmi_dist.models import get_model
 from lmi_dist.models.flash_causal_lm import FlashCausalLMBatch
 from lmi_dist.models.seq2seq_lm import Seq2SeqLMBatch
@@ -70,6 +70,7 @@ class LmiDistRollingBatch(RollingBatch):
             quantize=None,
             trust_remote_code=kwargs.get("trust_remote_code"))
 
+    @stop_on_any_exception
     def inference(self, input_data, parameters):
         """
         Performs prefill and decode operations for the batch.
