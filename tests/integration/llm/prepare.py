@@ -550,7 +550,7 @@ def build_rolling_batch_model(model):
             f"{model} is not one of the supporting handler {list(rolling_batch_model_list.keys())}"
         )
     options = rolling_batch_model_list[model]
-    options["rolling_batch"] = True
+    options["rolling_batch"] = "scheduler"
     write_properties(options)
 
 
