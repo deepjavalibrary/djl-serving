@@ -17,8 +17,10 @@ import logging
 from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
 from transformers_neuronx import dtypes
 from transformers_neuronx.generation_utils import HuggingFaceGenerationModelAdapter
+from transformers_neuronx.gptneox.model import GPTNeoXForSampling
 from transformers_neuronx.gptj.model import GPTJForSampling
 from transformers_neuronx.gpt2.model import GPT2ForSampling
+from transformers_neuronx.llama.model import LlamaForSampling
 from transformers_neuronx.module import save_pretrained_split
 from transformers_neuronx.opt.model import OPTForSampling
 from djl_python import Input, Output
@@ -29,7 +31,15 @@ model = None
 
 DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16"}
 
-SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj"}
+SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj", "gpt_neox", "llama"}
+
+MODEL_TYPE_TO_MODEL= {
+    "opt": OPTForSampling,
+    "gpt2": GPT2ForSampling,
+    "gptj": GPTJForSampling,
+    "gpt_neox": GPTNeoXForSampling,
+    "llama": LlamaForSampling,
+}
 
 
 class TransformersNeuronXService(object):
@@ -43,7 +53,37 @@ class TransformersNeuronXService(object):
         self.tokenizer = None
         self.enable_streaming = None
 
-    def convert_opt(self, amp):
+    def convert_dtype(self, dtype, model_type):
+        if model_type == "opt":
+            for block in self.model.model.decoder.layers:
+                block.self_attn.to(dtype)
+                block.fc1.to(dtype)
+                block.fc2.to(dtype)
+            self.model.lm_head.to(dtype)
+        elif model_type in ["gpt2", "gptj"]:
+            for block in self.model.transformer.h:
+                block.attn.to(dtype)
+                block.mlp.to(dtype)
+            self.model.lm_head.to(dtype)
+        elif model_type == "gpt_neox":
+            for block in self.model.gpt_neox.layers:
+                block.attention.to(dtype)
+                block.mlp.to(dtype)
+            self.model.embed_out.to(dtype)
+        elif model_type == "llama":
+            for block in self.model.model.layers:
+                block.self_attn.q_proj.to(dtype)
+                block.self_attn.k_proj.to(dtype)
+                block.self_attn.v_proj.to(dtype)
+                block.self_attn.o_proj.to(dtype)
+                block.mlp.gate_proj.to(dtype)
+                block.mlp.down_proj.to(dtype)
+                block.mlp.up_proj.to(dtype)
+            self.model.lm_head.to(dtype)
+        else:
+            raise AttributeError(f"Model architecture format not recognized")
+
+    def convert_model(self, amp, model_type):
         logging.warning(
             "Model conversion is a slow process to do in runtime, please consider convert it"
             " Ahead-of-Time next time")
@@ -57,83 +97,30 @@ class TransformersNeuronXService(object):
         load_path = tempfile.mkdtemp(dir=path, prefix="inf2_")
         logging.info("Start model conversion to INF2 format...")
         dtype = dtypes.to_torch_dtype(amp)
-        for block in self.model.model.decoder.layers:
-            block.self_attn.to(dtype)
-            block.fc1.to(dtype)
-            block.fc2.to(dtype)
-        self.model.lm_head.to(dtype)
+        self.convert_dtype(dtype, model_type)
         logging.info(f"Saving INF2 model to {load_path} ...")
         save_pretrained_split(self.model, load_path)
         with open(os.path.join(load_path, "verify"), "w") as f:
-            f.writelines("opt-converted")
+            f.writelines(f"{model_type}-converted")
         return load_path
 
-    def convert_gpt(self, amp, gpt_type="gpt2"):
-        logging.warning(
-            "Model conversion is a slow process to do in runtime, please consider convert it"
-            " Ahead-of-Time next time")
-        logging.info(f"Start loading the model {self.model_id_or_path}...")
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_id_or_path, low_cpu_mem_usage=True)
-        path = os.environ.get("SERVING_DOWNLOAD_DIR")
-        if not path:
-            path = tempfile.gettempdir()
-
-        load_path = tempfile.mkdtemp(dir=path, prefix="inf2_")
-        logging.info("Start model conversion to INF2 format...")
-        dtype = dtypes.to_torch_dtype(amp)
-        for block in self.model.transformer.h:
-            block.attn.to(dtype)
-            block.mlp.to(dtype)
-        self.model.lm_head.to(dtype)
-        logging.info(f"Saving to INF2 model to {load_path} ...")
-        self.model.save_pretrained(load_path, max_shard_size="100GB")
-        with open(os.path.join(load_path, "verify"), "w") as f:
-            f.writelines(f"{gpt_type}-converted")
-        return load_path
-
-    def load_opt(self, amp, unroll, n_positions):
+    def load_model(self, amp, unroll, n_positions, model_type):
         load_path = self.model_id_or_path
         if not os.path.exists(os.path.join(load_path, "verify")):
-            load_path = self.convert_opt(amp)
-        self.model = OPTForSampling.from_pretrained(
+            load_path = self.convert_model(amp, model_type)
+        self.model = MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
             load_path,
             batch_size=self.batch_size,
             amp=amp,
             tp_degree=self.tensor_parallel_degree,
             n_positions=n_positions,
             unroll=unroll)
-        self.model.to_neuron()
-
-    def load_gpt2(self, amp, unroll, n_positions):
-        load_path = self.model_id_or_path
-        if not os.path.exists(os.path.join(load_path, "verify")):
-            load_path = self.convert_gpt(amp, gpt_type="gpt2")
-        self.model = GPT2ForSampling.from_pretrained(
-            load_path,
-            batch_size=self.batch_size,
-            amp=amp,
-            tp_degree=self.tensor_parallel_degree,
-            n_positions=n_positions,
-            unroll=unroll)
-        # load GPT2 compiled artifacts if exist
-        self.model._load_compiled_artifacts(load_path)
-        self.model.to_neuron()
-        # save GPT2 compiled artifacts
-        self.model._save_compiled_artifacts(load_path)
-
-    def load_gptj(self, amp, unroll, n_positions):
-        load_path = self.model_id_or_path
-        if not os.path.exists(os.path.join(load_path, "verify")):
-            load_path = self.convert_gpt(amp, gpt_type="gptj")
-        self.model = GPTJForSampling.from_pretrained(
-            load_path,
-            batch_size=self.batch_size,
-            amp=amp,
-            tp_degree=self.tensor_parallel_degree,
-            n_positions=n_positions,
-            unroll=unroll)
-        self.model.to_neuron()
+        if model_type == "gpt2":
+            self.model._load_compiled_artifacts(load_path)
+            self.model.to_neuron()
+            self.model._save_compiled_artifacts(load_path)
+        else:
+            self.model.to_neuron()
 
     def initialize(self, properties):
         self.batch_size = int(properties.get("batch_size", 1))
@@ -160,12 +147,8 @@ class TransformersNeuronXService(object):
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        if "opt" == model_config.model_type:
-            self.load_opt(amp, unroll, n_positions)
-        elif "gpt2" == model_config.model_type:
-            self.load_gpt2(amp, unroll, n_positions)
-        elif "gptj" == model_config.model_type:
-            self.load_gptj(amp, unroll, n_positions)
+        self.load_model(amp, unroll, n_positions, model_config.model_type)
+
         # HuggingFace compatible generate model
         self.model = HuggingFaceGenerationModelAdapter(model_config,
                                                        self.model)
