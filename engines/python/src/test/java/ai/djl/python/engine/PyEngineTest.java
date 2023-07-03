@@ -227,7 +227,7 @@ public class PyEngineTest {
                         .optEngine("Python")
                         .build();
         ZooModel<Input, Output> model = criteria.loadModel();
-        Predictor<Input, Output> predictor = model.newPredictor();
+        model.newPredictor();
     }
 
     @Test
