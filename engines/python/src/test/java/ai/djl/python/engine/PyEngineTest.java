@@ -217,7 +217,7 @@ public class PyEngineTest {
         }
     }
 
-    @Test(expectedExceptions = {EngineException.class}, expectedExceptionsMessageRegExp = "OOM")
+    @Test(expectedExceptions = EngineException.class, expectedExceptionsMessageRegExp = "OOM")
     public void testLoadModelOom()
             throws TranslateException, IOException, ModelException, InterruptedException {
         Criteria<Input, Output> criteria =

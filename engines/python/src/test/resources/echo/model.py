@@ -21,10 +21,6 @@ import time
 from djl_python import Input
 from djl_python import Output
 
-
-class OutOfMemoryError(Exception):
-    pass
-
 def stream_token():
     for i in range(5):
         time.sleep(1)
@@ -43,7 +39,7 @@ def handle(inputs: Input):
     elif inputs.contains_key("exit"):
         sys.exit()
     elif inputs.contains_key("OOM"):
-        raise OutOfMemoryError
+        raise MemoryError
 
     data = inputs.get_as_bytes()
 

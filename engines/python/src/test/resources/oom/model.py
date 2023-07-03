@@ -20,10 +20,6 @@ import time
 
 from djl_python import Input
 from djl_python import Output
-# import pdb
-
-class OutOfMemoryError(Exception):
-    pass
 
 
 def handle(inputs: Input):
@@ -32,7 +28,7 @@ def handle(inputs: Input):
     """
 
     if inputs.is_empty():
-        raise OutOfMemoryError()
+        raise MemoryError
 
     outputs = Output()
     return outputs
