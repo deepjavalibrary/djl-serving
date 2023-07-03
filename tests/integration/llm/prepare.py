@@ -561,7 +561,6 @@ def build_lmi_dist_model(model):
         )
     options = lmi_dist_model_list[model]
     options["engine"] = "MPI"
-    options["option.entryPoint"] = "djl_python.huggingface"
     options["option.rolling_batch"] = "auto"
     write_properties(options)
 
