@@ -354,27 +354,23 @@ lmi_dist_model_list = {
     "gpt-neox-20b": {
         "option.model_id": "EleutherAI/gpt-neox-20b",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 4,
-        "load_on_devices": 0
+        "option.max_rolling_batch_size": 4
     },
     "falcon-7b": {
         "option.model_id": "tiiuae/falcon-7b",
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
-        "option.trust_remote_code": True,
-        "load_on_devices": 0
+        "option.trust_remote_code": True
     },
     "open-llama-7b": {
         "option.model_id": "openlm-research/open_llama_7b",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 4,
-        "load_on_devices": 0
+        "option.max_rolling_batch_size": 4
     },
     "flan-t5-xxl": {
         "option.model_id": "google/flan-t5-xxl",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 4,
-        "load_on_devices": 0
+        "option.max_rolling_batch_size": 4
     }
 }
 
