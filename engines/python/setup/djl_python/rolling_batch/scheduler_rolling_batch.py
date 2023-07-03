@@ -67,7 +67,8 @@ class SchedulerRollingBatch(RollingBatch):
                                               self.search_algorithm)
 
             # TODO: This is not needed when search algorithm automatically chosen for the user.
-            if parameters.get("do_sample", self.search_config.sampling).lower() == "true":
+            if parameters.get("do_sample",
+                              self.search_config.sampling).lower() == "true":
                 search_algorithm = "sample"
 
             new_requests.input_texts[search_algorithm].append(
@@ -81,8 +82,7 @@ class SchedulerRollingBatch(RollingBatch):
         return new_requests
 
     def _init_model_and_tokenizer(self, kwargs, model_id_or_path):
-        self.config = AutoConfig.from_pretrained(model_id_or_path,
-                                                 **kwargs)
+        self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         architectures = self.config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):

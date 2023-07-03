@@ -138,19 +138,16 @@ class FasterTransformerService(object):
             output_length = [output_len] * len(input_data)
             if self.enable_streaming:
                 outputs = Output()
-                outputs.add_property("content-type",
-                                        "application/jsonlines")
+                outputs.add_property("content-type", "application/jsonlines")
                 outputs.add_stream_content(
                     self.model.stream_generate(input_data, output_length,
-                                                **parameters))
+                                               **parameters))
                 return outputs
-            result = self.model.pipeline_generate(input_data,
-                                                    output_length,
-                                                    **parameters)
+            result = self.model.pipeline_generate(input_data, output_length,
+                                                  **parameters)
         else:
             if self.is_t5:
-                result = self.model.pipeline_generate(
-                    input_data, **parameters)
+                result = self.model.pipeline_generate(input_data, **parameters)
             else:
                 beam_width = parameters.pop("beam_width", 1)
                 # TODO: remove after fixes in FT python package

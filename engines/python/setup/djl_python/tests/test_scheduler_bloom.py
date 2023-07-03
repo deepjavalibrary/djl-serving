@@ -122,7 +122,8 @@ class TestSchedulerBloom(unittest.TestCase):
 
     def test_contrastive_scheduler_falcon(self):
         model_name = "tiiuae/falcon-7b"
-        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                  trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
             "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True)
 
@@ -189,7 +190,6 @@ class TestSchedulerBloom(unittest.TestCase):
         # print
         for i, ret in results.items():
             print('\n{}:'.format(i), tokenizer.decode(ret))
-
 
 
 if __name__ == '__main__':
