@@ -217,6 +217,37 @@ public class PyEngineTest {
         }
     }
 
+    @Test(expectedExceptions = EngineException.class, expectedExceptionsMessageRegExp = "OOM")
+    public void testLoadModelOom()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/oom"))
+                        .optEngine("Python")
+                        .build();
+        ZooModel<Input, Output> model = criteria.loadModel();
+        model.newPredictor();
+    }
+
+    @Test
+    public void testInvokeModelOom()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("OOM", "true");
+            Output out = predictor.predict(input);
+            Assert.assertEquals(out.getCode(), 507);
+        }
+    }
+
     @Test
     public void testResnet18() throws TranslateException, IOException, ModelException {
         if (!Boolean.getBoolean("nightly")) {
