@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import Union, Tuple, List, Dict, Type
 
 import torch
@@ -19,6 +19,7 @@ from djl_python.scheduler.search_config import SearchConfig
 from djl_python.scheduler.lm_block import LMBlock
 from djl_python.scheduler.seq_batcher import SeqBatcher
 from djl_python.scheduler.seq_batcher_impl import GreedySeqBatcher, ContrastiveSeqBatcher
+from djl_python.scheduler.utils import compute_kv_cache
 
 SEARCH_ALGORITHM_TO_CLASS = {
     "greedy": GreedySeqBatcher,
@@ -42,15 +43,85 @@ class SeqBatchScheduler:
         self.results: Dict[int, List[int]] = defaultdict(list)
 
         self.seq_batchers: Dict[
-            Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
-                list)  # {key: List[SeqBatcher]}
+                           Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
+            list)  # {key: List[SeqBatcher]}
+
+        self.lru_kv_cache = OrderedDict()
+        self.lru_max_size = 10
 
     def add_request(self,
                     input_ids: torch.Tensor,
                     request_uids: torch.Tensor,
                     search_algorithm: str = None,
                     search_configs: List[SearchConfig] = None,
-                    kv_cache: Union[Tuple, None] = None):
+                    kv_cache: Union[Tuple, None] = None,
+                    kv_cache_prompt_ids: Union[Dict[int, torch.tensor], None] = None):
+        """
+        Args: kv_cache_prompt_ids = {request_uid -> List[token_ids]}
+        """
+
+        # Find the requests that uses kv_cache_prompt_ids
+        index_not_use_prompt = []
+        search_configs_not_use_prompt = []
+        if search_configs:
+            for idx, search_config in enumerate(search_configs):
+                if search_config.use_lru_kv_cache:
+                    prompt_ids_tensor = kv_cache_prompt_ids[request_uids[idx].item()]
+                    key = tuple(prompt_ids_tensor.flatten().tolist())
+                    if not key:
+                        raise Exception(f"request_uids = {request_uids[idx]}: search_config says use_kv_cache_prompt, "
+                                        f"but the prompt_ids is not provided.")
+                    else:
+                        # lru operations
+                        if key not in self.lru_kv_cache:
+                            if len(self.lru_kv_cache) + 1 > self.lru_max_size:
+                                # If cache size exceeds the maximum, remove by FIFO order
+                                self.lru_kv_cache.popitem(last=False)
+                            kv_cache_tuple = compute_kv_cache(input_ids=prompt_ids_tensor,
+                                                        lm_block=self.lm_block,
+                                                        search_configs=[search_config])
+                            kv_cache_new = []
+                            for k, v in kv_cache_tuple:
+                                k_new = k.cpu()
+                                v_new = v.cpu()
+                                kv_cache_new.append((k_new, v_new))
+                            self.lru_kv_cache[key] = tuple(kv_cache_new)
+                            self.lru_kv_cache.move_to_end(key)
+
+                            # _add_request
+                            self._add_request(input_ids[idx].view(1, -1),
+                                              request_uids[idx].view(1, -1),
+                                              search_algorithm,
+                                              [search_config],
+                                              kv_cache=kv_cache_tuple)
+                        else:
+                            # _add_request
+                            self._add_request(input_ids[idx].view(1, -1),
+                                              request_uids[idx].view(1, -1),
+                                              search_algorithm,
+                                              [search_config],
+                                              kv_cache=self.lru_kv_cache[key])
+                            self.lru_kv_cache.move_to_end(key)
+                else:
+                    index_not_use_prompt.append(idx)
+                    search_configs_not_use_prompt.append(search_config)
+        else:
+            index_not_use_prompt = list(range(input_ids.shape[0]))
+            search_configs_not_use_prompt = None
+
+        index_not_use_prompt = torch.tensor(index_not_use_prompt)
+        self._add_request(input_ids[index_not_use_prompt],
+                          request_uids[index_not_use_prompt],
+                          search_algorithm,
+                          search_configs_not_use_prompt,
+                          kv_cache)
+
+    def _add_request(self,
+                     input_ids: torch.Tensor,
+                     request_uids: torch.Tensor,
+                     search_algorithm: str = None,
+                     search_configs: List[SearchConfig] = None,
+                     kv_cache: Union[Tuple, None] = None):
         # TODO: next, this will take an argument of `action`, computed by self.optimal_action.
         device = input_ids.device
         request_uids = request_uids.to(device)
