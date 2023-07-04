@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -48,11 +49,13 @@ class RollingBatch implements Runnable {
     private ReentrantLock lock;
     private Condition canAdd;
     private Condition canRead;
+    private Random random;
 
     RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout) {
         this.process = process;
         this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
+        this.random = new Random();
         list = new ArrayList<>(3);
         lock = new ReentrantLock(true);
         canAdd = lock.newCondition();
@@ -80,6 +83,8 @@ class RollingBatch implements Runnable {
                         batch.setProperties(req.input.getProperties());
                     }
                     batch.add(prefix, req.getRequest());
+                    String seedPrefix = "batch_" + i + ".seed";
+                    batch.add(seedPrefix, req.seed);
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
 
@@ -123,7 +128,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input);
+            Request req = new Request(input, Long.toUnsignedString(random.nextLong()));
             list.add(req);
             canRead.signal();
             return req.output;
@@ -147,12 +152,14 @@ class RollingBatch implements Runnable {
         Output output;
         String nextToken;
         boolean last;
+        String seed;
 
-        Request(Input input) {
+        Request(Input input, String seed) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
             output.add(data);
+            this.seed = seed;
         }
 
         BytesSupplier getRequest() {
