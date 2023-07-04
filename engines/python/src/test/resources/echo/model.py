@@ -21,6 +21,7 @@ import time
 from djl_python import Input
 from djl_python import Output
 
+
 def stream_token():
     for i in range(5):
         time.sleep(1)
