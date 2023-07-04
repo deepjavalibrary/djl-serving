@@ -91,17 +91,18 @@ public abstract class BaseCacheEngine implements CacheEngine {
                                     o.setMessage(output.getMessage());
                                     o.setProperties(output.getProperties());
                                     PublisherBytesSupplier pub = (PublisherBytesSupplier) supplier;
-                                    AtomicInteger index = new AtomicInteger();
+                                    AtomicInteger index = new AtomicInteger(-1);
                                     List<byte[]> list = new ArrayList<>(writeBatch);
                                     putStream(key, o, null, index.incrementAndGet(), false);
                                     pub.subscribe(
                                             buf -> {
                                                 try {
                                                     if (buf == null) {
+                                                        byte[] batch = joinBytes(list);
                                                         putStream(
                                                                 key,
                                                                 null,
-                                                                null,
+                                                                batch,
                                                                 index.incrementAndGet(),
                                                                 true);
                                                     } else if (buf.length > 0) {
@@ -116,12 +117,6 @@ public abstract class BaseCacheEngine implements CacheEngine {
                                                                     false);
                                                             list.clear();
                                                         }
-                                                        putStream(
-                                                                key,
-                                                                o,
-                                                                buf,
-                                                                index.incrementAndGet(),
-                                                                false);
                                                     }
                                                 } catch (IOException e) {
                                                     throw new CompletionException(e);

@@ -13,6 +13,7 @@
 package ai.djl.serving.cache;
 
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
+import ai.djl.inference.streaming.PublisherBytesSupplier;
 import ai.djl.modality.Output;
 
 import cloud.localstack.Localstack;
@@ -105,15 +106,14 @@ public class CacheEngineTest {
     //           Helper Functions
 
     private void testCacheEngine(CacheEngine engine)
-            throws IOException, ExecutionException, InterruptedException {
+            throws ExecutionException, InterruptedException {
         Assert.assertFalse(engine.isMultiTenant());
 
         testBasic(engine);
         testStream(engine);
     }
 
-    private void testBasic(CacheEngine engine)
-            throws ExecutionException, InterruptedException, IOException {
+    private void testBasic(CacheEngine engine) throws ExecutionException, InterruptedException {
         // Test cache miss
         Output o = engine.get("none-exist-key", Integer.MAX_VALUE);
         Assert.assertNull(o);
@@ -152,8 +152,16 @@ public class CacheEngineTest {
         engine.remove(key1);
     }
 
-    private void testStream(CacheEngine engine)
-            throws IOException, ExecutionException, InterruptedException {
+    private void testStream(CacheEngine engine) throws ExecutionException, InterruptedException {
+        // Test ChunkedBytesSupplier streaming
+        testStreamType(engine, true);
+
+        // Test PublisherBytesSupplier streaming
+        testStreamType(engine, false);
+    }
+
+    private void testStreamType(CacheEngine engine, boolean chunkedVsPublisher)
+            throws ExecutionException, InterruptedException {
         String key = engine.create();
         Output output = new Output();
         output.addProperty("x-next-token", key);
@@ -161,12 +169,24 @@ public class CacheEngineTest {
         future.get();
 
         Output output2 = new Output();
-        ChunkedBytesSupplier cbs2 = new ChunkedBytesSupplier();
-        output2.add(cbs2);
-        cbs2.appendContent(buf, false);
-        future = engine.put(key, output2);
-        for (int i = 0; i < 21; ++i) {
-            cbs2.appendContent(buf, i == 20);
+        if (chunkedVsPublisher) {
+            // Test ChunkedBytesSupplier streaming
+            ChunkedBytesSupplier cbs2 = new ChunkedBytesSupplier();
+            output2.add(cbs2);
+            cbs2.appendContent(buf, false);
+            future = engine.put(key, output2);
+            for (int i = 0; i < 21; ++i) {
+                cbs2.appendContent(buf, i == 20);
+            }
+        } else {
+            // Test PublisherBytesSupplier streaming
+            PublisherBytesSupplier pbs = new PublisherBytesSupplier();
+            output2.add(pbs);
+            pbs.appendContent(buf, false);
+            future = engine.put(key, output2);
+            for (int i = 0; i < 21; ++i) {
+                pbs.appendContent(buf, i == 20);
+            }
         }
         future.get();
 
@@ -175,6 +195,13 @@ public class CacheEngineTest {
         if (engine instanceof BaseCacheEngine) {
             // 1 for initial input, 1 for write batch
             expectedBatch = 1 + ((BaseCacheEngine) engine).getWriteBatch();
+
+            if (!chunkedVsPublisher && (!(engine instanceof MemoryCacheEngine))) {
+                // The PublisherBytesSupplier doesn't include data as part of the first item, only
+                // properties
+                // This applies when serializing, so it doesn't affect the MemoryCacheEngine
+                expectedBatch--;
+            }
         }
         Assert.assertEquals(o.getCode(), 200);
         String nextToken = o.getProperty("x-next-token", null);
