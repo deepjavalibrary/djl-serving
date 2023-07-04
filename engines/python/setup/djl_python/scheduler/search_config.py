@@ -26,3 +26,4 @@ class SearchConfig:
         self.sampling = kwargs.get('do_sample', False)
         self.topp = kwargs.get('top_p', 0.92)
         self.temperature = kwargs.get('temperature', 1)
+        self.use_lru_kv_cache = kwargs.get('use_lru_kv_cache', False)
