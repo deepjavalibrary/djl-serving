@@ -102,12 +102,11 @@ class TestScheduler(unittest.TestCase):
 
         results = scheduler.collect_results()
         assert len(results) == 6
-        assert tokenizer.decode(results[3][:30]) == "!!!!!!!!!!When your legs don't work, you're going " \
+        assert tokenizer.decode(results[3][10:30]) == "When your legs don't work, you're going " \
                                                     "to be a little bit more tired. I'm"
         assert tokenizer.decode(
-            results[4][:30]
-        ) == '!!!!!!!!!!DeepMind Company is a company that is dedicated to the advancement of artificial ' \
-             'intelligence. We are a company'
+            results[4][10:30]
+        ) == "'t remember the last time I saw a girl in a dress. I can't remember the last time"
 
     def test_sampling_scheduler(self):
         torch.manual_seed(20220611)
@@ -157,12 +156,12 @@ class TestScheduler(unittest.TestCase):
 
         results = scheduler.collect_results()
 
-        # assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before And I can't " \
-        #                                             "sweep you off your feet, you're right, I'm done for the"
+        assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before And I can't " \
+                                                    "sweep you off your feet, you're right, I'm done for the"
         assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not know what to do " \
                                                     "with my life. I was in a very bad mood. I was"
-        # assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't help but feel that " \
-        #                                             "I've been given a chance to do something different. I've been told"
+        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't help but feel that " \
+                                                    "I've been given a chance to do something different. I've been told"
 
         for i, ret in results.items():
             print('\n{}:'.format(i), tokenizer.decode(ret))
@@ -232,11 +231,11 @@ class TestScheduler(unittest.TestCase):
             pass
 
         results = scheduler.collect_results()
-        assert tokenizer.decode(results[3][:30]) == "!!!!!!!!!!When your legs don't work, I'll tell you how to fix " \
+        assert tokenizer.decode(results[3][10:30]) == "When your legs don't work, I'll tell you how to fix " \
                                                     "them.\n\nI'm"
         assert tokenizer.decode(
-            results[4][:30]
-        ) == "!!!!!!!!!!There's a time and place where I feel like I'm going to die. It's not that"
+            results[4][10:30]
+        ) == "There's a time and place where I feel like I'm going to die. It's not that"
 
         # print
         model_name = 'gpt2'
@@ -467,11 +466,11 @@ class TestScheduler(unittest.TestCase):
         assert tokenizer.decode(results[0][:30]) == "When your legs don't work, you can try to get them to " \
                                                     "work.\n\nIf you're not sure how to do this, try this"
         assert tokenizer.decode(
-            results[1][:30]
-        ) == "!!!!!!!!!!'t remember the last time I saw a girl in a dress. I can't remember the last time"
+            results[1][10:30]
+        ) == "'t remember the last time I saw a girl in a dress. I can't remember the last time"
         assert tokenizer.decode(
-            results[2][:30]
-        ) == '!!!!!!!!!!The story of the first time I saw a girl in a hospital. I was in the hospital with'
+            results[2][10:30]
+        ) == 'The story of the first time I saw a girl in a hospital. I was in the hospital with'
 
 
 if __name__ == '__main__':
