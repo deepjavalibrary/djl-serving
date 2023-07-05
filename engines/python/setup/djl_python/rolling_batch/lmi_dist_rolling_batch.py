@@ -104,7 +104,9 @@ class LmiDistRollingBatch(RollingBatch):
             is_last_token = generation.generated_text is not None
             if not is_last_token:
                 req_ids.append(r.id)
-            r.set_next_token(generation.token_text, last_token=is_last_token)
+            r.set_next_token(
+                "" if generation.token_is_special else generation.token_text,
+                last_token=is_last_token)
 
         # filter the requests that are stopped.
         if self.cache:
