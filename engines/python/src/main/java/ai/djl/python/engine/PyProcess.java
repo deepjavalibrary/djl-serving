@@ -57,15 +57,16 @@ class PyProcess {
     PyProcess(Model model, PyEnv pyEnv, int workerId) {
         this.model = model;
         this.pyEnv = pyEnv;
-        this.workerId = workerId + counter.getAndIncrement();
+        this.workerId = workerId;
+        int port = workerId + counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             connections = new ArrayList<>(tensorParallelDegree);
             for (int i = 0; i < tensorParallelDegree; ++i) {
-                connections.add(new Connection(pyEnv, this.workerId, i));
+                connections.add(new Connection(pyEnv, port, i));
             }
         } else {
-            connections = Collections.singletonList(new Connection(pyEnv, this.workerId, -1));
+            connections = Collections.singletonList(new Connection(pyEnv, port, -1));
         }
         restartCount = new AtomicInteger(0);
     }
