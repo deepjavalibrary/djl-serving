@@ -313,6 +313,11 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [12.0],
         "batch_size": [1],
         "seq_length": [64, 128, 256]
+    },
+    "gpt2": {
+        "max_memory_per_gpu": [8.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256]
     }
 }
 
