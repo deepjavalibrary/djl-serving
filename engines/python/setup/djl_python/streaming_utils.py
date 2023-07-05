@@ -74,7 +74,7 @@ class StreamingUtils:
         if device is not None:
             input_tokens = input_tokens.to(device)
 
-        streamer = HFStreamer(tokenizer, skip_special_token=True)
+        streamer = HFStreamer(tokenizer, skip_special_tokens=True)
         generation_kwargs = dict(input_tokens, streamer=streamer, **kwargs)
 
         def run_generation(model, **kwargs):
