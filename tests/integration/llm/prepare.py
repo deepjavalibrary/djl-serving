@@ -353,23 +353,33 @@ rolling_batch_model_list = {
 lmi_dist_model_list = {
     "gpt-neox-20b": {
         "option.model_id": "EleutherAI/gpt-neox-20b",
+        "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
     },
     "falcon-7b": {
         "option.model_id": "tiiuae/falcon-7b",
+        "option.task": "text-generation",
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
         "option.trust_remote_code": True
     },
     "open-llama-7b": {
         "option.model_id": "openlm-research/open_llama_7b",
+        "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
     },
     "flan-t5-xxl": {
         "option.model_id": "google/flan-t5-xxl",
+        "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
+    "gpt2": {
+        "option.model_id": "gpt2",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4
     }
 }
@@ -561,7 +571,7 @@ def build_lmi_dist_model(model):
         )
     options = lmi_dist_model_list[model]
     options["engine"] = "MPI"
-    options["option.rolling_batch"] = "auto"
+    options["option.rolling_batch"] = "lmi-dist"
     write_properties(options)
 
 

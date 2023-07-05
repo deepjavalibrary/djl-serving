@@ -219,6 +219,15 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist flan-t5-xxl
           docker rm -f $(docker ps -aq)
+      - name: Test gpt2
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:deepspeed-nightly $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist gpt2
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
