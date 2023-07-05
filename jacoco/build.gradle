@@ -30,3 +30,11 @@ reporting {
 tasks.named("check") {
     dependsOn tasks.named("testCodeCoverageReport", JacocoReport)
 }
+
+testCodeCoverageReport {
+    classDirectories.setFrom(files(classDirectories.files.collect {
+        fileTree(dir: it, exclude: [
+                "**/python/setup/*"
+        ])
+    }))
+}
