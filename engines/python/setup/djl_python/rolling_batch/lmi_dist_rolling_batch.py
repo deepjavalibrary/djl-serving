@@ -125,12 +125,10 @@ class LmiDistRollingBatch(RollingBatch):
                 top_p=param.get("top_p", 1.0),
                 typical_p=param.get("typical_p", 1.0),
                 do_sample=param.get("do_sample", False),
-                seed=int(param.get("seed", 0))
-            )
+                seed=int(param.get("seed", 0)))
             stop_parameters = StoppingCriteriaParameters(
                 stop_sequences=param.get("stop_sequences", []),
-                max_new_tokens=param.get("max_new_tokens", 30),
-                ignore_eos_token=False)
+                max_new_tokens=param.get("max_new_tokens", 30))
 
             preprocessed_requests.append(
                 lmi_dist.utils.types.Request(

@@ -171,8 +171,9 @@ class RollingBatch implements Runnable {
         }
 
         /**
-         * Seed is required for LMI Dist for sampling for all processes in the MPI to generate the same token.
-         * NextChosenParameters is constructed during first forward and preserved for all forward calls of the request.
+         * Seed is required for LMI Dist for sampling for all processes in the MPI to generate the
+         * same token. NextTokenChooserParameters is constructed during first forward and preserved
+         * for all forward calls of the request.
          *
          * @return seed, only for first forward
          */
