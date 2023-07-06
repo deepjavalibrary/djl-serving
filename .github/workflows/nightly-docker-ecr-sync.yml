@@ -30,6 +30,9 @@ jobs:
     runs-on: [ self-hosted, aarch64 ]
     timeout-minutes: 60
     needs: create-aarch64-runner
+    strategy:
+      matrix:
+        region: [ us-east-1, us-west-2 ]
     steps:
       - uses: actions/checkout@v3
       - name: Clean docker env
@@ -45,8 +48,8 @@ jobs:
         run: |
           version=${{ github.event.inputs.mode }}
           [ -z "$version" ] && version="nightly"
-          repo="125045733377.dkr.ecr.us-east-1.amazonaws.com"
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
+          repo="125045733377.dkr.ecr.${{ matrix.region }}.amazonaws.com"
+          aws ecr get-login-password --region ${{ matrix.region }} | docker login --username AWS --password-stdin $repo
           ./scripts/pull_and_retag.sh $version $repo
       - name: Clean docker env
         working-directory: serving/docker
