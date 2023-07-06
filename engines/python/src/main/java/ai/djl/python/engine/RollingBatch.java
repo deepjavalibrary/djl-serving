@@ -19,8 +19,8 @@ import ai.djl.ndarray.BytesSupplier;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
-
 import ai.djl.util.RandomUtils;
+
 import com.google.gson.JsonObject;
 
 import org.slf4j.Logger;
@@ -129,7 +129,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, Long.toUnsignedString((long)RandomUtils.random()));
+            Request req = new Request(input, Long.toUnsignedString((long) RandomUtils.random()));
             list.add(req);
             canRead.signal();
             return req.output;
