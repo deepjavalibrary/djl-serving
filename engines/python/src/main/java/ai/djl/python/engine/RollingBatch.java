@@ -129,7 +129,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, Long.toUnsignedString((long) RandomUtils.random()));
+            Request req = new Request(input, Integer.toString(RandomUtils.nextInt()));
             list.add(req);
             canRead.signal();
             return req.output;
@@ -170,6 +170,12 @@ class RollingBatch implements Runnable {
             return input.getData();
         }
 
+        /**
+         * Seed is required for LMI Dist for sampling for all processes in the MPI to generate the same token.
+         * NextChosenParameters is constructed during first forward and preserved for all forward calls of the request.
+         *
+         * @return seed, only for first forward
+         */
         String getSeed() {
             if (nextToken != null) {
                 return null;
