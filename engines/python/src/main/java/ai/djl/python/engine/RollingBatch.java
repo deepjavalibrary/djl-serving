@@ -48,13 +48,11 @@ class RollingBatch implements Runnable {
     private ReentrantLock lock;
     private Condition canAdd;
     private Condition canRead;
-    private boolean enableStreaming;
 
-    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, boolean enableStreaming) {
+    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout) {
         this.process = process;
         this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
-        this.enableStreaming = enableStreaming;
         list = new ArrayList<>(3);
         lock = new ReentrantLock(true);
         canAdd = lock.newCondition();
@@ -99,7 +97,7 @@ class RollingBatch implements Runnable {
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
                     String json = content.get(i).getValue().getAsString();
-                    status.addResponse(json, enableStreaming);
+                    status.addResponse(json);
                 }
                 list.removeIf(status -> status.last);
                 if (list.size() < maxRollingBatchSize) {
@@ -125,7 +123,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, enableStreaming);
+            Request req = new Request(input);
             list.add(req);
             canRead.signal();
             return req.output;
@@ -147,41 +145,28 @@ class RollingBatch implements Runnable {
         Input input;
         ChunkedBytesSupplier data;
         Output output;
-        StringBuilder nextToken; // NOPMD
+        String nextToken;
         boolean last;
 
-        Request(Input input, boolean enableStreaming) {
+        Request(Input input) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
             output.add(data);
-            if (enableStreaming) {
-                nextToken = new StringBuilder();
-            } else {
-                nextToken = new StringBuilder(1024);
-            }
         }
 
         BytesSupplier getRequest() {
-            if (nextToken.length() != 0) {
+            if (nextToken != null) {
                 return BytesSupplier.wrap("{\"inputs\": [\"\"]}");
             }
             return input.getData();
         }
 
-        void addResponse(String json, boolean enableStreaming) {
+        void addResponse(String json) {
             JsonObject element = JsonUtils.GSON.fromJson(json, JsonObject.class);
             last = element.get("last").getAsBoolean();
-            if (enableStreaming) {
-                nextToken.setLength(0);
-                nextToken.append(element.get("data").getAsString());
-                data.appendContent(BytesSupplier.wrap(nextToken.toString()), last);
-            } else {
-                nextToken.append(element.get("data").getAsString());
-                if (last) {
-                    data.appendContent(BytesSupplier.wrap(nextToken.toString()), true);
-                }
-            }
+            nextToken = element.get("data").getAsString();
+            data.appendContent(BytesSupplier.wrap(nextToken), last);
         }
     }
 }
