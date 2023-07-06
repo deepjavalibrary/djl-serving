@@ -85,6 +85,7 @@ else
     -v ~/.aws:/home/djl/.aws \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
+    -e SERVING_OPTS='-Dai.djl.logging.level=debug' \
     $uid_mapping \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \

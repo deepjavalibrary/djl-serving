@@ -20,9 +20,10 @@ ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.23.0-
 ARG tb_wheel="https://publish.djl.ai/tritonserver/r23.04/tritontoolkit-23.4-py3-none-any.whl"
 ARG ompi_version=4.1.4
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.29.2
-ARG accelerate_version=0.19.0
+ARG transformers_version=4.30.1
+ARG accelerate_version=0.20.3
 ARG bitsandbytes_version=0.39.1
+ARG peft_version=0.3.0
 
 EXPOSE 8080
 
@@ -64,7 +65,7 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
     scripts/install_python.sh ${python_version} && \
     pip3 install ${torch_wheel} ${ft_wheel} ${tb_wheel} safetensors protobuf==${protobuf_version} && \
     pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    scipy einops && \
+    scipy einops peft==${peft_version} && \
     pip3 install cmake sentencepiece && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \

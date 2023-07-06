@@ -19,6 +19,7 @@ import ai.djl.ndarray.BytesSupplier;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
+import ai.djl.util.RandomUtils;
 
 import com.google.gson.JsonObject;
 
@@ -48,13 +49,11 @@ class RollingBatch implements Runnable {
     private ReentrantLock lock;
     private Condition canAdd;
     private Condition canRead;
-    private boolean enableStreaming;
 
-    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, boolean enableStreaming) {
+    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout) {
         this.process = process;
         this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
-        this.enableStreaming = enableStreaming;
         list = new ArrayList<>(3);
         lock = new ReentrantLock(true);
         canAdd = lock.newCondition();
@@ -82,6 +81,11 @@ class RollingBatch implements Runnable {
                         batch.setProperties(req.input.getProperties());
                     }
                     batch.add(prefix, req.getRequest());
+                    String seed = req.getSeed();
+                    if (seed != null) {
+                        String seedPrefix = "batch_" + i + ".seed";
+                        batch.add(seedPrefix, req.seed);
+                    }
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
 
@@ -99,7 +103,7 @@ class RollingBatch implements Runnable {
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
                     String json = content.get(i).getValue().getAsString();
-                    status.addResponse(json, enableStreaming);
+                    status.addResponse(json);
                 }
                 list.removeIf(status -> status.last);
                 if (list.size() < maxRollingBatchSize) {
@@ -120,11 +124,12 @@ class RollingBatch implements Runnable {
         try {
             lock.lock();
             if (list.size() >= maxRollingBatchSize) {
+                logger.debug("exceed max_rolling_batch_size: {}", maxRollingBatchSize);
                 if (!canAdd.await(timeout, TimeUnit.SECONDS)) {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, enableStreaming);
+            Request req = new Request(input, String.valueOf(RandomUtils.nextInt()));
             list.add(req);
             canRead.signal();
             return req.output;
@@ -146,41 +151,44 @@ class RollingBatch implements Runnable {
         Input input;
         ChunkedBytesSupplier data;
         Output output;
-        StringBuilder nextToken; // NOPMD
+        String nextToken;
         boolean last;
+        String seed;
 
-        Request(Input input, boolean enableStreaming) {
+        Request(Input input, String seed) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
             output.add(data);
-            if (enableStreaming) {
-                nextToken = new StringBuilder();
-            } else {
-                nextToken = new StringBuilder(1024);
-            }
+            this.seed = seed;
         }
 
         BytesSupplier getRequest() {
-            if (nextToken.length() != 0) {
+            if (nextToken != null) {
                 return BytesSupplier.wrap("{\"inputs\": [\"\"]}");
             }
             return input.getData();
         }
 
-        void addResponse(String json, boolean enableStreaming) {
+        /**
+         * Seed is required for LMI Dist for sampling for all processes in the MPI to generate the
+         * same token. NextTokenChooserParameters is constructed during first forward and preserved
+         * for all forward calls of the request.
+         *
+         * @return seed, only for first forward
+         */
+        String getSeed() {
+            if (nextToken != null) {
+                return null;
+            }
+            return seed;
+        }
+
+        void addResponse(String json) {
             JsonObject element = JsonUtils.GSON.fromJson(json, JsonObject.class);
             last = element.get("last").getAsBoolean();
-            if (enableStreaming) {
-                nextToken.setLength(0);
-                nextToken.append(element.get("data").getAsString());
-                data.appendContent(BytesSupplier.wrap(nextToken.toString()), last);
-            } else {
-                nextToken.append(element.get("data").getAsString());
-                if (last) {
-                    data.appendContent(BytesSupplier.wrap(nextToken.toString()), true);
-                }
-            }
+            nextToken = element.get("data").getAsString();
+            data.appendContent(BytesSupplier.wrap(nextToken), last);
         }
     }
 }

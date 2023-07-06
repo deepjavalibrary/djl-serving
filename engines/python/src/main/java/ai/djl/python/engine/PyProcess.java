@@ -52,18 +52,21 @@ class PyProcess {
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
 
+    private static AtomicInteger counter = new AtomicInteger(0);
+
     PyProcess(Model model, PyEnv pyEnv, int workerId) {
         this.model = model;
         this.pyEnv = pyEnv;
         this.workerId = workerId;
+        int port = workerId + counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             connections = new ArrayList<>(tensorParallelDegree);
             for (int i = 0; i < tensorParallelDegree; ++i) {
-                connections.add(new Connection(pyEnv, workerId, i));
+                connections.add(new Connection(pyEnv, port, i));
             }
         } else {
-            connections = Collections.singletonList(new Connection(pyEnv, workerId, -1));
+            connections = Collections.singletonList(new Connection(pyEnv, port, -1));
         }
         restartCount = new AtomicInteger(0);
     }

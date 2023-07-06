@@ -196,22 +196,21 @@ class TransformersNeuronXService(object):
                     "transformers-neuronx")
                 model_kwargs["engine"] = "transformers-neuronx"
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer,
-                                        input_text, "cpu", **model_kwargs))
+                    stream_generator(self.model, self.tokenizer, input_text,
+                                     "cpu", **model_kwargs))
             return outputs
 
-        encoded_inputs = self.tokenizer.batch_encode_plus(
-            input_text, return_tensors="pt", padding=True)
+        encoded_inputs = self.tokenizer.batch_encode_plus(input_text,
+                                                          return_tensors="pt",
+                                                          padding=True)
         output_tokens = self.model.generate(
             input_ids=encoded_inputs.input_ids,
             attention_mask=encoded_inputs.attention_mask,
             **parameters)
-        generated_text = self.tokenizer.batch_decode(
-            output_tokens, skip_special_tokens=True)
+        generated_text = self.tokenizer.batch_decode(output_tokens,
+                                                     skip_special_tokens=True)
 
-        return Output().add([{
-            "generated_text": s
-        } for s in generated_text])
+        return Output().add([{"generated_text": s} for s in generated_text])
 
 
 _service = TransformersNeuronXService()

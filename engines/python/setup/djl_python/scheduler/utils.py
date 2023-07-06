@@ -82,11 +82,11 @@ def nudge_tensor(tensor: torch.Tensor, offsets: torch.Tensor,
         offset = offsets_list[i]
         if seq_order == 1:
             tensor_new[i, offset:offset + init_kv_cache_len,
-            ...] = tensor[i, :init_kv_cache_len, ...]
+                       ...] = tensor[i, :init_kv_cache_len, ...]
             tensor_new[i, :offset, ...] = 0
         elif seq_order == 2:
             tensor_new[i, :, offset:offset + init_kv_cache_len,
-            ...] = tensor[i, :, :init_kv_cache_len, ...]
+                       ...] = tensor[i, :, :init_kv_cache_len, ...]
 
     return tensor_new
 
@@ -175,7 +175,7 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
                    dtype=torch.int64,
                    device=attention_mask.device), attention_mask
     ],
-        dim=1)
+                               dim=1)
     position_ids += init_kv_cache_len
     # If in the future not only prefix kv_cache is given, but also prefix token ids are given,
     # then the dummy_token_ids will still be used and only assemble the prefix at the final output.
@@ -199,22 +199,22 @@ def assemble_prefix_kv_cache(input_ids, position_ids, attention_mask,
 
 def compute_kv_cache(input_ids: torch.Tensor,
                      lm_block: LMBlock,
-                     save_kv_cache_paths: List[str],
-                     search_configs: Union[List[SearchConfig], None] = None
-                     ):
-    if input_ids.shape[0] != len(save_kv_cache_paths):
-        raise Exception("input_ids.shape does not match save_kv_cache_paths shape or is illegal")
+                     save_kv_cache_paths: List[str] = None,
+                     search_configs: Union[List[SearchConfig], None] = None):
+    if save_kv_cache_paths and input_ids.shape[0] != len(save_kv_cache_paths):
+        raise Exception(
+            "input_ids.shape does not match save_kv_cache_paths shape or is illegal"
+        )
 
     pad_token_ids = []
     if not search_configs:
-        # (first_token_id + 2) // 2 is a dummy_pad_token. Then only requirement is it be not the same as
-        # first_token_id while not exceeding the vocabulary token id value range.
         for token_ids in input_ids:
             first_token_id = token_ids[0].item()
-            pad_token_id = (first_token_id + 2) // 2 if first_token_id != 2 else 0
+            pad_token_id = (first_token_id - 1) if first_token_id != 0 else 0
             pad_token_ids.append(pad_token_id)
     else:
-        pad_token_ids.append(search_config.pad_token_id for search_config in search_configs)
+        pad_token_ids.append(search_config.pad_token_id
+                             for search_config in search_configs)
 
     initial_offsets = compute_offsets(input_ids, pad_token_ids)
     attention_mask = compute_attention_mask(initial_offsets,
@@ -231,11 +231,17 @@ def compute_kv_cache(input_ids: torch.Tensor,
     past_key_values = lm_output.past_key_values
 
     # Save kv_cache of input_ids
-    for idx, save_kv_cache_path in enumerate(save_kv_cache_paths):
+    last_kv_cache = None
+    for idx in range(initial_offsets.numel()):
         kv_cache_list = []
         for k, v in past_key_values:
             offset = initial_offsets[idx].item()
             k_idx = k[idx, :, offset:, :].unsqueeze(dim=0)
             v_idx = v[idx, :, offset:, :].unsqueeze(dim=0)
             kv_cache_list.append((k_idx, v_idx))
-        torch.save(tuple(kv_cache_list), save_kv_cache_path)
+
+        last_kv_cache = tuple(kv_cache_list)
+        if save_kv_cache_paths:
+            torch.save(last_kv_cache, save_kv_cache_paths[idx])
+
+    return last_kv_cache

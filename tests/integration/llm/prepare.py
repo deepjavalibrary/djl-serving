@@ -120,6 +120,12 @@ hf_handler_list = {
         "option.device_map": "auto",
         "option.enable_streaming": True,
     },
+    "gpt4all-lora": {
+        "option.model_id": "nomic-ai/gpt4all-lora",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "fp16"
+    }
 }
 
 ds_handler_list = {
@@ -153,6 +159,12 @@ ds_handler_list = {
         "option.dtype": "fp16",
         "option.enable_streaming": True
     },
+    "gpt4all-lora": {
+        "option.model_id": "nomic-ai/gpt4all-lora",
+        "option.tensor_parallel_degree": 4,
+        "option.task": "text-generation",
+        "option.dtype": "fp16"
+    }
 }
 
 sd_handler_list = {
@@ -338,6 +350,40 @@ rolling_batch_model_list = {
     }
 }
 
+lmi_dist_model_list = {
+    "gpt-neox-20b": {
+        "option.model_id": "EleutherAI/gpt-neox-20b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
+    "falcon-7b": {
+        "option.model_id": "tiiuae/falcon-7b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
+        "option.trust_remote_code": True
+    },
+    "open-llama-7b": {
+        "option.model_id": "openlm-research/open_llama_7b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
+    "flan-t5-xxl": {
+        "option.model_id": "google/flan-t5-xxl",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
+    "gpt2": {
+        "option.model_id": "gpt2",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4
+    }
+}
+
 
 def write_properties(properties):
     model_path = "models/test"
@@ -514,7 +560,18 @@ def build_rolling_batch_model(model):
             f"{model} is not one of the supporting handler {list(rolling_batch_model_list.keys())}"
         )
     options = rolling_batch_model_list[model]
-    options["rolling_batch"] = True
+    options["rolling_batch"] = "scheduler"
+    write_properties(options)
+
+
+def build_lmi_dist_model(model):
+    if model not in lmi_dist_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(lmi_dist_model_list.keys())}"
+        )
+    options = lmi_dist_model_list[model]
+    options["engine"] = "MPI"
+    options["option.rolling_batch"] = "lmi-dist"
     write_properties(options)
 
 
@@ -532,7 +589,8 @@ supported_handler = {
     'transformers_neuronx_raw': build_transformers_neuronx_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
     'performance': build_performance_model,
-    'rolling_batch_scheduler': build_rolling_batch_model
+    'rolling_batch_scheduler': build_rolling_batch_model,
+    'lmi_dist': build_lmi_dist_model
 }
 
 if __name__ == '__main__':

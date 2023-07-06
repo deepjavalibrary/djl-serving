@@ -11,11 +11,9 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.rolling_batch.rolling_batch import RollingBatch
-from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from transformers import AutoConfig
 from lmi_dist.models import get_model
-from lmi_dist.models.flash_causal_lm import FlashCausalLMBatch
-from lmi_dist.models.seq2seq_lm import Seq2SeqLMBatch
 from lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
     StoppingCriteriaParameters,
@@ -24,21 +22,6 @@ import lmi_dist
 from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
-
-ARCHITECTURE_2_BATCH_CLS = {
-    "RWForCausalLM": FlashCausalLMBatch,
-    "GPTNeoXForCausalLM": FlashCausalLMBatch,
-    "T5ForConditionalGeneration": Seq2SeqLMBatch,
-    "LlamaForCausalLM": FlashCausalLMBatch
-}
-
-QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes"]
-
-
-def get_batch_cls_from_architecture(architecture):
-    if architecture in ARCHITECTURE_2_BATCH_CLS:
-        return ARCHITECTURE_2_BATCH_CLS[architecture]
-    raise ValueError("Invalid architecture, not supported by lmi-dist")
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -62,8 +45,6 @@ class LmiDistRollingBatch(RollingBatch):
 
     def _init_model(self, kwargs, model_id_or_path):
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
-        self.batch_cls = get_batch_cls_from_architecture(
-            self.config.architectures[0])
         sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
         quantize = self.properties.get("quantize", None)
         dtype = self.properties.get("dtype", None)
@@ -82,7 +63,9 @@ class LmiDistRollingBatch(RollingBatch):
             sharded=sharded,
             quantize=quantize,
             trust_remote_code=kwargs.get("trust_remote_code"))
+        self.batch_cls = self.model.batch_type
 
+    @stop_on_any_exception
     def inference(self, input_data, parameters):
         """
         Performs prefill and decode operations for the batch.
@@ -132,7 +115,9 @@ class LmiDistRollingBatch(RollingBatch):
             is_last_token = generation.generated_text is not None
             if not is_last_token:
                 req_ids.append(r.id)
-            r.set_next_token(generation.token_text, last_token=is_last_token)
+            r.set_next_token(
+                "" if generation.token_is_special else generation.token_text,
+                last_token=is_last_token)
 
         # filter the requests that are stopped.
         if self.cache:
@@ -151,7 +136,7 @@ class LmiDistRollingBatch(RollingBatch):
                 top_p=param.get("top_p", 1.0),
                 typical_p=param.get("typical_p", 1.0),
                 do_sample=param.get("do_sample", False),
-            )
+                seed=int(param.get("seed", 0)))
             stop_parameters = StoppingCriteriaParameters(
                 stop_sequences=param.get("stop_sequences", []),
                 max_new_tokens=param.get("max_new_tokens", 30))

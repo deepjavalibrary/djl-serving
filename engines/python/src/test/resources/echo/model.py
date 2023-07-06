@@ -39,6 +39,8 @@ def handle(inputs: Input):
         return "invalid_type"
     elif inputs.contains_key("exit"):
         sys.exit()
+    elif inputs.contains_key("OOM"):
+        raise MemoryError
 
     data = inputs.get_as_bytes()
 

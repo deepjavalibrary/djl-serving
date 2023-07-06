@@ -133,6 +133,12 @@ hf_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 2,
+    },
+    "gpt4all-lora": {
+        "max_memory_per_gpu": [8.0, 10.0],
+        "batch_size": [1, 4],
+        "seq_length": [16, 32],
+        "worker": 1,
     }
 }
 
@@ -165,6 +171,12 @@ ds_model_spec = {
         "seq_length": [16],
         "worker": 1,
         "stream_output": True,
+    },
+    "gpt4all-lora": {
+        "max_memory_per_gpu": [8.0, 10.0],
+        "batch_size": [1, 4],
+        "seq_length": [16, 32],
+        "worker": 1,
     }
 }
 
@@ -279,6 +291,39 @@ transformers_neuronx_model_spec = {
         "batch_size": [2],
         "stream_output": True,
     },
+}
+
+lmi_dist_model_spec = {
+    "gpt-neox-20b": {
+        "max_memory_per_gpu": [15.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
+    "falcon-7b": {
+        "max_memory_per_gpu": [20.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
+    "open-llama-7b": {
+        "max_memory_per_gpu": [8.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
+    "flan-t5-xxl": {
+        "max_memory_per_gpu": [12.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
+    "gpt2": {
+        "max_memory_per_gpu": [5.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    }
 }
 
 
@@ -492,7 +537,7 @@ def test_handler(model, model_spec):
                 result = res.content.decode().split("\n")[:-1]
                 assert len(
                     result
-                ) <= seq_length, "generated more takens than max_new_tokens"
+                ) <= seq_length, "generated more tokens than max_new_tokens"
                 result_0 = json.loads(result[0])['outputs']
                 assert len(
                     result_0
@@ -686,6 +731,8 @@ if __name__ == "__main__":
     elif args.handler == "transformers_neuronx_raw":
         test_transformers_neuronx_raw(args.model,
                                       transformers_neuronx_raw_model_spec)
+    elif args.handler == "lmi_dist":
+        test_handler(args.model, lmi_dist_model_spec)
     elif args.handler == "performance":
         test_performance()
     else:

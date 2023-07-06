@@ -1,10 +1,11 @@
 import unittest
 
-from djl_python.scheduler import BloomBlock
+from djl_python.scheduler.lm_block import BloomBlock, FalconBlock
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
 from djl_python.scheduler.search_config import SearchConfig
 import torch
+from transformers import GPT2Tokenizer, GPT2LMHeadModel, AutoTokenizer, AutoModelForCausalLM
 
 
 class TestSchedulerBloom(unittest.TestCase):
@@ -98,6 +99,77 @@ class TestSchedulerBloom(unittest.TestCase):
         assert tokenizer.decode(
             results[0][:30]
         ) == "Memories follow me left and right. I can feel them moving around in my body, like they’re trying to tell me something about where I’m going"
+
+        # Merge shorter sequences
+        input_ids_1 = tokenizer.encode("When your legs don't work",
+                                       return_tensors='pt')
+        input_ids_2 = torch.concat([
+            torch.tensor([PAD, PAD]),
+            tokenizer.encode("There's a time", return_tensors='pt')[0]
+        ]).view(1, -1)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        request_ids = torch.tensor([[3], [4]])
+
+        scheduler.add_request(input_ids, request_ids)
+
+        # Forward pass
+        for _ in scheduler.increment_forward(100):
+            pass
+
+        # print
+        for i, ret in results.items():
+            print('\n{}:'.format(i), tokenizer.decode(ret))
+
+    def test_contrastive_scheduler_falcon(self):
+        model_name = "tiiuae/falcon-7b"
+        tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                  trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True)
+
+        lm_block = FalconBlock(model)
+
+        search_config = SearchConfig()
+        PAD = search_config.pad_token_id
+        scheduler = SeqBatchScheduler(lm_block, "contrastive", search_config)
+
+        input_ids_0 = tokenizer.encode(
+            'Memories follow me left and right. I can', return_tensors='pt')
+        request_ids = torch.tensor([[0]])
+
+        # Test init_forward
+        scheduler.add_request(input_ids_0, request_ids)
+
+        # Merge longer sequences
+        input_ids_1 = tokenizer.encode(
+            "When your legs don't work like they used to before And I can't sweep you off",
+            return_tensors='pt')
+        input_ids_2 = torch.concat([
+            torch.tensor([PAD, PAD, PAD, PAD, PAD, PAD]),
+            tokenizer.encode(
+                "There's a time that I remember, when I did not know",
+                return_tensors='pt')[0]
+        ]).view(1, -1)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+
+        request_ids = torch.tensor([[1], [2]])
+        scheduler.add_request(input_ids, request_ids)
+
+        # Forward pass
+        for _ in scheduler.increment_forward(20):
+            pass
+
+        results = scheduler.results
+
+        assert tokenizer.decode(
+            results[1][:30]
+        ) == "When your legs don't work like they used to before And I can't sweep you offíc warr formats Tos Bruce advocacyyoungGP xxx522"
+        assert tokenizer.decode(
+            results[2][:20]
+        ) == "There's a time that I remember, when I did not know rents complimentaryigsiosis stimulate roads"
+        assert tokenizer.decode(
+            results[0][:30]
+        ) == 'Memories follow me left and right. I canHex pennednal hackers quali consists authoritative operates Nurse Scotland[@ Burns diminishing和 preNut comfortably drainage suddenly revised'
 
         # Merge shorter sequences
         input_ids_1 = tokenizer.encode("When your legs don't work",

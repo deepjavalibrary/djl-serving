@@ -56,27 +56,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
 class Connection {
 
     private static final Logger logger = LoggerFactory.getLogger(Connection.class);
     private static final String MASTER_ADDR = "127.0.0.1";
 
-    private static AtomicInteger counter = new AtomicInteger(0);
-
     private int port;
     private SocketAddress socketAddress;
     private Channel channel;
     private RequestHandler requestHandler;
 
-    Connection(PyEnv pyEnv, int workerId, int rank) {
+    Connection(PyEnv pyEnv, int basePort, int rank) {
         requestHandler = new RequestHandler();
-        if (pyEnv.isMpiMode()) {
-            port = 128 * workerId + 29761;
-        } else {
-            port = 19000 + counter.getAndIncrement();
-        }
+        port = 19000 + basePort;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank);
     }
 
@@ -106,6 +99,8 @@ class Connection {
     static String[] getPythonStartCmd(PyEnv pyEnv, Model model, int workerId, int port) {
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
         if (pyEnv.isMpiMode()) {
+            String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
+            logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
             String[] args = new String[36];
             args[0] = "mpirun";
             args[1] = "-N";
@@ -129,7 +124,7 @@ class Connection {
             args[16] = "-x";
             args[17] = "PYTHONPATH";
             args[18] = "-x";
-            args[19] = "CUDA_VISIBLE_DEVICES=" + getVisibleDevices(workerId, tensorParallelDegree);
+            args[19] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
             args[20] = "-x";
             args[21] = "MASTER_ADDR=" + MASTER_ADDR;
             args[22] = "-x";

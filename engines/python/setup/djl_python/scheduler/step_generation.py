@@ -10,12 +10,14 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import bisect
 from collections import defaultdict
 
 import torch
 from torch.nn.functional import normalize, softmax
 from typing import Tuple, List, Dict
 from djl_python.scheduler.search_config import SearchConfig
+import numpy, heapq
 
 
 def contrastive_step_generate(top_k_ids: torch.Tensor,
@@ -82,7 +84,7 @@ def sampling_step_generate(logits: torch.tensor,
     output_ids_greedy = greedy_step_generate(logits[collector['greedy'], :])
     output_ids_topk = topk_step_generate(logits[collector['topk'], :],
                                          k_config_list, tmprtr_list_for_k)
-    output_ids_topp = topp_step_generate(logits[collector['topk'], :],
+    output_ids_topp = topp_step_generate(logits[collector['topp'], :],
                                          p_config_list, tmprtr_list_for_p)
     output_ids = torch.empty(len(search_configs),
                              dtype=torch.int64,
@@ -124,7 +126,7 @@ def sampler_bucket_sort(search_configs: List[SearchConfig]):
 def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     """
     Args:
-        logtis: [batch, vocab_size].
+        logits: [batch, vocab_size].
             This logits can also be probability inputs, since probs = softmax(logits, dim=1) .
 
     Return:
@@ -133,18 +135,68 @@ def greedy_step_generate(logits: torch.Tensor, k: int = 1) -> torch.tensor:
     return torch.topk(logits, k=k, dim=-1, largest=True, sorted=False).indices
 
 
-def topk_step_generate(logits, k_config_list: List[int], tmprtr_list_for_k):
+def topk_step_generate(logits, k_config_list: List[int],
+                       tmprtr_list_for_k: List[float]):
     """
-    If logits is tensor([]), the output should be tensor([]) too.
+    Returns the token ids of the top k selection. If logits is tensor([]), the output should be tensor([]) too.
     """
-    return torch.tensor([], dtype=torch.int64, device=logits.device)
+    if logits.numel() == 0:
+        return torch.tensor([], dtype=torch.int64, device=logits.device)
+
+    batch_size, vocab_size = logits.size()
+
+    # result
+    indices = torch.empty(batch_size, dtype=torch.int64)
+
+    # Find the candidate: O(k * log(vocab_size))
+    for i in range(batch_size):
+        k = k_config_list[i]
+        topk_values, topk_indices = torch.topk(logits[i],
+                                               k=k,
+                                               dim=-1,
+                                               largest=True,
+                                               sorted=True)
+        # At this step the truncated prob is normalized
+        probs = softmax(topk_values / tmprtr_list_for_k[i], dim=-1)
+
+        indices[i] = topk_indices[torch.multinomial(probs, 1)]
+
+    return indices.view(-1, 1)
 
 
-def topp_step_generate(logits, p_config_list: List[float], tmprtr_list_for_p):
+def topp_step_generate(logits, p_config_list: List[float],
+                       tmprtr_list_for_p: List[float]):
     """
-    If logits is tensor([]), the output should be tensor([]) too.
+    Returns the token ids of the top p selection. If logits is tensor([]), the output should be tensor([]) too.
+
+    Args:
+        logits: [batch, vocab_size].
+
+    Return:
+        indices: [batch, 1]
     """
-    return torch.tensor([], dtype=torch.int64, device=logits.device)
+    if logits.numel() == 0:
+        return torch.tensor([], dtype=torch.int64, device=logits.device)
+
+    cumulative_prob_tensor = torch.tensor(p_config_list,
+                                          device=logits.device).view(-1, 1)
+    temperature_tensor = torch.tensor(tmprtr_list_for_p,
+                                      device=logits.device).view(-1, 1)
+    logits /= temperature_tensor
+
+    sorted_logits, sorted_indices = torch.sort(logits, descending=False)
+    cumulative_probs = sorted_logits.softmax(dim=-1).cumsum(dim=-1)
+
+    # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
+    sorted_indices_to_remove = cumulative_probs <= (1 - cumulative_prob_tensor)
+    # Keep at least 1 candidate token
+    sorted_indices_to_remove[..., -1:] = 0
+
+    # scatter sorted tensors to original indexing
+    indices_to_remove = sorted_indices_to_remove.scatter(
+        1, sorted_indices, sorted_indices_to_remove)
+    scores = logits.masked_fill(indices_to_remove, -float("Inf"))
+    return torch.multinomial(scores.softmax(dim=-1), 1).view(-1, 1)
 
 
 def beam_step_generate(last_probs: torch.Tensor, logits: torch.Tensor,

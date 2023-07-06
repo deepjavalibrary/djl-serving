@@ -15,8 +15,13 @@ import logging
 import os
 
 import torch
-from transformers import pipeline, Conversation, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig
+from transformers import (pipeline, Conversation, AutoModelForCausalLM,
+                          AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
+                          AutoModelForSequenceClassification,
+                          AutoModelForTokenClassification,
+                          AutoModelForQuestionAnswering)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from peft import PeftConfig, PeftModel
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -42,10 +47,16 @@ ARCHITECTURES_2_TASK = {
 }
 
 LMI_DIST_ADV_MODEL = {
-    "RWForCausalLM",
-    "GPTNeoXForCausalLM",
-    "T5ForConditionalGeneration",
+    "RWForCausalLM", "GPTNeoXForCausalLM", "T5ForConditionalGeneration",
     "LlamaForCausalLM"
+}
+
+PEFT_MODEL_TASK_TO_CLS = {
+    "SEQ_CLS": AutoModelForSequenceClassification,
+    "SEQ_2_SEQ_LM": AutoModelForSeq2SeqLM,
+    "CAUSAL_LM": AutoModelForCausalLM,
+    "TOKEN_CLS": AutoModelForTokenClassification,
+    "QUESTION_ANS": AutoModelForQuestionAnswering,
 }
 
 
@@ -65,7 +76,8 @@ def get_torch_dtype_from_str(dtype: str):
     raise ValueError(f"Invalid data type: {dtype}")
 
 
-def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool, model_config):
+def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
+                                     model_config):
     if rolling_batch_type == "auto":
         architecture = model_config.architectures[0]
         if architecture in LMI_DIST_ADV_MODEL and is_mpi:
@@ -78,6 +90,11 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool, mode
     elif rolling_batch_type == "lmi-dist":
         from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
         return LmiDistRollingBatch
+    elif rolling_batch_type == "vllm":
+        from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
+        logging.warning(
+            "vLLM rolling batcher is experimental, use with caution")
+        return VLLMRollingBatch
     raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
 
@@ -95,6 +112,7 @@ class HuggingFaceService(object):
         self.rolling_batch_type = None
         self.rolling_batch = None
         self.model_config = None
+        self.peft_config = None
 
     def initialize(self, properties: dict):
         # model_id can point to huggingface model_id or local directory.
@@ -146,17 +164,20 @@ class HuggingFaceService(object):
                 properties.get("dtype"))
         self.rolling_batch_type = properties.get("rolling_batch", None)
 
+        self._read_model_config(model_id_or_path)
+
         if self.rolling_batch_type:
             self.rolling_batch_type = self.rolling_batch_type.lower()
             is_mpi = properties.get("engine") != "Python"
             if is_mpi:
                 self.device = int(os.getenv("LOCAL_RANK", 0))
-            model_config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
-            _rolling_batch_cls = get_rolling_batch_class_from_str(self.rolling_batch_type, is_mpi, model_config)
+            _rolling_batch_cls = get_rolling_batch_class_from_str(
+                self.rolling_batch_type, is_mpi, self.model_config)
+
+            # TODO: Allow user to set output formatter
             self.rolling_batch = _rolling_batch_cls(model_id_or_path,
                                                     self.device, properties,
                                                     **kwargs)
-
             self.initialized = True
             return
         elif self.enable_streaming:
@@ -165,7 +186,7 @@ class HuggingFaceService(object):
             return
 
         if not task:
-            task = self.infer_task_from_model_architecture(model_id_or_path)
+            task = self.infer_task_from_model_architecture()
 
         self.hf_pipeline = self.get_pipeline(task=task,
                                              model_id_or_path=model_id_or_path,
@@ -187,7 +208,7 @@ class HuggingFaceService(object):
         parameters = []
         batch = inputs.get_batches()
         first = True
-        for item in batch:
+        for i, item in enumerate(batch):
             input_map = decode(item, content_type)
             _inputs = input_map.pop("inputs", input_map)
             if isinstance(_inputs, list):
@@ -205,16 +226,23 @@ class HuggingFaceService(object):
                         "In order to enable dynamic batching, all input batches must have the same parameters"
                     )
 
+            seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
+            if item.contains_key(seed_key):
+                seed = parameters[i].get("seed")
+                if not seed:
+                    # set server provided seed if seed is not part of request
+                    parameters[i]["seed"] = item.get_as_string(key=seed_key)
+
         outputs = Output()
 
         if self.rolling_batch_type:
             result = self.rolling_batch.inference(input_data, parameters)
             for i in range(inputs.get_batch_size()):
-                res = result[i]
-                encode(outputs,
-                       res,
-                       accept,
-                       key=inputs.get_content().key_at(i))
+                outputs.add(result[i], key="data", batch_index=i)
+
+            content_type = self.rolling_batch.get_content_type()
+            if content_type:
+                outputs.add_property("content-type", content_type)
 
             return outputs
         elif self.enable_streaming:
@@ -222,15 +250,14 @@ class HuggingFaceService(object):
             if self.enable_streaming == "huggingface":
                 outputs.add_stream_content(
                     StreamingUtils.use_hf_default_streamer(
-                        self.model, self.tokenizer, input_data,
-                        self.device, **parameters[0]))
+                        self.model, self.tokenizer, input_data, self.device,
+                        **parameters[0]))
             else:
                 stream_generator = StreamingUtils.get_stream_generator(
                     "Accelerate")
                 outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer,
-                                        input_data, self.device,
-                                        **parameters[0]))
+                    stream_generator(self.model, self.tokenizer, input_data,
+                                     self.device, **parameters[0]))
             return outputs
 
         prediction = self.hf_pipeline(input_data, **parameters[0])
@@ -238,9 +265,9 @@ class HuggingFaceService(object):
         offset = 0
         for i in range(inputs.get_batch_size()):
             encode(outputs,
-                    prediction[offset:offset + input_size[i]],
-                    accept,
-                    key=inputs.get_content().key_at(i))
+                   prediction[offset:offset + input_size[i]],
+                   accept,
+                   key=inputs.get_content().key_at(i))
             offset += input_size[i]
 
         return outputs
@@ -248,12 +275,12 @@ class HuggingFaceService(object):
     def get_pipeline(self, task: str, model_id_or_path: str, kwargs):
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
         if task in {
-            "automatic-speech-recognition",
-            "image-segmentation",
-            "image-classification",
-            "audio-classification",
-            "object-detection",
-            "zero-shot-image-classification",
+                "automatic-speech-recognition",
+                "image-segmentation",
+                "image-classification",
+                "audio-classification",
+                "object-detection",
+                "zero-shot-image-classification",
         }:
             kwargs["feature_extractor"] = model_id_or_path
         else:
@@ -265,10 +292,25 @@ class HuggingFaceService(object):
                 use_pipeline = False
         # build pipeline
         if use_pipeline:
-            hf_pipeline = pipeline(task=task,
-                                   model=model_id_or_path,
-                                   device=self.device,
-                                   **kwargs)
+            if self.peft_config is not None:
+                kwargs.pop("tokenizer", None)
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    self.peft_config.base_model_name_or_path)
+                base_model = PEFT_MODEL_TASK_TO_CLS[
+                    self.peft_config.task_type].from_pretrained(
+                        self.peft_config.base_model_name_or_path, **kwargs)
+                lora_model = PeftModel.from_pretrained(base_model,
+                                                       model_id_or_path)
+                self.model = lora_model.merge_and_unload()
+                hf_pipeline = pipeline(task=task,
+                                       tokenizer=self.tokenizer,
+                                       model=self.model,
+                                       device=self.device)
+            else:
+                hf_pipeline = pipeline(task=task,
+                                       model=model_id_or_path,
+                                       device=self.device,
+                                       **kwargs)
         else:
             kwargs.pop("tokenizer", None)
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
@@ -292,19 +334,27 @@ class HuggingFaceService(object):
         return hf_pipeline
 
     def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
-                                                       padding_side="left")
-        model_config = AutoConfig.from_pretrained(model_id_or_path,
-                                                  **kwargs)
-        self.model_config = model_config
-        architectures = model_config.architectures
+        if self.peft_config is not None:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.peft_config.base_model_name_or_path, padding_size="left")
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
+                                                           padding_side="left")
+        architectures = self.model_config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(
-                model_id_or_path, **kwargs)
+            model_cls = AutoModelForSeq2SeqLM
         else:
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path, **kwargs)
+            model_cls = AutoModelForCausalLM
+
+        if self.peft_config is not None:
+            base_model = model_cls.from_pretrained(
+                self.peft_config.base_model_name_or_path, **kwargs)
+            lora_model = PeftModel.from_pretrained(base_model,
+                                                   model_id_or_path)
+            self.model = lora_model.merge_and_unload()
+        else:
+            self.model = model_cls.from_pretrained(model_id_or_path, **kwargs)
 
         if self.device:
             self.model.to(self.device)
@@ -351,10 +401,8 @@ class HuggingFaceService(object):
 
         return wrapped_pipeline
 
-    def infer_task_from_model_architecture(self, model_config_path: str):
-        model_config = AutoConfig.from_pretrained(
-            model_config_path, trust_remote_code=self.trust_remote_code)
-        architecture = model_config.architectures[0]
+    def infer_task_from_model_architecture(self):
+        architecture = self.model_config.architectures[0]
 
         task = None
         for arch_options in ARCHITECTURES_2_TASK:
@@ -366,6 +414,23 @@ class HuggingFaceService(object):
                 f"Task couldn't be inferred from {architecture}. Please manually set `task` option."
             )
         return task
+
+    def _read_model_config(self, model_config_path: str):
+        try:
+            self.model_config = AutoConfig.from_pretrained(
+                model_config_path, trust_remote_code=self.trust_remote_code)
+        except OSError:
+            logging.warning(
+                f"config.json not found for {model_config_path}. Attempting to load with peft"
+            )
+            self.peft_config = PeftConfig.from_pretrained(model_config_path)
+            self.model_config = AutoConfig.from_pretrained(
+                self.peft_config.base_model_name_or_path)
+        except Exception as e:
+            self.logger.error(
+                f"{self.model_id_or_path} does not contain a config.json or adapter_config.json for lora models. "
+                f"This is required for loading huggingface models")
+            raise e
 
 
 _service = HuggingFaceService()
