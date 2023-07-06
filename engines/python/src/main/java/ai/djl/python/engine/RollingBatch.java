@@ -129,7 +129,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, Integer.toString(RandomUtils.nextInt()));
+            Request req = new Request(input, String.valueOf(RandomUtils.nextInt()));
             list.add(req);
             canRead.signal();
             return req.output;

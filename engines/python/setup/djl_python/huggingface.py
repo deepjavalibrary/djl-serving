@@ -224,11 +224,11 @@ class HuggingFaceService(object):
                         "In order to enable dynamic batching, all input batches must have the same parameters"
                     )
 
-            seed_key = 'seed' if inputs.get_batch_size(
-            ) > 1 else f'batch_{i}.seed'
+            seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
             if item.contains_key(seed_key):
                 seed = parameters[i].get("seed")
                 if not seed:
+                    # set server provided seed if seed is not part of request
                     parameters[i]["seed"] = item.get_as_string(key=seed_key)
 
         outputs = Output()
