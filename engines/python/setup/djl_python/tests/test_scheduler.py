@@ -156,15 +156,14 @@ class TestScheduler(unittest.TestCase):
 
         results = scheduler.collect_results()
 
-        # assert tokenizer.decode(results[1][:30]) == "When your legs don't work like they used to before And I can't " \
-        #                                             "sweep you off your feet, you're right, I'm done for the"
-        assert tokenizer.decode(results[2][:30]) == "There's a time that I remember, when I did not know what to do " \
-                                                    "with my life. I was in a very bad mood. I was"
-        # assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't help but feel that " \
-        #                                             "I've been given a chance to do something different. I've been told"
-
-        for i, ret in results.items():
-            print('\n{}:'.format(i), tokenizer.decode(ret))
+        assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't remember the last " \
+                                                    "time I had to do this, and I'm glad that I did.\n"
+        assert tokenizer.decode(
+            results[1][:30]
+        ) == """When your legs don't work like they used to before And I can't sweep you off your face" one female announced... " Everyone seems"""
+        assert tokenizer.decode(
+            results[2][:30]
+        ) == "There's a time that I remember, when I did not know what to do with my life. I was in a very bad mood. I was"
 
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
