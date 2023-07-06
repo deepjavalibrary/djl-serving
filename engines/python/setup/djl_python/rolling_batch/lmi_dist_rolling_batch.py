@@ -23,6 +23,8 @@ from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
 
+QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes"]
+
 
 class LmiDistRollingBatch(RollingBatch):
 
@@ -46,11 +48,22 @@ class LmiDistRollingBatch(RollingBatch):
     def _init_model(self, kwargs, model_id_or_path):
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
+        quantize = self.properties.get("quantize", None)
+        dtype = self.properties.get("dtype", None)
+        if quantize is not None and dtype is not None:
+            raise ValueError(
+                f"Can't set both dtype: {dtype} and quantize: {quantize}")
+        if quantize is not None and quantize not in QUANTIZATION_SUPPORT_ALGO:
+            raise ValueError(
+                f"Invalid value for quantize: {quantize}. Valid values are: {QUANTIZATION_SUPPORT_ALGO}"
+            )
+        if quantize is None and dtype == "int8":
+            quantize = "bitsandbytes"
         self.model = get_model(
             model_id_or_path,
             revision=None,
             sharded=sharded,
-            quantize=None,
+            quantize=quantize,
             trust_remote_code=kwargs.get("trust_remote_code"))
         self.batch_cls = self.model.batch_type
 
