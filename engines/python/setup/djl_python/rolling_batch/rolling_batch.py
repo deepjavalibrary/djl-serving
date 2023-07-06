@@ -65,7 +65,7 @@ class Request(object):
         """
         if self.output_formatter is None:
             self.next_token = next_token
-        else: # output only supports size one now
+        else:  # output only supports size one now
             self.next_token = self.output_formatter([next_token])
         self.last_token = last_token
 
@@ -84,6 +84,12 @@ class Request(object):
         :return: whether last token of the sequence.
         """
         return self.last_token
+
+    def get_content_type(self):
+        # TODO: find a way to return content-type for custom output formatter
+        if self.output_formatter == _default_output_formatter:
+            return "application/jsonlines"
+        return None
 
 
 def stop_on_any_exception(func):

@@ -173,6 +173,8 @@ class HuggingFaceService(object):
                 self.device = int(os.getenv("LOCAL_RANK", 0))
             _rolling_batch_cls = get_rolling_batch_class_from_str(
                 self.rolling_batch_type, is_mpi, self.model_config)
+
+            # TODO: Allow user to set output formatter
             self.rolling_batch = _rolling_batch_cls(model_id_or_path,
                                                     self.device, properties,
                                                     **kwargs)
@@ -227,14 +229,14 @@ class HuggingFaceService(object):
         outputs = Output()
 
         if self.rolling_batch_type:
-            # TODO: Allow user to set output formatter
             result = self.rolling_batch.inference(input_data, parameters)
             for i in range(inputs.get_batch_size()):
-                res = result[i]
-                encode(outputs,
-                       res,
-                       "application/jsonlines",
-                       key=inputs.get_content().key_at(i))
+                outputs.add(result[i], key="data", batch_index=i)
+
+            content_type = self.rolling_batch.get_content_type()
+            if content_type:
+                outputs.add_property("content-type", content_type)
+
             return outputs
         elif self.enable_streaming:
             outputs.add_property("content-type", "application/jsonlines")
