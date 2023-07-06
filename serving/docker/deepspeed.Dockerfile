@@ -15,12 +15,12 @@ ARG djl_version=0.23.0~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.9.2-py2.py3-none-any.whl"
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-nightly-py2.py3-none-any.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.29.2
-ARG accelerate_version=0.19.0
-ARG diffusers_version=0.15.0
+ARG transformers_version=4.30.2
+ARG accelerate_version=0.20.3
+ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.39.1
 ARG peft_version=0.3.0
 
