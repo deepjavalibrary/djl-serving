@@ -206,7 +206,7 @@ class HuggingFaceService(object):
         parameters = []
         batch = inputs.get_batches()
         first = True
-        for item in batch:
+        for i, item in enumerate(batch):
             input_map = decode(item, content_type)
             _inputs = input_map.pop("inputs", input_map)
             if isinstance(_inputs, list):
@@ -223,6 +223,13 @@ class HuggingFaceService(object):
                     return Output().error(
                         "In order to enable dynamic batching, all input batches must have the same parameters"
                     )
+
+            seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
+            if item.contains_key(seed_key):
+                seed = parameters[i].get("seed")
+                if not seed:
+                    # set server provided seed if seed is not part of request
+                    parameters[i]["seed"] = item.get_as_string(key=seed_key)
 
         outputs = Output()
 

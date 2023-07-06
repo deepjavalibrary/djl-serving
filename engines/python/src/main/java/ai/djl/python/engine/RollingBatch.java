@@ -19,6 +19,7 @@ import ai.djl.ndarray.BytesSupplier;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
+import ai.djl.util.RandomUtils;
 
 import com.google.gson.JsonObject;
 
@@ -80,6 +81,11 @@ class RollingBatch implements Runnable {
                         batch.setProperties(req.input.getProperties());
                     }
                     batch.add(prefix, req.getRequest());
+                    String seed = req.getSeed();
+                    if (seed != null) {
+                        String seedPrefix = "batch_" + i + ".seed";
+                        batch.add(seedPrefix, req.seed);
+                    }
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
 
@@ -123,7 +129,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input);
+            Request req = new Request(input, String.valueOf(RandomUtils.nextInt()));
             list.add(req);
             canRead.signal();
             return req.output;
@@ -147,12 +153,14 @@ class RollingBatch implements Runnable {
         Output output;
         String nextToken;
         boolean last;
+        String seed;
 
-        Request(Input input) {
+        Request(Input input, String seed) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
             output.add(data);
+            this.seed = seed;
         }
 
         BytesSupplier getRequest() {
@@ -160,6 +168,20 @@ class RollingBatch implements Runnable {
                 return BytesSupplier.wrap("{\"inputs\": [\"\"]}");
             }
             return input.getData();
+        }
+
+        /**
+         * Seed is required for LMI Dist for sampling for all processes in the MPI to generate the
+         * same token. NextTokenChooserParameters is constructed during first forward and preserved
+         * for all forward calls of the request.
+         *
+         * @return seed, only for first forward
+         */
+        String getSeed() {
+            if (nextToken != null) {
+                return null;
+            }
+            return seed;
         }
 
         void addResponse(String json) {
