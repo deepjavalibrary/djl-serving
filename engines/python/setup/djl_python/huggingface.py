@@ -227,6 +227,7 @@ class HuggingFaceService(object):
         outputs = Output()
 
         if self.rolling_batch_type:
+            # TODO: Allow user to set output formatter
             result = self.rolling_batch.inference(input_data, parameters)
             for i in range(inputs.get_batch_size()):
                 res = result[i]
