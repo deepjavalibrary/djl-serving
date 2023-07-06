@@ -21,7 +21,7 @@ ARG protobuf_version=3.20.3
 ARG transformers_version=4.30.2
 ARG accelerate_version=0.20.3
 ARG diffusers_version=0.16.0
-ARG bitsandbytes_version=0.40.0.post3
+ARG bitsandbytes_version=0.40.0.post4
 ARG peft_version=0.3.0
 
 EXPOSE 8080
