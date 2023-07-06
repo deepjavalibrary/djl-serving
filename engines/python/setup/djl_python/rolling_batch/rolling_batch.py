@@ -10,8 +10,20 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import json
 import logging
 from abc import ABC, abstractmethod
+
+
+def _default_output_formatter(token_texts: list):
+    """
+    Default output formatter
+
+    :return: formatted output
+    """
+    token_texts = {"outputs": token_texts}
+    json_encoded_str = json.dumps(token_texts) + "\n"
+    return json_encoded_str
 
 
 class Request(object):
@@ -24,16 +36,23 @@ class Request(object):
 
     """
 
-    def __init__(self, id: int, input_text: str, parameters: dict):
+    def __init__(self,
+                 id: int,
+                 input_text: str,
+                 parameters: dict,
+                 output_formatter=_default_output_formatter):
         """
         Initialize a request
 
         :param id: request id
         :param input_text: request's input text
+        :param parameters: list of parameters
+        :param output_formatter: output formatter
         """
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
+        self.output_formatter = output_formatter
         self.next_token = None
         self.last_token = False
 
@@ -44,7 +63,10 @@ class Request(object):
         :param next_token: next token to be set.
         :param last_token: whether this token is the last of the sequence.
         """
-        self.next_token = next_token
+        if self.output_formatter is None:
+            self.next_token = next_token
+        else: # output only supports size one now
+            self.next_token = self.output_formatter([next_token])
         self.last_token = last_token
 
     def get_next_token(self) -> str:
