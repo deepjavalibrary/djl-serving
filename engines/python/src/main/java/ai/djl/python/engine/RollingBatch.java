@@ -20,6 +20,7 @@ import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 
+import ai.djl.util.RandomUtils;
 import com.google.gson.JsonObject;
 
 import org.slf4j.Logger;
@@ -27,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -49,13 +49,11 @@ class RollingBatch implements Runnable {
     private ReentrantLock lock;
     private Condition canAdd;
     private Condition canRead;
-    private Random random;
 
     RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout) {
         this.process = process;
         this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
-        this.random = new Random();
         list = new ArrayList<>(3);
         lock = new ReentrantLock(true);
         canAdd = lock.newCondition();
@@ -83,8 +81,11 @@ class RollingBatch implements Runnable {
                         batch.setProperties(req.input.getProperties());
                     }
                     batch.add(prefix, req.getRequest());
-                    String seedPrefix = "batch_" + i + ".seed";
-                    batch.add(seedPrefix, req.seed);
+                    String seed = req.getSeed();
+                    if (seed != null) {
+                        String seedPrefix = "batch_" + i + ".seed";
+                        batch.add(seedPrefix, req.seed);
+                    }
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
 
@@ -128,7 +129,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, Long.toUnsignedString(random.nextLong()));
+            Request req = new Request(input, Long.toUnsignedString((long)RandomUtils.random()));
             list.add(req);
             canRead.signal();
             return req.output;
@@ -167,6 +168,13 @@ class RollingBatch implements Runnable {
                 return BytesSupplier.wrap("{\"inputs\": [\"\"]}");
             }
             return input.getData();
+        }
+
+        String getSeed() {
+            if (nextToken != null) {
+                return null;
+            }
+            return seed;
         }
 
         void addResponse(String json) {
