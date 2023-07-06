@@ -23,6 +23,8 @@ from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
 
+QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes"]
+
 
 class LmiDistRollingBatch(RollingBatch):
 
