@@ -143,7 +143,13 @@ class SchedulerRollingBatch(RollingBatch):
         for request_id, generated_token, request in zip(
                 request_ids, generated_tokens, self.pending_requests):
             is_last_token = (request_id in exit_req_ids)
-            request.set_next_token(generated_token, last_token=is_last_token)
+            if self.output_formatter is not None:
+                request.set_next_token(self.output_formatter([generated_token
+                                                              ]),
+                                       last_token=is_last_token)
+            else:
+                request.set_next_token(generated_token,
+                                       last_token=is_last_token)
 
     def _get_input_ids(self, input_texts):
         input_ids = self.tokenizer(input_texts,

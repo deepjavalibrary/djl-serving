@@ -15,9 +15,9 @@ import logging
 from abc import ABC, abstractmethod
 
 
-def _default_output_formatter(token_texts: list):
+def _json_output_formatter(token_texts: list):
     """
-    Default output formatter
+    JSON output formatter
 
     :return: formatted output
     """
@@ -36,23 +36,17 @@ class Request(object):
 
     """
 
-    def __init__(self,
-                 id: int,
-                 input_text: str,
-                 parameters: dict,
-                 output_formatter=_default_output_formatter):
+    def __init__(self, id: int, input_text: str, parameters: dict):
         """
         Initialize a request
 
         :param id: request id
         :param input_text: request's input text
         :param parameters: list of parameters
-        :param output_formatter: output formatter
         """
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
-        self.output_formatter = output_formatter
         self.next_token = None
         self.last_token = False
 
@@ -63,10 +57,7 @@ class Request(object):
         :param next_token: next token to be set.
         :param last_token: whether this token is the last of the sequence.
         """
-        if self.output_formatter is None:
-            self.next_token = next_token
-        else:  # output only supports size one now
-            self.next_token = self.output_formatter([next_token])
+        self.next_token = next_token
         self.last_token = last_token
 
     def get_next_token(self) -> str:
@@ -84,12 +75,6 @@ class Request(object):
         :return: whether last token of the sequence.
         """
         return self.last_token
-
-    def get_content_type(self):
-        # TODO: find a way to return content-type for custom output formatter
-        if self.output_formatter == _default_output_formatter:
-            return "application/jsonlines"
-        return None
 
 
 def stop_on_any_exception(func):
@@ -124,6 +109,13 @@ class RollingBatch(ABC):
         self.device = device
         self.pending_requests = []
         self.req_id_counter = 0
+        self.content_type = None
+        self.output_formatter = None
+
+    def init(self, content_type="application/jsonlines"):
+        self.content_type = content_type
+        if content_type == "application/jsonlines":
+            self.output_formatter = _json_output_formatter
 
     @abstractmethod
     def inference(self, input_data, parameters):
@@ -169,3 +161,6 @@ class RollingBatch(ABC):
             self.req_id_counter = 0
 
         return results
+
+    def get_content_type(self):
+        return self.content_type
