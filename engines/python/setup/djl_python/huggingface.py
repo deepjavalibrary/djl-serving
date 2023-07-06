@@ -233,9 +233,8 @@ class HuggingFaceService(object):
                 res = result[i]
                 encode(outputs,
                        res,
-                       accept,
+                       "application/jsonlines",
                        key=inputs.get_content().key_at(i))
-
             return outputs
         elif self.enable_streaming:
             outputs.add_property("content-type", "application/jsonlines")
