@@ -123,7 +123,7 @@ class RollingBatch(ABC):
             self.output_formatter = _default_output_formatter
 
     @abstractmethod
-    def inference(self, input_data, parameters):
+    def inference(self, input_data, parameters, prompts={}):
         """
         Performs prefill and decode operations for the batch.
 

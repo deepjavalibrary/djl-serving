@@ -451,6 +451,7 @@ class TestScheduler(unittest.TestCase):
         prompt_ids = tokenizer('Memories follow me left and right. I can',
                                return_tensors='pt',
                                padding=True).input_ids
+        print(prompt_ids)
         prompt_ids = prompt_ids.view(1, -1)
         prompt_ids_dict = {1: prompt_ids, 2: prompt_ids}
 
