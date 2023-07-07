@@ -51,7 +51,6 @@ jobs:
     runs-on: [ self-hosted, g5xl ]
     timeout-minutes: 240
     needs: create-runners
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Clean env
@@ -88,7 +87,6 @@ jobs:
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 180
     needs: create-runners
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Clean env
@@ -121,11 +119,46 @@ jobs:
           name: performance-bloom-7b-logs
           path: tests/integration/logs/
 
+  lmic-llama-g5-test:
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 180
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy datetime
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test open-llama-13b
+        working-directory: tests/integration
+        run: |
+          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+            --profile profiles/llama_13b.json
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-llama-logs
+          path: tests/integration/logs/
+
   lmic-gptj-g5-test:
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 180
     needs: create-runners
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Clean env
@@ -162,7 +195,6 @@ jobs:
     runs-on: [ self-hosted, g5xl ]
     timeout-minutes: 180
     needs: create-runners
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v3
       - name: Clean env
@@ -209,7 +241,7 @@ jobs:
   stop-g5-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test ]
+    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test, lmic-llama-g5-test ]
     steps:
       - name: Stop g5 instances
         run: |

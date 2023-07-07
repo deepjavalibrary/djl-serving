@@ -256,6 +256,10 @@ performance_test_list = {
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/opt-30b/"
     },
+    "open-llama-13b": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/open-llama-13b/"
+    },
     "gpt-j-6b": {
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/gpt-j-6b/"
