@@ -58,6 +58,7 @@ class Request(object):
         Sets the newly generated token.
 
         :param next_token: next token to be set.
+        :param output_formatter: output formatter.
         :param last_token: whether this token is the last of the sequence.
         """
         if output_formatter is None:
