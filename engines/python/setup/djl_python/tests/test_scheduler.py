@@ -46,7 +46,8 @@ class TestScheduler(unittest.TestCase):
     def test_greedy_scheduler(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
-        tokenizer = GPT2Tokenizer.from_pretrained(model_id, padding_side='left')
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id,
+                                                  padding_side='left')
         tokenizer.pad_token = "[PAD]"
         lm_block = HuggingfaceBlock(model)
 
@@ -67,9 +68,12 @@ class TestScheduler(unittest.TestCase):
         # Test add request
         scheduler.add_request(input_ids_0, request_ids)
 
-        input_ids = tokenizer([r"When your legs don't work like they used to before And I can't sweep you off",
-                               r"There's a time that I remember, when I did not know"],
-                              return_tensors='pt', padding=True).input_ids
+        input_ids = tokenizer([
+            r"When your legs don't work like they used to before And I can't sweep you off",
+            r"There's a time that I remember, when I did not know"
+        ],
+                              return_tensors='pt',
+                              padding=True).input_ids
 
         # Test merging longer sequences
         request_ids = torch.tensor([[1], [2]])
@@ -87,9 +91,10 @@ class TestScheduler(unittest.TestCase):
                                                     "remember the last time I saw a girl in a dress. I can't remember the last time"
 
         # Load a kv_cache from file and test merging a shorter sequence
-        input_ids = tokenizer([r"When your legs don't work",
-                               r"'t remember",
-                               r""], return_tensors='pt', padding=True).input_ids
+        input_ids = tokenizer(
+            [r"When your legs don't work", r"'t remember", r""],
+            return_tensors='pt',
+            padding=True).input_ids
         request_ids = torch.tensor([[3], [4], [5]])
 
         # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
@@ -434,7 +439,8 @@ class TestScheduler(unittest.TestCase):
     def test_lru_kv_cache(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id)
-        tokenizer = GPT2Tokenizer.from_pretrained(model_id, padding_side='left')
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id,
+                                                  padding_side='left')
         tokenizer.pad_token = "[PAD]"
         lm_block = HuggingfaceBlock(model)
 
@@ -442,20 +448,29 @@ class TestScheduler(unittest.TestCase):
         search_config.max_new_seqlen = 30
         scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
 
-        prompt_ids = tokenizer(
-            'Memories follow me left and right. I can', return_tensors='pt', padding=True).input_ids
+        prompt_ids = tokenizer('Memories follow me left and right. I can',
+                               return_tensors='pt',
+                               padding=True).input_ids
         prompt_ids = prompt_ids.view(1, -1)
         prompt_ids_dict = {1: prompt_ids, 2: prompt_ids}
 
         # Load a kv_cache from file and test merging a shorter sequence
-        input_ids = tokenizer([r"When your legs don't work",
-                               r"'t remember",
-                               r""], return_tensors='pt', padding=True).input_ids
+        input_ids = tokenizer(
+            [r"When your legs don't work", r"'t remember", r""],
+            return_tensors='pt',
+            padding=True).input_ids
         request_ids = torch.tensor([[0], [1], [2]])
-        search_configs = [SearchConfig(), SearchConfig(use_lru_kv_cache=True), SearchConfig(use_lru_kv_cache=True)]
+        search_configs = [
+            SearchConfig(),
+            SearchConfig(use_lru_kv_cache=True),
+            SearchConfig(use_lru_kv_cache=True)
+        ]
 
         # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
-        scheduler.add_request(input_ids, request_ids, search_configs=search_configs, kv_cache_prompt_ids=prompt_ids_dict)
+        scheduler.add_request(input_ids,
+                              request_ids,
+                              search_configs=search_configs,
+                              kv_cache_prompt_ids=prompt_ids_dict)
 
         # Test trim_and_collect
         for idx, _ in enumerate(scheduler.increment_forward(100)):
