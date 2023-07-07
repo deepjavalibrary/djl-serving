@@ -36,37 +36,35 @@ class Request(object):
 
     """
 
-    def __init__(self,
-                 id: int,
-                 input_text: str,
-                 parameters: dict,
-                 output_formatter=_default_output_formatter):
+    def __init__(self, id: int, input_text: str, parameters: dict):
         """
         Initialize a request
 
         :param id: request id
         :param input_text: request's input text
         :param parameters: list of parameters
-        :param output_formatter: output formatter
         """
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
-        self.output_formatter = output_formatter
         self.next_token = None
         self.last_token = False
 
-    def set_next_token(self, next_token: str, last_token: bool = False):
+    def set_next_token(self,
+                       next_token: str,
+                       output_formatter,
+                       last_token: bool = False):
         """
         Sets the newly generated token.
 
         :param next_token: next token to be set.
+        :param output_formatter: output formatter.
         :param last_token: whether this token is the last of the sequence.
         """
-        if self.output_formatter is None:
+        if output_formatter is None:
             self.next_token = next_token
         else:  # output only supports size one now
-            self.next_token = self.output_formatter([next_token])
+            self.next_token = output_formatter([next_token])
         self.last_token = last_token
 
     def get_next_token(self) -> str:
@@ -84,12 +82,6 @@ class Request(object):
         :return: whether last token of the sequence.
         """
         return self.last_token
-
-    def get_content_type(self):
-        # TODO: find a way to return content-type for custom output formatter
-        if self.output_formatter == _default_output_formatter:
-            return "application/jsonlines"
-        return None
 
 
 def stop_on_any_exception(func):
@@ -114,16 +106,21 @@ class RollingBatch(ABC):
 
     """
 
-    def __init__(self, device):
+    def __init__(self, device, **kwargs):
         """
         Initializes the rolling batch scheduler.
 
         :param device: device to load the model
+        :param kwargs passed while loading the model
         """
 
         self.device = device
         self.pending_requests = []
         self.req_id_counter = 0
+        if 'rolling_batch_output_formatter' in kwargs:
+            self.output_formatter = kwargs['rolling_batch_output_formatter']
+        else:
+            self.output_formatter = _default_output_formatter
 
     @abstractmethod
     def inference(self, input_data, parameters):
@@ -169,3 +166,9 @@ class RollingBatch(ABC):
             self.req_id_counter = 0
 
         return results
+
+    def get_content_type(self):
+        # TODO: find a way to return content-type for custom output formatter
+        if self.output_formatter == _default_output_formatter:
+            return "application/jsonlines"
+        return None

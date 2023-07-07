@@ -38,7 +38,7 @@ class LmiDistRollingBatch(RollingBatch):
         :param kwargs passed while loading the model
         """
 
-        super().__init__(device)
+        super().__init__(device, **kwargs)
         self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
@@ -112,13 +112,15 @@ class LmiDistRollingBatch(RollingBatch):
         }
 
         req_ids = []
-        for r in self.pending_requests:
-            generation = generation_dict[r.id]
+        for request in self.pending_requests:
+            generation = generation_dict[request.id]
             is_last_token = generation.generated_text is not None
             if not is_last_token:
-                req_ids.append(r.id)
-            r.set_next_token(
+                req_ids.append(request.id)
+
+            request.set_next_token(
                 "" if generation.token_is_special else generation.token_text,
+                self.output_formatter,
                 last_token=is_last_token)
 
         # filter the requests that are stopped.
