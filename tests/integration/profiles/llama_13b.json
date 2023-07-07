@@ -1,7 +1,7 @@
 {
 	"test_series":"performance",
 	"engine":["deepspeed","huggingface"],
-	"model": "opt-30b",
+	"model": "open-llama-13b",
 	"dtype": ["fp16","bf16"],
 	"tensor_parallel": 4,
 	"batch_size": 4,

@@ -466,7 +466,6 @@ def log_metrics(response_times):
 
     p50 = np.percentile(response_times, 50)
     p90 = np.percentile(response_times, 90)
-    p99 = np.percentile(response_times, 99)
     throughput = 1000 / (sum(response_times) / len(response_times))
     tps = throughput * args.out_tokens * args.batch_size
     max_memory = get_total_memory(get_gpu_memory())
@@ -482,11 +481,6 @@ def log_metrics(response_times):
         "MetricName": f"{metric_stem}_p90",
         "Unit": "Milliseconds",
         "Value": p90
-    })
-    outputs.append({
-        "MetricName": f"{metric_stem}_p99",
-        "Unit": "Milliseconds",
-        "Value": p99
     })
     outputs.append({
         "MetricName": f"{metric_stem}_throughput",
