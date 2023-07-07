@@ -323,7 +323,13 @@ lmi_dist_model_spec = {
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
-    }
+    },
+    "gpt-neox-20b-bits-and-bytes-quantized": {
+        "max_memory_per_gpu": [10.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
 }
 
 
