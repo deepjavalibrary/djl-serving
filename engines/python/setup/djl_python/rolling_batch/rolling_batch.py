@@ -50,14 +50,20 @@ class Request(object):
         self.next_token = None
         self.last_token = False
 
-    def set_next_token(self, next_token: str, last_token: bool = False):
+    def set_next_token(self,
+                       next_token: str,
+                       output_formatter,
+                       last_token: bool = False):
         """
         Sets the newly generated token.
 
         :param next_token: next token to be set.
         :param last_token: whether this token is the last of the sequence.
         """
-        self.next_token = next_token
+        if output_formatter is None:
+            self.next_token = next_token
+        else:
+            self.next_token = output_formatter([next_token])
         self.last_token = last_token
 
     def get_next_token(self) -> str:

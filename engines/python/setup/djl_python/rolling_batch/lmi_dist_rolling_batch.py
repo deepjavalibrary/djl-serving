@@ -120,12 +120,9 @@ class LmiDistRollingBatch(RollingBatch):
 
             if generation.token_is_special:
                 request.set_next_token("", last_token=is_last_token)
-            elif self.output_formatter is not None:
-                request.set_next_token(self.output_formatter(
-                    [generation.token_text]),
-                                       last_token=is_last_token)
             else:
                 request.set_next_token(generation.token_text,
+                                       self.output_formatter,
                                        last_token=is_last_token)
 
         # filter the requests that are stopped.
