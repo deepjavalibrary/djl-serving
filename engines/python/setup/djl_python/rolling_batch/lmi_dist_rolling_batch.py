@@ -38,7 +38,7 @@ class LmiDistRollingBatch(RollingBatch):
         :param kwargs passed while loading the model
         """
 
-        super().__init__(device)
+        super().__init__(device, **kwargs)
         self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)

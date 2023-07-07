@@ -24,7 +24,7 @@ class VLLMRollingBatch(RollingBatch):
         :param model_id_or_path: model id or path
         :param properties: other properties of the model, such as decoder strategy
         """
-        super().__init__(-1)
+        super().__init__(-1, **kwargs)
         self.dtype = kwargs.pop("dtype", 'auto')
         if properties.get("engine") != "Python":
             raise AssertionError(

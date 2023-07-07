@@ -15,9 +15,9 @@ import logging
 from abc import ABC, abstractmethod
 
 
-def _json_output_formatter(token_texts: list):
+def _default_output_formatter(token_texts: list):
     """
-    JSON output formatter
+    Default output formatter
 
     :return: formatted output
     """
@@ -99,23 +99,22 @@ class RollingBatch(ABC):
 
     """
 
-    def __init__(self, device):
+    def __init__(self, device, **kwargs):
         """
         Initializes the rolling batch scheduler.
 
         :param device: device to load the model
+        :param kwargs passed while loading the model
         """
 
         self.device = device
         self.pending_requests = []
         self.req_id_counter = 0
-        self.content_type = None
-        self.output_formatter = None
-
-    def init(self, content_type="application/jsonlines"):
-        self.content_type = content_type
-        if content_type == "application/jsonlines":
-            self.output_formatter = _json_output_formatter
+        if 'rolling_batch_output_formatter' in kwargs:
+            # TODO: Allow user to set custom output formatter
+            pass
+        else:
+            self.output_formatter = _default_output_formatter
 
     @abstractmethod
     def inference(self, input_data, parameters):
@@ -163,4 +162,7 @@ class RollingBatch(ABC):
         return results
 
     def get_content_type(self):
-        return self.content_type
+        # TODO: find a way to return content-type for custom output formatter
+        if self.output_formatter == _default_output_formatter:
+            return "application/jsonlines"
+        return None
