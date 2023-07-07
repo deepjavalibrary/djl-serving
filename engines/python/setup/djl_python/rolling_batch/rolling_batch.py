@@ -62,7 +62,7 @@ class Request(object):
         """
         if output_formatter is None:
             self.next_token = next_token
-        else:
+        else:  # output only supports size one now
             self.next_token = output_formatter([next_token])
         self.last_token = last_token
 
@@ -117,8 +117,7 @@ class RollingBatch(ABC):
         self.pending_requests = []
         self.req_id_counter = 0
         if 'rolling_batch_output_formatter' in kwargs:
-            # TODO: Allow user to set custom output formatter
-            pass
+            self.output_formatter = kwargs['rolling_batch_output_formatter']
         else:
             self.output_formatter = _default_output_formatter
 
