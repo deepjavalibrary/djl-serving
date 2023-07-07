@@ -241,7 +241,7 @@ jobs:
   stop-g5-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test ]
+    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test, lmic-llama-g5-test ]
     steps:
       - name: Stop g5 instances
         run: |
