@@ -159,6 +159,8 @@ class RollingBatch implements Runnable {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
+            // TODO: Avoid hardcoded application/jsonlines content type
+            output.addProperty("Content-Type", "application/jsonlines");
             output.add(data);
             this.seed = seed;
         }
