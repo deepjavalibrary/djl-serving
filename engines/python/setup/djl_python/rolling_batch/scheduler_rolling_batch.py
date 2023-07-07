@@ -68,8 +68,7 @@ class SchedulerRollingBatch(RollingBatch):
                                               self.search_algorithm)
 
             # TODO: This is not needed when search algorithm automatically chosen for the user.
-            if parameters.get("do_sample",
-                              self.search_config.sampling).lower() == "true":
+            if parameters.get("do_sample", self.search_config.sampling):
                 search_algorithm = "sample"
 
             new_requests.input_texts[search_algorithm].append(
