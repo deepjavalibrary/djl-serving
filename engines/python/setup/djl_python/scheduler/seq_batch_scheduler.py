@@ -43,8 +43,7 @@ class SeqBatchScheduler:
         self.results: Dict[int, List[int]] = defaultdict(list)
 
         self.seq_batchers: Dict[
-                           Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(
-            list)  # {key: List[SeqBatcher]}
+            Type[SeqBatcher]:List[SeqBatcher]] = defaultdict(list)
 
         self.lru_kv_cache = OrderedDict()
         self.lru_max_size = 10
@@ -55,7 +54,8 @@ class SeqBatchScheduler:
                     search_algorithm: str = None,
                     search_configs: List[SearchConfig] = None,
                     kv_cache: Union[Tuple, None] = None,
-                    kv_cache_prompt_ids: Union[Dict[int, torch.tensor], None] = None):
+                    kv_cache_prompt_ids: Union[Dict[int, torch.tensor],
+                                               None] = None):
         """
         Args: kv_cache_prompt_ids = {request_uid -> List[token_ids]}
         """
@@ -66,20 +66,23 @@ class SeqBatchScheduler:
         if search_configs:
             for idx, search_config in enumerate(search_configs):
                 if search_config.use_lru_kv_cache:
-                    prompt_ids_tensor = kv_cache_prompt_ids[request_uids[idx].item()]
+                    prompt_ids_tensor = kv_cache_prompt_ids[
+                        request_uids[idx].item()]
                     key = tuple(prompt_ids_tensor.flatten().tolist())
                     if not key:
-                        raise Exception(f"request_uids = {request_uids[idx]}: search_config says use_kv_cache_prompt, "
-                                        f"but the prompt_ids is not provided.")
+                        raise Exception(
+                            f"request_uids = {request_uids[idx]}: search_config says use_kv_cache_prompt, "
+                            f"but the prompt_ids is not provided.")
                     else:
                         # lru operations
                         if key not in self.lru_kv_cache:
                             if len(self.lru_kv_cache) + 1 > self.lru_max_size:
                                 # If cache size exceeds the maximum, remove by FIFO order
                                 self.lru_kv_cache.popitem(last=False)
-                            kv_cache_tuple = compute_kv_cache(input_ids=prompt_ids_tensor,
-                                                        lm_block=self.lm_block,
-                                                        search_configs=[search_config])
+                            kv_cache_tuple = compute_kv_cache(
+                                input_ids=prompt_ids_tensor,
+                                lm_block=self.lm_block,
+                                search_configs=[search_config])
                             kv_cache_new = []
                             for k, v in kv_cache_tuple:
                                 k_new = k.cpu()
@@ -111,10 +114,8 @@ class SeqBatchScheduler:
 
         index_not_use_prompt = torch.tensor(index_not_use_prompt)
         self._add_request(input_ids[index_not_use_prompt],
-                          request_uids[index_not_use_prompt],
-                          search_algorithm,
-                          search_configs_not_use_prompt,
-                          kv_cache)
+                          request_uids[index_not_use_prompt], search_algorithm,
+                          search_configs_not_use_prompt, kv_cache)
 
     def _add_request(self,
                      input_ids: torch.Tensor,
