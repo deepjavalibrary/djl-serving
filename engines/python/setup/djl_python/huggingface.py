@@ -424,7 +424,7 @@ class HuggingFaceService(object):
             self.model_config = AutoConfig.from_pretrained(
                 self.peft_config.base_model_name_or_path)
         except Exception as e:
-            self.logger.error(
+            logging.error(
                 f"{self.model_id_or_path} does not contain a config.json or adapter_config.json for lora models. "
                 f"This is required for loading huggingface models")
             raise e
