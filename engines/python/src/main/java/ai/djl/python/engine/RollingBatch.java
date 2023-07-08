@@ -13,6 +13,8 @@
 package ai.djl.python.engine;
 
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
+import ai.djl.metric.Metric;
+import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -37,6 +39,7 @@ import java.util.concurrent.locks.ReentrantLock;
 class RollingBatch implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(RollingBatch.class);
+    private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
 
     private static ExecutorService threadPool = Executors.newCachedThreadPool();
 
@@ -126,11 +129,13 @@ class RollingBatch implements Runnable {
             if (list.size() >= maxRollingBatchSize) {
                 logger.debug("exceed max_rolling_batch_size: {}", maxRollingBatchSize);
                 if (!canAdd.await(timeout, TimeUnit.SECONDS)) {
+                    SERVER_METRIC.info("{}", new Metric("RollingTimeout", list.size(), Unit.COUNT));
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
             Request req = new Request(input, String.valueOf(RandomUtils.nextInt()));
             list.add(req);
+            SERVER_METRIC.info("{}", new Metric("RollingBatchSize", list.size(), Unit.COUNT));
             canRead.signal();
             return req.output;
         } catch (InterruptedException e) {
