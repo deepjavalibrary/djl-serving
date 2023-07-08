@@ -71,6 +71,10 @@ abstract class BatchAggregator<I, O> {
             SERVER_METRIC.info("{}", new Metric("QueueTime", queueTime, Unit.MICROSECONDS));
             list.add(job.getInput());
         }
+        int size = list.size();
+        if (size > 1) {
+            SERVER_METRIC.info("{}", new Metric("BatchSize", size, Unit.COUNT));
+        }
         return list;
     }
 
