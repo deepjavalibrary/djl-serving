@@ -384,6 +384,8 @@ class HuggingFaceService(object):
             input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
             if self.device:
                 input_tokens = input_tokens.to(self.device)
+            else:
+                input_tokens = input_tokens.to(torch.cuda.current_device())
 
             with torch.no_grad():
                 output_tokens = model.generate(
