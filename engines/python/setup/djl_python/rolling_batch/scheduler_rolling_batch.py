@@ -17,7 +17,6 @@ from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exc
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
-import logging
 
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
@@ -68,7 +67,7 @@ class SchedulerRollingBatch(RollingBatch):
                                               self.search_algorithm)
 
             # TODO: This is not needed when search algorithm automatically chosen for the user.
-            if parameters.get("do_sample", self.search_config.sampling):
+            if str(parameters.get("do_sample", self.search_config.sampling)).lower() == "true":
                 search_algorithm = "sample"
 
             new_requests.input_texts[search_algorithm].append(
@@ -122,7 +121,6 @@ class SchedulerRollingBatch(RollingBatch):
                 input_texts = new_requests.input_texts[search_algorithm]
                 search_configs = new_requests.search_configs[search_algorithm]
                 prompt_ids = self._get_prompt_ids(new_requests.prompts[search_algorithm])
-                logging.info(f"Prompt ids {prompt_ids}")
                 prompt_ids = prompt_ids if prompt_ids else None
                 # Prefills search states for each request and merges to the existing batch
                 self.scheduler.add_request(
@@ -139,7 +137,6 @@ class SchedulerRollingBatch(RollingBatch):
 
         if self.scheduler and self.scheduler.seq_batchers and self.scheduler.seq_batchers[0]:
             seq_len = self.scheduler.seq_batchers[0].seq_len - self.scheduler.seq_batchers[0].offsets[0]
-            logging.info(f"Sequence length is {seq_len}")
 
         # TODO: Deleting the finished results here temporarily
         for request_id in exit_req_ids:
@@ -173,8 +170,10 @@ class SchedulerRollingBatch(RollingBatch):
             prompt_ids[req_id] = prompt_id
         return prompt_ids
 
-
     def _construct_search_config(self, parameters):
+        use_lru_kv_cache = str(
+            parameters.get('use_lru_kv_cache', self.search_config.use_lru_kv_cache)).lower() == "true"
+        do_sample = str(parameters.get('do_sample', self.search_config.sampling)).lower() == "true"
         return SearchConfig(
             max_new_tokens=parameters.get('max_new_tokens',
                                           self.search_config.max_new_seqlen),
@@ -182,11 +181,12 @@ class SchedulerRollingBatch(RollingBatch):
             penalty_alpha=parameters.get('penalty_alpha',
                                          self.search_config.alpha),
             num_beams=parameters.get('num_beams', self.search_config.beam),
-            do_sample=parameters.get('do_sample', self.search_config.sampling),
+            do_sample=do_sample,
             top_p=parameters.get('top_p', self.search_config.topk),
             temperature=parameters.get('temperature',
                                        self.search_config.temperature),
-            use_lru_kv_cache=parameters.get('use_lru_kv_cache', True))
+            use_lru_kv_cache=use_lru_kv_cache
+        )
 
 
 def _get_request_ids_tensor(request_ids):
