@@ -146,6 +146,13 @@ class SeqBatchScheduler:
 
         seq_batcher_cls = self.default_seq_batcher_cls if seq_batcher_cls is None else seq_batcher_cls
 
+        # Corner case: input_ids are empty. Pad them.
+        if input_ids.numel() == 0:
+            batch_size = input_ids.shape[0]
+            input_ids = torch.zeros(batch_size, 1, dtype=torch.int64, device=input_ids.device)
+            for i in range(batch_size):
+                input_ids[i, 0] = self.default_search_configs[request_uids[i].item()].pad_token_id
+
         # Prefill
         new_seq_batcher, output_ids = seq_batcher_cls.init_forward(
             input_ids=input_ids,
