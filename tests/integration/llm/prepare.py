@@ -369,7 +369,7 @@ lmi_dist_model_list = {
         "option.trust_remote_code": True
     },
     "open-llama-7b": {
-        "option.model_id": "s3://djl-llm/open_llama_7b",
+        "option.model_id": "s3://djl-llm/open-llama-7b",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4

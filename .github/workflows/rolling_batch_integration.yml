@@ -228,6 +228,15 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist gpt2
           docker rm -f $(docker ps -aq)
+      - name: Test gpt-neox-20b-quantized
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist gpt-neox-20b-bits-and-bytes-quantized
+          ./launch_container.sh deepjavalibrary/djl-serving:deepspeed-nightly $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist gpt-neox-20b-bits-and-bytes-quantized
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
