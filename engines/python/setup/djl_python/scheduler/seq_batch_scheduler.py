@@ -116,8 +116,7 @@ class SeqBatchScheduler:
             index_not_use_prompt = torch.tensor(index_not_use_prompt)
             self._add_request(input_ids[index_not_use_prompt],
                               request_uids[index_not_use_prompt],
-                              search_algorithm,
-                              search_configs_not_use_prompt,
+                              search_algorithm, search_configs_not_use_prompt,
                               kv_cache)
 
     def _add_request(self,
@@ -149,9 +148,13 @@ class SeqBatchScheduler:
         # Corner case: input_ids are empty. Pad them.
         if input_ids.numel() == 0:
             batch_size = input_ids.shape[0]
-            input_ids = torch.zeros(batch_size, 1, dtype=torch.int64, device=input_ids.device)
+            input_ids = torch.zeros(batch_size,
+                                    1,
+                                    dtype=torch.int64,
+                                    device=input_ids.device)
             for i in range(batch_size):
-                input_ids[i, 0] = self.default_search_configs[request_uids[i].item()].pad_token_id
+                input_ids[i, 0] = self.default_search_configs[
+                    request_uids[i].item()].pad_token_id
 
         # Prefill
         new_seq_batcher, output_ids = seq_batcher_cls.init_forward(
