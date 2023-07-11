@@ -384,6 +384,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
             } catch (InterruptedException | IllegalStateException e) {
                 logger.warn("Chunk reading interrupted", e);
+                ctx.disconnect();
                 ctx.newFailedFuture(e);
             }
             return;
