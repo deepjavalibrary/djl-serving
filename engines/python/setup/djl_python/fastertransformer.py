@@ -16,6 +16,7 @@ from transformers import AutoConfig
 from djl_python import Input, Output
 import logging
 from typing import Optional
+from peft import PeftConfig
 
 
 class FasterTransformerService(object):
@@ -59,6 +60,7 @@ class FasterTransformerService(object):
         self.is_t5 = False
         self.use_triton = None
         self.enable_streaming = None
+        self.is_peft = False
 
     def initialize_properties(self, properties):
         self.tensor_parallel_degree = int(
@@ -79,9 +81,9 @@ class FasterTransformerService(object):
 
     def initialize(self, properties):
         self.initialize_properties(properties)
-        self.model = self.load_model()
-        model_config = AutoConfig.from_pretrained(self.model_id_or_path)
+        model_config = self.get_model_config()
         self.is_t5 = model_config.model_type == "t5"
+        self.model = self.load_model()
         self.initialized = True
 
     def load_model(self):
@@ -91,7 +93,18 @@ class FasterTransformerService(object):
                                  self.pipeline_parallel_degree,
                                  self.dtype,
                                  use_triton=self.use_triton,
-                                 do_streaming=self.enable_streaming)
+                                 do_streaming=self.enable_streaming,
+                                 is_peft=self.is_peft)
+
+    def get_model_config(self):
+        try:
+            model_config = AutoConfig.from_pretrained(self.model_id_or_path)
+        except OSError:
+            peft_config = PeftConfig.from_pretrained(self.model_id_or_path)
+            base_model_name = peft_config.base_model_name_or_path
+            model_config = AutoConfig.from_pretrained(base_model_name)
+            self.is_peft = True
+        return model_config
 
     @staticmethod
     def param_mapper(parameters: dict):
