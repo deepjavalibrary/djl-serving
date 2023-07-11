@@ -93,15 +93,13 @@ class SeqBatchScheduler:
                         # _add_request
                         self._add_request(input_ids[idx].view(1, -1),
                                           request_uids[idx].view(1, -1),
-                                          search_algorithm,
-                                          [search_config],
+                                          search_algorithm, [search_config],
                                           kv_cache=kv_cache_tuple)
                     else:
                         # _add_request
                         self._add_request(input_ids[idx].view(1, -1),
                                           request_uids[idx].view(1, -1),
-                                          search_algorithm,
-                                          [search_config],
+                                          search_algorithm, [search_config],
                                           kv_cache=self.lru_kv_cache[key])
                         self.lru_kv_cache.move_to_end(key)
                 else:
