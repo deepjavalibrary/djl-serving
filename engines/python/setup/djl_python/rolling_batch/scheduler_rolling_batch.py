@@ -73,8 +73,8 @@ class SchedulerRollingBatch(RollingBatch):
             new_requests.input_texts[search_algorithm].append(
                 request.input_text)
 
-            if "prompts" in parameters:
-                new_requests.prompts[search_algorithm][request.id] = parameters.pop("prompts")
+            if "cached_prompt" in parameters:
+                new_requests.prompts[search_algorithm][request.id] = parameters.pop("cached_prompt")
 
             search_config = self._construct_search_config(parameters)
             new_requests.search_configs[search_algorithm].append(search_config)
