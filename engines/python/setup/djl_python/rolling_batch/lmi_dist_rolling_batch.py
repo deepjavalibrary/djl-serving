@@ -95,11 +95,13 @@ class LmiDistRollingBatch(RollingBatch):
                 generations.extend(decode_generations)
 
                 # concatenate with the existing batch of the model
-                if decode_next_batch:
+                if prefill_next_batch is None:
+                    self.cache = decode_next_batch
+                elif decode_next_batch is None:
+                    self.cache = prefill_next_batch
+                else:
                     self.cache = self.model.batch_type.concatenate(
                         [prefill_next_batch, decode_next_batch])
-                else:
-                    self.cache = prefill_next_batch
             else:
                 self.cache = prefill_next_batch
         else:
