@@ -230,7 +230,7 @@ public class PyModel extends BaseModel {
         } else {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             if (tensorParallelDegree > 0) {
-                if (tensorParallelDegree > 1) {
+                if (getProperty("maxWorkers") == null && getProperty("gpu.maxWorkers") == null) {
                     setProperty("gpu.minWorkers", "1");
                     setProperty("gpu.maxWorkers", "1");
                 }
