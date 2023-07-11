@@ -455,16 +455,23 @@ class TestScheduler(unittest.TestCase):
         prompt_ids_dict = {1: prompt_ids, 2: prompt_ids}
 
         # Load a kv_cache from file and test merging a shorter sequence
-        input_ids = tokenizer(
-            [r"When your legs don't work", r"'t remember", r""],
-            return_tensors='pt',
-            padding=True).input_ids
-        request_ids = torch.tensor([[0], [1], [2]])
-        search_configs = [
-            SearchConfig(),
-            SearchConfig(use_lru_kv_cache=True),
-            SearchConfig(use_lru_kv_cache=True)
-        ]
+        input_ids = tokenizer([r"When your legs don't work", r"'t remember"],
+                              return_tensors='pt',
+                              padding=True).input_ids
+        request_ids = torch.tensor([[0], [1]])
+        search_configs = [SearchConfig(), SearchConfig(use_lru_kv_cache=True)]
+
+        # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
+        scheduler.add_request(input_ids,
+                              request_ids,
+                              search_configs=search_configs,
+                              kv_cache_prompt_ids=prompt_ids_dict)
+
+        # Test empty input_ids
+        input_ids = tokenizer([r""], return_tensors='pt',
+                              padding=True).input_ids.view(1, -1)
+        request_ids = torch.tensor([[2]])
+        search_configs = [SearchConfig(use_lru_kv_cache=True)]
 
         # Load a kv_cache file to simulate a fixed reusable prefix which is pre-calculated
         scheduler.add_request(input_ids,
