@@ -195,6 +195,11 @@ ft_model_spec = {
         "batch_size": [1, 2],
         "seq_length": [64, 128],
         "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0]
+    },
+    "t5-base-lora": {
+        "batch_size": [1, 4],
+        "seq_length": [64, 128],
+        "max_memory_per_gpu": [4.0, 4.0, 4.0, 4.0]
     }
 }
 
