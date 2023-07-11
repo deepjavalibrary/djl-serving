@@ -223,6 +223,8 @@ class HuggingFaceService(object):
                     return Output().error(
                         "In order to enable dynamic batching, all input batches must have the same parameters"
                     )
+            if "cached_prompt" in input_map:
+                parameters[i]["cached_prompt"] = input_map.pop("cached_prompt")
 
             seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
             if item.contains_key(seed_key):

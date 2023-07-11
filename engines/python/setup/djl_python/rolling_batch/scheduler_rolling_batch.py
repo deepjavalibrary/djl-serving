@@ -56,28 +56,33 @@ class SchedulerRollingBatch(RollingBatch):
         return self.postprocess_results(batch_size)
 
     def preprocess_requests(self, requests):
-        Requests = namedtuple('Requests',
-                              ['input_texts', 'search_configs', 'request_ids'])
+        Requests = namedtuple(
+            'Requests',
+            ['input_texts', 'search_configs', 'request_ids', 'prompts'])
         new_requests = Requests(defaultdict(list), defaultdict(list),
-                                defaultdict(list))
+                                defaultdict(list), defaultdict(dict))
 
-        req_id_counter = _calculate_req_id_counter(self.scheduler)
         for request in requests:
             parameters = request.parameters
             search_algorithm = parameters.get('decoding_strategy',
                                               self.search_algorithm)
 
             # TODO: This is not needed when search algorithm automatically chosen for the user.
-            if parameters.get("do_sample", self.search_config.sampling):
+            if str(parameters.get(
+                    "do_sample",
+                    self.search_config.sampling)).lower() == "true":
                 search_algorithm = "sample"
 
             new_requests.input_texts[search_algorithm].append(
                 request.input_text)
 
+            if "cached_prompt" in parameters:
+                new_requests.prompts[search_algorithm][
+                    request.id] = parameters.pop("cached_prompt")
+
             search_config = self._construct_search_config(parameters)
             new_requests.search_configs[search_algorithm].append(search_config)
-            new_requests.request_ids[search_algorithm].append(req_id_counter)
-            req_id_counter += 1
+            new_requests.request_ids[search_algorithm].append(request.id)
 
         return new_requests
 
@@ -119,18 +124,26 @@ class SchedulerRollingBatch(RollingBatch):
             if request_ids:
                 input_texts = new_requests.input_texts[search_algorithm]
                 search_configs = new_requests.search_configs[search_algorithm]
-
+                prompt_ids = self._get_prompt_ids(
+                    new_requests.prompts[search_algorithm])
+                prompt_ids = prompt_ids if prompt_ids else None
                 # Prefills search states for each request and merges to the existing batch
                 self.scheduler.add_request(
                     input_ids=self._get_input_ids(input_texts=input_texts),
                     request_uids=_get_request_ids_tensor(
                         request_ids=request_ids),
                     search_algorithm=search_algorithm,
-                    search_configs=search_configs)
+                    search_configs=search_configs,
+                    kv_cache_prompt_ids=prompt_ids)
 
         # Decoding step. Generates a token for all the requests in a batch.
         generated_token_ids, request_ids, exit_req_ids = self.scheduler.inference_call(
         )
+
+        if self.scheduler and self.scheduler.seq_batchers and self.scheduler.seq_batchers[
+                0]:
+            seq_len = self.scheduler.seq_batchers[
+                0].seq_len - self.scheduler.seq_batchers[0].offsets[0]
 
         # TODO: Deleting the finished results here temporarily
         for request_id in exit_req_ids:
@@ -154,7 +167,24 @@ class SchedulerRollingBatch(RollingBatch):
             input_ids = input_ids.to(self.device)
         return input_ids
 
+    def _get_prompt_ids(self, prompts):
+        prompt_ids = {}
+        for req_id, prompt in prompts.items():
+            prompt_id = self.tokenizer(prompt,
+                                       return_tensors="pt",
+                                       padding=True).input_ids
+            prompt_id = prompt_id.view(1, -1)
+            prompt_ids[req_id] = prompt_id
+        return prompt_ids
+
     def _construct_search_config(self, parameters):
+        use_lru_kv_cache = str(
+            parameters.get(
+                'use_lru_kv_cache',
+                self.search_config.use_lru_kv_cache)).lower() == "true"
+        do_sample = str(
+            parameters.get('do_sample',
+                           self.search_config.sampling)).lower() == "true"
         return SearchConfig(
             max_new_tokens=parameters.get('max_new_tokens',
                                           self.search_config.max_new_seqlen),
@@ -162,10 +192,11 @@ class SchedulerRollingBatch(RollingBatch):
             penalty_alpha=parameters.get('penalty_alpha',
                                          self.search_config.alpha),
             num_beams=parameters.get('num_beams', self.search_config.beam),
-            do_sample=parameters.get('do_sample', self.search_config.sampling),
+            do_sample=do_sample,
             top_p=parameters.get('top_p', self.search_config.topk),
             temperature=parameters.get('temperature',
-                                       self.search_config.temperature))
+                                       self.search_config.temperature),
+            use_lru_kv_cache=use_lru_kv_cache)
 
 
 def _get_request_ids_tensor(request_ids):
