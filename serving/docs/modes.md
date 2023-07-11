@@ -46,6 +46,9 @@ option.model_loading_timeout=10
 option.parallel_loading=true
 option.tensor_parallel_degree=2
 option.enable_venv=true
+option.rolling_batch=auto
+#option.rolling_batch=lmi-dist
+option.max_rolling_batch_size=64
 ```
 
 In `serving.properties`, you can set the following properties. Model properties are accessible to `Translator`
@@ -54,14 +57,14 @@ and python handler functions.
 - `engine`: Which Engine to use, values include MXNet, PyTorch, TensorFlow, ONNX, PaddlePaddle, DeepSpeed, etc.
 - `load_on_devices`: A ; delimited devices list, which the model to be loaded on, default to load on all devices.
 - `translatorFactory`: Specify the TranslatorFactory.
-- `job_queue_size`: Specify the job queue size at model level, this will override global `job_queue_size`.
+- `job_queue_size`: Specify the job queue size at model level, this will override global `job_queue_size`, default is `1000`.
 - `batch_size`: the dynamic batch size, default is `1`.
 - `max_batch_delay` - the maximum delay for batch aggregation in millis, default value is `100` milliseconds.
 - `max_idle_time` - the maximum idle time in seconds before the worker thread is scaled down, default is `60` seconds.
 - `log_model_metric`: Enable model metrics (inference, pre-process and post-process latency) logging.
 - `metrics_aggregation`: Number of model metrics to aggregate, default is `1000`.
-- `minWorkers`: Minimum number of workers.
-- `maxWorkers`: Maximum number of workers.
+- `minWorkers`: Minimum number of workers, default is `1`.
+- `maxWorkers`: Maximum number of workers, default is `#CPU/OMP_NUM_THREAD` for CPU, GPU default is `2`, inferentia default is `2` (PyTorch engine), `1` (Python engine) .
 - `gpu.minWorkers`: Minimum number of workers for GPU.
 - `gpu.maxWorkers`: Maximum number of workers for GPU.
 - `cpu.minWorkers`: Minimum number of workers for CPU.
@@ -72,7 +75,16 @@ and python handler functions.
 - `gpu.reserved_memory_mb`: Reserve GPU memory in MB to avoid system out of memory.
 
 
-For example, set minimum workers and maximum workers for your model:
+#### number of workers
+For Python engine, we recommend set `minWorkers` and `maxWorkers` to be the same since python
+worker scale up and down is expensive.
+
+You may also need to consider `OMP_NUM_THREAD` when setting number workers. `OMP_NUM_THREAD` is default
+to `1`, you can unset `OMP_NUM_THREAD` by setting `NO_OMP_NUM_THREADS=true`. If `OMP_NUM_THREAD` is unset,
+the `maxWorkers` will be default to 2 (larger `maxWorkers` with non 1 `OMP_NUM_THREAD` can cause thread
+contention, and reduce throughput).
+
+Set minimum workers and maximum workers for your model:
 
 ```
 minWorkers=32
@@ -90,17 +102,28 @@ cpu.minWorkers=2
 cpu.maxWorkers=4
 ```
 
+#### job queue size
 Or override global `job_queue_size`:
 
 ```
 job_queue_size=10
 ```
 
+#### dynamic batching
 To enable dynamic batching:
 
 ```
 batch_size=2
 max_batch_delay=1
+```
+
+#### rolling batch
+To enable rolling batch for Python engine:
+
+```
+option.rolling_batch=auto
+#option.rolling_batch=lmi-dist
+option.max_rolling_batch_size=64
 ```
 
 
