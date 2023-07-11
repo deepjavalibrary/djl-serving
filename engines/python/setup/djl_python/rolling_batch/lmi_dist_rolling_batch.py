@@ -132,13 +132,11 @@ class LmiDistRollingBatch(RollingBatch):
         for r in requests:
             param = r.parameters
             parameters = NextTokenChooserParameters(
-                temperature=param.get(
-                    "temperature",
-                    0.5),  # TODO: Find a better place to put default values
-                repetition_penalty=param.get("repetition_penalty", 1.0),
-                top_k=param.get("top_k", 4),
-                top_p=param.get("top_p", 1.0),
-                typical_p=param.get("typical_p", 1.0),
+                temperature=param.get("temperature", None),
+                repetition_penalty=param.get("repetition_penalty", None),
+                top_k=param.get("top_k", None),
+                top_p=param.get("top_p", None),
+                typical_p=param.get("typical_p", None),
                 do_sample=param.get("do_sample", False),
                 seed=int(param.get("seed", 0)))
             stop_parameters = StoppingCriteriaParameters(
