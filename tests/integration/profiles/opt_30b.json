@@ -5,7 +5,7 @@
 	"dtype": ["fp16","bf16"],
 	"tensor_parallel": 4,
 	"batch_size": 4,
-	"in_tokens": [256, 512],
+	"in_tokens": [256],
 	"out_tokens": 256,
 	"count": 10,
 	"log_metrics": true
