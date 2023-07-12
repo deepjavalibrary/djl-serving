@@ -203,6 +203,12 @@ ft_handler_list = {
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1
+    },
+    "t5-base-lora": {
+        "option.model_id": "s3://djl-llm/t5-base-lora/",
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "fp32",
+        "gpu.maxWorkers": 1
     }
 }
 

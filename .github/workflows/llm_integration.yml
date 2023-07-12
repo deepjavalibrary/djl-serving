@@ -467,6 +467,15 @@ jobs:
           serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py fastertransformer EleutherAI/pythia-2.8b
           docker rm -f $(docker ps -aq)
+      - name: Test t5-base-lora
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer t5-base-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer t5-base-lora
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
