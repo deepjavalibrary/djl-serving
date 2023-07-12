@@ -22,7 +22,7 @@ ARG ompi_version=4.1.4
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.30.1
 ARG accelerate_version=0.20.3
-ARG bitsandbytes_version=0.40.0.post3
+ARG bitsandbytes_version=0.40.0.post4
 ARG peft_version=0.3.0
 
 EXPOSE 8080
