@@ -211,3 +211,15 @@ export SERVING_OPTS="-Dai.djl.logging.level=debug"
 ```
 export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/MY_CONF/log4j2.xml
 ```
+
+### How to download uncompressed model from S3
+To enable fast model downloading, you can store your model artifacts (weights) in a S3 bucket, and
+only keep the model code and metadata in the `model.tar.gz` (.zip) file. DJL can leverage
+[s5cmd](https://github.com/peak/s5cmd) to download uncompressed files from S3 with extremely fast
+speed.
+
+To enable `s5cmd` downloading, you can configure `serving.properties` as the following:
+
+```
+option.model_id=s3://YOUR_BUCKET/...
+```
