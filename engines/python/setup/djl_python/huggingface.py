@@ -147,14 +147,14 @@ class HuggingFaceService(object):
             if "device_map" not in kwargs:
                 raise ValueError(
                     "device_map should set when load_in_8bit is set")
-            kwargs["load_in_8bit"] = properties.get("load_in_8bit")
+            kwargs["load_in_8bit"] = properties.get("load_in_8bit").lower() == 'true'
         if "load_in_4bit" in properties:
             if "device_map" not in kwargs:
                 raise ValueError(
                     "device_map should set when load_in_4bit is set")
-            kwargs["load_in_8bit"] = properties.get("load_in_4bit")
+            kwargs["load_in_4bit"] = properties.get("load_in_4bit").lower() == 'true'
         if "low_cpu_mem_usage" in properties:
-            kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage")
+            kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage").lower() == 'true'
 
         if "data_type" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
