@@ -371,6 +371,7 @@ lmi_dist_model_list = {
         "option.model_id": "tiiuae/falcon-7b",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 1,
+        "option.revision": "2f5c3cd4eace6be6c0f12981f377fb35e5bf6ee5",
         "option.max_rolling_batch_size": 4,
         "option.trust_remote_code": True
     },
