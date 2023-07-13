@@ -147,14 +147,17 @@ class HuggingFaceService(object):
             if "device_map" not in kwargs:
                 raise ValueError(
                     "device_map should set when load_in_8bit is set")
-            kwargs["load_in_8bit"] = properties.get("load_in_8bit").lower() == 'true'
+            kwargs["load_in_8bit"] = properties.get(
+                "load_in_8bit").lower() == 'true'
         if "load_in_4bit" in properties:
             if "device_map" not in kwargs:
                 raise ValueError(
                     "device_map should set when load_in_4bit is set")
-            kwargs["load_in_4bit"] = properties.get("load_in_4bit").lower() == 'true'
+            kwargs["load_in_4bit"] = properties.get(
+                "load_in_4bit").lower() == 'true'
         if "low_cpu_mem_usage" in properties:
-            kwargs["low_cpu_mem_usage"] = properties.get("low_cpu_mem_usage").lower() == 'true'
+            kwargs["low_cpu_mem_usage"] = properties.get(
+                "low_cpu_mem_usage").lower() == 'true'
 
         if "data_type" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
@@ -300,9 +303,15 @@ class HuggingFaceService(object):
                 base_model = PEFT_MODEL_TASK_TO_CLS[
                     self.peft_config.task_type].from_pretrained(
                         self.peft_config.base_model_name_or_path, **kwargs)
-                lora_model = PeftModel.from_pretrained(base_model,
+                self.model = PeftModel.from_pretrained(base_model,
                                                        model_id_or_path)
-                self.model = lora_model.merge_and_unload()
+                if "load_in_8bit" in kwargs or "load_in_4bit" in kwargs:
+                    logging.warning(
+                        "LoRA checkpoints cannot be merged with base model when using 8bit or 4bit quantization."
+                        "You should expect slightly longer inference times with a quantized model."
+                    )
+                else:
+                    self.model = self.model.merge_and_unload()
                 hf_pipeline = pipeline(task=task,
                                        tokenizer=self.tokenizer,
                                        model=self.model,
@@ -351,9 +360,15 @@ class HuggingFaceService(object):
         if self.peft_config is not None:
             base_model = model_cls.from_pretrained(
                 self.peft_config.base_model_name_or_path, **kwargs)
-            lora_model = PeftModel.from_pretrained(base_model,
+            self.model = PeftModel.from_pretrained(base_model,
                                                    model_id_or_path)
-            self.model = lora_model.merge_and_unload()
+            if "load_in_8bit" in kwargs or "load_in_4bit" in kwargs:
+                logging.warning(
+                    "LoRA checkpoints cannot be merged with base model when using 8bit or 4bit quantization."
+                    "You should expect slightly longer inference times with a quantized model."
+                )
+            else:
+                self.model = self.model.merge_and_unload()
         else:
             self.model = model_cls.from_pretrained(model_id_or_path, **kwargs)
 
@@ -428,7 +443,8 @@ class HuggingFaceService(object):
             )
             self.peft_config = PeftConfig.from_pretrained(model_config_path)
             self.model_config = AutoConfig.from_pretrained(
-                self.peft_config.base_model_name_or_path)
+                self.peft_config.base_model_name_or_path,
+                trust_remote_code=self.trust_remote_code)
         except Exception as e:
             logging.error(
                 f"{self.model_id_or_path} does not contain a config.json or adapter_config.json for lora models. "
