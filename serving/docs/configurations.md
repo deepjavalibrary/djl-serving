@@ -71,13 +71,14 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 
 ### Python
 
-| Key                                | Type        | Description                                             |
-|------------------------------------|-------------|---------------------------------------------------------|
-| PYTHON_EXECUTABLE                  | env var	    | The location is python executable, default: python      |
-| DJL_ENTRY_POINT                    | env var	    | The entrypoint python file or module, default: model.py |
-| MODEL_LOADING_TIMEOUT              | env var	    | Python worker load model timeout: default: 240 seconds  |
-| PREDICT_TIMEOUT                    | env var	    | Python predict call timeout, default: 120 seconds       |
-| ai.djl.python.disable_alternative  | system prop | Disable alternative engine                              |
+| Key                               | Type                | Description                                             |
+|-----------------------------------|---------------------|---------------------------------------------------------|
+| PYTHON_EXECUTABLE                 | env var             | The location is python executable, default: python      |
+| DJL_ENTRY_POINT                   | env var             | The entrypoint python file or module, default: model.py |
+| MODEL_LOADING_TIMEOUT             | env var             | Python worker load model timeout: default: 240 seconds  |
+| PREDICT_TIMEOUT                   | env var             | Python predict call timeout, default: 120 seconds       |
+| DJL_VENV_DIR                      | env var/system prop | The venv directory, default: $DJL_CACHE_DIR/venv        |
+| ai.djl.python.disable_alternative | system prop         | Disable alternative engine                              |
 
 ### Python (DeepSpeed)
 
@@ -165,6 +166,9 @@ option.predict_timeout=240
 # mark the model as failure after python process crashing 10 times
 retry_threshold=0
 
+# enable virtual environment
+option.enable_venv=true
+
 # use built-in DeepSpeed handler
 option.entryPoint=djl_python.deepspeed
 # passing extra options to model.py or built-in handler
@@ -223,3 +227,12 @@ To enable `s5cmd` downloading, you can configure `serving.properties` as the fol
 ```
 option.model_id=s3://YOUR_BUCKET/...
 ```
+
+### How to resolve python package conflict between models
+If you want to deploy multiple python models, but their dependencies has conflict, you can enable
+[python virtual environments](https://docs.python.org/3/tutorial/venv.html) for your model:
+
+```
+option.enable_venv=true
+```
+
