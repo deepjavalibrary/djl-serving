@@ -471,8 +471,12 @@ public class ModelServer {
             logger.warn("HuggingFace Model {} already exists, use random model name", modelId);
             return modelName + '_' + RandomUtils.nextInt() + '=' + huggingFaceModelDir;
         }
+        String huggingFaceModelRevision = Utils.getEnvOrSystemProperty("HF_MODEL_REVISION");
         Properties huggingFaceProperties = new Properties();
         huggingFaceProperties.put("option.model_id", modelId);
+        if (huggingFaceModelRevision != null) {
+            huggingFaceProperties.put("option.revision", huggingFaceModelRevision);
+        }
         String task = Utils.getEnvOrSystemProperty("HF_TASK");
         if (task != null) {
             huggingFaceProperties.put("option.task", task);
