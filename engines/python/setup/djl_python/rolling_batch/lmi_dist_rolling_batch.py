@@ -50,6 +50,7 @@ class LmiDistRollingBatch(RollingBatch):
         sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
         quantize = self.properties.get("quantize", None)
         dtype = self.properties.get("dtype", None)
+        revision = self.properties.get('revision', None)
         if quantize is not None and dtype is not None:
             raise ValueError(
                 f"Can't set both dtype: {dtype} and quantize: {quantize}")
@@ -61,7 +62,7 @@ class LmiDistRollingBatch(RollingBatch):
             quantize = "bitsandbytes"
         self.model = get_model(
             model_id_or_path,
-            revision=None,
+            revision=revision,
             sharded=sharded,
             quantize=quantize,
             trust_remote_code=kwargs.get("trust_remote_code"))

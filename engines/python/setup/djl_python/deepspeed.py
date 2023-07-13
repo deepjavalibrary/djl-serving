@@ -115,6 +115,7 @@ class DeepSpeedService(object):
         self.peft_config = None
         self.model = None
         self.tokenizer = None
+        self.revision = None
 
     def initialize(self, properties: dict):
         self._parse_properties(properties)
@@ -150,6 +151,8 @@ class DeepSpeedService(object):
         if "trust_remote_code" in properties:
             self.trust_remote_code = properties.get(
                 "trust_remote_code").lower() == "true"
+        if "revision" in properties:
+            self.revision = properties['revision']
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
                 self.ds_config = json.load(f)
@@ -235,6 +238,8 @@ class DeepSpeedService(object):
         # Workaround on int8. fp16 fp32 bf16 init supported
         dtype = torch.float16 if self.data_type == torch.int8 else self.data_type
         kwargs = {"torch_dtype": dtype} if dtype else {}
+        if self.revision:
+            kwargs['revision'] = self.revision
         if "checkpoint" in self.ds_config:
             with deepspeed.OnDevice(dtype=dtype, device="meta"):
                 model = TASK_TO_MODEL[self.task].from_config(

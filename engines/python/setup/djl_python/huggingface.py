@@ -162,6 +162,8 @@ class HuggingFaceService(object):
         if "dtype" in properties:
             kwargs["torch_dtype"] = get_torch_dtype_from_str(
                 properties.get("dtype"))
+        if "revision" in properties:
+            kwargs["revision"] = properties.get('revision')
         self.rolling_batch_type = properties.get("rolling_batch", None)
 
         self._read_model_config(model_id_or_path)
