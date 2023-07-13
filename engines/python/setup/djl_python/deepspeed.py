@@ -215,7 +215,8 @@ class DeepSpeedService(object):
             self.peft_config = PeftConfig.from_pretrained(
                 self.model_id_or_path)
             self.model_config = AutoConfig.from_pretrained(
-                self.peft_config.base_model_name_or_path)
+                self.peft_config.base_model_name_or_path,
+                trust_remote_code=self.trust_remote_code)
         except Exception as e:
             self.logger.error(
                 f"{self.model_id_or_path} does not contain a config.json or adapter_config.json for lora models. "
