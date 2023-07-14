@@ -11,12 +11,12 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
-ARG djl_version=0.23.0~SNAPSHOT
+ARG djl_version=0.23.0
 ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-nightly-py2.py3-none-any.whl"
-ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.9.5-py2.py3-none-any.whl"
+ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-0.8.2-py3-none-any.whl"
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.30.2
 ARG accelerate_version=0.20.3
