@@ -151,7 +151,8 @@ class LmiDistRollingBatch(RollingBatch):
                     id=r.id,
                     inputs=r.input_text,
                     parameters=parameters,
-                    stopping_parameters=stop_parameters))
+                    stopping_parameters=stop_parameters,
+                    truncate=param.get("truncate", 1000)))
 
         if preprocessed_requests:
             batch = Batch(id=self.batch_id_counter,
