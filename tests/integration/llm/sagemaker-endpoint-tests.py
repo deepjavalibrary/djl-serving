@@ -22,13 +22,13 @@ parser.add_argument("test_case",
 parser.add_argument(
     "image_type",
     help="Whether to use release or nightly images for testing",
-    choices=["nightly", "release"])
+    choices=["nightly", "release", "candidate"])
 
 ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
 DEFAULT_INSTANCE_TYPE = "ml.g5.12xlarge"
 DEFAULT_PAYLOAD = {"inputs": "Deep Learning is"}
 DEFAULT_BUCKET = "sm-integration-tests-rubikon-usw2"
-RELEASE_VERSION = "0.22.1"
+RELEASE_VERSION = "0.23.0"
 REGION = "us-west-2"
 
 SINGLE_MODEL_ENDPOINT_CONFIGS = {
@@ -140,6 +140,15 @@ NIGHTLY_IMAGES = {
     "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:fastertransformer-nightly"
 }
 
+CANDIDATE_IMAGES = {
+    "python":
+        f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
+    "deepspeed":
+        f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
+    "fastertransformer":
+        f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-fastertransformer"
+}
+
 
 def get_sagemaker_session(default_bucket=DEFAULT_BUCKET,
                           default_bucket_prefix=None):
@@ -248,6 +257,8 @@ def mme_test(name, image_type):
 
         if image_type == "nightly":
             mme_image_uri = NIGHTLY_IMAGES[config.get("framework")]
+        elif image_type == "candidate":
+            mme_image_uri = CANDIDATE_IMAGES[config.get("framework")]
         else:
             mme_image_uri = sagemaker.image_uris.retrieve(
                 framework="djl-" + config.get("framework"),
@@ -293,6 +304,8 @@ def no_code_endpoint_test(name, image_type):
     predictor = None
     if image_type == "nightly":
         image_uri = NIGHTLY_IMAGES[config.get("framework")]
+    elif image_type == "candidate":
+        image_uri = CANDIDATE_IMAGES[config.get("framework")]
     else:
         image_uri = sagemaker.image_uris.retrieve(framework="djl-" +
                                                   config.get("framework"),
@@ -343,6 +356,8 @@ def single_model_endpoint_test(name, image_type):
         )
         if image_type == "nightly":
             model.image_uri = NIGHTLY_IMAGES[model.engine.value[0].lower()]
+        elif image_type == "candidate":
+            model.image_uri = CANDIDATE_IMAGES[model.engine.value[0].lower()]
 
         if config.get("partition", False):
             model.partition(instance_type=DEFAULT_INSTANCE_TYPE,
