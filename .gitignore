@@ -12,6 +12,9 @@ libs
 *.dylib
 *.dll
 *.class
+*.pt
+*.npy
+*.csv
 
 # Eclipse
 .settings

@@ -5,14 +5,15 @@ from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
 from djl_python.scheduler.search_config import SearchConfig
 import torch
-from transformers import GPT2Tokenizer, GPT2LMHeadModel, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class TestSchedulerBloom(unittest.TestCase):
 
     def test_lm_block(self):
         model_id = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(model_id)
+        model = BloomForCausalLM.from_pretrained(model_id, device_map="auto")
         tokenizer = AutoTokenizer.from_pretrained(model_id)
 
         encoding = tokenizer("Hello, my dog is cute", return_tensors="pt")
@@ -22,14 +23,14 @@ class TestSchedulerBloom(unittest.TestCase):
         lm_block = BloomBlock(model)
 
         input0 = [
-            torch.repeat_interleave(input_ids_0, dim=0, repeats=2),
+            torch.repeat_interleave(input_ids_0, dim=0, repeats=2).to(device),
             torch.repeat_interleave(torch.arange(seq_len)[None, :],
                                     dim=0,
-                                    repeats=2),
+                                    repeats=2).to(device),
             torch.repeat_interleave(torch.ones(seq_len,
                                                dtype=torch.int64)[None, :],
                                     dim=0,
-                                    repeats=2)
+                                    repeats=2).to(device)
         ]
 
         output0 = lm_block.forward(*input0, None)
@@ -40,18 +41,17 @@ class TestSchedulerBloom(unittest.TestCase):
         # input with kv_cache
         # k: [32, 64, 6], v: [32, 6, 64], [batch*head, kvDim, seq]
         past_key_values = output0.past_key_values
-        input_ids = torch.tensor([[404], [405]])
+        input_ids = torch.tensor([[404], [405]]).to(device)
         past_seq = past_key_values[0][0].shape[-2]
-        position_ids = torch.tensor([[past_seq], [past_seq]])
-        attention_mask = torch.ones(2, past_seq + 1, dtype=torch.int64)
+        position_ids = torch.tensor([[past_seq], [past_seq]]).to(device)
+        attention_mask = torch.ones(2, past_seq + 1, dtype=torch.int64).to(device)
         output1 = lm_block.forward(input_ids, position_ids, attention_mask,
                                    past_key_values)
         assert len(output1.past_key_values) == model_config.n_layer
 
     def test_contrastive_scheduler(self):
         model_id = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(model_id)
-        model_config = AutoConfig.from_pretrained(model_id)
+        model = BloomForCausalLM.from_pretrained(model_id, device_map="auto")
         tokenizer = AutoTokenizer.from_pretrained(model_id,
                                                   padding_side='left')
 
@@ -63,7 +63,7 @@ class TestSchedulerBloom(unittest.TestCase):
         scheduler = SeqBatchScheduler(lm_block, "contrastive", search_config)
 
         input_ids_0 = tokenizer.encode(
-            'Memories follow me left and right. I can', return_tensors='pt')
+            'Memories follow me left and right. I can', return_tensors='pt').to(device)
         request_ids = torch.tensor([[0]])
 
         # Test init_forward
@@ -79,7 +79,7 @@ class TestSchedulerBloom(unittest.TestCase):
                 "There's a time that I remember, when I did not know",
                 return_tensors='pt')[0]
         ]).view(1, -1)
-        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0).to(device)
 
         request_ids = torch.tensor([[1], [2]])
         scheduler.add_request(input_ids, request_ids)
@@ -107,7 +107,7 @@ class TestSchedulerBloom(unittest.TestCase):
             torch.tensor([PAD, PAD]),
             tokenizer.encode("There's a time", return_tensors='pt')[0]
         ]).view(1, -1)
-        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0).to(device)
         request_ids = torch.tensor([[3], [4]])
 
         scheduler.add_request(input_ids, request_ids)
@@ -125,7 +125,7 @@ class TestSchedulerBloom(unittest.TestCase):
         tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                   trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
-            "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True)
+            "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True, device_map="auto")
 
         lm_block = FalconBlock(model)
 
@@ -134,7 +134,7 @@ class TestSchedulerBloom(unittest.TestCase):
         scheduler = SeqBatchScheduler(lm_block, "contrastive", search_config)
 
         input_ids_0 = tokenizer.encode(
-            'Memories follow me left and right. I can', return_tensors='pt')
+            'Memories follow me left and right. I can', return_tensors='pt').to(device)
         request_ids = torch.tensor([[0]])
 
         # Test init_forward
@@ -150,7 +150,7 @@ class TestSchedulerBloom(unittest.TestCase):
                 "There's a time that I remember, when I did not know",
                 return_tensors='pt')[0]
         ]).view(1, -1)
-        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0).to(device)
 
         request_ids = torch.tensor([[1], [2]])
         scheduler.add_request(input_ids, request_ids)
@@ -178,7 +178,7 @@ class TestSchedulerBloom(unittest.TestCase):
             torch.tensor([PAD, PAD]),
             tokenizer.encode("There's a time", return_tensors='pt')[0]
         ]).view(1, -1)
-        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0).to(device)
         request_ids = torch.tensor([[3], [4]])
 
         scheduler.add_request(input_ids, request_ids)

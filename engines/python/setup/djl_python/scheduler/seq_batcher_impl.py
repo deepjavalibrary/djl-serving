@@ -303,16 +303,20 @@ class ContrastiveSeqBatcher(SeqBatcher):
         hidden_dim = batch.past_hidden_states.shape[-1]
 
         # [batch, 1]
-        a_range = torch.arange(batch_size)
+        a_range = torch.arange(batch_size, dtype=torch.int64, device=batch.next_input_ids.device)
         next_logits = candidate_logits.view(batch_size, config.topk,
                                             logits_dim)[a_range, select]
 
         next_past_key_values = []
+        select_pkv = select.to(candidate_past_key_values[0][0].device)
+        a_range_pkv = a_range.to(candidate_past_key_values[0][0].device)
         for k, v in candidate_past_key_values:
+            select_pkv = select_pkv.to(k.device)
+            a_range_pkv = a_range_pkv.to(v.device)
             k_new = k.view(batch_size, config.topk, num_heads,
-                           past_seq_len + 1, kv_dim)[a_range, select]
+                           past_seq_len + 1, kv_dim)[a_range_pkv, select_pkv]
             v_new = v.view(batch_size, config.topk, num_heads,
-                           past_seq_len + 1, kv_dim)[a_range, select]
+                           past_seq_len + 1, kv_dim)[a_range_pkv, select_pkv]
             next_past_key_values.append((k_new, v_new))
         next_past_key_values = tuple(next_past_key_values)
 
