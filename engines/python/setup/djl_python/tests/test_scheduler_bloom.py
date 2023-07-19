@@ -13,7 +13,7 @@ class TestSchedulerBloom(unittest.TestCase):
 
     def test_lm_block(self):
         model_id = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(model_id, device_map="auto")
+        model = BloomForCausalLM.from_pretrained(model_id).to(device)
         tokenizer = AutoTokenizer.from_pretrained(model_id)
 
         encoding = tokenizer("Hello, my dog is cute", return_tensors="pt")
@@ -51,7 +51,7 @@ class TestSchedulerBloom(unittest.TestCase):
 
     def test_contrastive_scheduler(self):
         model_id = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(model_id, device_map="auto")
+        model = BloomForCausalLM.from_pretrained(model_id).to(device)
         tokenizer = AutoTokenizer.from_pretrained(model_id,
                                                   padding_side='left')
 
@@ -125,7 +125,7 @@ class TestSchedulerBloom(unittest.TestCase):
         tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                   trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
-            "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True, device_map="auto")
+            "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True).to(device)
 
         lm_block = FalconBlock(model)
 

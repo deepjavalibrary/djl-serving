@@ -20,7 +20,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         lm_block = HuggingfaceBlock(model)
 
         input0 = [
@@ -46,7 +46,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_greedy_scheduler(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -118,7 +118,7 @@ class TestScheduler(unittest.TestCase):
         torch.manual_seed(20220611)
 
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map=device)
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         tokenizer = GPT2Tokenizer.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
@@ -173,7 +173,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -250,7 +250,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_inhomogeneous_search_config(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -290,7 +290,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_seq_batcher(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
@@ -348,7 +348,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_multi_seq_batcher(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -439,7 +439,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_lru_kv_cache(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
         tokenizer = GPT2Tokenizer.from_pretrained(model_id, padding_side='left')
         tokenizer.pad_token = "[PAD]"
         lm_block = HuggingfaceBlock(model)
