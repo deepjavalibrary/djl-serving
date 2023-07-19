@@ -118,7 +118,7 @@ class TestScheduler(unittest.TestCase):
         torch.manual_seed(20220611)
 
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map=device)
+        model = GPT2LMHeadModel.from_pretrained(model_id, device_map='auto')
         tokenizer = GPT2Tokenizer.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
