@@ -9,6 +9,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class TestSchedulerBloom(unittest.TestCase):
 
     def test_lm_block(self):
@@ -44,7 +45,8 @@ class TestSchedulerBloom(unittest.TestCase):
         input_ids = torch.tensor([[404], [405]]).to(device)
         past_seq = past_key_values[0][0].shape[-2]
         position_ids = torch.tensor([[past_seq], [past_seq]]).to(device)
-        attention_mask = torch.ones(2, past_seq + 1, dtype=torch.int64).to(device)
+        attention_mask = torch.ones(2, past_seq + 1,
+                                    dtype=torch.int64).to(device)
         output1 = lm_block.forward(input_ids, position_ids, attention_mask,
                                    past_key_values)
         assert len(output1.past_key_values) == model_config.n_layer
@@ -63,7 +65,8 @@ class TestSchedulerBloom(unittest.TestCase):
         scheduler = SeqBatchScheduler(lm_block, "contrastive", search_config)
 
         input_ids_0 = tokenizer.encode(
-            'Memories follow me left and right. I can', return_tensors='pt').to(device)
+            'Memories follow me left and right. I can',
+            return_tensors='pt').to(device)
         request_ids = torch.tensor([[0]])
 
         # Test init_forward
@@ -125,7 +128,9 @@ class TestSchedulerBloom(unittest.TestCase):
         tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                   trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
-            "BlackSamorez/falcon-40b-tiny-testing", trust_remote_code=True, device_map="auto")
+            "BlackSamorez/falcon-40b-tiny-testing",
+            trust_remote_code=True,
+            device_map="auto")
 
         lm_block = FalconBlock(model)
 
@@ -134,7 +139,8 @@ class TestSchedulerBloom(unittest.TestCase):
         scheduler = SeqBatchScheduler(lm_block, "contrastive", search_config)
 
         input_ids_0 = tokenizer.encode(
-            'Memories follow me left and right. I can', return_tensors='pt').to(device)
+            'Memories follow me left and right. I can',
+            return_tensors='pt').to(device)
         request_ids = torch.tensor([[0]])
 
         # Test init_forward

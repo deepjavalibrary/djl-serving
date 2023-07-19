@@ -303,7 +303,9 @@ class ContrastiveSeqBatcher(SeqBatcher):
         hidden_dim = batch.past_hidden_states.shape[-1]
 
         # [batch, 1]
-        a_range = torch.arange(batch_size, dtype=torch.int64, device=batch.next_input_ids.device)
+        a_range = torch.arange(batch_size,
+                               dtype=torch.int64,
+                               device=batch.next_input_ids.device)
         next_logits = candidate_logits.view(batch_size, config.topk,
                                             logits_dim)[a_range, select]
 

@@ -16,6 +16,7 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
@@ -57,7 +58,8 @@ class TestScheduler(unittest.TestCase):
         scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
 
         input_ids_0 = tokenizer.encode(
-            'Memories follow me left and right. I can', return_tensors='pt').to(device)
+            'Memories follow me left and right. I can',
+            return_tensors='pt').to(device)
         request_ids = torch.tensor([[0]])
 
         # Save a kv_cache to file for later use
@@ -129,7 +131,8 @@ class TestScheduler(unittest.TestCase):
                                      top_k=4)
         PAD = search_config.pad_token_id
         input_ids_0 = tokenizer.encode(
-            'Memories follow me left and right. I can', return_tensors='pt').to(device)
+            'Memories follow me left and right. I can',
+            return_tensors='pt').to(device)
         request_ids = torch.tensor([[0]])
 
         # Test add request
@@ -184,7 +187,8 @@ class TestScheduler(unittest.TestCase):
         scheduler = SeqBatchScheduler(lm_block, "contrastive", config)
 
         input_ids = tokenizer.encode(
-            'Memories follow me left and right. I can', return_tensors='pt').to(device)
+            'Memories follow me left and right. I can',
+            return_tensors='pt').to(device)
         request_ids = torch.tensor([[0]])
 
         # Save a kv_cache to file for later use
@@ -316,8 +320,10 @@ class TestScheduler(unittest.TestCase):
         # Test SeqBatcher.add_batch
         seq_batcher.add_batch(seq_batcher_new)
 
-        assert torch.all(seq_batcher.offsets.to('cpu') == torch.tensor([[0], [8]]))
-        assert torch.all(seq_batcher.request_uids.to('cpu') == torch.tensor([[1], [0]]))
+        assert torch.all(
+            seq_batcher.offsets.to('cpu') == torch.tensor([[0], [8]]))
+        assert torch.all(
+            seq_batcher.request_uids.to('cpu') == torch.tensor([[1], [0]]))
         assert seq_batcher.seq_len == 18
         assert len(seq_batcher.exit_index) == 0
         assert seq_batcher.batch_size == 2
@@ -326,14 +332,16 @@ class TestScheduler(unittest.TestCase):
         seq_batcher.exit_index.add(0)  # suppose the 0th sequence should exit
         seq_batcher.collect_and_trim()
         assert torch.all(seq_batcher.offsets.to('cpu') == torch.tensor([[0]]))
-        assert torch.all(seq_batcher.request_uids.to('cpu') == torch.tensor([[0]]))
+        assert torch.all(
+            seq_batcher.request_uids.to('cpu') == torch.tensor([[0]]))
         assert seq_batcher.seq_len == 10
         assert len(seq_batcher.exit_index) == 0
         assert seq_batcher.batch_size == 1
 
         # Test split
         input_ids_new = torch.tensor([[2215, 534, 7405, 836, 470, 670],
-                                      [588, 484, 973, 284, 878, 843]]).to(device)
+                                      [588, 484, 973, 284, 878,
+                                       843]]).to(device)
         request_ids_new = torch.tensor([[6], [7]]).to(device)
         seq_batcher_new = \
             ContrastiveSeqBatcher.init_forward(input_ids_new, request_ids_new, lm_block, search_config_dict)[0]
@@ -343,8 +351,7 @@ class TestScheduler(unittest.TestCase):
         assert len(seq_batcher_list) == 2
         assert seq_batcher_list[0].batch_size == 1
         assert seq_batcher_list[1].batch_size == 2
-        assert torch.all(
-            seq_batcher_list[1].request_uids == request_ids_new)
+        assert torch.all(seq_batcher_list[1].request_uids == request_ids_new)
 
     def test_multi_seq_batcher(self):
         model_id = "gpt2"
@@ -406,9 +413,11 @@ class TestScheduler(unittest.TestCase):
         attention_mask = compute_attention_mask(offsets,
                                                 input_ids1.shape[-1],
                                                 repeat_offset=2)
-        assert torch.all(attention_mask.to('cpu') == torch.tensor(
-            [[0, 0, 0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
-             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]))
+        assert torch.all(
+            attention_mask.to('cpu') == torch.tensor([
+                [0, 0, 0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            ]))
 
         # Test compute_position_ids
         position_ids = compute_position_ids(input_ids1.shape[0],
@@ -416,8 +425,10 @@ class TestScheduler(unittest.TestCase):
                                             offsets,
                                             past_seq_len=0,
                                             repeat_offset=1)
-        assert torch.all(position_ids.to('cpu') == torch.tensor(
-            [[0, 0, 0, 0, 0, 0, 0, 1, 2, 3], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]))
+        assert torch.all(
+            position_ids.to('cpu') == torch.tensor([[
+                0, 0, 0, 0, 0, 0, 0, 1, 2, 3
+            ], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]]))
 
         # Test merge_tensors
         input2 = 'Fastertransformer is'
@@ -425,22 +436,27 @@ class TestScheduler(unittest.TestCase):
                                padding=True).input_ids.to(device)
         merged_tensor = merge_tensors(input_ids1, input_ids2, seq_delta=5)
 
-        assert torch.all(merged_tensor.to('cpu') == torch.tensor([[
-            50256, 50256, 50256, 50256, 50256, 50256, 29744, 28478, 5834, 318
-        ], [13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460
-            ], [0, 0, 0, 0, 0, 37, 1603, 7645, 16354, 318]]))
+        assert torch.all(
+            merged_tensor.to('cpu') == torch.tensor([[
+                50256, 50256, 50256, 50256, 50256, 50256, 29744, 28478, 5834,
+                318
+            ], [13579, 1749, 1061, 502, 1364, 290, 826, 13, 314, 460
+                ], [0, 0, 0, 0, 0, 37, 1603, 7645, 16354, 318]]))
 
         # Test trim_tensor: removed the second row which has the largest sequence length
         trimmed_tensor = trim_tensor(merged_tensor,
                                      keep_indices=torch.tensor([0, 2]),
                                      trim_seq_len=5)
-        assert torch.all(trimmed_tensor.to('cpu') == torch.tensor(
-            [[50256, 29744, 28478, 5834, 318], [37, 1603, 7645, 16354, 318]]))
+        assert torch.all(
+            trimmed_tensor.to('cpu') == torch.tensor([[
+                50256, 29744, 28478, 5834, 318
+            ], [37, 1603, 7645, 16354, 318]]))
 
     def test_lru_kv_cache(self):
         model_id = "gpt2"
         model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
-        tokenizer = GPT2Tokenizer.from_pretrained(model_id, padding_side='left')
+        tokenizer = GPT2Tokenizer.from_pretrained(model_id,
+                                                  padding_side='left')
         tokenizer.pad_token = "[PAD]"
         lm_block = HuggingfaceBlock(model)
 
@@ -448,8 +464,9 @@ class TestScheduler(unittest.TestCase):
         search_config.max_new_seqlen = 30
         scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
 
-        prompt_ids = tokenizer(
-            'Memories follow me left and right. I can', return_tensors='pt', padding=True).input_ids
+        prompt_ids = tokenizer('Memories follow me left and right. I can',
+                               return_tensors='pt',
+                               padding=True).input_ids
         prompt_ids = prompt_ids.view(1, -1)
         prompt_ids_dict = {1: prompt_ids, 2: prompt_ids}
 
