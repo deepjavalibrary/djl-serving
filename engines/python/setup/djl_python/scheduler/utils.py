@@ -54,12 +54,12 @@ def trim_tensor(tensor: torch.Tensor,
                 trim_seq_len: int,
                 seq_order: int = 1) -> torch.Tensor:
     if trim_seq_len == 0:
-        return tensor[keep_indices]
+        return tensor[keep_indices.to(tensor.device)]
 
     if seq_order == 1:
         return tensor[keep_indices, trim_seq_len:, ...]
     elif seq_order == 2:
-        return tensor[keep_indices, :, trim_seq_len:, ...]
+        return tensor[keep_indices.to(tensor.device), :, trim_seq_len:, ...]
     elif seq_order == -1:
         return tensor[keep_indices]
 
