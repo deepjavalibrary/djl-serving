@@ -46,6 +46,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -661,6 +662,15 @@ public final class ModelInfo<I, O> {
         }
         if (engineName == null) {
             engineName = inferEngine();
+        }
+
+        // load default settings from env
+        for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
+            String key = entry.getKey();
+            if (key.startsWith("OPTION_")) {
+                key = key.substring(7).toLowerCase(Locale.ROOT);
+                prop.putIfAbsent(key, entry.getValue());
+            }
         }
 
         StringBuilder sb = new StringBuilder();
