@@ -164,17 +164,13 @@ class TestScheduler(unittest.TestCase):
             pass
 
         results = scheduler.collect_results()
-        print(tokenizer.decode(results[0][:30]))
-        print(tokenizer.decode(results[1][:30]))
-        print(tokenizer.decode(results[2][:30]))
-        # assert tokenizer.decode(results[0][:30]) == "Memories follow me left and right. I can't remember the last " \
-        #                                             "time I had to do this, and I'm glad that I did.\n"
-        # assert tokenizer.decode(
-        #     results[1][:30]
-        # ) == """When your legs don't work like they used to before And I can't sweep you off your face" one female announced... " Everyone seems"""
-        # assert tokenizer.decode(
-        #     results[2][:30]
-        # ) == "There's a time that I remember, when I did not know what to do with my life. I was in a very bad mood. I was"
+        # TODO: The random seed is fixed by torch.manual_seed(), and the sampling output is indeed fixed. However,
+        #  the results are not the same between local test and github CI test. So here the assertion is
+        #  disabled. After the random seed is aligned between local test and CI test, this assertion should be added
+        #  back.
+        assert tokenizer.decode(
+            results[2][:30]
+        ) == "There's a time that I remember, when I did not know what to do with my life. I was in a very bad mood. I was"
 
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
