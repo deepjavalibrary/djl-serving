@@ -1,8 +1,6 @@
 import unittest
 from collections import defaultdict
 
-import numpy
-
 from djl_python.scheduler import HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
     trim_tensor, compute_kv_cache
