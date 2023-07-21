@@ -1,12 +1,12 @@
 import unittest
 from collections import defaultdict
 
-from djl_python.scheduler import HuggingfaceBlock
+from djl_python.scheduler.lm_block import FalconBlock, HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
     trim_tensor, compute_kv_cache
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from djl_python.scheduler.seq_batcher_impl import ContrastiveSeqBatcher
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
 from djl_python.scheduler.search_config import SearchConfig
 import torch
 
@@ -18,30 +18,50 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
-        model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
-        lm_block = HuggingfaceBlock(model)
+        # model_names = ["gpt2", "openlm-research/open_llama_3b"]
+        # model_names = ["BlackSamorez/falcon-40b-tiny-testing"]
+        model_names = ["gpt2"]
+        for model_name in model_names:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name, trust_remote_code=True, device_map="auto")
 
-        input0 = [
-            torch.tensor([[40, 2883, 6155, 351, 616, 13779, 3290]]).to(device),
-            torch.arange(7)[None, :].to(device),
-            torch.ones(7, dtype=torch.int64)[None, :].to(device)
-        ]
+            lm_block = HuggingfaceBlock(
+                model) if 'falcon' not in model_name else FalconBlock(model)
 
-        lm_output = lm_block.forward(*input0, None)
+            input_ids_0 = torch.tensor(
+                [[40, 2883, 6155, 351, 616, 13779, 3290]])
+            seq_len = input_ids_0.shape[1]
+            model_input = [
+                torch.repeat_interleave(input_ids_0, dim=0,
+                                        repeats=2).to(device),
+                torch.repeat_interleave(torch.arange(seq_len)[None, :],
+                                        dim=0,
+                                        repeats=2).to(device),
+                torch.repeat_interleave(torch.ones(seq_len,
+                                                   dtype=torch.int64)[None, :],
+                                        dim=0,
+                                        repeats=2).to(device)
+            ]
 
-        model_config = AutoConfig.from_pretrained(model_id)
-        assert len(lm_output.past_key_values) == model_config.n_layer
+            lm_output = lm_block.forward(*model_input, None)
 
-        # input with kv_cache
-        past_key_values = lm_output.past_key_values
-        input_ids = torch.tensor([[404]]).to(device)
-        past_seq = past_key_values[0][0].shape[-2]
-        position_ids = torch.tensor([[past_seq]]).to(device)
-        attention_mask = torch.ones(past_seq + 1, dtype=torch.int64).to(device)
-        output1 = lm_block.forward(input_ids, position_ids, attention_mask,
-                                   past_key_values)
-        assert len(output1.past_key_values) == model_config.n_layer
+            model_config = AutoConfig.from_pretrained(model_name)
+            assert len(
+                lm_output.past_key_values
+            ) == model_config.n_layer if 'llama' not in model_name else model_config.num_key_value_heads
+
+            # input with kv_cache
+            past_key_values = lm_output.past_key_values
+            input_ids_1 = torch.tensor([[404], [405]]).to(device)
+            past_seq = past_key_values[0][0].shape[-2]
+            position_ids = torch.tensor([[past_seq], [past_seq]]).to(device)
+            attention_mask = torch.ones(2, past_seq + 1,
+                                        dtype=torch.int64).to(device)
+            output1 = lm_block.forward(input_ids_1, position_ids,
+                                       attention_mask, past_key_values)
+            assert len(
+                output1.past_key_values
+            ) == model_config.n_layer if 'llama' not in model_name else model_config.num_key_value_heads
 
     def test_greedy_scheduler(self):
         model_id = "gpt2"
