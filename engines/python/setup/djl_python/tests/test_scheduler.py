@@ -23,7 +23,8 @@ class TestScheduler(unittest.TestCase):
         model_names = ["gpt2"]
         for model_name in model_names:
             model = AutoModelForCausalLM.from_pretrained(
-                model_name, trust_remote_code=True, device_map="auto")
+                model_name, trust_remote_code=True,
+                device_map="auto" if device.type == "cuda" else "cpu")
 
             lm_block = HuggingfaceBlock(
                 model) if 'falcon' not in model_name else FalconBlock(model)
@@ -45,10 +46,11 @@ class TestScheduler(unittest.TestCase):
 
             lm_output = lm_block.forward(*model_input, None)
 
-            model_config = AutoConfig.from_pretrained(model_name)
-            assert len(
-                lm_output.past_key_values
-            ) == model_config.n_layer if 'llama' not in model_name else model_config.num_key_value_heads
+            if 'falcon' not in model_name:
+                model_config = AutoConfig.from_pretrained(model_name)
+                assert len(
+                    lm_output.past_key_values
+                ) == model_config.n_layer if 'llama' not in model_name else model_config.num_key_value_heads
 
             # input with kv_cache
             past_key_values = lm_output.past_key_values
@@ -59,13 +61,15 @@ class TestScheduler(unittest.TestCase):
                                         dtype=torch.int64).to(device)
             output1 = lm_block.forward(input_ids_1, position_ids,
                                        attention_mask, past_key_values)
-            assert len(
-                output1.past_key_values
-            ) == model_config.n_layer if 'llama' not in model_name else model_config.num_key_value_heads
+            if 'falcon' not in model_name:
+                assert len(
+                    output1.past_key_values
+                ) == model_config.n_layer if 'llama' not in model_name else model_config.num_key_value_heads
 
     def test_greedy_scheduler(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -138,7 +142,8 @@ class TestScheduler(unittest.TestCase):
         torch.manual_seed(20220611)
 
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map='auto')
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map='auto' if device.type == 'cuda' else 'cpu')
         tokenizer = GPT2Tokenizer.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
@@ -192,7 +197,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -270,7 +276,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_inhomogeneous_search_config(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -310,7 +317,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_seq_batcher(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
@@ -371,7 +379,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_multi_seq_batcher(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -470,7 +479,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_lru_kv_cache(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
