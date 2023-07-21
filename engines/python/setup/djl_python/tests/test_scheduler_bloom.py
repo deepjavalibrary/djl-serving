@@ -1,6 +1,6 @@
 import unittest
 
-from djl_python.scheduler.lm_block import BloomBlock, FalconBlock
+from djl_python.scheduler.lm_block import BloomBlock, FalconBlock, HuggingfaceBlock
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
 from djl_python.scheduler.search_config import SearchConfig
@@ -124,8 +124,7 @@ class TestSchedulerBloom(unittest.TestCase):
             print('\n{}:'.format(i), tokenizer.decode(ret))
 
     def test_contrastive_scheduler_falcon(self):
-        model_name = "tiiuae/falcon-7b"
-        tokenizer = AutoTokenizer.from_pretrained(model_name,
+        tokenizer = AutoTokenizer.from_pretrained("tiiuae/falcon-7b",
                                                   trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
             "BlackSamorez/falcon-40b-tiny-testing",
@@ -196,6 +195,62 @@ class TestSchedulerBloom(unittest.TestCase):
         # print
         for i, ret in results.items():
             print('\n{}:'.format(i), tokenizer.decode(ret))
+
+    def test_greedy_scheduler_llama(self):
+        model_name = "seanmor5/tiny-llama-test"
+        tokenizer = AutoTokenizer.from_pretrained(
+            "openlm-research/open_llama_3b", trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            trust_remote_code=True, device_map=device)
+
+        lm_block = HuggingfaceBlock(model)
+
+        tokenizer.pad_token_id = 0
+        search_config = SearchConfig(pad_token_id=tokenizer.pad_token_id)
+        PAD = search_config.pad_token_id
+        scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
+
+        input_ids_0 = tokenizer.encode(
+            'Memories follow me left and right. I can',
+            return_tensors='pt').to(device)
+        request_ids = torch.tensor([[0]])
+
+        # Test init_forward
+        scheduler.add_request(input_ids_0, request_ids)
+        for _ in scheduler.increment_forward(20):
+            pass
+
+        # Merge longer sequences
+        input_ids_1 = tokenizer.encode(
+            "When your legs don't work like they used to before And I can't sweep you off",
+            return_tensors='pt')
+        input_ids_2 = torch.concat([
+            torch.tensor([PAD, PAD, PAD, PAD, PAD, PAD]),
+            tokenizer.encode(
+                "There's a time that I remember, when I did not know",
+                return_tensors='pt')[0]
+        ]).view(1, -1)
+        input_ids = torch.concat([input_ids_1, input_ids_2], dim=0).to(device)
+
+        request_ids = torch.tensor([[1], [2]])
+        scheduler.add_request(input_ids, request_ids)
+
+        # Forward pass
+        for _ in scheduler.increment_forward(100):
+            pass
+
+        results = scheduler.collect_results()
+
+        assert tokenizer.decode(
+            results[0][:30]
+        ) == "<s> Memories follow me left and right. I can nobodyMuslim implants mount algorithms depends Posts semi dissent gospelSRassociIm requirerientotti regime Nem TED"
+        assert tokenizer.decode(
+            results[1][:30]
+        ) == "<s> When your legs don't work like they used to before And I can't sweep you offimp shifted atoms raids......seud theat Furthermore locom"
+        assert tokenizer.decode(
+            results[2][:20]
+        ) == "<s> There's a time that I remember, when I did not knowouthThose aquaticlace Stewart"
 
 
 if __name__ == '__main__':
