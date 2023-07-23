@@ -172,6 +172,8 @@ class HuggingFaceService(object):
         self._read_model_config(model_id_or_path)
 
         if self.rolling_batch_type:
+            if "output_formatter" in properties:
+                kwargs["output_formatter"] = properties.get("output_formatter")
             self.rolling_batch_type = self.rolling_batch_type.lower()
             is_mpi = properties.get("engine") != "Python"
             if is_mpi:

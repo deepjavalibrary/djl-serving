@@ -15,9 +15,26 @@ import logging
 from abc import ABC, abstractmethod
 
 
-def _default_output_formatter(token_texts: list):
+def _json_output_formatter(token_texts: list, first_token: bool,
+                           last_token: bool):
     """
-    Default output formatter
+    json output formatter
+
+    :return: formatted output
+    """
+    json_encoded_str = f"{{\"outputs\": \"" if first_token else ""
+    text = json.dumps(''.join(token_texts))
+    json_encoded_str = f"{json_encoded_str}{text[1:-1]}"
+    if last_token:
+        json_encoded_str = f"{json_encoded_str}\"}}"
+
+    return json_encoded_str
+
+
+def _jsonlines_output_formatter(token_texts: list, first_token: bool,
+                                last_token: bool):
+    """
+    jsonlines output formatter
 
     :return: formatted output
     """
@@ -48,6 +65,7 @@ class Request(object):
         self.input_text = input_text
         self.parameters = parameters
         self.next_token = None
+        self.first_token = True
         self.last_token = False
 
     def set_next_token(self,
@@ -64,8 +82,10 @@ class Request(object):
         if output_formatter is None:
             self.next_token = next_token
         else:  # output only supports size one now
-            self.next_token = output_formatter([next_token])
+            self.next_token = output_formatter([next_token], self.first_token,
+                                               last_token)
         self.last_token = last_token
+        self.first_token = False
 
     def get_next_token(self) -> str:
         """
@@ -118,10 +138,17 @@ class RollingBatch(ABC):
         self.device = device
         self.pending_requests = []
         self.req_id_counter = 0
-        if 'rolling_batch_output_formatter' in kwargs:
-            self.output_formatter = kwargs['rolling_batch_output_formatter']
+        self.output_formatter = None
+        formatter = kwargs.get("output_formatter")
+        if not formatter or "json" == formatter:
+            self.output_formatter = _json_output_formatter
+        elif "jsonlines" == formatter:
+            self.output_formatter = _jsonlines_output_formatter
+        elif "none" == formatter:
+            pass
         else:
-            self.output_formatter = _default_output_formatter
+            # TODO: allows to load custom formatter from a module
+            logging.warning(f"Unsupported formatter: {formatter}")
 
     @abstractmethod
     def inference(self, input_data, parameters):
@@ -170,6 +197,8 @@ class RollingBatch(ABC):
 
     def get_content_type(self):
         # TODO: find a way to return content-type for custom output formatter
-        if self.output_formatter == _default_output_formatter:
+        if self.output_formatter == _jsonlines_output_formatter:
             return "application/jsonlines"
+        elif self.output_formatter == _json_output_formatter:
+            return "application/json"
         return None
