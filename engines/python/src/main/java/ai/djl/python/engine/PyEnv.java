@@ -275,6 +275,10 @@ public class PyEnv {
         initialized = true;
     }
 
+    void setMpiMode(boolean mpiMode) {
+        this.mpiMode = mpiMode;
+    }
+
     boolean isMpiMode() {
         return mpiMode;
     }
