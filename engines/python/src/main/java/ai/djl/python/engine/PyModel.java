@@ -132,6 +132,9 @@ public class PyModel extends BaseModel {
                     case "enable_venv":
                         pyEnv.setEnableVenv(Boolean.parseBoolean(value));
                         break;
+                    case "mpi_mode":
+                        pyEnv.setMpiMode(Boolean.parseBoolean(value));
+                        break;
                     default:
                         break;
                 }

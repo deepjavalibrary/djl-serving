@@ -669,7 +669,7 @@ public final class ModelInfo<I, O> {
             String key = entry.getKey();
             if (key.startsWith("OPTION_")) {
                 key = key.substring(7).toLowerCase(Locale.ROOT);
-                prop.putIfAbsent(key, entry.getValue());
+                prop.putIfAbsent("option." + key, entry.getValue());
             }
         }
 
