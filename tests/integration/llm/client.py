@@ -285,6 +285,22 @@ transformers_neuronx_model_spec = {
         "seq_length": [128, 256],
         "batch_size": [4]
     },
+    "gpt-neox-20b": {
+        "worker": 1,
+        "seq_length": [128, 256],
+        "batch_size": [4],
+        "use_sample": True
+    },
+    "open-llama-7b": {
+        "worker": 1,
+        "seq_length": [128, 256],
+        "batch_size": [4]
+    },
+    "bloom-7b1": {
+        "worker": 1,
+        "seq_length": [128, 256],
+        "batch_size": [4]
+    },
     "gpt-j-6b": {
         "worker": 1,
         "seq_length": [128, 256, 512],
@@ -701,6 +717,8 @@ def test_transformers_neuronx_handler(model, model_spec):
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}
             params = {"max_length": seq_length}
+            if "use_sample" in spec:
+                params["use_sample"] = True
             req["parameters"] = params
             logging.info(f"req {req}")
             res = send_json(req)
