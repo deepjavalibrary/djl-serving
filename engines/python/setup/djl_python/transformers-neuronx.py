@@ -13,6 +13,7 @@
 import tempfile
 import os
 import logging
+import torch
 
 from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
 from transformers_neuronx import dtypes
@@ -58,6 +59,7 @@ class TransformersNeuronXService(object):
         self.amp = None
         self.unroll = None
         self.n_positions = None
+        self.model_type = None
 
     def convert_dtype(self, dtype, model_type):
         if model_type == "opt":
@@ -180,10 +182,10 @@ class TransformersNeuronXService(object):
             raise ValueError(
                 f"{model_config.model_type} type not supported for model {self.model_id_or_path}"
                 f"Supported model arch: {SUPPORTED_MODEL_TYPES}")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path)
-        self.tokenizer.padding_side = 'left'
-        if not self.tokenizer.pad_token:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.model_type = model_config.model_type
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path, padding_side="left")
+        if not self.tokenizer.pad_token_id:
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
         self.load_model(model_config.model_type)
 
@@ -224,10 +226,18 @@ class TransformersNeuronXService(object):
 
             encoded_inputs = self.tokenizer.batch_encode_plus(
                 input_text, return_tensors="pt", padding=True)
-            output_tokens = self.model.generate(
-                input_ids=encoded_inputs.input_ids,
-                attention_mask=encoded_inputs.attention_mask,
-                **parameters)
+            use_sample = parameters.pop("use_sample", None)
+            if use_sample:
+                # TODO: Watch transformer-neuronx release for fix on gpt-neox generate functionality
+                output_tokens = self.model.sample(encoded_inputs.input_ids, sequence_length=self.n_positions,
+                                                  pad_token_id=self.tokenizer.pad_token_id,
+                                                  eos_token_id=self.tokenizer.eos_token_id,
+                                                  **parameters)
+            else:
+                output_tokens = self.model.generate(
+                    input_ids=encoded_inputs.input_ids,
+                    attention_mask=encoded_inputs.attention_mask,
+                    **parameters)
             generated_text = self.tokenizer.batch_decode(
                 output_tokens, skip_special_tokens=True)
 

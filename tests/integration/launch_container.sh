@@ -100,7 +100,7 @@ echo "Launching ${container_id}..."
 total=24
 if $is_llm; then
   echo "extra sleep for 2 min on LLM models"
-  total=48
+  total=60
   sleep 120
 fi
 
