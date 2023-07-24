@@ -46,6 +46,7 @@ class RollingBatch implements Runnable {
     private PyProcess process;
     private int maxRollingBatchSize;
     private int timeout;
+    private String contentType;
     private boolean stop;
     private List<Request> list;
     private Thread currentThread;
@@ -53,10 +54,16 @@ class RollingBatch implements Runnable {
     private Condition canAdd;
     private Condition canRead;
 
-    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout) {
+    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, String outputFormatter) {
         this.process = process;
         this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
+        if (outputFormatter == null || "json".equals(outputFormatter)) {
+            contentType = "application/json";
+        } else if ("jsonlines".equals(outputFormatter)) {
+            contentType = "application/jsonlines";
+        }
+        // TODO: find a way to support custom output_formatter
         list = new ArrayList<>(3);
         lock = new ReentrantLock(true);
         canAdd = lock.newCondition();
@@ -133,7 +140,7 @@ class RollingBatch implements Runnable {
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, String.valueOf(RandomUtils.nextInt()));
+            Request req = new Request(input, String.valueOf(RandomUtils.nextInt()), contentType);
             list.add(req);
             SERVER_METRIC.info("{}", new Metric("RollingBatchSize", list.size(), Unit.COUNT));
             canRead.signal();
@@ -160,12 +167,13 @@ class RollingBatch implements Runnable {
         boolean last;
         String seed;
 
-        Request(Input input, String seed) {
+        Request(Input input, String seed, String contentType) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
-            // TODO: Avoid hardcoded application/jsonlines content type
-            output.addProperty("Content-Type", "application/jsonlines");
+            if (contentType != null) {
+                output.addProperty("Content-Type", contentType);
+            }
             output.add(data);
             this.seed = seed;
         }
