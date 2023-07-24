@@ -294,7 +294,8 @@ transformers_neuronx_model_spec = {
     "open-llama-7b": {
         "worker": 1,
         "seq_length": [128, 256],
-        "batch_size": [4]
+        "batch_size": [4],
+        "use_sample": True
     },
     "bloom-7b1": {
         "worker": 1,
