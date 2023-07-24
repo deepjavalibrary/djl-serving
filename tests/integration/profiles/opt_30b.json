@@ -1,11 +1,11 @@
 {
 	"test_series":"performance",
-	"engine":["deepspeed","huggingface"],
+	"engine":["deepspeed"],
 	"model": "opt-30b",
 	"dtype": ["fp16","bf16"],
 	"tensor_parallel": 4,
 	"batch_size": 4,
-	"in_tokens": [256],
+	"in_tokens": [256, 512],
 	"out_tokens": 256,
 	"count": 10,
 	"log_metrics": true
