@@ -679,6 +679,8 @@ def test_transformers_neuronx_handler(model, model_spec):
         for seq_length in spec["seq_length"]:
             req = {"inputs": batch_generation(batch_size)}
             params = {"max_length": seq_length}
+            if "use_sample" in spec:
+                params["use_sample"] = True
             req["parameters"] = params
             logging.info(f"req {req}")
             res = send_json(req)
