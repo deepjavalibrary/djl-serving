@@ -102,6 +102,9 @@ cpu.minWorkers=2
 cpu.maxWorkers=4
 ```
 
+**Note**: Loading model in Python mode is pretty heavy. We recommend to set `minWorker` and `maxWorker` to be the same value to avoid unnecessary load and unload.
+
+
 #### job queue size
 Or override global `job_queue_size`:
 
@@ -121,15 +124,19 @@ max_batch_delay=1
 To enable rolling batch for Python engine:
 
 ```
+# lmi-dist and vllm requires running mpi mode
+engine=MPI
 option.rolling_batch=auto
+# use FlashAttention
 #option.rolling_batch=lmi-dist
+# use PagedAttention
+#option.rolling_batch=vllm
+#option.rolling_batch=scheduler
 option.max_rolling_batch_size=64
 ```
 
 
 An example `serving.properties` can be found [here](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/src/test/resources/identity/serving.properties).
-
-**Note**: Loading model in Python mode is pretty heavy. We recommend to set `minWorker` and `maxWorker` to be the same value to avoid unnecessary load and unload.
 
 ## Python Mode
 
