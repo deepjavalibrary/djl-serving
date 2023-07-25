@@ -9,6 +9,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 global_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class TestSchedulerBloom(unittest.TestCase):
 
     def test_lm_block(self):
@@ -247,6 +248,7 @@ class TestSchedulerBloom(unittest.TestCase):
         assert tokenizer.decode(
             results[2][:20]
         ) == "<s> There's a time that I remember, when I did not knowouthThose aquaticlace Stewart"
+
 
 if __name__ == '__main__':
     unittest.main()

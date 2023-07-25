@@ -18,10 +18,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
-        model_names = ["gpt2", "BlackSamorez/falcon-40b-tiny-testing", "seanmor5/tiny-llama-test"]
+        model_names = [
+            "gpt2", "BlackSamorez/falcon-40b-tiny-testing",
+            "seanmor5/tiny-llama-test"
+        ]
         for model_name in model_names:
             model = AutoModelForCausalLM.from_pretrained(
-                model_name, trust_remote_code=True,
+                model_name,
+                trust_remote_code=True,
                 device_map="auto" if device.type == "cuda" else "cpu")
             model_device = model.device
 
@@ -55,7 +59,8 @@ class TestScheduler(unittest.TestCase):
             past_key_values = lm_output.past_key_values
             input_ids_1 = torch.tensor([[404], [405]]).to(model_device)
             past_seq = past_key_values[0][0].shape[-2]
-            position_ids = torch.tensor([[past_seq], [past_seq]]).to(model_device)
+            position_ids = torch.tensor([[past_seq],
+                                         [past_seq]]).to(model_device)
             attention_mask = torch.ones(2, past_seq + 1,
                                         dtype=torch.int64).to(model_device)
             output1 = lm_block.forward(input_ids_1, position_ids,
