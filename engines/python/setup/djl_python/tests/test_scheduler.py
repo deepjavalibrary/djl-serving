@@ -22,7 +22,6 @@ class TestScheduler(unittest.TestCase):
             "gpt2", "BlackSamorez/falcon-40b-tiny-testing",
             "seanmor5/tiny-llama-test"
         ]
-        model_names = ["lmsys/vicuna-13b-v1.3"]
         for model_name in model_names:
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
