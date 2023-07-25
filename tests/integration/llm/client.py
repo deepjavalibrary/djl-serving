@@ -299,7 +299,7 @@ transformers_neuronx_model_spec = {
     },
     "bloom-7b1": {
         "worker": 1,
-        "seq_length": [128, 256],
+        "seq_length": [128],
         "batch_size": [4]
     },
     "gpt-j-6b": {
