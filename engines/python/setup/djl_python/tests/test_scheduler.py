@@ -18,13 +18,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
-        # model_names = ["gpt2", "openlm-research/open_llama_3b"]
-        # model_names = ["BlackSamorez/falcon-40b-tiny-testing"]
-        model_names = ["gpt2"]
+        model_names = ["gpt2", "BlackSamorez/falcon-40b-tiny-testing", "seanmor5/tiny-llama-test"]
         for model_name in model_names:
             model = AutoModelForCausalLM.from_pretrained(
                 model_name, trust_remote_code=True,
                 device_map="auto" if device.type == "cuda" else "cpu")
+            model_device = model.device
 
             lm_block = HuggingfaceBlock(
                 model) if 'falcon' not in model_name else FalconBlock(model)
@@ -34,14 +33,14 @@ class TestScheduler(unittest.TestCase):
             seq_len = input_ids_0.shape[1]
             model_input = [
                 torch.repeat_interleave(input_ids_0, dim=0,
-                                        repeats=2).to(device),
+                                        repeats=2).to(model_device),
                 torch.repeat_interleave(torch.arange(seq_len)[None, :],
                                         dim=0,
-                                        repeats=2).to(device),
+                                        repeats=2).to(model_device),
                 torch.repeat_interleave(torch.ones(seq_len,
                                                    dtype=torch.int64)[None, :],
                                         dim=0,
-                                        repeats=2).to(device)
+                                        repeats=2).to(model_device)
             ]
 
             lm_output = lm_block.forward(*model_input, None)
@@ -54,11 +53,11 @@ class TestScheduler(unittest.TestCase):
 
             # input with kv_cache
             past_key_values = lm_output.past_key_values
-            input_ids_1 = torch.tensor([[404], [405]]).to(device)
+            input_ids_1 = torch.tensor([[404], [405]]).to(model_device)
             past_seq = past_key_values[0][0].shape[-2]
-            position_ids = torch.tensor([[past_seq], [past_seq]]).to(device)
+            position_ids = torch.tensor([[past_seq], [past_seq]]).to(model_device)
             attention_mask = torch.ones(2, past_seq + 1,
-                                        dtype=torch.int64).to(device)
+                                        dtype=torch.int64).to(model_device)
             output1 = lm_block.forward(input_ids_1, position_ids,
                                        attention_mask, past_key_values)
             if 'falcon' not in model_name:
@@ -511,7 +510,7 @@ class TestScheduler(unittest.TestCase):
 
         # Test empty input_ids
         input_ids = tokenizer([r""], return_tensors='pt',
-                              padding=True).input_ids.view(1, -1)
+                              padding=True).input_ids.view(1, -1).to(device)
         request_ids = torch.tensor([[2]])
         search_configs = [SearchConfig(use_lru_kv_cache=True)]
 

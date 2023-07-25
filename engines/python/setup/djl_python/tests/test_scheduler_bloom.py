@@ -7,15 +7,15 @@ from djl_python.scheduler.search_config import SearchConfig
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+global_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class TestSchedulerBloom(unittest.TestCase):
 
     def test_lm_block(self):
         model_id = "bigscience/bloom-560m"
         model = BloomForCausalLM.from_pretrained(
-            model_id, device_map="auto" if device.type == "cuda" else "cpu")
+            model_id, device_map="auto" if global_device == "cuda" else "cpu")
+        device = model.device
         tokenizer = AutoTokenizer.from_pretrained(model_id)
 
         encoding = tokenizer("Hello, my dog is cute", return_tensors="pt")
@@ -55,7 +55,8 @@ class TestSchedulerBloom(unittest.TestCase):
     def test_contrastive_scheduler(self):
         model_id = "bigscience/bloom-560m"
         model = BloomForCausalLM.from_pretrained(
-            model_id, device_map="auto" if device.type == "cuda" else "cpu")
+            model_id, device_map="auto" if global_device == "cuda" else "cpu")
+        device = model.device
         tokenizer = AutoTokenizer.from_pretrained(model_id,
                                                   padding_side='left')
 
@@ -131,7 +132,8 @@ class TestSchedulerBloom(unittest.TestCase):
         model = AutoModelForCausalLM.from_pretrained(
             "BlackSamorez/falcon-40b-tiny-testing",
             trust_remote_code=True,
-            device_map="auto" if device.type == "cuda" else "cpu")
+            device_map="auto" if global_device == "cuda" else "cpu")
+        device = model.device
 
         lm_block = FalconBlock(model)
 
@@ -195,7 +197,8 @@ class TestSchedulerBloom(unittest.TestCase):
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             trust_remote_code=True,
-            device_map="auto" if device.type == "cuda" else "cpu")
+            device_map="auto" if global_device == "cuda" else "cpu")
+        device = model.device
 
         lm_block = HuggingfaceBlock(model)
 
