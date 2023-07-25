@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO">
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%-5level] %c{1} - %msg%n"/>
+        </Console>
+        <RollingFile
+                name="application"
+                fileName="${env:MODEL_SERVER_HOME}/logs/serving.log"
+                filePattern="${env:MODEL_SERVER_HOME}/logs/serving.%d{dd-MMM}.log.gz"
+                ignoreExceptions="false">
+            <PatternLayout>
+                <Pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss} %c{1} - %m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+                <TimeBasedTriggeringPolicy/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+        <RollingFile
+                name="access"
+                fileName="${env:MODEL_SERVER_HOME}/logs/access.log"
+                filePattern="${env:MODEL_SERVER_HOME}/logs/access.%d{dd-MMM}.log.gz"
+                ignoreExceptions="false">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+                <TimeBasedTriggeringPolicy/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+        <RollingFile
+                name="server_metric"
+                fileName="${env:MODEL_SERVER_HOME}/logs/server_metric.log"
+                filePattern="${env:MODEL_SERVER_HOME}/logs/server_metric.%d{dd-MMM}.log.gz"
+                ignoreExceptions="false">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+                <TimeBasedTriggeringPolicy/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+        <RollingFile
+                name="model_metric"
+                fileName="${env:MODEL_SERVER_HOME}/logs/model_metric.log"
+                filePattern="${env:MODEL_SERVER_HOME}/logs/model_metric.%d{dd-MMM}.log.gz"
+                ignoreExceptions="false">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} %m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+                <TimeBasedTriggeringPolicy/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="info" additivity="false" includeLocation="false">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="application"/>
+        </Root>
+        <Logger name="ai.djl" level="${sys:ai.djl.logging.level:-info}" additivity="false"
+                includeLocation="false">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="application"/>
+        </Logger>
+        <Logger name="ACCESS_LOG" level="info" additivity="false" includeLocation="false">
+            <AppenderRef ref="access"/>
+        </Logger>
+        <Logger name="server_metric" level="info" additivity="false" includeLocation="false">
+            <AppenderRef ref="server_metric"/>
+        </Logger>
+        <Logger name="model_metric" level="info" additivity="false" includeLocation="false">
+            <AppenderRef ref="model_metric"/>
+        </Logger>
+    </Loggers>
+</Configuration>

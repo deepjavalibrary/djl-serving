@@ -122,8 +122,10 @@ startScripts {
                 'fi\n' +
                 'if [ -f "/opt/ml/.sagemaker_infra/endpoint-metadata.json" ]; then\n' +
                 '    export JAVA_OPTS="$JAVA_OPTS -XX:-UseContainerSupport"\n' +
-                'fi\n' +
-                'DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml"\n')
+                '    DEFAULT_JVM_OPTS="${DEFAULT_JVM_OPTS:--Dlog4j.configurationFile=${APP_HOME}/conf/log4j2-plain.xml}"\n' +
+                'else\n' +
+                '    DEFAULT_JVM_OPTS="${DEFAULT_JVM_OPTS:--Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml}"\n' +
+                'fi\n')
         text = text.replaceAll('CLASSPATH=\\$APP_HOME/lib/.*', 'CLASSPATH=\\$APP_HOME/lib/*')
         unixScript.text = text
     }
