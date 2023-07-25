@@ -202,7 +202,7 @@ class TestSchedulerBloom(unittest.TestCase):
             "openlm-research/open_llama_3b", trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            trust_remote_code=True, device_map=device)
+            trust_remote_code=True, device_map='auto')
 
         lm_block = HuggingfaceBlock(model)
 
