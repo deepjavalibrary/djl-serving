@@ -73,4 +73,4 @@ class VLLMRollingBatch(RollingBatch):
         return self.postprocess_results(batch_size)
 
     def preprocess_requests(self, requests):
-        raise NotImplementedError("Not inplemented for vLLM rolling batcher")
+        raise NotImplementedError("Not implemented for vLLM rolling batcher")
