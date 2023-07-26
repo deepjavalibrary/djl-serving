@@ -14,7 +14,9 @@ package ai.djl.serving.util;
 
 import ai.djl.serving.Arguments;
 import ai.djl.serving.wlm.util.WlmConfigManager;
+import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -406,8 +408,19 @@ public final class ConfigManager {
                 .append("\nCommand line: ")
                 .append(String.join(" ", ManagementFactory.getRuntimeMXBean().getInputArguments()))
                 .append("\nNumber of CPUs: ")
-                .append(runtime.availableProcessors())
-                .append("\nMax heap size: ")
+                .append(runtime.availableProcessors());
+        if (CudaUtils.hasCuda()) {
+            sb.append("\nCUDA version: ")
+                    .append(CudaUtils.getCudaVersionString())
+                    .append(" / ")
+                    .append(CudaUtils.getComputeCapability(0))
+                    .append("\nNumber of GPUs: ")
+                    .append(CudaUtils.getGpuCount());
+        } else if (NeuronUtils.hasNeuron()) {
+            sb.append("\nNumber of Neuron cores: ").append(NeuronUtils.getNeuronCores());
+        }
+
+        sb.append("\nMax heap size: ")
                 .append((runtime.maxMemory() / 1024 / 1024))
                 .append("\nConfig file: ")
                 .append(prop.getProperty("configFile", "N/A"))
