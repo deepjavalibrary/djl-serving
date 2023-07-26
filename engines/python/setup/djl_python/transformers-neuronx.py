@@ -35,7 +35,7 @@ DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16"}
 
 SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj", "gpt_neox", "llama", "bloom"}
 
-MODEL_TYPE_TO_MODEL= {
+MODEL_TYPE_TO_MODEL = {
     "opt": OPTForSampling,
     "gpt2": GPT2ForSampling,
     "gptj": GPTJForSampling,
@@ -94,7 +94,8 @@ class TransformersNeuronXService(object):
                 block.mlp.up_proj.to(dtype)
             self.model.lm_head.to(dtype)
         else:
-            raise AttributeError(f"Model architecture format is not implemented")
+            raise AttributeError(
+                f"Model architecture format is not implemented")
 
     @staticmethod
     def is_inf2_model(model_path):
@@ -139,8 +140,8 @@ class TransformersNeuronXService(object):
 
     def load_hf_model(self):
         logging.info(f"Start loading the model {self.model_id_or_path}...")
-        return AutoModelForCausalLM.from_pretrained(
-            self.model_id_or_path, low_cpu_mem_usage=True)
+        return AutoModelForCausalLM.from_pretrained(self.model_id_or_path,
+                                                    low_cpu_mem_usage=True)
 
     def load_inf2_model(self, model_type, load_path):
         return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
@@ -183,7 +184,8 @@ class TransformersNeuronXService(object):
                 f"{model_config.model_type} type not supported for model {self.model_id_or_path}"
                 f"Supported model arch: {SUPPORTED_MODEL_TYPES}")
         self.model_type = model_config.model_type
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path, padding_side="left")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path,
+                                                       padding_side="left")
         if not self.tokenizer.pad_token_id:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
@@ -229,10 +231,12 @@ class TransformersNeuronXService(object):
             use_sample = parameters.pop("use_sample", None)
             if use_sample:
                 # TODO: Watch transformer-neuronx release for fix on gpt-neox generate functionality
-                output_tokens = self.model.sample(encoded_inputs.input_ids, sequence_length=self.n_positions,
-                                                  pad_token_id=self.tokenizer.pad_token_id,
-                                                  eos_token_id=self.tokenizer.eos_token_id,
-                                                  **parameters)
+                output_tokens = self.model.sample(
+                    encoded_inputs.input_ids,
+                    sequence_length=self.n_positions,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    **parameters)
             else:
                 output_tokens = self.model.generate(
                     input_ids=encoded_inputs.input_ids,

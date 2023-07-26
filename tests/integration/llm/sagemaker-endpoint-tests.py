@@ -142,11 +142,11 @@ NIGHTLY_IMAGES = {
 
 CANDIDATE_IMAGES = {
     "python":
-        f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
+    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
     "deepspeed":
-        f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
+    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
     "fastertransformer":
-        f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-fastertransformer"
+    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-fastertransformer"
 }
 
 
