@@ -1,7 +1,7 @@
 #!/bin/bash
 
 rm -rf flash-attention
-git clone https://github.com/HazyResearch/flash-attention.git -b v1.0.0
+git clone https://github.com/Dao-AILab/flash-attention.git -b v1.0.9
 pushd flash-attention || exit 1
 pip install -v .
 cd csrc/layer_norm && pip install -v .
