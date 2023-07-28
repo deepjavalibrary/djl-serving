@@ -51,11 +51,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
+import java.util.stream.Stream;
 
 class Connection {
 
@@ -75,6 +79,26 @@ class Connection {
 
     static Process startPython(PyEnv pyEnv, Model model, int workerId, int port)
             throws IOException {
+        Path tmp = Paths.get(System.getProperty("java.io.tmpdir"));
+        try (Stream<Path> stream = Files.list(tmp)) {
+            stream.forEach(
+                    p -> {
+                        try {
+                            String name = p.toFile().getName();
+                            if (name.startsWith("djl_sock." + port) && name.endsWith(".pid")) {
+                                long pid = Long.parseLong(Files.readString(p));
+                                Optional<ProcessHandle> handle = ProcessHandle.of(pid);
+                                if (handle.isPresent()) {
+                                    logger.warn("Kill dangling process: {}", pid);
+                                    handle.get().destroyForcibly();
+                                }
+                                Utils.deleteQuietly(p);
+                            }
+                        } catch (IOException e) {
+                            logger.warn("", e);
+                        }
+                    });
+        }
         File modelPath = model.getModelPath().toFile();
         String[] args = getPythonStartCmd(pyEnv, model, workerId, port);
         String[] envp = pyEnv.getEnvironmentVars(model);
