@@ -16,7 +16,11 @@ ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-nightly-py2.py3-none-any.whl"
-ARG vllm_wheel="https://publish.djl.ai/vllm/vllm-0.0.0-cp39-cp39-linux_x86_64.whl"
+ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn-1.0.9-cp39-cp39-linux_x86_64.whl"
+ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp39-cp39-linux_x86_64.whl"
+ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp39-cp39-linux_x86_64.whl"
+ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn_2-2.0.1-cp39-cp39-linux_x86_64.whl"
+ARG vllm_wheel="https://publish.djl.ai/vllm/vllm-0.1.1-cp39-cp39-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.30.2
@@ -61,11 +65,10 @@ RUN apt-get update && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
-    ${deepspeed_wheel} ${vllm_wheel} ${lmi_dist_wheel} protobuf==${protobuf_version} transformers==${transformers_version} \
+    ${deepspeed_wheel} ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
+    ${vllm_wheel} ${lmi_dist_wheel} protobuf==${protobuf_version} transformers==${transformers_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
     diffusers[torch]==${diffusers_version} peft==${peft_version} opencv-contrib-python-headless safetensors scipy && \
-    scripts/install_flash_attn.sh && \
-    scripts/install_flash_attn_v2.sh && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
