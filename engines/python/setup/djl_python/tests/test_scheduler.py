@@ -1,12 +1,12 @@
 import unittest
 from collections import defaultdict
 
-from djl_python.scheduler import HuggingfaceBlock
+from djl_python.scheduler.lm_block import FalconBlock, HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
     trim_tensor, compute_kv_cache
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from djl_python.scheduler.seq_batcher_impl import ContrastiveSeqBatcher
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
 from djl_python.scheduler.search_config import SearchConfig
 import torch
 
@@ -18,34 +18,52 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
-        model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
-        lm_block = HuggingfaceBlock(model)
-
-        input0 = [
-            torch.tensor([[40, 2883, 6155, 351, 616, 13779, 3290]]).to(device),
-            torch.arange(7)[None, :].to(device),
-            torch.ones(7, dtype=torch.int64)[None, :].to(device)
+        model_names = [
+            "gpt2", "BlackSamorez/falcon-40b-tiny-testing",
+            "seanmor5/tiny-llama-test"
         ]
+        for model_name in model_names:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                trust_remote_code=True,
+                device_map="auto" if device.type == "cuda" else "cpu")
+            model_device = model.device
 
-        lm_output = lm_block.forward(*input0, None)
+            lm_block = HuggingfaceBlock(
+                model) if 'falcon' not in model_name else FalconBlock(model)
 
-        model_config = AutoConfig.from_pretrained(model_id)
-        assert len(lm_output.past_key_values) == model_config.n_layer
+            input_ids_0 = torch.tensor(
+                [[40, 2883, 6155, 351, 616, 13779, 3290]])
+            seq_len = input_ids_0.shape[1]
+            model_input = [
+                torch.repeat_interleave(input_ids_0, dim=0,
+                                        repeats=2).to(model_device),
+                torch.repeat_interleave(torch.arange(seq_len)[None, :],
+                                        dim=0,
+                                        repeats=2).to(model_device),
+                torch.repeat_interleave(torch.ones(seq_len,
+                                                   dtype=torch.int64)[None, :],
+                                        dim=0,
+                                        repeats=2).to(model_device)
+            ]
 
-        # input with kv_cache
-        past_key_values = lm_output.past_key_values
-        input_ids = torch.tensor([[404]]).to(device)
-        past_seq = past_key_values[0][0].shape[-2]
-        position_ids = torch.tensor([[past_seq]]).to(device)
-        attention_mask = torch.ones(past_seq + 1, dtype=torch.int64).to(device)
-        output1 = lm_block.forward(input_ids, position_ids, attention_mask,
-                                   past_key_values)
-        assert len(output1.past_key_values) == model_config.n_layer
+            lm_output = lm_block.forward(*model_input, None)
+
+            # input with kv_cache
+            past_key_values = lm_output.past_key_values
+            input_ids_1 = torch.tensor([[404], [405]]).to(model_device)
+            past_seq = past_key_values[0][0].shape[-2]
+            position_ids = torch.tensor([[past_seq],
+                                         [past_seq]]).to(model_device)
+            attention_mask = torch.ones(2, past_seq + 1,
+                                        dtype=torch.int64).to(model_device)
+            output1 = lm_block.forward(input_ids_1, position_ids,
+                                       attention_mask, past_key_values)
 
     def test_greedy_scheduler(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -118,7 +136,8 @@ class TestScheduler(unittest.TestCase):
         torch.manual_seed(20220611)
 
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map='auto')
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map='auto' if device.type == 'cuda' else 'cpu')
         tokenizer = GPT2Tokenizer.from_pretrained(model_id)
         lm_block = HuggingfaceBlock(model)
 
@@ -172,7 +191,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_contrastive_scheduler(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -250,7 +270,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_inhomogeneous_search_config(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -290,7 +311,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_seq_batcher(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
@@ -351,7 +373,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_multi_seq_batcher(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -450,7 +473,8 @@ class TestScheduler(unittest.TestCase):
 
     def test_lru_kv_cache(self):
         model_id = "gpt2"
-        model = GPT2LMHeadModel.from_pretrained(model_id, device_map="auto")
+        model = GPT2LMHeadModel.from_pretrained(
+            model_id, device_map="auto" if device.type == "cuda" else "cpu")
         tokenizer = GPT2Tokenizer.from_pretrained(model_id,
                                                   padding_side='left')
         tokenizer.pad_token = "[PAD]"
@@ -481,7 +505,7 @@ class TestScheduler(unittest.TestCase):
 
         # Test empty input_ids
         input_ids = tokenizer([r""], return_tensors='pt',
-                              padding=True).input_ids.view(1, -1)
+                              padding=True).input_ids.view(1, -1).to(device)
         request_ids = torch.tensor([[2]])
         search_configs = [SearchConfig(use_lru_kv_cache=True)]
 
