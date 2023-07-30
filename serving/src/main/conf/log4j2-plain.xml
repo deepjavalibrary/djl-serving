@@ -49,10 +49,10 @@
             <AppenderRef ref="access"/>
         </Logger>
         <Logger name="server_metric" level="info" additivity="false" includeLocation="false">
-            <AppenderRef ref="console"/>
+            <AppenderRef ref="server_metric"/>
         </Logger>
         <Logger name="model_metric" level="info" additivity="false" includeLocation="false">
-            <AppenderRef ref="console"/>
+            <AppenderRef ref="model_metric"/>
         </Logger>
     </Loggers>
 </Configuration>
