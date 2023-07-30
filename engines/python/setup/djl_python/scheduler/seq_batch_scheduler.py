@@ -226,6 +226,56 @@ class SeqBatchScheduler:
         # This is provided to the consumers to be used as part of the max_seq_batcher thresholding mechanism.
         pass
 
+    def optimal_partition(self, dp, dp_partition, arr, arr_idx, num_list):
+        # dp[i][k]: optimal cost to partition the suffix array after index i into k partitions
+        # dp_partition[i][k]: list of starting indices of optimal partitions in the suffix array after index i into k
+        # partitions`
+        # arr: the lengths of sequences sorted in descending order
+
+        # returns a list containing the optimal padding amount and a list of of starting indices of optimal
+        # partitions or -1 and an empty list if it is impossible to partition with given sparsity and num_list
+        if dp[arr_idx][num_list] is not None:
+            return [dp[arr_idx][num_list], dp_partition[arr_idx][num_list]]
+        if num_list == len(arr) - arr_idx:
+            dp_partition[arr_idx][num_list] = [
+                i for i in range(arr_idx, len(arr))
+            ]
+            dp[arr_idx][num_list] = 0
+            return [0, dp_partition[arr_idx][num_list]]
+        if num_list == 1:
+            cost = 0
+            max_size = arr[arr_idx]
+            for i in range(arr_idx + 1, len(arr)):
+                cost += max_size - arr[i]
+
+            if arr_idx == 0 and float(cost) / (cost + sum(arr)) > 0.33:
+                return [-1, []]
+
+            dp_partition[arr_idx][1] = [arr_idx]
+            dp[arr_idx][1] = cost
+            return [cost, dp_partition[arr_idx][num_list]]
+
+        cost = float('inf')
+        partition = float('inf')
+        pad_cost = 0
+        max_size = arr[arr_idx]
+        for i in range(arr_idx, len(arr) - num_list + 1):
+            pad_cost += max_size - arr[i]
+            new_cost = pad_cost + self.optimal_partition(
+                dp, dp_partition, arr, i + 1, num_list - 1)[0]
+            if new_cost < cost:
+                cost = new_cost
+                partition = i + 1
+
+        if arr_idx == 0 and float(cost) / (cost + sum(arr)) > 0.33:
+            return [-1, []]
+
+        dp[arr_idx][num_list] = cost
+        dp_partition[arr_idx][num_list] = [
+            arr_idx
+        ] + dp_partition[partition][num_list - 1]
+        return [cost, dp_partition[arr_idx][num_list]]
+
     def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
         """
         A sweep of inference calls on all seq_batchers in the scheduler
