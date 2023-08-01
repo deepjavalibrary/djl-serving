@@ -23,7 +23,7 @@ from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
 
-QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes"]
+QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes", "gptq"]
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -42,6 +42,7 @@ class LmiDistRollingBatch(RollingBatch):
         self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
+        self._warmup(**kwargs)
         self.batch_id_counter = 0
         self.cache: Batch = None
 
@@ -65,8 +66,37 @@ class LmiDistRollingBatch(RollingBatch):
             revision=revision,
             sharded=sharded,
             quantize=quantize,
+            dtype=dtype,
             trust_remote_code=kwargs.get("trust_remote_code"))
         self.batch_cls = self.model.batch_type
+
+    def _warmup(self, **kwargs):
+        parameters = NextTokenChooserParameters(temperature=0.9,
+                                                repetition_penalty=1.2,
+                                                top_k=10,
+                                                top_p=0.9,
+                                                typical_p=0.9,
+                                                do_sample=False,
+                                                seed=0)
+        stop_parameters = StoppingCriteriaParameters(stop_sequences=[],
+                                                     max_new_tokens=2)
+
+        max_prefill_tokens = int(
+            self.properties.get(
+                "max_rolling_batch_prefill_tokens",
+                int(self.properties.get("max_rolling_batch_size", 4)) * 512))
+        requests = [
+            lmi_dist.utils.types.Request(id=0,
+                                         inputs='_test ' * max_prefill_tokens,
+                                         parameters=parameters,
+                                         stopping_parameters=stop_parameters,
+                                         truncate=max_prefill_tokens)
+        ]
+        batch = self.batch_cls.get_batch(
+            Batch(id=0, requests=requests,
+                  size=len(requests)), self.model.tokenizer,
+            kwargs.get("torch_dtype", torch.float16), self.device)
+        self.model.warmup(batch, max_prefill_tokens)
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
