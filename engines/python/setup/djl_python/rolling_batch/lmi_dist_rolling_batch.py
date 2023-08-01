@@ -42,9 +42,6 @@ class LmiDistRollingBatch(RollingBatch):
         self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
-        self.paged_attention = self.properties.get("paged_attention", "true").lower() == "true"
-        if self.paged_attention:
-            self._warmup(**kwargs)
         self.batch_id_counter = 0
         self.cache: Batch = None
 
@@ -54,6 +51,7 @@ class LmiDistRollingBatch(RollingBatch):
         quantize = self.properties.get("quantize", None)
         dtype = self.properties.get("dtype", None)
         revision = self.properties.get('revision', None)
+        paged_attention = self.properties.get("paged_attention", "true").lower() == "true"
         if quantize is not None and dtype is not None:
             raise ValueError(
                 f"Can't set both dtype: {dtype} and quantize: {quantize}")
@@ -70,8 +68,10 @@ class LmiDistRollingBatch(RollingBatch):
             quantize=quantize,
             dtype=dtype,
             trust_remote_code=kwargs.get("trust_remote_code"),
-            paged_attention=self.paged_attention)
+            paged_attention=paged_attention)
         self.batch_cls = self.model.batch_type
+        if paged_attention:
+            self._warmup(**kwargs)
 
     def _warmup(self, **kwargs):
         parameters = NextTokenChooserParameters(temperature=0.9,
