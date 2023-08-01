@@ -22,7 +22,7 @@ def _json_output_formatter(token_texts: list, first_token: bool,
 
     :return: formatted output
     """
-    json_encoded_str = f"{{\"outputs\": \"" if first_token else ""
+    json_encoded_str = f"{{\"generated_text\": \"" if first_token else ""
     text = json.dumps(''.join(token_texts))
     json_encoded_str = f"{json_encoded_str}{text[1:-1]}"
     if last_token:
