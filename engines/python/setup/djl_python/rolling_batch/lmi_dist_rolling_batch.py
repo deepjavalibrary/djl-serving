@@ -42,7 +42,9 @@ class LmiDistRollingBatch(RollingBatch):
         self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
-        self._warmup(**kwargs)
+        self.paged_attention = self.properties.get("paged_attention", "true").lower() == "true"
+        if self.paged_attention:
+            self._warmup(**kwargs)
         self.batch_id_counter = 0
         self.cache: Batch = None
 
@@ -67,7 +69,8 @@ class LmiDistRollingBatch(RollingBatch):
             sharded=sharded,
             quantize=quantize,
             dtype=dtype,
-            trust_remote_code=kwargs.get("trust_remote_code"))
+            trust_remote_code=kwargs.get("trust_remote_code"),
+            paged_attention=self.paged_attention)
         self.batch_cls = self.model.batch_type
 
     def _warmup(self, **kwargs):
@@ -84,7 +87,7 @@ class LmiDistRollingBatch(RollingBatch):
         max_prefill_tokens = int(
             self.properties.get(
                 "max_rolling_batch_prefill_tokens",
-                int(self.properties.get("max_rolling_batch_size", 4)) * 512))
+                int(self.properties.get("max_rolling_batch_size", 4)) * 272))
         requests = [
             lmi_dist.utils.types.Request(id=0,
                                          inputs='_test ' * max_prefill_tokens,
