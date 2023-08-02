@@ -615,6 +615,7 @@ def build_lmi_dist_model(model):
     options = lmi_dist_model_list[model]
     options["engine"] = "MPI"
     options["option.rolling_batch"] = "lmi-dist"
+    options["option.output_formatter"] = "jsonlines"
     write_properties(options)
 
 
