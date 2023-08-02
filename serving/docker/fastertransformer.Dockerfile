@@ -66,7 +66,7 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
     pip3 install ${torch_wheel} ${ft_wheel} ${tb_wheel} safetensors protobuf==${protobuf_version} && \
     pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     scipy einops peft==${peft_version} && \
-    pip3 install cmake sentencepiece && \
+    pip3 install cmake sentencepiece bfloat16 tiktoken && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     mv /usr/local/mpi/bin/mpirun /usr/local/mpi/bin/mpirun.real && \
@@ -80,8 +80,8 @@ ENV PATH=/usr/local/mpi/bin:${PATH} LD_LIBRARY_PATH=/usr/local/mpi/lib:${LD_LIBR
 RUN mkdir -p /opt/tritonserver/backends/fastertransformer && mkdir -p /opt/tritonserver/lib && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
     curl -o /opt/tritonserver/backends/fastertransformer/libth_transformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libth_transformer.so && \
-    curl -o /opt/tritonserver/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/${ft_version}/libtransformer-shared.so && \
-    curl -o /opt/tritonserver/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libtriton_fastertransformer.so && \
+    curl -o /opt/tritonserver/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/llama/libtransformer-shared.so && \
+    curl -o /opt/tritonserver/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/llama/libtriton_fastertransformer.so && \
     curl -o /root/FASTERTRANSFORMER_LICENSE https://raw.githubusercontent.com/NVIDIA/FasterTransformer/main/LICENSE
 
 ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:${LD_LIBRARY_PATH}
