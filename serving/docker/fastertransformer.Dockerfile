@@ -13,7 +13,7 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.24.0~SNAPSHOT
 ARG python_version=3.9
-ARG ft_version="main"
+ARG ft_version="llama"
 ARG triton_version="r23.04"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
 ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.23.0-py3-none-any.whl"
@@ -80,8 +80,8 @@ ENV PATH=/usr/local/mpi/bin:${PATH} LD_LIBRARY_PATH=/usr/local/mpi/lib:${LD_LIBR
 RUN mkdir -p /opt/tritonserver/backends/fastertransformer && mkdir -p /opt/tritonserver/lib && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
     curl -o /opt/tritonserver/backends/fastertransformer/libth_transformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libth_transformer.so && \
-    curl -o /opt/tritonserver/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/llama/libtransformer-shared.so && \
-    curl -o /opt/tritonserver/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/llama/libtriton_fastertransformer.so && \
+    curl -o /opt/tritonserver/backends/fastertransformer/libtransformer-shared.so https://publish.djl.ai/fastertransformer/${ft_version}/libtransformer-shared.so && \
+    curl -o /opt/tritonserver/backends/fastertransformer/libtriton_fastertransformer.so https://publish.djl.ai/fastertransformer/${ft_version}/libtriton_fastertransformer.so && \
     curl -o /root/FASTERTRANSFORMER_LICENSE https://raw.githubusercontent.com/NVIDIA/FasterTransformer/main/LICENSE
 
 ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:${LD_LIBRARY_PATH}
