@@ -13,7 +13,7 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.24.0~SNAPSHOT
 ARG python_version=3.9
-ARG ft_version="main"
+ARG ft_version="llama"
 ARG triton_version="r23.04"
 ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
 ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.23.0-py3-none-any.whl"
@@ -66,7 +66,7 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
     pip3 install ${torch_wheel} ${ft_wheel} ${tb_wheel} safetensors protobuf==${protobuf_version} && \
     pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     scipy einops peft==${peft_version} && \
-    pip3 install cmake sentencepiece && \
+    pip3 install cmake sentencepiece bfloat16 tiktoken && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     mv /usr/local/mpi/bin/mpirun /usr/local/mpi/bin/mpirun.real && \
