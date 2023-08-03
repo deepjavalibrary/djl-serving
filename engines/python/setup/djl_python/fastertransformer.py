@@ -84,6 +84,8 @@ class FasterTransformerService(object):
                 raise ValueError(
                     "Please use Python engine for streaming use case")
             self.use_triton = True
+        self.trust_remote_code = properties.get("trust_remote_code",
+                                                "false").lower() == "true"
 
     def initialize(self, properties):
         self.initialize_properties(properties)
