@@ -17,6 +17,7 @@ from djl_python import Input, Output
 import logging
 from typing import Optional
 from peft import PeftConfig
+import os
 
 
 class FasterTransformerService(object):
@@ -61,6 +62,8 @@ class FasterTransformerService(object):
         self.use_triton = None
         self.enable_streaming = None
         self.is_peft = False
+        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
+                                                "FALSE").lower() == 'true'
 
     def initialize_properties(self, properties):
         self.tensor_parallel_degree = int(
@@ -71,6 +74,9 @@ class FasterTransformerService(object):
         self.dtype = properties.get("dtype", "fp32")
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
+        if "trust_remote_code" in properties:
+            self.trust_remote_code = properties.get(
+                "trust_remote_code").lower() == "true"
         self.use_triton = properties.get("engine", "Python") == "Python"
         self.enable_streaming = properties.get("enable_streaming", None)
         if self.enable_streaming and self.enable_streaming.lower() != "false":
@@ -94,15 +100,19 @@ class FasterTransformerService(object):
                                  self.dtype,
                                  use_triton=self.use_triton,
                                  do_streaming=self.enable_streaming,
-                                 is_peft=self.is_peft)
+                                 is_peft=self.is_peft,
+                                 trust_remote_code=self.trust_remote_code)
 
     def get_model_config(self):
         try:
-            model_config = AutoConfig.from_pretrained(self.model_id_or_path)
+            model_config = AutoConfig.from_pretrained(
+                self.model_id_or_path,
+                trust_remote_code=self.trust_remote_code)
         except OSError:
             peft_config = PeftConfig.from_pretrained(self.model_id_or_path)
             base_model_name = peft_config.base_model_name_or_path
-            model_config = AutoConfig.from_pretrained(base_model_name)
+            model_config = AutoConfig.from_pretrained(
+                base_model_name, trust_remote_code=self.trust_remote_code)
             self.is_peft = True
         return model_config
 
