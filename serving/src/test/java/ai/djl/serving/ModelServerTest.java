@@ -1043,7 +1043,7 @@ public class ModelServerTest {
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
             assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
-            assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2");
+            assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2 (READY)");
         }
     }
 

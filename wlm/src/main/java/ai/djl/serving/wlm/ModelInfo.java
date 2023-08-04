@@ -342,6 +342,7 @@ public final class ModelInfo<I, O> {
                 String def = Utils.getenv("SERVING_RETRY_THRESHOLD", "10");
                 int threshold = Integer.parseInt(m.getProperty("retry_threshold", def));
                 if (failures > threshold) {
+                    logger.info("exceed retry threshold: {}, mark model as failed.", threshold);
                     return Status.FAILED;
                 }
             }
@@ -964,9 +965,9 @@ public final class ModelInfo<I, O> {
     @Override
     public String toString() {
         if (version != null) {
-            return id + ':' + version;
+            return id + ':' + version + " (" + getStatus() + ')';
         }
-        return id;
+        return id + " (" + getStatus() + ')';
     }
 
     /** An enum represents state of a model. */

@@ -29,6 +29,7 @@ import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
+import ai.djl.util.JsonUtils;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -113,6 +114,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
                                     HttpResponseStatus status;
                                     if (hasFailure) {
+                                        logger.info(
+                                                "PING FAILED: {}",
+                                                JsonUtils.GSON.toJson(w.get("data")));
                                         status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                                     } else if (hasPending) {
                                         if (ConfigManager.getInstance().allowsMultiStatus()) {

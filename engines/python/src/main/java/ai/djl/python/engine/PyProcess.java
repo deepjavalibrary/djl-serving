@@ -175,8 +175,8 @@ class PyProcess {
 
     synchronized void stopPythonProcess() {
         int id = restartCount.getAndIncrement();
-        logger.info("Stop process: {}:{}", workerId, id);
         int failures = Integer.parseInt(model.getProperty("failed", "0"));
+        logger.info("Stop process: {}:{}, failure count: {}", workerId, id, failures);
         model.setProperty("failed", String.valueOf(failures + 1));
 
         if (restartFuture != null) {
