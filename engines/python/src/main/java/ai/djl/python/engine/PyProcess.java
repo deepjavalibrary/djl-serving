@@ -108,7 +108,7 @@ class PyProcess {
             return output;
         } catch (Exception e) {
             logger.debug("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
-            stopPythonProcess();
+            stopPythonProcess(!initialLoad);
             if (!initialLoad) {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
@@ -168,16 +168,18 @@ class PyProcess {
             throw new EngineException("Failed to loaded model.", e);
         } finally {
             if (!started) {
-                stopPythonProcess();
+                stopPythonProcess(true);
             }
         }
     }
 
-    synchronized void stopPythonProcess() {
+    synchronized void stopPythonProcess(boolean failure) {
         int id = restartCount.getAndIncrement();
-        int failures = Integer.parseInt(model.getProperty("failed", "0"));
-        logger.info("Stop process: {}:{}, failure count: {}", workerId, id, failures);
-        model.setProperty("failed", String.valueOf(failures + 1));
+        if (failure) {
+            int failures = Integer.parseInt(model.getProperty("failed", "0"));
+            logger.info("Stop process: {}:{}, failure count: {}", workerId, id, failures);
+            model.setProperty("failed", String.valueOf(failures + 1));
+        }
 
         if (restartFuture != null) {
             try {

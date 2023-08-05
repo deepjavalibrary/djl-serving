@@ -123,7 +123,7 @@ class RollingBatch implements Runnable {
                 break;
             } catch (TranslateException e) {
                 logger.error("RollingBatch thread died, killing python process.", e);
-                process.stopPythonProcess();
+                process.stopPythonProcess(true);
             } finally {
                 lock.unlock();
             }
