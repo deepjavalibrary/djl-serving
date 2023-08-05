@@ -91,8 +91,7 @@ public class WorkLoadManager {
         CompletableFuture<O> result = new CompletableFuture<>();
         ModelInfo<I, O> modelInfo = job.getModel();
         if (modelInfo.getStatus() != ModelInfo.Status.READY) {
-            result.completeExceptionally(
-                    new WlmException("Model is not ready: " + modelInfo.getStatus()));
+            result.completeExceptionally(new WlmException("Model is not ready: " + modelInfo));
             return result;
         }
 

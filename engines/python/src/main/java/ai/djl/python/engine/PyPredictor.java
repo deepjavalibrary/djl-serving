@@ -147,7 +147,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     @Override
     public void close() {
         super.close();
-        process.stopPythonProcess();
+        process.stopPythonProcess(false);
         if (rollingBatch != null) {
             rollingBatch.shutdown();
         }
