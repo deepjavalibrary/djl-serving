@@ -44,6 +44,7 @@ class PyProcess {
     private Model model;
     private int workerId;
     private Process process;
+    private String pid;
     private List<Connection> connections;
     private CountDownLatch latch;
     private volatile boolean started; // NOPMD
@@ -127,10 +128,11 @@ class PyProcess {
             logger.info("Start process: {} - retry: {}", port, id);
             pyEnv.installDependency(model.getModelPath());
             process = Connection.startPython(pyEnv, model, workerId, port);
+            pid = process.toString().split(", ")[0].replace("Process[pid=", "");
 
             String modelName = model.getName();
             modelName = modelName.substring(0, Math.min(modelName.length(), 15));
-            String threadName = "W-" + port + '-' + modelName;
+            String threadName = "W-" + pid + '-' + modelName;
             err = new ReaderThread(threadName, process.getErrorStream(), true, this, id);
             out = new ReaderThread(threadName, process.getInputStream(), false, this, id);
             latch = new CountDownLatch(connections.size());
@@ -173,12 +175,13 @@ class PyProcess {
         }
     }
 
-    synchronized void stopPythonProcess(boolean failure) {
-        int id = restartCount.getAndIncrement();
-        if (failure) {
+    synchronized void stopPythonProcess(boolean error) {
+        restartCount.getAndIncrement();
+        logger.info("Stop process: {}:{}, failure={}", workerId, pid, error);
+        if (error) {
             int failures = Integer.parseInt(model.getProperty("failed", "0"));
-            logger.info("Stop process: {}:{}, failure count: {}", workerId, id, failures);
             model.setProperty("failed", String.valueOf(failures + 1));
+            logger.info("Failure count: {}", failures);
         }
 
         if (restartFuture != null) {
@@ -262,7 +265,7 @@ class PyProcess {
                         break;
                     }
                     if (result.contains("Python engine started.")) {
-                        logger.info(result);
+                        logger.info("{}: {}", getName(), result);
                         lifeCycle.setStarted(true, processId);
                         continue;
                     }
@@ -273,9 +276,9 @@ class PyProcess {
                     }
 
                     if (error) {
-                        logger.warn(result);
+                        logger.warn("{}: {}", getName(), result);
                     } else {
-                        logger.info(result);
+                        logger.info("{}: {}", getName(), result);
                     }
                 }
             } catch (Exception e) {
