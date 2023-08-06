@@ -180,6 +180,7 @@ public final class WorkerThread<I, O> implements Runnable {
             Exception e = new WlmException("Worker shutting down");
             aggregator.sendError(e);
         }
+        logger.info("shutdown temporary worker: {}", workerName);
         predictor.close();
     }
 
