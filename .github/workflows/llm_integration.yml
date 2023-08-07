@@ -818,7 +818,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
           name: ds-aot-handler-logs
 
-  huggingface-test:
+  no-code-test:
     if: contains(fromJson('["", "hf"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
@@ -846,7 +846,7 @@ jobs:
       - name: Test nomic-ai/gpt4all-j inference
         working-directory: tests/integration
         run: |
-          echo -en "HF_MODEL_ID=nomic-ai/gpt4all-j" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/gpt4all-j/" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG no_code deepspeed
           python3 llm/client.py huggingface no-code/nomic-ai/gpt4all-j
           docker rm -f $(docker ps -aq)
@@ -854,7 +854,7 @@ jobs:
       - name: Test databricks/dolly-v2-7b inference
         working-directory: tests/integration
         run: |
-          echo -en "HF_MODEL_ID=databricks/dolly-v2-7b\nTENSOR_PARALLEL_DEGREE=2" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/dolly-v2-7b\nTENSOR_PARALLEL_DEGREE=2" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG no_code deepspeed
           python3 llm/client.py huggingface no-code/databricks/dolly-v2-7b
           docker rm -f $(docker ps -aq)
@@ -862,7 +862,7 @@ jobs:
       - name: Test google/flan-t5-xl inference
         working-directory: tests/integration
         run: |
-          echo -en "HF_MODEL_ID=google/flan-t5-xl\nTENSOR_PARALLEL_DEGREE=2" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/flan-t5-xl\nTENSOR_PARALLEL_DEGREE=2" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG no_code deepspeed
           python3 llm/client.py huggingface no-code/google/flan-t5-xl
           docker rm -f $(docker ps -aq)
