@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -86,15 +87,16 @@ class RollingBatch implements Runnable {
                 int size = list.size();
                 for (int i = 0; i < size; ++i) {
                     Request req = list.get(i);
-                    String prefix = "batch_" + i + ".data";
-                    if (i == 0) {
-                        batch.setProperties(req.input.getProperties());
+                    String prefix = "batch_" + i + '.';
+                    for (Map.Entry<String, String> entry : req.input.getProperties().entrySet()) {
+                        String key = prefix + entry.getKey();
+                        batch.addProperty(key, entry.getValue());
                     }
-                    batch.add(prefix, req.getRequest());
+
+                    batch.add(prefix + "data", req.getRequest());
                     String seed = req.getSeed();
                     if (seed != null) {
-                        String seedPrefix = "batch_" + i + ".seed";
-                        batch.add(seedPrefix, req.seed);
+                        batch.add(prefix + "seed", req.seed);
                     }
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
