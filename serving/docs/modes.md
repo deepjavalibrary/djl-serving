@@ -49,6 +49,8 @@ option.enable_venv=true
 option.rolling_batch=auto
 #option.rolling_batch=lmi-dist
 option.max_rolling_batch_size=64
+option.paged_attention=false
+option.max_rolling_batch_prefill_tokens=1088
 ```
 
 In `serving.properties`, you can set the following properties. Model properties are accessible to `Translator`
@@ -129,10 +131,14 @@ engine=MPI
 option.rolling_batch=auto
 # use FlashAttention
 #option.rolling_batch=lmi-dist
-# use PagedAttention
-#option.rolling_batch=vllm
 #option.rolling_batch=scheduler
 option.max_rolling_batch_size=64
+
+# increase max_rolling_batch_prefill_tokens for long sequence
+option.max_rolling_batch_prefill_tokens=1088
+
+# disable PagedAttention if run into OOM
+option.paged_attention=false
 ```
 
 
