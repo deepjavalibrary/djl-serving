@@ -189,6 +189,7 @@ class FasterTransformerService(object):
                 "generated_text": s
             } for s in result[offset:offset + input_size[i]]]
             outputs.add(generated_text, key=inputs.get_content().key_at(i))
+            offset = offset + input_size[i]
 
         return outputs
 
