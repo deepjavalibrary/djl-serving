@@ -96,7 +96,14 @@ class Input(object):
         batch = []
         for i in range(batch_size):
             item = Input()
-            item.properties = self.properties
+            item.properties = {}
+            prefix = f"batch_{i}."
+            length = len(prefix)
+            for key, value in self.properties.items():
+                if key.startswith(prefix):
+                    key = key[:length]
+                    item.properties[key] = value
+
             batch.append(item)
 
         p = re.compile("batch_(\\d+)\\.(.*)")

@@ -29,6 +29,7 @@ import ai.djl.util.PairList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -82,16 +83,20 @@ class PyPredictor<I, O> extends Predictor<I, O> {
 
             Input batch = new Input();
             List<O> ret = new ArrayList<>(size);
-            batch.setProperties(((Input) first).getProperties());
             batch.addProperty("batch_size", String.valueOf(size));
             for (int i = 0; i < size; ++i) {
                 Input in = (Input) inputs.get(i);
+                String prefix = "batch_" + i + '.';
+                for (Map.Entry<String, String> entry : in.getProperties().entrySet()) {
+                    String key = prefix + entry.getKey();
+                    batch.addProperty(key, entry.getValue());
+                }
+
                 PairList<String, BytesSupplier> content = in.getContent();
-                String prefix = "batch_" + i;
                 for (Pair<String, BytesSupplier> pair : content) {
                     String key = pair.getKey();
                     key = key == null ? "data" : key;
-                    batch.add(prefix + '.' + key, pair.getValue());
+                    batch.add(prefix + key, pair.getValue());
                 }
             }
             Output output = process.predict(batch, timeout, false);
