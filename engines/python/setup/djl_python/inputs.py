@@ -96,12 +96,11 @@ class Input(object):
         batch = []
         for i in range(batch_size):
             item = Input()
-            item.properties = {}
             prefix = f"batch_{i}."
             length = len(prefix)
             for key, value in self.properties.items():
                 if key.startswith(prefix):
-                    key = key[:length]
+                    key = key[length:]
                     item.properties[key] = value
 
             batch.append(item)
