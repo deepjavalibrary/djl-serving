@@ -48,7 +48,7 @@ RUN apt-get update && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu117 && \
-    pip3 install ${deepspeed_wheel} &&  \
+    pip3 install ${deepspeed_wheel} pydantic==1.10.12 && \
     pip3 install transformers==${transformers_version} && \
     pip3 install triton==2.0.0.dev20221202 mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} && \
     pip3 install diffusers[torch]==${diffusers_version} && \
