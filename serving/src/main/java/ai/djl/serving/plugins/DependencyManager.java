@@ -89,6 +89,8 @@ public final class DependencyManager {
                 break;
             case "XGBoost":
                 installDependency("ai.djl.ml.xgboost:xgboost:" + djlVersion);
+                // TODO: Avoid hard code version
+                installDependency("commons-logging:commons-logging:1.2");
                 break;
             default:
                 break;
