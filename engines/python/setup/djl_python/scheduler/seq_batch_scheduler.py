@@ -275,12 +275,10 @@ class SeqBatchScheduler:
             if dp[idx][k] > -1:
                 return dp[idx][k], dp_parts[idx, k]
 
-            max_seq_length = arr[idx]
-            opt_cost = float('inf')
-            opt_cuts = None
             padding_leftmost_part = 0
+            opt_cost, opt_cut = float('inf'), None
             for i in range(idx, batch_size):
-                padding_leftmost_part += max_seq_length - arr[i]
+                padding_leftmost_part += arr[idx] - arr[i]
                 padding_suffix_part, opt_cuts_suffix_part = dp_recur(
                     i + 1, k - 1)
                 if padding_leftmost_part + padding_suffix_part < opt_cost:
@@ -292,6 +290,7 @@ class SeqBatchScheduler:
 
         optimal_cost, optimal_cuts = dp_recur(0, num_part)
 
+        # Convert the cuts to parts of sequence index list
         optimal_part = []
         for i in range(len(optimal_cuts)):
             optimal_part.append(
