@@ -74,9 +74,8 @@ class FasterTransformerService(object):
         self.dtype = properties.get("dtype", "fp32")
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        if "trust_remote_code" in properties:
-            self.trust_remote_code = properties.get(
-                "trust_remote_code").lower() == "true"
+        self.trust_remote_code = properties.get("trust_remote_code",
+                                                "false").lower() == "true"
         self.use_triton = properties.get("engine", "Python") == "Python"
         self.enable_streaming = properties.get("enable_streaming", None)
         if self.enable_streaming and self.enable_streaming.lower() != "false":
@@ -84,8 +83,6 @@ class FasterTransformerService(object):
                 raise ValueError(
                     "Please use Python engine for streaming use case")
             self.use_triton = True
-        self.trust_remote_code = properties.get("trust_remote_code",
-                                                "false").lower() == "true"
 
     def initialize(self, properties):
         self.initialize_properties(properties)
