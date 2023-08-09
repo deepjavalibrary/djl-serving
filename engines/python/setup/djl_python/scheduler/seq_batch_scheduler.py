@@ -226,6 +226,83 @@ class SeqBatchScheduler:
         # This is provided to the consumers to be used as part of the max_seq_batcher thresholding mechanism.
         pass
 
+    @staticmethod
+    def optimal_partition(seq_length_list: List[int],
+                          num_part: int) -> Tuple[int, List[List[int]]]:
+        """
+        total_padding, opt_partition = self.optimal_partition(
+            seq_length_list, num_part)
+
+        Args:
+            seq_length_list: list of sequence lengths. Sorted in descending order.
+            num_part: number of parts in a partition
+
+        Return:
+            cost: total padding
+            opt_partition (`List[List[int]]`): optimal partition stored as List of List of sequence index
+        """
+        if num_part <= 0:
+            raise Exception("Illegal argument.")
+
+        batch_size = len(seq_length_list)
+        arr = seq_length_list
+
+        # dp[i][k] stores the optimal cost of partition the suffix array arr[i:] into k parts.
+        dp = [[-1 for _ in range(num_part + 1)] for _ in range(batch_size)]
+
+        # dp_parts[i][k] stores the corresponding optimal partition. dict: (i, k) -> List[int]
+        dp_parts = defaultdict(list)
+
+        def dp_recur(idx, k) -> Tuple[int, List[int]]:
+            """
+            dp(idx, k) returns the optimal cost of partition the suffix array arr[i:] into k parts.
+            """
+            if k == 1:
+                if idx == batch_size:
+                    return 0, []
+                if dp[idx][k] > -1:
+                    return dp[idx][k], dp_parts[idx, k]
+                else:
+                    max_seq_size = arr[idx]
+                    dp[idx][k], dp_parts[idx, k] = sum(
+                        max_seq_size - arr[i]
+                        for i in range(idx, batch_size)), [idx]
+                    return dp[idx][k], dp_parts[idx, k]
+
+            if idx == batch_size:
+                return 0, []
+
+            if dp[idx][k] > -1:
+                return dp[idx][k], dp_parts[idx, k]
+
+            padding_leftmost_part = 0
+            opt_cost, opt_cuts = float('inf'), None
+            for i in range(idx, batch_size):
+                padding_leftmost_part += arr[idx] - arr[i]
+                padding_suffix_part, opt_cuts_suffix_part = dp_recur(
+                    i + 1, k - 1)
+                if padding_leftmost_part + padding_suffix_part < opt_cost:
+                    opt_cost = padding_leftmost_part + padding_suffix_part
+                    opt_cuts = [i + 1] + opt_cuts_suffix_part
+
+            dp[idx][k], dp_parts[idx, k] = opt_cost, opt_cuts
+            return opt_cost, opt_cuts
+
+        optimal_cost, optimal_cuts = dp_recur(0, num_part)
+
+        # Convert the cuts to parts of sequence index list
+        optimal_part = []
+        for i in range(len(optimal_cuts)):
+            optimal_part.append(
+                list(
+                    range(0 if i == 0 else optimal_cuts[i - 1],
+                          optimal_cuts[i])))
+        optimal_part.append(
+            list(
+                range(optimal_cuts[-1] if len(optimal_cuts) > 0 else 0,
+                      batch_size)))
+        return optimal_cost, optimal_part
+
     def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
         """
         A sweep of inference calls on all seq_batchers in the scheduler
