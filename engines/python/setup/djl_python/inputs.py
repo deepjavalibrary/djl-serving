@@ -99,7 +99,7 @@ class Input(object):
                 if key.startswith(prefix):
                     key = key[length:]
                     item.properties[key] = value
-                else:
+                elif not key.startswith("batch_"):
                     item.properties[key] = value
 
             batch.append(item)

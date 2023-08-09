@@ -107,27 +107,28 @@ class RollingBatch implements Runnable {
                 batch.addProperty("batch_size", String.valueOf(size));
 
                 Output output = process.predict(batch, timeout, false);
-                // TODO: optimize for conditional killing
-                if (output.getCode() != 200) {
-                    for (RollingBatch.Request element : list) {
-                        element.addResponse(
-                                "{\"ErrorCode\":"
-                                        + output.getCode()
-                                        + ", \"Message\":\""
-                                        + output.getMessage()
-                                        + "\"}");
-                    }
-                    canAdd.signal();
-                    resetRollingBatch = true;
-                    continue;
-                }
                 PairList<String, BytesSupplier> content = output.getContent();
-                if (content.size() != size) {
-                    throw new TranslateException(
-                            "Batch output size mismatch, expected: "
-                                    + size
-                                    + ", actual: "
-                                    + content.size());
+                // TODO: optimize for conditional killing
+                int code = output.getCode();
+                if (code != 200 || content.size() != size) {
+                    if (code != 200) {
+                        logger.warn("Batch inference failed: {}", output.getMessage());
+                    } else {
+                        logger.error(
+                                "Batch output size mismatch, expected: {}, actual: {}",
+                                size,
+                                content.size());
+                    }
+                    Output out = new Output(output.getCode(), "Batch inference failed");
+                    BytesSupplier err = BytesSupplier.wrap(JsonUtils.GSON.toJson(out));
+                    for (Request req : list) {
+                        req.last = true;
+                        req.data.appendContent(err, true);
+                    }
+                    list.clear();
+                    resetRollingBatch = true;
+                    canAdd.signal();
+                    continue;
                 }
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
@@ -140,9 +141,6 @@ class RollingBatch implements Runnable {
                 }
             } catch (InterruptedException e) {
                 break;
-            } catch (TranslateException e) {
-                logger.error("RollingBatch thread died, killing python process.", e);
-                process.stopPythonProcess(true);
             } finally {
                 lock.unlock();
             }

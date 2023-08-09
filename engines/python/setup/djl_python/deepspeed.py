@@ -314,12 +314,12 @@ class DeepSpeedService(object):
         return batch_inputs
 
     def inference(self, inputs: Input):
-        # TODO: deal with batch specific issues
-        content_type = inputs.get_batches()[0].get_property("Content-Type")
         input_data = []
         input_size = []
         model_kwargs = {}
         batch = inputs.get_batches()
+        # TODO: deal with batch specific issues
+        content_type = batch[0].get_property("Content-Type")
         if content_type is not None and content_type.startswith(
                 "application/json"):
             first = True
