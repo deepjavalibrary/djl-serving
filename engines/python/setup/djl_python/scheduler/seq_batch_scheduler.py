@@ -227,7 +227,8 @@ class SeqBatchScheduler:
         pass
 
     @staticmethod
-    def optimal_partition(seq_length_list: List[int], num_part: int) -> Tuple[int, List[List[int]]]:
+    def optimal_partition(seq_length_list: List[int],
+                          num_part: int) -> Tuple[int, List[List[int]]]:
         """
         total_padding, opt_partition = self.optimal_partition(
             seq_length_list, num_part)
@@ -263,7 +264,9 @@ class SeqBatchScheduler:
                     return dp[idx][k], dp_parts[idx, k]
                 else:
                     max_seq_size = arr[idx]
-                    dp[idx][k], dp_parts[idx, k] = sum(max_seq_size - arr[i] for i in range(idx, batch_size)), [idx]
+                    dp[idx][k], dp_parts[idx, k] = sum(
+                        max_seq_size - arr[i]
+                        for i in range(idx, batch_size)), [idx]
                     return dp[idx][k], dp_parts[idx, k]
 
             if idx == batch_size:
@@ -278,10 +281,11 @@ class SeqBatchScheduler:
             padding_leftmost_part = 0
             for i in range(idx, batch_size):
                 padding_leftmost_part += max_seq_length - arr[i]
-                padding_suffix_part, opt_cuts_suffix_part = dp_recur(i + 1, k - 1)
+                padding_suffix_part, opt_cuts_suffix_part = dp_recur(
+                    i + 1, k - 1)
                 if padding_leftmost_part + padding_suffix_part < opt_cost:
                     opt_cost = padding_leftmost_part + padding_suffix_part
-                    opt_cuts = [i+1] + opt_cuts_suffix_part
+                    opt_cuts = [i + 1] + opt_cuts_suffix_part
 
             dp[idx][k], dp_parts[idx, k] = opt_cost, opt_cuts
             return opt_cost, opt_cuts
@@ -290,10 +294,15 @@ class SeqBatchScheduler:
 
         optimal_part = []
         for i in range(len(optimal_cuts)):
-            optimal_part.append(list(range(0 if i == 0 else optimal_cuts[i - 1], optimal_cuts[i])))
-        optimal_part.append(list(range(optimal_cuts[-1] if len(optimal_cuts) > 0 else 0, batch_size)))
+            optimal_part.append(
+                list(
+                    range(0 if i == 0 else optimal_cuts[i - 1],
+                          optimal_cuts[i])))
+        optimal_part.append(
+            list(
+                range(optimal_cuts[-1] if len(optimal_cuts) > 0 else 0,
+                      batch_size)))
         return optimal_cost, optimal_part
-
 
     def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
         """
