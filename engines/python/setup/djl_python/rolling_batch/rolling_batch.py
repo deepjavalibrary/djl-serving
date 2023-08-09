@@ -112,6 +112,7 @@ def stop_on_any_exception(func):
         except Exception as e:
             logging.exception("Rolling batch inference error")
             err = json.dumps({"code": 500, "error": str(e)})
+            self.reset()
             for request in self.pending_requests:
                 request.set_next_token(err, None, True)
             return self.postprocess_results(len(self.pending_requests))
@@ -149,6 +150,10 @@ class RollingBatch(ABC):
         else:
             # TODO: allows to load custom formatter from a module
             logging.warning(f"Unsupported formatter: {formatter}")
+
+    def reset(self):
+        self.pending_requests = []
+        self.req_id_counter = 0
 
     @abstractmethod
     def inference(self, input_data, parameters):

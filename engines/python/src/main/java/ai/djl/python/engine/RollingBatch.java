@@ -54,6 +54,7 @@ class RollingBatch implements Runnable {
     private ReentrantLock lock;
     private Condition canAdd;
     private Condition canRead;
+    private boolean resetRollingBatch;
 
     RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, String outputFormatter) {
         this.process = process;
@@ -84,6 +85,10 @@ class RollingBatch implements Runnable {
                 }
 
                 Input batch = new Input();
+                if (resetRollingBatch) {
+                    batch.addProperty("reset_rollingbatch", "true");
+                    resetRollingBatch = false;
+                }
                 int size = list.size();
                 for (int i = 0; i < size; ++i) {
                     Request req = list.get(i);
@@ -101,16 +106,29 @@ class RollingBatch implements Runnable {
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
 
-                // TODO: Handler error case
-
                 Output output = process.predict(batch, timeout, false);
                 PairList<String, BytesSupplier> content = output.getContent();
-                if (content.size() != size) {
-                    throw new TranslateException(
-                            "Batch output size mismatch, expected: "
-                                    + size
-                                    + ", actual: "
-                                    + content.size());
+                // TODO: optimize for conditional killing
+                int code = output.getCode();
+                if (code != 200 || content.size() != size) {
+                    if (code != 200) {
+                        logger.warn("Batch inference failed: {}", output.getMessage());
+                    } else {
+                        logger.error(
+                                "Batch output size mismatch, expected: {}, actual: {}",
+                                size,
+                                content.size());
+                    }
+                    Output out = new Output(output.getCode(), "Batch inference failed");
+                    BytesSupplier err = BytesSupplier.wrap(JsonUtils.GSON.toJson(out));
+                    for (Request req : list) {
+                        req.last = true;
+                        req.data.appendContent(err, true);
+                    }
+                    list.clear();
+                    resetRollingBatch = true;
+                    canAdd.signal();
+                    continue;
                 }
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
@@ -123,9 +141,6 @@ class RollingBatch implements Runnable {
                 }
             } catch (InterruptedException e) {
                 break;
-            } catch (TranslateException e) {
-                logger.error("RollingBatch thread died, killing python process.", e);
-                process.stopPythonProcess(true);
             } finally {
                 lock.unlock();
             }
