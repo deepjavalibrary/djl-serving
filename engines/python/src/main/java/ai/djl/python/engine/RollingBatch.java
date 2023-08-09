@@ -54,6 +54,7 @@ class RollingBatch implements Runnable {
     private ReentrantLock lock;
     private Condition canAdd;
     private Condition canRead;
+    private boolean resetRollingBatch;
 
     RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, String outputFormatter) {
         this.process = process;
@@ -84,6 +85,10 @@ class RollingBatch implements Runnable {
                 }
 
                 Input batch = new Input();
+                if (resetRollingBatch) {
+                    batch.addProperty("reset_rollingbatch", "true");
+                    resetRollingBatch = false;
+                }
                 int size = list.size();
                 for (int i = 0; i < size; ++i) {
                     Request req = list.get(i);
@@ -101,9 +106,21 @@ class RollingBatch implements Runnable {
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
 
-                // TODO: Handler error case
-
                 Output output = process.predict(batch, timeout, false);
+                // TODO: optimize for conditional killing
+                if (output.getCode() != 200) {
+                    for (RollingBatch.Request element : list) {
+                        element.addResponse(
+                                "{\"ErrorCode\":"
+                                        + output.getCode()
+                                        + ", \"Message\":\""
+                                        + output.getMessage()
+                                        + "\"}");
+                    }
+                    canAdd.signal();
+                    resetRollingBatch = true;
+                    continue;
+                }
                 PairList<String, BytesSupplier> content = output.getContent();
                 if (content.size() != size) {
                     throw new TranslateException(

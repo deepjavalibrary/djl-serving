@@ -45,13 +45,19 @@ class LmiDistRollingBatch(RollingBatch):
         self.batch_id_counter = 0
         self.cache: Batch = None
 
+    def reset(self):
+        self.cache = None
+        self.batch_id_counter = 0
+        super().reset()
+
     def _init_model(self, kwargs, model_id_or_path):
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
         quantize = self.properties.get("quantize", None)
         dtype = self.properties.get("dtype", None)
         revision = self.properties.get('revision', None)
-        paged_attention = self.properties.get("paged_attention", "true").lower() == "true"
+        paged_attention = self.properties.get("paged_attention",
+                                              "true").lower() == "true"
         if quantize is not None and dtype is not None:
             raise ValueError(
                 f"Can't set both dtype: {dtype} and quantize: {quantize}")

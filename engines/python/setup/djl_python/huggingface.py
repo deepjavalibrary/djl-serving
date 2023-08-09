@@ -227,7 +227,7 @@ class HuggingFaceService(object):
                 first = False
             else:
                 if parameters != input_map.pop("parameters", {}):
-                    return Output().error(
+                    raise ValueError(
                         "In order to enable dynamic batching, all input batches must have the same parameters"
                     )
             if "cached_prompt" in input_map:
@@ -243,6 +243,8 @@ class HuggingFaceService(object):
         outputs = Output()
 
         if self.rolling_batch_type:
+            if inputs.get_property("reset_rollingbatch"):
+                self.rolling_batch.reset()
             result = self.rolling_batch.inference(input_data, parameters)
             for i in range(inputs.get_batch_size()):
                 outputs.add(result[i], key="data", batch_index=i)
