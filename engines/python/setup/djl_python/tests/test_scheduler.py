@@ -471,7 +471,7 @@ class TestScheduler(unittest.TestCase):
                 50256, 29744, 28478, 5834, 318
             ], [37, 1603, 7645, 16354, 318]]))
 
-    def test_temp(self):
+    def test_optimal_partition(self):
         # Test optimal_partition
         seq_length_list = sorted(torch.randint(1, 30, (10,)).tolist(), reverse=True)
         print(seq_length_list)
