@@ -67,7 +67,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: Install DJL-Bench
         working-directory: benchmark
-        run: ./gradlew installOnLinux
+        run: ./gradlew installOnLinux -Pstaging
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -178,7 +178,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: Install DJL-Bench
         working-directory: benchmark
-        run: ./gradlew installOnLinux
+        run: ./gradlew installOnLinux -Pstaging
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf1 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -237,7 +237,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: Install DJL-Bench
         working-directory: benchmark
-        run: ./gradlew installOnLinux
+        run: ./gradlew installOnLinux -Pstaging
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-cu117 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -295,7 +295,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: Install DJL-Bench
         working-directory: benchmark
-        run: ./gradlew installOnLinux
+        run: ./gradlew installOnLinux -Pstaging
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh aarch64 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
