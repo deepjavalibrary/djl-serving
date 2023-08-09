@@ -53,7 +53,7 @@ RUN apt-get update && \
     scripts/install_s5cmd.sh x64 && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
-    ${deepspeed_wheel} transformers==${transformers_version} \
+    ${deepspeed_wheel} pydantic==1.10.12 transformers==${transformers_version} \
     mpi4py sentencepiece accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     diffusers[torch]==${diffusers_version} && \
     scripts/install_aitemplate.sh && \
