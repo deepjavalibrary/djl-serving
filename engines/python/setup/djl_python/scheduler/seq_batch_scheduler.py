@@ -276,7 +276,7 @@ class SeqBatchScheduler:
                 return dp[idx][k], dp_parts[idx, k]
 
             padding_leftmost_part = 0
-            opt_cost, opt_cut = float('inf'), None
+            opt_cost, opt_cuts = float('inf'), None
             for i in range(idx, batch_size):
                 padding_leftmost_part += arr[idx] - arr[i]
                 padding_suffix_part, opt_cuts_suffix_part = dp_recur(
