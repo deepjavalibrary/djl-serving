@@ -200,20 +200,13 @@ class HuggingFaceService(object):
         self.initialized = True
 
     def inference(self, inputs):
-        content_type = inputs.get_property("Content-Type")
-        accept = inputs.get_property("Accept")
-        if not accept:
-            accept = content_type if content_type.startswith(
-                "tensor/") else "application/json"
-        elif "*/*" in accept:
-            accept = "application/json"
-
         input_data = []
         input_size = []
         parameters = []
         batch = inputs.get_batches()
         first = True
         for i, item in enumerate(batch):
+            content_type = item.get_property("Content-Type")
             input_map = decode(item, content_type)
             _inputs = input_map.pop("inputs", input_map)
             if isinstance(_inputs, list):
@@ -271,7 +264,14 @@ class HuggingFaceService(object):
         prediction = self.hf_pipeline(input_data, **parameters[0])
 
         offset = 0
-        for i in range(inputs.get_batch_size()):
+        for i, item in enumerate(batch):
+            content_type = item.get_property("Content-Type")
+            accept = item.get_property("Accept")
+            if not accept:
+                accept = content_type if content_type.startswith(
+                    "tensor/") else "application/json"
+            elif "*/*" in accept:
+                accept = "application/json"
             encode(outputs,
                    prediction[offset:offset + input_size[i]],
                    accept,

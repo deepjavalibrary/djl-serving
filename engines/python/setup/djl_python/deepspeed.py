@@ -314,7 +314,8 @@ class DeepSpeedService(object):
         return batch_inputs
 
     def inference(self, inputs: Input):
-        content_type = inputs.get_property("Content-Type")
+        # TODO: deal with batch specific issues
+        content_type = inputs.get_batches()[0].get_property("Content-Type")
         input_data = []
         input_size = []
         model_kwargs = {}
