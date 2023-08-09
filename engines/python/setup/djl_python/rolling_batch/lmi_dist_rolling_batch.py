@@ -45,6 +45,11 @@ class LmiDistRollingBatch(RollingBatch):
         self.batch_id_counter = 0
         self.cache: Batch = None
 
+    def reset(self):
+        self.cache = None
+        self.batch_id_counter = 0
+        super().reset()
+
     def _init_model(self, kwargs, model_id_or_path):
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1

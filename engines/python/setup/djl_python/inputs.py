@@ -90,9 +90,6 @@ class Input(object):
 
     def get_batches(self) -> list:
         batch_size = self.get_batch_size()
-        if batch_size == 1:
-            return [self]
-
         batch = []
         for i in range(batch_size):
             item = Input()
@@ -101,6 +98,8 @@ class Input(object):
             for key, value in self.properties.items():
                 if key.startswith(prefix):
                     key = key[length:]
+                    item.properties[key] = value
+                elif not key.startswith("batch_"):
                     item.properties[key] = value
 
             batch.append(item)
