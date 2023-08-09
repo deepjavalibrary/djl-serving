@@ -226,55 +226,74 @@ class SeqBatchScheduler:
         # This is provided to the consumers to be used as part of the max_seq_batcher thresholding mechanism.
         pass
 
-    def optimal_partition(self, dp, dp_partition, arr, arr_idx, num_list):
-        # dp[i][k]: optimal cost to partition the suffix array after index i into k partitions
-        # dp_partition[i][k]: list of starting indices of optimal partitions in the suffix array after index i into k
-        # partitions`
-        # arr: the lengths of sequences sorted in descending order
+    @staticmethod
+    def optimal_partition(seq_length_list: List[int], num_part: int) -> Tuple[int, List[List[int]]]:
+        """
+        total_padding, opt_partition = self.optimal_partition(
+            seq_length_list, num_part)
 
-        # returns a list containing the optimal padding amount and a list of of starting indices of optimal
-        # partitions or -1 and an empty list if it is impossible to partition with given sparsity and num_list
-        if dp[arr_idx][num_list] is not None:
-            return [dp[arr_idx][num_list], dp_partition[arr_idx][num_list]]
-        if num_list == len(arr) - arr_idx:
-            dp_partition[arr_idx][num_list] = [
-                i for i in range(arr_idx, len(arr))
-            ]
-            dp[arr_idx][num_list] = 0
-            return [0, dp_partition[arr_idx][num_list]]
-        if num_list == 1:
-            cost = 0
-            max_size = arr[arr_idx]
-            for i in range(arr_idx + 1, len(arr)):
-                cost += max_size - arr[i]
+        Args:
+            seq_length_list: list of sequence lengths. Sorted in descending order.
+            num_part: number of parts in a partition
 
-            if arr_idx == 0 and float(cost) / (cost + sum(arr)) > 0.33:
-                return [-1, []]
+        Return:
+            cost: total padding
+            opt_partition (`List[List[int]]`): optimal partition stored as List of List of sequence index
+        """
+        if num_part <= 0:
+            raise Exception("Illegal argument.")
 
-            dp_partition[arr_idx][1] = [arr_idx]
-            dp[arr_idx][1] = cost
-            return [cost, dp_partition[arr_idx][num_list]]
+        batch_size = len(seq_length_list)
+        arr = seq_length_list
 
-        cost = float('inf')
-        partition = float('inf')
-        pad_cost = 0
-        max_size = arr[arr_idx]
-        for i in range(arr_idx, len(arr) - num_list + 1):
-            pad_cost += max_size - arr[i]
-            new_cost = pad_cost + self.optimal_partition(
-                dp, dp_partition, arr, i + 1, num_list - 1)[0]
-            if new_cost < cost:
-                cost = new_cost
-                partition = i + 1
+        # dp[i][k] stores the optimal cost of partition the suffix array arr[i:] into k parts.
+        dp = [[-1 for _ in range(num_part + 1)] for _ in range(batch_size)]
 
-        if arr_idx == 0 and float(cost) / (cost + sum(arr)) > 0.33:
-            return [-1, []]
+        # dp_parts[i][k] stores the corresponding optimal partition. dict: (i, k) -> List[int]
+        dp_parts = defaultdict(list)
 
-        dp[arr_idx][num_list] = cost
-        dp_partition[arr_idx][num_list] = [
-            arr_idx
-        ] + dp_partition[partition][num_list - 1]
-        return [cost, dp_partition[arr_idx][num_list]]
+        def dp_recur(idx, k) -> Tuple[int, List[int]]:
+            """
+            dp(idx, k) returns the optimal cost of partition the suffix array arr[i:] into k parts.
+            """
+            if k == 1:
+                if idx == batch_size:
+                    return 0, []
+                if dp[idx][k] > -1:
+                    return dp[idx][k], dp_parts[idx, k]
+                else:
+                    max_seq_size = arr[idx]
+                    dp[idx][k], dp_parts[idx, k] = sum(max_seq_size - arr[i] for i in range(idx, batch_size)), [idx]
+                    return dp[idx][k], dp_parts[idx, k]
+
+            if idx == batch_size:
+                return 0, []
+
+            if dp[idx][k] > -1:
+                return dp[idx][k], dp_parts[idx, k]
+
+            max_seq_length = arr[idx]
+            opt_cost = float('inf')
+            opt_cuts = None
+            padding_leftmost_part = 0
+            for i in range(idx, batch_size):
+                padding_leftmost_part += max_seq_length - arr[i]
+                padding_suffix_part, opt_cuts_suffix_part = dp_recur(i + 1, k - 1)
+                if padding_leftmost_part + padding_suffix_part < opt_cost:
+                    opt_cost = padding_leftmost_part + padding_suffix_part
+                    opt_cuts = [i+1] + opt_cuts_suffix_part
+
+            dp[idx][k], dp_parts[idx, k] = opt_cost, opt_cuts
+            return opt_cost, opt_cuts
+
+        optimal_cost, optimal_cuts = dp_recur(0, num_part)
+
+        optimal_part = []
+        for i in range(len(optimal_cuts)):
+            optimal_part.append(list(range(0 if i == 0 else optimal_cuts[i - 1], optimal_cuts[i])))
+        optimal_part.append(list(range(optimal_cuts[-1] if len(optimal_cuts) > 0 else 0, batch_size)))
+        return optimal_cost, optimal_part
+
 
     def inference_call(self) -> Tuple[List[List[int]], List[int], List[int]]:
         """
