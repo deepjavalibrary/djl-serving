@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
+import json
 import logging
 import os
 
@@ -199,54 +199,88 @@ class HuggingFaceService(object):
 
         self.initialized = True
 
-    def inference(self, inputs):
+    def parse_input(self, inputs):
         input_data = []
         input_size = []
         parameters = []
+        errors = {}
         batch = inputs.get_batches()
         first = True
         for i, item in enumerate(batch):
-            content_type = item.get_property("Content-Type")
-            input_map = decode(item, content_type)
-            _inputs = input_map.pop("inputs", input_map)
-            if isinstance(_inputs, list):
-                input_data.extend(_inputs)
-                input_size.append(len(_inputs))
-            else:
-                input_data.append(_inputs)
-                input_size.append(1)
-            if first or self.rolling_batch_type:
-                parameters.append(input_map.pop("parameters", {}))
-                first = False
-            else:
-                if parameters != input_map.pop("parameters", {}):
-                    raise ValueError(
-                        "In order to enable dynamic batching, all input batches must have the same parameters"
-                    )
-            if "cached_prompt" in input_map:
-                parameters[i]["cached_prompt"] = input_map.pop("cached_prompt")
+            try:
+                content_type = item.get_property("Content-Type")
+                input_map = decode(item, content_type)
+                _inputs = input_map.pop("inputs", input_map)
+                if first or self.rolling_batch_type:
+                    parameters.append(input_map.pop("parameters", {}))
+                    first = False
+                else:
+                    param = input_map.pop("parameters", {})
+                    if parameters[0] != param:
+                        logging.warning(
+                            f"expected param: {parameters}, actual: {param}")
+                        raise ValueError(
+                            "In order to enable dynamic batching, all input batches must have the same parameters"
+                        )
+                if isinstance(_inputs, list):
+                    input_data.extend(_inputs)
+                    input_size.append(len(_inputs))
+                else:
+                    input_data.append(_inputs)
+                    input_size.append(1)
 
-            seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
-            if item.contains_key(seed_key):
-                seed = parameters[i].get("seed")
-                if not seed:
-                    # set server provided seed if seed is not part of request
-                    parameters[i]["seed"] = item.get_as_string(key=seed_key)
+                if "cached_prompt" in input_map:
+                    parameters[i]["cached_prompt"] = input_map.pop(
+                        "cached_prompt")
 
+                seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
+                if item.contains_key(seed_key):
+                    seed = parameters[i].get("seed")
+                    if not seed:
+                        # set server provided seed if seed is not part of request
+                        parameters[i]["seed"] = item.get_as_string(
+                            key=seed_key)
+            except Exception as e:  # pylint: disable=broad-except
+                logging.exception(f"Parse input failed: {i}")
+                errors[i] = str(e)
+
+        return input_data, input_size, parameters, errors, batch
+
+    def inference(self, inputs):
         outputs = Output()
+
+        input_data, input_size, parameters, errors, batch = self.parse_input(
+            inputs)
+        if len(input_data) == 0:
+            for i in range(len(batch)):
+                err = errors.get(i)
+                err = json.dumps({"code": 500, "error": err})
+                if self.rolling_batch_type:
+                    err = json.dumps({"data": err, "last": True})
+                outputs.add(err, key="data", batch_index=i)
+            return outputs
 
         if self.rolling_batch_type:
             if inputs.get_property("reset_rollingbatch"):
                 self.rolling_batch.reset()
             result = self.rolling_batch.inference(input_data, parameters)
-            for i in range(inputs.get_batch_size()):
-                outputs.add(result[i], key="data", batch_index=i)
+            idx = 0
+            for i in range(len(batch)):
+                err = errors.get(i)
+                if err:
+                    err = json.dumps({"code": 500, "error": err})
+                    err = json.dumps({"data": err, "last": True})
+                    outputs.add(err, key="data", batch_index=i)
+                else:
+                    outputs.add(result[idx], key="data", batch_index=i)
+                    idx += 1
 
             content_type = self.rolling_batch.get_content_type()
             if content_type:
                 outputs.add_property("content-type", content_type)
             return outputs
         elif self.enable_streaming:
+            # TODO support dynamic batch
             outputs.add_property("content-type", "application/jsonlines")
             if self.enable_streaming == "huggingface":
                 outputs.add_stream_content(
@@ -268,15 +302,24 @@ class HuggingFaceService(object):
             content_type = item.get_property("Content-Type")
             accept = item.get_property("Accept")
             if not accept:
+                content_type = content_type if content_type else "application/json"
                 accept = content_type if content_type.startswith(
                     "tensor/") else "application/json"
             elif "*/*" in accept:
                 accept = "application/json"
-            encode(outputs,
-                   prediction[offset:offset + input_size[i]],
-                   accept,
-                   key=inputs.get_content().key_at(i))
-            offset += input_size[i]
+
+            err = errors.get(i)
+            if err:
+                encode(outputs,
+                       err,
+                       accept,
+                       key=inputs.get_content().key_at(i))
+            else:
+                encode(outputs,
+                       prediction[offset:offset + input_size[i]],
+                       accept,
+                       key=inputs.get_content().key_at(i))
+                offset += input_size[i]
 
         return outputs
 
@@ -451,7 +494,7 @@ class HuggingFaceService(object):
                 trust_remote_code=self.trust_remote_code)
         except Exception as e:
             logging.error(
-                f"{self.model_id_or_path} does not contain a config.json or adapter_config.json for lora models. "
+                f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
                 f"This is required for loading huggingface models")
             raise e
 

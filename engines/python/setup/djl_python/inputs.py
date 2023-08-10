@@ -83,12 +83,15 @@ class Input(object):
         return cur_str
 
     def is_batch(self) -> bool:
-        return self.get_batch_size() > 1
+        return "batch_size" in self.properties
 
     def get_batch_size(self) -> int:
         return int(self.properties.get("batch_size", "1"))
 
     def get_batches(self) -> list:
+        if not self.is_batch():
+            return [self]
+
         batch_size = self.get_batch_size()
         batch = []
         for i in range(batch_size):
@@ -98,8 +101,6 @@ class Input(object):
             for key, value in self.properties.items():
                 if key.startswith(prefix):
                     key = key[length:]
-                    item.properties[key] = value
-                elif not key.startswith("batch_"):
                     item.properties[key] = value
 
             batch.append(item)

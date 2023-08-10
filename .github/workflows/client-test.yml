@@ -42,7 +42,7 @@ jobs:
         run: |
           cd tests/binary && python prepare.py pt && cd ..
           djl-serving -m test::PyTorch=file://$PWD/binary/model.pt &> output.log &
-          sleep 30
+          sleep 40
           cd java-client
           ./gradlew build
           cd ../binary && python prepare.py pt --clean && cd ..
@@ -52,7 +52,7 @@ jobs:
         run: |
           cd tests/binary && python prepare.py pt && cd ..
           djl-serving -m test::PyTorch=file://$PWD/binary/model.pt &> output.log &
-          sleep 30
+          sleep 40
           python test_binary.py 1,3,224,224 1,1000
           cd binary && python prepare.py pt --clean && cd ..
           jobs
