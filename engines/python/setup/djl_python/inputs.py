@@ -109,7 +109,7 @@ class Input(object):
             key = self.content.key_at(i)
             m = p.match(key)
             if m is None:
-                raise ValueError(f"Unexpected key in batch input: key")
+                raise ValueError(f"Unexpected key in batch input: {key}")
             index = int(m.group(1))
             batch[index].content.add(m.group(2), self.content.value_at(i))
 
