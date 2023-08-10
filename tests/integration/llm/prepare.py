@@ -415,7 +415,7 @@ lmi_dist_model_list = {
         "option.model_id": "gpt2",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 1,
-        "option.max_rolling_batch_size": 4
+        "option.max_rolling_batch_size": 2
     },
     "gpt-neox-20b-bits-and-bytes-quantized": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b",
@@ -615,6 +615,7 @@ def build_lmi_dist_model(model):
     options = lmi_dist_model_list[model]
     options["engine"] = "MPI"
     options["option.rolling_batch"] = "lmi-dist"
+    options["option.output_formatter"] = "jsonlines"
     write_properties(options)
 
 
