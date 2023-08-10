@@ -185,6 +185,7 @@ public final class ModelManager {
             candidateModelsToUnregister.addAll(workflow.getModels());
             workflow.stop();
             startupWorkflows.remove(workflowName);
+            logger.info("Model {}/{} unregistered.", workflowName, version);
         }
         if (endpoint.getWorkflows().isEmpty()) {
             endpoints.remove(workflowName);
