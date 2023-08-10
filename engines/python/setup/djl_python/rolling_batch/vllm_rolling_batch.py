@@ -42,6 +42,12 @@ class VLLMRollingBatch(RollingBatch):
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = {}
 
+    def reset(self):
+        for key in self.request_cache.keys():
+            self.engine.abort_request(key)
+        self.request_cache = {}
+        super().reset()
+
     @stop_on_any_exception
     def inference(self, input_data, parameters):
         batch_size = len(input_data)
