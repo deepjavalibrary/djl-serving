@@ -373,15 +373,25 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
         BytesSupplier data = output.getData();
         if (data instanceof ChunkedBytesSupplier) {
-            HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, true);
-            for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
-                resp.headers().set(entry.getKey(), entry.getValue());
-            }
-            NettyUtils.sendHttpResponse(ctx, resp, true);
-            ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
             try {
+                boolean first = true;
+                ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
                 while (supplier.hasNext()) {
                     byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.MINUTES);
+                    // Defer sending HTTP header until first chunk received.
+                    // This allows inference update HTTP code.
+                    if (first) {
+                        code = output.getCode();
+                        status = new HttpResponseStatus(code, output.getMessage());
+                        HttpResponse resp =
+                                new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, true);
+                        for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
+                            resp.headers().set(entry.getKey(), entry.getValue());
+                        }
+                        NettyUtils.sendHttpResponse(ctx, resp, true, false);
+                        first = false;
+                    }
+
                     ByteBuf bb = Unpooled.wrappedBuffer(buf);
                     ctx.writeAndFlush(new DefaultHttpContent(bb));
                 }
