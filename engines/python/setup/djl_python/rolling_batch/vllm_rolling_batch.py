@@ -49,6 +49,7 @@ class VLLMRollingBatch(RollingBatch):
                                              batch_size)
         for request in new_requests:
             request_id = random_uuid()
+            request.parameters.pop('seed', None)
             sampling_params = SamplingParams(**request.parameters)
             self.engine.add_request(request_id, request.input_text,
                                     sampling_params)
