@@ -220,6 +220,14 @@ class RollingBatch implements Runnable {
             JsonObject element = JsonUtils.GSON.fromJson(json, JsonObject.class);
             last = element.get("last").getAsBoolean();
             nextToken = element.get("data").getAsString();
+            try {
+                JsonObject content = JsonUtils.GSON.fromJson(nextToken, JsonObject.class);
+                output.setCode(content.get("code").getAsInt());
+                output.setMessage(content.get("error").getAsString());
+            } catch (Throwable ignore) {
+                // ignore
+            }
+
             data.appendContent(BytesSupplier.wrap(nextToken), last);
         }
     }
