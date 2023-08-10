@@ -300,11 +300,28 @@ public final class NettyUtils {
      */
     public static void sendHttpResponse(
             ChannelHandlerContext ctx, HttpResponse resp, boolean keepAlive) {
-        sendHttpResponse(ctx, resp, keepAlive, true);
+        sendHttpResponse(ctx, resp, keepAlive, true, true);
+    }
+
+    /**
+     * Send HTTP response to client.
+     *
+     * @param ctx ChannelHandlerContext
+     * @param resp HttpResponse to send
+     * @param keepAlive if keep the connection
+     * @param closeOnError close the connection if error
+     */
+    public static void sendHttpResponse(
+            ChannelHandlerContext ctx, HttpResponse resp, boolean keepAlive, boolean closeOnError) {
+        sendHttpResponse(ctx, resp, keepAlive, true, closeOnError);
     }
 
     private static void sendHttpResponse(
-            ChannelHandlerContext ctx, HttpResponse resp, boolean keepAlive, boolean noCache) {
+            ChannelHandlerContext ctx,
+            HttpResponse resp,
+            boolean keepAlive,
+            boolean noCache,
+            boolean closeOnError) {
         // Send the response and close the connection if necessary.
         Channel channel = ctx.channel();
         Session session = channel.attr(SESSION_KEY).getAndSet(null);
@@ -358,7 +375,7 @@ public final class NettyUtils {
         } else {
             HttpUtil.setTransferEncodingChunked(resp, true);
         }
-        if (!keepAlive || code >= 400) {
+        if (!keepAlive || (code >= 400 && closeOnError)) {
             headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             if (channel.isActive()) {
                 ChannelFuture f = channel.writeAndFlush(resp);
