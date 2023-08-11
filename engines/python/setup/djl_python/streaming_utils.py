@@ -38,8 +38,12 @@ class HFStreamer(BaseStreamer):
 
     def put(self, value):
         self.started = True
-        text = self.tokenizer.batch_decode(value, **self.decode_kwargs)
-        self.queue.put(text)
+        if len(value.shape) == 1:
+            value = [value]
+        result = []
+        for item in value:
+            result.append(self.tokenizer.decode(item, **self.decode_kwargs))
+        self.queue.put(result)
 
     def put_text(self, value):
         self.queue.put(value)
