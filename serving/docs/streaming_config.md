@@ -1,4 +1,4 @@
-# Streaming configuration
+# Streaming Python configuration
 
 We explain various options that can be configured while using response streaming when running in [Python mode](modes.md#python-mode). Response streaming can be enabled in djl-serving by setting `enable_streaming` option in `serving.properties` file.
 

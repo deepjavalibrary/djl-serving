@@ -3,7 +3,8 @@
 ## Available Plugins
 
 - [KServe plugin](../../plugins/kserve/README.md) - KServe V2 Protocol support
-- [Management console](../../plugins/management-console/README.md) - DJL Management console UI
+- [Management console plugin](../../plugins/management-console/README.md) - DJL Management console UI
+- [Cache plugin](../../plugins/cache/README.md) - Provides additional options for caches
 - [Static File plugin](../../plugins/static-file-plugin/README.md) - Allows DJL Serving to also serve static files
 - [Plugin Management plugin](../../plugins/plugin-management-plugin/README.md) - Adds plugin management to the management API
  

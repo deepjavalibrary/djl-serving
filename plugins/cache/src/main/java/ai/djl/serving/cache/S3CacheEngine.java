@@ -84,6 +84,16 @@ public class S3CacheEngine extends BaseCacheEngine {
         this.bucket = bucket;
         this.keyPrefix = keyPrefix;
 
+        if (bucket == null) {
+            throw new IllegalStateException(
+                    "When using the S3CacheEngine, the bucket can't be null or missing. Try setting"
+                            + " SERVING_S3_CACHE_BUCKET.");
+        }
+
+        if (keyPrefix == null) {
+            this.keyPrefix = "";
+        }
+
         if (asyncClient == null) {
             asyncClient = S3AsyncClient.builder().build();
         }

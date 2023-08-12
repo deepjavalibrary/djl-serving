@@ -20,3 +20,7 @@
 
 ### Reference from Kserve
 See [KServe Requirements](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md)
+
+## Instructions
+
+Instructions for using plugins can be found on the [main plugins page](../../serving/docs/plugin_management.md).
