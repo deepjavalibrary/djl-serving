@@ -124,7 +124,11 @@ public class PyModel extends BaseModel {
                         parallelLoading = Boolean.parseBoolean(value);
                         break;
                     case "tensor_parallel_degree":
-                        pyEnv.setTensorParallelDegree(Integer.parseInt(value));
+                        if ("max".equals(value)) {
+                            pyEnv.setTensorParallelDegree(PyEnv.getDefaultTensorParallelDegree());
+                        } else {
+                            pyEnv.setTensorParallelDegree(Integer.parseInt(value));
+                        }
                         break;
                     case "handler":
                         pyEnv.setHandler(value);
