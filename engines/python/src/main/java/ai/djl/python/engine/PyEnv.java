@@ -14,6 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
+import ai.djl.util.NeuronUtils;
 import ai.djl.util.Platform;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
@@ -309,11 +310,21 @@ public class PyEnv {
     public int getTensorParallelDegree() {
         if (tensorParallelDegree == 0) {
             String value = Utils.getenv("TENSOR_PARALLEL_DEGREE");
-            if (value != null) {
+            if ("max".equals(value)) {
+                tensorParallelDegree = getDefaultTensorParallelDegree();
+            } else if (value != null) {
                 tensorParallelDegree = Integer.parseInt(value);
             }
         }
         return tensorParallelDegree;
+    }
+
+    static int getDefaultTensorParallelDegree() {
+        int gpus = CudaUtils.getGpuCount();
+        if (gpus > 0) {
+            return gpus;
+        }
+        return NeuronUtils.getNeuronCores();
     }
 
     /**
