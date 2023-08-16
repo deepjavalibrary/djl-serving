@@ -29,6 +29,7 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
@@ -184,8 +185,9 @@ public class KServeRequestHandler implements RequestHandler<Void> {
                 continue;
             }
 
-            for (ModelInfo<Input, Output> modelInfo : wf.getModels()) {
-                if (modelInfo.getStatus() == ModelInfo.Status.READY) {
+            for (WorkerPoolConfig<Input, Output> wpc : wf.getWpcs()) {
+                if (wpc.getStatus() == WorkerPoolConfig.Status.READY && wpc instanceof ModelInfo) {
+                    ModelInfo<Input, Output> modelInfo = (ModelInfo<Input, Output>) wpc;
                     response.name = wf.getName();
                     response.setPlatform(modelInfo.getEngineName());
                     Device device = modelInfo.getModels().keySet().iterator().next();
@@ -242,11 +244,11 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         if (segments.length > 5) {
             modelVersion = segments[5];
         }
-        ModelInfo<Input, Output> modelInfo = getModelInfo(modelName, modelVersion);
-        ModelInfo.Status status = modelInfo.getStatus();
+        WorkerPoolConfig<Input, Output> wpc = getWpc(modelName, modelVersion);
+        ModelInfo.Status status = wpc.getStatus();
 
         HttpResponseStatus httpResponseStatus;
-        if (status == ModelInfo.Status.READY) {
+        if (status == WorkerPoolConfig.Status.READY) {
             httpResponseStatus = HttpResponseStatus.OK;
         } else {
             httpResponseStatus = HttpResponseStatus.FAILED_DEPENDENCY;
@@ -254,13 +256,13 @@ public class KServeRequestHandler implements RequestHandler<Void> {
         NettyUtils.sendJsonResponse(ctx, EMPTY_BODY, httpResponseStatus);
     }
 
-    private ModelInfo<Input, Output> getModelInfo(String modelName, String modelVersion)
+    private WorkerPoolConfig<Input, Output> getWpc(String modelName, String modelVersion)
             throws ModelNotFoundException {
         ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(modelName, modelVersion, false);
-        Collection<ModelInfo<Input, Output>> models;
+        Collection<WorkerPoolConfig<Input, Output>> models;
         if (workflow != null) {
-            models = workflow.getModels();
+            models = workflow.getWpcs();
         } else {
             models = Collections.emptyList();
         }

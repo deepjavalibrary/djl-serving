@@ -14,14 +14,14 @@ package ai.djl.serving.workflow;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
-import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.WorkflowExpression.Item.ItemType;
 import ai.djl.serving.workflow.function.EnsembleMerge;
 import ai.djl.serving.workflow.function.FunctionsApply;
 import ai.djl.serving.workflow.function.IdentityWF;
-import ai.djl.serving.workflow.function.ModelWorkflowFunction;
+import ai.djl.serving.workflow.function.WlmWorkflowFunction;
 import ai.djl.serving.workflow.function.WorkflowFunction;
 
 import org.slf4j.Logger;
@@ -58,21 +58,21 @@ public class Workflow {
 
     String name;
     String version;
-    Map<String, ModelInfo<Input, Output>> models;
+    Map<String, WorkerPoolConfig<Input, Output>> wpcs;
     Map<String, WorkflowExpression> expressions;
     Map<String, WorkflowFunction> funcs;
     Map<String, Map<String, Object>> configs;
 
     /**
-     * Constructs a workflow containing only a single model.
+     * Constructs a workflow containing only a single workerPoolConfig.
      *
-     * @param model the model for the workflow
+     * @param wpc the workerPoolConfig for the workflow
      */
-    public Workflow(ModelInfo<Input, Output> model) {
+    public Workflow(WorkerPoolConfig<Input, Output> wpc) {
         String modelName = "model";
-        this.name = model.getId();
-        this.version = model.getVersion();
-        models = Collections.singletonMap(modelName, model);
+        this.name = wpc.getId();
+        this.version = wpc.getVersion();
+        wpcs = Collections.singletonMap(modelName, wpc);
         expressions =
                 Collections.singletonMap(
                         OUT, new WorkflowExpression(new Item(modelName), new Item(IN)));
@@ -85,7 +85,7 @@ public class Workflow {
      *
      * @param name workflow name
      * @param version workflow version
-     * @param models a map of executableNames for a model (how it is referred to in the {@link
+     * @param wpcs a map of executableNames for a wpc (how it is referred to in the {@link
      *     WorkflowExpression}s to model
      * @param expressions a map of names to refer to an expression to the expression
      * @param configs the configuration objects
@@ -94,34 +94,34 @@ public class Workflow {
     public Workflow(
             String name,
             String version,
-            Map<String, ModelInfo<Input, Output>> models,
+            Map<String, WorkerPoolConfig<Input, Output>> wpcs,
             Map<String, WorkflowExpression> expressions,
             Map<String, Map<String, Object>> configs,
             Map<String, WorkflowFunction> funcs) {
         this.name = name;
         this.version = version;
-        this.models = models;
+        this.wpcs = wpcs;
         this.expressions = expressions;
         this.funcs = funcs;
         this.configs = configs;
     }
 
     /**
-     * Returns the models used in the workflow.
+     * Returns the {@link WorkerPoolConfig}s used in the workflow.
      *
-     * @return the models used in the workflow
+     * @return the wpcs used in the workflow
      */
-    public Collection<ModelInfo<Input, Output>> getModels() {
-        return models.values();
+    public Collection<WorkerPoolConfig<Input, Output>> getWpcs() {
+        return wpcs.values();
     }
 
     /**
-     * Returns the model map in the workflow.
+     * Returns the wpc map in the workflow.
      *
-     * @return the model map in the workflow
+     * @return the wpc map in the workflow
      */
-    public Map<String, ModelInfo<Input, Output>> getModelMap() {
-        return models;
+    public Map<String, WorkerPoolConfig<Input, Output>> getWpcMap() {
+        return wpcs;
     }
 
     /**
@@ -194,10 +194,10 @@ public class Workflow {
         return name;
     }
 
-    /** Stops the workflow and unloads all the models in the workflow. */
+    /** Stops the workflow and unloads all the wpcs in the workflow. */
     public void stop() {
-        for (ModelInfo<Input, Output> m : getModels()) {
-            m.close();
+        for (WorkerPoolConfig<Input, Output> wpc : getWpcs()) {
+            wpc.close();
         }
     }
 
@@ -299,9 +299,9 @@ public class Workflow {
          * @return the function to execute the found executable
          */
         public WorkflowFunction getExecutable(String name) {
-            ModelInfo<Input, Output> model = models.get(name);
-            if (model != null) {
-                return new ModelWorkflowFunction(model);
+            WorkerPoolConfig<Input, Output> wpc = wpcs.get(name);
+            if (wpc != null) {
+                return new WlmWorkflowFunction(wpc);
             }
 
             if (funcs.containsKey(name)) {

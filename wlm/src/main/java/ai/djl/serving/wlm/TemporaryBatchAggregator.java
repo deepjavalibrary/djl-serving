@@ -37,14 +37,14 @@ public class TemporaryBatchAggregator<I, O> extends BatchAggregator<I, O> {
     /**
      * a batch aggregator that terminates after a maximum idle time.
      *
-     * @param model the model to run for.
+     * @param wpc the workerPoolConfig to run for.
      * @param jobQueue reference to external job queue for polling.
      */
     public TemporaryBatchAggregator(
-            ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
-        super(model, jobQueue);
+            WorkerPoolConfig<I, O> wpc, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
+        super(wpc, jobQueue);
         this.idleSince = System.currentTimeMillis();
-        this.maxIdleSeconds = model.getMaxIdleSeconds();
+        this.maxIdleSeconds = wpc.getMaxIdleSeconds();
     }
 
     /** {@inheritDoc} */

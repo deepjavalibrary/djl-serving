@@ -18,6 +18,8 @@ import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
+import ai.djl.inference.Predictor;
+import ai.djl.metric.Metrics;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.NDManager;
@@ -30,6 +32,7 @@ import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
+import ai.djl.translate.TranslateException;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
@@ -58,24 +61,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /** A class represent a loaded model and it's metadata. */
-public final class ModelInfo<I, O> {
+public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelInfo.class);
+    private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private static final Pattern PATTERN = Pattern.compile("MemAvailable:\\s+(\\d+) kB");
 
-    private transient String id;
-    private String version;
-    private String modelUrl;
     private String engineName;
     private String loadOnDevices;
-
-    private int queueSize;
-    private int batchSize;
-    private int maxBatchDelayMillis;
-    private int maxIdleSeconds;
-    private Integer minWorkers; // Integer so it becomes null when parsed from JSON
-    private Integer maxWorkers;
 
     // the following fields can be loaded from workflow json file
     private Map<String, String> filters;
@@ -184,13 +178,8 @@ public final class ModelInfo<I, O> {
         modelUrl = modelUrl.replaceAll("\\{model_dir}", workflowDir);
     }
 
-    /**
-     * Loads the model to the specified device.
-     *
-     * @param device the device to load model on
-     * @throws IOException if failed to read model file
-     * @throws ModelException if failed to load the specified model
-     */
+    /** {@inheritDoc} */
+    @Override
     @SuppressWarnings("unchecked")
     public void load(Device device) throws ModelException, IOException {
         if (getModels().containsKey(device)) {
@@ -279,31 +268,10 @@ public final class ModelInfo<I, O> {
         return getModels().get(device);
     }
 
-    /**
-     * Sets the model ID.
-     *
-     * @param id the model ID
-     */
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    /**
-     * Returns the model ID.
-     *
-     * @return the model ID
-     */
-    public String getId() {
-        return id;
-    }
-
-    /**
-     * Returns the model version.
-     *
-     * @return the model version
-     */
-    public String getVersion() {
-        return version;
+    /** {@inheritDoc} */
+    @Override
+    public ThreadType<I, O> newThread(Device device) {
+        return new ModelThread(device);
     }
 
     /**
@@ -315,20 +283,8 @@ public final class ModelInfo<I, O> {
         return engineName;
     }
 
-    /**
-     * Returns the model url.
-     *
-     * @return the model url
-     */
-    public String getModelUrl() {
-        return modelUrl;
-    }
-
-    /**
-     * Returns the model loading status.
-     *
-     * @return the model loading status
-     */
+    /** {@inheritDoc} */
+    @Override
     public Status getStatus() {
         if (status == null) {
             return Status.PENDING;
@@ -385,102 +341,8 @@ public final class ModelInfo<I, O> {
         this.outputClass = outputClass;
     }
 
-    /**
-     * Sets the configured max idle time in seconds of workers.
-     *
-     * @param maxIdleSeconds the configured max idle time in seconds of workers
-     */
-    public void setMaxIdleSeconds(int maxIdleSeconds) {
-        this.maxIdleSeconds = maxIdleSeconds;
-    }
-
-    /**
-     * Returns the configured max idle time in seconds of workers.
-     *
-     * @return the max idle time in seconds
-     */
-    public int getMaxIdleSeconds() {
-        return maxIdleSeconds;
-    }
-
-    /**
-     * Sets the configured batch size.
-     *
-     * @param batchSize the configured batch size
-     */
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-    }
-
-    /**
-     * Returns the configured batch size.
-     *
-     * @return the configured batch size
-     */
-    public int getBatchSize() {
-        return batchSize;
-    }
-
-    /**
-     * Sets the maximum delay in milliseconds to aggregate a batch.
-     *
-     * @param maxBatchDelayMillis the maximum delay in milliseconds to aggregate a batch
-     */
-    public void setMaxBatchDelayMillis(int maxBatchDelayMillis) {
-        this.maxBatchDelayMillis = maxBatchDelayMillis;
-    }
-
-    /**
-     * Returns the maximum delay in milliseconds to aggregate a batch.
-     *
-     * @return the maximum delay in milliseconds to aggregate a batch
-     */
-    public int getMaxBatchDelayMillis() {
-        return maxBatchDelayMillis;
-    }
-
-    /**
-     * Sets the configured size of the workers queue.
-     *
-     * @param queueSize the configured size of the workers queue
-     */
-    public void setQueueSize(int queueSize) {
-        this.queueSize = queueSize;
-    }
-
-    /**
-     * Returns the configured size of the workers queue.
-     *
-     * @return requested size of the workers queue.
-     */
-    public int getQueueSize() {
-        return queueSize;
-    }
-
-    /**
-     * Sets the minimum number of workers.
-     *
-     * @param minWorkers the new minimum number of workers
-     */
-    public void setMinWorkers(int minWorkers) {
-        if (maxWorkers != null && maxWorkers < minWorkers) {
-            throw new IllegalArgumentException(
-                    "The max workers for a model can't be smaller than the min workers");
-        }
-        if (minWorkers == 0) {
-            throw new IllegalArgumentException(
-                    "Having a minWorkers of 0 is not currently supported");
-        }
-
-        this.minWorkers = minWorkers;
-    }
-
-    /**
-     * Returns the minimum number of workers.
-     *
-     * @param device the device to get the min workers for
-     * @return the minimum number of workers
-     */
+    /** {@inheritDoc} */
+    @Override
     public int getMinWorkers(Device device) {
         if (minWorkers != null && minWorkers >= 0) {
             return minWorkers;
@@ -489,52 +351,8 @@ public final class ModelInfo<I, O> {
         return getWorkersMinMaxProperty(getModel(device), device, "minWorkers", 1);
     }
 
-    /**
-     * Sets the maximum number of workers.
-     *
-     * @param maxWorkers the new maximum number of workers
-     */
-    public void setMaxWorkers(int maxWorkers) {
-        if (minWorkers != null && maxWorkers < minWorkers) {
-            throw new IllegalArgumentException(
-                    "The max workers for a model can't be smaller than the min workers");
-        }
-        if (maxWorkers == 0) {
-            throw new IllegalArgumentException("Models must have a maxWorkers greater than 0");
-        }
-
-        this.maxWorkers = maxWorkers;
-    }
-
-    /**
-     * Sets the minimum and maximum number of workers.
-     *
-     * @param minWorkers the new minimum number of workers
-     * @param maxWorkers the new maximum number of workers
-     */
-    public void setMinMaxWorkers(int minWorkers, int maxWorkers) {
-        if (maxWorkers < minWorkers) {
-            throw new IllegalArgumentException(
-                    "The max workers for a model can't be smaller than the min workers");
-        }
-        if (minWorkers == 0) {
-            throw new IllegalArgumentException(
-                    "Having a minWorkers of 0 is not currently supported");
-        }
-        if (maxWorkers == 0) {
-            throw new IllegalArgumentException("Models must have a maxWorkers greater than 0");
-        }
-
-        this.minWorkers = minWorkers;
-        this.maxWorkers = maxWorkers;
-    }
-
-    /**
-     * Returns the maximum number of workers.
-     *
-     * @param device the device to get the min workers for
-     * @return the maximum number of workers
-     */
+    /** {@inheritDoc} */
+    @Override
     public int getMaxWorkers(Device device) {
         if (maxWorkers != null && maxWorkers >= 0) {
             return maxWorkers;
@@ -591,12 +409,8 @@ public final class ModelInfo<I, O> {
         return def;
     }
 
-    /**
-     * Initialize the model.
-     *
-     * @throws IOException if failed to download model
-     * @throws ModelNotFoundException if model not found
-     */
+    /** {@inheritDoc} */
+    @Override
     public void initialize() throws IOException, ModelException {
         downloadModel();
         loadServingProperties();
@@ -618,7 +432,8 @@ public final class ModelInfo<I, O> {
         }
     }
 
-    /** Close all loaded models. */
+    /** {@inheritDoc} */
+    @Override
     public void close() {
         if (!getModels().isEmpty() && !Boolean.getBoolean("ai.djl.serving.keep_cache")) {
             logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
@@ -668,12 +483,8 @@ public final class ModelInfo<I, O> {
         return modelName;
     }
 
-    /**
-     * Returns the default device for this model if device is null.
-     *
-     * @param deviceName the device to use if it is not null
-     * @return a non-null device
-     */
+    /** {@inheritDoc} */
+    @Override
     public Device withDefaultDevice(String deviceName) {
         return Device.fromName(deviceName, Engine.getEngine(engineName));
     }
@@ -881,11 +692,8 @@ public final class ModelInfo<I, O> {
         }
     }
 
-    /**
-     * Returns the devices the model will be loaded on at startup.
-     *
-     * @return the devices the model will be loaded on at startup
-     */
+    /** {@inheritDoc} */
+    @Override
     public String[] getLoadOnDevices() {
         Engine engine = Engine.getEngine(engineName);
         if ("*".equals(loadOnDevices)) {
@@ -948,11 +756,8 @@ public final class ModelInfo<I, O> {
         return new String[] {"-1"};
     }
 
-    /**
-     * Returns if the model can be load parallel on multiple devices.
-     *
-     * @return if the model can be load parallel on multiple devices
-     */
+    /** {@inheritDoc} */
+    @Override
     public boolean isParallelLoading() {
         return Boolean.parseBoolean(prop.getProperty("option.parallel_loading"));
     }
@@ -1067,38 +872,37 @@ public final class ModelInfo<I, O> {
         return Integer.parseInt(value);
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof ModelInfo)) {
-            return false;
-        }
-        ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) o;
-        return id.equals(modelInfo.id) && Objects.equals(version, modelInfo.version);
-    }
+    protected class ModelThread extends ThreadType<I, O> {
 
-    /** {@inheritDoc} */
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, version);
-    }
+        private Predictor<I, O> predictor;
+        ZooModel<I, O> model;
 
-    /** {@inheritDoc} */
-    @Override
-    public String toString() {
-        if (version != null) {
-            return id + ':' + version + " (" + getStatus() + ')';
+        protected ModelThread(Device device) {
+            super(device);
+            model = getModel(device);
+            predictor = model.newPredictor();
+
+            boolean logModelMetric = Boolean.parseBoolean(model.getProperty("log_model_metric"));
+            if (logModelMetric) {
+                int metricsAggregation =
+                        Integer.parseInt(model.getProperty("metrics_aggregation", "1000"));
+                Metrics metrics = new Metrics();
+                metrics.setLimit(metricsAggregation);
+                metrics.setOnLimit((m, s) -> MODEL_METRIC.info("{}-{}", id, m.percentile(s, 50)));
+                predictor.setMetrics(metrics);
+            }
         }
-        return id + " (" + getStatus() + ')';
-    }
 
-    /** An enum represents state of a model. */
-    public enum Status {
-        PENDING,
-        READY,
-        FAILED
+        /** {@inheritDoc} */
+        @Override
+        public List<O> run(List<I> input) throws TranslateException {
+            return predictor.batchPredict(input);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public void close() {
+            predictor.close();
+        }
     }
 }

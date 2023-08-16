@@ -15,25 +15,28 @@ package ai.djl.serving.workflow.function;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.serving.wlm.Job;
-import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/** An internal {@link WorkflowFunction} that is used to execute models in the workflow. */
-public class ModelWorkflowFunction extends WorkflowFunction {
+/**
+ * An internal {@link WorkflowFunction} that is used to execute a {@link WorkerPoolConfig}
+ * (typically a model) through the {@link ai.djl.serving.wlm.WorkLoadManager} in the workflow.
+ */
+public class WlmWorkflowFunction extends WorkflowFunction {
 
-    ModelInfo<Input, Output> model;
+    WorkerPoolConfig<Input, Output> workerPoolConfig;
 
     /**
-     * Constructs a {@link ModelWorkflowFunction} with a given model.
+     * Constructs a {@link WlmWorkflowFunction} with a given workerPoolConfig.
      *
-     * @param model the model to run
+     * @param wpc the workerPoolConfig to run
      */
-    public ModelWorkflowFunction(ModelInfo<Input, Output> model) {
-        this.model = model;
+    public WlmWorkflowFunction(WorkerPoolConfig<Input, Output> wpc) {
+        this.workerPoolConfig = wpc;
     }
 
     /** {@inheritDoc} */
@@ -43,14 +46,20 @@ public class ModelWorkflowFunction extends WorkflowFunction {
             Workflow.WorkflowExecutor executor, List<Workflow.WorkflowArgument> args) {
         if (args.size() != 1) {
             throw new IllegalArgumentException(
-                    "The model " + model.getId() + " should have one arg, but has " + args.size());
+                    "The model or worker type "
+                            + workerPoolConfig.getId()
+                            + " should have one arg, but has "
+                            + args.size());
         }
 
         return evaluateArgs(args)
                 .thenComposeAsync(
                         processedArgs ->
                                 executor.getWlm()
-                                        .runJob(new Job<>(model, processedArgs.get(0).getInput()))
+                                        .runJob(
+                                                new Job<>(
+                                                        workerPoolConfig,
+                                                        processedArgs.get(0).getInput()))
                                         .thenApply(Item::new));
     }
 }

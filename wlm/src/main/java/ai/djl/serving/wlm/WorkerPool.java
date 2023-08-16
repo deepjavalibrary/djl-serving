@@ -40,7 +40,7 @@ public class WorkerPool<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerPool.class);
 
-    private final ModelInfo<I, O> model;
+    private final WorkerPoolConfig<I, O> wpc;
     private ExecutorService threadPool;
     private Map<Device, WorkerGroup<I, O>> workerGroups;
     private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
@@ -49,11 +49,11 @@ public class WorkerPool<I, O> {
     /**
      * Construct and initial data structure.
      *
-     * @param model the model this WorkerPool belongs to
+     * @param wpc the model this WorkerPool belongs to
      * @param threadPool the thread pool executor
      */
-    WorkerPool(ModelInfo<I, O> model, ExecutorService threadPool) {
-        this.model = model;
+    WorkerPool(WorkerPoolConfig<I, O> wpc, ExecutorService threadPool) {
+        this.wpc = wpc;
         this.threadPool = threadPool;
         workerGroups = new ConcurrentHashMap<>();
         refCnt = new AtomicInteger(1);
@@ -78,8 +78,8 @@ public class WorkerPool<I, O> {
      *
      * @return the model of the worker pool
      */
-    public ModelInfo<I, O> getModel() {
-        return model;
+    public WorkerPoolConfig<I, O> getWpc() {
+        return wpc;
     }
 
     ExecutorService getThreadPool() {
@@ -188,23 +188,23 @@ public class WorkerPool<I, O> {
      */
     public void initWorkers(String deviceName, int minWorkers, int maxWorkers) {
         Device device;
-        synchronized (model) {
+        synchronized (wpc) {
             try {
-                model.initialize();
-                device = model.withDefaultDevice(deviceName);
-                logger.info("loading model {} on {} ...", model, device);
-                model.load(device);
+                wpc.initialize();
+                device = wpc.withDefaultDevice(deviceName);
+                logger.info("loading model {} on {} ...", wpc, device);
+                wpc.load(device);
             } catch (ModelException | IOException e) {
                 throw new CompletionException(e);
             }
-            if (model.getStatus() != ModelInfo.Status.READY) {
-                logger.warn("Cannot scale workers while model is not READY: {}", model);
+            if (wpc.getStatus() != WorkerPoolConfig.Status.READY) {
+                logger.warn("Cannot scale workers while model is not READY: {}", wpc);
             }
         }
 
         // jobQueue should be initialized after model is configure
         if (jobQueue == null) {
-            jobQueue = new LinkedBlockingDeque<>(model.getQueueSize());
+            jobQueue = new LinkedBlockingDeque<>(wpc.getQueueSize());
         }
         cleanup();
 
@@ -267,7 +267,7 @@ public class WorkerPool<I, O> {
 
     /** Shutdown all works. */
     public void shutdownWorkers() {
-        synchronized (model) {
+        synchronized (wpc) {
             List<WorkerThread<I, O>> threads = getWorkers();
             for (WorkerThread<I, O> thread : threads) {
                 thread.shutdown(WorkerState.WORKER_SCALED_DOWN);
@@ -285,7 +285,7 @@ public class WorkerPool<I, O> {
 
     /** Shuts down all the worker threads in the work pool. */
     public void shutdown() {
-        model.close();
+        wpc.close();
         for (WorkerGroup<I, O> group : workerGroups.values()) {
             for (WorkerThread<I, O> worker : group.workers) {
                 worker.shutdown(WorkerState.WORKER_STOPPED);
@@ -338,7 +338,7 @@ public class WorkerPool<I, O> {
                                     buf.append("-tmpPool\n");
                                 }
                             });
-            logger.debug("worker pool for model {}:\n {}", model, buf);
+            logger.debug("worker pool for model {}:\n {}", wpc, buf);
         }
     }
 }

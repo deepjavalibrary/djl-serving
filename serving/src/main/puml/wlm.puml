@@ -1,0 +1,50 @@
+@startuml
+skinparam componentStyle uml1
+
+package "DJL Serving WorkLoad Manager" as wlm {
+  frame "Worker pool (mlp)" as wp_mlp {
+
+    queue "Job queue\nauto batch" as jq_mlp
+
+    frame "WorkerGroup (CPU)" as wg_mlp {
+
+      [Predictor WorkerThread 1]
+      [Predictor WorkerThread 2]
+      [Predictor WorkerThread 3]
+      [Predictor WorkerThread 4]
+    }
+  }
+
+  frame "Worker pool (resnet18_v1)" as wp_resnet {
+
+    queue "Job queue\nauto batch" as jq_resnet
+
+    frame "WorkerGroup (GPU0)" as wg0 {
+      [Predictor WorkerThread] as wt0
+    }
+  }
+
+  frame "Worker pool (llama)" as wp_llama {
+    queue "Job queue\nauto batch" as jq_llama
+
+    frame "WorkerGroup (GPU1)" as wg1 {
+      [Predictor WorkerThread] as wt1
+    }
+    frame "WorkerGroup (GPU2)" as wg2 {
+      [Predictor WorkerThread] as wt2
+    }
+    wg1-[hidden]down-wg2
+  }
+  wp_mlp-[hidden]down-wp_resnet
+  wp_resnet-[hidden]down-wp_llama
+}
+
+frame "Python Workers" {
+    [Worker llama GPU1] as py1
+    [Worker llama GPU2] as py2
+    py1-[hidden]down-py2
+}
+
+wt1 -> py1
+wt2 -> py2
+@enduml

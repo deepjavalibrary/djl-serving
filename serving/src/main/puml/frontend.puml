@@ -1,0 +1,39 @@
+@startuml
+skinparam componentStyle uml1
+package "DJL Serving - single process" {
+
+  frame ModelManager as mm {
+    frame "Endpoints" {
+      frame "Endpoint mlp" {
+        [Workflow 0] as w0
+      }
+    }
+  }
+
+  frame Netty {
+      package REST_API [
+          /resnet18
+          ..
+          /resnet18/v1
+          ..
+          /resnet18/v2
+          --
+          /BERT
+          ===
+          Management API
+      ]
+
+    package HttpRequestHandlers [
+        InferenceRequestHandler
+        ManagementRequestHandler
+        KServeRequestHandler
+        ...
+    ]
+    HTTP -r-> REST_API
+  }
+
+  REST_API -r-> HttpRequestHandlers
+  HttpRequestHandlers -r-> w0
+
+}
+@enduml

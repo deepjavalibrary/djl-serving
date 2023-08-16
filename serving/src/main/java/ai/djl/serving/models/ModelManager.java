@@ -24,6 +24,7 @@ import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerPool;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.Workflow;
 
 import org.slf4j.Logger;
@@ -88,41 +89,56 @@ public final class ModelManager {
 
         return CompletableFuture.supplyAsync(
                 () -> {
-                    Map<String, ModelInfo<Input, Output>> models = workflow.getModelMap();
-                    for (Map.Entry<String, ModelInfo<Input, Output>> entry : models.entrySet()) {
+                    Map<String, WorkerPoolConfig<Input, Output>> wpcs = workflow.getWpcMap();
+                    for (Map.Entry<String, WorkerPoolConfig<Input, Output>> entry :
+                            wpcs.entrySet()) {
                         String key = entry.getKey();
-                        ModelInfo<Input, Output> model = entry.getValue();
+                        WorkerPoolConfig<Input, Output> workerPoolConfig = entry.getValue();
                         try {
                             // download model and configure per model settings
-                            model.initialize();
+                            workerPoolConfig.initialize();
 
                             // Install engine if necessary
-                            String engine = model.getEngineName();
-                            DependencyManager dm = DependencyManager.getInstance();
-                            dm.installEngine(engine);
-                            Thread.currentThread()
-                                    .setContextClassLoader(MutableClassLoader.getInstance());
-                            WorkerPool<Input, Output> wp = wlm.getWorkerPool(model);
-                            if (wp != null) {
-                                models.put(key, wp.getModel());
-                                wp.increaseRef();
-                                logger.info("Model {} is registered by other workflow", model);
-                                continue;
+                            String engine = null;
+                            if (workerPoolConfig instanceof ModelInfo) {
+                                ModelInfo<Input, Output> model =
+                                        (ModelInfo<Input, Output>) workerPoolConfig;
+                                engine = model.getEngineName();
+                                DependencyManager dm = DependencyManager.getInstance();
+                                dm.installEngine(engine);
+                                Thread.currentThread()
+                                        .setContextClassLoader(MutableClassLoader.getInstance());
+                                WorkerPool<Input, Output> wp = wlm.getWorkerPool(model);
+                                if (wp != null) {
+                                    wpcs.put(key, wp.getWpc());
+                                    wp.increaseRef();
+                                    logger.info("Model {} is registered by other workflow", model);
+                                    continue;
+                                }
                             }
 
-                            wlm.registerModel(model);
-                            String[] devices = model.getLoadOnDevices();
-                            logger.info("Loading model on {}:{}", engine, Arrays.toString(devices));
+                            wlm.registerWorkerPool(workerPoolConfig);
+                            String[] devices = workerPoolConfig.getLoadOnDevices();
+                            if (engine != null) {
+                                logger.info(
+                                        "Loading model on {}:{}", engine, Arrays.toString(devices));
+                            } else {
+                                logger.info("Loading worker: {}", Arrays.toString(devices));
+                            }
                             ExecutorService pool = null;
                             List<Future<?>> futures = new ArrayList<>();
-                            if (model.isParallelLoading()) {
+                            if (workerPoolConfig.isParallelLoading()) {
                                 pool = Executors.newFixedThreadPool(devices.length);
                             }
                             for (String deviceName : devices) {
                                 if (pool != null) {
-                                    futures.add(pool.submit(() -> initWorkers(model, deviceName)));
+                                    futures.add(
+                                            pool.submit(
+                                                    () ->
+                                                            initWorkers(
+                                                                    workerPoolConfig, deviceName)));
                                 } else {
-                                    initWorkers(model, deviceName);
+                                    initWorkers(workerPoolConfig, deviceName);
                                 }
                             }
                             if (pool != null) {
@@ -159,11 +175,11 @@ public final class ModelManager {
             logger.warn("Model not found: {}", workflowName);
             return false;
         }
-        Set<ModelInfo<Input, Output>> candidateModelsToUnregister = new HashSet<>();
+        Set<WorkerPoolConfig<Input, Output>> candidateWpcsToUnregister = new HashSet<>();
         if (version == null) {
             // unregister all versions
             for (Workflow workflow : endpoint.getWorkflows()) {
-                candidateModelsToUnregister.addAll(workflow.getModels());
+                candidateWpcsToUnregister.addAll(workflow.getWpcs());
                 workflow.stop();
             }
             startupWorkflows.remove(workflowName);
@@ -175,7 +191,7 @@ public final class ModelManager {
                 logger.warn("Workflow not found: {}:{}", workflowName, version);
                 return false;
             }
-            candidateModelsToUnregister.addAll(workflow.getModels());
+            candidateWpcsToUnregister.addAll(workflow.getWpcs());
             workflow.stop();
             startupWorkflows.remove(workflowName);
             logger.info("Model {}/{} unregistered.", workflowName, version);
@@ -185,39 +201,42 @@ public final class ModelManager {
         }
 
         // Unregister candidate models if they are not used for a remaining endpoint
-        candidateModelsToUnregister.removeAll(getModels());
-        for (ModelInfo<Input, Output> model : candidateModelsToUnregister) {
-            wlm.unregisterModel(model);
+        candidateWpcsToUnregister.removeAll(getWpcs());
+        for (WorkerPoolConfig<Input, Output> wpc : candidateWpcsToUnregister) {
+            wlm.unregisterWorkerPool(wpc);
         }
 
         return true;
     }
 
     /**
-     * Initializes the workers for a model.
+     * Initializes the workers for a workerPoolConfig.
      *
-     * @param model the model to scale workers for
-     * @param deviceName the device for the model
+     * @param wpc the workerPoolConfig to scale workers for
+     * @param deviceName the device for the workerPoolConfig
      * @see WorkerPool#initWorkers(String)
      */
-    public void initWorkers(ModelInfo<Input, Output> model, String deviceName) {
+    public void initWorkers(WorkerPoolConfig<Input, Output> wpc, String deviceName) {
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
-        wlm.getWorkerPool(model).initWorkers(deviceName);
+        wlm.getWorkerPool(wpc).initWorkers(deviceName);
     }
 
     /**
      * Scales the workers for a model.
      *
-     * @param model the model to scale workers for
+     * @param wpc the model to scale workers for
      * @param deviceName the device for the model
      * @param minWorkers the min workers, -1 for auto-scale
      * @param maxWorkers the max workers, -1 for auto-scale
      * @see WorkerPool#scaleWorkers(String, int, int)
      */
     public void scaleWorkers(
-            ModelInfo<Input, Output> model, String deviceName, int minWorkers, int maxWorkers) {
+            WorkerPoolConfig<Input, Output> wpc,
+            String deviceName,
+            int minWorkers,
+            int maxWorkers) {
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
-        wlm.getWorkerPool(model).scaleWorkers(deviceName, minWorkers, maxWorkers);
+        wlm.getWorkerPool(wpc).scaleWorkers(deviceName, minWorkers, maxWorkers);
     }
 
     /**
@@ -230,14 +249,14 @@ public final class ModelManager {
     }
 
     /**
-     * Returns all models in an endpoint.
+     * Returns all {@link WorkerPoolConfig}s in an endpoint.
      *
-     * @return all models in an endpoint
+     * @return all {@link WorkerPoolConfig}s in an endpoint
      */
-    public Set<ModelInfo<Input, Output>> getModels() {
+    public Set<WorkerPoolConfig<Input, Output>> getWpcs() {
         return getEndpoints().values().stream()
                 .flatMap(e -> e.getWorkflows().stream())
-                .flatMap(w -> w.getModels().stream())
+                .flatMap(w -> w.getWpcs().stream())
                 .collect(Collectors.toSet());
     }
 
@@ -350,12 +369,12 @@ public final class ModelManager {
                     for (Endpoint endpoint : endpoints.values()) {
                         for (Workflow wf : endpoint.getWorkflows()) {
                             String workflowName = wf.getName();
-                            for (ModelInfo<Input, Output> m : wf.getModels()) {
-                                String modelName = m.getId();
+                            for (WorkerPoolConfig<Input, Output> wpc : wf.getWpcs()) {
+                                String modelName = wpc.getId();
                                 if (!modelName.equals(workflowName)) {
                                     modelName = workflowName + ':' + modelName; // NOPMD
                                 }
-                                ModelInfo.Status status = m.getStatus();
+                                WorkerPoolConfig.Status status = wpc.getStatus();
                                 switch (status) {
                                     case FAILED:
                                         data.put(modelName, new StatusResponse(status.name()));
@@ -366,7 +385,7 @@ public final class ModelManager {
                                         hasPending = true;
                                         break;
                                     default:
-                                        if (wlm.getWorkerPool(m).isFullyScaled()) {
+                                        if (wlm.getWorkerPool(wpc).isFullyScaled()) {
                                             data.put(modelName, new StatusResponse("Healthy"));
                                         } else {
                                             data.put(modelName, new StatusResponse("Unhealthy"));

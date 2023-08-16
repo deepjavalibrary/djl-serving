@@ -44,13 +44,14 @@ abstract class BatchAggregator<I, O> {
     /**
      * Constructs a new {@code BbatchAggregator} instance.
      *
-     * @param model the model to use.
+     * @param wpc the workerPoolConfig to use.
      * @param jobQueue the job queue for polling data from.
      */
-    public BatchAggregator(ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
-        this.dimension = new Dimension("Model", model.getId());
-        this.batchSize = model.getBatchSize();
-        this.maxBatchDelayMicros = model.getMaxBatchDelayMillis() * 1000L;
+    public BatchAggregator(
+            WorkerPoolConfig<I, O> wpc, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
+        this.dimension = new Dimension("Model", wpc.getId());
+        this.batchSize = wpc.getBatchSize();
+        this.maxBatchDelayMicros = wpc.getMaxBatchDelayMillis() * 1000L;
         this.jobQueue = jobQueue;
         wjs = new ArrayList<>();
     }

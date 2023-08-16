@@ -23,6 +23,7 @@ import ai.djl.modality.Classifications.Classification;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
 import ai.djl.serving.http.DescribeWorkflowResponse;
+import ai.djl.serving.http.DescribeWorkflowResponse.DescribeWorkerPoolConfig;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.ListModelsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse;
@@ -476,7 +477,7 @@ public class ModelServerTest {
         Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
         DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
         DescribeWorkflowResponse wf = resp[0];
-        DescribeWorkflowResponse.Model model = wf.getModels().get(0);
+        DescribeWorkerPoolConfig model = wf.getWpcs().get(0);
         assertEquals(model.getQueueSize(), 10);
         DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
 
@@ -638,8 +639,8 @@ public class ModelServerTest {
         assertEquals(wf.getWorkflowName(), "mlp_2");
         assertNull(wf.getVersion());
 
-        List<DescribeWorkflowResponse.Model> models = wf.getModels();
-        DescribeWorkflowResponse.Model model = models.get(0);
+        List<DescribeWorkerPoolConfig> models = wf.getWpcs();
+        DescribeWorkerPoolConfig model = models.get(0);
         assertEquals(model.getModelName(), "mlp_2");
         assertNotNull(model.getModelUrl());
         assertEquals(model.getBatchSize(), 1);

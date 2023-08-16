@@ -34,12 +34,12 @@ public class PermanentBatchAggregator<I, O> extends BatchAggregator<I, O> {
     /**
      * Constructs a {@code PermanentBatchAggregator} instance.
      *
-     * @param model the model to use.
+     * @param wpc the workerPoolConfig to use.
      * @param jobQueue the job queue for polling data from.
      */
     public PermanentBatchAggregator(
-            ModelInfo<I, O> model, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
-        super(model, jobQueue);
+            WorkerPoolConfig<I, O> wpc, LinkedBlockingDeque<WorkerJob<I, O>> jobQueue) {
+        super(wpc, jobQueue);
     }
 
     /** {@inheritDoc} */

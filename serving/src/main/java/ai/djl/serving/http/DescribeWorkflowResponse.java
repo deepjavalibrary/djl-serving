@@ -16,10 +16,10 @@ import ai.djl.Device;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.serving.models.ModelManager;
-import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerGroup;
 import ai.djl.serving.wlm.WorkerPool;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.wlm.WorkerThread;
 
 import java.util.ArrayList;
@@ -32,7 +32,7 @@ public class DescribeWorkflowResponse {
 
     private String workflowName;
     private String version;
-    private List<Model> models;
+    private List<DescribeWorkerPoolConfig> wpcs;
 
     /**
      * Constructs a new {@code DescribeWorkflowResponse} instance.
@@ -42,31 +42,31 @@ public class DescribeWorkflowResponse {
     public DescribeWorkflowResponse(ai.djl.serving.workflow.Workflow workflow) {
         this.workflowName = workflow.getName();
         this.version = workflow.getVersion();
-        models = new ArrayList<>();
+        wpcs = new ArrayList<>();
 
         ModelManager manager = ModelManager.getInstance();
         WorkLoadManager wlm = manager.getWorkLoadManager();
         Set<String> startupWorkflows = manager.getStartupWorkflows();
 
-        for (ModelInfo<Input, Output> model : workflow.getModels()) {
-            ModelInfo.Status status = model.getStatus();
+        for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
+            WorkerPoolConfig.Status status = wpc.getStatus();
             int activeWorker = 0;
             int targetWorker = 0;
 
-            Model m = new Model();
-            models.add(m);
-            WorkerPool<Input, Output> pool = wlm.getWorkerPool(model);
+            DescribeWorkerPoolConfig m = new DescribeWorkerPoolConfig();
+            wpcs.add(m);
+            WorkerPool<Input, Output> pool = wlm.getWorkerPool(wpc);
             if (pool != null) {
                 pool.cleanup();
 
-                m.setModelName(model.getId());
-                m.setModelUrl(model.getModelUrl());
-                m.setBatchSize(model.getBatchSize());
-                m.setMaxBatchDelayMillis(model.getMaxBatchDelayMillis());
-                m.setMaxIdleSeconds(model.getMaxIdleSeconds());
-                m.setQueueSize(model.getQueueSize());
+                m.setModelName(wpc.getId());
+                m.setModelUrl(wpc.getModelUrl());
+                m.setBatchSize(wpc.getBatchSize());
+                m.setMaxBatchDelayMillis(wpc.getMaxBatchDelayMillis());
+                m.setMaxIdleSeconds(wpc.getMaxIdleSeconds());
+                m.setQueueSize(wpc.getQueueSize());
                 m.setRequestInQueue(pool.getJobQueue().size());
-                m.setLoadedAtStartup(startupWorkflows.contains(model.getId()));
+                m.setLoadedAtStartup(startupWorkflows.contains(wpc.getId()));
 
                 for (WorkerGroup<Input, Output> group : pool.getWorkerGroups().values()) {
                     Device device = group.getDevice();
@@ -86,7 +86,7 @@ public class DescribeWorkflowResponse {
                 }
             }
 
-            if (status == ModelInfo.Status.READY) {
+            if (status == WorkerPoolConfig.Status.READY) {
                 m.setStatus(activeWorker >= targetWorker ? "Healthy" : "Unhealthy");
             } else {
                 m.setStatus(status.name());
@@ -117,12 +117,12 @@ public class DescribeWorkflowResponse {
      *
      * @return a list of models
      */
-    public List<Model> getModels() {
-        return models;
+    public List<DescribeWorkerPoolConfig> getWpcs() {
+        return wpcs;
     }
 
     /** A class represents model information. */
-    public static final class Model {
+    public static final class DescribeWorkerPoolConfig {
 
         private String modelName;
         private String modelUrl;

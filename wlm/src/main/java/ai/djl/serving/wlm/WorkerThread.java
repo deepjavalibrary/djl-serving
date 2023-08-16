@@ -13,9 +13,7 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.Device;
-import ai.djl.inference.Predictor;
-import ai.djl.metric.Metrics;
-import ai.djl.repository.zoo.ZooModel;
+import ai.djl.serving.wlm.WorkerPoolConfig.ThreadType;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WorkerJob;
 import ai.djl.translate.TranslateException;
@@ -33,12 +31,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class WorkerThread<I, O> implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerThread.class);
-    private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private String workerName;
-    private String modelName;
-    private Predictor<I, O> predictor;
 
+    private ThreadType<I, O> threadType;
     private AtomicBoolean running = new AtomicBoolean(true);
 
     private BatchAggregator<I, O> aggregator;
@@ -48,8 +44,6 @@ public final class WorkerThread<I, O> implements Runnable {
     private int workerId;
     private long startTime;
     private boolean fixPoolThread;
-    private boolean logModelMetric;
-    private int metricsAggregation;
     private long stateChangeTime;
 
     /**
@@ -58,18 +52,13 @@ public final class WorkerThread<I, O> implements Runnable {
      * @param builder build a new worker thread using this builder.
      */
     private WorkerThread(Builder<I, O> builder) {
-        this.workerName = buildWorkerName(builder.model);
+        this.workerName = buildWorkerName(builder.workerPoolConfig);
         this.aggregator = builder.aggregator;
         this.workerId = new WorkerIdGenerator().generate();
         this.startTime = System.currentTimeMillis();
         this.fixPoolThread = builder.fixPoolThread;
         this.device = builder.device;
-        ZooModel<I, O> model = builder.model.getModel(device);
-
-        predictor = model.newPredictor();
-        modelName = builder.model.getId();
-        logModelMetric = Boolean.parseBoolean(model.getProperty("log_model_metric"));
-        metricsAggregation = Integer.parseInt(model.getProperty("metrics_aggregation", "1000"));
+        threadType = builder.workerPoolConfig.newThread(device);
     }
 
     /** {@inheritDoc} */
@@ -82,19 +71,12 @@ public final class WorkerThread<I, O> implements Runnable {
         List<I> req = null;
         String errorMessage = "Worker shutting down";
         try {
-            if (logModelMetric) {
-                Metrics metrics = new Metrics();
-                metrics.setLimit(metricsAggregation);
-                metrics.setOnLimit(
-                        (m, s) -> MODEL_METRIC.info("{}-{}", modelName, m.percentile(s, 50)));
-                predictor.setMetrics(metrics);
-            }
             while (isRunning() && !aggregator.isFinished()) {
                 req = aggregator.getRequest();
                 if (req != null && !req.isEmpty()) {
                     state = WorkerState.WORKER_BUSY;
                     try {
-                        List<O> reply = predictor.batchPredict(req);
+                        List<O> reply = threadType.run(req);
                         aggregator.sendResponse(reply);
                     } catch (TranslateException e) {
                         logger.warn("Failed to predict", e);
@@ -181,11 +163,11 @@ public final class WorkerThread<I, O> implements Runnable {
             aggregator.sendError(e);
         }
         logger.info("shutdown temporary worker: {}", workerName);
-        predictor.close();
+        threadType.close();
     }
 
-    private String buildWorkerName(ModelInfo<I, O> model) {
-        String modelId = model.getId();
+    private String buildWorkerName(WorkerPoolConfig<I, O> wpc) {
+        String modelId = wpc.getId();
         if (modelId.length() > 25) {
             modelId = modelId.substring(0, 25);
         }
@@ -222,26 +204,26 @@ public final class WorkerThread<I, O> implements Runnable {
     /**
      * Creates a builder to build a {@code WorkerThread}.
      *
-     * @param <I> the model input class
-     * @param <O> the model output class
-     * @param model the {@code ModelInfo} the thread will be responsible for
+     * @param <I> the workerPoolConfig input class
+     * @param <O> the workerPoolConfig output class
+     * @param wpc the {@link WorkerPoolConfig} the thread will be responsible for
      * @return a new builder
      */
-    public static <I, O> Builder<I, O> builder(ModelInfo<I, O> model) {
-        return new Builder<>(model);
+    public static <I, O> Builder<I, O> builder(WorkerPoolConfig<I, O> wpc) {
+        return new Builder<>(wpc);
     }
 
     /** A Builder to construct a {@code WorkerThread}. */
     public static final class Builder<I, O> {
 
-        private ModelInfo<I, O> model;
+        private WorkerPoolConfig<I, O> workerPoolConfig;
         private Device device;
         private BatchAggregator<I, O> aggregator;
         private LinkedBlockingDeque<WorkerJob<I, O>> jobQueue;
         private boolean fixPoolThread;
 
-        Builder(ModelInfo<I, O> model) {
-            this.model = model;
+        Builder(WorkerPoolConfig<I, O> wpc) {
+            this.workerPoolConfig = wpc;
             this.fixPoolThread = true;
         }
 
@@ -292,9 +274,9 @@ public final class WorkerThread<I, O> implements Runnable {
                 throw new IllegalArgumentException("jobQueue has to be set.");
             }
             if (fixPoolThread) {
-                aggregator = new PermanentBatchAggregator<>(model, jobQueue);
+                aggregator = new PermanentBatchAggregator<>(workerPoolConfig, jobQueue);
             } else {
-                aggregator = new TemporaryBatchAggregator<>(model, jobQueue);
+                aggregator = new TemporaryBatchAggregator<>(workerPoolConfig, jobQueue);
             }
             return new WorkerThread<>(this);
         }
