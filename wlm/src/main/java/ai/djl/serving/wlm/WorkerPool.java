@@ -174,8 +174,17 @@ public class WorkerPool<I, O> {
      * Initializes new worker capacities for this model.
      *
      * @param deviceName the device for the model, null for default devices
-     * @param minWorkers minimum amount of workers.
-     * @param maxWorkers maximum amount of workers.
+     */
+    public void initWorkers(String deviceName) {
+        initWorkers(deviceName, -1, -1);
+    }
+
+    /**
+     * Initializes new worker capacities for this model.
+     *
+     * @param deviceName the device for the model, null for default devices
+     * @param minWorkers minimum amount of workers (-1 for model default).
+     * @param maxWorkers maximum amount of workers (-1 for model default).
      */
     public void initWorkers(String deviceName, int minWorkers, int maxWorkers) {
         Device device;

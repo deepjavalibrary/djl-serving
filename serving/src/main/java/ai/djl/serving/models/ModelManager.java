@@ -116,20 +116,11 @@ public final class ModelManager {
                             if (model.isParallelLoading()) {
                                 pool = Executors.newFixedThreadPool(devices.length);
                             }
-                            int minWorkers = model.getMinWorkers();
-                            int maxWorkers = model.getMaxWorkers();
                             for (String deviceName : devices) {
                                 if (pool != null) {
-                                    futures.add(
-                                            pool.submit(
-                                                    () ->
-                                                            initWorkers(
-                                                                    model,
-                                                                    deviceName,
-                                                                    minWorkers,
-                                                                    maxWorkers)));
+                                    futures.add(pool.submit(() -> initWorkers(model, deviceName)));
                                 } else {
-                                    initWorkers(model, deviceName, minWorkers, maxWorkers);
+                                    initWorkers(model, deviceName);
                                 }
                             }
                             if (pool != null) {
@@ -205,14 +196,11 @@ public final class ModelManager {
      *
      * @param model the model to scale workers for
      * @param deviceName the device for the model
-     * @param minWorkers the min workers, -1 for auto-scale
-     * @param maxWorkers the max workers, -1 for auto-scale
-     * @see WorkerPool#initWorkers(String, int, int)
+     * @see WorkerPool#initWorkers(String)
      */
-    public void initWorkers(
-            ModelInfo<Input, Output> model, String deviceName, int minWorkers, int maxWorkers) {
+    public void initWorkers(ModelInfo<Input, Output> model, String deviceName) {
         Thread.currentThread().setContextClassLoader(MutableClassLoader.getInstance());
-        wlm.getWorkerPool(model).initWorkers(deviceName, minWorkers, maxWorkers);
+        wlm.getWorkerPool(model).initWorkers(deviceName);
     }
 
     /**

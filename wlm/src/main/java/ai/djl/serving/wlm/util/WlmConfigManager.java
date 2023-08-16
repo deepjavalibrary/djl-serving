@@ -12,11 +12,6 @@
  */
 package ai.djl.serving.wlm.util;
 
-import ai.djl.Device;
-import ai.djl.Model;
-import ai.djl.ndarray.NDManager;
-import ai.djl.util.Utils;
-
 /** This manages some configurations used by the {@link ai.djl.serving.wlm.WorkLoadManager}. */
 public final class WlmConfigManager {
 
@@ -155,73 +150,5 @@ public final class WlmConfigManager {
      */
     public void setLoadOnDevices(String loadOnDevices) {
         this.loadOnDevices = loadOnDevices;
-    }
-
-    /**
-     * Returns the default minimum number of workers for a new registered model.
-     *
-     * @param model the loaded {@code Model}
-     * @return the calculated minimum number of workers for a new registered model
-     */
-    public int getDefaultMinWorkers(Model model) {
-        return getWorkersProperty(model, "minWorkers", 1);
-    }
-
-    /**
-     * Returns the default maximum number of workers for a new registered model.
-     *
-     * @param model the loaded {@code Model}
-     * @return the default number of workers for a new registered model
-     */
-    public int getDefaultMaxWorkers(Model model) {
-        if (isDebug()) {
-            return 1;
-        }
-        // get from model's property
-        int maxWorkers = getWorkersProperty(model, "maxWorkers", -1);
-        if (maxWorkers > 0) {
-            return maxWorkers;
-        }
-
-        NDManager manager = model.getNDManager();
-        Device device = manager.getDevice();
-        if ("nc".equals(device.getDeviceType())) {
-            if ("Python".equals(manager.getEngine().getEngineName())) {
-                return 1;
-            }
-            return 2; // default to max 2 workers for inferentia
-        }
-
-        if (Device.Type.GPU.equals(device.getDeviceType())) {
-            String engineName = manager.getEngine().getEngineName();
-            if ("MXNet".equals(engineName) || "Python".equals(engineName)) {
-                // FIXME: MXNet GPU Model doesn't support multi-threading
-                return 1;
-            }
-            return 2;
-        }
-
-        int cpuCores = Runtime.getRuntime().availableProcessors();
-        int ompThreads = Integer.parseInt(Utils.getenv("OMP_NUM_THREADS", "-1"));
-        if (ompThreads > 0) {
-            if (ompThreads > cpuCores) {
-                ompThreads = cpuCores;
-            }
-            return cpuCores / ompThreads;
-        }
-        return 2;
-    }
-
-    private static int getWorkersProperty(Model model, String key, int def) {
-        Device device = model.getNDManager().getDevice();
-        String workers = model.getProperty(device.getDeviceType() + '.' + key);
-        if (workers != null) {
-            return Integer.parseInt(workers);
-        }
-        workers = model.getProperty(key);
-        if (workers != null) {
-            return Integer.parseInt(workers);
-        }
-        return def;
     }
 }

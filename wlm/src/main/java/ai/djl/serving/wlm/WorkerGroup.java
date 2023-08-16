@@ -13,8 +13,6 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.Device;
-import ai.djl.Model;
-import ai.djl.serving.wlm.util.WlmConfigManager;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -33,10 +31,11 @@ public class WorkerGroup<I, O> {
         this.workerPool = workerPool;
         this.device = device;
         workers = new CopyOnWriteArrayList<>();
-        WlmConfigManager config = WlmConfigManager.getInstance();
-        Model model = workerPool.getModel().getModel(device);
-        minWorkers = config.getDefaultMinWorkers(model);
-        maxWorkers = config.getDefaultMaxWorkers(model);
+        ModelInfo<I, O> model = workerPool.getModel();
+
+        // Default workers from model, may be overridden by configureWorkers on init or scale
+        minWorkers = model.getMinWorkers(device);
+        maxWorkers = model.getMaxWorkers(device);
         minWorkers = Math.min(minWorkers, maxWorkers);
     }
 

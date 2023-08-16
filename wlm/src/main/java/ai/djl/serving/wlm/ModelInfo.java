@@ -20,6 +20,7 @@ import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.ndarray.NDManager;
 import ai.djl.repository.Artifact;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.MRL;
@@ -74,8 +75,8 @@ public final class ModelInfo<I, O> {
     private int batchSize;
     private int maxBatchDelayMillis;
     private int maxIdleSeconds;
-    private int minWorkers = -1;
-    private int maxWorkers = -1;
+    private Integer minWorkers; // Integer so it becomes null when parsed from JSON
+    private Integer maxWorkers;
 
     // the following fields can be loaded from workflow json file
     private Map<String, String> filters;
@@ -168,7 +169,7 @@ public final class ModelInfo<I, O> {
         this.maxIdleSeconds = maxIdleSeconds; // default max idle time 60s
         this.queueSize = queueSize;
         this.batchSize = batchSize;
-        this.minWorkers = minWorkers;
+        this.minWorkers = Math.min(minWorkers, maxWorkers);
         this.maxWorkers = maxWorkers;
     }
 
@@ -458,21 +459,123 @@ public final class ModelInfo<I, O> {
     }
 
     /**
+     * Sets the minimum number of workers.
+     *
+     * @param minWorkers the new minimum number of workers
+     */
+    public void setMinWorkers(int minWorkers) {
+        if (maxWorkers != null && maxWorkers < minWorkers) {
+            throw new IllegalArgumentException(
+                    "The max workers for a model can't be smaller than the min workers");
+        }
+
+        this.minWorkers = minWorkers;
+    }
+
+    /**
      * Returns the minimum number of workers.
      *
+     * @param device the device to get the min workers for
      * @return the minimum number of workers
      */
-    public int getMinWorkers() {
-        return minWorkers;
+    public int getMinWorkers(Device device) {
+        if (minWorkers != null && minWorkers >= 0) {
+            return minWorkers;
+        }
+
+        return getWorkersMinMaxProperty(getModel(device), device, "minWorkers", 1);
+    }
+
+    /**
+     * Sets the maximum number of workers.
+     *
+     * @param maxWorkers the new maximum number of workers
+     */
+    public void setMaxWorkers(int maxWorkers) {
+        if (minWorkers != null && maxWorkers < minWorkers) {
+            throw new IllegalArgumentException(
+                    "The max workers for a model can't be smaller than the min workers");
+        }
+
+        this.maxWorkers = maxWorkers;
+    }
+
+    /**
+     * Sets the minimum and maximum number of workers.
+     *
+     * @param minWorkers the new minimum number of workers
+     * @param maxWorkers the new maximum number of workers
+     */
+    public void setMinMaxWorkers(int minWorkers, int maxWorkers) {
+        if (maxWorkers < minWorkers) {
+            throw new IllegalArgumentException(
+                    "The max workers for a model can't be smaller than the min workers");
+        }
+
+        this.minWorkers = minWorkers;
+        this.maxWorkers = maxWorkers;
     }
 
     /**
      * Returns the maximum number of workers.
      *
+     * @param device the device to get the min workers for
      * @return the maximum number of workers
      */
-    public int getMaxWorkers() {
-        return maxWorkers;
+    public int getMaxWorkers(Device device) {
+        if (maxWorkers != null && maxWorkers >= 0) {
+            return maxWorkers;
+        }
+
+        WlmConfigManager configManager = WlmConfigManager.getInstance();
+        if (configManager.isDebug()) {
+            return 1;
+        }
+        // get from model's property
+        Model model = getModel(device);
+        int maxProp = getWorkersMinMaxProperty(model, device, "maxWorkers", -1);
+        if (maxProp > 0) {
+            return maxProp;
+        }
+
+        NDManager manager = model.getNDManager();
+        if ("nc".equals(device.getDeviceType())) {
+            if ("Python".equals(manager.getEngine().getEngineName())) {
+                return 1;
+            }
+            return 2; // default to max 2 workers for inferentia
+        }
+
+        if (Device.Type.GPU.equals(device.getDeviceType())) {
+            String engine = manager.getEngine().getEngineName();
+            if ("MXNet".equals(engine) || "Python".equals(engine)) {
+                // FIXME: MXNet GPU Model doesn't support multi-threading
+                return 1;
+            }
+            return 2;
+        }
+
+        int cpuCores = Runtime.getRuntime().availableProcessors();
+        int ompThreads = Integer.parseInt(Utils.getenv("OMP_NUM_THREADS", "-1"));
+        if (ompThreads > 0) {
+            if (ompThreads > cpuCores) {
+                ompThreads = cpuCores;
+            }
+            return cpuCores / ompThreads;
+        }
+        return 2;
+    }
+
+    private int getWorkersMinMaxProperty(Model model, Device device, String key, int def) {
+        String workers = model.getProperty(device.getDeviceType() + '.' + key);
+        if (workers != null) {
+            return Integer.parseInt(workers);
+        }
+        workers = model.getProperty(key);
+        if (workers != null) {
+            return Integer.parseInt(workers);
+        }
+        return def;
     }
 
     /**
