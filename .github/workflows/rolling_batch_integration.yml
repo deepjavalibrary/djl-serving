@@ -237,6 +237,24 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist gpt-neox-20b-bits-and-bytes-quantized
           docker rm -f $(docker ps -aq)
+      - name: Test mpt-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mpt-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:deepspeed-nightly $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist mpt-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test octocoder
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist octocoder
+          ./launch_container.sh deepjavalibrary/djl-serving:deepspeed-nightly $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist octocoder
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration

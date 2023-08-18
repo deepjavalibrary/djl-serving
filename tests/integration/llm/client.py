@@ -357,6 +357,18 @@ lmi_dist_model_spec = {
         "seq_length": [64, 128, 256],
         "stream_output": True
     },
+    "mpt-7b": {
+        "max_memory_per_gpu": [15.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
+    "octocoder": {
+        "max_memory_per_gpu": [15.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
 }
 
 

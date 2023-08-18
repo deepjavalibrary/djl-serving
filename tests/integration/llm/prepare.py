@@ -434,6 +434,21 @@ lmi_dist_model_list = {
         "option.quantize": "bitsandbytes",
         "option.trust_remote_code": True
     },
+    "mpt-7b": {
+        "option.model_id": "mosaicml/mpt-7b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 8,
+        "load_on_devices": 0
+    },
+    "octocoder": {
+        "option.model_id": "s3://djl-llm/octocoder",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 8
+    }
 }
 
 
