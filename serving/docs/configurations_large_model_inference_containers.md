@@ -23,12 +23,12 @@ for [Large Model Inference Containers](https://github.com/aws/deep-learning-cont
 | option.enable_cuda_graph  | No       | Activates capturing the CUDA graph of the forward pass to accelerate.                                                                                                                           | `True`                         |
 | option.triangular_masking | No       | Whether to use triangular masking for the attention mask. This is application or model specific.                                                                                                | `False`                        |
 | option.return_tuple       | No       | Whether transformer layers need to return a tuple or a tensor.                                                                                                                                  | `False`                        |
-| option.training_mp_size 	| No       | If the model was trained with DeepSpeed, this indicates the tensor parallelism degree with which the model was trained. Can be different than the tensor parallel degree desired for inference. | `2`                            |
+| option.training_mp_size   | No       | If the model was trained with DeepSpeed, this indicates the tensor parallelism degree with which the model was trained. Can be different than the tensor parallel degree desired for inference. | `2`                            |
 | option.checkpoint         | No       | Path to DeepSpeed compatible checkpoint file.                                                                                                                                                   | `ds_inference_checkpoint.json` |
 
 ### FasterTransformer ([doc](https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-configuration.html))
 
-[Common settings](#common)
+[Common settings](#common-doc)
 
 ### HuggingFace ([doc](https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-configuration.html))
 
@@ -51,4 +51,4 @@ for [Large Model Inference Containers](https://github.com/aws/deep-learning-cont
 | Item               | Required | Description           | Example value  |
 |--------------------|----------|-----------------------|----------------|
 | option.n_positions | No       | Input sequence length | Default: `128` |
-| option.unroll      | No       |                       | Default: `128` |
+| option.unroll      | No       |                       |                |
