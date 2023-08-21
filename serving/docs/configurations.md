@@ -2,6 +2,8 @@
 
 DJL serving is highly configurable. This document tries to capture those configurations in a single document.
 
+**Note:** For tunable parameters for Large Language Models please refer to [this](configurations_large_model_inference_containers.md) guide.
+
 ## DJL settings
 
 DJLServing build on top of Deep Java Library (DJL). Here is a list of settings for DJL:
