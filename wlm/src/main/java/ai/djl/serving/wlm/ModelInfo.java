@@ -468,6 +468,10 @@ public final class ModelInfo<I, O> {
             throw new IllegalArgumentException(
                     "The max workers for a model can't be smaller than the min workers");
         }
+        if (minWorkers == 0) {
+            throw new IllegalArgumentException(
+                    "Having a minWorkers of 0 is not currently supported");
+        }
 
         this.minWorkers = minWorkers;
     }
@@ -496,6 +500,9 @@ public final class ModelInfo<I, O> {
             throw new IllegalArgumentException(
                     "The max workers for a model can't be smaller than the min workers");
         }
+        if (maxWorkers == 0) {
+            throw new IllegalArgumentException("Models must have a maxWorkers greater than 0");
+        }
 
         this.maxWorkers = maxWorkers;
     }
@@ -510,6 +517,13 @@ public final class ModelInfo<I, O> {
         if (maxWorkers < minWorkers) {
             throw new IllegalArgumentException(
                     "The max workers for a model can't be smaller than the min workers");
+        }
+        if (minWorkers == 0) {
+            throw new IllegalArgumentException(
+                    "Having a minWorkers of 0 is not currently supported");
+        }
+        if (maxWorkers == 0) {
+            throw new IllegalArgumentException("Models must have a maxWorkers greater than 0");
         }
 
         this.minWorkers = minWorkers;
