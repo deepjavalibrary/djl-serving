@@ -204,6 +204,15 @@ ft_handler_list = {
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1
     },
+    "Salesforce/xgen-7b-8k-base": {
+        "engine": "Python",
+        "option.entryPoint": "djl_python.fastertransformer",
+        "option.model_id": "Salesforce/xgen-7b-8k-base",
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "fp16",
+        "gpu.maxWorkers": 1,
+        "option.trust_remote_code": "true",
+    },
     "t5-base-lora": {
         "option.model_id": "s3://djl-llm/t5-base-lora/",
         "option.tensor_parallel_degree": 2,
@@ -522,8 +531,8 @@ def build_ft_handler_model(model):
             f"{model} is not one of the supporting handler {list(ft_handler_list.keys())}"
         )
     options = ft_handler_list[model]
-    options["engine"] = "FasterTransformer"
-    # options["option.entryPoint"] = "djl_python.fastertransformer"
+    if "engine" not in options:
+        options["engine"] = "FasterTransformer"
     write_properties(options)
 
 

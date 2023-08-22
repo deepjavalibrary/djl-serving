@@ -467,6 +467,15 @@ jobs:
           serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py fastertransformer EleutherAI/pythia-2.8b
           docker rm -f $(docker ps -aq)
+      - name: Test Salesforce/xgen-7b-8k-base
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py fastertransformer Salesforce/xgen-7b-8k-base
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py fastertransformer Salesforce/xgen-7b-8k-base
+          docker rm -f $(docker ps -aq)
       - name: Test t5-base-lora
         working-directory: tests/integration
         run: |

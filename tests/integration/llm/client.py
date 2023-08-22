@@ -196,6 +196,11 @@ ft_model_spec = {
         "seq_length": [64, 128],
         "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0]
     },
+    "Salesforce/xgen-7b-8k-base": {
+        "batch_size": [1, 2],
+        "seq_length": [64, 128],
+        "max_memory_per_gpu": [10.0, 10.0, 10.0, 10.0]
+    },
     "t5-base-lora": {
         "batch_size": [1, 4],
         "seq_length": [64, 128],
