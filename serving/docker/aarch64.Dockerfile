@@ -21,8 +21,8 @@ WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV MODEL_SERVER_HOME=/opt/djl
-ENV HUGGINGFACE_HUB_CACHE=/tmp
-ENV TRANSFORMERS_CACHE=/tmp
+ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
+ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
