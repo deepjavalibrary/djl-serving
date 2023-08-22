@@ -13,6 +13,8 @@ variables that user can set for DJL Serving:
 **Note:** environment variable has higher priority that command line or config.properties.
 It will override other property values.
 
+**Note:** For tunable parameters for Large Language Models please refer to [this](configurations_large_model_inference_containers.md) guide.
+
 ## Command line parameters
 
 User can use the following parameters to start djl-serving, those parameters will override default behavior:
