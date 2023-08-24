@@ -32,8 +32,9 @@ ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV NO_OMP_NUM_THREADS=true
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
-ENV HUGGINGFACE_HUB_CACHE=/tmp
-ENV TRANSFORMERS_CACHE=/tmp
+ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
+ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
+ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV NEURON_SDK_PATH=/usr/local/lib/python3.8/dist-packages/torch_neuronx/lib
@@ -43,7 +44,6 @@ ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=1.13.1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -Xss2m -XX:+ExitOnOutOfMemoryError"
-ENV PYTORCH_KERNEL_CACHE_PATH=/tmp
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]

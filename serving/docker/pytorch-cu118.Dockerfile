@@ -37,7 +37,9 @@ ENV PYTORCH_FLAVOR=cu118-precxx11
 # TODO: remove TORCH_CUDNN_V8_API_DISABLED once PyTorch bug is fixed
 ENV TORCH_CUDNN_V8_API_DISABLED=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
-ENV PYTORCH_KERNEL_CACHE_PATH=/tmp
+ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
+ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
+ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 
 COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
