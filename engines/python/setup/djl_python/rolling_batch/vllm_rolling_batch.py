@@ -61,12 +61,14 @@ class VLLMRollingBatch(RollingBatch):
             self.engine.add_request(request_id, request.input_text,
                                     sampling_params)
             self.request_cache[request_id] = {"curr_length": 0}
+            # step after add request only output result of new request
+            self.engine.step()
         request_outputs = self.engine.step()
         for request_output, request in zip(request_outputs,
                                            self.pending_requests):
             req_id = request_output.request_id
             gen_text = request_output.outputs[0].text
-            if len(request_output.outputs) > 0:
+            if len(request_output.outputs) > 1:
                 logging.warning(
                     f"Finding more than 1 output for single request {len(request_output.outputs)}"
                     f"Beam search is not supported yet, use first output by default"
