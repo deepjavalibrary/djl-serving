@@ -218,6 +218,19 @@ export SERVING_OPTS="-Dai.djl.logging.level=debug"
 export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/MY_CONF/log4j2.xml
 ```
 
+DJLServing provides a few built-in `log4j2-XXX.xml` files in DJLServing containers.
+Use the following environment variable to print HTTP access log to console:
+
+```
+export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/usr/local/djl-serving-0.23.0/conf/log4j2-access.xml
+```
+
+Use the following environment variable to print both access log, server metrics and model metrics to console:
+
+```
+export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/usr/local/djl-serving-0.23.0/conf/log4j2-console.xml
+```
+
 ### How to download uncompressed model from S3
 To enable fast model downloading, you can store your model artifacts (weights) in a S3 bucket, and
 only keep the model code and metadata in the `model.tar.gz` (.zip) file. DJL can leverage
