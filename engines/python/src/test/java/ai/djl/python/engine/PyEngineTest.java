@@ -282,7 +282,7 @@ public class PyEngineTest {
             NDArray ones = model.getNDManager().ones(new Shape(1, 3, 224, 224));
             NDList list = new NDList();
             list.add(ones);
-            byte[] buf = list.encode(true);
+            byte[] buf = list.encode(NDList.Encoding.NPZ);
 
             input = new Input();
             input.add("data", buf);
