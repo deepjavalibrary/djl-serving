@@ -439,7 +439,7 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.trust_remote_code": True,
         "option.tensor_parallel_degree": 1,
-        "option.max_rolling_batch_size": 8,
+        "option.max_rolling_batch_size": 4,
         "load_on_devices": 0
     },
     "octocoder": {
@@ -447,7 +447,7 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.trust_remote_code": True,
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 8
+        "option.max_rolling_batch_size": 4
     }
 }
 
