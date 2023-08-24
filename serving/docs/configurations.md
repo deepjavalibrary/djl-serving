@@ -82,11 +82,11 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 | DJL_VENV_DIR                      | env var/system prop | The venv directory, default: $DJL_CACHE_DIR/venv        |
 | ai.djl.python.disable_alternative | system prop         | Disable alternative engine                              |
 
-### Python (DeepSpeed)
+### Python
 
-| Key                    | Type     | Description                                          |
-|------------------------|----------|------------------------------------------------------|
-| TENSOR_PARALLEL_DEGREE | env var	 | Required<br>Set tensor parallel degree for DeepSpeed |
+| Key                    | Type     | Description                                                                                                                                            |
+|------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| TENSOR_PARALLEL_DEGREE | env var	 | Set tensor parallel degree.<br>For mpi mode, the default is number of accelerators.<br>Use "max" for non-mpi mode to use all GPUs for tensor parallel. |
 
 ## Global Model Server settings
 
