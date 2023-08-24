@@ -14,6 +14,7 @@ package ai.djl.benchmark;
 
 import ai.djl.Device;
 import ai.djl.ndarray.NDList;
+import ai.djl.ndarray.NDList.Encoding;
 import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
@@ -23,6 +24,7 @@ import ai.djl.util.PairList;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
@@ -57,7 +59,14 @@ final class NDListGenerator {
             String inputShapes = cmd.getOptionValue("input-shapes");
             String output = cmd.getOptionValue("output-file");
             boolean ones = cmd.hasOption("ones");
-            boolean npz = cmd.hasOption("npz");
+            Encoding encoding;
+            if (cmd.hasOption("npz")) {
+                encoding = Encoding.NPZ;
+            } else if (cmd.hasOption("safetensors")) {
+                encoding = Encoding.SAFETENSORS;
+            } else {
+                encoding = Encoding.ND_LIST;
+            }
             Path path = Paths.get(output);
 
             try (NDManager manager = NDManager.newBaseManager(Device.cpu(), "PyTorch")) {
@@ -72,7 +81,7 @@ final class NDListGenerator {
                     }
                 }
                 try (OutputStream os = new BufferedOutputStream(Files.newOutputStream(path))) {
-                    list.encode(os, npz);
+                    list.encode(os, encoding);
                 }
             }
             logger.info("NDList file created: {}", path.toAbsolutePath());
@@ -167,13 +176,22 @@ final class NDListGenerator {
                         .argName("ones")
                         .desc("Use all ones instead of zeros.")
                         .build());
-        options.addOption(
+        OptionGroup group = new OptionGroup();
+        group.addOption(
                 Option.builder("z")
                         .longOpt("npz")
                         .hasArg(false)
                         .argName("npz")
                         .desc("Output .npz format.")
                         .build());
+        group.addOption(
+                Option.builder("st")
+                        .longOpt("safetensors")
+                        .hasArg(false)
+                        .argName("safetensors")
+                        .desc("Output .safetensors format.")
+                        .build());
+        options.addOptionGroup(group);
         return options;
     }
 }

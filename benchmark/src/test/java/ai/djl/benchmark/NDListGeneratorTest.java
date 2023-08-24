@@ -58,4 +58,11 @@ public class NDListGeneratorTest {
             Assert.assertEquals(entry.getName(), "arr_0.npy");
         }
     }
+
+    @Test
+    public void testSafetensors() {
+        String[] args = {"ndlist-gen", "-s", "1", "-st", "-o", "build/ones.safetensors"};
+        boolean success = NDListGenerator.generate(args);
+        Assert.assertTrue(success);
+    }
 }
