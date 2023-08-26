@@ -334,8 +334,6 @@ class HuggingFaceService(object):
                 "zero-shot-image-classification",
         }:
             kwargs["feature_extractor"] = model_id_or_path
-        else:
-            kwargs["tokenizer"] = model_id_or_path
 
         use_pipeline = True
         for element in ["load_in_8bit", "load_in_4bit", "low_cpu_mem_usage"]:
@@ -344,7 +342,6 @@ class HuggingFaceService(object):
         # build pipeline
         if use_pipeline:
             if self.peft_config is not None:
-                kwargs.pop("tokenizer", None)
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     self.peft_config.base_model_name_or_path)
                 base_model = PEFT_MODEL_TASK_TO_CLS[
@@ -364,12 +361,13 @@ class HuggingFaceService(object):
                                        model=self.model,
                                        device=self.device)
             else:
+                self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
                 hf_pipeline = pipeline(task=task,
+                                       tokenizer=self.tokenizer,
                                        model=model_id_or_path,
                                        device=self.device,
                                        **kwargs)
         else:
-            kwargs.pop("tokenizer", None)
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             hf_pipeline = pipeline(task=task,
                                    model=self.model,
