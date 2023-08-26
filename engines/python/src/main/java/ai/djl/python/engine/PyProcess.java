@@ -59,13 +59,14 @@ class PyProcess {
         this.model = model;
         this.pyEnv = pyEnv;
         this.workerId = workerId;
-        int port = workerId + counter.getAndIncrement();
+        int port = counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             connections = new ArrayList<>(tensorParallelDegree);
             for (int i = 0; i < tensorParallelDegree; ++i) {
                 connections.add(new Connection(pyEnv, port, i));
             }
+            counter.set(port + tensorParallelDegree);
         } else {
             connections = Collections.singletonList(new Connection(pyEnv, port, -1));
         }
@@ -224,8 +225,6 @@ class PyProcess {
                     latch.countDown();
                 }
             }
-        } else {
-            logger.warn("Unexpected restartCount: {}, expect: {}", id, restartCount.get());
         }
     }
 
