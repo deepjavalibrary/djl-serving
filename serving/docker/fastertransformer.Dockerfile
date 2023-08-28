@@ -101,5 +101,6 @@ RUN apt-get update && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.fastertransformer="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-24-0.fastertransformer="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"

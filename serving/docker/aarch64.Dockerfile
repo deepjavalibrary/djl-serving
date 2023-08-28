@@ -52,5 +52,6 @@ RUN scripts/install_djl_serving.sh $djl_version && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch64="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-24-0.aarch64="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
