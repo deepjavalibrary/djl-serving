@@ -73,20 +73,41 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 
 ### Python
 
-| Key                               | Type                | Description                                             |
-|-----------------------------------|---------------------|---------------------------------------------------------|
-| PYTHON_EXECUTABLE                 | env var             | The location is python executable, default: python      |
-| DJL_ENTRY_POINT                   | env var             | The entrypoint python file or module, default: model.py |
-| MODEL_LOADING_TIMEOUT             | env var             | Python worker load model timeout: default: 240 seconds  |
-| PREDICT_TIMEOUT                   | env var             | Python predict call timeout, default: 120 seconds       |
-| DJL_VENV_DIR                      | env var/system prop | The venv directory, default: $DJL_CACHE_DIR/venv        |
-| ai.djl.python.disable_alternative | system prop         | Disable alternative engine                              |
+| Key                               | Type                | Description                                                                                                                                            |
+|-----------------------------------|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| PYTHON_EXECUTABLE                 | env var             | The location is python executable, default: python                                                                                                     |
+| DJL_ENTRY_POINT                   | env var             | The entrypoint python file or module, default: model.py                                                                                                |
+| MODEL_LOADING_TIMEOUT             | env var             | Python worker load model timeout: default: 240 seconds                                                                                                 |
+| PREDICT_TIMEOUT                   | env var             | Python predict call timeout, default: 120 seconds                                                                                                      |
+| DJL_VENV_DIR                      | env var/system prop | The venv directory, default: $DJL_CACHE_DIR/venv                                                                                                       |
+| ai.djl.python.disable_alternative | system prop         | Disable alternative engine                                                                                                                             |
+| TENSOR_PARALLEL_DEGREE            | env var             | Set tensor parallel degree.<br>For mpi mode, the default is number of accelerators.<br>Use "max" for non-mpi mode to use all GPUs for tensor parallel. |
 
-### Python
+DJLServing provides a few alias for Python engine to make it easy for common LLM configurations.
 
-| Key                    | Type     | Description                                                                                                                                            |
-|------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| TENSOR_PARALLEL_DEGREE | env var	 | Set tensor parallel degree.<br>For mpi mode, the default is number of accelerators.<br>Use "max" for non-mpi mode to use all GPUs for tensor parallel. |
+- `engine=DeepSpeed`, equivalent to:
+
+```
+engine=Python
+option.mpi_mode=true
+option.entryPoint=djl_python.deepspeed
+```
+
+- `engine=FasterTransformer`, this is equivalent to:
+
+```
+engine=Python
+option.mpi_mode=true
+option.entryPoint=djl_python.fastertransformer
+```
+
+- `engine=MPI`, this is equivalent to:
+
+```
+engine=Python
+option.mpi_mode=true
+option.entryPoint=djl_python.huggingface
+```
 
 ## Global Model Server settings
 
@@ -113,6 +134,12 @@ export SERVING_JOB_QUEUE_SIZE=1000 # This will override JOB_QUEUE_SIZE in the co
 ## Model specific settings
 
 You set per model settings by adding a [serving.properties](modes.md#servingproperties) file in the root of your model directory (or .zip).
+Some of the options can be override by environment variable with `OPTION_` prefix, for example:
+
+```
+# to enable rolling batch with only environment variable:
+export OPTION_ROLLING_BATCH=auto
+```
 
 You can set number of workers for each model:
 https://github.com/deepjavalibrary/djl-serving/blob/master/serving/src/test/resources/identity/serving.properties#L4-L8
