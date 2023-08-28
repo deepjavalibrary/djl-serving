@@ -121,6 +121,8 @@ class Connection {
     }
 
     static String[] getPythonStartCmd(PyEnv pyEnv, Model model, int workerId, int port) {
+        Device device = model.getNDManager().getDevice();
+        int deviceId = device.getDeviceId();
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
@@ -169,22 +171,15 @@ class Connection {
         }
 
         // TP settings
-        Device device = model.getNDManager().getDevice();
-        String deviceId = String.valueOf(device.getDeviceId());
         if (tensorParallelDegree > 0 && device.isGpu()) {
-            deviceId = "0";
-            String cudaDevices = getVisibleDevices(device.getDeviceId(), tensorParallelDegree);
+            String cudaDevices = getVisibleDevices(deviceId, tensorParallelDegree);
+            deviceId = 0; // re-map logic device to 0
             pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
         }
         if ("nc".equals(device.getDeviceType())) {
-            deviceId = "0";
-            String visibleCores;
-            if (tensorParallelDegree > 0) {
-                visibleCores = getNeuronVisibleCores(device.getDeviceId(), tensorParallelDegree);
-            } else {
-                visibleCores = String.valueOf(device.getDeviceId());
-            }
+            String visibleCores = getNeuronVisibleCores(deviceId, tensorParallelDegree);
+            // TODO: re-map logic device once neuron fixed bug
             pyEnv.addEnv("NEURON_RT_VISIBLE_CORES", visibleCores);
             logger.info("Set NEURON_RT_VISIBLE_CORES={}", visibleCores);
         }
@@ -201,34 +196,35 @@ class Connection {
         args[8] = "--entry-point";
         args[9] = pyEnv.getEntryPoint();
         args[10] = "--device-id";
-        args[11] = deviceId;
+        args[11] = String.valueOf(deviceId);
         return args;
     }
 
-    private static String getVisibleDevices(int workerId, int tensorParallelDegree) {
+    private static String getVisibleDevices(int deviceId, int tensorParallelDegree) {
         StringBuilder sb = new StringBuilder(20);
         // CUDA_VISIBLE_DEVICES=0,2,3,7 TP2
         // -> 0,2 and 3,7
         if (Utils.getenv("CUDA_VISIBLE_DEVICES") != null) {
             String[] devices = Utils.getenv("CUDA_VISIBLE_DEVICES").split(",");
-            sb.append(devices[workerId * tensorParallelDegree]);
+            sb.append(devices[deviceId]);
             for (int i = 1; i < tensorParallelDegree; ++i) {
-                sb.append(',').append(devices[workerId * tensorParallelDegree + i]);
+                sb.append(',').append(devices[deviceId + i]);
             }
         } else {
-            sb.append(workerId * tensorParallelDegree);
+            sb.append(deviceId);
             for (int i = 1; i < tensorParallelDegree; ++i) {
-                sb.append(',').append(workerId * tensorParallelDegree + i);
+                sb.append(',').append(deviceId + i);
             }
         }
 
         return sb.toString();
     }
 
-    private static String getNeuronVisibleCores(int workerId, int tensorParallelDegree) {
-        int start = workerId * tensorParallelDegree;
-        int end = start + tensorParallelDegree - 1;
-        return start + "-" + end;
+    private static String getNeuronVisibleCores(int deviceId, int tensorParallelDegree) {
+        if (tensorParallelDegree > 0) {
+            return deviceId + "-" + (deviceId + tensorParallelDegree - 1);
+        }
+        return String.valueOf(deviceId);
     }
 
     void connect() throws InterruptedException {

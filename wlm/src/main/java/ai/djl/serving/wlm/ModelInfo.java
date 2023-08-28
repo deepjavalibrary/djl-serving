@@ -55,7 +55,6 @@ import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /** A class represent a loaded model and it's metadata. */
@@ -892,16 +891,17 @@ public final class ModelInfo<I, O> {
         if ("*".equals(loadOnDevices)) {
             int gpuCount = engine.getGpuCount();
             if (gpuCount > 0) {
+                int gpuPerWorker = 1;
                 if ("Python".equals(engineName)) {
                     String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
                     v = prop.getProperty("option.tensor_parallel_degree", v);
-                    int tensorParallelDegree = Integer.parseInt(v);
-                    if (tensorParallelDegree > 0) {
-                        int procs = gpuCount / tensorParallelDegree;
+                    gpuPerWorker = Integer.parseInt(v);
+                    if (gpuPerWorker > 0) {
+                        int procs = gpuCount / gpuPerWorker;
                         if (procs == 0) {
                             throw new EngineException(
                                     "GPU devices are not enough to run "
-                                            + tensorParallelDegree
+                                            + gpuPerWorker
                                             + " partitions.");
                         }
                         gpuCount = procs;
@@ -912,27 +912,33 @@ public final class ModelInfo<I, O> {
                     return new String[] {"0"};
                 }
 
-                return IntStream.range(0, gpuCount)
-                        .mapToObj(String::valueOf)
-                        .toArray(String[]::new);
+                String[] ret = new String[gpuCount];
+                for (int i = 0; i < gpuCount; ++i) {
+                    ret[i] = String.valueOf(i * gpuPerWorker);
+                }
+                return ret;
             } else if (NeuronUtils.hasNeuron()) {
                 int neurons = NeuronUtils.getNeuronCores();
                 String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
                 v = prop.getProperty("option.tensor_parallel_degree", v);
-                int tensorParallelDegree = Integer.parseInt(v);
-                if (tensorParallelDegree > 0) {
+                int ncPerWorker = Integer.parseInt(v);
+                if (ncPerWorker > 0) {
                     // Assume user understand TP only works on inf2
-                    int procs = neurons / tensorParallelDegree;
+                    int procs = neurons / ncPerWorker;
                     if (procs == 0) {
                         throw new EngineException(
                                 "Neuron devices are not enough to run "
-                                        + tensorParallelDegree
+                                        + ncPerWorker
                                         + " partitions. Please refer to: "
                                         + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
                     }
                     neurons = procs;
                 }
-                return IntStream.range(0, neurons).mapToObj(i -> "nc" + i).toArray(String[]::new);
+                String[] ret = new String[neurons];
+                for (int i = 0; i < neurons; ++i) {
+                    ret[i] = "nc" + (i * ncPerWorker);
+                }
+                return ret;
             }
         } else if (!loadOnDevices.isEmpty()) {
             return loadOnDevices.split(";");

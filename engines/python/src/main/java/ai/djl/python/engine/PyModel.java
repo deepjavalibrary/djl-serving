@@ -233,7 +233,7 @@ public class PyModel extends BaseModel {
 
             properties.forEach((k, v) -> pyEnv.addParameter(k, v));
 
-            createAllPyProcesses(mpiWorkers);
+            createAllPyProcesses(mpiWorkers, partitions);
         } else {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             if (tensorParallelDegree > 0) {
@@ -296,7 +296,7 @@ public class PyModel extends BaseModel {
         return modelFile;
     }
 
-    private void createAllPyProcesses(int mpiWorkers) {
+    private void createAllPyProcesses(int mpiWorkers, int tp) {
         long begin = System.currentTimeMillis();
         ExecutorService pool = null;
         List<Future<?>> futures = new ArrayList<>();
@@ -306,7 +306,7 @@ public class PyModel extends BaseModel {
         logger.info("Start {} mpiWorkers ...", mpiWorkers);
         for (int i = 0; i < mpiWorkers; ++i) {
             logger.debug("Pre-creating python worker: {} ", i);
-            PyProcess worker = new PyProcess(this, pyEnv, i);
+            PyProcess worker = new PyProcess(this, pyEnv, i * tp);
             workerQueue.offer(worker);
             if (pool != null) {
                 logger.debug("Submitting to pool: {}", i);
