@@ -40,7 +40,8 @@ class VLLMRollingBatch(RollingBatch):
             tensor_parallel_size=tensor_parallel_degree,
             dtype=self.dtype,
             seed=0,
-            trust_remote_code=kwargs.get("trust_remote_code"),
+            max_num_batched_tokens=kwargs.get("max_rolling_batch_prefill_tokens", 2560),
+            trust_remote_code=kwargs.get("trust_remote_code", False),
         )
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
