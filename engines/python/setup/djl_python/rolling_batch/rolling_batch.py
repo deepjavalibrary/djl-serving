@@ -114,7 +114,8 @@ def stop_on_any_exception(func):
             err = json.dumps({"code": 500, "error": str(e)})
             for request in self.pending_requests:
                 request.set_next_token(err, None, True)
-            error_requests = self.postprocess_results(len(self.pending_requests))
+            error_requests = self.postprocess_results(
+                len(self.pending_requests))
             self.reset()
             return error_requests
 

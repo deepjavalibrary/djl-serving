@@ -40,7 +40,8 @@ class VLLMRollingBatch(RollingBatch):
             tensor_parallel_size=tensor_parallel_degree,
             dtype=self.dtype,
             seed=0,
-            max_num_batched_tokens=kwargs.get("max_rolling_batch_prefill_tokens", 2560),
+            max_num_batched_tokens=kwargs.get(
+                "max_rolling_batch_prefill_tokens", 2560),
             trust_remote_code=kwargs.get("trust_remote_code", False),
         )
         self.engine = LLMEngine.from_engine_args(args)
@@ -64,7 +65,11 @@ class VLLMRollingBatch(RollingBatch):
             sampling_params = SamplingParams(**request.parameters)
             self.engine.add_request(request_id, request.input_text,
                                     sampling_params)
-            self.request_cache[request_id] = {"curr_length": 0, "text": "", "finished": False}
+            self.request_cache[request_id] = {
+                "curr_length": 0,
+                "text": "",
+                "finished": False
+            }
         request_outputs = self.engine.step()
         # step 1: put result to cache
         for request_output in request_outputs:
@@ -78,10 +83,10 @@ class VLLMRollingBatch(RollingBatch):
             self.request_cache[req_id]["finished"] = request_output.finished
         # step 2: send result back
         finished_id = []
-        for (key, cache), request in zip(self.request_cache.items(), self.pending_requests):
-            request.set_next_token(
-                cache["text"][cache["curr_length"]:],
-                self.output_formatter, cache["finished"])
+        for (key, cache), request in zip(self.request_cache.items(),
+                                         self.pending_requests):
+            request.set_next_token(cache["text"][cache["curr_length"]:],
+                                   self.output_formatter, cache["finished"])
             cache["curr_length"] = len(cache["text"])
             if cache["finished"]:
                 finished_id.append(key)
