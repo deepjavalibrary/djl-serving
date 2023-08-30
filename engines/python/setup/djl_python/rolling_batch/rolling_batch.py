@@ -192,16 +192,14 @@ class RollingBatch(ABC):
         pass
 
     def postprocess_results(self):
-        results = []
-        batch_size = len(self.pending_requests)
-        for i in range(batch_size):
-            req = self.pending_requests[i]
+        results, new_pending_requests = [], []
+        for req in self.pending_requests:
             res = {"data": req.get_next_token(), "last": req.is_last_token()}
             results.append(res)
+            if not req.is_last_token():
+                new_pending_requests.append(req)
 
-        self.pending_requests = [
-            req for req in self.pending_requests if not req.is_last_token()
-        ]
+        self.pending_requests = new_pending_requests
 
         if len(self.pending_requests) == 0:
             self.req_id_counter = 0
