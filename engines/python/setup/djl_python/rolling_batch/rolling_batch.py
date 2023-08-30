@@ -156,7 +156,6 @@ class RollingBatch(ABC):
         # Max batch_size threshold
         self.max_batch_size = None
 
-
     def reset(self):
         self.pending_requests = []
         self.req_id_counter = 0
@@ -179,8 +178,11 @@ class RollingBatch(ABC):
             self.pending_requests.append(request)
             new_requests.append(request)
             self.req_id_counter += 1
-            if self.max_batch_size is not None and len(self.pending_requests) == self.max_batch_size:
-                warnings.warn("Reach the maximum batch size. The excessive requests are thrown away.")
+            if self.max_batch_size is not None and len(
+                    self.pending_requests) == self.max_batch_size:
+                warnings.warn(
+                    "Reach the maximum batch size. The excessive requests are thrown away."
+                )
                 break
 
         return new_requests
