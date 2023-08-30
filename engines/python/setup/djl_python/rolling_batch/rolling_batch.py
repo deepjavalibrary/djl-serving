@@ -178,6 +178,7 @@ class RollingBatch(ABC):
                               params if params else {})
             self.pending_requests.append(request)
             self.req_id_counter += 1
+
             if self.max_batch_size is not None and len(
                     self.pending_requests) == self.max_batch_size:
                 warnings.warn(
