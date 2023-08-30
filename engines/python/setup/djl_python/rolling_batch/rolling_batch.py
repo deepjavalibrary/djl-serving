@@ -174,7 +174,7 @@ class RollingBatch(ABC):
     def get_new_requests(self, input_data, parameters):
         new_requests = []
         for data, params in zip(input_data, parameters):
-            request = Request(self.req_id_counter, data, params)
+            request = Request(self.req_id_counter, data, params if params else {})
             self.pending_requests.append(request)
             new_requests.append(request)
             self.req_id_counter += 1
