@@ -117,11 +117,10 @@ class LmiDistRollingBatch(RollingBatch):
         :return: generated batch decoded tokens
         """
         batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(input_data, parameters)
         new_batch = self.preprocess_requests(new_requests)
         self._prefill_and_decode(new_batch)
-        return self.postprocess_results(batch_size)
+        return self.postprocess_results()
 
     def _prefill_and_decode(self, new_batch):
         # prefill step

@@ -48,12 +48,11 @@ class SchedulerRollingBatch(RollingBatch):
         :return: generated batch decoded tokens
         """
         batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(input_data, parameters)
 
         preprocessed_new_requests = self.preprocess_requests(new_requests)
         self._prefill_and_decode(preprocessed_new_requests)
-        return self.postprocess_results(batch_size)
+        return self.postprocess_results()
 
     def preprocess_requests(self, requests):
         Requests = namedtuple(
@@ -139,11 +138,6 @@ class SchedulerRollingBatch(RollingBatch):
         # Decoding step. Generates a token for all the requests in a batch.
         generated_token_ids, request_ids, exit_req_ids = self.scheduler.inference_call(
         )
-
-        if self.scheduler and self.scheduler.seq_batchers and self.scheduler.seq_batchers[
-                0]:
-            seq_len = self.scheduler.seq_batchers[
-                0].seq_len - self.scheduler.seq_batchers[0].offsets[0]
 
         # TODO: Deleting the finished results here temporarily
         for request_id in exit_req_ids:

@@ -40,6 +40,7 @@ def init_rolling_batch(rolling_batch_type: str,
     rolling_batcher_cls = get_rolling_batch_class_from_str(rolling_batch_type)
     return rolling_batcher_cls(model_id, device, properties, **properties)
 
+
 def print_rank0(content):
     rank = 0
     if dist.is_initialized():

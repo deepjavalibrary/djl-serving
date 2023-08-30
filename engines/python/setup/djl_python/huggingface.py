@@ -361,7 +361,8 @@ class HuggingFaceService(object):
                                        model=self.model,
                                        device=self.device)
             else:
-                self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    model_id_or_path)
                 hf_pipeline = pipeline(task=task,
                                        tokenizer=self.tokenizer,
                                        model=model_id_or_path,

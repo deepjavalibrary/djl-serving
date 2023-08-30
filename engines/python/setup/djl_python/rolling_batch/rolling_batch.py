@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import json
 import logging
+import warnings
 from abc import ABC, abstractmethod
 
 
@@ -114,8 +115,7 @@ def stop_on_any_exception(func):
             err = json.dumps({"code": 500, "error": str(e)})
             for request in self.pending_requests:
                 request.set_next_token(err, None, True)
-            error_requests = self.postprocess_results(
-                len(self.pending_requests))
+            error_requests = self.postprocess_results()
             self.reset()
             return error_requests
 
@@ -153,6 +153,10 @@ class RollingBatch(ABC):
             # TODO: allows to load custom formatter from a module
             logging.warning(f"Unsupported formatter: {formatter}")
 
+        # Max batch_size threshold
+        self.max_batch_size = None
+
+
     def reset(self):
         self.pending_requests = []
         self.req_id_counter = 0
@@ -168,17 +172,16 @@ class RollingBatch(ABC):
         """
         pass
 
-    def get_new_requests(self, input_data, parameters, batch_size):
+    def get_new_requests(self, input_data, parameters):
         new_requests = []
-        pending_req_len = len(self.pending_requests)
-        if batch_size > pending_req_len:
-            for i in range(pending_req_len, batch_size):
-                data = input_data[i]
-                params = parameters[i] if i < len(parameters) else {}
-                request = Request(self.req_id_counter, data, params)
-                self.pending_requests.append(request)
-                new_requests.append(request)
-                self.req_id_counter += 1
+        for data, params in zip(input_data, parameters):
+            request = Request(self.req_id_counter, data, params)
+            self.pending_requests.append(request)
+            new_requests.append(request)
+            self.req_id_counter += 1
+            if self.max_batch_size is not None and len(self.pending_requests) == self.max_batch_size:
+                warnings.warn("Reach the maximum batch size. The excessive requests are thrown away.")
+                break
 
         return new_requests
 
@@ -186,16 +189,17 @@ class RollingBatch(ABC):
     def preprocess_requests(self, requests):
         pass
 
-    def postprocess_results(self, batch_size):
+    def postprocess_results(self):
         results = []
+        batch_size = len(self.pending_requests)
         for i in range(batch_size):
             req = self.pending_requests[i]
             res = {"data": req.get_next_token(), "last": req.is_last_token()}
             results.append(res)
 
-        for i in range(1, batch_size + 1):
-            if self.pending_requests[batch_size - i].is_last_token():
-                self.pending_requests.pop(batch_size - i)
+        self.pending_requests = [
+            req for req in self.pending_requests if not req.is_last_token()
+        ]
 
         if len(self.pending_requests) == 0:
             self.req_id_counter = 0

@@ -56,8 +56,7 @@ class VLLMRollingBatch(RollingBatch):
     @stop_on_any_exception
     def inference(self, input_data, parameters):
         batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(input_data, parameters)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()
@@ -94,7 +93,7 @@ class VLLMRollingBatch(RollingBatch):
         for key in finished_id:
             self.request_cache.pop(key)
 
-        return self.postprocess_results(batch_size)
+        return self.postprocess_results()
 
     def preprocess_requests(self, requests):
         raise NotImplementedError("Not implemented for vLLM rolling batcher")
