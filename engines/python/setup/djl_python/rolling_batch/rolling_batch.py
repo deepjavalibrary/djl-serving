@@ -172,21 +172,20 @@ class RollingBatch(ABC):
         pass
 
     def get_new_requests(self, input_data, parameters):
-        new_requests = []
+        init_batch_size = len(self.pending_requests)
         for data, params in zip(input_data, parameters):
             request = Request(self.req_id_counter, data,
                               params if params else {})
             self.pending_requests.append(request)
-            new_requests.append(request)
             self.req_id_counter += 1
             if self.max_batch_size is not None and len(
                     self.pending_requests) == self.max_batch_size:
                 warnings.warn(
-                    "Reach the maximum batch size. The excessive requests are thrown away."
+                    "Reach the maximum batch size. The excessive requests will be thrown away."
                 )
                 break
 
-        return new_requests
+        return self.pending_requests[init_batch_size:]
 
     @abstractmethod
     def preprocess_requests(self, requests):
