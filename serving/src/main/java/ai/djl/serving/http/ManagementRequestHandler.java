@@ -16,6 +16,9 @@ import ai.djl.ModelException;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.http.list.ListModelsResponse;
+import ai.djl.serving.http.list.ListPagination;
+import ai.djl.serving.http.list.ListWorkflowsResponse;
 import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
@@ -44,15 +47,11 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
-/**
- * A class handling inbound HTTP requests to the management API.
- *
- * <p>This class
- */
+/** A class handling inbound HTTP requests to the management API. */
 public class ManagementRequestHandler extends HttpRequestHandler {
 
-    private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?].*)?");
-    private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
+    private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?][^/]*)?");
+    private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?][^/]*)?");
     private static final Pattern INVOKE_PATTERN = Pattern.compile("^/models/.+/invoke$");
 
     /** {@inheritDoc} */
@@ -124,11 +123,11 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         ListModelsResponse list = new ListModelsResponse();
 
         ListPagination pagination = new ListPagination(decoder, keys.size());
-        if (pagination.last < keys.size()) {
-            list.setNextPageToken(String.valueOf(pagination.last));
+        if (pagination.getLast() < keys.size()) {
+            list.setNextPageToken(String.valueOf(pagination.getLast()));
         }
 
-        for (int i = pagination.pageToken; i < pagination.last; ++i) {
+        for (int i = pagination.getPageToken(); i < pagination.getLast(); ++i) {
             String workflowName = keys.get(i);
             for (Workflow workflow : endpoints.get(workflowName).getWorkflows()) {
                 for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
@@ -157,11 +156,11 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         ListWorkflowsResponse list = new ListWorkflowsResponse();
 
         ListPagination pagination = new ListPagination(decoder, keys.size());
-        if (pagination.last <= keys.size()) {
-            list.setNextPageToken(String.valueOf(pagination.last));
+        if (pagination.getLast() <= keys.size()) {
+            list.setNextPageToken(String.valueOf(pagination.getLast()));
         }
 
-        for (int i = pagination.pageToken; i < pagination.last; ++i) {
+        for (int i = pagination.getPageToken(); i < pagination.getLast(); ++i) {
             String workflowName = keys.get(i);
             for (Workflow w : endpoints.get(workflowName).getWorkflows()) {
                 list.addWorkflow(workflowName, w.getVersion());
@@ -190,11 +189,13 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             req = new LoadModelRequest(decoder);
         }
 
+        final ModelManager modelManager = ModelManager.getInstance();
         Workflow workflow;
         URI uri = WorkflowDefinition.toWorkflowUri(req.getModelUrl());
         if (uri != null) {
             try {
                 workflow = WorkflowDefinition.parse(req.getModelName(), uri).toWorkflow();
+                workflow.prepare(modelManager.getWorkLoadManager());
             } catch (IOException | BadWorkflowException e) {
                 NettyUtils.sendError(ctx, e.getCause());
                 return;
@@ -216,8 +217,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                             req.getMinWorkers(),
                             req.getMaxWorkers());
             workflow = new Workflow(modelInfo);
+            workflow.prepare(modelManager.getWorkLoadManager());
         }
-        final ModelManager modelManager = ModelManager.getInstance();
         CompletableFuture<Void> f =
                 modelManager
                         .registerWorkflow(workflow)
@@ -251,11 +252,13 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                         NettyUtils.getParameter(decoder, LoadModelRequest.SYNCHRONOUS, "true"));
 
         try {
+            final ModelManager modelManager = ModelManager.getInstance();
+
             URI uri = URI.create(workflowUrl);
             Workflow workflow = WorkflowDefinition.parse(null, uri).toWorkflow();
+            workflow.prepare(modelManager.getWorkLoadManager());
             String workflowName = workflow.getName();
 
-            final ModelManager modelManager = ModelManager.getInstance();
             CompletableFuture<Void> f =
                     modelManager
                             .registerWorkflow(workflow)
@@ -348,28 +351,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             NettyUtils.sendJsonResponse(ctx, new StatusResponse(combinedMsg));
         } catch (NumberFormatException ex) {
             throw new BadRequestException("parameter is invalid number." + ex.getMessage(), ex);
-        }
-    }
-
-    private static final class ListPagination {
-
-        private int pageToken;
-        private int last;
-
-        private ListPagination(QueryStringDecoder decoder, int keysSize) {
-            int limit = NettyUtils.getIntParameter(decoder, "limit", 100);
-            pageToken = NettyUtils.getIntParameter(decoder, "next_page_token", 0);
-            if (limit > 100 || limit < 0) {
-                limit = 100;
-            }
-            if (pageToken < 0) {
-                pageToken = 0;
-            }
-
-            last = pageToken + limit;
-            if (last > keysSize) {
-                last = keysSize;
-            }
         }
     }
 }

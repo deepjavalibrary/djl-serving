@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -155,6 +156,24 @@ public class WorkLoadManager {
 
     /**
      * Returns the {@link WorkerPool} for a wpc.
+     *
+     * @param <I> the wpc class
+     * @param <O> the wpc class
+     * @param id the wpc id
+     * @return the {@link WorkerPool}
+     */
+    @SuppressWarnings("unchecked")
+    public <I, O> WorkerPool<I, O> getWorkerPoolById(String id) {
+        for (Entry<WorkerPoolConfig<?, ?>, WorkerPool<?, ?>> wp : workerPools.entrySet()) {
+            if (id.equals(wp.getKey().getId())) {
+                return (WorkerPool<I, O>) wp.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the {@link WorkerPool} for a model.
      *
      * @param <I> the wpc input class
      * @param <O> the wpc output class

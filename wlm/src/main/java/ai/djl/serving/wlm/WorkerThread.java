@@ -13,7 +13,7 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.Device;
-import ai.djl.serving.wlm.WorkerPoolConfig.ThreadType;
+import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WorkerJob;
 import ai.djl.translate.TranslateException;
@@ -22,10 +22,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /** The {@link WorkerThread} is the worker managed by the {@link WorkLoadManager}. */
 public final class WorkerThread<I, O> implements Runnable {
@@ -34,9 +38,10 @@ public final class WorkerThread<I, O> implements Runnable {
 
     private String workerName;
 
-    private ThreadType<I, O> threadType;
+    private ThreadConfig<I, O> threadConfig;
     private AtomicBoolean running = new AtomicBoolean(true);
 
+    private LinkedBlockingDeque<WorkerJob<I, O>> configJobs;
     private BatchAggregator<I, O> aggregator;
     private Device device;
     private AtomicReference<Thread> currentThread = new AtomicReference<>();
@@ -58,7 +63,8 @@ public final class WorkerThread<I, O> implements Runnable {
         this.startTime = System.currentTimeMillis();
         this.fixPoolThread = builder.fixPoolThread;
         this.device = builder.device;
-        threadType = builder.workerPoolConfig.newThread(device);
+        threadConfig = builder.workerPoolConfig.newThread(device);
+        configJobs = new LinkedBlockingDeque<>();
     }
 
     /** {@inheritDoc} */
@@ -68,16 +74,27 @@ public final class WorkerThread<I, O> implements Runnable {
         thread.setName(workerName);
         currentThread.set(thread);
         this.state = WorkerState.WORKER_STARTED;
-        List<I> req = null;
+        List<Job<I, O>> req = null;
         String errorMessage = "Worker shutting down";
         try {
             while (isRunning() && !aggregator.isFinished()) {
                 req = aggregator.getRequest();
                 if (req != null && !req.isEmpty()) {
                     state = WorkerState.WORKER_BUSY;
+
+                    // Check for config jobs
+                    while (!threadConfig.getConfigJobs().isEmpty()) {
+                        // Run base worker pool configurations if present
+                        runConfigJob(threadConfig.getConfigJobs().pop());
+                    }
+                    while (!configJobs.isEmpty()) {
+                        // Run thread config jobs if present
+                        runConfigJob(configJobs.pop().getJob());
+                    }
+
                     try {
-                        List<O> reply = threadType.run(req);
-                        aggregator.sendResponse(reply);
+                        runJobs(req);
+                        aggregator.sendResponse();
                     } catch (TranslateException e) {
                         logger.warn("Failed to predict", e);
                         aggregator.sendError(e);
@@ -103,6 +120,23 @@ public final class WorkerThread<I, O> implements Runnable {
         }
     }
 
+    private O runConfigJob(Job<I, O> configJob) throws TranslateException {
+        runJobs(Collections.singletonList(configJob));
+        return configJob.getOutput();
+    }
+
+    private void runJobs(List<Job<I, O>> input) throws TranslateException {
+        Map<Optional<JobFunction<I, O>>, List<Job<I, O>>> jobs =
+                input.stream().collect(Collectors.groupingBy(Job::getRunner));
+        for (Map.Entry<Optional<JobFunction<I, O>>, List<Job<I, O>>> fjob : jobs.entrySet()) {
+            if (fjob.getKey().isPresent()) {
+                Job.runAll(fjob.getValue(), fjob.getKey().get());
+            } else {
+                threadConfig.run(fjob.getValue());
+            }
+        }
+    }
+
     /**
      * Returns the worker thread ID.
      *
@@ -110,6 +144,15 @@ public final class WorkerThread<I, O> implements Runnable {
      */
     public int getWorkerId() {
         return workerId;
+    }
+
+    /**
+     * Returns the {@link WorkerPoolConfig}'s {@link ThreadConfig} for this thread.
+     *
+     * @return the {@link WorkerPoolConfig}'s {@link ThreadConfig} for this thread
+     */
+    public ThreadConfig<I, O> getThreadType() {
+        return threadConfig;
     }
 
     /**
@@ -163,7 +206,16 @@ public final class WorkerThread<I, O> implements Runnable {
             aggregator.sendError(e);
         }
         logger.info("shutdown temporary worker: {}", workerName);
-        threadType.close();
+        threadConfig.close();
+    }
+
+    /**
+     * Adds a configuration job to this thread.
+     *
+     * @param wj the configuration job to add
+     */
+    public void addConfigJob(WorkerJob<I, O> wj) {
+        configJobs.add(wj);
     }
 
     private String buildWorkerName(WorkerPoolConfig<I, O> wpc) {

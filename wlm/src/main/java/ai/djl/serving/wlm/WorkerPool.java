@@ -251,8 +251,11 @@ public class WorkerPool<I, O> {
         if (activeThreads < minWorkers) {
             // scale up the fixed pool
             logger.info(
-                    "scale up {} workers ({} - {})",
+                    "scaling up min workers by {} (from {} to {}) workers. Total range is min {} to"
+                            + " max {}",
                     minWorkers - activeThreads,
+                    activeThreads,
+                    minWorkers,
                     minWorkers,
                     group.getMaxWorkers());
             group.addThreads(minWorkers - activeThreads, true);

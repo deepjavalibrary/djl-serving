@@ -38,6 +38,12 @@ public class WorkflowTest {
     /** A standard input for multiple tests with a zero image. */
     private Input zeroInput;
 
+    public static void main(String[] args) throws BadWorkflowException, IOException {
+        WorkflowTest t = new WorkflowTest();
+        t.beforeAll();
+        t.testCriteria();
+    }
+
     @BeforeSuite
     public void beforeAll() throws IOException {
         ConfigManager.init(new Arguments(new CommandLine.Builder().build()));
@@ -102,7 +108,7 @@ public class WorkflowTest {
         }
 
         Output output = workflow.execute(wlm, input).join();
-        workflow.stop();
+        workflow.close();
         wlm.close();
         Assert.assertNotNull(output.getData());
         return output;

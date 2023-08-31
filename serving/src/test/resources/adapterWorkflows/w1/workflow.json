@@ -1,0 +1,19 @@
+{
+  "name": "adapter1",
+  "version": "0.1",
+  "models": {
+    "m": "src/test/resources/adaptecho"
+  },
+  "configs": {
+    "adapters": {
+      "a": {
+        "model": "m",
+        "name": "a1",
+        "url": "url1"
+      }
+    }
+  },
+  "workflow": {
+    "out": ["adapter", "a", "in"]
+  }
+}

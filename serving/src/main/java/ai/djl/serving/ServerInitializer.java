@@ -12,6 +12,7 @@
  */
 package ai.djl.serving;
 
+import ai.djl.serving.http.AdapterManagementRequestHandler;
 import ai.djl.serving.http.ConfigurableHttpRequestHandler;
 import ai.djl.serving.http.InferenceRequestHandler;
 import ai.djl.serving.http.InvalidRequestHandler;
@@ -68,6 +69,7 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
             case MANAGEMENT:
                 pipeline.addLast(new ConfigurableHttpRequestHandler(pluginManager));
                 pipeline.addLast("management", new ManagementRequestHandler());
+                pipeline.addLast("management-adapter", new AdapterManagementRequestHandler());
                 break;
             case INFERENCE:
                 pipeline.addLast("inference", new InferenceRequestHandler());
@@ -77,6 +79,7 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
                 pipeline.addLast("inference", new InferenceRequestHandler());
                 pipeline.addLast(new ConfigurableHttpRequestHandler(pluginManager));
                 pipeline.addLast("management", new ManagementRequestHandler());
+                pipeline.addLast("management-adapter", new AdapterManagementRequestHandler());
                 break;
         }
         pipeline.addLast("badRequest", new InvalidRequestHandler());
