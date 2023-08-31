@@ -13,13 +13,14 @@ FROM ubuntu:20.04
 ARG djl_version=0.24.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.8
-ARG torch_neuronx_version=1.13.1.1.9.0
-ARG transformers_neuronx_version=0.5.58
-ARG neuronx_distributed_version=0.2.0
+ARG torch_neuronx_version=1.13.1.1.10.0
+ARG transformers_neuronx_version=0.6.106
+ARG neuronx_distributed_version=0.3.0
+ARG neuronx_cc_version=2.9.*
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.30.1
-ARG accelerate_version=0.20.3
-ARG diffusers_version=0.14.0
+ARG transformers_version=4.32.1
+ARG accelerate_version=0.22.0
+ARG diffusers_version=0.16.0
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -59,7 +60,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_djl_serving.sh $djl_version && \
     scripts/install_inferentia2.sh && \
     pip install transformers==${transformers_version} accelerate==${accelerate_version} safetensors \
-    neuronx-cc==2.6.* torch_neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
+    neuronx-cc==${neuronx_cc_version} torch_neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com && \
     scripts/install_s5cmd.sh x64 && \

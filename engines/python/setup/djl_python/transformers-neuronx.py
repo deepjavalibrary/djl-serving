@@ -164,6 +164,8 @@ class TransformersNeuronXService(object):
             self.model.to_neuron()
 
     def initialize(self, properties):
+        # Neuron recommendation for transformersneuronx speedup
+        os.environ["NEURON_CC_FLAGS"] = "--model-type=transformer-inference"
         self.batch_size = int(properties.get("batch_size", 1))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
