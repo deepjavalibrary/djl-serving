@@ -78,18 +78,19 @@ class RollingBatch implements Runnable {
     public void run() {
         currentThread = Thread.currentThread();
         while (!stop) {
+            int size;
+            Input batch = new Input();
             try {
                 lock.lock();
                 if (list.isEmpty()) {
                     canRead.await();
                 }
 
-                Input batch = new Input();
                 if (resetRollingBatch) {
                     batch.addProperty("reset_rollingbatch", "true");
                     resetRollingBatch = false;
                 }
-                int size = list.size();
+                size = list.size();
                 for (int i = 0; i < size; ++i) {
                     Request req = list.get(i);
                     String prefix = "batch_" + i + '.';
@@ -105,8 +106,16 @@ class RollingBatch implements Runnable {
                     }
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
+            } catch (InterruptedException e) {
+                break;
+            } finally {
+                lock.unlock();
+            }
 
-                Output output = process.predict(batch, timeout, false);
+            Output output = process.predict(batch, timeout, false);
+
+            try {
+                lock.lock();
                 PairList<String, BytesSupplier> content = output.getContent();
                 // TODO: optimize for conditional killing
                 int code = output.getCode();
@@ -139,8 +148,6 @@ class RollingBatch implements Runnable {
                 if (list.size() < maxRollingBatchSize) {
                     canAdd.signal();
                 }
-            } catch (InterruptedException e) {
-                break;
             } finally {
                 lock.unlock();
             }
