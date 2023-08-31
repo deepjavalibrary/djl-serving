@@ -132,7 +132,7 @@ class LmiDistRollingBatch(RollingBatch):
             if self.cache:
                 decode_generations, decode_next_batch = self.model.generate_token(
                     self.cache)
-                generations.extend(decode_generations)
+                decode_generations.extend(generations)
 
                 # concatenate with the existing batch of the model
                 if prefill_next_batch is None:
@@ -141,7 +141,7 @@ class LmiDistRollingBatch(RollingBatch):
                     self.cache = prefill_next_batch
                 else:
                     self.cache = self.model.batch_type.concatenate(
-                        [prefill_next_batch, decode_next_batch])
+                        [decode_next_batch, prefill_next_batch])
             else:
                 self.cache = prefill_next_batch
         else:
