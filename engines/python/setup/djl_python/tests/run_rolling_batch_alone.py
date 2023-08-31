@@ -47,6 +47,21 @@ def print_rank0(content):
     if rank == 0:
         print(content)
 
+data_collector = []
+def collect_data(result):
+    done_requests = []
+    for idx, item in enumerate(result):
+        if len(data_collector) <= idx:
+            data_collector[idx] = item["data"]["generated_text"]
+        else:
+            data_collector[idx] += item["data"]["generated_text"]
+        if item['data']['last']:
+            done_requests.append(data_collector[idx])
+    for value in done_requests:
+        print_rank0(f"\nFinish one request: {value}\n")
+        data_collector.remove(value)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
