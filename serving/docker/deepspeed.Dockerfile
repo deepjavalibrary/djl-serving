@@ -23,10 +23,10 @@ ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn_2-2.0.1-cp3
 ARG vllm_wheel="https://publish.djl.ai/vllm/vllm-0.1.1-cp39-cp39-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.30.2
-ARG accelerate_version=0.20.3
+ARG transformers_version=4.32.1
+ARG accelerate_version=0.22.0
 ARG diffusers_version=0.16.0
-ARG bitsandbytes_version=0.40.0.post4
+ARG bitsandbytes_version=0.41.1
 ARG peft_version=0.3.0
 
 EXPOSE 8080
