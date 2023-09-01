@@ -9,6 +9,9 @@ torchrun --standalone --nnodes=1 --nproc-per-node=4 \
 import argparse
 import logging
 import json
+import random
+from typing import List
+
 import torch.distributed as dist
 
 
@@ -29,16 +32,15 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str):
 
 def init_rolling_batch(rolling_batch_type: str,
                        model_id: str,
-                       properties: dict = None):
+                       properties: dict):
     rolling_batch_type = rolling_batch_type.lower()
-    if not properties:
-        properties = {"tensor_parallel_degree": 1, "trust_remote_code": True}
     device = 0
     if dist.is_initialized():
         device = dist.get_rank()
         properties["tensor_parallel_degree"] = dist.get_world_size()
     rolling_batcher_cls = get_rolling_batch_class_from_str(rolling_batch_type)
     return rolling_batcher_cls(model_id, device, properties, **properties)
+
 
 def print_rank0(content):
     rank = 0
@@ -47,20 +49,77 @@ def print_rank0(content):
     if rank == 0:
         print(content)
 
+
 data_collector = []
+
+
 def collect_data(result):
-    done_requests = []
+    done_requests_indices = []
     for idx, item in enumerate(result):
         if len(data_collector) <= idx:
-            data_collector[idx] = item["data"]["generated_text"]
+            data_collector.append(item["data"])
         else:
-            data_collector[idx] += item["data"]["generated_text"]
-        if item['data']['last']:
-            done_requests.append(data_collector[idx])
-    for value in done_requests:
+            data_collector[idx] += item["data"]
+        if item['last']:
+            done_requests_indices.append(idx)
+    for idx in sorted(done_requests_indices, reverse=True):
+        value = data_collector.pop(idx)
         print_rank0(f"\nFinish one request: {value}\n")
-        data_collector.remove(value)
+    return done_requests_indices
 
+
+def build_request(sample_prompt: List,
+                  sample_param: List,
+                  batch_size,
+                  shuffle=False):
+    sample_prompt = sample_prompt.copy()
+    sample_param = sample_param.copy()
+    while len(sample_prompt) < batch_size:
+        sample_prompt.extend(sample_prompt)
+        sample_param.extend(sample_param)
+    if shuffle:
+        temp = list(zip(sample_prompt, sample_param))
+        random.shuffle(temp)
+        res1, res2 = zip(*temp)
+        sample_prompt, sample_param = list(res1), list(res2)
+    return sample_prompt[:batch_size], sample_param[:batch_size]
+
+
+def simulator(batcher,
+              sample_prompt: str or List,
+              sample_param: dict or List,
+              merge_batch_size: List,
+              wait_step: int or list = 1,
+              shuffle=False):
+    if isinstance(sample_prompt, str):
+        sample_prompt = [sample_prompt]
+    if isinstance(sample_param, dict):
+        sample_param = [sample_param] * len(sample_prompt)
+    if isinstance(wait_step, int):
+        wait_step = [wait_step] * len(merge_batch_size)
+    assert len(sample_prompt) == len(sample_param)
+    assert len(merge_batch_size) == len(wait_step)
+    current_prompt = []
+    current_param = []
+    for batch_size, step in zip(merge_batch_size, wait_step):
+        new_prompt, new_param = build_request(sample_prompt, sample_param,
+                                              batch_size, shuffle)
+        current_prompt.extend(new_prompt)
+        current_param.extend(new_param)
+        for i in range(step):
+            if len(current_prompt) == 0:
+                break
+            generated_tokens = batcher.inference(current_prompt, current_param)
+            finished_indices = collect_data(generated_tokens)
+            for idx in sorted(finished_indices, reverse=True):
+                current_prompt.pop(idx)
+                current_param.pop(idx)
+    while len(current_prompt) > 0:
+        generated_tokens = batcher.inference(current_prompt, current_param)
+        finished_indices = collect_data(generated_tokens)
+        for idx in sorted(finished_indices, reverse=True):
+            current_prompt.pop(idx)
+            current_param.pop(idx)
 
 
 if __name__ == "__main__":
@@ -77,13 +136,16 @@ if __name__ == "__main__":
                         required=False,
                         help="The properties needed for the rolling batcher")
     args = parser.parse_args()
-    if args.rollingbatch == "vllm" or args.rollingbatch == "lmi-dist":
-        dist.init_process_group("nccl")
     properties = None
     if args.properties:
         properties = json.loads(args.properties)
+    else:
+        properties = {"tensor_parallel_degree": 1, "trust_remote_code": True, "engine": "Python"}
+    if args.rollingbatch == "lmi-dist":
+        dist.init_process_group("nccl")
+        properties["engine"] = "MPI"
     batcher = init_rolling_batch(args.rollingbatch, args.model_id, properties)
-    input_data = ["Deep Learning is"]
-    parameters = [{}]
-    result = batcher.inference(input_data, parameters)
-    print_rank0(result)
+    simulator(batcher, "write a program that can sum two number in python", {
+        "max_new_tokens": 256,
+        "do_sample": True
+    }, [1, 1, 1, 1], 1)
