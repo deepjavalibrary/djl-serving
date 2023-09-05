@@ -20,9 +20,9 @@ ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.24.0-
 ARG tb_wheel="https://publish.djl.ai/tritonserver/r23.04/tritontoolkit-23.4-py3-none-any.whl"
 ARG ompi_version=4.1.4
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.30.1
-ARG accelerate_version=0.20.3
-ARG bitsandbytes_version=0.40.0.post4
+ARG transformers_version=4.32.1
+ARG accelerate_version=0.22.0
+ARG bitsandbytes_version=0.41.1
 ARG peft_version=0.3.0
 
 EXPOSE 8080
