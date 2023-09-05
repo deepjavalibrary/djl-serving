@@ -13,7 +13,7 @@ FROM ubuntu:20.04
 ARG djl_version=0.24.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.8
-ARG torch_neuronx_version=1.13.1.1.10.0
+ARG torch_neuronx_version=1.13.1.1.10.1
 ARG transformers_neuronx_version=0.6.106
 ARG neuronx_distributed_version=0.3.0
 ARG neuronx_cc_version=2.9.*
