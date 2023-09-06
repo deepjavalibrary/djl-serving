@@ -193,9 +193,9 @@ class RollingBatch(ABC):
             res = {"data": req.get_next_token(), "last": req.is_last_token()}
             results.append(res)
 
-        for i in range(1, batch_size + 1):
-            if self.pending_requests[batch_size - i].is_last_token():
-                self.pending_requests.pop(batch_size - i)
+        self.pending_requests = [
+            req for req in self.pending_requests if not req.is_last_token()
+        ]
 
         if len(self.pending_requests) == 0:
             self.req_id_counter = 0
