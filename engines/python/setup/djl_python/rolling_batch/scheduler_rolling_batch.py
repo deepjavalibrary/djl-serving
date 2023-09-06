@@ -39,16 +39,16 @@ class SchedulerRollingBatch(RollingBatch):
         self._init_scheduler(properties)
 
     @stop_on_any_exception
-    def inference(self, input_data, parameters):
+    def inference(self, input_text, parameters):
         """
         Performs prefill and decode operations for the batch.
 
-        :param input_data: List of input texts for each request in a batch
+        :param input_text: List of input texts for each request in a batch
         :param parameters: List of kwargs for each request in a batch
         :return: generated batch decoded tokens
         """
-        batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
+        batch_size = len(input_text)
+        new_requests = self.get_new_requests(input_text, parameters,
                                              batch_size)
 
         preprocessed_new_requests = self.preprocess_requests(new_requests)
