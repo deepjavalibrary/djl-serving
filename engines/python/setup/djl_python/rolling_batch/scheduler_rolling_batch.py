@@ -35,7 +35,9 @@ class SchedulerRollingBatch(RollingBatch):
         """
 
         super().__init__(device, **kwargs)
-        self._init_model_and_tokenizer(model_id_or_path, device=device, **kwargs)
+        self._init_model_and_tokenizer(model_id_or_path,
+                                       device=device,
+                                       **kwargs)
         self._init_scheduler(properties)
 
     @stop_on_any_exception
@@ -86,7 +88,10 @@ class SchedulerRollingBatch(RollingBatch):
 
         return new_requests
 
-    def _init_model_and_tokenizer(self, model_id_or_path, device=None, **kwargs):
+    def _init_model_and_tokenizer(self,
+                                  model_id_or_path,
+                                  device=None,
+                                  **kwargs):
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         architectures = self.config.architectures
         if architectures and architectures[0].endswith(
@@ -94,7 +99,10 @@ class SchedulerRollingBatch(RollingBatch):
             raise ValueError('Seq2Seq model is not supported by scheduler')
         else:
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path, device_map="auto" if device and device.type == "cuda" else "cpu", **kwargs)
+                model_id_or_path,
+                device_map="auto"
+                if device and device.type == "cuda" else "cpu",
+                **kwargs)
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
