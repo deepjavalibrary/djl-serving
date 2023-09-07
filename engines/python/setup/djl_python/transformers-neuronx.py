@@ -156,8 +156,6 @@ class TransformersNeuronXService(object):
             amp=self.amp,
             tp_degree=self.tensor_parallel_degree,
             n_positions=self.n_positions,
-            trust_remote_code=self.trust_remote_code,
-            revision=self.revision,
             unroll=self.unroll)
 
     def load_model(self, model_type):
