@@ -60,6 +60,9 @@ class TransformersNeuronXService(object):
         self.unroll = None
         self.n_positions = None
         self.model_type = None
+        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
+                                                "FALSE").lower() == 'true'
+        self.revision = None
 
     def convert_dtype(self, dtype, model_type):
         if model_type == "opt":
@@ -140,8 +143,11 @@ class TransformersNeuronXService(object):
 
     def load_hf_model(self):
         logging.info(f"Start loading the model {self.model_id_or_path}...")
-        return AutoModelForCausalLM.from_pretrained(self.model_id_or_path,
-                                                    low_cpu_mem_usage=True)
+        return AutoModelForCausalLM.from_pretrained(
+            self.model_id_or_path,
+            trust_remote_code=self.trust_remote_code,
+            revision=self.revision,
+            low_cpu_mem_usage=True)
 
     def load_inf2_model(self, model_type, load_path):
         return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
@@ -150,6 +156,8 @@ class TransformersNeuronXService(object):
             amp=self.amp,
             tp_degree=self.tensor_parallel_degree,
             n_positions=self.n_positions,
+            trust_remote_code=self.trust_remote_code,
+            revision=self.revision,
             unroll=self.unroll)
 
     def load_model(self, model_type):
@@ -180,14 +188,23 @@ class TransformersNeuronXService(object):
         if dtype not in DTYPE_MAPPER:
             raise ValueError(f"{dtype} data type not supported!")
         self.amp = DTYPE_MAPPER[dtype]
-        model_config = AutoConfig.from_pretrained(self.model_id_or_path)
+        if "trust_remote_code" in properties:
+            self.trust_remote_code = properties.get(
+                "trust_remote_code").lower() == "true"
+        if "revision" in properties:
+            self.revision = properties.get("revision")
+        model_config = AutoConfig.from_pretrained(self.model_id_or_path,
+                                                  revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
             raise ValueError(
                 f"{model_config.model_type} type not supported for model {self.model_id_or_path}"
                 f"Supported model arch: {SUPPORTED_MODEL_TYPES}")
         self.model_type = model_config.model_type
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id_or_path,
-                                                       padding_side="left")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_id_or_path,
+            trust_remote_code=self.trust_remote_code,
+            revision=self.revision,
+            padding_side="left")
         if not self.tokenizer.pad_token_id:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
