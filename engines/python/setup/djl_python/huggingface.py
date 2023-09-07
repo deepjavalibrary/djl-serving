@@ -169,7 +169,8 @@ class HuggingFaceService(object):
             kwargs["revision"] = properties.get('revision')
         self.rolling_batch_type = properties.get("rolling_batch", None)
 
-        self._read_model_config(model_id_or_path)
+        self._read_model_config(model_id_or_path,
+                                properties.get('revision', None))
 
         if self.rolling_batch_type:
             if "output_formatter" in properties:
@@ -362,7 +363,7 @@ class HuggingFaceService(object):
                                        device=self.device)
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(
-                    model_id_or_path)
+                    model_id_or_path, revision=kwargs.get('revision', None))
                 hf_pipeline = pipeline(task=task,
                                        tokenizer=self.tokenizer,
                                        model=model_id_or_path,
@@ -395,7 +396,10 @@ class HuggingFaceService(object):
                 self.peft_config.base_model_name_or_path, padding_size="left")
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
-                                                           padding_side="left")
+                                                           padding_side="left",
+                                                           revision=kwargs.get(
+                                                               'revision',
+                                                               None))
         architectures = self.model_config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
@@ -479,10 +483,12 @@ class HuggingFaceService(object):
             )
         return task
 
-    def _read_model_config(self, model_config_path: str):
+    def _read_model_config(self, model_config_path: str, revision=None):
         try:
             self.model_config = AutoConfig.from_pretrained(
-                model_config_path, trust_remote_code=self.trust_remote_code)
+                model_config_path,
+                trust_remote_code=self.trust_remote_code,
+                revision=revision)
         except OSError:
             logging.warning(
                 f"config.json not found for {model_config_path}. Attempting to load with peft"
