@@ -283,17 +283,17 @@ class HuggingFaceService(object):
         elif self.enable_streaming:
             # TODO support dynamic batch
             outputs.add_property("content-type", "application/jsonlines")
-            if self.enable_streaming == "huggingface":
-                outputs.add_stream_content(
-                    StreamingUtils.use_hf_default_streamer(
-                        self.model, self.tokenizer, input_data, self.device,
-                        **parameters[0]))
-            else:
+            if self.enable_streaming == "local":
                 stream_generator = StreamingUtils.get_stream_generator(
                     "Accelerate")
                 outputs.add_stream_content(
                     stream_generator(self.model, self.tokenizer, input_data,
                                      self.device, **parameters[0]))
+            else:
+                outputs.add_stream_content(
+                    StreamingUtils.use_hf_default_streamer(
+                        self.model, self.tokenizer, input_data, self.device,
+                        **parameters[0]))
             return outputs
 
         prediction = self.hf_pipeline(input_data, **parameters[0])

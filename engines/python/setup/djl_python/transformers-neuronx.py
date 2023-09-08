@@ -229,18 +229,18 @@ class TransformersNeuronXService(object):
 
             if self.enable_streaming:
                 outputs.add_property("content-type", "application/jsonlines")
-                if self.enable_streaming == "huggingface":
-                    outputs.add_stream_content(
-                        StreamingUtils.use_hf_default_streamer(
-                            self.model, self.tokenizer, input_text, None,
-                            **model_kwargs))
-                else:
+                if self.enable_streaming == "local":
                     stream_generator = StreamingUtils.get_stream_generator(
                         "transformers-neuronx")
                     model_kwargs["engine"] = "transformers-neuronx"
                     outputs.add_stream_content(
                         stream_generator(self.model, self.tokenizer,
                                          input_text, "cpu", **model_kwargs))
+                else:
+                    outputs.add_stream_content(
+                        StreamingUtils.use_hf_default_streamer(
+                            self.model, self.tokenizer, input_text, None,
+                            **model_kwargs))
                 return outputs
 
             encoded_inputs = self.tokenizer.batch_encode_plus(

@@ -348,17 +348,17 @@ class DeepSpeedService(object):
         outputs = Output()
         if self.enable_streaming:
             outputs.add_property("content-type", "application/jsonlines")
-            if self.enable_streaming == "huggingface":
-                outputs.add_stream_content(
-                    StreamingUtils.use_hf_default_streamer(
-                        self.model, self.tokenizer, input_data, self.device,
-                        **model_kwargs))
-            else:
+            if self.enable_streaming == "local":
                 stream_generator = StreamingUtils.get_stream_generator(
                     "DeepSpeed")
                 outputs.add_stream_content(
                     stream_generator(self.model, self.tokenizer, input_data,
                                      self.device, **model_kwargs))
+            else:
+                outputs.add_stream_content(
+                    StreamingUtils.use_hf_default_streamer(
+                        self.model, self.tokenizer, input_data, self.device,
+                        **model_kwargs))
             return outputs
         if self.task == "text-generation":
             tokenized_inputs = self.tokenizer(input_data,
