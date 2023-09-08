@@ -100,6 +100,8 @@ public final class ModelManager {
                             String engine = model.getEngineName();
                             DependencyManager dm = DependencyManager.getInstance();
                             dm.installEngine(engine);
+                            Thread.currentThread()
+                                    .setContextClassLoader(MutableClassLoader.getInstance());
                             WorkerPool<Input, Output> wp = wlm.getWorkerPool(model);
                             if (wp != null) {
                                 models.put(key, wp.getModel());
