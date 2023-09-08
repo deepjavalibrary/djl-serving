@@ -77,6 +77,8 @@ class StreamingUtils:
         input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
         if device is not None:
             input_tokens = input_tokens.to(device)
+        else:
+            input_tokens = input_tokens.to(model.device)
 
         streamer = HFStreamer(tokenizer, skip_special_tokens=True)
         generation_kwargs = dict(input_tokens, streamer=streamer, **kwargs)
@@ -121,8 +123,9 @@ class StreamingUtils:
                                     StreamingUtils.DEFAULT_MAX_NEW_TOKENS)
         tokenized_inputs = tokenizer(inputs, return_tensors="pt", padding=True)
         input_ids = tokenized_inputs["input_ids"]
-        if device is not None:
-            input_ids = input_ids.to(device)
+        if device is None:
+            device = model.device
+        input_ids = input_ids.to(device)
 
         past_key_values = None
         decoding_method = StreamingUtils._get_decoding_method(**kwargs)
@@ -159,8 +162,7 @@ class StreamingUtils:
         else:
             raise ValueError(f"Unsupported model class: {generic_model_class}")
 
-        if device is not None:
-            attention_mask = attention_mask.to(device)
+        attention_mask = attention_mask.to(device)
 
         while True:
             if stop_generation:
