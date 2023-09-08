@@ -105,7 +105,7 @@ class LmiDistRollingBatch(RollingBatch):
             Batch(id=0, requests=requests,
                   size=len(requests)), self.model.tokenizer,
             kwargs.get("torch_dtype", torch.float16), self.device)
-        self.model.warmup(batch)
+        self.model.warmup(batch, max_prefill_tokens)
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
