@@ -22,9 +22,12 @@ libs
 .classpath
 bin/
 
-#node
+# node
 node_modules/
 
-#vscode
+# vscode
 .vscode
+
+# dir
 tests/integration/models/
+engines/python/setup/djl_python/tests/resources*

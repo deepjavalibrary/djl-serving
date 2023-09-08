@@ -30,8 +30,7 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str):
     raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
 
-def init_rolling_batch(rolling_batch_type: str,
-                       model_id: str,
+def init_rolling_batch(rolling_batch_type: str, model_id: str,
                        properties: dict):
     rolling_batch_type = rolling_batch_type.lower()
     device = 0
@@ -140,7 +139,11 @@ if __name__ == "__main__":
     if args.properties:
         properties = json.loads(args.properties)
     else:
-        properties = {"tensor_parallel_degree": 1, "trust_remote_code": True, "engine": "Python"}
+        properties = {
+            "tensor_parallel_degree": 1,
+            "trust_remote_code": True,
+            "engine": "Python"
+        }
     if args.rollingbatch == "lmi-dist":
         dist.init_process_group("nccl")
         properties["engine"] = "MPI"
