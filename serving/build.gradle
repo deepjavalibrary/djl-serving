@@ -61,7 +61,7 @@ run {
     systemProperty("file.encoding", "UTF-8")
     // systemProperty("ai.djl.logging.level", "debug")
     systemProperty("log4j.configurationFile", "${project.projectDir}/src/main/conf/log4j2.xml")
-    applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000"]
+    application.applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000"]
     workingDir getProjectDir()
 }
 
@@ -131,14 +131,16 @@ startScripts {
     }
 }
 
-applicationDistribution.into("conf") {
-    from("src/main/conf/")
-}
-applicationDistribution.into("plugins") {
-    from(project(":plugins:cache").tasks.jar)
-    from(project(":plugins:kserve").tasks.jar)
-    from(project(":plugins:management-console").tasks.jar)
-    from(project(":plugins:static-file-plugin").tasks.jar)
+application {
+    applicationDistribution.into("conf") {
+        from("src/main/conf/")
+    }
+    applicationDistribution.into("plugins") {
+        from(project(":plugins:cache").tasks.jar)
+        from(project(":plugins:kserve").tasks.jar)
+        from(project(":plugins:management-console").tasks.jar)
+        from(project(":plugins:static-file-plugin").tasks.jar)
+    }
 }
 tasks.test.dependsOn(
         ":plugins:kserve:jar",
