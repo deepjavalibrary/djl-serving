@@ -890,13 +890,14 @@ public final class ModelInfo<I, O> {
         Engine engine = Engine.getEngine(engineName);
         if ("*".equals(loadOnDevices)) {
             int gpuCount = engine.getGpuCount();
+            String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
+            v = prop.getProperty("option.tensor_parallel_degree", v);
+            int tpDegree = Integer.parseInt(v);
             if (gpuCount > 0) {
                 int gpuPerWorker = 1;
                 if ("Python".equals(engineName)) {
-                    String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
-                    v = prop.getProperty("option.tensor_parallel_degree", v);
-                    gpuPerWorker = Integer.parseInt(v);
-                    if (gpuPerWorker > 0) {
+                    if (tpDegree > 0) {
+                        gpuPerWorker = tpDegree;
                         int procs = gpuCount / gpuPerWorker;
                         if (procs == 0) {
                             throw new EngineException(
@@ -919,11 +920,10 @@ public final class ModelInfo<I, O> {
                 return ret;
             } else if (NeuronUtils.hasNeuron()) {
                 int neurons = NeuronUtils.getNeuronCores();
-                String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
-                v = prop.getProperty("option.tensor_parallel_degree", v);
-                int ncPerWorker = Integer.parseInt(v);
-                if (ncPerWorker > 0) {
+                int ncPerWorker;
+                if (tpDegree > 0) {
                     // Assume user understand TP only works on inf2
+                    ncPerWorker = tpDegree;
                     int procs = neurons / ncPerWorker;
                     if (procs == 0) {
                         throw new EngineException(
@@ -933,6 +933,8 @@ public final class ModelInfo<I, O> {
                                         + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
                     }
                     neurons = procs;
+                } else {
+                    ncPerWorker = 1;
                 }
                 String[] ret = new String[neurons];
                 for (int i = 0; i < neurons; ++i) {
