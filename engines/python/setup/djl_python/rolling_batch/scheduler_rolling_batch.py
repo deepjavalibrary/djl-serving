@@ -104,7 +104,10 @@ class SchedulerRollingBatch(RollingBatch):
                     device_map = device
                 elif isinstance(device,
                                 torch.device) and device.type == "cuda":
+                    # TODO: enable specifying the cuda device
                     device_map = 'auto'
+                else:
+                    raise Exception("Wrong input type of device")
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
 
