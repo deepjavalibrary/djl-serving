@@ -98,7 +98,12 @@ class SchedulerRollingBatch(RollingBatch):
                 "ForConditionalGeneration"):
             raise ValueError('Seq2Seq model is not supported by scheduler')
         else:
-            device_map = "auto" if device and device.type == "cuda" else "cpu"
+            device_map = "cpu"
+            if device:
+                if isinstance(device, str):
+                    device_map = device
+                elif isinstance(device, torch.device) and device.type == "cuda":
+                    device_map = 'auto'
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
             self.model = AutoModelForCausalLM.from_pretrained(
