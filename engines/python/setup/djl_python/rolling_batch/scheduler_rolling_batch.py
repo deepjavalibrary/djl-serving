@@ -106,6 +106,7 @@ class SchedulerRollingBatch(RollingBatch):
                     device_map = 'auto'
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
+                
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_id_or_path,
                 device_map=device_map,
