@@ -102,15 +102,14 @@ class SchedulerRollingBatch(RollingBatch):
             if device:
                 if isinstance(device, str):
                     device_map = device
-                elif isinstance(device, torch.device) and device.type == "cuda":
+                elif isinstance(device,
+                                torch.device) and device.type == "cuda":
                     device_map = 'auto'
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
-                
+
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path,
-                device_map=device_map,
-                **kwargs)
+                model_id_or_path, device_map=device_map, **kwargs)
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
