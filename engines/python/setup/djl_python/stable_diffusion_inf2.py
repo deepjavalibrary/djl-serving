@@ -131,6 +131,10 @@ class StableDiffusionService(object):
         self.tensor_parallel_degree = None
 
     def initialize(self, properties: dict):
+        # TODO: OMP_NUM_THREADS=1 has sightly negative impact for stable_diffusion model
+        # Remove the following workaround once CLIP model can run on neuron core
+        os.environ.pop("OMP_NUM_THREADS")
+        os.unsetenv("OMP_NUM_THREADS")
         # model_id can point to huggingface model_id or local directory.
         # If option.model_id points to a s3 bucket, we download it and set model_id to the download directory.
         # Otherwise, we assume model artifacts are in the model_dir
