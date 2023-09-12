@@ -451,8 +451,21 @@ lmi_dist_model_list = {
     }
 }
 
+vllm_model_list = {
+    "llama2-13b": {
+        "option.model_id": "OpenAssistant/llama2-13b-orca-8k-3319",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4
+    },
+    "gpt-neox-20b": {
+        "option.model_id": "s3://djl-llm/gpt-neox-20b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4
+    },
+}
 
-def write_properties(properties):
+
+def write_model_artifacts(properties, requirements=None):
     model_path = "models/test"
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
@@ -460,6 +473,9 @@ def write_properties(properties):
     with open(os.path.join(model_path, "serving.properties"), "w") as f:
         for key, value in properties.items():
             f.write(f"{key}={value}\n")
+    if requirements:
+        with open(os.path.join(model_path, "requirements.txt"), "w") as f:
+            f.write('\n'.join(requirements) + '\n')
 
 
 def build_hf_handler_model(model):
@@ -471,7 +487,7 @@ def build_hf_handler_model(model):
     options["engine"] = "Python"
     options["option.entryPoint"] = "djl_python.huggingface"
     options["option.predict_timeout"] = 240
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_ds_handler_model(model):
@@ -482,13 +498,13 @@ def build_ds_handler_model(model):
     options = ds_handler_list[model]
     options["engine"] = "DeepSpeed"
     # options["option.entryPoint"] = "djl_python.deepspeed"
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_ds_raw_model(model):
     options = ds_model_list[model]
     options["engine"] = "DeepSpeed"
-    write_properties(options)
+    write_model_artifacts(options)
     shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
 
 
@@ -500,7 +516,7 @@ def build_ds_aot_model(model):
 
     options = ds_aot_list[model]
     options["engine"] = "DeepSpeed"
-    write_properties(options)
+    write_model_artifacts(options)
     shutil.copyfile("llm/deepspeed-model.py", "models/test/model.py")
 
 
@@ -515,7 +531,7 @@ def build_performance_model(model):
     for k, v in default_accel_configs[args.engine].items():
         if k not in options:
             options[k] = v
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_ds_aot_handler_model(model):
@@ -526,7 +542,7 @@ def build_ds_aot_handler_model(model):
 
     options = ds_aot_handler_list[model]
     options["engine"] = "DeepSpeed"
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_sd_handler_model(model):
@@ -537,7 +553,7 @@ def build_sd_handler_model(model):
     options = sd_handler_list[model]
     options["engine"] = "DeepSpeed"
     options["option.entryPoint"] = "djl_python.stable-diffusion"
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_ft_handler_model(model):
@@ -548,7 +564,7 @@ def build_ft_handler_model(model):
     options = ft_handler_list[model]
     if "engine" not in options:
         options["engine"] = "FasterTransformer"
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_ft_raw_model(model):
@@ -560,7 +576,7 @@ def build_ft_raw_model(model):
     if "engine" not in options:
         options["engine"] = "Python"
 
-    write_properties(options)
+    write_model_artifacts(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
 
@@ -577,7 +593,7 @@ def build_ft_raw_aot_model(model):
     else:
         options[
             "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
-    write_properties(options)
+    write_model_artifacts(options)
     shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
 
 
@@ -595,7 +611,7 @@ def builder_ft_handler_aot_model(model):
     else:
         options[
             "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_transformers_neuronx_model(model):
@@ -605,7 +621,7 @@ def build_transformers_neuronx_model(model):
         )
     options = transformers_neuronx_model_list[model]
     options["engine"] = "Python"
-    write_properties(options)
+    write_model_artifacts(options)
     shutil.copyfile("llm/transformers-neuronx-gpt2-model.py",
                     "models/test/model.py")
 
@@ -618,7 +634,7 @@ def build_transformers_neuronx_handler_model(model):
     options = transformers_neuronx_handler_list[model]
     options["engine"] = "Python"
     options["option.entryPoint"] = "djl_python.transformers-neuronx"
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_rolling_batch_model(model):
@@ -628,7 +644,7 @@ def build_rolling_batch_model(model):
         )
     options = rolling_batch_model_list[model]
     options["rolling_batch"] = "scheduler"
-    write_properties(options)
+    write_model_artifacts(options)
 
 
 def build_lmi_dist_model(model):
@@ -640,7 +656,19 @@ def build_lmi_dist_model(model):
     options["engine"] = "MPI"
     options["option.rolling_batch"] = "lmi-dist"
     options["option.output_formatter"] = "jsonlines"
-    write_properties(options)
+    write_model_artifacts(options)
+
+
+def build_vllm_model(model):
+    if model not in vllm_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(vllm_model_list.keys())}"
+        )
+    options = vllm_model_list[model]
+    options["engine"] = "Python"
+    options["option.rolling_batch"] = "vllm"
+    options["option.output_formatter"] = "jsonlines"
+    write_model_artifacts(options, ["vllm==0.1.7", "pandas"])
 
 
 supported_handler = {
@@ -658,7 +686,8 @@ supported_handler = {
     'transformers_neuronx': build_transformers_neuronx_handler_model,
     'performance': build_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
-    'lmi_dist': build_lmi_dist_model
+    'lmi_dist': build_lmi_dist_model,
+    'vllm': build_vllm_model
 }
 
 if __name__ == '__main__':

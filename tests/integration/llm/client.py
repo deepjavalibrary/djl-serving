@@ -371,6 +371,21 @@ lmi_dist_model_spec = {
     },
 }
 
+vllm_model_spec = {
+    "gpt-neox-20b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
+    "llama2-13b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    }
+}
+
 
 def check_worker_number(desired):
     model_name = get_model_name()
@@ -592,6 +607,28 @@ def test_handler(model, model_spec):
             for memory in memory_usage:
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
 
+def test_vllm_handler(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for seq_length in spec["seq_length"]:
+        req = {"inputs": "The new movie that got Oscar this year"}
+        params = {"max_tokens": seq_length}
+        req["parameters"] = params
+        logging.info(f"req {req}")
+        res = send_json(req)
+        if spec.get("stream_output", False):
+            logging.info(f"res: {res.content}")
+            result = res.content.decode().split("\n")[:-1]
+            assert len(
+                result
+            ) <= seq_length, "generated more tokens than max_new_tokens"
+
+
 
 def test_ds_raw_model(model, model_spec):
     if model not in model_spec:
@@ -774,6 +811,8 @@ if __name__ == "__main__":
                                       transformers_neuronx_raw_model_spec)
     elif args.handler == "lmi_dist":
         test_handler(args.model, lmi_dist_model_spec)
+    elif args.handler == "vllm":
+        test_vllm_handler(args.model, vllm_model_spec)
     elif args.handler == "performance":
         test_performance()
     else:
