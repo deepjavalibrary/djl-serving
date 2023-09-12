@@ -15,30 +15,30 @@ package ai.djl.serving.wlm;
 /** A class represents an inference job. */
 public class Job<I, O> {
 
-    private ModelInfo<I, O> modelInfo;
+    private WorkerPoolConfig<I, O> workerPoolConfig;
     private I input;
     private long begin;
 
     /**
      * Constructs a new {@code Job} instance.
      *
-     * @param modelInfo the model to run the job
+     * @param wpc the model to run the job
      * @param input the input data
      */
-    public Job(ModelInfo<I, O> modelInfo, I input) {
-        this.modelInfo = modelInfo;
+    public Job(WorkerPoolConfig<I, O> wpc, I input) {
+        this.workerPoolConfig = wpc;
         this.input = input;
 
         begin = System.nanoTime();
     }
 
     /**
-     * Returns the model that associated with this job.
+     * Returns the worker pool config that is associated with this job.
      *
-     * @return the model that associated with this job
+     * @return the worker pool config that is associated with this job
      */
-    public ModelInfo<I, O> getModel() {
-        return modelInfo;
+    public WorkerPoolConfig<I, O> getWpc() {
+        return workerPoolConfig;
     }
 
     /**

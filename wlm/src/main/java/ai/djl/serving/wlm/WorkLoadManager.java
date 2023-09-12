@@ -29,7 +29,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * WorkLoadManager is responsible to manage the work load of worker thread. the manage scales
- * up/down the required amount of worker threads per model.
+ * up/down the required amount of worker threads per wpc.
  *
  * @author erik.bamberg@web.de
  */
@@ -38,7 +38,7 @@ public class WorkLoadManager {
     private static final Logger logger = LoggerFactory.getLogger(WorkLoadManager.class);
 
     private ExecutorService threadPool;
-    private ConcurrentHashMap<ModelInfo<?, ?>, WorkerPool<?, ?>> workerPools;
+    private ConcurrentHashMap<WorkerPoolConfig<?, ?>, WorkerPool<?, ?>> workerPools;
 
     /** Constructs a {@link WorkLoadManager} instance. */
     public WorkLoadManager() {
@@ -47,34 +47,33 @@ public class WorkLoadManager {
     }
 
     /**
-     * Registers a model and returns the {@link WorkerPool} for it.
+     * Registers a {@link WorkerPool} (model).
      *
-     * <p>This operation is idempotent and will return the existing workerpool if the model was
+     * <p>This operation is idempotent and will return the existing workerpool if the wpc was
      * already registered.
      *
-     * @param <I> the model input class
-     * @param <O> the model output class
-     * @param modelInfo the model to create the worker pool for
+     * @param <I> the wpc input class
+     * @param <O> the wpc output class
+     * @param wpc the wpc to create the worker pool for
      * @return the {@link WorkerPool}
      */
     @SuppressWarnings("unchecked")
-    public <I, O> WorkerPool<I, O> registerModel(ModelInfo<I, O> modelInfo) {
+    public <I, O> WorkerPool<I, O> registerWorkerPool(WorkerPoolConfig<I, O> wpc) {
         return (WorkerPool<I, O>)
-                workerPools.computeIfAbsent(
-                        modelInfo, k -> new WorkerPool<>(modelInfo, threadPool));
+                workerPools.computeIfAbsent(wpc, k -> new WorkerPool<>(wpc, threadPool));
     }
 
     /**
-     * Removes a model from management.
+     * Removes a worker pool from management.
      *
-     * @param model the model to remove
+     * @param wpc the wpc to remove
      */
-    public void unregisterModel(ModelInfo<?, ?> model) {
-        WorkerPool<?, ?> pool = getWorkerPool(model);
+    public void unregisterWorkerPool(WorkerPoolConfig<?, ?> wpc) {
+        WorkerPool<?, ?> pool = getWorkerPool(wpc);
         if (pool.decreaseRef() <= 0) {
-            logger.info("Unloading model: {}", model);
+            logger.info("Unloading model: {}", wpc);
             pool.shutdownWorkers();
-            workerPools.remove(model);
+            workerPools.remove(wpc);
         }
     }
 
@@ -82,24 +81,24 @@ public class WorkLoadManager {
      * Adds an inference job to the job queue of the next free worker. scales up worker if
      * necessary.
      *
-     * @param <I> the model input class
-     * @param <O> the model output class
+     * @param <I> the wpc input class
+     * @param <O> the wpc output class
      * @param job an inference job to be executed.
      * @return {@code true} if submit success, false otherwise.
      */
     public <I, O> CompletableFuture<O> runJob(Job<I, O> job) {
         CompletableFuture<O> result = new CompletableFuture<>();
-        ModelInfo<I, O> modelInfo = job.getModel();
-        if (modelInfo.getStatus() != ModelInfo.Status.READY) {
-            result.completeExceptionally(new WlmException("Model is not ready: " + modelInfo));
+        WorkerPoolConfig<I, O> wpc = job.getWpc();
+        if (wpc.getStatus() != WorkerPoolConfig.Status.READY) {
+            result.completeExceptionally(new WlmException("Model is not ready: " + wpc));
             return result;
         }
 
-        WorkerPool<I, O> pool = getWorkerPool(modelInfo);
+        WorkerPool<I, O> pool = getWorkerPool(wpc);
         int maxWorkers = pool.getMaxWorkers();
         if (maxWorkers == 0) {
             result.completeExceptionally(
-                    new WlmShutdownException("All model workers has been shutdown: " + modelInfo));
+                    new WlmShutdownException("All model workers has been shutdown: " + wpc));
             return result;
         }
         LinkedBlockingDeque<WorkerJob<I, O>> queue = pool.getJobQueue();
@@ -107,41 +106,39 @@ public class WorkLoadManager {
                 || pool.isAllWorkerDied()
                 || !queue.offer(new WorkerJob<>(job, result))) {
             result.completeExceptionally(
-                    new WlmCapacityException(
-                            "Worker queue capacity exceeded for model: " + modelInfo));
-            scaleUp(pool, modelInfo, maxWorkers);
+                    new WlmCapacityException("Worker queue capacity exceeded for model: " + wpc));
+            scaleUp(pool, wpc, maxWorkers);
             return result;
         }
 
-        int currentWorkers = getNumRunningWorkers(modelInfo);
+        int currentWorkers = getNumRunningWorkers(wpc);
         if (currentWorkers == 0
-                || currentWorkers < maxWorkers && queue.size() > modelInfo.getBatchSize() * 2) {
-            scaleUp(pool, modelInfo, maxWorkers);
+                || currentWorkers < maxWorkers && queue.size() > wpc.getBatchSize() * 2) {
+            scaleUp(pool, wpc, maxWorkers);
         }
         return result;
     }
 
-    private <I, O> void scaleUp(WorkerPool<I, O> pool, ModelInfo<I, O> modelInfo, int maxWorkers) {
+    private <I, O> void scaleUp(WorkerPool<I, O> pool, WorkerPoolConfig<I, O> wpc, int maxWorkers) {
         synchronized (pool) {
-            int currentWorkers = getNumRunningWorkers(modelInfo); // check again
+            int currentWorkers = getNumRunningWorkers(wpc); // check again
             if (currentWorkers < maxWorkers) {
-                logger.info(
-                        "Scaling up workers for model {} to {} ", modelInfo, currentWorkers + 1);
+                logger.info("Scaling up workers for model {} to {} ", wpc, currentWorkers + 1);
                 pool.addThreads();
             }
         }
     }
 
     /**
-     * Returns the number of running workers of a model. running workers are workers which are not
+     * Returns the number of running workers of a wpc. running workers are workers which are not
      * stopped, in error or scheduled to scale down.
      *
-     * @param modelInfo the model we are interested in.
+     * @param wpc the wpc we are interested in.
      * @return number of running workers.
      */
-    public int getNumRunningWorkers(ModelInfo<?, ?> modelInfo) {
+    public int getNumRunningWorkers(WorkerPoolConfig<?, ?> wpc) {
         int numWorking = 0;
-        WorkerPool<?, ?> pool = workerPools.get(modelInfo);
+        WorkerPool<?, ?> pool = workerPools.get(wpc);
         if (pool != null) {
             pool.cleanup();
             List<? extends WorkerThread<?, ?>> threads = pool.getWorkers();
@@ -157,19 +154,19 @@ public class WorkLoadManager {
     }
 
     /**
-     * Returns the {@link WorkerPool} for a model.
+     * Returns the {@link WorkerPool} for a wpc.
      *
-     * @param <I> the model input class
-     * @param <O> the model output class
-     * @param modelInfo the model to get the worker pool for
+     * @param <I> the wpc input class
+     * @param <O> the wpc output class
+     * @param wpc the worker type to get the worker pool for
      * @return the {@link WorkerPool}
      */
     @SuppressWarnings("unchecked")
-    public <I, O> WorkerPool<I, O> getWorkerPool(ModelInfo<I, O> modelInfo) {
-        return (WorkerPool<I, O>) workerPools.get(modelInfo);
+    public <I, O> WorkerPool<I, O> getWorkerPool(WorkerPoolConfig<I, O> wpc) {
+        return (WorkerPool<I, O>) workerPools.get(wpc);
     }
 
-    /** Close all models related to the {@code WorkloadManager}. */
+    /** Close all wpcs related to the {@code WorkloadManager}. */
     public void close() {
         threadPool.shutdownNow();
         for (WorkerPool<?, ?> wp : workerPools.values()) {

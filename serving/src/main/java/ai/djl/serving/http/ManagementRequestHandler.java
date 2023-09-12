@@ -20,6 +20,7 @@ import ai.djl.serving.models.Endpoint;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
@@ -130,16 +131,16 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         for (int i = pagination.pageToken; i < pagination.last; ++i) {
             String workflowName = keys.get(i);
             for (Workflow workflow : endpoints.get(workflowName).getWorkflows()) {
-                for (ModelInfo<Input, Output> m : workflow.getModels()) {
-                    String status = m.getStatus().toString();
-                    String id = m.getId();
-                    String modelName;
+                for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
+                    String status = wpc.getStatus().toString();
+                    String id = wpc.getId();
+                    String name;
                     if (workflowName.equals(id)) {
-                        modelName = workflowName;
+                        name = workflowName;
                     } else {
-                        modelName = workflowName + ':' + id;
+                        name = workflowName + ':' + id;
                     }
-                    list.addModel(modelName, workflow.getVersion(), m.getModelUrl(), status);
+                    list.addModel(name, workflow.getVersion(), wpc.getModelUrl(), status);
                 }
             }
         }
@@ -322,16 +323,16 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
             List<String> messages = new ArrayList<>();
             for (Workflow workflow : workflows) {
-                // make sure all models are loaded and ready
-                for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
-                    if (modelInfo.getStatus() != ModelInfo.Status.READY) {
+                // make sure all WorkerPoolConfigs (models) are loaded and ready
+                for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
+                    if (wpc.getStatus() != WorkerPoolConfig.Status.READY) {
                         throw new ServiceUnavailableException(
                                 "Model or workflow is not ready: " + workflow.getName());
                     }
                 }
 
-                for (ModelInfo<Input, Output> modelInfo : workflow.getModels()) {
-                    modelManager.scaleWorkers(modelInfo, deviceName, minWorkers, maxWorkers);
+                for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
+                    modelManager.scaleWorkers(wpc, deviceName, minWorkers, maxWorkers);
                     String msg =
                             "Workflow \""
                                     + workflow.getName()

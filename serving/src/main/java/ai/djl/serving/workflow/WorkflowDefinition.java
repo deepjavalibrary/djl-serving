@@ -17,6 +17,7 @@ import ai.djl.modality.Output;
 import ai.djl.repository.FilenameUtils;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.WorkflowFunction;
 import ai.djl.util.ClassLoaderUtils;
@@ -233,7 +234,9 @@ public class WorkflowDefinition {
             }
         }
 
-        return new Workflow(name, version, models, expressions, configs, loadedFunctions);
+        Map<String, WorkerPoolConfig<Input, Output>> wpcs = new ConcurrentHashMap<>(models);
+        wpcs.putAll(models);
+        return new Workflow(name, version, wpcs, expressions, configs, loadedFunctions);
     }
 
     private static final class ModelDefinitionDeserializer

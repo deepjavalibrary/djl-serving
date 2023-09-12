@@ -31,11 +31,11 @@ public class WorkerGroup<I, O> {
         this.workerPool = workerPool;
         this.device = device;
         workers = new CopyOnWriteArrayList<>();
-        ModelInfo<I, O> model = workerPool.getModel();
+        WorkerPoolConfig<I, O> wpc = workerPool.getWpc();
 
-        // Default workers from model, may be overridden by configureWorkers on init or scale
-        minWorkers = model.getMinWorkers(device);
-        maxWorkers = model.getMaxWorkers(device);
+        // Default workers from worker type, may be overridden by configureWorkers on init or scale
+        minWorkers = wpc.getMinWorkers(device);
+        maxWorkers = wpc.getMaxWorkers(device);
         minWorkers = Math.min(minWorkers, maxWorkers);
     }
 
@@ -91,11 +91,11 @@ public class WorkerGroup<I, O> {
     }
 
     void addThreads(int count, boolean permanent) {
-        ModelInfo<I, O> model = workerPool.getModel();
+        WorkerPoolConfig<I, O> wpc = workerPool.getWpc();
         ExecutorService threadPool = workerPool.getThreadPool();
         for (int i = 0; i < count; ++i) {
             WorkerThread<I, O> thread =
-                    WorkerThread.builder(model)
+                    WorkerThread.builder(wpc)
                             .setDevice(device)
                             .setJobQueue(workerPool.getJobQueue())
                             .optFixPoolThread(permanent)

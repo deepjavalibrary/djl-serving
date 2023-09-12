@@ -73,10 +73,12 @@ public class WlmBenchmark extends AbstractBenchmark {
         ModelInfo<Void, float[]> modelInfo =
                 new ModelInfo<>("model", arguments.getModelUrl(), criteria);
 
-        WorkerPool<Void, float[]> wp = wlm.registerModel(modelInfo);
         int workersPerDevice = numOfWorkers / devices.length;
+        modelInfo.setMinWorkers(workersPerDevice);
+        modelInfo.setMaxWorkers(workersPerDevice);
+        WorkerPool<Void, float[]> wp = wlm.registerWorkerPool(modelInfo);
         for (String deviceName : devices) {
-            wp.initWorkers(deviceName, workersPerDevice, workersPerDevice);
+            wp.initWorkers(deviceName);
         }
 
         // Measure memory before worker kickoff

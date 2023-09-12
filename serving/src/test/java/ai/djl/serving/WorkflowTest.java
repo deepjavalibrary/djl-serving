@@ -15,8 +15,8 @@ package ai.djl.serving;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.serving.util.ConfigManager;
-import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
+import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
@@ -78,12 +78,12 @@ public class WorkflowTest {
     public void testLocalPerf() throws IOException, BadWorkflowException {
         Path workflowFile = Paths.get("src/test/resources/workflows/localPerf.json");
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
-        ModelInfo<Input, Output> m = workflow.getModels().iterator().next();
+        WorkerPoolConfig<Input, Output> wpc = workflow.getWpcs().iterator().next();
 
-        Assert.assertEquals(m.getQueueSize(), 102);
-        Assert.assertEquals(m.getMaxIdleSeconds(), 62);
-        Assert.assertEquals(m.getMaxBatchDelayMillis(), 302);
-        Assert.assertEquals(m.getBatchSize(), 3);
+        Assert.assertEquals(wpc.getQueueSize(), 102);
+        Assert.assertEquals(wpc.getMaxIdleSeconds(), 62);
+        Assert.assertEquals(wpc.getMaxBatchDelayMillis(), 302);
+        Assert.assertEquals(wpc.getBatchSize(), 3);
     }
 
     @Test
@@ -96,9 +96,9 @@ public class WorkflowTest {
             throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         WorkLoadManager wlm = new WorkLoadManager();
-        for (ModelInfo<Input, Output> model : workflow.getModels()) {
-            model.setMaxWorkers(1);
-            wlm.registerModel(model).initWorkers("-1");
+        for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
+            wpc.setMaxWorkers(1);
+            wlm.registerWorkerPool(wpc).initWorkers("-1");
         }
 
         Output output = workflow.execute(wlm, input).join();
