@@ -263,8 +263,10 @@ class TransformersNeuronXService(object):
             )
 
         for i in range(prompt_size, self.batch_size):
-            input_data.append(self.tokenizer.eos_token())
+            input_data.append(self.tokenizer.eos_token)
 
+        # clean KV cache
+        self.model.reset_generation()
         if self.enable_streaming:
             if batch > 1:
                 raise NotImplementedError(
@@ -306,6 +308,7 @@ class TransformersNeuronXService(object):
 
         # trim the input based on the actual size
         prediction = prediction[:prompt_size]
+        prediction = [{"generated_text": s} for s in prediction]
 
         offset = 0
         for i, item in enumerate(batch):
@@ -350,4 +353,4 @@ def handle(inputs: Input):
         # Model server makes an empty call to warm up the model on startup
         return None
 
-    return _service.infer(inputs)
+    return _service.inference(inputs)
