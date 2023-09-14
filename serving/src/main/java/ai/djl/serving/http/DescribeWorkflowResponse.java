@@ -32,7 +32,7 @@ public class DescribeWorkflowResponse {
 
     private String workflowName;
     private String version;
-    private List<DescribeWorkerPoolConfig> wpcs;
+    private List<Model> models;
 
     /**
      * Constructs a new {@code DescribeWorkflowResponse} instance.
@@ -42,7 +42,7 @@ public class DescribeWorkflowResponse {
     public DescribeWorkflowResponse(ai.djl.serving.workflow.Workflow workflow) {
         this.workflowName = workflow.getName();
         this.version = workflow.getVersion();
-        wpcs = new ArrayList<>();
+        models = new ArrayList<>();
 
         ModelManager manager = ModelManager.getInstance();
         WorkLoadManager wlm = manager.getWorkLoadManager();
@@ -53,8 +53,8 @@ public class DescribeWorkflowResponse {
             int activeWorker = 0;
             int targetWorker = 0;
 
-            DescribeWorkerPoolConfig m = new DescribeWorkerPoolConfig();
-            wpcs.add(m);
+            Model m = new Model();
+            models.add(m);
             WorkerPool<Input, Output> pool = wlm.getWorkerPool(wpc);
             if (pool != null) {
                 pool.cleanup();
@@ -117,12 +117,12 @@ public class DescribeWorkflowResponse {
      *
      * @return a list of models
      */
-    public List<DescribeWorkerPoolConfig> getWpcs() {
-        return wpcs;
+    public List<Model> getModels() {
+        return models;
     }
 
     /** A class represents model information. */
-    public static final class DescribeWorkerPoolConfig {
+    public static final class Model {
 
         private String modelName;
         private String modelUrl;
