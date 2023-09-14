@@ -164,7 +164,7 @@ public class PyModel extends BaseModel {
                     entryPoint = "djl_python.fastertransformer";
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
-                    entryPoint = "djl_python.transformers-neuronx";
+                    entryPoint = "djl_python.transformers_neuronx";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")) {
                     entryPoint = "djl_python.huggingface";
                 } else {

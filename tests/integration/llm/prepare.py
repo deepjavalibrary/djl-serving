@@ -633,7 +633,7 @@ def build_transformers_neuronx_handler_model(model):
         )
     options = transformers_neuronx_handler_list[model]
     options["engine"] = "Python"
-    options["option.entryPoint"] = "djl_python.transformers-neuronx"
+    options["option.entryPoint"] = "djl_python.transformers_neuronx"
     write_model_artifacts(options)
 
 
