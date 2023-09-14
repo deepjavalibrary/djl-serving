@@ -23,7 +23,7 @@ import ai.djl.modality.Classifications.Classification;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
 import ai.djl.serving.http.DescribeWorkflowResponse;
-import ai.djl.serving.http.DescribeWorkflowResponse.DescribeWorkerPoolConfig;
+import ai.djl.serving.http.DescribeWorkflowResponse.Model;
 import ai.djl.serving.http.ErrorResponse;
 import ai.djl.serving.http.ListModelsResponse;
 import ai.djl.serving.http.ListWorkflowsResponse;
@@ -38,6 +38,7 @@ import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
 import ai.djl.util.cuda.CudaUtils;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
@@ -98,9 +99,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -477,7 +481,7 @@ public class ModelServerTest {
         Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
         DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
         DescribeWorkflowResponse wf = resp[0];
-        DescribeWorkerPoolConfig model = wf.getWpcs().get(0);
+        Model model = wf.getModels().get(0);
         assertEquals(model.getQueueSize(), 10);
         DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
 
@@ -596,6 +600,16 @@ public class ModelServerTest {
                             .anyMatch(w -> expectedModel.equals(w.getModelName())));
         }
 
+        // Test pure JSON works
+        JsonObject rawResult = JsonUtils.GSON.fromJson(result, JsonObject.class);
+        JsonArray rawModels = rawResult.get("models").getAsJsonArray();
+        Set<String> modelProperties =
+                new HashSet<>(Arrays.asList("modelName", "version", "modelUrl", "status"));
+        for (JsonElement rrawModel : rawModels) {
+            JsonObject rawModel = rrawModel.getAsJsonObject();
+            assertTrue(modelProperties.containsAll(rawModel.keySet()));
+        }
+
         request(
                 channel,
                 new DefaultFullHttpRequest(
@@ -614,6 +628,16 @@ public class ModelServerTest {
             assertTrue(
                     resp.getWorkflows().stream()
                             .anyMatch(w -> expectedWorkflow.equals(w.getWorkflowName())));
+        }
+
+        // Test pure JSON works
+        JsonObject rawResult = JsonUtils.GSON.fromJson(result, JsonObject.class);
+        assertTrue(rawResult.has("nextPageToken"));
+        JsonArray rawWorkflows = rawResult.get("workflows").getAsJsonArray();
+        Set<String> workflowProperties = new HashSet<>(Arrays.asList("workflowName", "version"));
+        for (JsonElement rrawWorkflow : rawWorkflows) {
+            JsonObject rawWorkflow = rrawWorkflow.getAsJsonObject();
+            assertTrue(workflowProperties.containsAll(rawWorkflow.keySet()));
         }
     }
 
@@ -639,8 +663,8 @@ public class ModelServerTest {
         assertEquals(wf.getWorkflowName(), "mlp_2");
         assertNull(wf.getVersion());
 
-        List<DescribeWorkerPoolConfig> models = wf.getWpcs();
-        DescribeWorkerPoolConfig model = models.get(0);
+        List<Model> models = wf.getModels();
+        Model model = models.get(0);
         assertEquals(model.getModelName(), "mlp_2");
         assertNotNull(model.getModelUrl());
         assertEquals(model.getBatchSize(), 1);
@@ -663,6 +687,12 @@ public class ModelServerTest {
         assertTrue(worker.getId() > 0);
         assertNotNull(worker.getStartTime());
         assertNotNull(worker.getStatus());
+
+        // Test pure JSON works
+        JsonArray rawResult = JsonUtils.GSON.fromJson(result, JsonArray.class);
+        JsonArray rawModels = rawResult.get(0).getAsJsonObject().get("models").getAsJsonArray();
+        JsonObject rawModel = rawModels.get(0).getAsJsonObject();
+        assertEquals(rawModel.get("modelName").getAsString(), "mlp_2");
     }
 
     private void testUnregisterModel(Channel channel) throws InterruptedException {
