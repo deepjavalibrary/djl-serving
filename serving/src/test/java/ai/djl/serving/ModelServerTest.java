@@ -38,6 +38,7 @@ import ai.djl.util.Utils;
 import ai.djl.util.ZipUtils;
 import ai.djl.util.cuda.CudaUtils;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
@@ -586,7 +587,6 @@ public class ModelServerTest {
                         + " workers:4");
     }
 
-    @SuppressWarnings("unchecked")
     private void testListModels(Channel channel) throws InterruptedException {
         request(
                 channel,
@@ -601,12 +601,12 @@ public class ModelServerTest {
         }
 
         // Test pure JSON works
-        Map<String, Object> rawResult = JsonUtils.GSON.fromJson(result, Map.class);
-        List<Object> rawModels = (List<Object>) rawResult.get("models");
+        JsonObject rawResult = JsonUtils.GSON.fromJson(result, JsonObject.class);
+        JsonArray rawModels = rawResult.get("models").getAsJsonArray();
         Set<String> modelProperties =
                 new HashSet<>(Arrays.asList("modelName", "version", "modelUrl", "status"));
-        for (Object rrawModel : rawModels) {
-            Map<String, Object> rawModel = (Map<String, Object>) rrawModel;
+        for (JsonElement rrawModel : rawModels) {
+            JsonObject rawModel = rrawModel.getAsJsonObject();
             assertTrue(modelProperties.containsAll(rawModel.keySet()));
         }
 
@@ -618,7 +618,6 @@ public class ModelServerTest {
         Assert.assertEquals(resp.getNextPageToken(), "2");
     }
 
-    @SuppressWarnings("unchecked")
     private void testListWorkflows(Channel channel) throws InterruptedException {
         request(
                 channel,
@@ -632,12 +631,12 @@ public class ModelServerTest {
         }
 
         // Test pure JSON works
-        Map<String, Object> rawResult = JsonUtils.GSON.fromJson(result, Map.class);
-        assertTrue(rawResult.containsKey("nextPageToken"));
-        List<Object> rawWorkflows = (List<Object>) rawResult.get("workflows");
+        JsonObject rawResult = JsonUtils.GSON.fromJson(result, JsonObject.class);
+        assertTrue(rawResult.has("nextPageToken"));
+        JsonArray rawWorkflows = rawResult.get("workflows").getAsJsonArray();
         Set<String> workflowProperties = new HashSet<>(Arrays.asList("workflowName", "version"));
-        for (Object rrawWorkflow : rawWorkflows) {
-            Map<String, Object> rawWorkflow = (Map<String, Object>) rrawWorkflow;
+        for (JsonElement rrawWorkflow : rawWorkflows) {
+            JsonObject rawWorkflow = rrawWorkflow.getAsJsonObject();
             assertTrue(workflowProperties.containsAll(rawWorkflow.keySet()));
         }
     }
@@ -653,7 +652,6 @@ public class ModelServerTest {
         assertEquals(resp.get("platform").getAsString(), "mxnet_mxnet");
     }
 
-    @SuppressWarnings("unchecked")
     private void testDescribeModel(Channel channel) throws InterruptedException {
         request(
                 channel,
@@ -691,11 +689,10 @@ public class ModelServerTest {
         assertNotNull(worker.getStatus());
 
         // Test pure JSON works
-        List<Object> rawResult = (List<Object>) JsonUtils.GSON.fromJson(result, List.class);
-        List<Object> rawModels =
-                (List<Object>) ((Map<String, Object>) rawResult.get(0)).get("models");
-        Map<String, Object> rawModel = (Map<String, Object>) rawModels.get(0);
-        assertEquals(rawModel.get("modelName"), "mlp_2");
+        JsonArray rawResult = JsonUtils.GSON.fromJson(result, JsonArray.class);
+        JsonArray rawModels = rawResult.get(0).getAsJsonObject().get("models").getAsJsonArray();
+        JsonObject rawModel = rawModels.get(0).getAsJsonObject();
+        assertEquals(rawModel.get("modelName").getAsString(), "mlp_2");
     }
 
     private void testUnregisterModel(Channel channel) throws InterruptedException {
