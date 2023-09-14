@@ -178,7 +178,7 @@ class Connection {
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
         }
         if ("nc".equals(device.getDeviceType())) {
-            String visibleCores = getNeuronVisibleCores(deviceId, tensorParallelDegree);
+            String visibleCores = getNeuronVisibleCores(workerId, tensorParallelDegree);
             // TODO: re-map logic device once neuron fixed bug
             pyEnv.addEnv("NEURON_RT_VISIBLE_CORES", visibleCores);
             logger.info("Set NEURON_RT_VISIBLE_CORES={}", visibleCores);
@@ -220,11 +220,10 @@ class Connection {
         return sb.toString();
     }
 
-    private static String getNeuronVisibleCores(int deviceId, int tensorParallelDegree) {
-        if (tensorParallelDegree > 0) {
-            return deviceId + "-" + (deviceId + tensorParallelDegree - 1);
-        }
-        return String.valueOf(deviceId);
+    private static String getNeuronVisibleCores(int workerId, int tensorParallelDegree) {
+        int start = workerId * tensorParallelDegree;
+        int end = start + tensorParallelDegree - 1;
+        return start + "-" + end;
     }
 
     void connect() throws InterruptedException {
