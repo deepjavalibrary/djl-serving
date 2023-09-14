@@ -276,7 +276,7 @@ class StableDiffusionService(object):
         unet_filename = os.path.join(saved_dir, 'unet.pt')
         self.pipeline.unet.unetwrap = torch.jit.load(unet_filename)
 
-    def infer(self, inputs: Input):
+    def inference(self, inputs: Input):
         try:
             content_type = inputs.get_property("Content-Type")
             if content_type == "application/json":

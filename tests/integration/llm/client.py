@@ -607,6 +607,7 @@ def test_handler(model, model_spec):
             for memory in memory_usage:
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
 
+
 def test_vllm_handler(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -627,7 +628,6 @@ def test_vllm_handler(model, model_spec):
             assert len(
                 result
             ) <= seq_length, "generated more tokens than max_new_tokens"
-
 
 
 def test_ds_raw_model(model, model_spec):
