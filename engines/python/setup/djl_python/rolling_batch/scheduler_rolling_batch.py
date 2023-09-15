@@ -11,13 +11,14 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.scheduler import HuggingfaceBlock, BloomBlock, ShardedBlock, FalconBlock, SearchConfig, SeqBatchScheduler
+from djl_python.scheduler import HuggingfaceBlock, BloomBlock, FalconBlock, SearchConfig, SeqBatchScheduler
 # from seq_scheduler import HuggingfaceBlock, BloomBlock, ShardedBlock, FalconBlock, SearchConfig, SeqBatchScheduler
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
+import re
 
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock,
                       'falcon': FalconBlock}
@@ -113,7 +114,7 @@ class SchedulerRollingBatch(RollingBatch):
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
 
-            if 'neox' in model_id_or_path:
+            if 'neox' in model_id_or_path and int(re.findall(r'\d+', model_id_or_path)[0])>=20:
                 try:
                     from lmi_dist.models.gpt_neox import GPTNeoxSharded
                     from lmi_dist.utils import download_and_convert_weights
