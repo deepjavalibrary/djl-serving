@@ -11,15 +11,17 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.scheduler import HuggingfaceBlock, BloomBlock, SearchConfig, SeqBatchScheduler
-# from seq_scheduler import HuggingfaceBlock, BloomBlock, SearchConfig, SeqBatchScheduler
+from djl_python.scheduler import HuggingfaceBlock, BloomBlock, ShardedBlock, FalconBlock, SearchConfig, SeqBatchScheduler
+# from seq_scheduler import HuggingfaceBlock, BloomBlock, ShardedBlock, FalconBlock, SearchConfig, SeqBatchScheduler
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
 
-MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock}
+MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock,
+                      'sharded': ShardedBlock,
+                      'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 
 
@@ -117,9 +119,9 @@ class SchedulerRollingBatch(RollingBatch):
                     from lmi_dist.models.gpt_neox import GPTNeoxSharded
                     from lmi_dist.utils import download_and_convert_weights
                 except ImportError:
-                    print(f"Running {model_id} requires package lmi_dist.")
-                download_and_convert_weights(model_id)
-                self.model = GPTNeoxSharded(model_id)
+                    print(f"Running {model_id_or_path} requires package lmi_dist.")
+                download_and_convert_weights(model_id_or_path)
+                self.model = GPTNeoxSharded(model_id_or_path)
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_id_or_path, device_map=device_map, **kwargs)
