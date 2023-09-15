@@ -21,7 +21,7 @@ properties = {"tensor_parallel_degree": 2,
               "paged_attention": "True"}
 
 model_id = "huggyllama/llama-7b"
-model_id = "EleutherAI/gpt-neox-20b"
+# model_id = "EleutherAI/gpt-neox-20b"
 
 """
 {"inputs":"write a program to add two numbers in python","parameters":{"max_new_tokens":1000, "do_sample":true, "temperature":0.7}}
