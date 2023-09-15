@@ -85,29 +85,6 @@ class HuggingfaceBlock(LMBlock):
                                     **self.config)
         return output
 
-class ShardedBlock(LMBlock):
-
-    def __init__(self, model):
-        super().__init__(model)
-        self.config = {
-            'use_cache': True,
-            'return_dict': True,
-            'output_attentions': False,
-            'output_hidden_states': True
-        }
-
-    def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
-                attention_mask: torch.tensor, past_key_values: Union[Tuple,
-                                                                     None]):
-
-        # Forward
-        output = self.model.forward(input_ids=input_ids,
-                                    position_ids=position_ids,
-                                    attention_mask=attention_mask,
-                                    past_key_values=past_key_values,
-                                    **self.config)
-        return output
-
 class BloomBlock(LMBlock):
 
     def __init__(self, model):

@@ -20,7 +20,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 import torch
 
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock,
-                      'sharded': ShardedBlock,
                       'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 
@@ -132,7 +131,7 @@ class SchedulerRollingBatch(RollingBatch):
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def _init_scheduler(self, properties):
-        lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
+        lm_block_cls = MODEL_TYPE_2_BLOCK.get('falcon' if 'falcon' in self.config.model_type else '$',
                                               HuggingfaceBlock)
         self.lm_block = lm_block_cls(self.model)
         self.search_config = SearchConfig(

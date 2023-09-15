@@ -7,6 +7,9 @@ from djl_python.scheduler.search_config import SearchConfig
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+from lmi_dist.models.gpt_neox import GPTNeoxSharded
+from lmi_dist.utils import download_and_convert_weights
+
 global_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -14,8 +17,6 @@ class TestSchedulerSharded(unittest.TestCase):
 
     def test_lm_block(self):
         model_id = "EleutherAI/gpt-neox-20b"
-        from lmi_dist.models.gpt_neox import GPTNeoxSharded
-        from lmi_dist.utils import download_and_convert_weights
         download_and_convert_weights(model_id)
         model = GPTNeoxSharded(model_id)
 
@@ -58,8 +59,6 @@ class TestSchedulerSharded(unittest.TestCase):
 
     def test_contrastive_scheduler(self):
         model_id = "EleutherAI/gpt-neox-20b"
-        from lmi_dist.models.gpt_neox import GPTNeoxSharded
-        from lmi_dist.utils import download_and_convert_weights
         download_and_convert_weights(model_id)
         model = GPTNeoxSharded(model_id)
 
@@ -124,6 +123,7 @@ class TestSchedulerSharded(unittest.TestCase):
 
 if __name__ == '__main__':
     # unittest.main()
+    
     c = TestSchedulerSharded()
     # c.test_lm_block()
-    c.test_contrastive_scheduler()
+    # c.test_contrastive_scheduler()

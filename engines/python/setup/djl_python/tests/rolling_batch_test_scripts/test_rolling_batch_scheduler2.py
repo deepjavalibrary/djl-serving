@@ -20,7 +20,6 @@ properties = {"tensor_parallel_degree": 2,
               "max_rolling_batch_prefill_tokens": 10000,
               "paged_attention": "True"}
 
-model_id = "huggyllama/llama-7b"
 model_id = "EleutherAI/gpt-neox-20b"
 
 """
@@ -33,7 +32,7 @@ params = [{"max_new_tokens":50, "do_sample":False, "temperature":0.7},
           {"max_new_tokens":50, "do_sample":False, "temperature":0.7}]
 
 # ===================== lmi ============================
-print("=========== before =========")
+print("=========== lmi =========")
 rolling_batch = SchedulerRollingBatch(model_id, device, properties)
 rolling_batch.output_formatter = None
 print("reach here")
