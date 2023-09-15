@@ -111,8 +111,17 @@ class SchedulerRollingBatch(RollingBatch):
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
 
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path, device_map=device_map, **kwargs)
+            if 'neox' in model_id_or_path:
+                try:
+                    from lmi_dist.models.gpt_neox import GPTNeoxSharded
+                    from lmi_dist.utils import download_and_convert_weights
+                except ImportError:
+                    print(f"Running {model_id} requires package lmi_dist.")
+                download_and_convert_weights(model_id)
+                self.model = GPTNeoxSharded(model_id)
+            else:
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_id_or_path, device_map=device_map, **kwargs)
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
