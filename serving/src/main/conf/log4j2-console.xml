@@ -7,7 +7,7 @@
         <RollingFile
                 name="application"
                 fileName="${env:MODEL_SERVER_HOME}/logs/serving.log"
-                filePattern="${env:MODEL_SERVER_HOME}/logs/serving.%d{dd-MMM}.log.gz"
+                filePattern="${env:MODEL_SERVER_HOME}/logs/serving.%d{dd-MMM}-%i.log.gz"
                 ignoreExceptions="false">
             <PatternLayout>
                 <Pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss} %c{1} - %m%n</Pattern>
@@ -22,7 +22,7 @@
         <RollingFile
                 name="access"
                 fileName="${env:MODEL_SERVER_HOME}/logs/access.log"
-                filePattern="${env:MODEL_SERVER_HOME}/logs/access.%d{dd-MMM}.log.gz"
+                filePattern="${env:MODEL_SERVER_HOME}/logs/access.%d{dd-MMM}-%i.log.gz"
                 ignoreExceptions="false">
             <PatternLayout>
                 <Pattern>%d{yyyy-MM-dd HH:mm:ss} %m%n</Pattern>
