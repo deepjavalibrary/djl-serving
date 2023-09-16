@@ -84,11 +84,11 @@ class TestSchedulerSharded(unittest.TestCase):
 
         # Merge longer sequences
         input12 = [
-            r"When your legs don't work like they used to before And I can't sweep you off", 
+            r"When your legs don't work like they used to before And I can't sweep you off",
             r"There's a time that I remember, when I did not know"
         ]
         input_ids = tokenizer(input12, return_tensors='pt',
-                               padding=True).input_ids.to(device)
+                              padding=True).input_ids.to(device)
 
         request_ids = torch.tensor([[1], [2]])
         scheduler.add_request(input_ids, request_ids)
@@ -120,10 +120,9 @@ class TestSchedulerSharded(unittest.TestCase):
             print('\n{}:'.format(i), tokenizer.decode(ret))
 
 
-
 if __name__ == '__main__':
     # unittest.main()
-    
+
     c = TestSchedulerSharded()
     # c.test_lm_block()
     # c.test_contrastive_scheduler()

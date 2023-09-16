@@ -85,6 +85,7 @@ class HuggingfaceBlock(LMBlock):
                                     **self.config)
         return output
 
+
 class BloomBlock(LMBlock):
 
     def __init__(self, model):

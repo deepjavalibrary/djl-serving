@@ -20,8 +20,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 import torch
 import re
 
-MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock,
-                      'falcon': FalconBlock}
+MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 
 
@@ -114,12 +113,15 @@ class SchedulerRollingBatch(RollingBatch):
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
 
-            if 'neox' in model_id_or_path and int(re.findall(r'\d+', model_id_or_path)[0])>=20:
+            if 'neox' in model_id_or_path and int(
+                    re.findall(r'\d+', model_id_or_path)[0]) >= 20:
                 try:
                     from lmi_dist.models.gpt_neox import GPTNeoxSharded
                     from lmi_dist.utils import download_and_convert_weights
                 except ImportError:
-                    print(f"Running {model_id_or_path} requires package lmi_dist.")
+                    print(
+                        f"Running {model_id_or_path} requires package lmi_dist."
+                    )
                 download_and_convert_weights(model_id_or_path)
                 self.model = GPTNeoxSharded(model_id_or_path)
             else:
@@ -132,8 +134,9 @@ class SchedulerRollingBatch(RollingBatch):
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def _init_scheduler(self, properties):
-        lm_block_cls = MODEL_TYPE_2_BLOCK.get('falcon' if 'falcon' in self.config.model_type else '$',
-                                              HuggingfaceBlock)
+        lm_block_cls = MODEL_TYPE_2_BLOCK.get(
+            'falcon' if 'falcon' in self.config.model_type else '$',
+            HuggingfaceBlock)
         self.lm_block = lm_block_cls(self.model)
         self.search_config = SearchConfig(
             eos_token_id=self.tokenizer.eos_token,
@@ -224,8 +227,8 @@ class SchedulerRollingBatch(RollingBatch):
             temperature=parameters.get('temperature',
                                        self.search_config.temperature),
             use_lru_kv_cache=use_lru_kv_cache,
-            pad_token_id = self.tokenizer.pad_token_id,
-            eos_token_id = self.tokenizer.eos_token_id)
+            pad_token_id=self.tokenizer.pad_token_id,
+            eos_token_id=self.tokenizer.eos_token_id)
 
 
 def _get_request_ids_tensor(request_ids):
