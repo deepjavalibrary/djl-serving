@@ -1,11 +1,11 @@
 import unittest
 
-from djl_python.scheduler.lm_block import ShardedBlock
+from djl_python.scheduler.lm_block import HuggingfaceBlock
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
-from transformers import AutoConfig, BloomForCausalLM, AutoTokenizer
+from transformers import AutoConfig
 from djl_python.scheduler.search_config import SearchConfig
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer
 
 from lmi_dist.models.gpt_neox import GPTNeoxSharded
 from lmi_dist.utils import download_and_convert_weights
@@ -27,7 +27,7 @@ class TestSchedulerSharded(unittest.TestCase):
         input_ids_0 = encoding.data['input_ids']
         seq_len = input_ids_0.shape[1]
 
-        lm_block = ShardedBlock(model)
+        lm_block = HuggingfaceBlock(model)
 
         input0 = [
             torch.repeat_interleave(input_ids_0, dim=0, repeats=2).to(device),
@@ -67,7 +67,7 @@ class TestSchedulerSharded(unittest.TestCase):
                                                   padding_side='left')
         tokenizer.pad_token = tokenizer.eos_token
 
-        lm_block = ShardedBlock(model)
+        lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
         search_config.pad_token_id = tokenizer.pad_token_id

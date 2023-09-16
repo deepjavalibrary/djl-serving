@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 from djl_python.scheduler import HuggingfaceBlock, BloomBlock, FalconBlock, SearchConfig, SeqBatchScheduler
-# from seq_scheduler import HuggingfaceBlock, BloomBlock, ShardedBlock, FalconBlock, SearchConfig, SeqBatchScheduler
+# from seq_scheduler import HuggingfaceBlock, BloomBlock, FalconBlock, SearchConfig, SeqBatchScheduler
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
