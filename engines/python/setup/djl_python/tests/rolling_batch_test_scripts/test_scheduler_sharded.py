@@ -1,5 +1,3 @@
-import unittest
-
 from djl_python.scheduler.lm_block import HuggingfaceBlock
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from transformers import AutoConfig
@@ -13,7 +11,7 @@ from lmi_dist.utils import download_and_convert_weights
 global_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class TestSchedulerSharded(unittest.TestCase):
+class TestSchedulerSharded:
 
     def test_lm_block(self):
         model_id = "EleutherAI/gpt-neox-20b"
