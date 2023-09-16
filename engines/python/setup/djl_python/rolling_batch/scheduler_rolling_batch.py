@@ -223,7 +223,9 @@ class SchedulerRollingBatch(RollingBatch):
             top_p=parameters.get('top_p', self.search_config.topk),
             temperature=parameters.get('temperature',
                                        self.search_config.temperature),
-            use_lru_kv_cache=use_lru_kv_cache)
+            use_lru_kv_cache=use_lru_kv_cache,
+            pad_token_id = self.tokenizer.pad_token_id,
+            eos_token_id = self.tokenizer.eos_token_id)
 
 
 def _get_request_ids_tensor(request_ids):

@@ -4,10 +4,7 @@ from djl_python.rolling_batch import SchedulerRollingBatch
 import torch.distributed as dist
 
 def print_rank0(content):
-    rank = 0
-    if dist.is_initialized():
-        rank = dist.get_rank()
-    if rank == 0:
+    if not dist.is_initialized() or dist.get_rank() == 0:
         print(content)
 
 
@@ -25,11 +22,12 @@ model_id = "EleutherAI/gpt-neox-20b"
 """
 {"inputs":"write a program to add two numbers in python","parameters":{"max_new_tokens":1000, "do_sample":true, "temperature":0.7}}
 """
-input_str = ["write a program to add two numbers in python", 
-             "write a program to add two numbers in python\n"]
 
-params = [{"max_new_tokens":50, "do_sample":False, "temperature":0.7}, 
-          {"max_new_tokens":50, "do_sample":False, "temperature":0.7}]
+input_str = ["Memories follow me left and right",
+             "Memories follow me left and right."]
+
+params = [{"max_new_tokens":50, "do_sample":False, "temperature":0.000007},
+          {"max_new_tokens":50, "do_sample":False, "temperature":0.000007}]
 
 # ===================== lmi ============================
 print("=========== lmi =========")
@@ -43,7 +41,7 @@ for i, res in enumerate(result):
     output_all[i].append(res['data']) 
     
 for _ in range(50):
-    result = rolling_batch.inference([], [])
+    result = rolling_batch.inference(input_str, params)
     for i, res in enumerate(result):
         output_all[i].append(res['data']) 
 
