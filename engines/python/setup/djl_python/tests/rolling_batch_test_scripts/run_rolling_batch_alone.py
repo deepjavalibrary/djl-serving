@@ -30,6 +30,15 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str):
     raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
 
+def init_rolling_batch_neuron(rb_cls, model_id: str, properties: dict):
+    from djl_python.transformers_neuronx import TransformersNeuronXService
+    _service = TransformersNeuronXService()
+    properties['model_id'] = model_id
+    _service.initialize(properties)
+    return rb_cls(_service.model, _service.tokenizer, _service.batch_size,
+                  _service.n_positions)
+
+
 def init_rolling_batch(rolling_batch_type: str, model_id: str,
                        properties: dict):
     rolling_batch_type = rolling_batch_type.lower()
@@ -37,8 +46,14 @@ def init_rolling_batch(rolling_batch_type: str, model_id: str,
     if dist.is_initialized():
         device = dist.get_rank()
         properties["tensor_parallel_degree"] = dist.get_world_size()
-    rolling_batcher_cls = get_rolling_batch_class_from_str(rolling_batch_type)
-    return rolling_batcher_cls(model_id, device, properties, **properties)
+    if rolling_batch_type == "neuron":
+        from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
+        return init_rolling_batch_neuron(NeuronRollingBatch, model_id,
+                                         properties)
+    else:
+        rolling_batcher_cls = get_rolling_batch_class_from_str(
+            rolling_batch_type)
+        return rolling_batcher_cls(model_id, device, properties, **properties)
 
 
 def print_rank0(content):
@@ -129,7 +144,7 @@ if __name__ == "__main__":
     parser.add_argument("-rb",
                         "--rollingbatch",
                         type=str,
-                        choices=["scheduler", "vllm", "lmi-dist"])
+                        choices=["scheduler", "vllm", "lmi-dist", "neuron"])
     parser.add_argument("--properties",
                         type=str,
                         required=False,

@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import json
 import tempfile
 import os
 import logging
@@ -26,6 +27,7 @@ from transformers_neuronx.bloom.model import BloomForSampling
 from transformers_neuronx.module import save_pretrained_split
 from djl_python import Input, Output
 from djl_python.encode_decode import decode, encode
+from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionService
 from djl_python.streaming_utils import StreamingUtils
 
@@ -63,6 +65,7 @@ class TransformersNeuronXService(object):
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
         self.revision = None
+        self.rolling_batch = None
 
     def convert_dtype(self, dtype, model_type):
         if model_type == "opt":
@@ -212,6 +215,10 @@ class TransformersNeuronXService(object):
         self.model = HuggingFaceGenerationModelAdapter(model_config,
                                                        self.model)
         self.initialized = True
+        if "rolling_batch" in properties:
+            self.rolling_batch = NeuronRollingBatch(self.model, self.tokenizer,
+                                                    self.batch_size,
+                                                    self.n_positions)
 
     def parse_input(self, inputs):
         input_data = []
@@ -225,7 +232,7 @@ class TransformersNeuronXService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
-                if first:
+                if first or self.rolling_batch:
                     parameters.append(input_map.pop("parameters", {}))
                     first = False
                 else:
@@ -251,9 +258,29 @@ class TransformersNeuronXService(object):
     def inference(self, inputs):
         input_data, input_size, parameters, errors, batch = self.parse_input(
             inputs)
-        parameters = parameters[0]
-
         outputs = Output()
+
+        if self.rolling_batch:
+            if inputs.get_property("reset_rollingbatch"):
+                self.rolling_batch.reset()
+            result = self.rolling_batch.inference(input_data, parameters)
+            idx = 0
+            for i in range(len(batch)):
+                err = errors.get(i)
+                if err:
+                    err = json.dumps({"code": 424, "error": err})
+                    err = json.dumps({"data": err, "last": True})
+                    outputs.add(err, key="data", batch_index=i)
+                else:
+                    outputs.add(result[idx], key="data", batch_index=i)
+                    idx += 1
+
+            content_type = self.rolling_batch.get_content_type()
+            if content_type:
+                outputs.add_property("content-type", content_type)
+            return outputs
+
+        parameters = parameters[0]
         model_kwargs = {}
 
         prompt_size = len(input_data)
