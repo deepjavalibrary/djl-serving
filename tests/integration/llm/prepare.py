@@ -312,7 +312,7 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
         "option.dtype": "fp32",
-        "option.model_loading_timeout": 720
+        "option.model_loading_timeout": 900
     },
     "gpt-neox-20b": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b/",
