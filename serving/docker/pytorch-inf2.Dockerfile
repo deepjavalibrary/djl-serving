@@ -13,12 +13,12 @@ FROM ubuntu:20.04
 ARG djl_version=0.24.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.8
-ARG torch_neuronx_version=1.13.1.1.10.1
-ARG transformers_neuronx_version=0.6.106
-ARG neuronx_distributed_version=0.3.0
-ARG neuronx_cc_version=2.9.*
+ARG torch_neuronx_version=1.13.1.1.11.0
+ARG transformers_neuronx_version=0.7.84
+ARG neuronx_distributed_version=0.4.0
+ARG neuronx_cc_version=2.10.*
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.32.1
+ARG transformers_version=4.33.2
 ARG accelerate_version=0.22.0
 ARG diffusers_version=0.16.0
 EXPOSE 8080
