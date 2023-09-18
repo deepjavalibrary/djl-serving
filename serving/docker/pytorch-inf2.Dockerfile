@@ -69,6 +69,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
+    chown -R djl:djl /tmp/neuron && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
