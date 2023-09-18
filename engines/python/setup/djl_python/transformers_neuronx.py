@@ -165,16 +165,20 @@ class TransformersNeuronXService(object):
         load_path = self.get_load_path(model_type)
         self.convert_model(model_type, load_path)
         self.model = self.load_inf2_model(model_type, load_path)
+        # TODO: workaround on Neuron Compiler bug for SM
+        path = os.getcwd()
+        os.chdir("/tmp")
         if model_type == "gpt2":
             self.model._load_compiled_artifacts(load_path)
             self.model.to_neuron()
             self.model._save_compiled_artifacts(load_path)
         else:
             self.model.to_neuron()
+        os.chdir(path)
 
     def initialize(self, properties):
         # Neuron recommendation for transformersneuronx speedup
-        os.environ["NEURON_CC_FLAGS"] = "--model-type=transformer-inference"
+        os.environ["NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + " --model-type=transformer-inference"
         self.batch_size = int(properties.get("batch_size", 1))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))

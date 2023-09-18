@@ -80,7 +80,7 @@ else
     -itd \
     --rm \
     --network="host" \
-    ${model_path:+-v ${model_path}:/opt/ml/model} \
+    ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/home/djl/.aws \
     ${env_file} \
