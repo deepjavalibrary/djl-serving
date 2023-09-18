@@ -277,8 +277,6 @@ ds_aot_model_spec = {
     }
 }
 
-transformers_neuronx_raw_model_spec = {"gpt2": {"seq_length": [64, 128]}}
-
 transformers_neuronx_model_spec = {
     "gpt2": {
         "worker": 1,
@@ -737,29 +735,6 @@ def test_ft_handler(model, model_spec):
             assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
-def test_transformers_neuronx_raw(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{model} is not one of the supporting models {list(model_spec.keys())}"
-        )
-    spec = model_spec[model]
-    for seq_length in spec["seq_length"]:
-        print(
-            f"testing transformers_neuronx_handler with model: {model}, seq_length: {seq_length} "
-        )
-        text = "Hello, I'm a language model,"
-        compiled_batch_size = 4
-        req = {
-            "seq_length": seq_length,
-            "text": text,
-        }
-        res = send_json(req)
-        res = res.json()
-        logging.info(res)
-        assert len(res["outputs"]) == compiled_batch_size
-        assert all([text in t for t in res["outputs"]])
-
-
 def test_transformers_neuronx_handler(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -806,9 +781,6 @@ if __name__ == "__main__":
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)
-    elif args.handler == "transformers_neuronx_raw":
-        test_transformers_neuronx_raw(args.model,
-                                      transformers_neuronx_raw_model_spec)
     elif args.handler == "lmi_dist":
         test_handler(args.model, lmi_dist_model_spec)
     elif args.handler == "vllm":

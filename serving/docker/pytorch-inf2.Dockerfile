@@ -53,6 +53,7 @@ CMD ["serve"]
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
+    mkdir -p /tmp/neuron && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
