@@ -289,16 +289,6 @@ performance_test_list = {
     }
 }
 
-transformers_neuronx_model_list = {
-    "gpt2": {
-        "option.tensor_parallel_degree": 2,
-        "option.batch_size": 4,
-        "option.dtype": "f32",
-        "option.n_positions": 128,
-        "load_on_devices": "nc0"
-    },
-}
-
 transformers_neuronx_handler_list = {
     "gpt2": {
         "option.model_id": "gpt2",
@@ -614,18 +604,6 @@ def builder_ft_handler_aot_model(model):
     write_model_artifacts(options)
 
 
-def build_transformers_neuronx_model(model):
-    if model not in transformers_neuronx_model_list.keys():
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(transformers_neuronx_model_list.keys())}"
-        )
-    options = transformers_neuronx_model_list[model]
-    options["engine"] = "Python"
-    write_model_artifacts(options)
-    shutil.copyfile("llm/transformers-neuronx-gpt2-model.py",
-                    "models/test/model.py")
-
-
 def build_transformers_neuronx_handler_model(model):
     if model not in transformers_neuronx_handler_list.keys():
         raise ValueError(
@@ -682,7 +660,6 @@ supported_handler = {
     'fastertransformer_handler_aot': builder_ft_handler_aot_model,
     'deepspeed_aot': build_ds_aot_model,
     'deepspeed_handler_aot': build_ds_aot_handler_model,
-    'transformers_neuronx_raw': build_transformers_neuronx_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
     'performance': build_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
