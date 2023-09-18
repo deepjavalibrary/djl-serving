@@ -178,7 +178,7 @@ class TransformersNeuronXService(object):
 
     def initialize(self, properties):
         # Neuron recommendation for transformersneuronx speedup
-        os.environ["NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + " --model-type=transformer-inference"
+        os.environ["NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + " --model-type=transformer"
         self.batch_size = int(properties.get("batch_size", 1))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
@@ -299,7 +299,7 @@ class TransformersNeuronXService(object):
         # clean KV cache
         self.model.reset_generation()
         if self.enable_streaming:
-            if batch > 1:
+            if len(batch) > 1:
                 raise NotImplementedError(
                     "Dynamic batch not supported for generic streaming")
             outputs.add_property("content-type", "application/jsonlines")

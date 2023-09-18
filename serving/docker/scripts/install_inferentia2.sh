@@ -14,9 +14,9 @@ echo "deb https://apt.repos.neuron.amazonaws.com ${VERSION_CODENAME} main" >/etc
 curl -L https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB | apt-key add -
 
 # https://awsdocs-neuron.readthedocs-hosted.com/en/latest/release-notes/releasecontent.html#inf2-packages
-apt-get update -y && apt-get install -y aws-neuronx-dkms=2.12.* \
-    aws-neuronx-collectives=2.16.* \
-    aws-neuronx-runtime-lib=2.16.* \
-    aws-neuronx-tools=2.13.*
+apt-get update -y && apt-get install -y aws-neuronx-dkms=2.13.* \
+    aws-neuronx-collectives=2.17.* \
+    aws-neuronx-runtime-lib=2.17.* \
+    aws-neuronx-tools=2.14.*
 
 export PATH=/opt/aws/neuron/bin:$PATH
