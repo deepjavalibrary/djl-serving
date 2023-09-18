@@ -646,7 +646,7 @@ def build_vllm_model(model):
     options["engine"] = "Python"
     options["option.rolling_batch"] = "vllm"
     options["option.output_formatter"] = "jsonlines"
-    write_model_artifacts(options, ["vllm==0.1.7", "pandas"])
+    write_model_artifacts(options, ["vllm==0.1.7", "pandas", "pyarrow"])
 
 
 supported_handler = {
