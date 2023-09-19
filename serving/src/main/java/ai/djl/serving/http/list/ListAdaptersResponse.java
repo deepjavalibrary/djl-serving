@@ -59,20 +59,20 @@ public class ListAdaptersResponse {
      * Adds the adapter to the list.
      *
      * @param name the adapter name
-     * @param url the adapter url
+     * @param src the adapter source
      */
-    public void addAdapter(String name, String url) {
-        adapters.add(new AdapterItem(name, url));
+    public void addAdapter(String name, String src) {
+        adapters.add(new AdapterItem(name, src));
     }
 
     /** A class that holds the adapter response. */
     public static final class AdapterItem {
         private String name;
-        private String url;
+        private String src;
 
-        private AdapterItem(String name, String url) {
+        private AdapterItem(String name, String src) {
             this.name = name;
-            this.url = url;
+            this.src = src;
         }
 
         /**
@@ -85,12 +85,12 @@ public class ListAdaptersResponse {
         }
 
         /**
-         * Returns the adapter url.
+         * Returns the adapter src.
          *
-         * @return the adapter url
+         * @return the adapter src
          */
-        public String getUrl() {
-            return url;
+        public String getSrc() {
+            return src;
         }
     }
 }

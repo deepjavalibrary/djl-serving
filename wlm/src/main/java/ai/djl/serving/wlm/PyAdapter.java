@@ -17,8 +17,6 @@ import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.translate.TranslateException;
 
-import java.net.URI;
-
 /** An overload of {@link Adapter} for the python engine. */
 public class PyAdapter extends Adapter {
 
@@ -26,10 +24,10 @@ public class PyAdapter extends Adapter {
      * Constructs an {@link Adapter}.
      *
      * @param name the adapter name
-     * @param url the adapter url
+     * @param src the adapter src
      */
-    protected PyAdapter(String name, URI url) {
-        super(name, url);
+    protected PyAdapter(String name, String src) {
+        super(name, src);
     }
 
     @SuppressWarnings("unchecked")
@@ -39,7 +37,7 @@ public class PyAdapter extends Adapter {
         Input input = new Input();
         input.addProperty("handler", "register_adapter");
         input.addProperty("name", name);
-        input.addProperty("url", url.toString());
+        input.addProperty("src", src);
         try {
             p.predict(input);
         } catch (TranslateException e) {

@@ -28,7 +28,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -101,7 +100,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         for (int i = pagination.getPageToken(); i < pagination.getLast(); ++i) {
             String adapterName = keys.get(i);
             Adapter adapter = modelInfo.getAdapter(adapterName);
-            list.addAdapter(adapter.getName(), adapter.getUrl().toString());
+            list.addAdapter(adapter.getName(), adapter.getSrc());
         }
 
         NettyUtils.sendJsonResponse(ctx, list);
@@ -111,14 +110,14 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             ChannelHandlerContext ctx, String modelName, QueryStringDecoder decoder) {
 
         String adapterName = NettyUtils.getRequiredParameter(decoder, "name");
-        URI uri = URI.create(NettyUtils.getRequiredParameter(decoder, "url"));
+        String src = NettyUtils.getRequiredParameter(decoder, "src");
 
         WorkerPool<Input, Output> wp =
                 ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
         if (wp == null) {
             throw new BadRequestException("The model " + modelName + " was not found");
         }
-        Adapter adapter = Adapter.newInstance(wp, adapterName, uri);
+        Adapter adapter = Adapter.newInstance(wp, adapterName, src);
         adapter.register(wp);
 
         String msg = "Adapter " + adapterName + " registered";

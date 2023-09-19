@@ -16,7 +16,6 @@ import ai.djl.inference.Predictor;
 import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.WorkerJob;
 
-import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -25,17 +24,17 @@ import java.util.concurrent.CompletableFuture;
 public abstract class Adapter {
 
     protected String name;
-    protected URI url;
+    protected String src;
 
     /**
      * Constructs an {@link Adapter}.
      *
      * @param name the adapter name
-     * @param url the adapter url
+     * @param src the adapter source
      */
-    protected Adapter(String name, URI url) {
+    protected Adapter(String name, String src) {
         this.name = name;
-        this.url = url;
+        this.src = src;
     }
 
     /**
@@ -46,10 +45,10 @@ public abstract class Adapter {
      *
      * @param wp the worker pool for the new adapter
      * @param name the adapter name
-     * @param url the adapter url
+     * @param src the adapter source
      * @return the new adapter
      */
-    public static Adapter newInstance(WorkerPool<?, ?> wp, String name, URI url) {
+    public static Adapter newInstance(WorkerPool<?, ?> wp, String name, String src) {
         if (!(wp.getWpc() instanceof ModelInfo)) {
             String modelName = wp.getWpc().getId();
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
@@ -57,7 +56,7 @@ public abstract class Adapter {
         ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wp.getWpc();
         String engineName = modelInfo.getEngineName();
         if ("Python".equals(engineName)) {
-            return new PyAdapter(name, url);
+            return new PyAdapter(name, src);
         } else {
             throw new IllegalArgumentException(
                     "Adapters are only currently supported for Python models");
@@ -94,12 +93,12 @@ public abstract class Adapter {
     }
 
     /**
-     * Returns the adapter url.
+     * Returns the adapter src.
      *
-     * @return the adapter url
+     * @return the adapter src
      */
-    public URI getUrl() {
-        return url;
+    public String getSrc() {
+        return src;
     }
 
     /**

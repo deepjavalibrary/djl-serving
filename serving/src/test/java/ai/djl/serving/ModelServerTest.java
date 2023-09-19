@@ -810,7 +810,7 @@ public class ModelServerTest {
         // Test Missing Adapter before registering
         testAdapterMissing();
 
-        url = "/models/adaptecho/adapters?name=" + "adaptable" + "&url=" + "url";
+        url = "/models/adaptecho/adapters?name=" + "adaptable" + "&src=" + "src";
         request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
@@ -893,7 +893,7 @@ public class ModelServerTest {
         DescribeAdapterResponse resp =
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
         assertEquals(resp.getName(), "adaptable");
-        assertEquals(resp.getUrl(), "url");
+        assertEquals(resp.getSrc(), "src");
     }
 
     private void testAdapterScale(Channel channel) throws InterruptedException {

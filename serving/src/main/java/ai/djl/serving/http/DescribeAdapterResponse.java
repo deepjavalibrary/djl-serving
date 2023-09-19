@@ -17,7 +17,7 @@ import ai.djl.serving.wlm.Adapter;
 /** A class that holds information about adapter status. */
 public class DescribeAdapterResponse {
     private String name;
-    private String url;
+    private String src;
 
     /**
      * Constructs a {@link DescribeAdapterResponse}.
@@ -26,7 +26,7 @@ public class DescribeAdapterResponse {
      */
     public DescribeAdapterResponse(Adapter adapter) {
         this.name = adapter.getName();
-        this.url = adapter.getUrl().toString();
+        this.src = adapter.getSrc();
     }
 
     /**
@@ -39,11 +39,11 @@ public class DescribeAdapterResponse {
     }
 
     /**
-     * Returns the adapter url.
+     * Returns the adapter src.
      *
-     * @return the adapter url
+     * @return the adapter src
      */
-    public String getUrl() {
-        return url;
+    public String getSrc() {
+        return src;
     }
 }

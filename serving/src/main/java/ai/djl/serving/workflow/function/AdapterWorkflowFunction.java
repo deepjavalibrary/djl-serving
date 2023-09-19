@@ -22,7 +22,6 @@ import ai.djl.serving.workflow.Workflow.WorkflowExecutor;
 import ai.djl.serving.workflow.WorkflowExpression;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -68,10 +67,10 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
             Map<String, Object> config = (Map<String, Object>) entry.getValue();
             String modelName = (String) config.get("model");
             String adapterName = (String) config.get("name");
-            URI url = URI.create((String) config.get("url"));
+            String src = (String) config.get("src");
 
             WorkerPool<?, ?> wp = wlm.getWorkerPoolById(modelName);
-            Adapter adapter = Adapter.newInstance(wp, adapterName, url);
+            Adapter adapter = Adapter.newInstance(wp, adapterName, src);
             adapters.put(ref, new AdapterReference(modelName, adapter));
         }
 

@@ -9,7 +9,7 @@
       "a": {
         "model": "m",
         "name": "a1",
-        "url": "url1"
+        "src": "url1"
       }
     }
   },
