@@ -214,7 +214,7 @@ class HuggingFaceService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
-                adapters_per_item = input_map.pop("adapters", [])
+                adapters_per_item = self._fetch_adapters_from_input(input_map, input)
                 if first or self.rolling_batch_type:
                     parameters.append(input_map.pop("parameters", {}))
                     first = False
@@ -522,17 +522,27 @@ class HuggingFaceService(object):
                 f"This is required for loading huggingface models")
             raise e
 
+    def _fetch_adapters_from_input(self, input_map: dict, input: Input):
+        adapters = input_map.pop("adapters", [])
+        if not adapters:
+            ## check if input contains adapters, possible in workflow approach
+            if input.contains_key("adapter"):
+                adapters = input.get_as_string("adapter")
+        return adapters
 
 _service = HuggingFaceService()
 
-def register_adapter(adapter_model_id: str, adapter_name: str):
+def register_adapter(inputs: Input):
     """
     Registers lora adapter with the model.
     """
+    adapter_name = inputs.get_property("name")
+    adapter_model_id_or_path = inputs.get_property("src")
+
     if isinstance(_service.model, PeftModel):
-        _service.model.load_adapter(adapter_model_id, adapter_name)
+        _service.model.load_adapter(adapter_model_id_or_path, adapter_name)
     else:
-        _service.model = PeftModel.from_pretrained(_service.model, adapter_model_id, adapter_name)
+        _service.model = PeftModel.from_pretrained(_service.model, adapter_model_id_or_path, adapter_name)
 
     if isinstance(_service.hf_pipeline, Pipeline):
         _service.hf_pipeline.model = _service.model
@@ -540,10 +550,11 @@ def register_adapter(adapter_model_id: str, adapter_name: str):
     if isinstance(_service.hf_pipeline_unwrapped, Pipeline):
         _service.hf_pipeline_unwrapped.model = _service.model
 
-def unregister_adapter(adapter_name: str):
+def unregister_adapter(inputs: Input):
     """
     Unregisters lora adapter from the model.
     """
+    adapter_name = inputs.get_property("name")
     _service.model.base_model.delete_adapter(adapter_name)
 
 def handle(inputs: Input):
