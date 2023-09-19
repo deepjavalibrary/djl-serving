@@ -43,17 +43,17 @@ public abstract class Adapter {
      * <p>After registration, you should call {@link #register(WorkerPool)}. This doesn't affect the
      * worker pool itself.
      *
-     * @param wp the worker pool for the new adapter
+     * @param wpc the worker pool config for the new adapter
      * @param name the adapter name
      * @param src the adapter source
      * @return the new adapter
      */
-    public static Adapter newInstance(WorkerPool<?, ?> wp, String name, String src) {
-        if (!(wp.getWpc() instanceof ModelInfo)) {
-            String modelName = wp.getWpc().getId();
+    public static Adapter newInstance(WorkerPoolConfig<?, ?> wpc, String name, String src) {
+        if (!(wpc instanceof ModelInfo)) {
+            String modelName = wpc.getId();
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
         }
-        ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wp.getWpc();
+        ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wpc;
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
             return new PyAdapter(name, src);

@@ -70,7 +70,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 String src = (String) config.get("src");
 
                 WorkerPool<?, ?> wp = wlm.getWorkerPoolById(modelName);
-                Adapter adapter = Adapter.newInstance(wp, adapterName, src);
+                Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src);
                 adapters.put(adapterName, new AdapterReference(modelName, adapter));
             }
         }

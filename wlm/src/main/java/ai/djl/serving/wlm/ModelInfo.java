@@ -248,6 +248,24 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             if (engine == null) {
                 engine = m.getNDManager().getEngine();
             }
+
+            if (models.isEmpty()) {
+                // Check for adapters on first load
+                if (Files.isDirectory(modelDir.resolve("adapters"))) {
+                    Files.list(modelDir.resolve("adapters"))
+                            .forEach(
+                                    adapterDir -> {
+                                        String adapterName = adapterDir.getFileName().toString();
+                                        Adapter adapter =
+                                                Adapter.newInstance(
+                                                        this,
+                                                        adapterName,
+                                                        adapterDir.toAbsolutePath().toString());
+                                        registerAdapter(adapter);
+                                    });
+                }
+            }
+
             models.put(device, m);
             status = Status.READY;
         } finally {
