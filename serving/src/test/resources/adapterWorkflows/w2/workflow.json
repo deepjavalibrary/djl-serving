@@ -6,14 +6,13 @@
   },
   "configs": {
     "adapters": {
-      "a": {
+      "a2": {
         "model": "m",
-        "name": "a2",
         "src": "url2"
       }
     }
   },
   "workflow": {
-    "out": ["adapter", "a", "in"]
+    "out": ["adapter", "a2", "in"]
   }
 }

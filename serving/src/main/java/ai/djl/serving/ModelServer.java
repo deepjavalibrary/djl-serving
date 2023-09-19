@@ -380,7 +380,6 @@ public class ModelServer {
             URI uri = WorkflowDefinition.toWorkflowUri(modelUrl);
             if (uri != null) {
                 workflow = WorkflowDefinition.parse(modelName, uri).toWorkflow();
-                workflow.prepare(modelManager.getWorkLoadManager());
             } else {
                 if (modelName == null) {
                     modelName = ModelInfo.inferModelNameFromUrl(modelUrl);
@@ -401,7 +400,6 @@ public class ModelServer {
                                 -1,
                                 -1);
                 workflow = new Workflow(modelInfo);
-                workflow.prepare(modelManager.getWorkLoadManager());
             }
             CompletableFuture<Void> f =
                     modelManager

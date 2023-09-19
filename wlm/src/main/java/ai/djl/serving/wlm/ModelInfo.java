@@ -95,6 +95,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Criteria<I, O> criteria;
     private transient Map<Device, ZooModel<I, O>> models;
     private transient Map<String, Adapter> adapters;
+    private transient Engine engine;
 
     /**
      * Constructs a new {@code ModelInfo} instance.
@@ -244,8 +245,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
 
             ZooModel<I, O> m = builder.build().loadModel();
-            if (engineName == null) {
-                engineName = m.getNDManager().getEngine().getEngineName();
+            if (engine == null) {
+                engine = m.getNDManager().getEngine();
             }
             models.put(device, m);
             status = Status.READY;
@@ -285,6 +286,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     @Override
     public ThreadConfig<I, O> newThread(Device device) {
         return new ModelThread(device);
+    }
+
+    /**
+     * Returns the engine.
+     *
+     * @return the engine
+     */
+    public Engine getEngine() {
+        return engine;
     }
 
     /**
@@ -391,8 +401,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         if (Device.Type.GPU.equals(device.getDeviceType())) {
-            String engine = manager.getEngine().getEngineName();
-            if ("MXNet".equals(engine) || "Python".equals(engine)) {
+            String eng = manager.getEngine().getEngineName();
+            if ("MXNet".equals(eng) || "Python".equals(eng)) {
                 // FIXME: MXNet GPU Model doesn't support multi-threading
                 return 1;
             }
@@ -562,9 +572,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     private String inferEngine() throws ModelException {
-        String engine = prop.getProperty("engine");
-        if (engine != null) {
-            return engine;
+        String eng = prop.getProperty("engine");
+        if (eng != null) {
+            return eng;
         }
 
         String prefix = prop.getProperty("option.modelName", artifactName);
@@ -767,9 +777,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public String[] getLoadOnDevices() {
-        Engine engine = Engine.getEngine(engineName);
+        Engine eng = Engine.getEngine(engineName);
         if ("*".equals(loadOnDevices)) {
-            int gpuCount = engine.getGpuCount();
+            int gpuCount = eng.getGpuCount();
             String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
             v = prop.getProperty("option.tensor_parallel_degree", v);
             int tpDegree = Integer.parseInt(v);
@@ -967,14 +977,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             synchronized (this) {
                 for (Map.Entry<String, Adapter> adapter : adapters.entrySet()) {
                     configJobs.add(adapter.getValue().registerJob(ModelInfo.this, this).getJob());
-                    configJobs.add(
-                            new Job<>(
-                                    ModelInfo.this,
-                                    null,
-                                    in -> {
-                                        adapter.getValue().registerPredictor(predictor);
-                                        return null;
-                                    }));
                 }
             }
         }

@@ -54,8 +54,8 @@ public abstract class Adapter {
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
         }
         ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wp.getWpc();
-        String engineName = modelInfo.getEngineName();
-        if ("Python".equals(engineName)) {
+        // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
+        if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
             return new PyAdapter(name, src);
         } else {
             throw new IllegalArgumentException(
@@ -76,6 +76,7 @@ public abstract class Adapter {
     public static <I, O> void unregister(WorkerPool<I, O> wp, String adapterName) {
         ModelInfo<I, O> wpc = (ModelInfo<I, O>) wp.getWpc();
         Adapter adapter = wpc.unregisterAdapter(adapterName);
+        // TODO Support worker adapter scheduling rather than register/unregister on all workers
         for (WorkerGroup<I, O> wg : wp.getWorkerGroups().values()) {
             for (WorkerThread<I, O> t : wg.getWorkers()) {
                 t.addConfigJob(adapter.unregisterJob(wpc, t.getThreadType()));

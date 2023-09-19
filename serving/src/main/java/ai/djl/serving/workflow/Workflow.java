@@ -79,7 +79,7 @@ public class Workflow implements AutoCloseable {
         expressions =
                 Collections.singletonMap(
                         OUT, new WorkflowExpression(new Item(modelName), new Item(IN)));
-        funcs = Collections.emptyMap();
+        funcs = new ConcurrentHashMap<>();
         configs = Collections.emptyMap();
     }
 
@@ -139,10 +139,19 @@ public class Workflow implements AutoCloseable {
         if (prepared) {
             return;
         }
-        prepared = true;
+
+        // Populate local builtin funcs from global BUILT_INS
+        // TODO Avoid creating unused built-ins
+        for (Map.Entry<String, Supplier<WorkflowFunction>> builtIn : BUILT_INS.entrySet()) {
+            funcs.computeIfAbsent(builtIn.getKey(), n -> builtIn.getValue().get());
+        }
+
+        // Prepare WorkflowFunctions
         for (WorkflowFunction f : funcs.values()) {
             f.prepare(wlm, configs);
         }
+
+        prepared = true;
     }
 
     /**
@@ -154,7 +163,6 @@ public class Workflow implements AutoCloseable {
      */
     public CompletableFuture<Output> execute(WorkLoadManager wlm, Input input) {
         logger.trace("Beginning execution of workflow: {}", name);
-        prepare(wlm);
         WorkflowExecutor ex = new WorkflowExecutor(wlm, input);
         return ex.execute(OUT)
                 .thenApply(
@@ -332,14 +340,6 @@ public class Workflow implements AutoCloseable {
 
             if (funcs.containsKey(name)) {
                 return funcs.get(name);
-            }
-
-            if (BUILT_INS.containsKey(name)) {
-                // Built-in WorkflowFunctions should be one for each workflow
-                WorkflowFunction f = BUILT_INS.get(name).get();
-                f.prepare(wlm, configs);
-                funcs.put(name, f);
-                return f;
             }
 
             throw new IllegalArgumentException("Could not find find model or function: " + name);

@@ -62,16 +62,17 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
         this.adapters = new ConcurrentHashMap<>();
 
         // Add adapters from configurations
-        for (Map.Entry<String, Object> entry : configs.get("adapters").entrySet()) {
-            String ref = entry.getKey();
-            Map<String, Object> config = (Map<String, Object>) entry.getValue();
-            String modelName = (String) config.get("model");
-            String adapterName = (String) config.get("name");
-            String src = (String) config.get("src");
+        if (configs != null && configs.containsKey("adapters")) {
+            for (Map.Entry<String, Object> entry : configs.get("adapters").entrySet()) {
+                Map<String, Object> config = (Map<String, Object>) entry.getValue();
+                String modelName = (String) config.get("model");
+                String adapterName = entry.getKey();
+                String src = (String) config.get("src");
 
-            WorkerPool<?, ?> wp = wlm.getWorkerPoolById(modelName);
-            Adapter adapter = Adapter.newInstance(wp, adapterName, src);
-            adapters.put(ref, new AdapterReference(modelName, adapter));
+                WorkerPool<?, ?> wp = wlm.getWorkerPoolById(modelName);
+                Adapter adapter = Adapter.newInstance(wp, adapterName, src);
+                adapters.put(adapterName, new AdapterReference(modelName, adapter));
+            }
         }
 
         // Register adapters

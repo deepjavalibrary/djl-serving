@@ -195,7 +195,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         if (uri != null) {
             try {
                 workflow = WorkflowDefinition.parse(req.getModelName(), uri).toWorkflow();
-                workflow.prepare(modelManager.getWorkLoadManager());
             } catch (IOException | BadWorkflowException e) {
                 NettyUtils.sendError(ctx, e.getCause());
                 return;
@@ -217,7 +216,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
                             req.getMinWorkers(),
                             req.getMaxWorkers());
             workflow = new Workflow(modelInfo);
-            workflow.prepare(modelManager.getWorkLoadManager());
         }
         CompletableFuture<Void> f =
                 modelManager
@@ -256,7 +254,6 @@ public class ManagementRequestHandler extends HttpRequestHandler {
 
             URI uri = URI.create(workflowUrl);
             Workflow workflow = WorkflowDefinition.parse(null, uri).toWorkflow();
-            workflow.prepare(modelManager.getWorkLoadManager());
             String workflowName = workflow.getName();
 
             CompletableFuture<Void> f =

@@ -38,12 +38,6 @@ public class WorkflowTest {
     /** A standard input for multiple tests with a zero image. */
     private Input zeroInput;
 
-    public static void main(String[] args) throws BadWorkflowException, IOException {
-        WorkflowTest t = new WorkflowTest();
-        t.beforeAll();
-        t.testCriteria();
-    }
-
     @BeforeSuite
     public void beforeAll() throws IOException {
         ConfigManager.init(new Arguments(new CommandLine.Builder().build()));
@@ -102,6 +96,7 @@ public class WorkflowTest {
             throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         WorkLoadManager wlm = new WorkLoadManager();
+        workflow.prepare(wlm);
         for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
             wpc.setMaxWorkers(1);
             wlm.registerWorkerPool(wpc).initWorkers("-1");

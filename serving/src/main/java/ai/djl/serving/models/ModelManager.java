@@ -157,6 +157,7 @@ public final class ModelManager {
                             throw new CompletionException(e);
                         }
                     }
+                    workflow.prepare(wlm);
                     return null;
                 });
     }
