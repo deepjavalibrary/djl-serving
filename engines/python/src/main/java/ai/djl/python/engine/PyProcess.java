@@ -257,7 +257,7 @@ class PyProcess {
         @SuppressWarnings("PMD.UseTryWithResources")
         public void run() {
             try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8)) {
-                while (isRunning.get() && scanner.hasNext()) {
+                while (scanner.hasNext()) {
                     String result = scanner.nextLine();
                     if (result == null) {
                         logger.warn("Got EOF: {}", getName());
