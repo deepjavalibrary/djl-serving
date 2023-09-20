@@ -21,7 +21,7 @@ from transformers import (pipeline, Pipeline, Conversation, AutoModelForCausalLM
                           AutoModelForTokenClassification,
                           AutoModelForQuestionAnswering)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from peft import PeftConfig, PeftModel
+from peft import PeftConfig, PeftModel, PeftModelForCausalLM
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -261,12 +261,12 @@ class HuggingFaceService(object):
                 logging.exception(f"Parse input failed: {i}")
                 errors[i] = str(e)
 
-        return input_data, input_size, parameters, errors, batch
+        return input_data, input_size, adapters, parameters, errors, batch
 
     def inference(self, inputs):
         outputs = Output()
 
-        input_data, input_size, parameters, errors, batch = self.parse_input(
+        input_data, input_size, adapters, parameters, errors, batch = self.parse_input(
             inputs)
         if len(input_data) == 0:
             for i in range(len(batch)):
@@ -312,6 +312,9 @@ class HuggingFaceService(object):
                                      self.device, **parameters[0]))
             return outputs
 
+        if isinstance(self.model, PeftModelForCausalLM):
+            parameters[0]["adapters"] = adapters
+        parameters[0]["adapters"] = adapters
         prediction = self.hf_pipeline(input_data, **parameters[0])
 
         offset = 0
@@ -538,7 +541,7 @@ def register_adapter(inputs: Input):
     """
     adapter_name = inputs.get_property("name")
     adapter_model_id_or_path = inputs.get_property("src")
-
+    logging.info(f"Registering adapter {adapter_name} from {adapter_model_id_or_path}")
     if isinstance(_service.model, PeftModel):
         _service.model.load_adapter(adapter_model_id_or_path, adapter_name)
     else:
@@ -555,6 +558,7 @@ def unregister_adapter(inputs: Input):
     Unregisters lora adapter from the model.
     """
     adapter_name = inputs.get_property("name")
+    logging.info(f"Unregistering adapter {adapter_name}")
     _service.model.base_model.delete_adapter(adapter_name)
 
 def handle(inputs: Input):
