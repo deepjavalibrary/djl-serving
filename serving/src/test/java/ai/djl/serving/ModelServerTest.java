@@ -14,6 +14,7 @@ package ai.djl.serving;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -684,7 +685,7 @@ public class ModelServerTest {
         assertTrue(workers.size() > 1);
 
         DescribeWorkflowResponse.Worker worker = workers.get(0);
-        assertTrue(worker.getId() > 0);
+        assertNotEquals(worker.getId(), "");
         assertNotNull(worker.getStartTime());
         assertNotNull(worker.getStatus());
 
@@ -1226,7 +1227,8 @@ public class ModelServerTest {
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
             assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
-            assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2 (READY)");
+            assertTrue(resp.getMessage().contains("All model workers has been shutdown"));
+            assertTrue(resp.getMessage().contains("mlp_2"));
         }
     }
 
