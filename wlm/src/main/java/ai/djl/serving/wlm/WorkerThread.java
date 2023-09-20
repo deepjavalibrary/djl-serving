@@ -77,21 +77,12 @@ public final class WorkerThread<I, O> implements Runnable {
         List<Job<I, O>> req = null;
         String errorMessage = "Worker shutting down";
         try {
+            runAllConfigJobs(); // Run initial config jobs
             while (isRunning() && !aggregator.isFinished()) {
                 req = aggregator.getRequest();
                 if (req != null && !req.isEmpty()) {
                     state = WorkerState.WORKER_BUSY;
-
-                    // Check for config jobs
-                    while (!threadConfig.getConfigJobs().isEmpty()) {
-                        // Run base worker pool configurations if present
-                        runConfigJob(threadConfig.getConfigJobs().pop());
-                    }
-                    while (!configJobs.isEmpty()) {
-                        // Run thread config jobs if present
-                        runConfigJob(configJobs.pop().getJob());
-                    }
-
+                    runAllConfigJobs(); // Run new config jobs
                     try {
                         runJobs(req);
                         aggregator.sendResponse();
@@ -117,6 +108,17 @@ public final class WorkerThread<I, O> implements Runnable {
                 Exception e = new WlmException(errorMessage);
                 aggregator.sendError(e);
             }
+        }
+    }
+
+    private void runAllConfigJobs() throws TranslateException {
+        while (!threadConfig.getConfigJobs().isEmpty()) {
+            // Run base worker pool configurations if present
+            runConfigJob(threadConfig.getConfigJobs().pop());
+        }
+        while (!configJobs.isEmpty()) {
+            // Run thread config jobs if present
+            runConfigJob(configJobs.pop().getJob());
         }
     }
 
