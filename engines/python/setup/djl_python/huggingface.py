@@ -15,13 +15,13 @@ import logging
 import os
 
 import torch
-from transformers import (pipeline, Conversation, AutoModelForCausalLM,
+from transformers import (pipeline, Pipeline, Conversation, AutoModelForCausalLM,
                           AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
                           AutoModelForSequenceClassification,
                           AutoModelForTokenClassification,
                           AutoModelForQuestionAnswering)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from peft import PeftConfig, PeftModel
+from peft import PeftConfig, PeftModel, PeftModelForCausalLM
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -102,6 +102,7 @@ class HuggingFaceService(object):
 
     def __init__(self):
         self.hf_pipeline = None
+        self.hf_pipeline_unwrapped = None
         self.initialized = False
         self.enable_streaming = None
         self.model = None
@@ -204,6 +205,7 @@ class HuggingFaceService(object):
         input_data = []
         input_size = []
         parameters = []
+        adapters = []
         errors = {}
         batch = inputs.get_batches()
         first = True
@@ -212,6 +214,7 @@ class HuggingFaceService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
+                adapters_per_item = self._fetch_adapters_from_input(input_map, input)
                 if first or self.rolling_batch_type:
                     parameters.append(input_map.pop("parameters", {}))
                     first = False
@@ -223,12 +226,25 @@ class HuggingFaceService(object):
                         raise ValueError(
                             "In order to enable dynamic batching, all input batches must have the same parameters"
                         )
-                if isinstance(_inputs, list):
-                    input_data.extend(_inputs)
-                    input_size.append(len(_inputs))
+
+                if not isinstance(_inputs, list):
+                    _inputs = [_inputs]
+
+                if not isinstance(adapters_per_item, list):
+                    adapters_per_item = [adapters_per_item]
+
+                if not adapters_per_item:
+                    ## inference with just base model.
+                    adapters_per_item = [""] * len(_inputs)
                 else:
-                    input_data.append(_inputs)
-                    input_size.append(1)
+                    if len(_inputs) != len(adapters_per_item):
+                        ## input_size list needs to be appended as it's used during output processing
+                        input_size.append(0)
+                        raise Exception("Number of adapters is not equal to the number of inputs")
+
+                input_data.extend(_inputs)
+                input_size.append(len(_inputs))
+                adapters.extend(adapters_per_item)
 
                 if "cached_prompt" in input_map:
                     parameters[i]["cached_prompt"] = input_map.pop(
@@ -245,12 +261,12 @@ class HuggingFaceService(object):
                 logging.exception(f"Parse input failed: {i}")
                 errors[i] = str(e)
 
-        return input_data, input_size, parameters, errors, batch
+        return input_data, input_size, adapters, parameters, errors, batch
 
     def inference(self, inputs):
         outputs = Output()
 
-        input_data, input_size, parameters, errors, batch = self.parse_input(
+        input_data, input_size, adapters, parameters, errors, batch = self.parse_input(
             inputs)
         if len(input_data) == 0:
             for i in range(len(batch)):
@@ -298,6 +314,9 @@ class HuggingFaceService(object):
                                      self.device, **parameters[0]))
             return outputs
 
+        if isinstance(self.model, PeftModelForCausalLM):
+            parameters[0]["adapters"] = adapters
+        parameters[0]["adapters"] = adapters
         prediction = self.hf_pipeline(input_data, **parameters[0])
 
         offset = 0
@@ -371,6 +390,7 @@ class HuggingFaceService(object):
                                        model=model_id_or_path,
                                        device=self.device,
                                        **kwargs)
+                self.model = hf_pipeline.model
         else:
             self._init_model_and_tokenizer(model_id_or_path, **kwargs)
             hf_pipeline = pipeline(task=task,
@@ -380,7 +400,8 @@ class HuggingFaceService(object):
 
         # wrap specific pipeline to support better ux
         if task == "conversational":
-            hf_pipeline = self.wrap_conversation_pipeline(hf_pipeline)
+            self.hf_pipeline_unwrapped = hf_pipeline
+            hf_pipeline = self.wrap_conversation_pipeline(self.hf_pipeline_unwrapped)
 
         if task == "text-generation":
             if issubclass(type(hf_pipeline.tokenizer),
@@ -388,7 +409,8 @@ class HuggingFaceService(object):
                 hf_pipeline.tokenizer.padding_side = "left"
                 if not hf_pipeline.tokenizer.pad_token:
                     hf_pipeline.tokenizer.pad_token = hf_pipeline.tokenizer.eos_token
-            hf_pipeline = self.wrap_text_generation_pipeline(hf_pipeline)
+            self.hf_pipeline_unwrapped = hf_pipeline
+            hf_pipeline = self.wrap_text_generation_pipeline(self.hf_pipeline_unwrapped)
 
         return hf_pipeline
 
@@ -505,9 +527,41 @@ class HuggingFaceService(object):
                 f"This is required for loading huggingface models")
             raise e
 
+    def _fetch_adapters_from_input(self, input_map: dict, input: Input):
+        adapters = input_map.pop("adapters", [])
+        if not adapters:
+            ## check if input contains adapters, possible in workflow approach
+            if input.contains_key("adapter"):
+                adapters = input.get_as_string("adapter")
+        return adapters
 
 _service = HuggingFaceService()
 
+def register_adapter(inputs: Input):
+    """
+    Registers lora adapter with the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_model_id_or_path = inputs.get_property("src")
+    logging.info(f"Registering adapter {adapter_name} from {adapter_model_id_or_path}")
+    if isinstance(_service.model, PeftModel):
+        _service.model.load_adapter(adapter_model_id_or_path, adapter_name)
+    else:
+        _service.model = PeftModel.from_pretrained(_service.model, adapter_model_id_or_path, adapter_name)
+
+    if isinstance(_service.hf_pipeline, Pipeline):
+        _service.hf_pipeline.model = _service.model
+
+    if isinstance(_service.hf_pipeline_unwrapped, Pipeline):
+        _service.hf_pipeline_unwrapped.model = _service.model
+
+def unregister_adapter(inputs: Input):
+    """
+    Unregisters lora adapter from the model.
+    """
+    adapter_name = inputs.get_property("name")
+    logging.info(f"Unregistering adapter {adapter_name}")
+    _service.model.base_model.delete_adapter(adapter_name)
 
 def handle(inputs: Input):
     """
