@@ -345,6 +345,12 @@ public class ModelServer {
             urls.addAll(Arrays.asList(modelsUrls));
         }
 
+        String overrideEngineModel = Utils.getEnvOrSystemProperty("LMI_ENGINE");
+        if (overrideEngineModel != null) {
+            String loadDir = Utils.getEnvOrSystemProperty("MODEL_SERVER_HOME", System.getProperty("user.dir"));
+            urls.add("lmi_model::" + overrideEngineModel + "=" + loadDir);
+        }
+
         String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
         if (huggingFaceModelId != null) {
             urls.add(createHuggingFaceModel(huggingFaceModelId));
