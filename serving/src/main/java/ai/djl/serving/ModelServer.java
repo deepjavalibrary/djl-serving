@@ -348,8 +348,7 @@ public class ModelServer {
         String overrideEngineModel = Utils.getEnvOrSystemProperty("LOAD_WITH_ENGINE");
         if (overrideEngineModel != null) {
             String loadDir =
-                    Utils.getEnvOrSystemProperty(
-                            "MODEL_SERVER_HOME", System.getProperty("user.dir"));
+                    Utils.getEnvOrSystemProperty("LOAD_WITH_DIR", System.getProperty("user.dir"));
             urls.add("override_engine_model::" + overrideEngineModel + "=" + loadDir);
         }
 

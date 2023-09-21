@@ -82,6 +82,9 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 | DJL_VENV_DIR                      | env var/system prop | The venv directory, default: $DJL_CACHE_DIR/venv                                                                                                       |
 | ai.djl.python.disable_alternative | system prop         | Disable alternative engine                                                                                                                             |
 | TENSOR_PARALLEL_DEGREE            | env var             | Set tensor parallel degree.<br>For mpi mode, the default is number of accelerators.<br>Use "max" for non-mpi mode to use all GPUs for tensor parallel. |
+| LOAD_WITH_ENGINE                  | env var             | loads a model with a given engine. Will load from LOAD_WITH_DIR directory.                                                                             |
+| LOAD_WITH_DIR                     | env var             | loads a model from a given directory path. Default is current execution path.                                                                          |
+
 
 DJLServing provides a few alias for Python engine to make it easy for common LLM configurations.
 
