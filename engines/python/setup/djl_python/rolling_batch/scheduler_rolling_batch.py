@@ -39,7 +39,8 @@ class SchedulerRollingBatch(RollingBatch):
         super().__init__(device, **kwargs)
         self._init_model_and_tokenizer(model_id_or_path,
                                        device=device,
-                                       multi_gpu=properties.get('multi_gpu', None),
+                                       multi_gpu=properties.get(
+                                           'multi_gpu', None),
                                        **kwargs)
         self._init_scheduler(properties)
 
@@ -128,7 +129,9 @@ class SchedulerRollingBatch(RollingBatch):
                             f"Running {model_id_or_path} requires package lmi_dist."
                         )
                 else:
-                    raise Exception(f"{model_id_or_path} with tgi_sharding is currently unsupported.")
+                    raise Exception(
+                        f"{model_id_or_path} with tgi_sharding is currently unsupported."
+                    )
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_id_or_path, device_map=device_map, **kwargs)
