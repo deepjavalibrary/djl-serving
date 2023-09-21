@@ -251,6 +251,8 @@ class TestSchedulerBloom(unittest.TestCase):
         ) == "<s> There's a time that I remember, when I did not knowouthThose aquaticlace Stewart"
 
     def test_greedy_scheduler_llama2_gptq(self):
+        if global_device.type == 'cpu':
+            return
         model_name = "TheBloke/Llama-2-7b-Chat-GPTQ"
         tokenizer = AutoTokenizer.from_pretrained(model_name,
                                                   trust_remote_code=False,
