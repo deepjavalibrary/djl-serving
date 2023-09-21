@@ -116,7 +116,7 @@ class SchedulerRollingBatch(RollingBatch):
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
 
-            if "tgi_sharding" == multi_gpu:
+            if "lmi_dist_sharding" == multi_gpu:
                 if 'neox' in model_id_or_path:
                     try:
                         from lmi_dist.models.gpt_neox import GPTNeoxSharded
@@ -130,7 +130,7 @@ class SchedulerRollingBatch(RollingBatch):
                         )
                 else:
                     raise Exception(
-                        f"{model_id_or_path} with tgi_sharding is currently unsupported."
+                        f"{model_id_or_path} with lmi_dist_sharding is currently unsupported."
                     )
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
