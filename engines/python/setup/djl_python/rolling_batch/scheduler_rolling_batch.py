@@ -115,17 +115,20 @@ class SchedulerRollingBatch(RollingBatch):
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
 
-            if multi_gpu == "tgi_sharding":
-                try:
-                    from lmi_dist.models.gpt_neox import GPTNeoxSharded
-                    from lmi_dist.utils import download_and_convert_weights
+            if "tgi_sharding" == multi_gpu:
+                if 'neox' in model_id_or_path:
+                    try:
+                        from lmi_dist.models.gpt_neox import GPTNeoxSharded
+                        from lmi_dist.utils import download_and_convert_weights
 
-                    download_and_convert_weights(model_id_or_path)
-                    self.model = GPTNeoxSharded(model_id_or_path)
-                except ImportError:
-                    print(
-                        f"Running {model_id_or_path} requires package lmi_dist."
-                    )
+                        download_and_convert_weights(model_id_or_path)
+                        self.model = GPTNeoxSharded(model_id_or_path)
+                    except ImportError:
+                        print(
+                            f"Running {model_id_or_path} requires package lmi_dist."
+                        )
+                else:
+                    raise Exception(f"{model_id_or_path} with tgi_sharding is currently unsupported.")
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_id_or_path, device_map=device_map, **kwargs)
