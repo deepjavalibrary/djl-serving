@@ -281,7 +281,7 @@ class HuggingFaceService(object):
                 outputs.add_property("content-type", content_type)
             return outputs
         elif self.enable_streaming:
-            if batch > 1:
+            if len(batch) > 1:
                 raise NotImplementedError(
                     "Dynamic batch not supported for generic streaming")
             outputs.add_property("content-type", "application/jsonlines")

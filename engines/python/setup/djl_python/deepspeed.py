@@ -358,7 +358,7 @@ class DeepSpeedService(object):
 
         outputs = Output()
         if self.enable_streaming:
-            if batch > 1:
+            if len(batch) > 1:
                 raise NotImplementedError(
                     "Dynamic batch not supported for generic streaming")
             outputs.add_property("content-type", "application/jsonlines")
@@ -386,6 +386,7 @@ class DeepSpeedService(object):
                     **parameters)
             prediction = self.tokenizer.batch_decode(output_tokens,
                                                      skip_special_tokens=True)
+            return [{"generated_text": s} for s in prediction]
         else:
             prediction = self.pipeline(input_data, **parameters)
 
