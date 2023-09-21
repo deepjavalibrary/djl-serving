@@ -31,3 +31,8 @@ node_modules/
 # dir
 tests/integration/models/
 engines/python/setup/djl_python/tests/resources*
+
+#Python
+__pycache__
+*.egg-info/
+*.pt

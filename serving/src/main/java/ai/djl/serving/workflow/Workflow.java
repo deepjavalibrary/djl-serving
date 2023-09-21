@@ -18,6 +18,7 @@ import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.WorkflowExpression.Item.ItemType;
+import ai.djl.serving.workflow.function.AdapterWorkflowFunction;
 import ai.djl.serving.workflow.function.EnsembleMerge;
 import ai.djl.serving.workflow.function.FunctionsApply;
 import ai.djl.serving.workflow.function.IdentityWF;
@@ -40,7 +41,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /** A flow of executing {@link ai.djl.Model}s and custom functions. */
-public class Workflow {
+public class Workflow implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Workflow.class);
 
@@ -54,6 +55,7 @@ public class Workflow {
         BUILT_INS.put(IdentityWF.NAME, IdentityWF::new);
         BUILT_INS.put(EnsembleMerge.NAME, EnsembleMerge::new);
         BUILT_INS.put(FunctionsApply.NAME, FunctionsApply::new);
+        BUILT_INS.put(AdapterWorkflowFunction.NAME, AdapterWorkflowFunction::new);
     }
 
     String name;
@@ -62,6 +64,7 @@ public class Workflow {
     Map<String, WorkflowExpression> expressions;
     Map<String, WorkflowFunction> funcs;
     Map<String, Map<String, Object>> configs;
+    private boolean prepared;
 
     /**
      * Constructs a workflow containing only a single workerPoolConfig.
@@ -76,7 +79,7 @@ public class Workflow {
         expressions =
                 Collections.singletonMap(
                         OUT, new WorkflowExpression(new Item(modelName), new Item(IN)));
-        funcs = Collections.emptyMap();
+        funcs = new ConcurrentHashMap<>();
         configs = Collections.emptyMap();
     }
 
@@ -122,6 +125,33 @@ public class Workflow {
      */
     public Map<String, WorkerPoolConfig<Input, Output>> getWpcMap() {
         return wpcs;
+    }
+
+    /**
+     * Prepares this workflow for use.
+     *
+     * <p>This is idempotent and can be safely re-called if this is already prepared. It should
+     * re-call to ensure preparedness.
+     *
+     * @param wlm the wlm to prepare with
+     */
+    public void prepare(WorkLoadManager wlm) {
+        if (prepared) {
+            return;
+        }
+
+        // Populate local builtin funcs from global BUILT_INS
+        // TODO Avoid creating unused built-ins
+        for (Map.Entry<String, Supplier<WorkflowFunction>> builtIn : BUILT_INS.entrySet()) {
+            funcs.computeIfAbsent(builtIn.getKey(), n -> builtIn.getValue().get());
+        }
+
+        // Prepare WorkflowFunctions
+        for (WorkflowFunction f : funcs.values()) {
+            f.prepare(wlm, configs);
+        }
+
+        prepared = true;
     }
 
     /**
@@ -194,10 +224,14 @@ public class Workflow {
         return name;
     }
 
-    /** Stops the workflow and unloads all the wpcs in the workflow. */
-    public void stop() {
+    /** {@inheritDoc} */
+    @Override
+    public void close() {
         for (WorkerPoolConfig<Input, Output> wpc : getWpcs()) {
             wpc.close();
+        }
+        for (WorkflowFunction f : funcs.values()) {
+            f.close();
         }
     }
 
@@ -306,13 +340,6 @@ public class Workflow {
 
             if (funcs.containsKey(name)) {
                 return funcs.get(name);
-            }
-
-            if (BUILT_INS.containsKey(name)) {
-                // Built-in WorkflowFunctions should be one for each workflow
-                WorkflowFunction f = BUILT_INS.get(name).get();
-                funcs.put(name, f);
-                return f;
             }
 
             throw new IllegalArgumentException("Could not find find model or function: " + name);

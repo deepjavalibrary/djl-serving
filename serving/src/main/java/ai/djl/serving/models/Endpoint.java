@@ -133,7 +133,7 @@ public class Endpoint {
     /** Closes the {@code Endpoint}. */
     public void close() {
         for (Workflow workflow : workflows) {
-            workflow.stop();
+            workflow.close();
         }
     }
 }

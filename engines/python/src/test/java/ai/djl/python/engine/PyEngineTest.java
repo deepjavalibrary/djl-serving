@@ -217,6 +217,48 @@ public class PyEngineTest {
         }
     }
 
+    @Test
+    public void testAdaptEchoModel() throws TranslateException, IOException, ModelException {
+        // Echo model doesn't support initialize
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/adaptecho"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input input = new Input();
+            input.add("input");
+            input.add("adapter", "ad");
+            Output output = predictor.predict(input);
+            Assert.assertEquals(output.getData().getAsString(), "dynadinput");
+        }
+    }
+
+    @Test
+    public void testBatchAdaptEchoModel() throws TranslateException, IOException, ModelException {
+        // Echo model doesn't support initialize
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/adaptecho"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Input in0 = new Input();
+            in0.add("input");
+            in0.add("adapter", "ad0");
+            Input in1 = new Input();
+            in1.add("input");
+            in1.add("adapter", "ad1");
+            List<Output> outputs = predictor.batchPredict(Arrays.asList(in0, in1));
+            Assert.assertEquals(outputs.get(0).getData().getAsString(), "dynad0input");
+            Assert.assertEquals(outputs.get(1).getData().getAsString(), "dynad1input");
+        }
+    }
+
     @Test(expectedExceptions = EngineException.class, expectedExceptionsMessageRegExp = "OOM")
     public void testLoadModelOom()
             throws TranslateException, IOException, ModelException, InterruptedException {

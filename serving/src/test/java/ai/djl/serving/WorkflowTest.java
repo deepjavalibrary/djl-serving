@@ -96,13 +96,14 @@ public class WorkflowTest {
             throws IOException, BadWorkflowException {
         Workflow workflow = WorkflowDefinition.parse(workflowFile).toWorkflow();
         WorkLoadManager wlm = new WorkLoadManager();
+        workflow.prepare(wlm);
         for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
             wpc.setMaxWorkers(1);
             wlm.registerWorkerPool(wpc).initWorkers("-1");
         }
 
         Output output = workflow.execute(wlm, input).join();
-        workflow.stop();
+        workflow.close();
         wlm.close();
         Assert.assertNotNull(output.getData());
         return output;

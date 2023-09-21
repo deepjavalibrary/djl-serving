@@ -12,11 +12,13 @@
  */
 package ai.djl.serving.workflow.function;
 
+import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -25,7 +27,7 @@ import java.util.stream.Collectors;
  *
  * @see #run(Workflow.WorkflowExecutor, List)
  */
-public abstract class WorkflowFunction {
+public abstract class WorkflowFunction implements AutoCloseable {
 
     /**
      * The lambda function that is run.
@@ -57,4 +59,16 @@ public abstract class WorkflowFunction {
                                         .map(CompletableFuture::join)
                                         .collect(Collectors.toList()));
     }
+
+    /**
+     * Prepares this {@link WorkflowFunction}.
+     *
+     * @param wlm the wlm
+     * @param configs the workflow configs
+     */
+    public void prepare(WorkLoadManager wlm, Map<String, Map<String, Object>> configs) {}
+
+    /** {@inheritDoc} */
+    @Override
+    public void close() {}
 }

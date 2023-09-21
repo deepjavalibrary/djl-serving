@@ -20,6 +20,7 @@ import ai.djl.translate.TranslateException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * A {@link WorkerPoolConfig} represents a task that could be run in the {@link WorkLoadManager}.
@@ -56,9 +57,9 @@ public abstract class WorkerPoolConfig<I, O> {
      * Starts a new {@link WorkerThread} for this {@link WorkerPoolConfig}.
      *
      * @param device the device to run on
-     * @return the new {@link ThreadType}
+     * @return the new {@link ThreadConfig}
      */
-    public abstract ThreadType<I, O> newThread(Device device);
+    public abstract ThreadConfig<I, O> newThread(Device device);
 
     /**
      * Initialize the worker.
@@ -319,21 +320,37 @@ public abstract class WorkerPoolConfig<I, O> {
         FAILED
     }
 
-    protected abstract static class ThreadType<I, O> {
-        Device device;
+    /**
+     * The part of the {@link WorkerPoolConfig} for an individual {@link WorkerThread}.
+     *
+     * @param <I> the input type
+     * @param <O> the output type
+     */
+    public abstract static class ThreadConfig<I, O> {
+        private Device device;
+        protected LinkedBlockingDeque<Job<I, O>> configJobs;
 
-        protected ThreadType(Device device) {
+        protected ThreadConfig(Device device) {
             this.device = device;
+            configJobs = new LinkedBlockingDeque<>();
         }
 
         /**
-         * Runs the work on the {@link WorkerThread}.
+         * Runs the work on the {@link WorkerThread} and stores in the job.
          *
-         * @param input the work input
-         * @return the computed output
+         * @param inputs the work input
          * @throws TranslateException if it failed to compute
          */
-        public abstract List<O> run(List<I> input) throws TranslateException;
+        public abstract void run(List<Job<I, O>> inputs) throws TranslateException;
+
+        /**
+         * Gets the configuration jobs for the worker.
+         *
+         * @return the configuration jobs for the worker
+         */
+        public LinkedBlockingDeque<Job<I, O>> getConfigJobs() {
+            return configJobs;
+        }
 
         /** Closes the thread type and frees any resources. */
         public abstract void close();

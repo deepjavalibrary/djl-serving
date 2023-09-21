@@ -157,6 +157,7 @@ public final class ModelManager {
                             throw new CompletionException(e);
                         }
                     }
+                    workflow.prepare(wlm);
                     return null;
                 });
     }
@@ -180,7 +181,7 @@ public final class ModelManager {
             // unregister all versions
             for (Workflow workflow : endpoint.getWorkflows()) {
                 candidateWpcsToUnregister.addAll(workflow.getWpcs());
-                workflow.stop();
+                workflow.close();
             }
             startupWorkflows.remove(workflowName);
             endpoint.getWorkflows().clear();
@@ -192,7 +193,7 @@ public final class ModelManager {
                 return false;
             }
             candidateWpcsToUnregister.addAll(workflow.getWpcs());
-            workflow.stop();
+            workflow.close();
             startupWorkflows.remove(workflowName);
             logger.info("Model {}/{} unregistered.", workflowName, version);
         }

@@ -49,6 +49,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,6 +81,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private String translatorFactory;
     private String translator;
 
+    private boolean dynamicAdapters;
+
     transient Path modelDir;
     private transient String artifactName;
     transient Path downloadS3Dir;
@@ -91,6 +94,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Class<O> outputClass;
     private transient Criteria<I, O> criteria;
     private transient Map<Device, ZooModel<I, O>> models;
+    private transient Map<String, Adapter> adapters;
+    private transient Engine engine;
 
     /**
      * Constructs a new {@code ModelInfo} instance.
@@ -103,6 +108,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         this.modelUrl = modelUrl;
         this.inputClass = (Class<I>) Input.class;
         this.outputClass = (Class<O>) Output.class;
+
+        adapters = new ConcurrentHashMap<>();
     }
 
     /**
@@ -118,6 +125,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         this.criteria = criteria;
         inputClass = criteria.getInputClass();
         outputClass = criteria.getOutputClass();
+
+        adapters = new ConcurrentHashMap<>();
     }
 
     /**
@@ -164,6 +173,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         this.batchSize = batchSize;
         this.minWorkers = Math.min(minWorkers, maxWorkers);
         this.maxWorkers = maxWorkers;
+
+        adapters = new ConcurrentHashMap<>();
     }
 
     /**
@@ -234,6 +245,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
 
             ZooModel<I, O> m = builder.build().loadModel();
+            if (engine == null) {
+                engine = m.getNDManager().getEngine();
+            }
             models.put(device, m);
             status = Status.READY;
         } finally {
@@ -270,8 +284,17 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     /** {@inheritDoc} */
     @Override
-    public ThreadType<I, O> newThread(Device device) {
+    public ThreadConfig<I, O> newThread(Device device) {
         return new ModelThread(device);
+    }
+
+    /**
+     * Returns the engine.
+     *
+     * @return the engine
+     */
+    public Engine getEngine() {
+        return engine;
     }
 
     /**
@@ -378,8 +401,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         if (Device.Type.GPU.equals(device.getDeviceType())) {
-            String engine = manager.getEngine().getEngineName();
-            if ("MXNet".equals(engine) || "Python".equals(engine)) {
+            String eng = manager.getEngine().getEngineName();
+            if ("MXNet".equals(eng) || "Python".equals(eng)) {
                 // FIXME: MXNet GPU Model doesn't support multi-threading
                 return 1;
             }
@@ -412,6 +435,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public void initialize() throws IOException, ModelException {
+        if (adapters == null) {
+            adapters = new ConcurrentHashMap<>();
+        }
         downloadModel();
         loadServingProperties();
         downloadS3();
@@ -430,6 +456,62 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 arguments.put(key, prop.getProperty(key));
             }
         }
+    }
+
+    /**
+     * Adds an adapter to this {@link ModelInfo}.
+     *
+     * @param adapter the adapter to add
+     */
+    public void registerAdapter(Adapter adapter) {
+        synchronized (this) {
+            if (adapters.containsKey(adapter.getName())) {
+                throw new IllegalArgumentException(
+                        "The adapter "
+                                + adapter.getName()
+                                + " already exists. If you want to replace it, please unregistering"
+                                + " before registering a new adapter with the same name.");
+            }
+            adapters.put(adapter.getName(), adapter);
+        }
+    }
+
+    /**
+     * Removes an adapter from this {@link ModelInfo}.
+     *
+     * @param name the adapter to remove
+     * @return the removed adapter
+     */
+    public Adapter unregisterAdapter(String name) {
+        synchronized (this) {
+            // TODO: Remove from current workers
+            if (!adapters.containsKey(name)) {
+                throw new IllegalArgumentException(
+                        "The adapter "
+                                + name
+                                + " was not found and therefore can't be unregistered");
+            }
+            return adapters.remove(name);
+        }
+    }
+
+    /**
+     * Returns the adapters for this model.
+     *
+     * @return the adapters for this model
+     */
+    public Map<String, Adapter> getAdapters() {
+        return adapters;
+    }
+
+    /**
+     * Returns an adapter on this {@link ModelInfo}.
+     *
+     * @param name the adapter name to get
+     * @return the adapter
+     */
+    public Adapter getAdapter(String name) {
+        return adapters.get(name);
     }
 
     /** {@inheritDoc} */
@@ -490,9 +572,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     private String inferEngine() throws ModelException {
-        String engine = prop.getProperty("engine");
-        if (engine != null) {
-            return engine;
+        String eng = prop.getProperty("engine");
+        if (eng != null) {
+            return eng;
         }
 
         String prefix = prop.getProperty("option.modelName", artifactName);
@@ -695,9 +777,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public String[] getLoadOnDevices() {
-        Engine engine = Engine.getEngine(engineName);
+        Engine eng = Engine.getEngine(engineName);
         if ("*".equals(loadOnDevices)) {
-            int gpuCount = engine.getGpuCount();
+            int gpuCount = eng.getGpuCount();
             String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
             v = prop.getProperty("option.tensor_parallel_degree", v);
             int tpDegree = Integer.parseInt(v);
@@ -872,7 +954,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         return Integer.parseInt(value);
     }
 
-    protected class ModelThread extends ThreadType<I, O> {
+    protected class ModelThread extends ThreadConfig<I, O> {
 
         private Predictor<I, O> predictor;
         ZooModel<I, O> model;
@@ -891,12 +973,45 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 metrics.setOnLimit((m, s) -> MODEL_METRIC.info("{}-{}", id, m.percentile(s, 50)));
                 predictor.setMetrics(metrics);
             }
+
+            synchronized (this) {
+                for (Map.Entry<String, Adapter> adapter : adapters.entrySet()) {
+                    configJobs.add(adapter.getValue().registerJob(ModelInfo.this, this).getJob());
+                }
+            }
         }
 
-        /** {@inheritDoc} */
         @Override
-        public List<O> run(List<I> input) throws TranslateException {
-            return predictor.batchPredict(input);
+        @SuppressWarnings("unchecked")
+        public void run(List<Job<I, O>> jobs) throws TranslateException {
+            List<Job<I, O>> validJobs = new ArrayList<>(jobs.size());
+            for (Job<I, O> job : jobs) {
+                if (job.getInput() instanceof Input) {
+                    Input i = (Input) job.getInput();
+                    if (i.getContent().contains("adapter")) {
+                        String adapter = i.getAsString("adapter");
+                        if (!dynamicAdapters && !adapters.containsKey(adapter)) {
+                            String failMessage =
+                                    "The adapter " + adapter + " has not been registered";
+                            Job.setFailOutput((Job<Input, Output>) job, 503, failMessage);
+                            continue;
+                        }
+                    }
+                }
+                validJobs.add(job);
+            }
+            if (!validJobs.isEmpty()) {
+                Job.runAll(validJobs, js -> predictor.batchPredict(js));
+            }
+        }
+
+        /**
+         * Returns the predictor.
+         *
+         * @return the predictor
+         */
+        public Predictor<I, O> getPredictor() {
+            return predictor;
         }
 
         /** {@inheritDoc} */

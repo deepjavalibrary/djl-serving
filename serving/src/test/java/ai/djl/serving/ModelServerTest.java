@@ -22,14 +22,16 @@ import ai.djl.engine.Engine;
 import ai.djl.modality.Classifications.Classification;
 import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
+import ai.djl.serving.http.DescribeAdapterResponse;
 import ai.djl.serving.http.DescribeWorkflowResponse;
 import ai.djl.serving.http.DescribeWorkflowResponse.Model;
 import ai.djl.serving.http.ErrorResponse;
-import ai.djl.serving.http.ListModelsResponse;
-import ai.djl.serving.http.ListWorkflowsResponse;
-import ai.djl.serving.http.ListWorkflowsResponse.WorkflowItem;
 import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.http.StatusResponse;
+import ai.djl.serving.http.list.ListAdaptersResponse;
+import ai.djl.serving.http.list.ListModelsResponse;
+import ai.djl.serving.http.list.ListWorkflowsResponse;
+import ai.djl.serving.http.list.ListWorkflowsResponse.WorkflowItem;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
@@ -234,6 +236,15 @@ public class ModelServerTest {
 
             testPredictionsInvalidRequestSize(channel);
 
+            // adapter API
+            testAdapterRegister(channel);
+            testAdapterPredict(channel);
+            testAdapterInvoke(channel);
+            testAdapterList(channel);
+            testAdapterDescribe(channel);
+            testAdapterScale(channel);
+            testAdapterUnregister(channel);
+
             // plugin tests
             testStaticHtmlRequest();
 
@@ -273,6 +284,27 @@ public class ModelServerTest {
 
             testPredictions(channel, new String[] {"/predictions/m"});
             testPredictionsWorkflows(channel);
+
+            channel.close().sync();
+
+            ConfigManagerTest.testSsl();
+        } finally {
+            server.stop();
+        }
+    }
+
+    @Test
+    public void testAdapterWorkflows()
+            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
+                    InterruptedException, ReflectiveOperationException {
+        ModelServer server =
+                initTestServer("src/test/resources/adapterWorkflows/config.properties");
+        try {
+            assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+
+            testAdapterWorkflowPredict(channel, "adapter1", "a1");
+            testAdapterWorkflowPredict(channel, "adapter2", "a2");
 
             channel.close().sync();
 
@@ -767,6 +799,126 @@ public class ModelServerTest {
         // wait for 1st response
         f.sync();
         Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
+    }
+
+    private void testAdapterRegister(Channel channel) throws InterruptedException {
+        String url = URLEncoder.encode("file:src/test/resources/adaptecho", StandardCharsets.UTF_8);
+        url = "/models?model_name=adaptecho&url=" + url;
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
+        // Test Missing Adapter before registering
+        testAdapterMissing();
+
+        url = "/models/adaptecho/adapters?name=" + "adaptable" + "&src=" + "src";
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+    }
+
+    private void testAdapterMissing() throws InterruptedException {
+        Channel channel = connect(Connector.ConnectorType.INFERENCE);
+        assertNotNull(channel);
+
+        String url = "/predictions/adaptecho?adapter=adaptable";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.content().writeBytes("testPredictAdapter".getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        if (!System.getProperty("os.name").startsWith("Win")) {
+            assertEquals(httpStatus.code(), 503);
+        }
+    }
+
+    private void testAdapterPredict(Channel channel) throws InterruptedException {
+        String url = "/predictions/adaptecho?adapter=adaptable";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.content().writeBytes("testPredictAdapter".getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertEquals(result, "adaptabletestPredictAdapter");
+    }
+
+    private void testAdapterWorkflowPredict(Channel channel, String workflow, String adapter)
+            throws InterruptedException {
+        String url = "/predictions/" + workflow;
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.content().writeBytes("testAWP".getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertEquals(result, adapter + "testAWP");
+    }
+
+    private void testAdapterInvoke(Channel channel) throws InterruptedException {
+        String url = "/invocations?model_name=adaptecho&adapter=adaptable";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.content().writeBytes("testInvokeAdapter".getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertEquals(result, "adaptabletestInvokeAdapter");
+    }
+
+    private void testAdapterList(Channel channel) throws InterruptedException {
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/adaptecho/adapters"));
+
+        ListAdaptersResponse resp = JsonUtils.GSON.fromJson(result, ListAdaptersResponse.class);
+        assertTrue(resp.getAdapters().stream().anyMatch(a -> "adaptable".equals(a.getName())));
+    }
+
+    private void testAdapterDescribe(Channel channel) throws InterruptedException {
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.GET,
+                        "/models/adaptecho/adapters/adaptable"));
+
+        DescribeAdapterResponse resp =
+                JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
+        assertEquals(resp.getName(), "adaptable");
+        assertEquals(resp.getSrc(), "src");
+    }
+
+    private void testAdapterScale(Channel channel) throws InterruptedException {
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.PUT,
+                        "/models/adaptecho?min_worker=4&max_worker=4"));
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(
+                resp.getStatus(),
+                "Workflow \"adaptecho\" worker scaled. New Worker configuration min workers:4 max"
+                        + " workers:4");
+
+        // Runs prediction after scaling
+        // Has 3/4 chance to hit a worker that was scaled
+        testAdapterPredict(channel);
+    }
+
+    private void testAdapterUnregister(Channel channel) throws InterruptedException {
+        String url = "/models/adaptecho/adapters/adaptable";
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, url));
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {

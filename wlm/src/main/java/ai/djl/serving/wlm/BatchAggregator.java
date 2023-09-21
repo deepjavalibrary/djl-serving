@@ -63,14 +63,14 @@ abstract class BatchAggregator<I, O> {
      * @throws InterruptedException if thread gets interrupted while waiting for new data in the
      *     queue.
      */
-    public List<I> getRequest() throws InterruptedException {
+    public List<Job<I, O>> getRequest() throws InterruptedException {
         wjs = pollBatch();
-        List<I> list = new ArrayList<>(wjs.size());
+        List<Job<I, O>> list = new ArrayList<>(wjs.size());
         for (WorkerJob<I, O> wj : wjs) {
             Job<I, O> job = wj.getJob();
             long queueTime = job.getWaitingMicroSeconds();
             SERVER_METRIC.info("{}", new Metric("QueueTime", queueTime, Unit.MICROSECONDS));
-            list.add(job.getInput());
+            list.add(job);
         }
         int size = list.size();
         if (size > 1) {
@@ -79,20 +79,10 @@ abstract class BatchAggregator<I, O> {
         return list;
     }
 
-    /**
-     * Sends to response to all waiting clients.
-     *
-     * @param outputs list of model-outputs in same order as the input objects.
-     */
-    public void sendResponse(List<O> outputs) {
-        if (wjs.size() != outputs.size()) {
-            throw new IllegalStateException("Not all jobs get response.");
-        }
-
-        int i = 0;
-        for (O output : outputs) {
-            WorkerJob<I, O> wj = wjs.get(i++);
-            wj.getFuture().complete(output);
+    /** Sends to response to all waiting clients. */
+    public void sendResponse() {
+        for (WorkerJob<I, O> wj : wjs) {
+            wj.getFuture().complete(wj.getJob().getOutput());
             long latency = wj.getJob().getWaitingMicroSeconds();
             Metric metric = new Metric("ModelLatency", latency, Unit.MICROSECONDS, dimension);
             SERVER_METRIC.info("{}", metric);

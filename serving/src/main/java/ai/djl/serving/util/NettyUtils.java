@@ -426,6 +426,24 @@ public final class NettyUtils {
      *
      * @param decoder the {@code QueryStringDecoder} parsed from uri
      * @param key the parameter key
+     * @return the parameter's value
+     */
+    public static String getRequiredParameter(QueryStringDecoder decoder, String key) {
+        List<String> param = decoder.parameters().get(key);
+        if (param != null && !param.isEmpty()) {
+            String ret = param.get(0);
+            if (!ret.isEmpty()) {
+                return ret;
+            }
+        }
+        throw new BadRequestException("The parameter " + key + " is required");
+    }
+
+    /**
+     * Reads the parameter's value for the key from the uri.
+     *
+     * @param decoder the {@code QueryStringDecoder} parsed from uri
+     * @param key the parameter key
      * @param def the default value
      * @return the parameter's value
      */
