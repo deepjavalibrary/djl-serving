@@ -316,7 +316,7 @@ class HuggingFaceService(object):
 
         if isinstance(self.model, PeftModelForCausalLM):
             parameters[0]["adapters"] = adapters
-        parameters[0]["adapters"] = adapters
+
         prediction = self.hf_pipeline(input_data, **parameters[0])
 
         offset = 0
