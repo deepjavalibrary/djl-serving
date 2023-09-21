@@ -296,6 +296,7 @@ class TestSchedulerBloom(unittest.TestCase):
             pass
 
         results = scheduler.collect_results()
+        # The generated text of TheBloke/Llama-2-7b-Chat-GPTQ has randomness even for greedy.
 
 
 if __name__ == '__main__':
