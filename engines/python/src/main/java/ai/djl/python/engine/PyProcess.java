@@ -32,7 +32,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class PyProcess {
@@ -48,8 +47,6 @@ class PyProcess {
     private List<Connection> connections;
     private CountDownLatch latch;
     private volatile boolean started; // NOPMD
-    private ReaderThread err;
-    private ReaderThread out;
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
 
@@ -134,8 +131,10 @@ class PyProcess {
             String modelName = model.getName();
             modelName = modelName.substring(0, Math.min(modelName.length(), 15));
             String threadName = "W-" + pid + '-' + modelName;
-            err = new ReaderThread(threadName, process.getErrorStream(), true, this, id);
-            out = new ReaderThread(threadName, process.getInputStream(), false, this, id);
+            ReaderThread err =
+                    new ReaderThread(threadName, process.getErrorStream(), true, this, id);
+            ReaderThread out =
+                    new ReaderThread(threadName, process.getInputStream(), false, this, id);
             latch = new CountDownLatch(connections.size());
             err.start();
             out.start();
@@ -204,12 +203,6 @@ class PyProcess {
         }
         if (process != null) {
             started = false;
-            if (err != null) {
-                err.shutdown();
-            }
-            if (out != null) {
-                out.shutdown();
-            }
             process.destroyForcibly();
             process = null;
         }
@@ -237,7 +230,6 @@ class PyProcess {
         private InputStream is;
         private boolean error;
         private PyProcess lifeCycle;
-        private AtomicBoolean isRunning = new AtomicBoolean(true);
         private int processId;
 
         public ReaderThread(
@@ -247,10 +239,6 @@ class PyProcess {
             this.error = error;
             this.lifeCycle = lifeCycle;
             this.processId = processId;
-        }
-
-        public void shutdown() {
-            isRunning.set(false);
         }
 
         @Override
