@@ -127,7 +127,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests numpy huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -178,6 +178,15 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py huggingface gpt4all-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test batch unmerged lora - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py huggingface llama-7b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py huggingface llama-7b-unmerged-lora
           docker rm -f $(docker ps -aq)
       - name: Test streaming bigscience/bloom-3b
         working-directory: tests/integration

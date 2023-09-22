@@ -125,6 +125,15 @@ hf_handler_list = {
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "fp16"
+    },
+    "llama-7b-unmerged-lora": {
+        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
+        "option.tensor_parallel_degree": 1,
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.adapters": "adapters",
+        "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
+        "adapter_names": ["english-alpaca", "portugese-alpaca"],
     }
 }
 
@@ -455,7 +464,10 @@ vllm_model_list = {
 }
 
 
-def write_model_artifacts(properties, requirements=None):
+def write_model_artifacts(properties,
+                          requirements=None,
+                          adapter_ids=[],
+                          adapter_names=[]):
     model_path = "models/test"
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
@@ -467,6 +479,16 @@ def write_model_artifacts(properties, requirements=None):
         with open(os.path.join(model_path, "requirements.txt"), "w") as f:
             f.write('\n'.join(requirements) + '\n')
 
+    adapters_path = os.path.abspath(os.path.join(model_path, "adapters"))
+    # Download adapters if any
+    if adapter_ids:
+        os.makedirs(adapters_path, exist_ok=True)
+        ## install huggingface_hub in your workflow file to use this
+        from huggingface_hub import snapshot_download
+        for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
+            os.makedirs(os.path.join(adapters_path, adapter_name), exist_ok=True)
+            snapshot_download(adapter_id, local_dir=os.path.join(adapters_path, adapter_name))
+
 
 def build_hf_handler_model(model):
     if model not in hf_handler_list:
@@ -477,7 +499,16 @@ def build_hf_handler_model(model):
     options["engine"] = "Python"
     options["option.entryPoint"] = "djl_python.huggingface"
     options["option.predict_timeout"] = 240
-    write_model_artifacts(options)
+
+    adapter_ids = []
+    adapter_names = []
+    if "option.adapters" in options:
+        adapter_ids = options["adapter_ids"]
+        adapter_names = options["adapter_names"]
+        del options["adapter_ids"]
+        del options["adapter_names"]
+
+    write_model_artifacts(options, adapter_ids=adapter_ids, adapter_names=adapter_names)
 
 
 def build_ds_handler_model(model):

@@ -139,7 +139,15 @@ hf_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
+    },
+    "llama-7b-unmerged-lora": {
+        "max_memory_per_gpu": [15.0, 15.0],
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
     }
+
 }
 
 ds_model_spec = {
@@ -580,6 +588,8 @@ def test_handler(model, model_spec):
                 req = {"inputs": t5_batch_generation(batch_size)}
             else:
                 req = {"inputs": batch_generation(batch_size)}
+            if spec.get("adapters", []):
+                req["adapters"] = spec.get("adapters")
             params = {"max_new_tokens": seq_length}
             req["parameters"] = params
             logging.info(f"req {req}")
