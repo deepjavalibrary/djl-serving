@@ -239,6 +239,7 @@ public class ModelServerTest {
             // adapter API
             testAdapterRegister(channel);
             testAdapterPredict(channel);
+            testAdapterDirPredict(channel);
             testAdapterInvoke(channel);
             testAdapterList(channel);
             testAdapterDescribe(channel);
@@ -844,6 +845,18 @@ public class ModelServerTest {
         request(channel, req);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertEquals(result, "adaptabletestPredictAdapter");
+    }
+
+    private void testAdapterDirPredict(Channel channel) throws InterruptedException {
+        String url = "/predictions/adaptecho?adapter=myBuiltinAdapter";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.content().writeBytes("testPredictBuiltinAdapter".getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertEquals(result, "myBuiltinAdaptertestPredictBuiltinAdapter");
     }
 
     private void testAdapterWorkflowPredict(Channel channel, String workflow, String adapter)

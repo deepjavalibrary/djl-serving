@@ -117,7 +117,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         if (wp == null) {
             throw new BadRequestException("The model " + modelName + " was not found");
         }
-        Adapter adapter = Adapter.newInstance(wp, adapterName, src);
+        Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src);
         adapter.register(wp);
 
         String msg = "Adapter " + adapterName + " registered";
