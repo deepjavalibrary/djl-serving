@@ -214,7 +214,7 @@ class HuggingFaceService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
-                adapters_per_item = self._fetch_adapters_from_input(input_map, input)
+                adapters_per_item = self._fetch_adapters_from_input(input_map, item)
                 if first or self.rolling_batch_type:
                     parameters.append(input_map.pop("parameters", {}))
                     first = False
