@@ -85,6 +85,15 @@ jobs:
           serve -m test=file:/opt/ml/model/test/
           python3 rb_client.py scheduler_single_gpu bloom-560m
           docker rm -f $(docker ps -aq)
+      - name: Test llama2-7b-chat-gptq
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py rolling_batch_scheduler llama2-7b-chat-gptq
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve -m test=file:/opt/ml/model/test/
+          python3 rb_client.py scheduler_single_gpu llama2-7b-chat-gptq
+          docker rm -f $(docker ps -aq)
       - name: Print outputs
         working-directory: tests/integration
         run: for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done

@@ -51,13 +51,23 @@ scheduler_single_gpu = {
         },
         "expected_word_count": 20,
         "concurrent_clients": 4
+    },
+    "llama2-7b-chat-gptq": {
+        "input_texts":
+            "When your legs don'\''t work like they used to before And I can'\''t sweep you off",
+        "parameters": {
+            "max_new_tokens": 40,
+            "decoding_strategy": "greedy"
+        },
+        "expected_word_count": 20,
+        "concurrent_clients": 4
     }
 }
 
 scheduler_multi_gpu = {
     "gpt-j-6b": {
         "input_texts":
-        "When your legs don't work like they used to before And I can't sweep you off",
+        "When your legs don'\''t work like they used to before And I can'\''t sweep you off",
         "parameters": {
             "max_new_tokens": 40,
             "decoding_strategy": "contrastive"

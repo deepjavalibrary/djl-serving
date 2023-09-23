@@ -380,6 +380,12 @@ rolling_batch_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "load_on_devices": 0
+    },
+    "llama2-7b-chat-gptq": {
+        "option.model_id": "TheBloke/Llama-2-7b-Chat-GPTQ",
+        "engine": "Python",
+        "option.max_rolling_batch_size": 4,
+        "load_on_device": 0
     }
 }
 
