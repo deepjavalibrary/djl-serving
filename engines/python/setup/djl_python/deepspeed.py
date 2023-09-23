@@ -386,7 +386,7 @@ class DeepSpeedService(object):
                     **parameters)
             prediction = self.tokenizer.batch_decode(output_tokens,
                                                      skip_special_tokens=True)
-            return [{"generated_text": s} for s in prediction]
+            prediction = [{"generated_text": s} for s in prediction]
         else:
             prediction = self.pipeline(input_data, **parameters)
 
