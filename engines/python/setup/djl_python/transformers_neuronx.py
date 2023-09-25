@@ -180,6 +180,10 @@ class TransformersNeuronXService(object):
         # Neuron recommendation for transformersneuronx speedup
         os.environ["NEURON_CC_FLAGS"] = os.environ[
             "NEURON_CC_FLAGS"] + " --model-type=transformer"
+        if "neuron_optimize_level" in properties:
+            level = properties.get("neuron_optimize_level")
+            os.environ["NEURON_CC_FLAGS"] = os.environ[
+            "NEURON_CC_FLAGS"] + f" --O{level}"
         self.batch_size = int(properties.get("batch_size", 1))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
