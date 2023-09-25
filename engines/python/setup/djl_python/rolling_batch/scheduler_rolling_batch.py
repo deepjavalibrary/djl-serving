@@ -11,14 +11,16 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.scheduler import HuggingfaceBlock, BloomBlock, SearchConfig, SeqBatchScheduler
+from djl_python.scheduler import HuggingfaceBlock, BloomBlock, FalconBlock, SearchConfig, SeqBatchScheduler
+# from seq_scheduler import HuggingfaceBlock, BloomBlock, FalconBlock, SearchConfig, SeqBatchScheduler
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
+import re
 
-MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock}
+MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 
 
@@ -37,6 +39,8 @@ class SchedulerRollingBatch(RollingBatch):
         super().__init__(device, **kwargs)
         self._init_model_and_tokenizer(model_id_or_path,
                                        device=device,
+                                       multi_gpu=properties.get(
+                                           'multi_gpu', None),
                                        **kwargs)
         self._init_scheduler(properties)
 
@@ -91,6 +95,7 @@ class SchedulerRollingBatch(RollingBatch):
     def _init_model_and_tokenizer(self,
                                   model_id_or_path,
                                   device=None,
+                                  multi_gpu=None,
                                   **kwargs):
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         architectures = self.config.architectures
@@ -111,8 +116,25 @@ class SchedulerRollingBatch(RollingBatch):
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
 
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_id_or_path, device_map=device_map, **kwargs)
+            if "lmi_dist_sharding" == multi_gpu:
+                if 'neox' in model_id_or_path:
+                    try:
+                        from lmi_dist.models.gpt_neox import GPTNeoxSharded
+                        from lmi_dist.utils import download_and_convert_weights
+
+                        download_and_convert_weights(model_id_or_path)
+                        self.model = GPTNeoxSharded(model_id_or_path)
+                    except ImportError:
+                        print(
+                            f"Running {model_id_or_path} requires package lmi_dist."
+                        )
+                else:
+                    raise Exception(
+                        f"{model_id_or_path} with lmi_dist_sharding is currently unsupported."
+                    )
+            else:
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_id_or_path, device_map=device_map, **kwargs)
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left")
@@ -120,8 +142,9 @@ class SchedulerRollingBatch(RollingBatch):
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def _init_scheduler(self, properties):
-        lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
-                                              HuggingfaceBlock)
+        lm_block_cls = MODEL_TYPE_2_BLOCK.get(
+            'falcon' if 'falcon' in self.config.model_type else '$',
+            HuggingfaceBlock)
         self.lm_block = lm_block_cls(self.model)
         self.search_config = SearchConfig(
             eos_token_id=self.tokenizer.eos_token,
@@ -211,7 +234,9 @@ class SchedulerRollingBatch(RollingBatch):
             top_p=parameters.get('top_p', self.search_config.topk),
             temperature=parameters.get('temperature',
                                        self.search_config.temperature),
-            use_lru_kv_cache=use_lru_kv_cache)
+            use_lru_kv_cache=use_lru_kv_cache,
+            pad_token_id=self.tokenizer.pad_token_id,
+            eos_token_id=self.tokenizer.eos_token_id)
 
 
 def _get_request_ids_tensor(request_ids):
