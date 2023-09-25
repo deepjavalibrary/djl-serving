@@ -320,49 +320,49 @@ transformers_neuronx_model_spec = {
 
 lmi_dist_model_spec = {
     "gpt-neox-20b": {
-        "max_memory_per_gpu": [15.0],
+        "max_memory_per_gpu": [25.0],
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
     },
     "falcon-7b": {
-        "max_memory_per_gpu": [20.0],
+        "max_memory_per_gpu": [25.0],
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
     },
     "open-llama-7b": {
-        "max_memory_per_gpu": [8.0],
+        "max_memory_per_gpu": [25.0],
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
     },
     "flan-t5-xxl": {
-        "max_memory_per_gpu": [12.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
-    },
-    "gpt2": {
-        "max_memory_per_gpu": [5.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
-    },
-    "gpt-neox-20b-bits-and-bytes-quantized": {
         "max_memory_per_gpu": [10.0],
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
     },
+    "gpt2": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
     "mpt-7b": {
-        "max_memory_per_gpu": [17.0],
+        "max_memory_per_gpu": [20.0],
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
     },
     "octocoder": {
-        "max_memory_per_gpu": [16.0],
+        "max_memory_per_gpu": [20.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True
+    },
+    "gpt-neox-20b-bits-and-bytes-quantized": {
+        "max_memory_per_gpu": [20.0],
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
