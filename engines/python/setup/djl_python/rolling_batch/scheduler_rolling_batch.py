@@ -14,6 +14,7 @@
 from seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock, FalconBlock
 from seq_scheduler.search_config import SearchConfig
 from seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
+from djl_python.huggingface import FLASH_2_SUPPORTED_MODELS
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
@@ -119,6 +120,9 @@ class SchedulerRollingBatch(RollingBatch):
                     raise Exception("Wrong input type of device")
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
+
+            if architectures[0] in FLASH_2_SUPPORTED_MODELS:
+                kwargs['use_flash_attention_2'] = True
 
             if "lmi_dist_sharding" == multi_gpu:
                 if 'neox' in model_id_or_path:

@@ -54,6 +54,11 @@ LMI_DIST_ADV_MODEL = {
     "LlamaForCausalLM"
 }
 
+# https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
+FLASH_2_SUPPORTED_MODELS = {
+   "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
+}
+
 PEFT_MODEL_TASK_TO_CLS = {
     "SEQ_CLS": AutoModelForSequenceClassification,
     "SEQ_2_SEQ_LM": AutoModelForSeq2SeqLM,
@@ -490,6 +495,8 @@ class HuggingFaceService(object):
             model_cls = AutoModelForSeq2SeqLM
         else:
             model_cls = AutoModelForCausalLM
+            if architectures[0] in FLASH_2_SUPPORTED_MODELS:
+                kwargs['use_flash_attention_2'] = True
 
         if self.peft_config is not None:
             base_model = model_cls.from_pretrained(
