@@ -27,20 +27,18 @@ class VLLMRollingBatch(RollingBatch):
         :param properties: other properties of the model, such as decoder strategy
         """
         super().__init__(-1, **kwargs)
-        self.dtype = kwargs.pop("dtype", 'auto')
+        self.dtype = properties.get("dtype", 'auto')
         if properties.get("engine") != "Python":
             raise AssertionError(
                 f"Need python engine to start vLLM RollingBatcher")
         tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", None))
-        if kwargs:
-            logging.warning(f"kwargs content are dropped {kwargs}")
         args = EngineArgs(
             model=model_id_or_path,
             tensor_parallel_size=tensor_parallel_degree,
             dtype=self.dtype,
             seed=0,
-            max_num_batched_tokens=int(kwargs.get(
+            max_num_batched_tokens=int(properties.get(
                 "max_rolling_batch_prefill_tokens", 2560)),
             trust_remote_code=kwargs.get("trust_remote_code", False),
         )
