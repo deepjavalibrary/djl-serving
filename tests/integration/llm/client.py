@@ -770,6 +770,10 @@ def test_transformers_neuronx_handler(model, model_spec):
                 result = res
                 assert len(result) == batch_size
 
+def test_unmerged_lora_correctness():
+    res = send_json({})
+    logging.info(f"res: {res.json()}")
+
 
 if __name__ == "__main__":
     if args.handler == "deepspeed_raw":
@@ -797,6 +801,8 @@ if __name__ == "__main__":
         test_vllm_handler(args.model, vllm_model_spec)
     elif args.handler == "performance":
         test_performance()
+    elif args.handler == "unmerged_lora":
+        test_unmerged_lora_correctness()
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
