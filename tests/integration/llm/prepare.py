@@ -462,6 +462,14 @@ vllm_model_list = {
     },
 }
 
+unmerged_lora_correctness_list = {
+    "llama-7b-unmerged-lora": {
+        "option.tensor_parallel_degree": 1,
+        "gpu.maxWorkers": 1,
+        "load_on_devices": 0,
+    }
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -679,6 +687,17 @@ def build_vllm_model(model):
     write_model_artifacts(options, ["vllm==0.1.7", "pandas", "pyarrow"])
 
 
+def build_unmerged_lora_correctness_model(model):
+    if model not in unmerged_lora_correctness_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(unmerged_lora_correctness_list.keys())}"
+        )
+    options = unmerged_lora_correctness_list[model]
+    options["engine"] = "Python"
+    write_model_artifacts(options)
+    shutil.copyfile("llm/unmerged_lora.py", "models/test/model.py")
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
     'huggingface': build_hf_handler_model,
@@ -694,7 +713,8 @@ supported_handler = {
     'performance': build_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
     'lmi_dist': build_lmi_dist_model,
-    'vllm': build_vllm_model
+    'vllm': build_vllm_model,
+    'unmerged_lora': build_unmerged_lora_correctness_model,
 }
 
 if __name__ == '__main__':
