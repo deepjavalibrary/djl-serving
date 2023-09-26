@@ -15,8 +15,9 @@ import logging
 import os
 
 import torch
-from transformers import (pipeline, Pipeline, Conversation, AutoModelForCausalLM,
-                          AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
+from transformers import (pipeline, Pipeline, Conversation,
+                          AutoModelForCausalLM, AutoModelForSeq2SeqLM,
+                          AutoTokenizer, AutoConfig,
                           AutoModelForSequenceClassification,
                           AutoModelForTokenClassification,
                           AutoModelForQuestionAnswering)
@@ -176,6 +177,8 @@ class HuggingFaceService(object):
         if self.rolling_batch_type:
             if "output_formatter" in properties:
                 kwargs["output_formatter"] = properties.get("output_formatter")
+            if "waiting_steps" in properties:
+                kwargs["waiting_steps"] = properties.get("waiting_steps")
             self.rolling_batch_type = self.rolling_batch_type.lower()
             is_mpi = properties.get("engine") != "Python"
             if is_mpi:
@@ -214,7 +217,8 @@ class HuggingFaceService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
-                adapters_per_item = self._fetch_adapters_from_input(input_map, item)
+                adapters_per_item = self._fetch_adapters_from_input(
+                    input_map, item)
                 if first or self.rolling_batch_type:
                     parameters.append(input_map.pop("parameters", {}))
                     first = False
@@ -240,7 +244,9 @@ class HuggingFaceService(object):
                     if len(_inputs) != len(adapters_per_item):
                         ## input_size list needs to be appended as it's used during output processing
                         input_size.append(0)
-                        raise Exception("Number of adapters is not equal to the number of inputs")
+                        raise Exception(
+                            "Number of adapters is not equal to the number of inputs"
+                        )
 
                 input_data.extend(_inputs)
                 input_size.append(len(_inputs))
@@ -401,7 +407,8 @@ class HuggingFaceService(object):
         # wrap specific pipeline to support better ux
         if task == "conversational":
             self.hf_pipeline_unwrapped = hf_pipeline
-            hf_pipeline = self.wrap_conversation_pipeline(self.hf_pipeline_unwrapped)
+            hf_pipeline = self.wrap_conversation_pipeline(
+                self.hf_pipeline_unwrapped)
 
         if task == "text-generation":
             if issubclass(type(hf_pipeline.tokenizer),
@@ -410,7 +417,8 @@ class HuggingFaceService(object):
                 if not hf_pipeline.tokenizer.pad_token:
                     hf_pipeline.tokenizer.pad_token = hf_pipeline.tokenizer.eos_token
             self.hf_pipeline_unwrapped = hf_pipeline
-            hf_pipeline = self.wrap_text_generation_pipeline(self.hf_pipeline_unwrapped)
+            hf_pipeline = self.wrap_text_generation_pipeline(
+                self.hf_pipeline_unwrapped)
 
         return hf_pipeline
 
@@ -535,7 +543,9 @@ class HuggingFaceService(object):
                 adapters = input.get_as_string("adapter")
         return adapters
 
+
 _service = HuggingFaceService()
+
 
 def register_adapter(inputs: Input):
     """
@@ -543,17 +553,21 @@ def register_adapter(inputs: Input):
     """
     adapter_name = inputs.get_property("name")
     adapter_model_id_or_path = inputs.get_property("src")
-    logging.info(f"Registering adapter {adapter_name} from {adapter_model_id_or_path}")
+    logging.info(
+        f"Registering adapter {adapter_name} from {adapter_model_id_or_path}")
     if isinstance(_service.model, PeftModel):
         _service.model.load_adapter(adapter_model_id_or_path, adapter_name)
     else:
-        _service.model = PeftModel.from_pretrained(_service.model, adapter_model_id_or_path, adapter_name)
+        _service.model = PeftModel.from_pretrained(_service.model,
+                                                   adapter_model_id_or_path,
+                                                   adapter_name)
 
     if isinstance(_service.hf_pipeline, Pipeline):
         _service.hf_pipeline.model = _service.model
 
     if isinstance(_service.hf_pipeline_unwrapped, Pipeline):
         _service.hf_pipeline_unwrapped.model = _service.model
+
 
 def unregister_adapter(inputs: Input):
     """
@@ -562,6 +576,7 @@ def unregister_adapter(inputs: Input):
     adapter_name = inputs.get_property("name")
     logging.info(f"Unregistering adapter {adapter_name}")
     _service.model.base_model.delete_adapter(adapter_name)
+
 
 def handle(inputs: Input):
     """

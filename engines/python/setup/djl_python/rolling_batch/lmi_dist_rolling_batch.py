@@ -120,8 +120,9 @@ class LmiDistRollingBatch(RollingBatch):
         new_requests = self.get_new_requests(input_data, parameters,
                                              batch_size)
         new_batch = self.preprocess_requests(new_requests)
-        self._prefill_and_decode(new_batch)
-        return self.postprocess_results(batch_size)
+        if new_batch or self.cache:
+            self._prefill_and_decode(new_batch)
+        return self.postprocess_results()
 
     def _prefill_and_decode(self, new_batch):
         # prefill step
@@ -154,7 +155,7 @@ class LmiDistRollingBatch(RollingBatch):
         }
 
         req_ids = []
-        for request in self.pending_requests:
+        for request in self.active_requests:
             generation = generation_dict[request.id]
             is_last_token = generation.generated_text is not None
             if not is_last_token:

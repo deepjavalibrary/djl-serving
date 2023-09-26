@@ -45,7 +45,7 @@ class NeuronRollingBatch(RollingBatch):
             for generation in generations
         }
         req_ids = []
-        for request in self.pending_requests:
+        for request in self.active_requests:
             generation = generation_dict.get(request.id, None)
             if generation:
                 is_last_token = generation.generated_text is not None
@@ -64,7 +64,7 @@ class NeuronRollingBatch(RollingBatch):
 
         # filter the requests that are stopped.
         self.scheduler.filter(req_ids)
-        return self.postprocess_results(batch_size)
+        return self.postprocess_results()
 
     def preprocess_requests(self, requests):
         raise NotImplementedError("Not implemented for Neuron rolling batcher")
