@@ -68,6 +68,9 @@ class Request(object):
         self.first_token = True
         self.last_token = False
 
+    def __repr__(self):
+        return f"<Request id: {self.id} Input {self.input_text} Parameters {self.parameters} Finished {self.last_token}>"
+
     def set_next_token(self,
                        next_token: str,
                        output_formatter,
@@ -112,12 +115,13 @@ def stop_on_any_exception(func):
         except Exception as e:
             logging.exception("Rolling batch inference error")
             err = json.dumps({"code": 500, "error": str(e)})
-            for request in self.pending_requests:
-                request.set_next_token(err, None, True)
-            error_requests = self.postprocess_results(
-                len(self.pending_requests))
+            results = []
+            for i in range(
+                    len(self.active_requests) + len(self.pending_requests)):
+                res = {"data": err, "last": True}
+                results.append(res)
             self.reset()
-            return error_requests
+            return results
 
     return try_catch_handling
 
@@ -140,9 +144,13 @@ class RollingBatch(ABC):
 
         self.device = device
         self.pending_requests = []
+        self.active_requests = []
         self.req_id_counter = 0
         self.output_formatter = None
-        formatter = kwargs.get("output_formatter")
+        self.waiting_steps = kwargs.get("waiting_steps", None)
+        self.current_step = 0
+        formatter = kwargs.get("output_formatter", None)
+
         if not formatter or "json" == formatter:
             self.output_formatter = _json_output_formatter
         elif "jsonlines" == formatter:
@@ -155,6 +163,7 @@ class RollingBatch(ABC):
 
     def reset(self):
         self.pending_requests = []
+        self.active_requests = []
         self.req_id_counter = 0
 
     @abstractmethod
@@ -169,35 +178,48 @@ class RollingBatch(ABC):
         pass
 
     def get_new_requests(self, input_data, parameters, batch_size):
-        new_requests = []
-        pending_req_len = len(self.pending_requests)
-        if batch_size > pending_req_len:
-            for i in range(pending_req_len, batch_size):
+        total_req_len = len(self.active_requests) + len(self.pending_requests)
+        if batch_size > total_req_len:
+            for i in range(total_req_len, batch_size):
                 data = input_data[i]
                 params = parameters[i] if i < len(parameters) else {}
                 request = Request(self.req_id_counter, data, params)
                 self.pending_requests.append(request)
-                new_requests.append(request)
                 self.req_id_counter += 1
-
-        return new_requests
+        # wait steps and not feeding new requests
+        if self.waiting_steps and self.current_step < self.waiting_steps:
+            self.current_step += 1
+            return []
+        # add all pending to active requests
+        active_pos = len(self.active_requests)
+        self.active_requests.extend(self.pending_requests)
+        # reset states
+        self.pending_requests = []
+        self.current_step = 0
+        return self.active_requests[active_pos:]
 
     @abstractmethod
     def preprocess_requests(self, requests):
         pass
 
-    def postprocess_results(self, batch_size):
+    def postprocess_results(self):
         results = []
-        for i in range(batch_size):
-            req = self.pending_requests[i]
+        for i in range(len(self.active_requests)):
+            req = self.active_requests[i]
             res = {"data": req.get_next_token(), "last": req.is_last_token()}
             results.append(res)
 
-        self.pending_requests = [
-            req for req in self.pending_requests if not req.is_last_token()
+        # add empty tokens to pending requests
+        for i in range(len(self.active_requests),
+                       len(self.active_requests) + len(self.pending_requests)):
+            res = {"data": "", "last": False}
+            results.append(res)
+
+        self.active_requests = [
+            req for req in self.active_requests if not req.is_last_token()
         ]
 
-        if len(self.pending_requests) == 0:
+        if len(self.active_requests) + len(self.pending_requests) == 0:
             self.req_id_counter = 0
 
         return results

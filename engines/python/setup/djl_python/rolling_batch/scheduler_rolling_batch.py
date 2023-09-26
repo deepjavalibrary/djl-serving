@@ -59,7 +59,7 @@ class SchedulerRollingBatch(RollingBatch):
 
         preprocessed_new_requests = self.preprocess_requests(new_requests)
         self._prefill_and_decode(preprocessed_new_requests)
-        return self.postprocess_results(batch_size)
+        return self.postprocess_results()
 
     def preprocess_requests(self, requests):
         Requests = namedtuple(
@@ -97,6 +97,10 @@ class SchedulerRollingBatch(RollingBatch):
                                   device=None,
                                   multi_gpu=None,
                                   **kwargs):
+        if "waiting_steps" in kwargs:
+            kwargs.pop("waiting_steps")
+        if "output_formatter" in kwargs:
+            kwargs.pop("output_formatter")
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         architectures = self.config.architectures
         if architectures and architectures[0].endswith(
@@ -191,7 +195,7 @@ class SchedulerRollingBatch(RollingBatch):
         generated_tokens = self.tokenizer.batch_decode(generated_token_ids)
 
         for request_id, generated_token, request in zip(
-                request_ids, generated_tokens, self.pending_requests):
+                request_ids, generated_tokens, self.active_requests):
             is_last_token = (request_id in exit_req_ids)
             request.set_next_token(f" {generated_token}",
                                    self.output_formatter,

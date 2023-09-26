@@ -87,7 +87,7 @@ class VLLMRollingBatch(RollingBatch):
         # step 2: send result back
         finished_id = []
         for (key, cache), request in zip(self.request_cache.items(),
-                                         self.pending_requests):
+                                         self.active_requests):
             request.set_next_token(cache["text"][cache["curr_length"]:],
                                    self.output_formatter, cache["finished"])
             cache["curr_length"] = len(cache["text"])
@@ -97,7 +97,7 @@ class VLLMRollingBatch(RollingBatch):
         for key in finished_id:
             self.request_cache.pop(key)
 
-        return self.postprocess_results(batch_size)
+        return self.postprocess_results()
 
     def preprocess_requests(self, requests):
         raise NotImplementedError("Not implemented for vLLM rolling batcher")
