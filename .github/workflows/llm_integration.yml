@@ -227,9 +227,6 @@ jobs:
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
-    strategy:
-      matrix:
-        arch: [ deepspeed ]
     steps:
       - uses: actions/checkout@v3
       - name: Clean env
@@ -245,7 +242,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
