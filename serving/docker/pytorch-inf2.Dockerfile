@@ -19,7 +19,7 @@ ARG neuronx_distributed_version=0.4.0
 ARG neuronx_cc_version=2.10.*
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.33.2
-ARG accelerate_version=0.22.0
+ARG accelerate_version=0.23.0
 ARG diffusers_version=0.16.0
 EXPOSE 8080
 
