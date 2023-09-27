@@ -337,6 +337,7 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.dtype": "fp16",
+        "option.neuron_optimize_level": 1,
         "option.model_loading_timeout": 1200
     },
     "bloom-7b1": {
