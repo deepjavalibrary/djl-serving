@@ -217,7 +217,8 @@ class TransformersNeuronXService(object):
                 "trust_remote_code").lower() == "true"
         if "revision" in properties:
             self.revision = properties.get("revision")
-        self.load_in_8bit = properties.get("load_in_8bit").lower() == 'true'
+        if "load_in_8bit" in properties:
+            self.load_in_8bit = properties.get("load_in_8bit").lower() == 'true'
         model_config = AutoConfig.from_pretrained(self.model_id_or_path,
                                                   revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
