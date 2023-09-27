@@ -25,6 +25,7 @@ from transformers_neuronx.opt.model import OPTForSampling
 from transformers_neuronx.llama.model import LlamaForSampling
 from transformers_neuronx.bloom.model import BloomForSampling
 from transformers_neuronx.module import save_pretrained_split
+from transformers_neuronx.config import NeuronConfig, QuantizationConfig
 from djl_python import Input, Output
 from djl_python.encode_decode import decode, encode
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
@@ -33,7 +34,7 @@ from djl_python.streaming_utils import StreamingUtils
 
 model = None
 
-DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16"}
+DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16", "bf16": "bf16"}
 
 SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj", "gpt_neox", "llama", "bloom"}
 
@@ -66,6 +67,7 @@ class TransformersNeuronXService(object):
                                                 "FALSE").lower() == 'true'
         self.revision = None
         self.rolling_batch = None
+        self.load_in_8bit = False
 
     def convert_dtype(self, dtype, model_type):
         if model_type == "opt":
@@ -153,6 +155,18 @@ class TransformersNeuronXService(object):
             low_cpu_mem_usage=True)
 
     def load_inf2_model(self, model_type, load_path):
+        if self.load_in_8bit:
+            neuron_config = NeuronConfig()
+            neuron_config.quant = QuantizationConfig(quant_dtype='s8',
+                                                     dequant_dtype=self.amp)
+            return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
+                load_path,
+                batch_size=self.batch_size,
+                amp=self.amp,
+                tp_degree=self.tensor_parallel_degree,
+                n_positions=self.n_positions,
+                neuron_config=neuron_config,
+                unroll=self.unroll)
         return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
             load_path,
             batch_size=self.batch_size,
@@ -183,7 +197,7 @@ class TransformersNeuronXService(object):
         if "neuron_optimize_level" in properties:
             level = properties.get("neuron_optimize_level")
             os.environ["NEURON_CC_FLAGS"] = os.environ[
-            "NEURON_CC_FLAGS"] + f" --O{level}"
+                "NEURON_CC_FLAGS"] + f" -O{level}"
         self.batch_size = int(properties.get("batch_size", 1))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
@@ -203,6 +217,7 @@ class TransformersNeuronXService(object):
                 "trust_remote_code").lower() == "true"
         if "revision" in properties:
             self.revision = properties.get("revision")
+        self.load_in_8bit = properties.get("load_in_8bit").lower() == 'true'
         model_config = AutoConfig.from_pretrained(self.model_id_or_path,
                                                   revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:

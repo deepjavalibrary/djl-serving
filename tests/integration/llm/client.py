@@ -147,7 +147,6 @@ hf_model_spec = {
         "worker": 1,
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
     }
-
 }
 
 ds_model_spec = {
@@ -769,6 +768,7 @@ def test_transformers_neuronx_handler(model, model_spec):
                 logging.info(f"res {res}")
                 result = res
                 assert len(result) == batch_size
+
 
 def test_unmerged_lora_correctness():
     res = send_json({})
