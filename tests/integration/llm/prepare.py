@@ -337,6 +337,7 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.dtype": "fp16",
+        "option.neuron_optimize_level": 1,
         "option.model_loading_timeout": 1200
     },
     "bloom-7b1": {
@@ -493,8 +494,11 @@ def write_model_artifacts(properties,
         ## install huggingface_hub in your workflow file to use this
         from huggingface_hub import snapshot_download
         for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
-            os.makedirs(os.path.join(adapters_path, adapter_name), exist_ok=True)
-            snapshot_download(adapter_id, local_dir=os.path.join(adapters_path, adapter_name))
+            os.makedirs(os.path.join(adapters_path, adapter_name),
+                        exist_ok=True)
+            snapshot_download(adapter_id,
+                              local_dir=os.path.join(adapters_path,
+                                                     adapter_name))
 
 
 def build_hf_handler_model(model):
@@ -515,7 +519,9 @@ def build_hf_handler_model(model):
         del options["adapter_ids"]
         del options["adapter_names"]
 
-    write_model_artifacts(options, adapter_ids=adapter_ids, adapter_names=adapter_names)
+    write_model_artifacts(options,
+                          adapter_ids=adapter_ids,
+                          adapter_names=adapter_names)
 
 
 def build_ds_handler_model(model):
