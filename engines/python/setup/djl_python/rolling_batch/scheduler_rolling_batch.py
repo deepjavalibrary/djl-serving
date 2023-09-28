@@ -11,14 +11,14 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.scheduler import HuggingfaceBlock, BloomBlock, FalconBlock, SearchConfig, SeqBatchScheduler
-# from seq_scheduler import HuggingfaceBlock, BloomBlock, FalconBlock, SearchConfig, SeqBatchScheduler
+from seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock, FalconBlock
+from seq_scheduler.search_config import SearchConfig
+from seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
-import re
 
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'

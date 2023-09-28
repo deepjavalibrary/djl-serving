@@ -16,11 +16,11 @@ from typing import Union, Tuple, List, Dict, Type
 import torch
 import copy
 
-from djl_python.scheduler.search_config import SearchConfig
-from djl_python.scheduler.lm_block import LMBlock
-from djl_python.scheduler.seq_batcher import SeqBatcher
-from djl_python.scheduler.seq_batcher_impl import GreedySeqBatcher, ContrastiveSeqBatcher
-from djl_python.scheduler.utils import compute_kv_cache
+from djl_python.seq_scheduler.search_config import SearchConfig
+from djl_python.seq_scheduler.lm_block import LMBlock
+from djl_python.seq_scheduler.seq_batcher import SeqBatcher
+from djl_python.seq_scheduler.seq_batcher_impl import GreedySeqBatcher, ContrastiveSeqBatcher
+from djl_python.seq_scheduler.utils import compute_kv_cache
 
 SEARCH_ALGORITHM_TO_CLASS = {
     "greedy": GreedySeqBatcher,

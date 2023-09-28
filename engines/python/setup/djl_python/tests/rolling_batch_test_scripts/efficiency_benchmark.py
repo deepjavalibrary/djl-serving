@@ -1,12 +1,12 @@
-from djl_python.scheduler import HuggingfaceBlock, BloomBlock
+from djl_python.seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import torch
 from collections import defaultdict
 
 from transformers import AutoTokenizer, BloomForCausalLM
 
-from djl_python.scheduler import SearchConfig
-from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
+from djl_python.seq_scheduler.search_config import SearchConfig
+from djl_python.seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
 from typing import List
 
 from functools import wraps

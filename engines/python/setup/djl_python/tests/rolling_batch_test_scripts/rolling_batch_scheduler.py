@@ -1,6 +1,6 @@
 from collections import defaultdict
 import torch
-from djl_python.rolling_batch import SchedulerRollingBatch
+from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
 import torch.distributed as dist
 
 

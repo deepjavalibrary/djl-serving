@@ -16,19 +16,19 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Dict, Union, Tuple, List, Any
 
-from djl_python.scheduler.batch import Batch, ContrastiveBatch
-from djl_python.scheduler.lm_block import LMBlock
+from djl_python.seq_scheduler.batch import Batch, ContrastiveBatch
+from djl_python.seq_scheduler.lm_block import LMBlock
 import torch
-from torch.nn.functional import normalize, softmax
+from torch.nn.functional import softmax
 
-from djl_python.scheduler.step_generation import greedy_step_generate, contrastive_step_generate, sampling_step_generate, \
+from djl_python.seq_scheduler.step_generation import contrastive_step_generate, sampling_step_generate, \
     sampler_bucket_sort
-from djl_python.scheduler.utils import compute_offsets, compute_attention_mask, compute_position_ids, \
+from djl_python.seq_scheduler.utils import compute_offsets, compute_attention_mask, compute_position_ids, \
     assemble_prefix_kv_cache
-from djl_python.scheduler import SearchConfig
+from djl_python.seq_scheduler.search_config import SearchConfig
 import warnings
 
-from djl_python.scheduler.seq_batcher import SeqBatcher
+from djl_python.seq_scheduler.seq_batcher import SeqBatcher
 
 
 class GreedySeqBatcher(SeqBatcher):
