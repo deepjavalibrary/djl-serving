@@ -37,7 +37,8 @@ class SeqBatchScheduler:
 
     def __init__(self, lm_block: LMBlock, default_search_algorithm: str,
                  default_config: SearchConfig):
-        self.default_search_configs = defaultdict(lambda: copy.copy(default_config))
+        self.default_search_configs = defaultdict(
+            lambda: copy.copy(default_config))
         self.default_seq_batcher_cls = SEARCH_ALGORITHM_TO_CLASS[
             default_search_algorithm]
         self.lm_block = lm_block
