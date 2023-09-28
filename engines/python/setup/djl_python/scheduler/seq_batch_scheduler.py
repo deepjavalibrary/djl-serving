@@ -14,6 +14,7 @@ from collections import defaultdict, OrderedDict
 from typing import Union, Tuple, List, Dict, Type
 
 import torch
+import copy
 
 from djl_python.scheduler.search_config import SearchConfig
 from djl_python.scheduler.lm_block import LMBlock
@@ -36,7 +37,7 @@ class SeqBatchScheduler:
 
     def __init__(self, lm_block: LMBlock, default_search_algorithm: str,
                  default_config: SearchConfig):
-        self.default_search_configs = defaultdict(lambda: default_config)
+        self.default_search_configs = defaultdict(lambda: copy.copy(default_config))
         self.default_seq_batcher_cls = SEARCH_ALGORITHM_TO_CLASS[
             default_search_algorithm]
         self.lm_block = lm_block
