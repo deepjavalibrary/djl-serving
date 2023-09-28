@@ -27,3 +27,16 @@ class SearchConfig:
         self.topp = kwargs.get('top_p', 0.92)
         self.temperature = kwargs.get('temperature', 1)
         self.use_lru_kv_cache = kwargs.get('use_lru_kv_cache', False)
+
+    def __copy__(self):
+        return type(self)(max_new_tokens=self.max_new_seqlen,
+                          _max_seqlen=self._max_seqlen,
+                          eos_token_id=self.eos_token_id,
+                          pad_token_id=self.pad_token_id,
+                          top_k=self.topk,
+                          penalty_alpha=self.alpha,
+                          num_beam=self.beam,
+                          do_sample=self.sampling,
+                          top_p=self.topp,
+                          temperature=self.temperature,
+                          use_lru_kv_cache=self.use_lru_kv_cache)

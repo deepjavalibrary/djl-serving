@@ -1,5 +1,6 @@
 import unittest
 from collections import defaultdict
+import copy
 
 from djl_python.scheduler.lm_block import FalconBlock, HuggingfaceBlock
 from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
@@ -316,7 +317,7 @@ class TestScheduler(unittest.TestCase):
         lm_block = HuggingfaceBlock(model)
 
         search_config = SearchConfig()
-        search_config_dict = defaultdict(lambda: search_config)
+        search_config_dict = defaultdict(lambda: copy.copy(search_config))
 
         # Test SeqBatcher initialization
         input_ids = torch.tensor(
