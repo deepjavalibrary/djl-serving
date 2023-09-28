@@ -24,8 +24,8 @@ ARG vllm_wheel="https://publish.djl.ai/vllm/vllm-0.1.1-cp39-cp39-linux_x86_64.wh
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.32.1
-ARG accelerate_version=0.22.0
+ARG transformers_version=4.33.2
+ARG accelerate_version=0.23.0
 ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 

@@ -21,8 +21,8 @@ ARG tb_wheel="https://publish.djl.ai/tritonserver/r23.04/tritontoolkit-23.4-py3-
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG ompi_version=4.1.4
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.32.1
-ARG accelerate_version=0.22.0
+ARG transformers_version=4.33.2
+ARG accelerate_version=0.23.0
 ARG bitsandbytes_version=0.41.1
 
 EXPOSE 8080

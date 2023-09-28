@@ -205,8 +205,10 @@ class SchedulerRollingBatch(RollingBatch):
         input_ids = self.tokenizer(input_texts,
                                    return_tensors="pt",
                                    padding=True).input_ids
-        if self.device is not None:
+        if self.device:
             input_ids = input_ids.to(self.device)
+        else:
+            input_ids = input_ids.to(self.model.device)
         return input_ids
 
     def _get_prompt_ids(self, prompts):
