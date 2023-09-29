@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import json
+import shutil
 import tempfile
 import os
 import logging
@@ -105,42 +106,28 @@ class TransformersNeuronXService(object):
             raise AttributeError(
                 f"Model architecture format is not implemented")
 
-    @staticmethod
-    def is_inf2_model(model_path):
-        return os.path.exists(os.path.join(model_path, "verify"))
-
-    def model_amp_match(self, model_path):
-        if not self.is_inf2_model(model_path):
-            return False
-        with open(os.path.join(model_path, "verify")) as f:
-            return self.amp in f.read()
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
         folder = f"inf2_{model_type}_{self.amp}"
         if not path:
             path = tempfile.gettempdir()
-        if not os.path.exists(os.path.join(path, folder)):
-            os.mkdir(os.path.join(path, folder))
+        if os.path.exists(os.path.join(path, folder)):
+            shutil.rmtree(os.path.join(path, folder))
+        os.mkdir(os.path.join(path, folder))
         self.download_dir = os.path.join(path, folder)
         return self.download_dir
 
     def convert_model(self, model_type, load_path):
-        if self.is_inf2_model(load_path):
-            return
         self.model = self.load_hf_model()
         logging.info("Start model conversion to INF2 format...")
         dtype = dtypes.to_torch_dtype(self.amp)
         self.convert_dtype(dtype, model_type)
         logging.info(f"Saving INF2 model to {load_path} ...")
         save_pretrained_split(self.model, load_path)
-        with open(os.path.join(load_path, "verify"), "w") as f:
-            f.writelines(f"{model_type}-converted-{self.amp}")
 
     def get_load_path(self, model_type):
-        if self.is_inf2_model(self.model_id_or_path):
-            load_path = self.model_id_or_path
-        elif self.download_dir:
+        if self.download_dir:
             load_path = self.download_dir
         else:
             load_path = self.init_load_path(model_type)
