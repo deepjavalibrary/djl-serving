@@ -947,7 +947,7 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, hf-handler-test, ds-raw-test, ds-handler-test, ft-handler-test, ft-raw-test, ds-aot-raw-test, no-code-test, ft-aot-raw-test, ft-aot-handler-test, ds-handler-aot-test ]
+    needs: [ create-runners, hf-handler-test, hf-lora-correctness-test, ds-raw-test, ds-handler-test, ft-handler-test, ft-raw-test, ds-aot-raw-test, no-code-test, ft-aot-raw-test, ft-aot-handler-test, ds-handler-aot-test ]
     steps:
       - name: Stop all instances
         run: |
