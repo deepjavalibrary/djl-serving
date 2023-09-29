@@ -454,6 +454,7 @@ vllm_model_list = {
     "llama2-13b": {
         "option.model_id": "OpenAssistant/llama2-13b-orca-8k-3319",
         "option.task": "text-generation",
+        "option.dtype": "fp16",
         "option.tensor_parallel_degree": 4
     },
     "gpt-neox-20b": {
@@ -690,7 +691,7 @@ def build_vllm_model(model):
     options["engine"] = "Python"
     options["option.rolling_batch"] = "vllm"
     options["option.output_formatter"] = "jsonlines"
-    write_model_artifacts(options, ["vllm==0.1.7", "pandas", "pyarrow"])
+    write_model_artifacts(options, ["vllm==0.2.0", "pandas", "pyarrow"])
 
 
 def build_unmerged_lora_correctness_model(model):

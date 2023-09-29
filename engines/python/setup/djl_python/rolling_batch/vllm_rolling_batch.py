@@ -17,6 +17,7 @@ from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 
+DTYPE_MAPPER = {"fp32": "float32", "fp16": "float16", "bf16": "bfloat16", "auto": "auto"}
 
 class VLLMRollingBatch(RollingBatch):
 
@@ -36,7 +37,7 @@ class VLLMRollingBatch(RollingBatch):
         args = EngineArgs(
             model=model_id_or_path,
             tensor_parallel_size=tensor_parallel_degree,
-            dtype=self.dtype,
+            dtype=DTYPE_MAPPER[self.dtype],
             seed=0,
             max_num_batched_tokens=int(
                 properties.get("max_rolling_batch_prefill_tokens", 2560)),
