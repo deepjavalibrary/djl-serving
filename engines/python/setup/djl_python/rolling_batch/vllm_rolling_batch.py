@@ -29,9 +29,12 @@ class VLLMRollingBatch(RollingBatch):
         """
         super().__init__(-1, **kwargs)
         self.dtype = properties.get("dtype", 'auto')
+        max_batched_prefill_tokens = None
         if properties.get("engine") != "Python":
             raise AssertionError(
                 f"Need python engine to start vLLM RollingBatcher")
+        if "max_rolling_batch_prefill_tokens" in properties:
+            max_batched_prefill_tokens = int(properties.get("max_rolling_batch_prefill_tokens"))
         tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", None))
         args = EngineArgs(
@@ -39,8 +42,7 @@ class VLLMRollingBatch(RollingBatch):
             tensor_parallel_size=tensor_parallel_degree,
             dtype=DTYPE_MAPPER[self.dtype],
             seed=0,
-            max_num_batched_tokens=int(
-                properties.get("max_rolling_batch_prefill_tokens", 2560)),
+            max_num_batched_tokens=max_batched_prefill_tokens,
             trust_remote_code=kwargs.get("trust_remote_code", False),
         )
         self.engine = LLMEngine.from_engine_args(args)
