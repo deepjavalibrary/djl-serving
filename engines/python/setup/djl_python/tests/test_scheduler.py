@@ -19,10 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
-        model_names = [
-            "gpt2",
-            "seanmor5/tiny-llama-test"
-        ]
+        model_names = ["gpt2", "seanmor5/tiny-llama-test"]
         for model_name in model_names:
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
