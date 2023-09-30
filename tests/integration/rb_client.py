@@ -54,7 +54,7 @@ scheduler_single_gpu = {
     },
     "llama2-7b-chat-gptq": {
         "input_texts":
-            "When your legs don'\''t work like they used to before And I can'\''t sweep you off",
+        "When your legs don'\''t work like they used to before And I can'\''t sweep you off",
         "parameters": {
             "max_new_tokens": 40,
             "decoding_strategy": "greedy"

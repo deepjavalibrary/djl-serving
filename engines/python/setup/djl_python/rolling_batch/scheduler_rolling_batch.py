@@ -146,9 +146,8 @@ class SchedulerRollingBatch(RollingBatch):
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def _init_scheduler(self, properties):
-        lm_block_cls = MODEL_TYPE_2_BLOCK.get(
-            self.config.model_type,
-            HuggingfaceBlock)
+        lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
+                                              HuggingfaceBlock)
         self.lm_block = lm_block_cls(self.model)
         self.search_config = SearchConfig(
             eos_token_id=self.tokenizer.eos_token,
