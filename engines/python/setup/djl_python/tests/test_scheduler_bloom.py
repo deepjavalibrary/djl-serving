@@ -14,8 +14,9 @@ class TestSchedulerBloom(unittest.TestCase):
 
     def test_lm_block(self):
         model_id = "bigscience/bloom-560m"
-        model = BloomForCausalLM.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             model_id, device_map="auto" if global_device == "cuda" else "cpu")
+
         device = model.device
         tokenizer = AutoTokenizer.from_pretrained(model_id)
 
@@ -25,7 +26,7 @@ class TestSchedulerBloom(unittest.TestCase):
 
         lm_block = BloomBlock(model)
 
-        input0 = [
+        input = [
             torch.repeat_interleave(input_ids_0, dim=0, repeats=2).to(device),
             torch.repeat_interleave(torch.arange(seq_len)[None, :],
                                     dim=0,
@@ -36,7 +37,7 @@ class TestSchedulerBloom(unittest.TestCase):
                                     repeats=2).to(device)
         ]
 
-        output0 = lm_block.forward(*input0, None)
+        output0 = lm_block.forward(*input, None)
 
         model_config = AutoConfig.from_pretrained(model_id)
         assert len(output0.past_key_values) == model_config.n_layer
@@ -248,6 +249,56 @@ class TestSchedulerBloom(unittest.TestCase):
         assert tokenizer.decode(
             results[2][:20]
         ) == "<s> There's a time that I remember, when I did not knowouthThose aquaticlace Stewart"
+
+    def test_greedy_scheduler_llama2_gptq(self):
+        if global_device.type == 'cpu':
+            return
+        model_name = "TheBloke/Llama-2-7b-Chat-GPTQ"
+        tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                  trust_remote_code=False,
+                                                  padding_size='left',
+                                                  use_fast=True)
+        tokenizer.pad_token = "[PAD]"
+
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            trust_remote_code=False,
+            revision="main",
+            device_map="auto" if global_device == "cuda" else "cpu")
+        device = model.device
+
+        lm_block = HuggingfaceBlock(model)
+
+        search_config = SearchConfig(pad_token_id=tokenizer.pad_token_id)
+        scheduler = SeqBatchScheduler(lm_block, "greedy", search_config)
+
+        input_ids_0 = tokenizer.encode(
+            'Memories follow me left and right. I can',
+            return_tensors='pt').to(device)
+        request_ids = torch.tensor([[0]])
+
+        # Test init_forward
+        scheduler.add_request(input_ids_0, request_ids)
+        for _ in scheduler.increment_forward(20):
+            pass
+
+        # Merge longer sequences
+        input12 = [
+            r"When your legs don't work like they used to before And I can't sweep you off",
+            r"There's a time that I remember, when I did not know"
+        ]
+        input_ids = tokenizer(input12, return_tensors='pt',
+                              padding=True).input_ids.to(device)
+
+        request_ids = torch.tensor([[1], [2]])
+        scheduler.add_request(input_ids, request_ids)
+
+        # Forward pass
+        for _ in scheduler.increment_forward(100):
+            pass
+
+        results = scheduler.collect_results()
+        # The generated text of TheBloke/Llama-2-7b-Chat-GPTQ has randomness even for greedy.
 
 
 if __name__ == '__main__':
