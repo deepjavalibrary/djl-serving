@@ -441,13 +441,20 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
     },
-    "gpt-neox-20b-bits-and-bytes-quantized": {
+    "gpt-neox-20b-bitsandbytes": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
         "option.quantize": "bitsandbytes"
-    }
+    },
+    "llama2-13b-gptq": {
+        "option.model_id": "TheBloke/Llama-2-13B-chat-GPTQ",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+        "option.quantize": "gptq"
+    },
 }
 
 vllm_model_list = {
