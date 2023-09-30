@@ -14,8 +14,8 @@ from typing import Tuple, Dict, List, Union
 
 import torch
 
-from djl_python.scheduler.lm_block import LMBlock
-from djl_python.scheduler.search_config import SearchConfig
+from djl_python.seq_scheduler.lm_block import LMBlock
+from djl_python.seq_scheduler.search_config import SearchConfig
 
 
 def merge_tensors(tensor1: torch.Tensor,

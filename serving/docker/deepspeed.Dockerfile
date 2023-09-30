@@ -22,6 +22,7 @@ ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp39-cp39
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn_2-2.3.0-cp39-cp39-linux_x86_64.whl"
 ARG vllm_wheel="https://publish.djl.ai/vllm/vllm-0.1.1-cp39-cp39-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
+ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-nightly-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.33.2
@@ -66,7 +67,8 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
     ${deepspeed_wheel} ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
-    ${vllm_wheel} ${lmi_dist_wheel} ${peft_wheel} protobuf==${protobuf_version} transformers==${transformers_version} \
+    ${vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} protobuf==${protobuf_version} \
+    transformers==${transformers_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     scripts/install_aitemplate.sh && \

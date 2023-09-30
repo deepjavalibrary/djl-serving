@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import torch
-from djl_python.scheduler.utils import merge_tensors, trim_tensor, nudge_tensor
+from djl_python.seq_scheduler.utils import merge_tensors, trim_tensor, nudge_tensor
 from abc import ABC, abstractmethod
 
 

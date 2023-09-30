@@ -2,13 +2,13 @@ import unittest
 from collections import defaultdict
 import copy
 
-from djl_python.scheduler.lm_block import FalconBlock, HuggingfaceBlock
-from djl_python.scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
+from djl_python.seq_scheduler.lm_block import FalconBlock, HuggingfaceBlock
+from djl_python.seq_scheduler.utils import compute_offsets, compute_position_ids, compute_attention_mask, merge_tensors, \
     trim_tensor, compute_kv_cache
-from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
-from djl_python.scheduler.seq_batcher_impl import ContrastiveSeqBatcher
+from djl_python.seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
+from djl_python.seq_scheduler.seq_batcher_impl import ContrastiveSeqBatcher
 from transformers import AutoModelForCausalLM
-from djl_python.scheduler.search_config import SearchConfig
+from djl_python.seq_scheduler.search_config import SearchConfig
 import torch
 
 from transformers import GPT2LMHeadModel, GPT2Tokenizer

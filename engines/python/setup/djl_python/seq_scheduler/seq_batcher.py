@@ -16,10 +16,10 @@ from collections import defaultdict
 from typing import Dict, Union, Tuple, List, Any
 from abc import ABC, abstractmethod
 
-from djl_python.scheduler.batch import Batch, ContrastiveBatch
-from djl_python.scheduler.lm_block import LMBlock
+from djl_python.seq_scheduler.batch import Batch, ContrastiveBatch
+from djl_python.seq_scheduler.lm_block import LMBlock
 import torch
-from djl_python.scheduler import SearchConfig
+from djl_python.seq_scheduler.search_config import SearchConfig
 
 
 class SeqBatcher(ABC):

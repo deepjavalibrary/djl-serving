@@ -16,7 +16,7 @@ from collections import defaultdict
 import torch
 from torch.nn.functional import normalize, softmax
 from typing import Tuple, List, Dict
-from djl_python.scheduler.search_config import SearchConfig
+from djl_python.seq_scheduler.search_config import SearchConfig
 import numpy, heapq
 
 

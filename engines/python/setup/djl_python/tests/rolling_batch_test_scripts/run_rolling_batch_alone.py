@@ -17,7 +17,7 @@ import torch.distributed as dist
 
 def get_rolling_batch_class_from_str(rolling_batch_type: str):
     if rolling_batch_type == "scheduler":
-        from djl_python.rolling_batch import SchedulerRollingBatch
+        from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
         return SchedulerRollingBatch
     elif rolling_batch_type == "lmi-dist":
         from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
