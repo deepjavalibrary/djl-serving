@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [ cpu, cpu-full, deepspeed, pytorch-inf1, pytorch-inf2, pytorch-cu118 ]
+        arch: [ cpu, cpu-full, pytorch-inf1, pytorch-inf2, pytorch-cu118 ]
     steps:
       - uses: actions/checkout@v3
       - name: Login to Docker
@@ -139,10 +139,43 @@ jobs:
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} fastertransformer
           docker compose push fastertransformer
 
+  nightly-deepspeed:
+    runs-on: [ self-hosted, cpu ]
+    timeout-minutes: 30
+    needs: create-runner
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean docker env
+        working-directory: serving/docker
+        run: |
+          yes | docker system prune -a --volumes
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push nightly docker image
+        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        working-directory: serving/docker
+        run: |
+          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          export NIGHTLY="-nightly"
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT deepspeed
+          docker compose push deepspeed
+      - name: Build and push release docker image
+        if: ${{ github.event.inputs.mode == 'release' }}
+        working-directory: serving/docker
+        run: |
+          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          export BASE_RELEASE_VERSION="${DJL_VERSION}"
+          export RELEASE_VERSION="${DJL_VERSION}-"
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} deepspeed
+          docker compose push deepspeed
+
   stop-runner:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [nightly-aarch64, nightly-fastertransformer, create-runner]
+    needs: [nightly-aarch64, nightly-fastertransformer, nightly-deepspeed, create-runner]
     steps:
       - name: Stop all instances
         run: |
