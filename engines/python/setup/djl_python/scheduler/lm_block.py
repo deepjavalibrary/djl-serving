@@ -148,53 +148,20 @@ class FalconBlock(LMBlock):
             'output_attentions': False,
             'output_hidden_states': True
         }
+        warnings.warn(
+            "Falcon model doesn't take position_id as an input. This may affect the generated text when the input is padded."
+        )
 
     def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
                 attention_mask: torch.tensor, past_key_values):
-        # concatenate along seq_length dimension:
-        # [batch, seq, num_heads*kvDim = 73 * 64]
-        #  - key: [batch_size * self.num_kv, seq, kvDim]. [2, 6, 64]
-        #  - value: [batch_size * self.num_kv, seq, kvDim]. [2, 6, 64]
-
-        # Falcon
-        # fused_qkv: [batch, seq, (num_heads=71 + num_kv=1 + num_kv=1) * kvDim]
-        # query_layer: [batch*num_heads=71,  seq, kvDim]
-        # key_layer  : [batch*num_kv=1, seq, kvDim].
-        # value_layer: [batch*num_kv=1, seq, kvDim].
-        # hidden_dim = 4544
-
-        # kv: (batch, num_head, seq_len, kv_dim)
-        # <->
-        # k: (batch*num_kv, seq_len, kv_dim),
-        # v: (batch*num_kv, seq_len, kv_dim)
-        batch_size = input_ids.shape[0]
-
-        # Pre-process
-        if past_key_values is not None:
-            _, num_head, seq_len, kv_dim = past_key_values[0][0].shape
-            new_kv_list = []
-            for k, v in past_key_values:
-                k_new = k.view(batch_size * num_head, seq_len, kv_dim)
-                v_new = v.view(batch_size * num_head, seq_len, kv_dim)
-                new_kv_list.append((k_new, v_new))
-            past_key_values = tuple(new_kv_list)
+        # (batch_size, num_heads, seq_len, kv_dim)
+        # tiiuae/falcon-7b has a process of _convert_cache_to_standard_format(), which converts kv_cache to tuple(
+        # tuple([batch_size, num_heads, ...])) form. But it doesn't take position_ids
 
         # Forward
         output = self.model.forward(input_ids=input_ids,
-                                    position_ids=position_ids,
                                     attention_mask=attention_mask,
                                     past_key_values=past_key_values,
                                     **self.config)
         past_key_values = output.past_key_values
-
-        # Post-process
-        _, seq_len, kv_dim = past_key_values[0][0].shape
-        new_kv_list = []
-        for k, v in past_key_values:
-            k_new = k.view(batch_size, -1, seq_len, kv_dim)
-            v_new = v.view(batch_size, -1, seq_len, kv_dim)
-            new_kv_list.append((k_new, v_new))
-        past_key_values = tuple(new_kv_list)
-        output.past_key_values = past_key_values
-
         return output
