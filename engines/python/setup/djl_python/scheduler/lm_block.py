@@ -148,6 +148,8 @@ class FalconBlock(LMBlock):
             'output_attentions': False,
             'output_hidden_states': True
         }
+        warnings.warn("Falcon model doesn't take position_id as an input. This may affect the generated text when the input is padded.")
+
 
     def forward(self, input_ids: torch.tensor, position_ids: torch.tensor,
                 attention_mask: torch.tensor, past_key_values):
