@@ -147,7 +147,7 @@ class SchedulerRollingBatch(RollingBatch):
 
     def _init_scheduler(self, properties):
         lm_block_cls = MODEL_TYPE_2_BLOCK.get(
-            'falcon' if 'falcon' in self.config.model_type else '$',
+            self.config.model_type,
             HuggingfaceBlock)
         self.lm_block = lm_block_cls(self.model)
         self.search_config = SearchConfig(
