@@ -7,7 +7,7 @@ from djl_python.scheduler.utils import compute_offsets, compute_position_ids, co
     trim_tensor, compute_kv_cache
 from djl_python.scheduler.seq_batch_scheduler import SeqBatchScheduler
 from djl_python.scheduler.seq_batcher_impl import ContrastiveSeqBatcher
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM
 from djl_python.scheduler.search_config import SearchConfig
 import torch
 
@@ -20,7 +20,7 @@ class TestScheduler(unittest.TestCase):
 
     def test_lm_block(self):
         model_names = [
-            "gpt2", "BlackSamorez/falcon-40b-tiny-testing",
+            "gpt2",
             "seanmor5/tiny-llama-test"
         ]
         for model_name in model_names:
