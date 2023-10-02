@@ -15,9 +15,9 @@ import shutil
 import tempfile
 import os
 import logging
+import time
 
 from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
-from transformers_neuronx import dtypes
 from transformers_neuronx.generation_utils import HuggingFaceGenerationModelAdapter
 from transformers_neuronx.gptneox.model import GPTNeoXForSampling
 from transformers_neuronx.gptj.model import GPTJForSampling
@@ -70,42 +70,6 @@ class TransformersNeuronXService(object):
         self.rolling_batch = None
         self.load_in_8bit = False
 
-    def convert_dtype(self, dtype, model_type):
-        if model_type == "opt":
-            for block in self.model.model.decoder.layers:
-                block.self_attn.to(dtype)
-                block.fc1.to(dtype)
-                block.fc2.to(dtype)
-            self.model.lm_head.to(dtype)
-        elif model_type == "bloom":
-            for block in self.model.transformer.h:
-                block.self_attention.to(dtype)
-                block.mlp.to(dtype)
-            self.model.lm_head.to(dtype)
-        elif model_type in ["gpt2", "gptj"]:
-            for block in self.model.transformer.h:
-                block.attn.to(dtype)
-                block.mlp.to(dtype)
-            self.model.lm_head.to(dtype)
-        elif model_type == "gpt_neox":
-            for block in self.model.gpt_neox.layers:
-                block.attention.to(dtype)
-                block.mlp.to(dtype)
-            self.model.embed_out.to(dtype)
-        elif model_type == "llama":
-            for block in self.model.model.layers:
-                block.self_attn.q_proj.to(dtype)
-                block.self_attn.k_proj.to(dtype)
-                block.self_attn.v_proj.to(dtype)
-                block.self_attn.o_proj.to(dtype)
-                block.mlp.gate_proj.to(dtype)
-                block.mlp.down_proj.to(dtype)
-                block.mlp.up_proj.to(dtype)
-            self.model.lm_head.to(dtype)
-        else:
-            raise AttributeError(
-                f"Model architecture format is not implemented")
-
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
@@ -118,11 +82,8 @@ class TransformersNeuronXService(object):
         self.download_dir = os.path.join(path, folder)
         return self.download_dir
 
-    def convert_model(self, model_type, load_path):
+    def convert_model(self, load_path):
         self.model = self.load_hf_model()
-        logging.info("Start model conversion to INF2 format...")
-        dtype = dtypes.to_torch_dtype(self.amp)
-        self.convert_dtype(dtype, model_type)
         logging.info(f"Saving INF2 model to {load_path} ...")
         save_pretrained_split(self.model, load_path)
 
@@ -164,8 +125,10 @@ class TransformersNeuronXService(object):
 
     def load_model(self, model_type):
         load_path = self.get_load_path(model_type)
-        self.convert_model(model_type, load_path)
+        self.convert_model(load_path)
         self.model = self.load_inf2_model(model_type, load_path)
+        logging.info(f"Compiling Started ...")
+        start = time.time()
         # TODO: workaround on Neuron Compiler bug for SM
         path = os.getcwd()
         os.chdir("/tmp")
@@ -176,6 +139,8 @@ class TransformersNeuronXService(object):
         else:
             self.model.to_neuron()
         os.chdir(path)
+        elapsed = time.time() - start
+        logging.info(f"Compilation completed with {elapsed}s")
 
     def initialize(self, properties):
         # Neuron recommendation for transformersneuronx speedup
