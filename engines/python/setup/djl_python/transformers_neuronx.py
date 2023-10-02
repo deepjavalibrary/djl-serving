@@ -127,7 +127,7 @@ class TransformersNeuronXService(object):
         load_path = self.get_load_path(model_type)
         self.convert_model(load_path)
         self.model = self.load_inf2_model(model_type, load_path)
-        logging.info(f"Compiling Started ...")
+        logging.info(f"LLM sharding and compiling Started ...")
         start = time.time()
         # TODO: workaround on Neuron Compiler bug for SM
         path = os.getcwd()
@@ -140,7 +140,7 @@ class TransformersNeuronXService(object):
             self.model.to_neuron()
         os.chdir(path)
         elapsed = time.time() - start
-        logging.info(f"Compilation completed with {elapsed}s")
+        logging.info(f"LLM sharding and compiling completed with {elapsed}s")
 
     def initialize(self, properties):
         # Neuron recommendation for transformersneuronx speedup
