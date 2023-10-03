@@ -70,7 +70,6 @@ class TransformersNeuronXService(object):
         self.rolling_batch = None
         self.load_in_8bit = False
 
-
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
         folder = f"inf2_{model_type}_{self.amp}"

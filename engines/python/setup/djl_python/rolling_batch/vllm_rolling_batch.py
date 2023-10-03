@@ -44,15 +44,14 @@ class VLLMRollingBatch(RollingBatch):
                 properties.get("max_rolling_batch_prefill_tokens"))
         tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", None))
-        args = EngineArgs(
-            model=model_id_or_path,
-            tensor_parallel_size=tensor_parallel_degree,
-            dtype=DTYPE_MAPPER[self.dtype],
-            seed=0,
-            max_num_batched_tokens=max_batched_prefill_tokens,
-            trust_remote_code=kwargs.get("trust_remote_code", False),
-            quantization=properties.get("quantize", None)
-        )
+        args = EngineArgs(model=model_id_or_path,
+                          tensor_parallel_size=tensor_parallel_degree,
+                          dtype=DTYPE_MAPPER[self.dtype],
+                          seed=0,
+                          max_num_batched_tokens=max_batched_prefill_tokens,
+                          trust_remote_code=kwargs.get("trust_remote_code",
+                                                       False),
+                          quantization=properties.get("quantize", None))
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
 
