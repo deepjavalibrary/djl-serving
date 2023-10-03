@@ -67,7 +67,8 @@ RUN apt-get update && apt-get install -y wget git libnuma-dev zlib1g-dev rapidjs
     cd ../../ && rm -rf ompi && \
     scripts/install_python.sh ${python_version} && \
     pip3 install ${torch_wheel} ${ft_wheel} ${tb_wheel} ${peft_wheel} ${seq_scheduler_wheel} safetensors protobuf==${protobuf_version} && \
-    pip3 install transformers==${transformers_version} accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} optimum=${optimum_version} auto-gptq=${auto_gptq_version} \
+    pip3 install transformers==${transformers_version} accelerate==${accelerate_version} \
+    bitsandbytes==${bitsandbytes_version} optimum==${optimum_version} auto-gptq==${auto_gptq_version} \
     scipy einops && \
     pip3 install cmake sentencepiece bfloat16 tiktoken && \
     pip3 cache purge && \
