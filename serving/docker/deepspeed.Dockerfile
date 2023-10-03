@@ -29,6 +29,8 @@ ARG transformers_version=4.33.2
 ARG accelerate_version=0.23.0
 ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
+ARG optimum_version=1.13.2
+ARG auto_gptq_version=0.4.2
 
 EXPOSE 8080
 
@@ -69,7 +71,8 @@ RUN apt-get update && \
     ${deepspeed_wheel} ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
     ${vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} \
-    mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version}\
+    mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
+    optimum=${optimum_version} auto-gptq=${auto_gptq_version} \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
