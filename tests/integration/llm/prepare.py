@@ -489,18 +489,21 @@ ds_smoothquant_model_list = {
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.tensor_parallel_degree": 4,
-        "option.quantize": "smoothquant"
+        "option.quantize": "smoothquant",
+        "option.task": "text-generation",
     },
     "gpt-neox-20b": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b",
         "option.tensor_parallel_degree": 4,
         "option.quantize": "smoothquant",
-        "option.smoothquant_alpha": 0.65
+        "option.task": "text-generation",
+        "option.smoothquant_alpha": 0.65,
     },
     "llama2-13b": {
         "option.model_id": "OpenAssistant/llama2-13b-orca-8k-3319",
         "option.tensor_parallel_degree": 4,
-        "option.quantize": "dynamic_int8"
+        "option.quantize": "dynamic_int8",
+        "option.task": "text-generation",
     },
 }
 
@@ -744,6 +747,7 @@ def build_ds_smoothquant_model(model):
         )
     options = ds_smoothquant_model_list[model]
     options["engine"] = "DeepSpeed"
+    options["entryPoint"] = "djl_python.deepspeed"
     write_model_artifacts(options)
 
 
