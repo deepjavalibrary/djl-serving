@@ -329,7 +329,7 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 512,
         "option.dtype": "fp16",
-        "option.model_loading_timeout": 900
+        "option.model_loading_timeout": 1200
     },
     "open-llama-7b": {
         "option.model_id": "s3://djl-llm/open-llama-7b/",
