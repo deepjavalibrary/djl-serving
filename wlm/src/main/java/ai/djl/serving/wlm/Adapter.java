@@ -16,6 +16,8 @@ import ai.djl.inference.Predictor;
 import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.WorkerJob;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -53,6 +55,14 @@ public abstract class Adapter {
             String modelName = wpc.getId();
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
         }
+
+        // TODO Allow URL support
+        try {
+            new URL(src);
+            throw new IllegalArgumentException("URL adapters are not currently supported");
+        } catch (MalformedURLException ignored) {
+        }
+
         ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wpc;
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {

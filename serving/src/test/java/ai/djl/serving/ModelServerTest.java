@@ -238,6 +238,7 @@ public class ModelServerTest {
 
             // adapter API
             testAdapterRegister(channel);
+            testAdapterNoPredictRegister();
             testAdapterPredict(channel);
             testAdapterDirPredict(channel);
             testAdapterInvoke(channel);
@@ -832,6 +833,28 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             assertEquals(httpStatus.code(), 503);
+        }
+    }
+
+    private void testAdapterNoPredictRegister() throws InterruptedException {
+        Channel channel = connect(Connector.ConnectorType.INFERENCE);
+        assertNotNull(channel);
+
+        String url = "/predictions/adaptecho?adapter=adaptable";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.headers().set("handler", "register_adapter");
+        req.headers().set("name", "malicious_name");
+        req.headers().set("src", "malicious_url");
+        req.content().writeBytes("tt".getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        if (!System.getProperty("os.name").startsWith("Win")) {
+            assertEquals(httpStatus.code(), 400);
         }
     }
 

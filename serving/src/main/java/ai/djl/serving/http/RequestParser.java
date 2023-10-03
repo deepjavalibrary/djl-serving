@@ -92,6 +92,11 @@ public class RequestParser {
             byte[] content = NettyUtils.getBytes(req.content());
             input.add("data", content);
         }
+
+        if (input.getProperties().containsKey("handler")) {
+            throw new BadRequestException("The handler can't be overridden in a request");
+        }
+
         return input;
     }
 }
