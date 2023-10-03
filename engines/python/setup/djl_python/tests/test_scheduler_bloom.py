@@ -15,7 +15,8 @@ class TestSchedulerBloom(unittest.TestCase):
     def test_lm_block(self):
         model_id = "bigscience/bloom-560m"
         model = AutoModelForCausalLM.from_pretrained(
-            model_id, device_map="auto" if global_device == "cuda" else "cpu")
+            model_id,
+            device_map="auto" if global_device.type == "cuda" else "cpu")
 
         device = model.device
         tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -57,7 +58,8 @@ class TestSchedulerBloom(unittest.TestCase):
     def test_contrastive_scheduler(self):
         model_id = "bigscience/bloom-560m"
         model = BloomForCausalLM.from_pretrained(
-            model_id, device_map="auto" if global_device == "cuda" else "cpu")
+            model_id,
+            device_map="auto" if global_device.type == "cuda" else "cpu")
         device = model.device
         tokenizer = AutoTokenizer.from_pretrained(model_id,
                                                   padding_side='left')
@@ -135,7 +137,7 @@ class TestSchedulerBloom(unittest.TestCase):
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             trust_remote_code=True,
-            device_map="auto" if global_device == "cuda" else "cpu")
+            device_map="auto" if global_device.type == "cuda" else "cpu")
         device = model.device
 
         lm_block = HuggingfaceBlock(model)
@@ -200,7 +202,7 @@ class TestSchedulerBloom(unittest.TestCase):
             model_name,
             trust_remote_code=False,
             revision="main",
-            device_map="auto" if global_device == "cuda" else "cpu")
+            device_map="auto" if global_device.type == "cuda" else "cpu")
         device = model.device
 
         lm_block = HuggingfaceBlock(model)
