@@ -83,6 +83,7 @@ else
     ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/home/djl/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     -e SERVING_OPTS='-Dai.djl.logging.level=debug' \

@@ -73,7 +73,7 @@ RUN apt-get update && \
     ${deepspeed_wheel} ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
     ${vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} zstandard datasets==${datasets_version} \
-    mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version \
+    mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     scripts/install_aitemplate.sh && \
