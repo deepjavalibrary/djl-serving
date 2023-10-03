@@ -12,12 +12,12 @@
 ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
 ARG djl_version=0.24.0~SNAPSHOT
-ARG python_version=3.9
+ARG python_version=3.10
 ARG ft_version="llama"
 ARG triton_version="r23.04"
-ARG torch_wheel="https://aws-pytorch-unified-cicd-binaries.s3.us-west-2.amazonaws.com/r1.13.1_ec2/20221219-193736/54406b8eed7fbd61be629cb06229dfb7b6b2954e/torch-1.13.1%2Bcu117-cp39-cp39-linux_x86_64.whl"
+ARG torch_wheel="https://framework-binaries.s3.us-west-2.amazonaws.com/pytorch/v2.0.1/cu11.8.0/2023-05-24-03-41/torch-2.0.1%2Bcu118-cp310-cp310-linux_x86_64.whl"
 ARG ft_wheel="https://publish.djl.ai/fastertransformer/fastertransformer-0.24.0-py3-none-any.whl"
-ARG tb_wheel="https://publish.djl.ai/tritonserver/r23.04/tritontoolkit-23.4-py3-none-any.whl"
+ARG tb_wheel="https://publish.djl.ai/tritonserver/r23.04/tritontoolkit-23.4-py310-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-nightly-py3-none-any.whl"
 ARG ompi_version=4.1.4
