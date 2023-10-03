@@ -744,8 +744,7 @@ def build_ds_smoothquant_model(model):
         )
     options = ds_smoothquant_model_list[model]
     options["engine"] = "DeepSpeed"
-    #TODO: Remove after adding to dockerfile
-    write_model_artifacts(options, ["zstandard", "datasets"])
+    write_model_artifacts(options)
 
 
 supported_handler = {
