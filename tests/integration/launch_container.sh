@@ -102,6 +102,9 @@ total=24
 if $is_llm; then
   echo "extra sleep for 2 min on LLM models"
   total=60
+  if [[ "$platform" == *"inf2"* ]]; then
+    total=80
+  fi
   sleep 120
 fi
 
