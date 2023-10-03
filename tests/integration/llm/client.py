@@ -295,7 +295,7 @@ transformers_neuronx_model_spec = {
         "seq_length": [128, 256],
         "batch_size": [4]
     },
-    "gpt-neox-20b": {
+    "pythia-2.8b": {
         "worker": 1,
         "seq_length": [128, 256],
         "batch_size": [4],
