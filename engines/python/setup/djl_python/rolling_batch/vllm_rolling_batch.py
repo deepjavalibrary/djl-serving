@@ -51,6 +51,7 @@ class VLLMRollingBatch(RollingBatch):
             seed=0,
             max_num_batched_tokens=max_batched_prefill_tokens,
             trust_remote_code=kwargs.get("trust_remote_code", False),
+            quantization=self.properties.get("quantize", None)
         )
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
