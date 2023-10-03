@@ -944,6 +944,58 @@ jobs:
           name: huggingface-logs
           path: tests/integration/logs/
 
+  ds-smoothquant-handler-test:
+    if: contains(fromJson('["", "smoothquant"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests pillow numpy
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gpt-j-6b default smoothquant
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_smoothquant gpt-j-6b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_smoothquant gpt-j-6b
+          docker rm -f $(docker ps -aq)
+      - name: Test gpt-neox-20b smoothquant custom alpha
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_smoothquant gpt-neox-20b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_smoothquant gpt-neox-20b
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-13b dynamic_quant only
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_smoothquant llama2-13b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_smoothquant llama2-13b
+          docker rm -f $(docker ps -aq)
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]

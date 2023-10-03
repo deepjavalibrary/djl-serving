@@ -397,6 +397,24 @@ vllm_model_spec = {
     }
 }
 
+ds_smoothquant_model_spec = {
+    "gpt-j-6b": {
+        "max_memory_per_gpu": [9.0, 10.0, 11.0, 12.0],
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+    },
+    "llama2-13b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+    },
+    "gpt-neox-20b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+    }
+}
+
 
 def check_worker_number(desired):
     model_name = get_model_name()
@@ -776,6 +794,29 @@ def test_transformers_neuronx_handler(model, model_spec):
                 assert len(result) == batch_size
 
 
+def test_ds_smoothquant(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            req = {
+                "inputs": batch_generation(batch_size),
+                "batch_size": batch_size,
+                "text_length": seq_length
+            }
+            logging.info(f"req: {req}")
+            res = send_json(req)
+            res = res.json()
+            logging.info(f"res: {res}")
+            assert len(res["outputs"]) == batch_size
+            memory_usage = get_gpu_memory()
+            logging.info(memory_usage)
+            for memory in memory_usage:
+                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
+
 def test_unmerged_lora_correctness():
     res = send_json({})
     logging.info(f"res: {res.json()}")
@@ -809,6 +850,8 @@ if __name__ == "__main__":
         test_performance()
     elif args.handler == "unmerged_lora":
         test_unmerged_lora_correctness()
+    elif args.handler == "deepspeed_smoothquant":
+        test_ds_smoothquant(args.model, ds_smoothquant_model_spec)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
