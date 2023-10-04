@@ -15,6 +15,7 @@ package ai.djl.serving.http;
 import ai.djl.modality.Input;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
+import ai.djl.util.Utils;
 
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -92,6 +93,14 @@ public class RequestParser {
             byte[] content = NettyUtils.getBytes(req.content());
             input.add("data", content);
         }
+
+        if (input.getProperties().containsKey("handler")) {
+            if (!Boolean.parseBoolean(
+                    Utils.getEnvOrSystemProperty("ALLOW_REQUEST_HANDLER_OVERRIDE"))) {
+                throw new BadRequestException("The handler can't be overridden in a request");
+            }
+        }
+
         return input;
     }
 }
