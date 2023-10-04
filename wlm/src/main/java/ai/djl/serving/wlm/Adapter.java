@@ -16,8 +16,8 @@ import ai.djl.inference.Predictor;
 import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.WorkerJob;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -58,9 +58,12 @@ public abstract class Adapter {
 
         // TODO Allow URL support
         try {
-            new URL(src);
-            throw new IllegalArgumentException("URL adapters are not currently supported");
-        } catch (MalformedURLException ignored) {
+            URI uri = new URI(src);
+            String scheme = uri.getScheme();
+            if (scheme != null && !"file".equals(scheme)) {
+                throw new IllegalArgumentException("URL adapters are not currently supported");
+            }
+        } catch (URISyntaxException ignored) {
         }
 
         ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wpc;
