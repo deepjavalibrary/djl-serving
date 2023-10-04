@@ -399,21 +399,18 @@ vllm_model_spec = {
 
 ds_smoothquant_model_spec = {
     "gpt-j-6b": {
-        #TODO: Update max_memory_per_gpu
-        "max_memory_per_gpu": [9.0, 10.0, 11.0, 12.0],
+        "max_memory_per_gpu": [5.0, 5.0, 5.0, 5.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
     },
-    "llama2-13b": {
-        #TODO: Update max_memory_per_gpu
-        "max_memory_per_gpu": [22.0, 22.0, 22.0],
-        "batch_size": [1, 2, 4],
+    "gpt-neox-20b": {
+        "max_memory_per_gpu": [9.0, 11.0],
+        "batch_size": [1, 8],
         "seq_length": [64, 128, 256],
     },
-    "gpt-neox-20b": {
-        #TODO: Update max_memory_per_gpu
-        "max_memory_per_gpu": [22.0, 22.0],
-        "batch_size": [1, 8],
+    "llama2-13b": {
+        "max_memory_per_gpu": [7.0, 7.0, 7.0],
+        "batch_size": [1, 2, 4],
         "seq_length": [64, 128, 256],
     }
 }
@@ -814,7 +811,7 @@ def test_ds_smoothquant(model, model_spec):
             res = send_json(req)
             res = res.json()
             logging.info(f"res: {res}")
-            assert len(res["outputs"]) == batch_size
+            assert len(res) == batch_size
             memory_usage = get_gpu_memory()
             logging.info(memory_usage)
             for memory in memory_usage:

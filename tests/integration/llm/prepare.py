@@ -489,21 +489,24 @@ ds_smoothquant_model_list = {
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.tensor_parallel_degree": 4,
-        "option.quantize": "smoothquant",
+        "option.dtype": "fp16",
         "option.task": "text-generation",
+        "option.quantize": "smoothquant",
     },
     "gpt-neox-20b": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b",
         "option.tensor_parallel_degree": 4,
-        "option.quantize": "smoothquant",
+        "option.dtype": "fp16",
         "option.task": "text-generation",
+        "option.quantize": "smoothquant",
         "option.smoothquant_alpha": 0.65,
     },
     "llama2-13b": {
-        "option.model_id": "OpenAssistant/llama2-13b-orca-8k-3319",
+        "option.model_id": "TheBloke/Llama-2-13B-fp16",
         "option.tensor_parallel_degree": 4,
-        "option.quantize": "dynamic_int8",
+        "option.dtype": "fp16",
         "option.task": "text-generation",
+        "option.quantize": "dynamic_int8",
     },
 }
 

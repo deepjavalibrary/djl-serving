@@ -32,7 +32,6 @@ ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.13.2
 ARG auto_gptq_version=0.4.2
-ARG cutlass_version=3.1.0
 ARG datasets_version=2.14.4
 
 EXPOSE 8080
@@ -85,12 +84,6 @@ RUN apt-get update && \
     rm -rf scripts && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
-RUN cd /opt/djl/deps/ && \
-    wget -O cutlass-v${cutlass_version}.tar.gz https://github.com/NVIDIA/cutlass/archive/refs/tags/v${cutlass_version}.tar.gz && \
-    tar -xzf cutlass-v${cutlass_version}.tar.gz && \
-    rm cutlass-v${cutlass_version}.tar.gz
-ENV CUTLASS_ROOT_DIR=/opt/djl/deps/cutlass-${cutlass_version}
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
