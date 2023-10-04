@@ -612,6 +612,9 @@ def register_adapter(inputs: Input):
     """
     adapter_name = inputs.get_property("name")
     adapter_model_id_or_path = inputs.get_property("src")
+    if not os.path.exists(adapter_model_id_or_path):
+        raise ValueError(
+            f"Only local LoRA models are supported. {adapter_model_id_or_path} is not a valid path")
     logging.info(
         f"Registering adapter {adapter_name} from {adapter_model_id_or_path}")
     if isinstance(_service.model, PeftModel):
