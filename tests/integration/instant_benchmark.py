@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 parser = argparse.ArgumentParser(
     description="Script for building and running the LMI container tests")
-parser.add_argument("--parse-template",
+parser.add_argument("--parse",
                     required=False,
                     type=str,
                     help="Parse the template")
