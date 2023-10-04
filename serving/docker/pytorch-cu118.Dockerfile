@@ -13,7 +13,7 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.24.0~SNAPSHOT
+ARG djl_version=0.24.0
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
 ARG python_version=3.9
