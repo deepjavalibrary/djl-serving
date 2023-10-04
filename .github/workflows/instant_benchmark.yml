@@ -1,0 +1,112 @@
+name: instant benchmark tooling
+
+on:
+  workflow_dispatch:
+    inputs:
+      container:
+        description: 'The container used to run benchmark'
+        required: true
+        default: '0.23.0-deepspeed'
+      running_template:
+        description: 'A json file that contains benchmark plans'
+        required: true
+      instance:
+        description: 'Instance used for benchmark'
+        required: true
+        default: 'g5.12xlarge'
+        type: choice
+        options:
+          - g5.2xlarge
+          - g5.12xlarge
+          - g5.48xlarge
+          - g4dn.12xlarge
+          - g4dn.2xlarge
+          - p4d.24xlarge
+          - inf2.8xlarge
+          - inf2.24xlarge
+          - trn1.2xlarge
+          - trn1.32xlarge
+
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new instance
+        id: create_instance
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_ib_${{ github.event.inputs.instance }} $token djl-serving
+    outputs:
+      gpu_instance_id: ${{ steps.create_instance.outputs.action_ib_instance_id }}
+
+  environment-setup:
+    runs-on: [ self-hosted, "${{ github.event.inputs.instance }}" ]
+    needs: [ create-runners ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Clean env
+        run: |
+          docker rm -f $(docker ps -aq)
+          yes | docker system prune -a --volumes
+      - name: Download container
+        run: |
+          docker pull deepjavalibrary/djl-serving:${{ github.event.inputs.container }}
+      - name: Parse job schema
+        working-directory: tests/integration
+        id: generate_matrix
+        run: |
+          python3 instant_benchmark.py --parse ${{ github.event.inputs.running_template }}
+    outputs:
+      jobs: ${{ steps.generate_matrix.outputs.jobs }}
+      template: ${{ steps.generate_matrix.outputs.template }}
+
+  benchmark_run:
+    runs-on: [ self-hosted, "${{ github.event.inputs.instance }}" ]
+    needs: [ environment-setup ]
+    strategy:
+      matrix:
+        job: ${{ fromJSON(needs.environment-setup.outputs.jobs) }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Setup awscurl
+        working-directory: tests/integration
+        run: |
+          wget https://github.com/frankfliu/junkyard/releases/download/v0.3.1/awscurl
+          chmod +x awscurl
+      - name: Run benchmark job
+        working-directory: tests/integration
+        run: |
+          python3 instant_benchmark.py --template ${{ needs.environment-setup.outputs.template }} \
+          --job ${{ matrix.job }}
+          bash instant_benchmark.sh
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          docker rm -f $(docker ps -aq)
+          cat logs/serving.log
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, environment-setup, benchmark_run ]
+    steps:
+      - name: Stop instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          ./stop_instance.sh $instance_id
