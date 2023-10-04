@@ -46,6 +46,7 @@ jobs:
 
   environment-setup:
     runs-on: [ self-hosted, "${{ github.event.inputs.instance }}" ]
+    timeout-minutes: 15
     needs: [ create-runners ]
     steps:
       - uses: actions/checkout@v3
@@ -55,22 +56,22 @@ jobs:
           python-version: '3.10.x'
       - name: Clean env
         run: |
-          docker rm -f $(docker ps -aq)
           yes | docker system prune -a --volumes
-      - name: Download container
-        run: |
-          docker pull deepjavalibrary/djl-serving:${{ github.event.inputs.container }}
       - name: Parse job schema
         working-directory: tests/integration
         id: generate_matrix
         run: |
           python3 instant_benchmark.py --parse ${{ github.event.inputs.running_template }}
+      - name: Download container
+        run: |
+          docker pull deepjavalibrary/djl-serving:${{ github.event.inputs.container }}
     outputs:
       jobs: ${{ steps.generate_matrix.outputs.jobs }}
       template: ${{ steps.generate_matrix.outputs.template }}
 
   benchmark_run:
     runs-on: [ self-hosted, "${{ github.event.inputs.instance }}" ]
+    timeout-minutes: 30
     needs: [ environment-setup ]
     strategy:
       matrix:
@@ -89,16 +90,23 @@ jobs:
       - name: Run benchmark job
         working-directory: tests/integration
         run: |
-          python3 instant_benchmark.py --template ${{ needs.environment-setup.outputs.template }} \
-          --job ${{ matrix.job }}
+          echo "${{ needs.environment-setup.outputs.template }}" >> template.json
+          python3 instant_benchmark.py --template template.json \
+          --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }} \
+          --container deepjavalibrary/djl-serving:${{ github.event.inputs.container }}
           bash instant_benchmark.sh
-          docker rm -f $(docker ps -aq)
-      - name: On fail step
-        if: ${{ failure() }}
+      - name: Get serving logs
+        if: always()
         working-directory: tests/integration
         run: |
-          docker rm -f $(docker ps -aq)
+          docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.job }}
+          path: tests/integration
 
   stop-runners:
     if: always()
