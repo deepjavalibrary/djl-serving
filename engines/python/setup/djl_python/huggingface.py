@@ -589,12 +589,18 @@ class HuggingFaceService(object):
             raise e
 
     def _fetch_adapters_from_input(self, input_map: dict, input: Input):
-        adapters = input_map.pop("adapters", [])
-        if not adapters:
-            ## check if input contains adapters, possible in workflow approach
-            if input.contains_key("adapter"):
-                adapters = input.get_as_string("adapter")
-        return adapters
+        if "adapters" in input_map:
+            return input_map.pop("adapters", [])
+
+        # check content, possible in workflow approach
+        if input.contains_key("adapter"):
+            return input.get_as_string("adapter")
+
+        # check properties, possible from header
+        if "adapter" in input.get_properties():
+            return input.get_properties()["adapter"]
+
+        return []
 
 
 _service = HuggingFaceService()
