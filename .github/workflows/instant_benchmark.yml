@@ -13,7 +13,7 @@ on:
       instance:
         description: 'Instance used for benchmark'
         required: true
-        default: 'g5_12x'
+        default: 'g5_12x_ib'
         type: choice
         options:
           - g5_2x_ib
