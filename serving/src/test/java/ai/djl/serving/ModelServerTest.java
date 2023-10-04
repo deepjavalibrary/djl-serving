@@ -162,7 +162,7 @@ public class ModelServerTest {
         System.setProperty("ENGINE_CACHE_DIR", engineCacheDir);
 
         // TODO Remove when removing the temporary feature flag
-        System.setProperty("ENABLE_ADAPTER_SUPPORT", "true");
+        System.setProperty("ENABLE_ADAPTERS_PREVIEW", "true");
     }
 
     @AfterSuite

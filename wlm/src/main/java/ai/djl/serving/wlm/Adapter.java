@@ -50,8 +50,8 @@ public abstract class Adapter {
      * @return the new adapter
      */
     public static Adapter newInstance(WorkerPoolConfig<?, ?> wpc, String name, String src) {
-        if (!Boolean.parseBoolean(Utils.getEnvOrSystemProperty("ENABLE_ADAPTER_SUPPORT"))) {
-            throw new IllegalStateException("Adapter support is not enabled");
+        if (!Boolean.parseBoolean(Utils.getEnvOrSystemProperty("ENABLE_ADAPTERS_PREVIEW"))) {
+            throw new IllegalStateException("Adapters preview is not enabled");
         }
 
         if (!(wpc instanceof ModelInfo)) {
