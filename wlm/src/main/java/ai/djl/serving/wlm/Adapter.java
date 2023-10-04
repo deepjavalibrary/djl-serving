@@ -15,6 +15,7 @@ package ai.djl.serving.wlm;
 import ai.djl.inference.Predictor;
 import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.WorkerJob;
+import ai.djl.util.Utils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -51,6 +52,10 @@ public abstract class Adapter {
      * @return the new adapter
      */
     public static Adapter newInstance(WorkerPoolConfig<?, ?> wpc, String name, String src) {
+        if (!Boolean.parseBoolean(Utils.getEnvOrSystemProperty("ENABLE_ADAPTERS_PREVIEW"))) {
+            throw new IllegalStateException("Adapters preview is not enabled");
+        }
+
         if (!(wpc instanceof ModelInfo)) {
             String modelName = wpc.getId();
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
