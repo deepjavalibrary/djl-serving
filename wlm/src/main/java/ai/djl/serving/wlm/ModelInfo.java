@@ -96,6 +96,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Map<Device, ZooModel<I, O>> models;
     private transient Map<String, Adapter> adapters;
     private transient Engine engine;
+    private transient boolean initialize;
 
     /**
      * Constructs a new {@code ModelInfo} instance.
@@ -453,6 +454,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public void initialize() throws IOException, ModelException {
+        if (initialize) {
+            return;
+        }
         if (adapters == null) {
             adapters = new ConcurrentHashMap<>();
         }
@@ -474,6 +478,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 arguments.put(key, prop.getProperty(key));
             }
         }
+        initialize = true;
     }
 
     /**
@@ -902,29 +907,35 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
             modelId = s3Url;
         }
-        if (modelId == null || !modelId.startsWith("s3://")) {
+        if (modelId == null) {
             return;
         }
-
-        logger.info("S3 url found, start downloading from {}", modelId);
-        // Use fixed download path to avoid repeat download
-        String hash = Utils.hash(modelId);
-        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
-        Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
-        parent = parent.resolve("download");
-        downloadS3Dir = parent.resolve(hash);
-        if (Files.exists(downloadS3Dir)) {
-            logger.info("artifacts has been downloaded already: {}", downloadS3Dir);
-            return;
-        }
-        Files.createDirectories(parent);
-        Path tmp = Files.createTempDirectory(parent, "tmp");
-        try {
-            downloadS3(modelId, tmp.toAbsolutePath().toString());
-            Utils.moveQuietly(tmp, downloadS3Dir);
-            logger.info("Download completed! Files saved to {}", downloadS3Dir);
-        } finally {
-            Utils.deleteQuietly(tmp);
+        if (modelId.startsWith("s3://")) {
+            logger.info("S3 url found, start downloading from {}", modelId);
+            // Use fixed download path to avoid repeat download
+            String hash = Utils.hash(modelId);
+            String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+            Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
+            parent = parent.resolve("download");
+            downloadS3Dir = parent.resolve(hash);
+            if (Files.exists(downloadS3Dir)) {
+                logger.info("artifacts has been downloaded already: {}", downloadS3Dir);
+                return;
+            }
+            Files.createDirectories(parent);
+            Path tmp = Files.createTempDirectory(parent, "tmp");
+            try {
+                downloadS3(modelId, tmp.toAbsolutePath().toString());
+                Utils.moveQuietly(tmp, downloadS3Dir);
+                logger.info("Download completed! Files saved to {}", downloadS3Dir);
+            } finally {
+                Utils.deleteQuietly(tmp);
+            }
+        } else if (modelId.startsWith("djl://")) {
+            logger.info("djl model zoo url found: {}", modelId);
+            modelUrl = modelId;
+            // download real model from model zoo
+            downloadModel();
         }
     }
 

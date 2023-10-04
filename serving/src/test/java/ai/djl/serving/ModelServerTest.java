@@ -233,6 +233,7 @@ public class ModelServerTest {
             testDescribeModel(channel);
             testUnregisterModel(channel);
             testAsyncInference(channel);
+            testDjlModelZoo(channel);
 
             testPredictionsInvalidRequestSize(channel);
 
@@ -777,6 +778,24 @@ public class ModelServerTest {
         url = "/models/echo";
         request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, url));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+    }
+
+    private void testDjlModelZoo(Channel channel) throws InterruptedException {
+        String url = "src/test/resources/zoomodel";
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=zoomodel&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Model \"zoomodel\" registered.");
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/zoomodel"));
     }
 
     private void testThrottle(Channel channel) throws InterruptedException {
