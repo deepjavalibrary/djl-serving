@@ -122,15 +122,15 @@ jobs:
           python3 llm/client.py transformers_neuronx open-llama-7b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
-      - name: Test transformers-neuronx gpt-neox-20b with handler
+      - name: Test transformers-neuronx pythia-2.8b with handler
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py transformers_neuronx gpt-neox-20b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-6 \
+          python3 llm/prepare.py transformers_neuronx pythia-2.8b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx gpt-neox-20b
+          python3 llm/client.py transformers_neuronx pythia-2.8b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: Test streaming transformers-neuronx opt-1.3b with handler

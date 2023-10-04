@@ -323,13 +323,13 @@ transformers_neuronx_handler_list = {
         "option.dtype": "fp32",
         "option.model_loading_timeout": 900
     },
-    "gpt-neox-20b": {
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+    "pythia-2.8b": {
+        "option.model_id": "s3://djl-llm/pythia-2.8b/",
         "option.batch_size": 4,
-        "option.tensor_parallel_degree": 8,
+        "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
         "option.dtype": "fp16",
-        "option.model_loading_timeout": 1200
+        "option.model_loading_timeout": 900
     },
     "open-llama-7b": {
         "option.model_id": "s3://djl-llm/open-llama-7b/",
