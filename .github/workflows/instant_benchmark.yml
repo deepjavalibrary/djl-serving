@@ -13,19 +13,19 @@ on:
       instance:
         description: 'Instance used for benchmark'
         required: true
-        default: 'g5_12x_ib'
+        default: 'g5.12xlarge'
         type: choice
         options:
-          - g5_2x_ib
-          - g5_12x_ib
-          - g5_48x_ib
-          - g4dn_12x_ib
-          - g4dn_2x_ib
-          - p4d_24x_ib
-          - inf2_8x_ib
-          - inf2_24x_ib
-          - trn1_2x_ib
-          - trn1_32x_ib
+          - g5.2xlarge
+          - g5.12xlarge
+          - g5.48xlarge
+          - g4dn.12xlarge
+          - g4dn.2xlarge
+          - p4d.24xlarge
+          - inf2.8xlarge
+          - inf2.24xlarge
+          - trn1.2xlarge
+          - trn1.32xlarge
 
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_${{ github.event.inputs.instance }} $token djl-serving
+          ./start_instance.sh action_ib_${{ github.event.inputs.instance }} $token djl-serving
     outputs:
       gpu_instance_id: ${{ steps.create_instance.outputs.action_ib_instance_id }}
 
