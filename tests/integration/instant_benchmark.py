@@ -38,6 +38,8 @@ def is_square_bracket(input_str):
 def parse_raw_template(url):
     data = urllib.request.urlopen(url)
     lines = [line.decode("utf-8").strip() for line in data]
+    # remove empty lines
+    lines = [line for line in lines if len(line) > 0]
     iterator = 0
     final_result = {}
     name = ''
