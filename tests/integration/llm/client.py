@@ -399,17 +399,17 @@ vllm_model_spec = {
 
 ds_smoothquant_model_spec = {
     "gpt-j-6b": {
-        "max_memory_per_gpu": [5.0, 5.0, 5.0, 5.0],
+        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256],
     },
     "gpt-neox-20b": {
-        "max_memory_per_gpu": [9.0, 11.0],
+        "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [1, 8],
         "seq_length": [64, 128, 256],
     },
     "llama2-13b": {
-        "max_memory_per_gpu": [7.0, 7.0, 7.0],
+        "max_memory_per_gpu": [9.0, 9.0, 9.0],
         "batch_size": [1, 2, 4],
         "seq_length": [64, 128, 256],
     }
