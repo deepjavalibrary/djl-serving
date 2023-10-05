@@ -10,6 +10,15 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+
+# smoothquant reference -
+# @InProceedings{xiao2023smoothquant,
+#     title = {{S}mooth{Q}uant: Accurate and Efficient Post-Training Quantization for Large Language Models},
+#     author = {Xiao, Guangxuan and Lin, Ji and Seznec, Mickael and Wu, Hao and Demouth, Julien and Han, Song},
+#     booktitle = {Proceedings of the 40th International Conference on Machine Learning},
+#     year = {2023}
+# }
+
 import logging
 import os
 import json
@@ -28,6 +37,20 @@ from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
 from typing import Optional
 from peft import PeftConfig, PeftModel
+
+SUPPORTED_QUANTIZATION_MODE = [
+    "smoothquant",
+    "dynamic_int8"
+]
+
+SMOOTHQUANT_SUPPORTED_MODEL_TYPES = {
+    "gpt2",
+    "gpt_neo",
+    "gptj",
+    "gpt_neox",
+    "bloom",
+    "llama",
+}
 
 OPTIMIZED_MODEL_TYPES = {
     "roberta",
@@ -119,6 +142,9 @@ class DeepSpeedService(object):
         self.tokenizer = None
         self.revision = None
 
+        self.quantize_mode = None
+        self.smoothquant_alpha = None
+
     def initialize(self, properties: dict):
         self._parse_properties(properties)
         self._read_model_config()
@@ -155,11 +181,32 @@ class DeepSpeedService(object):
                 "trust_remote_code").lower() == "true"
         if "revision" in properties:
             self.revision = properties['revision']
+
+        # SmoothQuant properties
+        self._parse_smoothquant_properties(properties)
+
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
                 self.ds_config = json.load(f)
         else:
             self.ds_config = self._get_ds_config(properties)
+
+    def _parse_smoothquant_properties(self, properties):
+        if 'quantize' in properties:
+            if properties['quantize'] not in SUPPORTED_QUANTIZATION_MODE:
+                self.logger.warning(
+                    f"DeepSpeed does not currently support quantization mode: ${properties['quantize']}, "
+                    f"this setting will be ignored.")
+                return
+            self.quantize_mode = properties['quantize']
+        if 'smoothquant_alpha' in properties:
+            try:
+                if 0 <= float(properties['smoothquant_alpha']) <= 1:
+                    self.smoothquant_alpha = properties['smoothquant_alpha']
+                else:
+                    raise ValueError(f"${properties['smoothquant_alpha']} is not between 0 and 1.")
+            except ValueError:
+                raise ValueError(f"${properties['smoothquant_alpha']} cannot convert to float number.")
 
     def _get_ds_config(self, properties: dict):
         ds_config = {
@@ -186,6 +233,17 @@ class DeepSpeedService(object):
             if self.data_type is None:
                 raise ValueError(
                     "dtype should also be provided for checkpoint loading")
+
+        if self.quantize_mode:
+            ds_config['dynamic_quant'] = {'enabled': True, 'use_cutlass': False}
+            if self.quantize_mode == 'smoothquant':
+                smoothing_value = {
+                    'smooth': True,
+                    'calibrate': True
+                }
+                if self.smoothquant_alpha:
+                    smoothing_value['alpha'] = self.smoothquant_alpha
+                ds_config['smoothing'] = smoothing_value
         return ds_config
 
     def _validate_model_type_and_task(self):
@@ -204,6 +262,10 @@ class DeepSpeedService(object):
         if self.task not in SUPPORTED_TASKS:
             raise ValueError(
                 f"task: {self.task} is not currently supported by DeepSpeed")
+
+        if self.quantize_mode == \
+                'smoothquant' and self.model_config.model_type not in SMOOTHQUANT_SUPPORTED_MODEL_TYPES:
+            raise ValueError(f"${self.quantize_mode} does not support model ${self.model_config.model_type}")
 
     def _read_model_config(self):
         try:
@@ -236,6 +298,52 @@ class DeepSpeedService(object):
                 f"Task could not be inferred from model config. "
                 f"Please manually set `task` in serving.properties.")
 
+    def get_model_pretrained(self, model_id_or_path, torch_dtype='auto', **kwargs):
+        tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
+        model = TASK_TO_MODEL[self.task].from_pretrained(model_id_or_path, torch_dtype=torch_dtype, **kwargs)
+        return model, tokenizer
+
+    def get_model_from_config(self, model_id_or_path, **kwargs):
+        tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
+        model = TASK_TO_MODEL[self.task].from_config(self.model_config, **kwargs)
+        return model, tokenizer
+
+    def get_model(self, model_id_or_path, loading_method, **kwargs):
+        if loading_method == 'from_config':
+            return self.get_model_from_config(model_id_or_path, **kwargs)
+        elif loading_method == 'pretrained':
+            return self.get_model_pretrained(model_id_or_path, **kwargs)
+        else:
+            raise RuntimeError(f'Unsupported model loading method, this should not happen.')
+
+    def load_model(self, model_id_or_path, loading_method, use_mmap_loader, **kwargs):
+        def load_model_with_mmap(model_id_or_path, loading_method):
+            import mmaploader
+            import accelerate
+            with mmaploader.load_mmap_meta() as mmap_loader:
+                with accelerate.init_empty_weights():
+                    kwargs['low_cpu_mem_usage'] = False
+                    model, tokenizer = self.get_model(model_id_or_path, loading_method, **kwargs)
+            return model, tokenizer, mmap_loader.state_dict_mmap
+
+        state_dict_mmap = {}
+        model = None
+        tokenizer = None
+        done = False
+
+        if use_mmap_loader:
+            try:
+                model, tokenizer, state_dict_mmap = load_model_with_mmap(model_id_or_path, loading_method)
+                done = True
+            except:
+                self.logger.warning(f'failed to load model with mmap loader, will load model normally')
+
+        if not done:
+            kwargs['low_cpu_mem_usage'] = True
+            model, tokenizer = self.get_model(model_id_or_path, loading_method, **kwargs)
+
+        return model, tokenizer, state_dict_mmap
+
     def create_model_pipeline(self):
         # If a ds checkpoint is provided, we instantiate model with meta tensors. weights loaded when DS engine invoked
         # Workaround on int8. fp16 fp32 bf16 init supported
@@ -243,10 +351,18 @@ class DeepSpeedService(object):
         kwargs = {"torch_dtype": dtype} if dtype else {}
         if self.revision:
             kwargs['revision'] = self.revision
+        if self.model_config.model_type in OPTIMIZED_MODEL_TYPES:
+            self.ds_config["replace_with_kernel_inject"] = True
+        else:
+            self.ds_config["replace_with_kernel_inject"] = False
+        state_dict_mmap = {}
         if "checkpoint" in self.ds_config:
-            with deepspeed.OnDevice(dtype=dtype, device="meta"):
-                model = TASK_TO_MODEL[self.task].from_config(
-                    self.model_config, **kwargs)
+            model, self.tokenizer, state_dict_mmap = self.load_model(
+                self.model_id_or_path,
+                'from_config',
+                self.ds_config['replace_with_kernel_inject'],
+                **kwargs
+            )
         elif self.peft_config is not None:
             self.logger.info(
                 f"Peft Model detected. Instantiating base model {self.peft_config.base_model_name_or_path}"
@@ -259,28 +375,26 @@ class DeepSpeedService(object):
             lora_model = PeftModel.from_pretrained(base_model,
                                                    self.model_id_or_path)
             model = lora_model.merge_and_unload()
+            self.tokenizer = AutoTokenizer.from_pretrained(self.peft_config.base_model_name_or_path)
             self.logger.info(
                 f"Peft Model merged into base model for deepspeed compatibility"
             )
         else:
-            model = TASK_TO_MODEL[self.task].from_pretrained(
+            model, self.tokenizer, state_dict_mmap = self.load_model(
                 self.model_id_or_path,
+                'pretrained',
+                self.ds_config['replace_with_kernel_inject'],
                 low_cpu_mem_usage=self.low_cpu_mem_usage,
                 trust_remote_code=self.trust_remote_code,
-                **kwargs)
+                **kwargs
+            )
         if self.data_type:
             self.ds_config["dtype"] = self.data_type
         else:
             self.ds_config["dtype"] = model.dtype
-        if self.model_config.model_type in OPTIMIZED_MODEL_TYPES:
-            self.ds_config["replace_with_kernel_inject"] = True
-        self.model = deepspeed.init_inference(model, config=self.ds_config)
-        if self.peft_config:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.peft_config.base_model_name_or_path)
-        else:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id_or_path)
+        self.ds_config['replace_state_dict'] = state_dict_mmap
+        self.model = deepspeed.init_inference(model, self.ds_config)
+
         if self.enable_streaming:
             return
         # Optimization for text-generation batch processing
