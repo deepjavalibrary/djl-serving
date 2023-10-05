@@ -54,6 +54,11 @@ LMI_DIST_ADV_MODEL = {
     "LlamaForCausalLM"
 }
 
+# https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
+FLASH_2_SUPPORTED_MODELS = {
+   "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
+}
+
 PEFT_MODEL_TASK_TO_CLS = {
     "SEQ_CLS": AutoModelForSequenceClassification,
     "SEQ_2_SEQ_LM": AutoModelForSeq2SeqLM,
@@ -77,6 +82,14 @@ def get_torch_dtype_from_str(dtype: str):
     if dtype is None:
         return None
     raise ValueError(f"Invalid data type: {dtype}")
+
+
+def enable_flash():
+    if torch.cuda.is_available():
+        major, _ = torch.cuda.get_device_capability()
+        if major >= 8:
+            return True
+    return False
 
 
 def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
@@ -106,17 +119,15 @@ class StopWord(StoppingCriteria):
         self.tokenizer = tokenizer
         self.stop_seq = stop_seq
 
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs):
         decoded_input_ids = self.tokenizer.decode(input_ids[0][-len(self.stop_seq):])
 
         matches = re.search(self.stop_seq, decoded_input_ids)
 
-        if(matches is not None):
+        if matches is not None:
             return True
-        else:
-            return False
 
-        return True
+        return False
 
 class HuggingFaceService(object):
 
@@ -135,6 +146,7 @@ class HuggingFaceService(object):
         self.model_config = None
         self.peft_config = None
         self.stopping_criteria_list = None
+        self.disable_flash_attn = None
 
     def initialize(self, properties: dict):
         # model_id can point to huggingface model_id or local directory.
@@ -189,6 +201,8 @@ class HuggingFaceService(object):
                 properties.get("dtype"))
         if "revision" in properties:
             kwargs["revision"] = properties.get('revision')
+        self.disable_flash_attn = properties.get(
+                "disable_flash_attn", "false").lower() == 'true'
         self.rolling_batch_type = properties.get("rolling_batch", None)
 
         self._read_model_config(model_id_or_path,
@@ -222,7 +236,7 @@ class HuggingFaceService(object):
                                              model_id_or_path=model_id_or_path,
                                              kwargs=kwargs)
 
-        if("stop_sequence" in properties):
+        if "stop_sequence" in properties:
             self.load_stopping_criteria_list(properties["stop_sequence"])
         self.initialized = True
 
@@ -245,7 +259,7 @@ class HuggingFaceService(object):
         Input: (str) stop_sequence - currently just one stop sequence supported
         Output: none (loads into member variable)
         """
-        if(self.tokenizer is None):
+        if self.tokenizer is None:
             return
         
         stop_seq_list = self.parse_stop_sequence_input(stop_sequence)
@@ -490,6 +504,8 @@ class HuggingFaceService(object):
             model_cls = AutoModelForSeq2SeqLM
         else:
             model_cls = AutoModelForCausalLM
+            if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash() and not self.disable_flash_attn:
+                kwargs['use_flash_attention_2'] = True
 
         if self.peft_config is not None:
             base_model = model_cls.from_pretrained(
