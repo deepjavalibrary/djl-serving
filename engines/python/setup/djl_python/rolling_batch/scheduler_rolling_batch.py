@@ -14,7 +14,6 @@
 from seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock, FalconBlock
 from seq_scheduler.search_config import SearchConfig
 from seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
-from djl_python.huggingface import FLASH_2_SUPPORTED_MODELS, enable_flash
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
@@ -23,6 +22,17 @@ import torch
 
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
+# https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
+FLASH_2_SUPPORTED_MODELS = {
+   "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
+}
+
+def enable_flash():
+    if torch.cuda.is_available():
+        major, _ = torch.cuda.get_device_capability()
+        if major >= 8:
+            return True
+    return False
 
 
 class SchedulerRollingBatch(RollingBatch):
