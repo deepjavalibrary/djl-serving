@@ -11,12 +11,14 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.8.0-cudnn8-runtime-ubuntu20.04
 FROM nvidia/cuda:$version
+ARG cuda_version=cu118
 ARG djl_version=0.24.0~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
 ARG vllm_version=0.2.1.post1
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-nightly-cp39-cp39-linux_x86_64.whl"
+ARG deepspeed_version=nightly
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp39-cp39-linux_x86_64.whl"
 ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp39-cp39-linux_x86_64.whl"
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp39-cp39-linux_x86_64.whl"
 ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp39-cp39-linux_x86_64.whl"
@@ -103,3 +105,6 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.deepspeed="true"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-25-0.deepspeed="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL deepspeed-version=$deepspeed_version
+LABEL cuda-version=$cuda_version
