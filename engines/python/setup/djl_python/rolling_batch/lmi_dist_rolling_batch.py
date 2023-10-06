@@ -63,7 +63,7 @@ class LmiDistRollingBatch(RollingBatch):
                 f"Can't set both dtype: {dtype} and quantize: {quantize}")
         if quantize is not None and quantize not in QUANTIZATION_SUPPORT_ALGO:
             raise ValueError(
-                f"Invalid value for quantize: {quantize}. Valid values are: {QUANTIZATION_SUPPORT_ALGO}"
+                f"Invalid value for quantize: {quantize}. Valid values when using option rolling_batch=lmi-dist are: {QUANTIZATION_SUPPORT_ALGO}"
             )
         if quantize is None and dtype == "int8":
             quantize = "bitsandbytes"
