@@ -882,6 +882,7 @@ jobs:
           name: ds-aot-handler-logs
 
 
+
   no-code-test:
     if: contains(fromJson('["", "hf"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
@@ -996,11 +997,27 @@ jobs:
           serve
           python3 llm/client.py deepspeed_smoothquant llama2-13b
           docker rm -f $(docker ps -aq)
+      - name: Remove models dir
+        working-directory: tests/integration
+        run: |
+          sudo rm -rf models
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          sudo rm -rf models
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ds-smoothquant-logs
+          path: tests/integration/logs/
 
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, hf-handler-test, hf-lora-correctness-test, ds-raw-test, ds-handler-test, ft-handler-test, ft-raw-test, ds-aot-raw-test, no-code-test, ft-aot-raw-test, ft-aot-handler-test, ds-handler-aot-test ]
+    needs: [ create-runners, hf-handler-test, hf-lora-correctness-test, ds-raw-test, ds-handler-test, ft-handler-test, ft-raw-test, ds-aot-raw-test, no-code-test, ft-aot-raw-test, ft-aot-handler-test, ds-handler-aot-test, ds-smoothquant-handler-test ]
     steps:
       - name: Stop all instances
         run: |
