@@ -357,6 +357,11 @@ class DeepSpeedService(object):
             self.ds_config["replace_with_kernel_inject"] = False
         state_dict_mmap = {}
         if "checkpoint" in self.ds_config:
+            if self.quantize_mode:
+                raise ValueError(
+                    f"quantize option does NOT currently work WITH DeepSpeed checkpoints using checkpoint option. "
+                    f"Please using quantization with a standard HuggingFace checkpoint or "
+                    f"turn off quantization and try again.")
             model, self.tokenizer, state_dict_mmap = self.load_model(
                 self.model_id_or_path,
                 'from_config',
