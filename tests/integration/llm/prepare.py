@@ -485,6 +485,31 @@ unmerged_lora_correctness_list = {
     }
 }
 
+ds_smoothquant_model_list = {
+    "gpt-j-6b": {
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp16",
+        "option.task": "text-generation",
+        "option.quantize": "smoothquant",
+    },
+    "gpt-neox-20b": {
+        "option.model_id": "s3://djl-llm/gpt-neox-20b",
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp16",
+        "option.task": "text-generation",
+        "option.quantize": "smoothquant",
+        "option.smoothquant_alpha": 0.65,
+    },
+    "llama2-13b": {
+        "option.model_id": "TheBloke/Llama-2-13B-fp16",
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp16",
+        "option.task": "text-generation",
+        "option.quantize": "dynamic_int8",
+    },
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -718,6 +743,17 @@ def build_unmerged_lora_correctness_model(model):
     shutil.copyfile("llm/unmerged_lora.py", "models/test/model.py")
 
 
+def build_ds_smoothquant_model(model):
+    if model not in ds_smoothquant_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(ds_smoothquant_model_list.keys())}"
+        )
+    options = ds_smoothquant_model_list[model]
+    options["engine"] = "DeepSpeed"
+    options["entryPoint"] = "djl_python.deepspeed"
+    write_model_artifacts(options)
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
     'huggingface': build_hf_handler_model,
@@ -735,6 +771,7 @@ supported_handler = {
     'lmi_dist': build_lmi_dist_model,
     'vllm': build_vllm_model,
     'unmerged_lora': build_unmerged_lora_correctness_model,
+    'deepspeed_smoothquant': build_ds_smoothquant_model,
 }
 
 if __name__ == '__main__':
