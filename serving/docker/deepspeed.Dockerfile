@@ -15,6 +15,7 @@ ARG djl_version=0.24.0~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
+ARG vllm_version=0.2.0
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-nightly-py2.py3-none-any.whl"
 ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn-1.0.9-cp39-cp39-linux_x86_64.whl"
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp39-cp39-linux_x86_64.whl"
@@ -72,7 +73,7 @@ RUN apt-get update && \
     ${lmi_vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    optimum==${optimum_version} auto-gptq==${auto_gptq_version} \
+    optimum==${optimum_version} auto-gptq==${auto_gptq_version} vllm==${vllm_version} pandas pyarrow \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
