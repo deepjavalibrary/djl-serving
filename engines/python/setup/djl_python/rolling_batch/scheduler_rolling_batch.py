@@ -22,6 +22,17 @@ import torch
 
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
+# https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
+FLASH_2_SUPPORTED_MODELS = {
+   "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
+}
+
+def enable_flash():
+    if torch.cuda.is_available():
+        major, _ = torch.cuda.get_device_capability()
+        if major >= 8:
+            return True
+    return False
 
 
 class SchedulerRollingBatch(RollingBatch):
@@ -39,6 +50,7 @@ class SchedulerRollingBatch(RollingBatch):
         super().__init__(device, **kwargs)
         self._init_model_and_tokenizer(model_id_or_path,
                                        device=device,
+                                       properties=properties,
                                        multi_gpu=properties.get(
                                            'multi_gpu', None),
                                        **kwargs)
@@ -96,6 +108,7 @@ class SchedulerRollingBatch(RollingBatch):
                                   model_id_or_path,
                                   device=None,
                                   multi_gpu=None,
+                                  properties=None,
                                   **kwargs):
         if "waiting_steps" in kwargs:
             kwargs.pop("waiting_steps")
@@ -119,6 +132,11 @@ class SchedulerRollingBatch(RollingBatch):
                     raise Exception("Wrong input type of device")
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
+
+            if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
+                if properties.get(
+                    "disable_flash_attn", "false").lower() != 'true':
+                    kwargs['use_flash_attention_2'] = True
 
             if "lmi_dist_sharding" == multi_gpu:
                 if 'neox' in model_id_or_path:

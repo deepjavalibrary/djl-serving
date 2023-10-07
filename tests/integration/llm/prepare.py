@@ -729,7 +729,7 @@ def build_vllm_model(model):
     options["engine"] = "Python"
     options["option.rolling_batch"] = "vllm"
     options["option.output_formatter"] = "jsonlines"
-    write_model_artifacts(options, ["vllm==0.2.0", "pandas", "pyarrow"])
+    write_model_artifacts(options)
 
 
 def build_unmerged_lora_correctness_model(model):

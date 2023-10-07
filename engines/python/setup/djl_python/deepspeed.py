@@ -357,6 +357,11 @@ class DeepSpeedService(object):
             self.ds_config["replace_with_kernel_inject"] = False
         state_dict_mmap = {}
         if "checkpoint" in self.ds_config:
+            if self.quantize_mode:
+                raise ValueError(
+                    f"quantize option does NOT currently work WITH DeepSpeed checkpoints using checkpoint option. "
+                    f"Please using quantization with a standard HuggingFace checkpoint or "
+                    f"turn off quantization and try again.")
             model, self.tokenizer, state_dict_mmap = self.load_model(
                 self.model_id_or_path,
                 'from_config',
@@ -393,16 +398,24 @@ class DeepSpeedService(object):
         else:
             self.ds_config["dtype"] = model.dtype
         self.ds_config['replace_state_dict'] = state_dict_mmap
-        self.model = deepspeed.init_inference(model, self.ds_config)
 
-        if self.enable_streaming:
-            return
         # Optimization for text-generation batch processing
         if self.task == "text-generation":
             self.tokenizer.padding_side = "left"
             if not self.tokenizer.pad_token:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        # If doing smoothquant calibration, set tokenizer
+        smoothing_config = self.ds_config.get("smoothing", {})
+        if smoothing_config.get("calibrate", False):
+            smoothing_config["tokenizer"] = self.tokenizer
+
+        self.model = deepspeed.init_inference(model, self.ds_config)
+
+        # Don't create a "pipeline" if we're streaming or text-generation task, since those don't use a pipeline
+        if self.enable_streaming or self.task == "text-generation":
             return
+
         self.pipeline = pipeline(task=self.task,
                                  model=self.model.module,
                                  tokenizer=self.tokenizer,

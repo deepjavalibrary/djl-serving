@@ -38,6 +38,8 @@ def is_square_bracket(input_str):
 def parse_raw_template(url):
     data = urllib.request.urlopen(url)
     lines = [line.decode("utf-8").strip() for line in data]
+    # remove empty lines
+    lines = [line for line in lines if len(line) > 0]
     iterator = 0
     final_result = {}
     name = ''
@@ -112,12 +114,16 @@ def build_running_script(template, job, instance, container):
     with open(template) as f:
         template = json.load(f)
     job_template = template[job]
-    job_template['awscurl'] = bytes.fromhex(job_template['awscurl']).decode("utf-8")
+    job_template['awscurl'] = bytes.fromhex(
+        job_template['awscurl']).decode("utf-8")
     write_model_artifacts(job_template['properties'],
                           job_template['requirements'])
 
     command_str = f"./launch_container.sh {container} $PWD/models {machine_translation(instance)}"
-    bash_command = ['echo "Start Launching container..."', command_str, job_template['awscurl']]
+    bash_command = [
+        'echo "Start Launching container..."', command_str,
+        job_template['awscurl']
+    ]
     with open("instant_benchmark.sh", "w") as f:
         f.write('\n'.join(bash_command))
 
@@ -131,7 +137,8 @@ if __name__ == "__main__":
         command = f"echo \"template={json.dumps(json.dumps(json.dumps(result)))}\" >> $GITHUB_OUTPUT"
         sp.call(command, shell=True)
     elif args.template and args.job and args.instance and args.container:
-        build_running_script(args.template, args.job, args.instance, args.container)
+        build_running_script(args.template, args.job, args.instance,
+                             args.container)
     else:
         parser.print_help()
         raise ValueError("args not supported")
