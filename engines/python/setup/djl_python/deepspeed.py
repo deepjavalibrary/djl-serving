@@ -310,6 +310,8 @@ class DeepSpeedService(object):
 
     def get_model(self, model_id_or_path, loading_method, **kwargs):
         if loading_method == 'from_config':
+            if 'low_cpu_mem_usage' in kwargs:
+                kwargs.pop('low_cpu_mem_usage')
             return self.get_model_from_config(model_id_or_path, **kwargs)
         elif loading_method == 'pretrained':
             return self.get_model_pretrained(model_id_or_path, **kwargs)

@@ -62,6 +62,7 @@ if $is_partition; then
     ${model_path:+-v ${model_path}/test:/opt/ml/input/data/training} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     ${runtime:+--runtime="${runtime}"} \
