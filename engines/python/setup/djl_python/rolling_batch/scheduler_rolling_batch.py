@@ -135,7 +135,7 @@ class SchedulerRollingBatch(RollingBatch):
 
             if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
                 if properties.get(
-                    "disable_flash_attn", "false").lower() != 'true':
+                    "disable_flash_attn", "true").lower() != 'true':
                     kwargs['use_flash_attention_2'] = True
 
             if "lmi_dist_sharding" == multi_gpu:
