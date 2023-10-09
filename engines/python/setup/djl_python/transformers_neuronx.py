@@ -53,7 +53,7 @@ class TransformersNeuronXService(object):
 
     def __init__(self) -> None:
         self.initialized = False
-        self.batch_size = None
+        self.batch_size = 1
         self.model_id_or_path = None
         self.tensor_parallel_degree = None
         self.model = None
@@ -149,7 +149,10 @@ class TransformersNeuronXService(object):
             level = properties.get("neuron_optimize_level")
             os.environ["NEURON_CC_FLAGS"] = os.environ[
                 "NEURON_CC_FLAGS"] + f" -O{level}"
-        self.batch_size = int(properties.get("batch_size", 1))
+        if "batch_size" in properties:
+            self.batch_size = int(properties.get("batch_size"))
+        if "max_rolling_batch_size" in properties:
+            self.batch_size = int(properties.get("max_rolling_batch_size"))
         self.tensor_parallel_degree = int(
             properties.get("tensor_parallel_degree", 1))
         self.model_id_or_path = properties.get("model_id") or properties.get(
