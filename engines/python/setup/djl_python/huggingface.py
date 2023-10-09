@@ -202,7 +202,7 @@ class HuggingFaceService(object):
         if "revision" in properties:
             kwargs["revision"] = properties.get('revision')
         self.disable_flash_attn = properties.get(
-                "disable_flash_attn", "false").lower() == 'true'
+                "disable_flash_attn", "true").lower() == 'true'
         self.rolling_batch_type = properties.get("rolling_batch", None)
 
         self._read_model_config(model_id_or_path,
