@@ -408,9 +408,14 @@ ds_smoothquant_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [64, 128, 256],
     },
-    "llama2-13b": {
+    "llama2-13b-dynamic-int8": {
         "max_memory_per_gpu": [9.0, 9.0, 9.0],
         "batch_size": [1, 2, 4],
+        "seq_length": [64, 128, 256],
+    },
+    "llama2-13b-smoothquant": {
+        "max_memory_per_gpu": [9.0, 9.0, 9.0],
+        "batch_size": [2, 4, 8],
         "seq_length": [64, 128, 256],
     }
 }

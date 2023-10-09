@@ -489,24 +489,23 @@ ds_smoothquant_model_list = {
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16",
-        "option.task": "text-generation",
         "option.quantize": "smoothquant",
     },
     "gpt-neox-20b": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16",
-        "option.task": "text-generation",
         "option.quantize": "smoothquant",
         "option.smoothquant_alpha": 0.65,
     },
-    "llama2-13b": {
+    "llama2-13b-dynamic-int8": {
+        "option.model_id": "TheBloke/Llama-2-13B-fp16",
+        "option.tensor_parallel_degree": 2,
+        "option.quantize": "dynamic_int8",
+    },
+    "llama2-13b-smoothquant": {
         "option.model_id": "TheBloke/Llama-2-13B-fp16",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16",
-        "option.task": "text-generation",
-        "option.quantize": "dynamic_int8",
+        "option.quantize": "smoothquant",
     },
 }
 
@@ -751,6 +750,8 @@ def build_ds_smoothquant_model(model):
     options = ds_smoothquant_model_list[model]
     options["engine"] = "DeepSpeed"
     options["entryPoint"] = "djl_python.deepspeed"
+    options["dtype"] = "fp16"
+    options["task"] = "text-generation"
     write_model_artifacts(options)
 
 

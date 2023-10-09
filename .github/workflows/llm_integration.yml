@@ -996,10 +996,19 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py deepspeed_smoothquant llama2-13b
+          python3 llm/prepare.py deepspeed_smoothquant llama2-13b-dynamic-int8
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
-          python3 llm/client.py deepspeed_smoothquant llama2-13b
+          python3 llm/client.py deepspeed_smoothquant llama2-13b-dynamic-int8
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-13b smoothquant
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_smoothquant llama2-13b-smoothquant
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_smoothquant llama2-13b-smoothquant
           docker rm -f $(docker ps -aq)
       - name: Remove models dir
         working-directory: tests/integration
