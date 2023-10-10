@@ -69,6 +69,7 @@ class TransformersNeuronXService(object):
         self.revision = None
         self.rolling_batch = None
         self.load_in_8bit = False
+        self.low_cpu_mem_usage = False
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
@@ -146,11 +147,11 @@ class TransformersNeuronXService(object):
     def load_model(self, model_type):
         self.model = self.load_hf_model()
         load_path = self.get_load_path(model_type)
-        try:
-            logging.info("Trying to transfer weights in-memory")
+        if not self.low_cpu_mem_usage:
+            logging.info("Transferring weights from HF to INF2 in-memory")
             self.model = self.load_inf2_model_from_memory(model_type)
-        except Exception as exc:
-            logging.info(f"Falling back to disk transfer due to {str(exc)}")
+        else:
+            logging.info("Transferring weights from HF to INF2 through disk")
             self.model = self.load_inf2_model_from_disk(model_type, load_path)
         logging.info(f"LLM sharding and compiling Started ...")
         start = time.time()
@@ -197,6 +198,9 @@ class TransformersNeuronXService(object):
         if "load_in_8bit" in properties:
             self.load_in_8bit = properties.get(
                 "load_in_8bit").lower() == 'true'
+        if "low_cpu_mem_usage" in properties:
+            self.low_cpu_mem_usage = properties.get(
+                "low_cpu_mem_usage").lower() == 'true'
         model_config = AutoConfig.from_pretrained(self.model_id_or_path,
                                                   revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
