@@ -69,6 +69,7 @@ class TransformersNeuronXService(object):
         self.revision = None
         self.rolling_batch = None
         self.load_in_8bit = False
+        self.low_cpu_mem_usage = False
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
@@ -80,11 +81,6 @@ class TransformersNeuronXService(object):
         os.mkdir(os.path.join(path, folder))
         self.download_dir = os.path.join(path, folder)
         return self.download_dir
-
-    def convert_model(self, load_path):
-        self.model = self.load_hf_model()
-        logging.info(f"Saving INF2 model to {load_path} ...")
-        save_pretrained_split(self.model, load_path)
 
     def get_load_path(self, model_type):
         if self.download_dir:
@@ -101,7 +97,9 @@ class TransformersNeuronXService(object):
             revision=self.revision,
             low_cpu_mem_usage=True)
 
-    def load_inf2_model(self, model_type, load_path):
+    def load_inf2_model_from_disk(self, model_type, load_path):
+        logging.info(f"Saving INF2 model to {load_path} ...")
+        save_pretrained_split(self.model, load_path)
         if self.load_in_8bit:
             neuron_config = NeuronConfig()
             neuron_config.quant = QuantizationConfig(quant_dtype='s8',
@@ -122,10 +120,39 @@ class TransformersNeuronXService(object):
             n_positions=self.n_positions,
             unroll=self.unroll)
 
+    def load_inf2_model_from_memory(self, model_type):
+        if self.load_in_8bit:
+            neuron_config = NeuronConfig()
+            neuron_config.quant = QuantizationConfig(quant_dtype='s8',
+                                                     dequant_dtype=self.amp)
+            model = MODEL_TYPE_TO_MODEL[model_type](
+                self.model.config,
+                batch_size=self.batch_size,
+                amp=self.amp,
+                tp_degree=self.tensor_parallel_degree,
+                n_positions=self.n_positions,
+                neuron_config=neuron_config,
+                unroll=self.unroll)
+        else:
+            model = MODEL_TYPE_TO_MODEL[model_type](
+                self.model.config,
+                batch_size=self.batch_size,
+                amp=self.amp,
+                tp_degree=self.tensor_parallel_degree,
+                n_positions=self.n_positions,
+                unroll=self.unroll)
+        model.load_state_dict_low_memory(self.model.state_dict())
+        return model
+
     def load_model(self, model_type):
+        self.model = self.load_hf_model()
         load_path = self.get_load_path(model_type)
-        self.convert_model(load_path)
-        self.model = self.load_inf2_model(model_type, load_path)
+        if not self.low_cpu_mem_usage:
+            logging.info("Transferring weights from HF to INF2 in-memory")
+            self.model = self.load_inf2_model_from_memory(model_type)
+        else:
+            logging.info("Transferring weights from HF to INF2 through disk")
+            self.model = self.load_inf2_model_from_disk(model_type, load_path)
         logging.info(f"LLM sharding and compiling Started ...")
         start = time.time()
         # TODO: workaround on Neuron Compiler bug for SM
@@ -174,6 +201,9 @@ class TransformersNeuronXService(object):
         if "load_in_8bit" in properties:
             self.load_in_8bit = properties.get(
                 "load_in_8bit").lower() == 'true'
+        if "low_cpu_mem_usage" in properties:
+            self.low_cpu_mem_usage = properties.get(
+                "low_cpu_mem_usage").lower() == 'true'
         model_config = AutoConfig.from_pretrained(self.model_id_or_path,
                                                   revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
