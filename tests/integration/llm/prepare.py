@@ -499,7 +499,7 @@ ds_smoothquant_model_list = {
     },
     "llama2-13b-dynamic-int8": {
         "option.model_id": "TheBloke/Llama-2-13B-fp16",
-        "option.tensor_parallel_degree": 2,
+        "option.tensor_parallel_degree": 4,
         "option.quantize": "dynamic_int8",
     },
     "llama2-13b-smoothquant": {
