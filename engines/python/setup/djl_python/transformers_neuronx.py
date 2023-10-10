@@ -141,7 +141,7 @@ class TransformersNeuronXService(object):
                 n_positions=self.n_positions,
                 unroll=self.unroll)
         model.load_state_dict_low_memory(self.model.state_dict())
-        return model.load_state_dict_low_memory(self.model.state_dict())
+        return model
 
     def load_model(self, model_type):
         self.model = self.load_hf_model()
