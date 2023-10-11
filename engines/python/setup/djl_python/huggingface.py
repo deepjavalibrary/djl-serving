@@ -51,7 +51,8 @@ ARCHITECTURES_2_TASK = {
 
 LMI_DIST_ADV_MODEL = {
     "RWForCausalLM", "GPTNeoXForCausalLM", "T5ForConditionalGeneration",
-    "LlamaForCausalLM"
+    "LlamaForCausalLM", "FalconForCausalLM", "MPTForCausalLM",
+    "GPTBigCodeForCausalLM",
 }
 
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
