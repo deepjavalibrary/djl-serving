@@ -58,6 +58,8 @@ class LmiDistRollingBatch(RollingBatch):
         revision = self.properties.get('revision', None)
         paged_attention = self.properties.get("paged_attention",
                                               "true").lower() == "true"
+        use_aiccl_backend = self.properties.get("use_aiccl_backend",
+                                                "true").lower() == "true"
         if quantize is not None and dtype is not None:
             raise ValueError(
                 f"Can't set both dtype: {dtype} and quantize: {quantize}")
@@ -74,7 +76,9 @@ class LmiDistRollingBatch(RollingBatch):
             quantize=quantize,
             dtype=dtype,
             trust_remote_code=kwargs.get("trust_remote_code"),
-            paged_attention=paged_attention)
+            paged_attention=paged_attention,
+            use_aiccl_backend=use_aiccl_backend,
+        )
         self.batch_cls = self.model.batch_type
         if paged_attention:
             self._warmup(**kwargs)

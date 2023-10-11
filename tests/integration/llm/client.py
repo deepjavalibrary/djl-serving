@@ -417,7 +417,26 @@ ds_smoothquant_model_spec = {
         "max_memory_per_gpu": [9.0, 9.0, 9.0],
         "batch_size": [2, 4, 8],
         "seq_length": [64, 128, 256],
-    }
+    },
+}
+
+#TODO: Update max_memory_per_gpu
+lmi_dist_aiccl_model_spec = {
+    "llama-2-70b-aiccl": {
+        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0],
+        "batch_size": [1, 2, 4, 8],
+        "seq_length": [64, 128, 256],
+    },
+    "codellama-34b-aiccl": {
+        "max_memory_per_gpu": [15.0, 15.0],
+        "batch_size": [1, 8],
+        "seq_length": [64, 128, 256],
+    },
+    "falcon-40b-aiccl": {
+        "max_memory_per_gpu": [9.0, 9.0, 9.0],
+        "batch_size": [1, 2, 4],
+        "seq_length": [64, 128, 256],
+    },
 }
 
 
@@ -857,6 +876,8 @@ if __name__ == "__main__":
         test_unmerged_lora_correctness()
     elif args.handler == "deepspeed_smoothquant":
         test_ds_smoothquant(args.model, ds_smoothquant_model_spec)
+    elif args.handler == "lmi_dist_aiccl":
+        test_handler(args.model, lmi_dist_aiccl_model_spec)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")

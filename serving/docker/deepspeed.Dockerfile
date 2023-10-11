@@ -26,6 +26,7 @@ ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-an
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-nightly-py3-none-any.whl"
+ARG aiccl_wheel="https://publish.djl.ai/aiccl/aiccl-nightly-cp39-cp39-linux_x86_64.whl"
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
@@ -72,7 +73,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
     ${deepspeed_wheel} ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
-    ${lmi_vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} protobuf==${protobuf_version} \
+    ${lmi_vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} zstandard datasets==${datasets_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} vllm==${vllm_version} pandas pyarrow \
