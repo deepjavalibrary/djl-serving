@@ -213,10 +213,10 @@ ft_handler_list = {
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1
     },
-    "Salesforce/xgen-7b-8k-base": {
+    "llama2-7b": {
         "engine": "Python",
         "option.entryPoint": "djl_python.fastertransformer",
-        "option.model_id": "Salesforce/xgen-7b-8k-base",
+        "option.model_id": "s3://djl-llm/llama-2-7b-hf/",
         "option.tensor_parallel_degree": 2,
         "option.dtype": "fp16",
         "gpu.maxWorkers": 1,
