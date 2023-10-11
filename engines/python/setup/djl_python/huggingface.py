@@ -213,7 +213,7 @@ class HuggingFaceService(object):
             if "output_formatter" in properties:
                 kwargs["output_formatter"] = properties.get("output_formatter")
             if "waiting_steps" in properties:
-                kwargs["waiting_steps"] = properties.get("waiting_steps")
+                kwargs["waiting_steps"] = int(properties.get("waiting_steps"))
             self.rolling_batch_type = self.rolling_batch_type.lower()
             is_mpi = properties.get("engine") != "Python"
             if is_mpi:
