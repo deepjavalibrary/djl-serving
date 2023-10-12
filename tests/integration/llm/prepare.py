@@ -280,22 +280,105 @@ performance_test_list = {
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/opt-30b/"
     },
-    "open-llama-13b": {
+    "open-llama-13b-fp16-deepspeed": {
         "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "deepspeed",
         "option.model_id": "s3://djl-llm/open-llama-13b/"
     },
-    "gpt-j-6b": {
+    "open-llama-13b-fp16-huggingface": {
         "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "huggingface",
+        "option.model_id": "s3://djl-llm/open-llama-13b/"
+    },
+    "open-llama-13b-bf16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "option.engine": "deepspeed",
+        "option.model_id": "s3://djl-llm/open-llama-13b/"
+    },
+    "open-llama-13b-bf16-huggingface": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "option.engine": "huggingface",
+        "option.model_id": "s3://djl-llm/open-llama-13b/"
+    },
+    "open-llama-13b-smoothquant": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.dtype": "fp16",
+        "option.engine": "deepspeed",
+        "option.quantize": "smoothquant"
+    },
+    "gpt-j-6b-fp16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "deepspeed",
         "option.model_id": "s3://djl-llm/gpt-j-6b/"
+    },
+    "gpt-j-6b-fp16-huggingface": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "huggingface",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/"
+    },
+    "gpt-j-6b-bf16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "option.engine": "deepspeed",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/"
+    },
+    "gpt-j-6b-bf16-huggingface": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "option.engine": "huggingface",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/"
+    },
+    "gpt-j-6b-smoothquant": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "deepspeed",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.quantize": "smoothquant"
     },
     "bloom-7b1": {
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/bloom-7b1/"
     },
-    "gpt-neox-20b": {
+    "gpt-neox-20b-fp16-deepspeed": {
         "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "deepspeed",
         "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+    },
+    "gpt-neox-20b-fp16-huggingface": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "huggingface",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+    },
+    "gpt-neox-20b-bf16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "option.engine": "deepspeed",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+    },
+    "gpt-neox-20b-bf16-huggingface": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "option.engine": "huggingface",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+    },
+    "gpt-neox-20b-smoothquant": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.engine": "deepspeed",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.quantize": "smoothquant",
+        "option.smoothquant_alpha": 0.65
     }
+
 }
 
 transformers_neuronx_handler_list = {
@@ -598,9 +681,17 @@ def build_performance_model(model):
     else:
         options = {"option.task": "text-generation", "option.model_id": model}
     options["option.predict_timeout"] = 240
-    options["option.dtype"] = args.dtype
+    if args.dtype:
+        options["option.dtype"] = args.dtype
+    if options.get('option.dtype') is None:
+        raise ValueError("Need to provide dtype for performance benchmark")
     options["option.tensor_parallel_degree"] = args.tensor_parallel
-    for k, v in default_accel_configs[args.engine].items():
+    engine = options.get('option.engine')
+    if args.engine:
+        engine = args.engine
+    if engine is None:
+        raise ValueError("Need to provide engine for performance benchmark")
+    for k, v in default_accel_configs[engine].items():
         if k not in options:
             options[k] = v
     write_model_artifacts(options)

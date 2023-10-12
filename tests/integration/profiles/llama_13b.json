@@ -1,8 +1,6 @@
 {
 	"test_series":"performance",
-	"engine":["deepspeed","huggingface"],
-	"model": "open-llama-13b",
-	"dtype": ["fp16","bf16"],
+	"model": ["open-llama-13b-fp16-deepspeed", "open-llama-13b-fp16-huggingface", "open-llama-13b-bf16-deepspeed", "open-llama-13b-bf16-huggingface", "open-llama-13b-smoothquant"],
 	"tensor_parallel": 4,
 	"batch_size": 4,
 	"in_tokens": [256, 512],
