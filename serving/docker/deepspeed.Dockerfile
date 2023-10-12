@@ -52,6 +52,7 @@ ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV BITSANDBYTES_NOWELCOME=1
+ENV USE_AICCL_BACKEND=True
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
