@@ -805,7 +805,16 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             int gpuCount = eng.getGpuCount();
             String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
             v = prop.getProperty("option.tensor_parallel_degree", v);
-            int tpDegree = Integer.parseInt(v);
+            int tpDegree;
+            if ("max".equals(v)) {
+                if (gpuCount > 0) {
+                    tpDegree = gpuCount;
+                } else {
+                    tpDegree = NeuronUtils.getNeuronCores();
+                }
+            } else {
+                tpDegree = Integer.parseInt(v);
+            }
             if (gpuCount > 0) {
                 int gpuPerWorker = 1;
                 if ("Python".equals(engineName)) {
