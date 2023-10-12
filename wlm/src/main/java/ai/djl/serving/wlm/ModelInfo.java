@@ -702,6 +702,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             String key = entry.getKey();
             if (key.startsWith("OPTION_")) {
                 key = key.substring(7).toLowerCase(Locale.ROOT);
+                if ("entrypoint".equals(key)) {
+                    key = "entryPoint";
+                }
                 prop.putIfAbsent("option." + key, entry.getValue());
             }
         }
