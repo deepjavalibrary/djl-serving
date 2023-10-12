@@ -1,8 +1,6 @@
 {
 	"test_series":"performance",
-	"engine":["deepspeed","huggingface"],
-	"model": "gpt-neox-20b",
-	"dtype": ["fp16","bf16"],
+	"model": ["gpt-neox-20b-fp16-deepspeed", "gpt-neox-20b-fp16-huggingface", "gpt-neox-20b-bf16-deepspeed", "gpt-neox-20b-bf16-huggingface", "gpt-neox-20b-smoothquant"],
 	"tensor_parallel": 4,
 	"batch_size": 4,
 	"in_tokens": [256, 512],

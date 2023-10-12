@@ -124,7 +124,7 @@ class LMITestSetupBuilder:
         required_parameters = []
         if series == "performance":
             required_parameters = [
-                "engine", "dtype", "tensor_parallel", "batch_size",
+                "tensor_parallel", "batch_size",
                 "out_tokens", "count"
             ]
         for param in required_parameters:
@@ -324,6 +324,7 @@ class LMITestRunner:
         test["cpu_memory"] = self.max_cpu_memory_used()
         positional_args = self.get_script_args(test, self.test_sequence_keys)
         command = f"python3 llm/client.py {positional_args}"
+        logging.info(command)
         try:
             output = sp.check_output(command, shell=True, stderr=sp.STDOUT)
         except sp.CalledProcessError as cpe:
