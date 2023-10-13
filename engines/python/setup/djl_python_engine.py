@@ -146,6 +146,7 @@ def main():
         logging.basicConfig(stream=sys.stdout,
                             format="%(message)s",
                             level=logging.INFO)
+        configure_sm_logging()
         logging.info(
             f"{pid} - djl_python_engine started with args: {sys.argv[1:]}")
         args = ArgParser.python_engine_args().parse_args()
@@ -186,6 +187,5 @@ def configure_sm_logging():
 
 
 if __name__ == "__main__":
-    configure_sm_logging()
     main()
     exit(1)
