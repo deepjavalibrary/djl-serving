@@ -63,6 +63,7 @@ class TransformersNeuronXService(object):
         self.amp = None
         self.unroll = None
         self.n_positions = None
+        self.context_length_estimate = None
         self.model_type = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
@@ -111,12 +112,14 @@ class TransformersNeuronXService(object):
                 tp_degree=self.tensor_parallel_degree,
                 n_positions=self.n_positions,
                 neuron_config=neuron_config,
+                context_length_estimate=self.context_length_estimate,
                 unroll=self.unroll)
         return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
             load_path,
             batch_size=self.batch_size,
             amp=self.amp,
             tp_degree=self.tensor_parallel_degree,
+            context_length_estimate=self.context_length_estimate,
             n_positions=self.n_positions,
             unroll=self.unroll)
 
@@ -130,6 +133,7 @@ class TransformersNeuronXService(object):
                 batch_size=self.batch_size,
                 amp=self.amp,
                 tp_degree=self.tensor_parallel_degree,
+                context_length_estimate=self.context_length_estimate,
                 n_positions=self.n_positions,
                 neuron_config=neuron_config,
                 unroll=self.unroll)
@@ -139,6 +143,7 @@ class TransformersNeuronXService(object):
                 batch_size=self.batch_size,
                 amp=self.amp,
                 tp_degree=self.tensor_parallel_degree,
+                context_length_estimate=self.context_length_estimate,
                 n_positions=self.n_positions,
                 unroll=self.unroll)
         model.load_state_dict_low_memory(self.model.state_dict())
@@ -204,6 +209,9 @@ class TransformersNeuronXService(object):
         if "low_cpu_mem_usage" in properties:
             self.low_cpu_mem_usage = properties.get(
                 "low_cpu_mem_usage").lower() == 'true'
+        if "context_length_estimate" in properties:
+            # expect input like [256, 1024, 2048]
+            self.context_length_estimate = json.loads(properties.get("context_length_estimate"))
         model_config = AutoConfig.from_pretrained(self.model_id_or_path,
                                                   revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:

@@ -822,6 +822,7 @@ def test_ds_smoothquant(model, model_spec):
             for memory in memory_usage:
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
 
+
 def test_unmerged_lora_correctness():
     res = send_json({})
     logging.info(f"res: {res.json()}")
