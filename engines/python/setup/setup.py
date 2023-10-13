@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import os
 import setuptools.command.build_py
 from setuptools import setup, find_packages
 
@@ -28,6 +29,15 @@ def detect_version():
     return None
 
 
+def add_version(version_str):
+    djl_version_string = f"__version__ = '{version_str}'"
+    with open(os.path.join("djl_python", "__init__.py"), 'r') as f:
+        existing = [i.strip() for i in f.readlines()]
+    with open(os.path.join("djl_python", "__init__.py"), 'a') as f:
+        if djl_version_string not in existing:
+            f.writelines(['\n', djl_version_string])
+
+
 def pypi_description():
     with open('PyPiDescription.rst') as df:
         return df.read()
@@ -41,6 +51,7 @@ class BuildPy(setuptools.command.build_py.build_py):
 
 if __name__ == '__main__':
     version = detect_version()
+    add_version(version)
 
     requirements = ['psutil', 'packaging', 'wheel']
 

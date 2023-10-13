@@ -25,6 +25,7 @@ from djl_python.arg_parser import ArgParser
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.service_loader import load_model_service
+from djl_python.sm_log_filter import SMLogFilter
 
 SOCKET_ACCEPT_TIMEOUT = 30.0
 
@@ -175,6 +176,16 @@ def main():
                 os.remove(pid_file)
 
 
+def configure_sm_logging():
+    if 'SM_TELEMETRY_LOG_REV_2022_12' in os.environ:
+        # https://docs.aws.amazon.com/deep-learning-containers/latest/devguide/logging-and-monitoring.html
+        root_logger = logging.getLogger()
+        sm_log_handler = logging.FileHandler(filename=os.getenv('SM_TELEMETRY_LOG_REV_2022_12'))
+        sm_log_handler.addFilter(SMLogFilter())
+        root_logger.addHandler(sm_log_handler)
+
+
 if __name__ == "__main__":
+    configure_sm_logging()
     main()
     exit(1)
