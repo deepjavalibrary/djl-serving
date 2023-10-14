@@ -71,6 +71,7 @@ class TransformersNeuronXService(object):
         self.rolling_batch = None
         self.load_in_8bit = False
         self.low_cpu_mem_usage = False
+        self.load_split_model = False
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
@@ -99,8 +100,9 @@ class TransformersNeuronXService(object):
             low_cpu_mem_usage=True)
 
     def load_inf2_model_from_disk(self, model_type, load_path):
-        logging.info(f"Saving INF2 model to {load_path} ...")
-        save_pretrained_split(self.model, load_path)
+        if not self.load_split_model:
+            logging.info(f"Saving INF2 model to {load_path} ...")
+            save_pretrained_split(self.model, load_path)
         if self.load_in_8bit:
             neuron_config = NeuronConfig()
             neuron_config.quant = QuantizationConfig(quant_dtype='s8',
@@ -150,8 +152,11 @@ class TransformersNeuronXService(object):
         return model
 
     def load_model(self, model_type):
-        self.model = self.load_hf_model()
-        load_path = self.get_load_path(model_type)
+        if not self.load_split_model:
+            self.model = self.load_hf_model()
+            load_path = self.get_load_path(model_type)
+        else:
+            load_path = self.model_id_or_path
         if not self.low_cpu_mem_usage:
             logging.info("Transferring weights from HF to INF2 in-memory")
             self.model = self.load_inf2_model_from_memory(model_type)
@@ -209,6 +214,10 @@ class TransformersNeuronXService(object):
         if "low_cpu_mem_usage" in properties:
             self.low_cpu_mem_usage = properties.get(
                 "low_cpu_mem_usage").lower() == 'true'
+        if "load_split_model" in properties:
+            self.load_split_model = properties.get(
+                "load_split_model").lower() == 'true'
+            self.low_cpu_mem_usage = True
         if "context_length_estimate" in properties:
             # expect input like [256, 1024, 2048]
             self.context_length_estimate = json.loads(properties.get("context_length_estimate"))
