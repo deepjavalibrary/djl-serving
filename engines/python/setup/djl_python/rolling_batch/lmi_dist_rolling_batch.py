@@ -43,10 +43,10 @@ class LmiDistRollingBatch(RollingBatch):
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
         self.batch_id_counter = 0
-        self.cache: Batch = None
+        self.cache = {}
 
     def reset(self):
-        self.cache = None
+        self.cache.clear()
         self.batch_id_counter = 0
         super().reset()
 
@@ -127,27 +127,21 @@ class LmiDistRollingBatch(RollingBatch):
     def _prefill_and_decode(self, new_batch):
         # prefill step
         if new_batch:
-            generations, prefill_next_batch = self.model.generate_token(
-                new_batch)
-
-            if self.cache:
-                decode_generations, decode_next_batch = self.model.generate_token(
-                    self.cache)
-                generations.extend(decode_generations)
-
-                # concatenate with the existing batch of the model
-                if prefill_next_batch is None:
-                    self.cache = decode_next_batch
-                elif decode_next_batch is None:
-                    self.cache = prefill_next_batch
-                else:
-                    self.cache = self.model.batch_type.concatenate(
-                        [prefill_next_batch, decode_next_batch])
-            else:
-                self.cache = prefill_next_batch
+            batch = new_batch
+            generations, next_batch = self.model.generate_token(batch)
+            if next_batch is not None:
+                self.cache[next_batch.batch_id] = next_batch
         else:
-            generations, next_batch = self.model.generate_token(self.cache)
-            self.cache = next_batch
+            # Get batches out of cache
+            batches = [x for x in self.cache.values()]
+            self.cache.clear()
+            if len(batches) > 1:
+                batch = self.model.batch_type.concatenate(batches)
+            else:
+                batch = batches[0]
+            generations, next_batch = self.model.generate_token(batch)
+            if next_batch is not None:
+                self.cache[next_batch.batch_id] = next_batch
 
         generation_dict = {
             generation.request_id: generation
@@ -156,19 +150,25 @@ class LmiDistRollingBatch(RollingBatch):
 
         req_ids = []
         for request in self.active_requests:
-            generation = generation_dict[request.id]
-            is_last_token = generation.generated_text is not None
-            if not is_last_token:
-                req_ids.append(request.id)
+            generation = generation_dict.get(request.id, None)
+            if generation:
+                is_last_token = generation.generated_text is not None
+                if not is_last_token:
+                    req_ids.append(request.id)
 
-            request.set_next_token(
-                "" if generation.token_is_special else generation.token_text,
-                self.output_formatter,
-                last_token=is_last_token)
+                request.set_next_token("" if generation.token_is_special else
+                                       generation.token_text,
+                                       self.output_formatter,
+                                       last_token=is_last_token)
+            else:
+                request.set_next_token("",
+                                       self.output_formatter,
+                                       last_token=False)
 
         # filter the requests that are stopped.
-        if self.cache:
-            self.cache = self.cache.filter(req_ids)
+        if self.cache and batch.batch_id in self.cache:
+            self.cache[batch.batch_id] = self.cache[batch.batch_id].filter(
+                req_ids)
 
     def preprocess_requests(self, requests, **kwargs):
         preprocessed_requests = []
