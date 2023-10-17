@@ -176,7 +176,7 @@ class TransformersNeuronXService(object):
             self.model.to_neuron()
         os.chdir(path)
         elapsed = time.time() - start
-        logging.info(f"LLM sharding and compiling completed with {elapsed}s")
+        logging.info(f"SysHealth: LLM sharding and compilation latency: {elapsed} secs")
 
     def initialize(self, properties):
         # Neuron recommendation for transformersneuronx speedup
