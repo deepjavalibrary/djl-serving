@@ -186,13 +186,15 @@ class LmiDistRollingBatch(RollingBatch):
                 stop_sequences=param.get("stop_sequences", []),
                 max_new_tokens=param.get("max_new_tokens", 30))
 
-            preprocessed_requests.append(
-                lmi_dist.utils.types.Request(
-                    id=r.id,
-                    inputs=r.input_text,
-                    parameters=parameters,
-                    stopping_parameters=stop_parameters,
-                    truncate=param.get("truncate", 1000)))
+            request = lmi_dist.utils.types.Request(
+                id=r.id,
+                inputs=r.input_text,
+                parameters=parameters,
+                stopping_parameters=stop_parameters)
+            truncate = param.get("truncate", None)
+            if truncate is not None:
+                request.truncate = truncate
+            preprocessed_requests.append(request)
 
         if preprocessed_requests:
             batch = Batch(id=self.batch_id_counter,
