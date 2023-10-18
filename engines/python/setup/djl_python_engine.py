@@ -181,7 +181,8 @@ def configure_sm_logging():
     if 'SM_TELEMETRY_LOG_REV_2022_12' in os.environ:
         # https://docs.aws.amazon.com/deep-learning-containers/latest/devguide/logging-and-monitoring.html
         root_logger = logging.getLogger()
-        sm_log_handler = logging.FileHandler(filename=os.getenv('SM_TELEMETRY_LOG_REV_2022_12'))
+        sm_log_handler = logging.FileHandler(
+            filename=os.getenv('SM_TELEMETRY_LOG_REV_2022_12'))
         sm_log_handler.addFilter(SMLogFilter())
         root_logger.addHandler(sm_log_handler)
 

@@ -24,8 +24,9 @@ MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
 FLASH_2_SUPPORTED_MODELS = {
-   "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
+    "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
 }
+
 
 def enable_flash():
     if torch.cuda.is_available():
@@ -134,8 +135,8 @@ class SchedulerRollingBatch(RollingBatch):
                 device_map = kwargs.pop('device_map')
 
             if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
-                if properties.get(
-                    "disable_flash_attn", "true").lower() != 'true':
+                if properties.get("disable_flash_attn",
+                                  "true").lower() != 'true':
                     kwargs['use_flash_attention_2'] = True
 
             if "lmi_dist_sharding" == multi_gpu:

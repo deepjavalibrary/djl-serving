@@ -748,9 +748,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         long reservedMemory = intValue(prop, "reserved_memory_mb", defMemory) * 1024L * 1024;
         String tpDegreeStr = Utils.getenv("TENSOR_PARALLEL_DEGREE", "0");
         tpDegreeStr = prop.getProperty("option.tensor_parallel_degree", tpDegreeStr);
-        Engine eng = Engine.getEngine(engineName);
         int tpDegree;
         if ("max".equals(tpDegreeStr)) {
+            Engine eng = Engine.getEngine(engineName);
             if (eng.getGpuCount() > 0) {
                 tpDegree = eng.getGpuCount();
             } else {

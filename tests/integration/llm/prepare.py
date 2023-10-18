@@ -378,7 +378,6 @@ performance_test_list = {
         "option.quantize": "smoothquant",
         "option.smoothquant_alpha": 0.65
     }
-
 }
 
 transformers_neuronx_handler_list = {
