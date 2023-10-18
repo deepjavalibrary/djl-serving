@@ -98,6 +98,8 @@ There are a few things to keep in mind which choosing a calling technique.
 
 This passes the adapter as part of the requeset body.
 It will also work with client-side batching and will allow multiple adapters to be passed with one for each input.
+If the adapters is not passed, the base model will be used for inference.
+You can also specify the base model for an element in the batch by using the empty string `""`.
 
 ```
 
@@ -150,9 +152,9 @@ There are two kinds of LoRA that can be put onto various engines.
 With our default handlers, we currently support unmerged LoRA for CausalLM through the huggingface handler.
 Support for other model types and handlers is coming soon.
 
-### Writing Adapter Models
+### Writing Custom Adapter Models
 
-Right now, adapters are only supported through our Python engine.
+Right now, adapters are only supported through our Python engine and not any of the other DJL engines.
 See instructions to get started with writing a [python handler](modes.md#python-mode).
 
 To add support for adapters, you must first add the register and unregister like below.
@@ -175,6 +177,10 @@ def handle(inputs: Input):
   ...
 ```
 
-Within the handler, you must parse the adapter properties from the inputs.
-The property can be put in the inputs property, content, or body depending on the technique(s) used.
+Within the handler, you must parse the adapter from the inputs.
+The adapter information can be put in the inputs property, content, or body depending on the technique(s) used.
 If desired, you can also parse multiple adapter passing options for greater ease of calling.
+
+From there, you can use those as part of your inference call.
+This will depend on the specific python deep learning framework you are using for inference.
+For example, you would update the [HF Accelerate](https://huggingface.co/docs/transformers/v4.33.0/en/main_classes/text_generation#transformers.GenerationMixin.generate) by passing in the adapters parameter.
