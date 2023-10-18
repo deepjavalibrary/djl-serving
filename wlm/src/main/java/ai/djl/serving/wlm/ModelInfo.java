@@ -624,7 +624,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 || Files.isRegularFile(modelDir.resolve("__model__"))
                 || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
             return "PaddlePaddle";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))
+                || Files.isRegularFile(modelDir.resolve(prefix + ".xgb"))
+                || Files.isRegularFile(modelDir.resolve("model.xgb"))) {
             return "XGBoost";
         } else {
             try {
