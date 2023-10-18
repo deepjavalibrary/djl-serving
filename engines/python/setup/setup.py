@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     test_requirements = [
         'numpy', 'requests', 'Pillow', 'transformers', 'torch', 'einops',
-        'accelerate', 'sentencepiece', 'protobuf'
+        'accelerate', 'sentencepiece', 'protobuf', 'yapf'
     ]
 
     setup(name='djl_python',

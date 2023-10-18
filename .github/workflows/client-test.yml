@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python3
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.11'
       # Enable gradle cache: https://github.com/actions/cache/blob/master/examples.md#java---gradle
       - uses: actions/cache@v3
         with:
@@ -82,7 +82,7 @@ jobs:
       - name: Set up Python3
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.11'
       - name: Install DJLServing dependencies
         shell: bash
         run: |
