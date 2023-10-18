@@ -420,22 +420,24 @@ ds_smoothquant_model_spec = {
     },
 }
 
-#TODO: Update max_memory_per_gpu
 lmi_dist_aiccl_model_spec = {
     "llama-2-70b-aiccl": {
-        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0],
-        "batch_size": [1, 2, 4, 8],
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1],
         "seq_length": [64, 128, 256],
+        "stream_output": True
     },
     "codellama-34b-aiccl": {
-        "max_memory_per_gpu": [15.0, 15.0],
-        "batch_size": [1, 8],
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1],
         "seq_length": [64, 128, 256],
+        "stream_output": True
     },
     "falcon-40b-aiccl": {
-        "max_memory_per_gpu": [9.0, 9.0, 9.0],
-        "batch_size": [1, 2, 4],
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1],
         "seq_length": [64, 128, 256],
+        "stream_output": True
     },
 }
 

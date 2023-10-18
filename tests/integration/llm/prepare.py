@@ -511,7 +511,7 @@ ds_smoothquant_model_list = {
 
 lmi_dist_aiccl_model_list = {
     "llama-2-70b-aiccl": {
-        "option.model_id": "TheBloke/Llama-2-70B-fp16",
+        "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
     },
     "codellama-34b-aiccl": {
         "option.model_id": "codellama/CodeLlama-34b-hf",
@@ -774,11 +774,11 @@ def build_lmi_dist_aiccl_model(model):
         )
     options = lmi_dist_aiccl_model_list[model]
     options["engine"] = "MPI"
-    options["task"] = "text-generation"
-    options["tensor_parallel_degree"] = 8
-    options["rolling_batch"] = "lmi-dist"
-    options["output_formatter"] = "jsonlines"
-    options["max_rolling_batch_size"] = 4
+    options["option.task"] = "text-generation"
+    options["option.tensor_parallel_degree"] = 8
+    options["option.rolling_batch"] = "lmi-dist"
+    options["option.output_formatter"] = "jsonlines"
+    options["option.max_rolling_batch_size"] = 4
     write_model_artifacts(options)
 
 
