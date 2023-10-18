@@ -746,8 +746,19 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         int defMemory = wlmc.getReservedMemoryMb();
         long reservedMemory = intValue(prop, "reserved_memory_mb", defMemory) * 1024L * 1024;
-        int tpDegree = Integer.parseInt(Utils.getenv("TENSOR_PARALLEL_DEGREE", "0"));
-        tpDegree = intValue(prop, "option.tensor_parallel_degree", tpDegree);
+        String tpDegreeStr = Utils.getenv("TENSOR_PARALLEL_DEGREE", "0");
+        tpDegreeStr = prop.getProperty("option.tensor_parallel_degree", tpDegreeStr);
+        Engine eng = Engine.getEngine(engineName);
+        int tpDegree;
+        if ("max".equals(tpDegreeStr)) {
+            if (eng.getGpuCount() > 0) {
+                tpDegree = eng.getGpuCount();
+            } else {
+                tpDegree = NeuronUtils.getNeuronCores();
+            }
+        } else {
+            tpDegree = Integer.parseInt(tpDegreeStr);
+        }
         if (requiredMemory <= 0
                 && tpDegree < 1
                 && "true".equals(Utils.getenv("SAGEMAKER_MULTI_MODEL"))) {
