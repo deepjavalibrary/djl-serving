@@ -11,7 +11,6 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-
 import copy
 from collections import defaultdict
 from djl_python import __version__
@@ -27,18 +26,24 @@ class SMLogFilter(logging.Filter):
         try:
             if isinstance(record.msg, str):
                 for i in self.sm_log_markers:
-                    if record.msg.startswith(i+':'):
+                    if record.msg.startswith(i + ':'):
                         altered_record = copy.deepcopy(record)
-                        tag, metric_name, metric = [i.strip() for i in altered_record.msg.split(':')]
+                        tag, metric_name, metric = [
+                            i.strip() for i in altered_record.msg.split(':')
+                        ]
                         value, units = metric.split(' ')
-                        altered_metric_name = ''.join([word[0].upper()+word[1:] for word in metric_name.split(' ')])
+                        altered_metric_name = ''.join([
+                            word[0].upper() + word[1:]
+                            for word in metric_name.split(' ')
+                        ])
                         altered_record.msg = f"{tag}.Count:{self.count(altered_metric_name)}|#DJLServing:{__version__},{altered_metric_name}:{value} {units}"
                         return altered_record
                 return False
             else:
                 return False
         except Exception as exc:
-            logging.warning(f"Forwarding {str(record)} failed due to {str(exc)}")
+            logging.warning(
+                f"Forwarding {str(record)} failed due to {str(exc)}")
             return False
 
     def count(self, key):

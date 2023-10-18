@@ -40,4 +40,3 @@ class TestSMLogFilter(unittest.TestCase):
         record.msg = f"LLM sharding and compilation latency: 845.62 : secs"
         actual = filter.filter(record)
         self.assertFalse(actual)
-

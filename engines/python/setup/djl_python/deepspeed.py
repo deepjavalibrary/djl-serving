@@ -38,10 +38,7 @@ from djl_python.streaming_utils import StreamingUtils
 from typing import Optional
 from peft import PeftConfig, PeftModel
 
-SUPPORTED_QUANTIZATION_MODE = [
-    "smoothquant",
-    "dynamic_int8"
-]
+SUPPORTED_QUANTIZATION_MODE = ["smoothquant", "dynamic_int8"]
 
 SMOOTHQUANT_SUPPORTED_MODEL_TYPES = {
     "gpt2",
@@ -204,9 +201,13 @@ class DeepSpeedService(object):
                 if 0 <= float(properties['smoothquant_alpha']) <= 1:
                     self.smoothquant_alpha = properties['smoothquant_alpha']
                 else:
-                    raise ValueError(f"${properties['smoothquant_alpha']} is not between 0 and 1.")
+                    raise ValueError(
+                        f"${properties['smoothquant_alpha']} is not between 0 and 1."
+                    )
             except ValueError:
-                raise ValueError(f"${properties['smoothquant_alpha']} cannot convert to float number.")
+                raise ValueError(
+                    f"${properties['smoothquant_alpha']} cannot convert to float number."
+                )
 
     def _get_ds_config(self, properties: dict):
         ds_config = {
@@ -235,12 +236,12 @@ class DeepSpeedService(object):
                     "dtype should also be provided for checkpoint loading")
 
         if self.quantize_mode:
-            ds_config['dynamic_quant'] = {'enabled': True, 'use_cutlass': False}
+            ds_config['dynamic_quant'] = {
+                'enabled': True,
+                'use_cutlass': False
+            }
             if self.quantize_mode == 'smoothquant':
-                smoothing_value = {
-                    'smooth': True,
-                    'calibrate': True
-                }
+                smoothing_value = {'smooth': True, 'calibrate': True}
                 if self.smoothquant_alpha:
                     smoothing_value['alpha'] = self.smoothquant_alpha
                 ds_config['smoothing'] = smoothing_value
@@ -265,7 +266,9 @@ class DeepSpeedService(object):
 
         if self.quantize_mode == \
                 'smoothquant' and self.model_config.model_type not in SMOOTHQUANT_SUPPORTED_MODEL_TYPES:
-            raise ValueError(f"${self.quantize_mode} does not support model ${self.model_config.model_type}")
+            raise ValueError(
+                f"${self.quantize_mode} does not support model ${self.model_config.model_type}"
+            )
 
     def _read_model_config(self):
         try:
@@ -298,14 +301,19 @@ class DeepSpeedService(object):
                 f"Task could not be inferred from model config. "
                 f"Please manually set `task` in serving.properties.")
 
-    def get_model_pretrained(self, model_id_or_path, torch_dtype='auto', **kwargs):
+    def get_model_pretrained(self,
+                             model_id_or_path,
+                             torch_dtype='auto',
+                             **kwargs):
         tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
-        model = TASK_TO_MODEL[self.task].from_pretrained(model_id_or_path, torch_dtype=torch_dtype, **kwargs)
+        model = TASK_TO_MODEL[self.task].from_pretrained(
+            model_id_or_path, torch_dtype=torch_dtype, **kwargs)
         return model, tokenizer
 
     def get_model_from_config(self, model_id_or_path, **kwargs):
         tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
-        model = TASK_TO_MODEL[self.task].from_config(self.model_config, **kwargs)
+        model = TASK_TO_MODEL[self.task].from_config(self.model_config,
+                                                     **kwargs)
         return model, tokenizer
 
     def get_model(self, model_id_or_path, loading_method, **kwargs):
@@ -316,16 +324,20 @@ class DeepSpeedService(object):
         elif loading_method == 'pretrained':
             return self.get_model_pretrained(model_id_or_path, **kwargs)
         else:
-            raise RuntimeError(f'Unsupported model loading method, this should not happen.')
+            raise RuntimeError(
+                f'Unsupported model loading method, this should not happen.')
 
-    def load_model(self, model_id_or_path, loading_method, use_mmap_loader, **kwargs):
+    def load_model(self, model_id_or_path, loading_method, use_mmap_loader,
+                   **kwargs):
+
         def load_model_with_mmap(model_id_or_path, loading_method):
             import mmaploader
             import accelerate
             with mmaploader.load_mmap_meta() as mmap_loader:
                 with accelerate.init_empty_weights():
                     kwargs['low_cpu_mem_usage'] = False
-                    model, tokenizer = self.get_model(model_id_or_path, loading_method, **kwargs)
+                    model, tokenizer = self.get_model(model_id_or_path,
+                                                      loading_method, **kwargs)
             return model, tokenizer, mmap_loader.state_dict_mmap
 
         state_dict_mmap = {}
@@ -335,14 +347,18 @@ class DeepSpeedService(object):
 
         if use_mmap_loader:
             try:
-                model, tokenizer, state_dict_mmap = load_model_with_mmap(model_id_or_path, loading_method)
+                model, tokenizer, state_dict_mmap = load_model_with_mmap(
+                    model_id_or_path, loading_method)
                 done = True
             except:
-                self.logger.warning(f'failed to load model with mmap loader, will load model normally')
+                self.logger.warning(
+                    f'failed to load model with mmap loader, will load model normally'
+                )
 
         if not done:
             kwargs['low_cpu_mem_usage'] = True
-            model, tokenizer = self.get_model(model_id_or_path, loading_method, **kwargs)
+            model, tokenizer = self.get_model(model_id_or_path, loading_method,
+                                              **kwargs)
 
         return model, tokenizer, state_dict_mmap
 
@@ -365,11 +381,8 @@ class DeepSpeedService(object):
                     f"Please using quantization with a standard HuggingFace checkpoint or "
                     f"turn off quantization and try again.")
             model, self.tokenizer, state_dict_mmap = self.load_model(
-                self.model_id_or_path,
-                'from_config',
-                self.ds_config['replace_with_kernel_inject'],
-                **kwargs
-            )
+                self.model_id_or_path, 'from_config',
+                self.ds_config['replace_with_kernel_inject'], **kwargs)
         elif self.peft_config is not None:
             self.logger.info(
                 f"Peft Model detected. Instantiating base model {self.peft_config.base_model_name_or_path}"
@@ -382,7 +395,8 @@ class DeepSpeedService(object):
             lora_model = PeftModel.from_pretrained(base_model,
                                                    self.model_id_or_path)
             model = lora_model.merge_and_unload()
-            self.tokenizer = AutoTokenizer.from_pretrained(self.peft_config.base_model_name_or_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.peft_config.base_model_name_or_path)
             self.logger.info(
                 f"Peft Model merged into base model for deepspeed compatibility"
             )
@@ -393,8 +407,7 @@ class DeepSpeedService(object):
                 self.ds_config['replace_with_kernel_inject'],
                 low_cpu_mem_usage=self.low_cpu_mem_usage,
                 trust_remote_code=self.trust_remote_code,
-                **kwargs
-            )
+                **kwargs)
         if self.data_type:
             self.ds_config["dtype"] = self.data_type
         else:

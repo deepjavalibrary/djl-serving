@@ -16,13 +16,11 @@ import os
 import re
 
 import torch
-from transformers import (pipeline, Pipeline, Conversation,
-                          AutoModelForCausalLM, AutoModelForSeq2SeqLM,
-                          AutoTokenizer, AutoConfig,
-                          AutoModelForSequenceClassification,
-                          AutoModelForTokenClassification,
-                          AutoModelForQuestionAnswering, StoppingCriteria,
-                          StoppingCriteriaList)
+from transformers import (
+    pipeline, Pipeline, Conversation, AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
+    AutoModelForSequenceClassification, AutoModelForTokenClassification,
+    AutoModelForQuestionAnswering, StoppingCriteria, StoppingCriteriaList)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from peft import PeftConfig, PeftModel, PeftModelForCausalLM
 
@@ -50,14 +48,18 @@ ARCHITECTURES_2_TASK = {
 }
 
 LMI_DIST_ADV_MODEL = {
-    "RWForCausalLM", "GPTNeoXForCausalLM", "T5ForConditionalGeneration",
-    "LlamaForCausalLM", "FalconForCausalLM", "MPTForCausalLM",
+    "RWForCausalLM",
+    "GPTNeoXForCausalLM",
+    "T5ForConditionalGeneration",
+    "LlamaForCausalLM",
+    "FalconForCausalLM",
+    "MPTForCausalLM",
     "GPTBigCodeForCausalLM",
 }
 
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
 FLASH_2_SUPPORTED_MODELS = {
-   "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
+    "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
 }
 
 PEFT_MODEL_TASK_TO_CLS = {
@@ -114,14 +116,18 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
         return VLLMRollingBatch
     raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
+
 class StopWord(StoppingCriteria):
+
     def __init__(self, tokenizer, stop_seq):
         StoppingCriteria.__init__(self)
         self.tokenizer = tokenizer
         self.stop_seq = stop_seq
 
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs):
-        decoded_input_ids = self.tokenizer.decode(input_ids[0][-len(self.stop_seq):])
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor,
+                 **kwargs):
+        decoded_input_ids = self.tokenizer.decode(
+            input_ids[0][-len(self.stop_seq):])
 
         matches = re.search(self.stop_seq, decoded_input_ids)
 
@@ -129,6 +135,7 @@ class StopWord(StoppingCriteria):
             return True
 
         return False
+
 
 class HuggingFaceService(object):
 
@@ -202,8 +209,8 @@ class HuggingFaceService(object):
                 properties.get("dtype"))
         if "revision" in properties:
             kwargs["revision"] = properties.get('revision')
-        self.disable_flash_attn = properties.get(
-                "disable_flash_attn", "true").lower() == 'true'
+        self.disable_flash_attn = properties.get("disable_flash_attn",
+                                                 "true").lower() == 'true'
         self.rolling_batch_type = properties.get("rolling_batch", None)
 
         self._read_model_config(model_id_or_path,
@@ -249,9 +256,12 @@ class HuggingFaceService(object):
         Input: stop_sequence (string)
         Output: list of strings
         """
-        assert stop_sequence[0] == '[' and stop_sequence[-1] == ']', "option.stop_sequence not properly formatted"
+        assert stop_sequence[0] == '[' and stop_sequence[
+            -1] == ']', "option.stop_sequence not properly formatted"
         stop_sequence = stop_sequence.replace(", ", ",")
-        stop_seq_list = [element[1:-1] for element in stop_sequence[1:-1].split(",")]
+        stop_seq_list = [
+            element[1:-1] for element in stop_sequence[1:-1].split(",")
+        ]
         return stop_seq_list
 
     def load_stopping_criteria_list(self, stop_sequence):
@@ -262,7 +272,7 @@ class HuggingFaceService(object):
         """
         if self.tokenizer is None:
             return
-        
+
         stop_seq_list = self.parse_stop_sequence_input(stop_sequence)
 
         stopwords = []
@@ -505,7 +515,8 @@ class HuggingFaceService(object):
             model_cls = AutoModelForSeq2SeqLM
         else:
             model_cls = AutoModelForCausalLM
-            if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash() and not self.disable_flash_attn:
+            if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash(
+            ) and not self.disable_flash_attn:
                 kwargs['use_flash_attention_2'] = True
 
         if self.peft_config is not None:
@@ -631,15 +642,14 @@ def register_adapter(inputs: Input):
     adapter_path = inputs.get_property("src")
     if not os.path.exists(adapter_path):
         raise ValueError(
-            f"Only local LoRA models are supported. {adapter_path} is not a valid path")
-    logging.info(
-        f"Registering adapter {adapter_name} from {adapter_path}")
+            f"Only local LoRA models are supported. {adapter_path} is not a valid path"
+        )
+    logging.info(f"Registering adapter {adapter_name} from {adapter_path}")
     if isinstance(_service.model, PeftModel):
         _service.model.load_adapter(adapter_path, adapter_name)
     else:
         _service.model = PeftModel.from_pretrained(_service.model,
-                                                   adapter_path,
-                                                   adapter_name)
+                                                   adapter_path, adapter_name)
 
     if isinstance(_service.hf_pipeline, Pipeline):
         _service.hf_pipeline.model = _service.model

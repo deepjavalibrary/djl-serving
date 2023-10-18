@@ -124,8 +124,7 @@ class LMITestSetupBuilder:
         required_parameters = []
         if series == "performance":
             required_parameters = [
-                "tensor_parallel", "batch_size",
-                "out_tokens", "count"
+                "tensor_parallel", "batch_size", "out_tokens", "count"
             ]
         for param in required_parameters:
             if param not in self.config or self.config[param] is None:
