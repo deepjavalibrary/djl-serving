@@ -51,7 +51,8 @@ class StableDiffusionService(object):
         # Otherwise we assume model artifacts are in the model_dir
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        self.data_type = get_torch_dtype_from_str(properties.get("dtype"))
+        self.data_type = get_torch_dtype_from_str(
+            properties.get("dtype", 'fp16'))
         self.max_tokens = int(properties.get("max_tokens", "1024"))
         self.device = int(os.getenv("LOCAL_RANK", "0"))
         self.tensor_parallel_degree = int(
