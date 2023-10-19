@@ -839,6 +839,7 @@ jobs:
           # checking if pt files are generated.
           sudo mv $PWD/models/test/partition-test $PWD/models/
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
+
           # checking whether requirements.txt download is successful
           if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
           then echo "requirements.txt install was successful"; else exit 1; fi
@@ -883,6 +884,8 @@ jobs:
           sudo rm -rf models
           docker rm -f $(docker ps -aq) || true
           name: ds-aot-handler-logs
+
+
 
   no-code-test:
     if: contains(fromJson('["", "hf"]'), github.event.inputs.run_test)
