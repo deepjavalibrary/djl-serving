@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
       run_test:
-        description: 'Run only the tests you need [ft, ds, hf, aot, lora-correctness, smoothquant]'
+        description: 'Run only the tests you need [ft, ds, hf, aot, lora-correctness]'
         required: false
         default: ''
   schedule:
@@ -832,8 +832,10 @@ jobs:
           python3 llm/prepare.py deepspeed_handler_aot opt-6.7b
           # To test the requirements.txt download.
           echo "dummy_test" >> $PWD/models/test/requirements.txt
+
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           partition --model-dir /opt/ml/input/data/training/ | tee partition_output.log
+
           # checking if pt files are generated.
           sudo mv $PWD/models/test/partition-test $PWD/models/
           if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
@@ -853,8 +855,10 @@ jobs:
         run: |
           sudo rm -rf models
           python3 llm/prepare.py deepspeed_handler_aot bloom-7b1
+
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           train | tee partition_output.log
+
           # checking if pt files are generated.
           # downloads the uploaded partitioned checkpoints from s3url.
           /opt/djl/bin/s5cmd --retry-count 1 sync s3://djl-llm/bloom-7b1-tp4/ds-aot-handler/* $PWD/models/partition-test
@@ -878,6 +882,7 @@ jobs:
         run: |
           sudo rm -rf models
           docker rm -f $(docker ps -aq) || true
+          name: ds-aot-handler-logs
 
   no-code-test:
     if: contains(fromJson('["", "hf"]'), github.event.inputs.run_test)
