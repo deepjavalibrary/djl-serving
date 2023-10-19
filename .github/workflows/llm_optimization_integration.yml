@@ -1,0 +1,112 @@
+name: Large model integration tests with compiler optimizations
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        default: ''
+      run_test:
+        description: 'Run only the tests you need [aiccl]'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 15 * * *'
+
+
+jobs:
+  create-runners-p4d:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new P4d.24xl instance
+        id: create_gpu_p4d
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_p4d $token djl-serving
+    outputs:
+      p4d_instance_id: ${{ steps.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
+
+  lmi-dist-aiccl-test:
+    if: contains(fromJson('["", "aiccl"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, p4d ]
+    timeout-minutes: 60
+    needs: create-runners-p4d
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests pillow numpy
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test TheBloke/Llama-2-70B-fp16 with aiccl backend
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist_aiccl llama-2-70b-aiccl
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
+          docker rm -f $(docker ps -aq)
+      - name: Test codellama/CodeLlama-34b-hf with aiccl backend
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist_aiccl codellama-34b-aiccl
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
+          docker rm -f $(docker ps -aq)
+      - name: Test tiiuae/falcon-40b with aiccl backend
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist_aiccl falcon-40b-aiccl
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
+          docker rm -f $(docker ps -aq)
+      - name: Remove models dir
+        working-directory: tests/integration
+        run: |
+          sudo rm -rf models
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          sudo rm -rf models
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: lmi-dist-aiccl-logs
+          path: tests/integration/logs/
+
+  stop-runners-p4d:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners-p4d, lmi-dist-aiccl-test ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
+          ./stop_instance.sh $instance_id

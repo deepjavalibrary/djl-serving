@@ -591,6 +591,18 @@ ds_smoothquant_model_list = {
     },
 }
 
+lmi_dist_aiccl_model_list = {
+    "llama-2-70b-aiccl": {
+        "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
+    },
+    "codellama-34b-aiccl": {
+        "option.model_id": "codellama/CodeLlama-34b-hf",
+    },
+    "falcon-40b-aiccl": {
+        "option.model_id": "tiiuae/falcon-40b",
+    },
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -845,6 +857,21 @@ def build_ds_smoothquant_model(model):
     write_model_artifacts(options)
 
 
+def build_lmi_dist_aiccl_model(model):
+    if model not in lmi_dist_aiccl_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(lmi_dist_aiccl_model_list.keys())}"
+        )
+    options = lmi_dist_aiccl_model_list[model]
+    options["engine"] = "MPI"
+    options["option.task"] = "text-generation"
+    options["option.tensor_parallel_degree"] = 8
+    options["option.rolling_batch"] = "lmi-dist"
+    options["option.output_formatter"] = "jsonlines"
+    options["option.max_rolling_batch_size"] = 4
+    write_model_artifacts(options)
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
     'huggingface': build_hf_handler_model,
@@ -863,6 +890,7 @@ supported_handler = {
     'vllm': build_vllm_model,
     'unmerged_lora': build_unmerged_lora_correctness_model,
     'deepspeed_smoothquant': build_ds_smoothquant_model,
+    'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
 }
 
 if __name__ == '__main__':
