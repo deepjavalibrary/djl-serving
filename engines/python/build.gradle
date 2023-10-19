@@ -33,11 +33,13 @@ sourceSets {
     main.resources.srcDirs "setup"
 }
 
+apply from: file("${rootProject.projectDir}/tools/gradle/python-formatter.gradle")
+
 processResources {
     doFirst {
 	    stripPackageVersion()
     	def versionLine = new StringBuilder()
-    	versionLine.append("__version__ = '${djl_version}'")
+    	versionLine.append("\n__version__ = '${djl_version}'\n")
     	file("setup/djl_python/__init__.py").append(versionLine)
     }
 
