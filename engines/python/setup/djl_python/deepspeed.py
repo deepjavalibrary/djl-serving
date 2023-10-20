@@ -38,7 +38,10 @@ from djl_python.streaming_utils import StreamingUtils
 from typing import Optional
 from peft import PeftConfig, PeftModel
 
-SUPPORTED_QUANTIZATION_MODE = ["smoothquant", "dynamic_int8"]
+SMOOTHQUANT_STR = 'smoothquant'
+DYNAMIC_INT8_STR = 'dynamic_int8'
+
+SUPPORTED_QUANTIZATION_MODE = [SMOOTHQUANT_STR, DYNAMIC_INT8_STR]
 
 SMOOTHQUANT_SUPPORTED_MODEL_TYPES = {
     "gpt2",
@@ -108,9 +111,10 @@ def get_torch_dtype_from_str(dtype: str):
     raise ValueError(f"Invalid data type: {dtype}")
 
 
-def default_dtype():
+def default_dtype(quantize_mode: str):
     if torch.cuda.is_available():
-        if torch.cuda.is_bf16_supported():
+        if torch.cuda.is_bf16_supported() \
+                and quantize_mode != SMOOTHQUANT_STR:
             return "bf16"
         return "fp16"
     return "fp32"
@@ -162,8 +166,6 @@ class DeepSpeedService(object):
         self.model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
         self.task = properties.get("task")
-        self.data_type = get_torch_dtype_from_str(
-            properties.get("dtype", default_dtype()))
         self.max_tokens = int(properties.get("max_tokens", 1024))
         self.device = int(os.getenv("LOCAL_RANK", 0))
         self.tensor_parallel_degree = int(
@@ -181,6 +183,8 @@ class DeepSpeedService(object):
 
         # SmoothQuant properties
         self._parse_smoothquant_properties(properties)
+        self.data_type = get_torch_dtype_from_str(
+            properties.get("dtype", default_dtype(self.quantize_mode)))
 
         if properties.get("deepspeed_config_path"):
             with open(properties.get("deepspeed_config_path"), "r") as f:
@@ -195,6 +199,11 @@ class DeepSpeedService(object):
                     f"DeepSpeed does not currently support quantization mode: ${properties['quantize']}, "
                     f"this setting will be ignored.")
                 return
+            if properties['quantize'] == SMOOTHQUANT_STR and properties.get(
+                    "dtype") == 'bf16':
+                raise ValueError(
+                    "dtype should not be bf16 while using smoothquant")
+
             self.quantize_mode = properties['quantize']
         if 'smoothquant_alpha' in properties:
             try:
@@ -240,7 +249,7 @@ class DeepSpeedService(object):
                 'enabled': True,
                 'use_cutlass': False
             }
-            if self.quantize_mode == 'smoothquant':
+            if self.quantize_mode == SMOOTHQUANT_STR:
                 smoothing_value = {'smooth': True, 'calibrate': True}
                 if self.smoothquant_alpha:
                     smoothing_value['alpha'] = self.smoothquant_alpha
@@ -265,7 +274,7 @@ class DeepSpeedService(object):
                 f"task: {self.task} is not currently supported by DeepSpeed")
 
         if self.quantize_mode == \
-                'smoothquant' and self.model_config.model_type not in SMOOTHQUANT_SUPPORTED_MODEL_TYPES:
+                SMOOTHQUANT_STR and self.model_config.model_type not in SMOOTHQUANT_SUPPORTED_MODEL_TYPES:
             raise ValueError(
                 f"${self.quantize_mode} does not support model ${self.model_config.model_type}"
             )
