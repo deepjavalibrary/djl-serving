@@ -121,3 +121,6 @@ configure(javaProjects()) {
         }
     }
 }
+
+apply from: file("${rootProject.projectDir}/tools/gradle/publish.gradle")
+apply from: file("${rootProject.projectDir}/tools/gradle/python-formatter.gradle")
