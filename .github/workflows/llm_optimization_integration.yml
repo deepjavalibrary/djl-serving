@@ -34,7 +34,7 @@ jobs:
   lmi-dist-aiccl-test:
     if: contains(fromJson('["", "aiccl"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, p4d ]
-    timeout-minutes: 60
+    timeout-minutes: 120
     needs: create-runners-p4d
     steps:
       - uses: actions/checkout@v3
@@ -56,7 +56,7 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Test TheBloke/Llama-2-70B-fp16 with aiccl backend
+      - name: Test Llama-2-70B with aiccl backend
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -64,6 +64,12 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
+          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
+            echo "aiccl backend not used"
+            return 1
+          else
+            echo "Using aiccl backend"
+          fi
           docker rm -f $(docker ps -aq)
       - name: Test codellama/CodeLlama-34b-hf with aiccl backend
         working-directory: tests/integration
@@ -73,6 +79,12 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
+          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
+            echo "aiccl backend not used"
+            return 1
+          else
+            echo "Using aiccl backend"
+          fi
           docker rm -f $(docker ps -aq)
       - name: Test tiiuae/falcon-40b with aiccl backend
         working-directory: tests/integration
@@ -82,6 +94,12 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
+          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
+            echo "aiccl backend not used"
+            return 1
+          else
+            echo "Using aiccl backend"
+          fi
           docker rm -f $(docker ps -aq)
       - name: Remove models dir
         working-directory: tests/integration
@@ -108,5 +126,5 @@ jobs:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
+          instance_id=${{ needs.create-runners-p4d.outputs.p4d_instance_id }}
           ./stop_instance.sh $instance_id
