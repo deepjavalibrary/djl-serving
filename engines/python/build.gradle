@@ -33,8 +33,6 @@ sourceSets {
     main.resources.srcDirs "setup"
 }
 
-apply from: file("${rootProject.projectDir}/tools/gradle/python-formatter.gradle")
-
 processResources {
     doFirst {
 	    stripPackageVersion()
