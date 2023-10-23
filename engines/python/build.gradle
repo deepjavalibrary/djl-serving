@@ -1,16 +1,10 @@
 group "ai.djl.python"
 
-def stripPackageVersion()  {
+def stripPackageVersion() {
     def initFile = file("setup/djl_python/__init__.py")
-    def initLines = initFile.readLines()
-    def versionRegex = /^__version__.*$/
-    def overwriteInitLines = initLines.findAll { !(it =~ versionRegex) }
-
-    initFile.withWriter(out -> {
-        overwriteInitLines.each {
-	        out.println it
-	    }
-    })
+    def text = initFile.text
+    text = text.replaceAll("\\n*__version__.*", "")
+    initFile.text = text
 }
 
 dependencies {
@@ -35,10 +29,8 @@ sourceSets {
 
 processResources {
     doFirst {
-	    stripPackageVersion()
-    	def versionLine = new StringBuilder()
-    	versionLine.append("\n__version__ = '${djl_version}'\n")
-    	file("setup/djl_python/__init__.py").append(versionLine)
+        stripPackageVersion()
+        file("setup/djl_python/__init__.py").append("\n__version__ = '${djl_version}'\n")
     }
 
     exclude "build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py"
@@ -83,3 +75,11 @@ clean.doFirst {
     delete System.getProperty("user.home") + "/.djl.ai/python"
     stripPackageVersion()
 }
+
+tasks.register("cleanVersion") {
+    doFirst {
+        stripPackageVersion()
+    }
+}
+
+jar.finalizedBy("cleanVersion")
