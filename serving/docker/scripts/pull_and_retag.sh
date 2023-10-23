@@ -2,7 +2,7 @@
 
 version=$1
 repo=$2
-images="cpu aarch64 cpu-full pytorch-inf2 pytorch-cu118 deepspeed fastertransformer"
+images="cpu aarch64 cpu-full pytorch-inf2 pytorch-cu118 deepspeed fastertransformer tensorrt-llm"
 
 for image in $images; do
     if [[ ! "$version" == "nightly" ]]; then
