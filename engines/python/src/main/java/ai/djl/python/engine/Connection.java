@@ -128,6 +128,8 @@ class Connection {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
             pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
+            pyEnv.addEnv("MASTER_ADDR", MASTER_ADDR);
+            pyEnv.addEnv("MASTER_PORT", String.valueOf(port));
             // TODO: explicit set PYTHON_EXEC for torchrun
             // pyEnv.addEnv("PYTHON_EXEC", "$PYTHONPATH");
             String[] args = new String[15];
