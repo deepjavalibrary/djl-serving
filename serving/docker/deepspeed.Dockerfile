@@ -34,7 +34,7 @@ ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.13.2
 ARG auto_gptq_version=0.4.2
-ARG datasets_version=2.14.4
+ARG datasets_version=2.14.5
 
 EXPOSE 8080
 
