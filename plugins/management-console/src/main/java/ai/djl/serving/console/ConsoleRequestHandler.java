@@ -299,11 +299,14 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         ConfigManager configManager = ConfigManager.getInstance();
         String inferenceAddress =
                 configManager.getProperty("inference_address", "http://127.0.0.1:8080");
+        String managementAddress =
+                configManager.getProperty("management_address", "http://127.0.0.1:8080");
         String origin = configManager.getProperty("cors_allowed_origin", "");
         String methods = configManager.getProperty("cors_allowed_methods", "");
         String headers = configManager.getProperty("cors_allowed_headers", "");
         Map<String, String> map = new ConcurrentHashMap<>(2);
         map.put("inferenceAddress", inferenceAddress);
+        map.put("managementAddress", managementAddress);
         map.put("corsAllowed", "0");
         if (!StringUtil.isNullOrEmpty(origin)
                 && !StringUtil.isNullOrEmpty(headers)
