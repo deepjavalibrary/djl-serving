@@ -56,8 +56,8 @@ public class DsEngineTest {
         if (!System.getProperty("os.name").startsWith("Linux")) {
             throw new SkipException("Large model test only support on Linux.");
         }
-        if (!Files.exists(Paths.get("/usr/bin/mpirun"))) {
-            throw new SkipException("Large model test requires /usr/bin/mpirun");
+        if (!Files.exists(Paths.get("/usr/local/bin/torchrun"))) {
+            throw new SkipException("Large model test requires /usr/local/bin/torchrun");
         }
         System.setProperty("ENGINE_CACHE_DIR", "build/cache");
     }

@@ -127,46 +127,28 @@ class Connection {
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            String[] args = new String[36];
-            args[0] = "mpirun";
-            args[1] = "-N";
+            pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
+            // TODO: explicit set PYTHON_EXEC for torchrun
+            // pyEnv.addEnv("PYTHON_EXEC", "$PYTHONPATH");
+            String[] args = new String[15];
+            args[0] = "torchrun";
+            args[1] = "--nnodes=1";
+            args[2] = "--standalone";
             // TODO: When we support multi nodes, change it to the product of tensor parallel value
-            // and
-            // pipeline parallel value.
-            args[2] = String.valueOf(tensorParallelDegree);
-            args[3] = "--allow-run-as-root";
-            args[4] = "--mca";
-            args[5] = "btl_vader_single_copy_mechanism";
-            args[6] = "none";
-            args[7] = "--tag-output";
-            args[8] = "-x";
-            args[9] = "FI_PROVIDER=efa";
-            args[10] = "-x";
-            args[11] = "RDMAV_FORK_SAFE=1";
-            args[12] = "-x";
-            args[13] = "FI_EFA_USE_DEVICE_RDMA=1";
-            args[14] = "-x";
-            args[15] = "LD_LIBRARY_PATH";
-            args[16] = "-x";
-            args[17] = "PYTHONPATH";
-            args[18] = "-x";
-            args[19] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
-            args[20] = "-x";
-            args[21] = "MASTER_ADDR=" + MASTER_ADDR;
-            args[22] = "-x";
-            args[23] = "MASTER_PORT=" + port;
-            args[24] = pyEnv.getPythonExecutable();
-            args[25] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
-            args[26] = "--model-dir";
-            args[27] = model.getModelPath().toAbsolutePath().toString();
-            args[28] = "--entry-point";
-            args[29] = pyEnv.getEntryPoint();
-            args[30] = "--sock-type";
-            args[31] = "unix";
-            args[32] = "--sock-name";
-            args[33] = getSocketPath(port);
-            args[34] = "--tensor-parallel-degree";
-            args[35] = String.valueOf(tensorParallelDegree);
+            args[3] = "--nproc-per-node=" + tensorParallelDegree;
+            // master address and port is not set for torchrun random pick
+            // args[4] = "--rdzv-endpoint=" + MASTER_ADDR + ":" + port;
+            args[4] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
+            args[5] = "--model-dir";
+            args[6] = model.getModelPath().toAbsolutePath().toString();
+            args[7] = "--entry-point";
+            args[8] = pyEnv.getEntryPoint();
+            args[9] = "--sock-type";
+            args[10] = "unix";
+            args[11] = "--sock-name";
+            args[12] = getSocketPath(port);
+            args[13] = "--tensor-parallel-degree";
+            args[14] = String.valueOf(tensorParallelDegree);
             return args;
         }
 

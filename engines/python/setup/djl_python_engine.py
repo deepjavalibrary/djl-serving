@@ -37,11 +37,13 @@ class PythonEngine(object):
 
     def __init__(self, args, service):
         # Support MPI environment args
+        rank = os.getenv("RANK", None)
         if os.getenv('OMPI_COMM_WORLD_SIZE'):
             os.environ["WORLD_SIZE"] = os.getenv('OMPI_COMM_WORLD_SIZE')
         if os.getenv('OMPI_COMM_WORLD_LOCAL_RANK'):
             os.environ["LOCAL_RANK"] = os.getenv('OMPI_COMM_WORLD_LOCAL_RANK')
-        rank = os.environ.get("OMPI_COMM_WORLD_RANK")
+        if os.getenv("OMPI_COMM_WORLD_RANK"):
+            rank = os.getenv("OMPI_COMM_WORLD_RANK")
         if rank:
             os.environ["RANK"] = rank
 
