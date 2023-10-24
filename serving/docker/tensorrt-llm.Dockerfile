@@ -59,11 +59,7 @@ RUN pip install torch==${TORCH_VERSION} && \
     pip3 cache purge
 
 # Install TRT
-RUN mkdir -p /tmp && cd /tmp && \
-    git clone https://github.com/NVIDIA/TensorRT-LLM.git -b ${TRT_LLM_VERSION} && \
-    cd TensorRT-LLM/docker/common && \
-    bash install_tensorrt.sh && \
-    cd / && rm -rf /tmp/TensorRT-LLM && \
+RUN scripts/install_tensorrt.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # download dependencies
