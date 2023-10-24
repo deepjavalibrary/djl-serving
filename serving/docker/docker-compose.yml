@@ -33,6 +33,11 @@ services:
       context: .
       dockerfile: fastertransformer.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}fastertransformer${NIGHTLY}"
+  tensorrt-llm:
+    build:
+      context: .
+      dockerfile: tensorrt-llm.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}tensorrt-llm${NIGHTLY}"
   pytorch-inf2:
     build:
       context: .
