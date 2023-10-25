@@ -74,6 +74,7 @@ RUN pip install https://publish.djl.ai/tensorrt-llm/0.5.0/tensorrt_llm-0.5.0-py3
 
 # Final steps
 RUN scripts/install_djl_serving.sh $djl_version && \
+    scripts/install_s5cmd.sh x64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} tensorrtllm" > /opt/djl/bin/telemetry && \
     scripts/patch_oss_dlc.sh python && \

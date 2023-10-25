@@ -28,7 +28,6 @@ from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
-from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -103,8 +102,10 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
             from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
             return LmiDistRollingBatch
         else:
+            from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
             return SchedulerRollingBatch
     elif rolling_batch_type == "scheduler":
+        from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
         return SchedulerRollingBatch
     elif rolling_batch_type == "lmi-dist":
         from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
