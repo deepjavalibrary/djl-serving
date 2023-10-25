@@ -143,14 +143,9 @@ class LmiDistRollingBatch(RollingBatch):
             if next_batch is not None:
                 self.cache[next_batch.batch_id] = next_batch
 
-        generation_dict = {
-            generation.request_id: generation
-            for generation in generations
-        }
-
         req_ids = []
         for request in self.active_requests:
-            generation = generation_dict.get(request.id, None)
+            generation = generations.get(request.id, None)
             if generation:
                 is_last_token = generation.generated_text is not None
                 if not is_last_token:
