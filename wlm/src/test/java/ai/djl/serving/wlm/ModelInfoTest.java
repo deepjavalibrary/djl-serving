@@ -155,6 +155,135 @@ public class ModelInfoTest {
     }
 
     @Test
+    public void testLoadOnDevices() {
+        Properties emptyProperties = new Properties();
+        Properties mpiProperties = new Properties();
+        mpiProperties.put("option.mpi_mode", "true");
+        Properties tp0Properties = new Properties();
+        tp0Properties.put("option.tensor_parallel_degree", "0");
+        Properties tp2Properties = new Properties();
+        tp2Properties.put("option.tensor_parallel_degree", "2");
+        Properties tpMaxProperties = new Properties();
+        tpMaxProperties.put("option.tensor_parallel_degree", "max");
+
+        // All devices (no tensor parallel)
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "PyTorch", emptyProperties, null, 2, 0),
+                new String[] {"0", "1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "PyTorch", emptyProperties, null, 0, 2),
+                new String[] {"nc0", "nc1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "PyTorch", tp2Properties, null, 2, 0),
+                new String[] {"0", "1"}); // Ignore tpDegree for non-Python engine
+
+        // All devices (mpi mode, default tensor parallel)
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", emptyProperties, null, 2, 0),
+                new String[] {"0+1"}); // GPU MPI defaults to TP=max
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", emptyProperties, null, 0, 2),
+                new String[] {"nc0", "nc1"}); // Neuron MPI defaults to TP=1
+
+        // All devices (mpi mode, explicit tensor parallel)
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 4, 0),
+                new String[] {"0+1", "2+3"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 0, 4),
+                new String[] {"nc0+nc1", "nc2+nc3"});
+
+        // All devices (mpi mode, 0 tensor parallel)
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp0Properties, null, 2, 0),
+                new String[] {"0", "1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp0Properties, null, 0, 2),
+                new String[] {"nc0", "nc1"});
+
+        // All devices (mpi mode, max tensor parallel)
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tpMaxProperties, null, 2, 0),
+                new String[] {"0+1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tpMaxProperties, null, 0, 2),
+                new String[] {"nc0+nc1"});
+
+        // All devices (insufficient TP assignment)
+        Assert.assertThrows(
+                () -> ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 1, 0));
+        Assert.assertThrows(
+                () -> ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 0, 1));
+
+        // All devices (uneven TP assignment)
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 3, 0),
+                new String[] {"0+1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 0, 3),
+                new String[] {"nc0+nc1"});
+
+        // All devices, max workers
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, 1, 4, 0),
+                new String[] {"0+1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, 1, 0, 4),
+                new String[] {"nc0+nc1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "PyTorch", emptyProperties, 1, 2, 0),
+                new String[] {"0"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "PyTorch", emptyProperties, 1, 0, 2),
+                new String[] {"nc0"});
+
+        // All devices (only CPU available)
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "Python", emptyProperties, null, 0, 0),
+                new String[] {"-1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 0, 0),
+                new String[] {"-1"}); // Ignored MPI and TPI and falls back to CPU
+
+        // Ways to enable mpi mode
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "Python", mpiProperties, null, 2, 0),
+                new String[] {"0+1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", emptyProperties, null, 2, 0),
+                new String[] {"0+1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "DeepSpeed", emptyProperties, null, 2, 0),
+                new String[] {"0+1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "FasterTransformer", emptyProperties, null, 2, 0),
+                new String[] {"0+1"});
+
+        // Ways to set tensor parallel
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", tp2Properties, null, 4, 0),
+                new String[] {"0+1", "2+3"});
+        System.setProperty("TENSOR_PARALLEL_DEGREE", "2");
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("*", "MPI", mpiProperties, null, 4, 0),
+                new String[] {"0+1", "2+3"});
+        System.clearProperty("TENSOR_PARALLEL_DEGREE");
+
+        // Providing devices
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("1", "", emptyProperties, null, 10, 10),
+                new String[] {"1"});
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("1;2", "", emptyProperties, null, 10, 10),
+                new String[] {"1", "2"});
+
+        // Empty case
+        Assert.assertEquals(
+                ModelInfo.getLoadOnDevices("", "", emptyProperties, null, 10, 10),
+                new String[] {"-1"});
+    }
+
+    @Test
     public void testInitModel() throws IOException, ModelException {
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("test_model");

@@ -13,6 +13,7 @@
 package ai.djl.python.engine;
 
 import ai.djl.Device;
+import ai.djl.Device.MultiDevice;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
@@ -123,7 +124,11 @@ class Connection {
     static String[] getPythonStartCmd(PyEnv pyEnv, Model model, int workerId, int port) {
         Device device = model.getNDManager().getDevice();
         int deviceId = device.getDeviceId();
-        int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+        int tensorParallelDegree = 0;
+        if (model.getNDManager().getDevice() instanceof MultiDevice) {
+            tensorParallelDegree =
+                    ((MultiDevice) model.getNDManager().getDevice()).getDevices().size();
+        }
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);

@@ -13,6 +13,7 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.Device;
+import ai.djl.Device.MultiDevice;
 import ai.djl.MalformedModelException;
 import ai.djl.Model;
 import ai.djl.ModelException;
@@ -59,6 +60,8 @@ import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /** A class represent a loaded model and it's metadata. */
@@ -761,21 +764,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         int defMemory = wlmc.getReservedMemoryMb();
         long reservedMemory = intValue(prop, "reserved_memory_mb", defMemory) * 1024L * 1024;
-        String tpDegreeStr = Utils.getenv("TENSOR_PARALLEL_DEGREE", "0");
-        tpDegreeStr = prop.getProperty("option.tensor_parallel_degree", tpDegreeStr);
-        int tpDegree;
-        if ("max".equals(tpDegreeStr)) {
-            Engine eng = Engine.getEngine(engineName);
-            if (eng.getGpuCount() > 0) {
-                tpDegree = eng.getGpuCount();
-            } else {
-                tpDegree = NeuronUtils.getNeuronCores();
-            }
-        } else {
-            tpDegree = Integer.parseInt(tpDegreeStr);
+        boolean multiDevice = false;
+        if (device instanceof MultiDevice) {
+            multiDevice = ((MultiDevice) device).getDevices().size() > 1;
         }
         if (requiredMemory <= 0
-                && tpDegree < 1
+                && !multiDevice
                 && "true".equals(Utils.getenv("SAGEMAKER_MULTI_MODEL"))) {
             // TODO:
             // 1. handle LMI use case in future
@@ -830,71 +824,96 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     @Override
     public String[] getLoadOnDevices() {
         Engine eng = Engine.getEngine(engineName);
+        int gpuCount = eng.getGpuCount();
+        int neurons = NeuronUtils.getNeuronCores();
+        return getLoadOnDevices(loadOnDevices, engineName, prop, maxWorkers, gpuCount, neurons);
+    }
+
+    static String[] getLoadOnDevices(
+            String loadOnDevices,
+            String engineName,
+            Properties prop,
+            Integer maxWorkers,
+            int gpuCount,
+            int neurons) {
         if ("*".equals(loadOnDevices)) {
-            int gpuCount = eng.getGpuCount();
-            String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
-            v = prop.getProperty("option.tensor_parallel_degree", v);
+
+            boolean mpiMode;
+            if (prop.containsKey("option.mpi_mode")) {
+                mpiMode = Boolean.parseBoolean(prop.getProperty("option.mpi_mode"));
+            } else if ("DeepSpeed".equals(engineName)
+                    || "FasterTransformer".equals(engineName)
+                    || "MPI".equals(engineName)) {
+                mpiMode = true;
+            } else {
+                mpiMode = false;
+            }
+
+            String tpDegreeProp = Utils.getEnvOrSystemProperty("TENSOR_PARALLEL_DEGREE");
+            String tpDegreeString;
+            if (prop.containsKey("option.tensor_parallel_degree")) {
+                tpDegreeString = prop.getProperty("option.tensor_parallel_degree");
+            } else if (tpDegreeProp != null) {
+                tpDegreeString = tpDegreeProp;
+            } else if (mpiMode && gpuCount > 0) {
+                tpDegreeString = "max";
+                logger.info(
+                        "No tensor parallel degree specified. Defaulting to all available GPUs.");
+            } else {
+                tpDegreeString = "-1";
+            }
+
             int tpDegree;
-            if ("max".equals(v)) {
+            if ("max".equals(tpDegreeString)) {
                 if (gpuCount > 0) {
                     tpDegree = gpuCount;
                 } else {
-                    tpDegree = NeuronUtils.getNeuronCores();
+                    tpDegree = neurons;
                 }
             } else {
-                tpDegree = Integer.parseInt(v);
-            }
-            if (gpuCount > 0) {
-                int gpuPerWorker = 1;
-                if (Boolean.parseBoolean(prop.getProperty("option.mpi_mode"))) {
-                    return new String[] {"0"};
-                } else if ("Python".equals(engineName)) {
-                    if (tpDegree > 0) {
-                        gpuPerWorker = tpDegree;
-                        int procs = gpuCount / gpuPerWorker;
-                        if (procs == 0) {
-                            throw new EngineException(
-                                    "GPU devices are not enough to run "
-                                            + gpuPerWorker
-                                            + " partitions.");
-                        }
-                        if (maxWorkers == null || maxWorkers < 0) {
-                            gpuCount = procs;
-                        } else {
-                            gpuCount = Math.min(procs, maxWorkers);
-                        }
-                    }
+                tpDegree = Integer.parseInt(tpDegreeString);
+                if (tpDegree <= 1) {
+                    tpDegree = 1;
                 }
+            }
 
-                String[] ret = new String[gpuCount];
-                for (int i = 0; i < gpuCount; ++i) {
-                    ret[i] = String.valueOf(i * gpuPerWorker);
+            String deviceType;
+            int deviceCount;
+            if (gpuCount > 0) { // GPU
+                deviceType = "";
+                deviceCount = gpuCount;
+                if (!"Python".equals(engineName) && !mpiMode) {
+                    tpDegree = 1;
                 }
-                return ret;
-            } else if (NeuronUtils.hasNeuron()) {
-                int neurons = NeuronUtils.getNeuronCores();
-                int ncPerWorker;
-                if (tpDegree > 0) {
-                    // Assume user understand TP only works on inf2
-                    ncPerWorker = tpDegree;
-                    int procs = neurons / ncPerWorker;
-                    if (procs == 0) {
-                        throw new EngineException(
-                                "Neuron devices are not enough to run "
-                                        + ncPerWorker
-                                        + " partitions. Please refer to: "
-                                        + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
-                    }
-                    neurons = procs;
-                } else {
-                    ncPerWorker = 1;
-                }
-                String[] ret = new String[neurons];
-                for (int i = 0; i < neurons; ++i) {
-                    ret[i] = "nc" + (i * ncPerWorker);
-                }
-                return ret;
+            } else if (neurons > 0) { // Neuron
+                deviceType = "nc";
+                deviceCount = neurons;
+            } else { // Default to CPU
+                return new String[] {"-1"};
             }
+            int workers = deviceCount / tpDegree;
+            if (workers == 0) {
+                if ("nc".equals(deviceType)) {
+                    throw new EngineException(
+                            "Neuron devices are not enough to run "
+                                    + workers
+                                    + " partitions. Please refer to: "
+                                    + "https://github.com/aws-neuron/transformers-neuronx#tensor-parallelism-support");
+                }
+                throw new EngineException(
+                        "GPU devices are not enough to run " + workers + " partitions.");
+            }
+            if (maxWorkers != null && maxWorkers > 0) {
+                workers = Math.min(workers, maxWorkers);
+            }
+            String[] ret = new String[workers];
+            for (int i = 0; i < workers; ++i) {
+                ret[i] =
+                        IntStream.range(i * tpDegree, (i + 1) * tpDegree)
+                                .mapToObj(j -> deviceType + j)
+                                .collect(Collectors.joining("+"));
+            }
+            return ret;
         } else if (!loadOnDevices.isEmpty()) {
             return loadOnDevices.split(";");
         }

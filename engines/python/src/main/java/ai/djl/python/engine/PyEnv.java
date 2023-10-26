@@ -12,9 +12,9 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Device.MultiDevice;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
-import ai.djl.util.NeuronUtils;
 import ai.djl.util.Platform;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
@@ -52,7 +52,6 @@ public class PyEnv {
     private String handler;
     private int predictTimeout;
     private int modelLoadingTimeout;
-    private int tensorParallelDegree;
     private Map<String, String> envs;
     private Map<String, String> initParameters;
     private boolean initialized;
@@ -302,41 +301,7 @@ public class PyEnv {
         this.pythonExecutable = pythonExecutable;
     }
 
-    /**
-     * Returns the tensor parallel degree.
-     *
-     * @return the tensor parallel degree
-     */
-    public int getTensorParallelDegree() {
-        if (tensorParallelDegree == 0) {
-            String value = Utils.getenv("TENSOR_PARALLEL_DEGREE");
-            if ("max".equals(value)) {
-                tensorParallelDegree = getDefaultTensorParallelDegree();
-            } else if (value != null) {
-                tensorParallelDegree = Integer.parseInt(value);
-            }
-        }
-        return tensorParallelDegree;
-    }
-
-    static int getDefaultTensorParallelDegree() {
-        int gpus = CudaUtils.getGpuCount();
-        if (gpus > 0) {
-            return gpus;
-        }
-        return NeuronUtils.getNeuronCores();
-    }
-
-    /**
-     * Sets the tensor parallel degree.
-     *
-     * @param tensorParallelDegree the tensor parallel degree
-     */
-    public void setTensorParallelDegree(int tensorParallelDegree) {
-        this.tensorParallelDegree = tensorParallelDegree;
-    }
-
-    int getMpiWorkers() {
+    int getMpiWorkers(MultiDevice multiDevice) {
         int gpuCount = CudaUtils.getGpuCount();
         String visibleDevices = Utils.getenv("CUDA_VISIBLE_DEVICES");
         if (gpuCount > 0 && visibleDevices != null) {
@@ -346,7 +311,8 @@ public class PyEnv {
             }
             gpuCount = visibleCount;
         }
-        return gpuCount / getTensorParallelDegree();
+        int tensorParallelDegree = multiDevice.getDevices().size();
+        return gpuCount / tensorParallelDegree;
     }
 
     /**

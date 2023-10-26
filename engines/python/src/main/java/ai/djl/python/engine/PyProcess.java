@@ -12,6 +12,8 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Device;
+import ai.djl.Device.MultiDevice;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
@@ -59,12 +61,12 @@ class PyProcess {
         this.workerId = workerId;
         int port = counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
-            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
-            connections = new ArrayList<>(tensorParallelDegree);
-            for (int i = 0; i < tensorParallelDegree; ++i) {
+            List<Device> devices = ((MultiDevice) model.getNDManager().getDevice()).getDevices();
+            connections = new ArrayList<>(devices.size());
+            for (int i = 0; i < devices.size(); ++i) {
                 connections.add(new Connection(pyEnv, port, i));
             }
-            counter.set(port + tensorParallelDegree);
+            counter.set(port + devices.size());
         } else {
             connections = Collections.singletonList(new Connection(pyEnv, port, -1));
         }
