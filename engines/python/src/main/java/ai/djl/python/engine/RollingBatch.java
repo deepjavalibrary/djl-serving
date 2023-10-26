@@ -23,14 +23,17 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -93,8 +96,16 @@ class RollingBatch implements Runnable {
                 size = list.size();
                 for (int i = 0; i < size; ++i) {
                     Request req = list.get(i);
-                    String prefix = "batch_" + i + '.';
-                    for (Map.Entry<String, String> entry : req.input.getProperties().entrySet()) {
+                    // TODO: max 999 batch size
+                    String prefix;
+                    if (i > 99) {
+                        prefix = "batch_" + i + '.';
+                    } else if (i > 9) {
+                        prefix = "batch_0" + i + '.';
+                    } else {
+                        prefix = "batch_00" + i + '.';
+                    }
+                    for (Map.Entry<String, String> entry : req.getProperties()) {
                         String key = prefix + entry.getKey();
                         batch.addProperty(key, entry.getValue());
                     }
@@ -139,15 +150,16 @@ class RollingBatch implements Runnable {
                     canAdd.signal();
                     continue;
                 }
+
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
                     String json = content.get(i).getValue().getAsString();
                     status.addResponse(json);
                 }
-                list.removeIf(status -> status.last);
-                if (list.size() < maxRollingBatchSize) {
+                if (list.removeIf(status -> status.last) || list.size() < maxRollingBatchSize) {
                     canAdd.signal();
                 }
+                logger.trace("rolling batch size: {}", size);
             } finally {
                 lock.unlock();
             }
@@ -204,9 +216,16 @@ class RollingBatch implements Runnable {
 
         BytesSupplier getRequest() {
             if (nextToken != null) {
-                return BytesSupplier.wrap("{\"inputs\": [\"\"]}");
+                return BytesSupplier.wrap("");
             }
             return input.getData();
+        }
+
+        Set<Map.Entry<String, String>> getProperties() {
+            if (nextToken != null) {
+                return Collections.emptySet();
+            }
+            return input.getProperties().entrySet();
         }
 
         /**
@@ -227,12 +246,13 @@ class RollingBatch implements Runnable {
             JsonObject element = JsonUtils.GSON.fromJson(json, JsonObject.class);
             last = element.get("last").getAsBoolean();
             nextToken = element.get("data").getAsString();
-            try {
-                JsonObject content = JsonUtils.GSON.fromJson(nextToken, JsonObject.class);
-                output.setCode(content.get("code").getAsInt());
-                output.setMessage(content.get("error").getAsString());
-            } catch (Throwable ignore) {
-                // ignore
+            JsonElement code = element.get("code");
+            if (code != null) {
+                output.setCode(code.getAsInt());
+                JsonElement error = element.get("error");
+                if (error != null) {
+                    output.setMessage(error.getAsString());
+                }
             }
 
             data.appendContent(BytesSupplier.wrap(nextToken), last);

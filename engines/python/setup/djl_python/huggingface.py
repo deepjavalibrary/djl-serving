@@ -251,7 +251,7 @@ class HuggingFaceService(object):
 
     def parse_stop_sequence_input(self, stop_sequence):
         """
-        Gets a list of stop sequences by parsing the string given in 
+        Gets a list of stop sequences by parsing the string given in
         serving.properties.
         Not robust against badly formatted input and commas in the stop sequence
         Input: stop_sequence (string)
@@ -355,9 +355,13 @@ class HuggingFaceService(object):
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
-                err = json.dumps({"code": 424, "error": err})
                 if self.rolling_batch_type:
-                    err = json.dumps({"data": err, "last": True})
+                    err = json.dumps({
+                        "data": "",
+                        "last": True,
+                        "code": 424,
+                        "error": err
+                    })
                 outputs.add(err, key="data", batch_index=i)
             return outputs
 
@@ -369,8 +373,12 @@ class HuggingFaceService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 if err:
-                    err = json.dumps({"code": 424, "error": err})
-                    err = json.dumps({"data": err, "last": True})
+                    err = json.dumps({
+                        "data": "",
+                        "last": True,
+                        "code": 424,
+                        "error": err
+                    })
                     outputs.add(err, key="data", batch_index=i)
                 else:
                     outputs.add(result[idx], key="data", batch_index=i)
