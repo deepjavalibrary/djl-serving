@@ -156,6 +156,7 @@ class HuggingFaceService(object):
         self.peft_config = None
         self.stopping_criteria_list = None
         self.disable_flash_attn = None
+        self.adapters = None
 
     def initialize(self, properties: dict):
         # model_id can point to huggingface model_id or local directory.
@@ -345,13 +346,17 @@ class HuggingFaceService(object):
                 logging.exception(f"Parse input failed: {i}")
                 errors[i] = str(e)
 
-        return input_data, input_size, adapters, parameters, errors, batch
+        self.adapters = adapters
+        return input_data, input_size, parameters, errors, batch
 
     def inference(self, inputs):
         outputs = Output()
 
-        input_data, input_size, adapters, parameters, errors, batch = self.parse_input(
+        input_data, input_size, parameters, errors, batch = self.parse_input(
             inputs)
+        adapters = self.adapters
+        if not adapters:
+            adapters = [""] * len(input_data)
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
