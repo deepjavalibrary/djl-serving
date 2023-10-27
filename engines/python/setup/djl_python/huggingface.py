@@ -356,12 +356,7 @@ class HuggingFaceService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 if self.rolling_batch_type:
-                    err = json.dumps({
-                        "data": "",
-                        "last": True,
-                        "code": 424,
-                        "error": err
-                    })
+                    err = {"data": "", "last": True, "code": 424, "error": err}
                 outputs.add(err, key="data", batch_index=i)
             return outputs
 
@@ -373,15 +368,14 @@ class HuggingFaceService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 if err:
-                    err = json.dumps({
-                        "data": "",
-                        "last": True,
-                        "code": 424,
-                        "error": err
-                    })
-                    outputs.add(err, key="data", batch_index=i)
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
                 else:
-                    outputs.add(result[idx], key="data", batch_index=i)
+                    outputs.add(Output.binary_encode(result[idx]),
+                                key="data",
+                                batch_index=i)
                     idx += 1
 
             content_type = self.rolling_batch.get_content_type()

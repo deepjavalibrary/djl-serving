@@ -148,6 +148,15 @@ class Output(object):
                        separators=(",", ":")).encode("utf-8"))
 
     @staticmethod
+    def binary_encode(data: dict) -> bytes:
+        msg = bytearray()
+        msg += struct.pack('>h', len(data))
+        for k, v in data.items():
+            Output.write_utf8(msg, k)
+            Output.write_utf8(msg, str(v))
+        return msg
+
+    @staticmethod
     def write_utf8(msg, val):
         if val is None:
             msg += struct.pack('>h', -1)
