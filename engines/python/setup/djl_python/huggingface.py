@@ -118,7 +118,8 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
     elif rolling_batch_type == "trtllm":
         from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
         return TRTLLMRollingBatch
-    raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
+    else:
+        raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
 
 class StopWord(StoppingCriteria):
