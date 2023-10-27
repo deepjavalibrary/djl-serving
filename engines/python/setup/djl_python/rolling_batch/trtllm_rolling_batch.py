@@ -87,7 +87,7 @@ class TRTLLMRollingBatch(RollingBatch):
         # obtain new tokens in all active requests
         finished_ids = set()
         for request in self.active_requests:
-            cached_request = request_cache[request.id]
+            cached_request = self.request_cache[request.id]
             data, complete = cached_request["response_obj"].get_result()
             output_id = data["output_ids"].squeeze().tolist()
             output_text = " " + self.tokenizer.decode(output_id)
