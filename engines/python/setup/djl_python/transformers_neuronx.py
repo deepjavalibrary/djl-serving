@@ -356,9 +356,8 @@ class TransformersNeuronXService(object):
         encoded_inputs = self.tokenizer.batch_encode_plus(input_data,
                                                           return_tensors="pt",
                                                           padding=True)
-        fast_sample = (parameters.pop("use_sample", True)
-                       and parameters.pop("fast_sample", True))
-        if fast_sample:
+        use_sample = parameters.pop("use_sample", True)
+        if use_sample:
             sample_length = parameters.pop("max_new_tokens", self.n_positions)
             output_tokens = self.model.neuron_sample(encoded_inputs.input_ids,
                                                      sample_length,
