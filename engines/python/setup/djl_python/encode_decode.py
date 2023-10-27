@@ -51,7 +51,12 @@ def encode_csv(content):  # type: (str) -> np.array
 
 
 def decode(inputs: Input, content_type: str, key=None):
-    if not content_type or "application/json" in content_type:
+    if not content_type:
+        ret = inputs.get_as_bytes(key=key)
+        if not ret:
+            return {"inputs": ""}
+        return inputs.get_as_json(key=key)
+    elif "application/json" in content_type:
         return inputs.get_as_json(key=key)
     elif "text/csv" in content_type:
         return decode_csv(inputs)
