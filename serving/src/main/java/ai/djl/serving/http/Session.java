@@ -12,6 +12,8 @@
  */
 package ai.djl.serving.http;
 
+import ai.djl.modality.Input;
+
 import io.netty.handler.codec.http.HttpRequest;
 
 import java.util.UUID;
@@ -26,6 +28,7 @@ public class Session {
     private String protocol;
     private int code;
     private long startTime;
+    private Input input;
 
     /**
      * Constructs a new {@code Session} instance.
@@ -45,6 +48,24 @@ public class Session {
         }
         requestId = UUID.randomUUID().toString();
         startTime = System.currentTimeMillis();
+    }
+
+    /**
+     * Returns the current input.
+     *
+     * @return the current input
+     */
+    public Input getInput() {
+        return input;
+    }
+
+    /**
+     * Sets the current input.
+     *
+     * @param input the current input
+     */
+    public void setInput(Input input) {
+        this.input = input;
     }
 
     /**

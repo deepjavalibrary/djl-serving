@@ -1042,6 +1042,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             for (Job<I, O> job : jobs) {
                 if (job.getInput() instanceof Input) {
                     Input i = (Input) job.getInput();
+                    if (i.isCancelled()) {
+                        logger.debug("Skip cancelled job");
+                        continue;
+                    }
                     if (i.getContent().contains("adapter")) {
                         String adapter = i.getAsString("adapter");
                         if (!dynamicAdapters && !adapters.containsKey(adapter)) {
