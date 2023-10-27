@@ -38,6 +38,7 @@ class TRTLLMService(object):
         self.model_id_or_path = properties.get("model_id") or properties.get("model_dir")
         device_id = int(properties.get("device_id", "-1"))
         self.device = f"cuda:{device_id}" if device_id >= 0 else None
+        kwargs = {}
         if "revision" in properties:
             kwargs["revision"] = properties.get('revision')
         if "output_formatter" in properties:
