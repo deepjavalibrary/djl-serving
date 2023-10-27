@@ -155,6 +155,7 @@ class TRTLLMService(object):
         
         result = self.rolling_batch.inference(input_data, parameters)
 
+        idx = 0
         for i in range(len(batch)):
             err = errors.get(i)
             if err:
