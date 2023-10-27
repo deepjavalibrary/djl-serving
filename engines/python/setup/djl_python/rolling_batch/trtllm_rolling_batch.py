@@ -55,7 +55,7 @@ class TRTLLMRollingBatch(RollingBatch):
 		self.request_cache = OrderedDict()
 		super().reset()
 
-	  def get_sample_payload(self, input_text, parameters):
+	def get_sample_payload(self, input_text, parameters):
 		input_tokens = self.tokenizer([input_text])
 		input_ids = input_tokens["input_ids"]
 		input_ids_data = np.array(input_ids, dtype=np.int32)
