@@ -50,6 +50,7 @@ class TRTLLMRollingBatch(RollingBatch):
 		Stops all current requests and resets state of rolling batch portion of handler
 		"""
 		for key in self.request_cache.keys():
+			continue
 			# todo stop the asynchronous inference
 		self.request_cache = OrderedDict()
 		super().reset()
