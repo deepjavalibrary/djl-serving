@@ -10,7 +10,7 @@ from transformers import (
     AutoModelForSequenceClassification, AutoModelForTokenClassification,
     AutoModelForQuestionAnswering, StoppingCriteria, StoppingCriteriaList)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-
+from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
