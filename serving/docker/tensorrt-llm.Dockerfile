@@ -47,6 +47,9 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 # Install OpenMPI and other deps
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev libffi-dev git-lfs rapidjson-dev && \
