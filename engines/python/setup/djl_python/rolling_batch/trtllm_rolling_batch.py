@@ -82,7 +82,7 @@ class TRTLLMRollingBatch(RollingBatch):
         # register new active requests
         for request in new_requests:
             result = self.model.inference_async(self.get_sample_payload(request.input_text, request.parameters))
-            self.request_cache[request_id] = {"response_obj":result, "curr_length":0, "text":"", "finished":False}
+            self.request_cache[request.id] = {"response_obj":result, "curr_length":0, "text":"", "finished":False}
 
         # obtain new tokens in all active requests
         finished_ids = set()
@@ -94,7 +94,7 @@ class TRTLLMRollingBatch(RollingBatch):
             cached_request["curr_length"] += 1
             cached_request["text"] += token
             if(complete): # placeholder: "finished"
-                finished_ids.add(request_id)
+                finished_ids.add(request.id)
                 cached_request["finished"] = True
 
         # remove finished requests
