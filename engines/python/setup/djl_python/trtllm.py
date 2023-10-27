@@ -141,7 +141,7 @@ class TRTLLMService(object):
         """
         outputs = Output()
         input_data, input_size, adapters, parameters, errors, batch = self.parse_input(inputs)
-
+        print(len(input_data))
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
@@ -149,12 +149,13 @@ class TRTLLMService(object):
                 err = json.dumps({"data": err, "last": True})
                 outputs.add(err, key="data", batch_index=i)
             return outputs
-
+        print("A")
         if inputs.get_property("reset_rollingbatch"):
             self.rolling_batch.reset()
-        
+        print("B")
         result = self.rolling_batch.inference(input_data, parameters)
-
+        print("C")
+        print(result)
         idx = 0
         for i in range(len(batch)):
             err = errors.get(i)
@@ -169,6 +170,8 @@ class TRTLLMService(object):
         content_type = self.rolling_batch.get_content_type()
         if content_type:
             outputs.add_property("content-type", content_type)
+        print("D")
+        print(outputs)
         return outputs
 
 _service = TRTLLMService()
