@@ -92,7 +92,8 @@ class TRTLLMRollingBatch(RollingBatch):
             output_id = data["output_ids"].squeeze().tolist()
             output_text = " " + self.tokenizer.decode(output_id)
             cached_request["curr_length"] += 1
-            cached_request["text"] += token
+            cached_request["text"] += output_text
+            request.set_next_token(output_text, self.output_formatter, complete)
             if(complete): # placeholder: "finished"
                 finished_ids.add(request.id)
                 cached_request["finished"] = True
