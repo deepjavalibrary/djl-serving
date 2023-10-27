@@ -180,12 +180,7 @@ class TransformersNeuronXService(object):
         # TODO: workaround on Neuron Compiler bug for SM
         path = os.getcwd()
         os.chdir("/tmp")
-        if model_type == "gpt2":
-            self.model._load_compiled_artifacts(load_path)
-            self.model.to_neuron()
-            self.model._save_compiled_artifacts(load_path)
-        else:
-            self.model.to_neuron()
+        self.model.to_neuron()
         os.chdir(path)
         elapsed = time.time() - start
         logging.info(
