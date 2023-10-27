@@ -27,7 +27,6 @@ class TRTLLMService(object):
         self.device = None
         self.tokenizer = None
         self.model_config = None
-        self.rolling_batch_type = None
         self.rolling_batch = None
 
 
@@ -41,12 +40,10 @@ class TRTLLMService(object):
         self.device = f"cuda:{device_id}" if device_id >= 0 else None
         if "revision" in properties:
             kwargs["revision"] = properties.get('revision')
-        self.rolling_batch_type = properties.get("rolling_batch", None)
         if "output_formatter" in properties:
             kwargs["output_formatter"] = properties.get("output_formatter")
         if "waiting_steps" in properties:
             kwargs["waiting_steps"] = int(properties.get("waiting_steps"))
-        self.rolling_batch_type = self.rolling_batch_type.lower()
         is_mpi = properties.get("engine") != "Python"
         if is_mpi:
             self.device = int(os.getenv("LOCAL_RANK", 0))
@@ -91,18 +88,13 @@ class TRTLLMService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
+                # remove adapters
                 #adapters_per_item = self._fetch_adapters_from_input(input_map, item)
-                if first or self.rolling_batch_type:
+                if first:
                     parameters.append(input_map.pop("parameters", {}))
                     first = False
                 else:
                     param = input_map.pop("parameters", {})
-                    if parameters[0] != param:
-                        logging.warning(
-                            f"expected param: {parameters}, actual: {param}")
-                        raise ValueError(
-                            "In order to enable dynamic batching, all input batches must have the same parameters"
-                        )
 
                 if not isinstance(_inputs, list):
                     _inputs = [_inputs]
@@ -153,8 +145,7 @@ class TRTLLMService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 err = json.dumps({"code": 424, "error": err})
-                if self.rolling_batch_type:
-                    err = json.dumps({"data": err, "last": True})
+                err = json.dumps({"data": err, "last": True})
                 outputs.add(err, key="data", batch_index=i)
             return outputs
 
