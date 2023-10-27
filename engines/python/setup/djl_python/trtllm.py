@@ -77,18 +77,25 @@ class TRTLLMService(object):
     #     return input_data
 
     def parse_input(self, inputs):
+        logging.error("[parse_input] start")
         input_data = []
         input_size = []
         parameters = []
         adapters = []
         errors = {}
         batch = inputs.get_batches()
+        logging.error("[parse_input] len(batches) %d"%(len(batch)))
         first = True
         for i, item in enumerate(batch):
             try:
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
+                if(i == 0):
+                    logging.error("[parse_input] input_map: ", str(input_map))
                 _inputs = input_map.pop("inputs", input_map)
+                if(i == 0):
+                    logging.error("[parse_input] _inputs: ", str(_inputs))
+
                 # remove adapters
                 #adapters_per_item = self._fetch_adapters_from_input(input_map, item)
                 if first:
@@ -132,6 +139,12 @@ class TRTLLMService(object):
             except Exception as e:  # pylint: disable=broad-except
                 logging.exception(f"Parse input failed: {i}")
                 errors[i] = str(e)
+        
+        logging.error("[parse_input] input data length: ", len(input_data))
+        logging.error("[parse_input] input data: ", input_data)
+
+        logging.error("[parse_input] input size length: ", len(input_size))
+        logging.error("[parse_input] input size: ", input_size)
 
         return input_data, input_size, adapters, parameters, errors, batch
 
