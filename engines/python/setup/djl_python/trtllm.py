@@ -187,5 +187,5 @@ def handle(inputs):
 
     logging.error("running inference")
     logging.error("inputs length")
-    print(len(inputs))
+    # print(len(inputs))
     return _service.inference(inputs)
