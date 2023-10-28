@@ -293,7 +293,7 @@ class HuggingFaceService(object):
         adapters = []
         errors = {}
         batch = inputs.get_batches()
-        logging.error("[hf parse_input] len(batches) %d"%(len(batch)))
+        #logging.error("[hf parse_input] len(batches) %d"%(len(batch)))
         first = True
         for i, item in enumerate(batch):
             try:
@@ -350,11 +350,11 @@ class HuggingFaceService(object):
                 logging.exception(f"Parse input failed: {i}")
                 errors[i] = str(e)
 
-        logging.error("[hf parse_input] input data length: ", len(input_data))
-        logging.error("[hf parse_input] input data: ", input_data)
+        #logging.error("[hf parse_input] input data length: ", len(input_data))
+        #logging.error("[hf parse_input] input data: ", input_data)
 
-        logging.error("[hf parse_input] input size length: ", len(input_size))
-        logging.error("[hf parse_input] input size: ", input_size)
+        #logging.error("[hf parse_input] input size length: ", len(input_size))
+        #logging.error("[hf parse_input] input size: ", input_size)
         return input_data, input_size, adapters, parameters, errors, batch
 
     def inference(self, inputs):
