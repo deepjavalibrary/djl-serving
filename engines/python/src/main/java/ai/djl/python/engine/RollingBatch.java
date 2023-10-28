@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -246,6 +247,8 @@ class RollingBatch implements Runnable {
         void addResponse(byte[] json) {
             ByteBuf buf = Unpooled.wrappedBuffer(json);
             int size = buf.readShort();
+            String code = null;
+            String error = null;
             for (int i = 0; i < size; ++i) {
                 String key = Objects.requireNonNull(CodecUtils.readUtf8(buf));
                 String value = Objects.requireNonNull(CodecUtils.readUtf8(buf));
@@ -257,16 +260,25 @@ class RollingBatch implements Runnable {
                         last = "true".equalsIgnoreCase(value);
                         break;
                     case "code":
-                        output.setCode(Integer.parseInt(value));
+                        code = value;
                         break;
                     case "error":
-                        output.setMessage(value);
+                        error = value;
                         break;
                     default:
                         break;
                 }
             }
-            data.appendContent(BytesSupplier.wrap(nextToken), last);
+            if (code != null) {
+                Map<String, Object> map = new ConcurrentHashMap<>(2);
+                map.put("code", Integer.parseInt(code));
+                if (error != null) {
+                    map.put("error", error);
+                }
+                data.appendContent(BytesSupplier.wrapAsJson(map), true);
+            } else {
+                data.appendContent(BytesSupplier.wrap(nextToken), last);
+            }
         }
     }
 }
