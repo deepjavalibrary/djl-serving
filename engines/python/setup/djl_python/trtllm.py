@@ -159,7 +159,7 @@ class TRTLLMService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 err = json.dumps({"code": 424, "error": err})
-                err = json.dumps({"data": err, "last": True})
+                # err = json.dumps({"data": err, "last": True})
                 outputs.add(err, key="data", batch_index=i)
             return outputs
         logging.error("A")
@@ -174,7 +174,7 @@ class TRTLLMService(object):
             err = errors.get(i)
             if err:
                 err = json.dumps({"code": 424, "error": err})
-                err = json.dumps({"data": err, "last": True})
+                # err = json.dumps({"data": err, "last": True})
                 outputs.add(err, key="data", batch_index=i)
             else:
                 outputs.add(result[idx], key="data", batch_index=i)
