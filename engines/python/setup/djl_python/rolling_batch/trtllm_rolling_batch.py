@@ -31,7 +31,7 @@ class TRTLLMRollingBatch(RollingBatch):
         self.fix_config(os.path.join(model_id_or_path, "tensorrt_llm/config.pbtxt"))
         # self.core = tritontoolkit.init_triton(model_id_or_path)
         # self.model = self.core.load_model("tensorrt_llm")
-        self.model = tensorrt_llm_toolkit.init_inference(model_id_or_path, **kwargs) # not sure kwargs okay or not
+        self.model = tensorrt_llm_toolkit.init_inference(model_id_or_path) # not sure kwargs okay or not
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path, padding_side="left", revision=kwargs.get('revision', None))
         self.request_cache = OrderedDict()
 
