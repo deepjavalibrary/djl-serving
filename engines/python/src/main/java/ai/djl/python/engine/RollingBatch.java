@@ -23,12 +23,15 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
 
+import com.google.gson.JsonObject;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -244,6 +247,24 @@ class RollingBatch implements Runnable {
         }
 
         void addResponse(byte[] json) {
+            if (json[0] == '{') {
+                // TODO: backward compatible for 0.23.0 release in case user
+                // customize huggingface.parse_input()
+                String s = new String(json, StandardCharsets.UTF_8);
+                JsonObject element = JsonUtils.GSON.fromJson(s, JsonObject.class);
+                last = element.get("last").getAsBoolean();
+                nextToken = element.get("data").getAsString();
+                try {
+                    JsonObject content = JsonUtils.GSON.fromJson(nextToken, JsonObject.class);
+                    output.setCode(content.get("code").getAsInt());
+                    output.setMessage(content.get("error").getAsString());
+                } catch (Throwable ignore) {
+                    // ignore
+                }
+
+                data.appendContent(BytesSupplier.wrap(nextToken), last);
+                return;
+            }
             ByteBuf buf = Unpooled.wrappedBuffer(json);
             int size = buf.readShort();
             for (int i = 0; i < size; ++i) {
