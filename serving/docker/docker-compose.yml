@@ -28,11 +28,6 @@ services:
       target: base
       dockerfile: pytorch-cu118.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu118${NIGHTLY}"
-  fastertransformer:
-    build:
-      context: .
-      dockerfile: fastertransformer.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}fastertransformer${NIGHTLY}"
   tensorrt-llm:
     build:
       context: .

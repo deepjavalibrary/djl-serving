@@ -8,7 +8,7 @@ parser.add_argument('model', help='model that works with certain handler')
 parser.add_argument('--engine',
                     required=False,
                     type=str,
-                    choices=['deepspeed', 'huggingface', 'fastertransformer'],
+                    choices=['deepspeed', 'huggingface'],
                     help='The engine used for inference')
 parser.add_argument('--dtype',
                     required=False,
@@ -195,71 +195,6 @@ sd_handler_list = {
     }
 }
 
-ft_handler_list = {
-    "bigscience/bloom-3b": {
-        "option.model_id": "s3://djl-llm/bloom-3b/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1,
-    },
-    "flan-t5-xxl": {
-        "option.model_id": "s3://djl-llm/flan-t5-xxl/",
-        "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp32"
-    },
-    "EleutherAI/pythia-2.8b": {
-        "option.model_id": "s3://djl-llm/pythia-2.8b/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1
-    },
-    "llama2-7b": {
-        "engine": "Python",
-        "option.entryPoint": "djl_python.fastertransformer",
-        "option.model_id": "s3://djl-llm/llama-2-7b-hf/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1,
-        "option.trust_remote_code": "true",
-    },
-    "t5-base-lora": {
-        "option.model_id": "s3://djl-llm/t5-base-lora/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp32",
-        "gpu.maxWorkers": 1
-    }
-}
-
-ft_model_list = {
-    "t5-small": {
-        "engine": "FasterTransformer",
-        "option.model_id": "t5-small",
-    },
-    "gpt2-xl": {
-        "engine": "FasterTransformer",
-        "option.model_id": "gpt2-xl",
-        "option.tensor_parallel_degree": 1,
-    },
-    "facebook/opt-6.7b": {
-        "engine": "FasterTransformer",
-        "option.model_id": "s3://djl-llm/opt-6b7/",
-        "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16",
-    },
-    "bigscience/bloom-3b": {
-        "engine": "FasterTransformer",
-        "option.model_id": "s3://djl-llm/bloom-3b/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1,
-    },
-    "nomic-ai/gpt4all-j": {
-        "option.model_id": "s3://djl-llm/gpt4all-j/",
-        "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp32"
-    }
-}
-
 default_accel_configs = {
     "huggingface": {
         "engine": "Python",
@@ -268,10 +203,6 @@ default_accel_configs = {
     "deepspeed": {
         "engine": "DeepSpeed",
         "option.entryPoint": "djl_python.deepspeed"
-    },
-    "fastertransformer": {
-        "engine": "FasterTransformer",
-        "entryPoint": "djl_python.fastertransformer"
     }
 }
 
@@ -730,64 +661,6 @@ def build_sd_handler_model(model):
     write_model_artifacts(options)
 
 
-def build_ft_handler_model(model):
-    if model not in ft_handler_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_handler_list.keys())}"
-        )
-    options = ft_handler_list[model]
-    if "engine" not in options:
-        options["engine"] = "FasterTransformer"
-    write_model_artifacts(options)
-
-
-def build_ft_raw_model(model):
-    if model not in ft_model_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
-        )
-    options = ft_model_list[model]
-    if "engine" not in options:
-        options["engine"] = "Python"
-
-    write_model_artifacts(options)
-    shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
-
-
-def build_ft_raw_aot_model(model):
-    if model not in ft_model_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
-        )
-    options = ft_model_list[model]
-    options["engine"] = "FasterTransformer"
-    if model == 't5-small':
-        options[
-            "option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot/"
-    else:
-        options[
-            "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
-    write_model_artifacts(options)
-    shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
-
-
-def builder_ft_handler_aot_model(model):
-    if model not in ft_model_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
-        )
-    options = ft_model_list[model]
-    options["engine"] = "FasterTransformer"
-    # options["entryPoint"] = "djl_python.fastertransformer"
-    if model == 't5-small':
-        options[
-            "option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot-handler/"
-    else:
-        options[
-            "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
-    write_model_artifacts(options)
-
-
 def build_transformers_neuronx_handler_model(model):
     if model not in transformers_neuronx_handler_list.keys():
         raise ValueError(
@@ -877,10 +750,6 @@ supported_handler = {
     'huggingface': build_hf_handler_model,
     "deepspeed_raw": build_ds_raw_model,
     'stable-diffusion': build_sd_handler_model,
-    'fastertransformer': build_ft_handler_model,
-    'fastertransformer_raw': build_ft_raw_model,
-    'fastertransformer_raw_aot': build_ft_raw_aot_model,
-    'fastertransformer_handler_aot': builder_ft_handler_aot_model,
     'deepspeed_aot': build_ds_aot_model,
     'deepspeed_handler_aot': build_ds_aot_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,

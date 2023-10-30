@@ -34,16 +34,6 @@ public class MpiEngineProvider extends PyEngineProvider {
         return PyEngine.RANK + 1;
     }
 
-    /** {@code FtEngineProvider} is the alias of {@link MpiEngineProvider}. */
-    public static final class FtEngineProvider extends MpiEngineProvider {
-
-        /** {@inheritDoc} */
-        @Override
-        public String getEngineName() {
-            return "FasterTransformer";
-        }
-    }
-
     /** {@code DsEngineProvider} is the alias of {@link MpiEngineProvider}. */
     public static final class DsEngineProvider extends MpiEngineProvider {
 

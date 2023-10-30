@@ -845,9 +845,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         }
                         gpuCount = procs;
                     }
-                } else if ("DeepSpeed".equals(engineName)
-                        || "FasterTransformer".equals(engineName)
-                        || "MPI".equals(engineName)) {
+                } else if ("DeepSpeed".equals(engineName) || "MPI".equals(engineName)) {
                     return new String[] {"0"};
                 }
 

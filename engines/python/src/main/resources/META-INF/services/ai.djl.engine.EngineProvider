@@ -1,4 +1,3 @@
 ai.djl.python.engine.PyEngineProvider
 ai.djl.python.engine.MpiEngineProvider
-ai.djl.python.engine.MpiEngineProvider$FtEngineProvider
 ai.djl.python.engine.MpiEngineProvider$DsEngineProvider

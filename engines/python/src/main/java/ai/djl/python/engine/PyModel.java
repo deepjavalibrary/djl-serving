@@ -160,8 +160,6 @@ public class PyModel extends BaseModel {
                     entryPoint = modelFile.toFile().getName();
                 } else if ("DeepSpeed".equals(engineName)) {
                     entryPoint = "djl_python.deepspeed";
-                } else if ("FasterTransformer".equals(engineName)) {
-                    entryPoint = "djl_python.fastertransformer";
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";
