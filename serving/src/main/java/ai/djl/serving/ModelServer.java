@@ -324,8 +324,23 @@ public class ModelServer {
             }
 
             if (Files.isDirectory(modelStore)) {
-                // Check if root model store folder contains a model
-                String url = mapModelUrl(modelStore);
+                String url = null;
+
+                // contains only directory or archive files
+                boolean isMultiModelsDirectory =
+                        Files.list(modelStore)
+                                .filter(p -> !p.getFileName().toString().startsWith("."))
+                                .allMatch(
+                                        p ->
+                                                Files.isDirectory(p)
+                                                        || FilenameUtils.isArchiveFile(
+                                                                p.toString()));
+
+                if (!isMultiModelsDirectory) {
+                    // Check if root model store folder contains a model
+                    url = mapModelUrl(modelStore);
+                }
+
                 if (url == null) {
                     // Check folders to see if they can be models as well
                     try (Stream<Path> stream = Files.list(modelStore)) {
