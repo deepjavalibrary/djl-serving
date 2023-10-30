@@ -42,6 +42,7 @@ import com.google.gson.JsonParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.MemoryUsage;
@@ -463,6 +464,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         downloadModel();
         loadServingProperties();
         downloadS3();
+        if ("trtllm".equals(prop.getProperty("option.rolling_batch"))) {
+            build_trt_llm_engine();
+        }
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
         if (options == null) {
@@ -960,6 +964,51 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             // download real model from model zoo
             downloadModel();
         }
+    }
+
+    void build_trt_llm_engine() throws ModelException, IOException {
+        logger.info("Start building TensorRT-LLM engine");
+        final String trt_llm_model_repo = "/tmp/tensorrtllm";
+        prop.putIfAbsent("option.trt_llm_model_repo", trt_llm_model_repo);
+        
+        // writing updated properties file after env variables are added
+        final Path propertiesDir = Paths.get("/tmp/properties");
+        final Path propertiesFile = propertiesDir.resolve("serving.properties");
+        if (Files.exists(propertiesFile)) {
+            Files.delete(propertiesFile);
+        }
+        Files.createDirectories(propertiesFile.getParent());
+        FileOutputStream fileOutputStream = new FileOutputStream(propertiesFile.toFile());
+        prop.store(fileOutputStream, "write serving.properties");
+        fileOutputStream.close();
+        
+        // invoke trt-llm build script
+        List<String> commandList = new ArrayList<>();
+        commandList.add("python");
+        commandList.add("/opt/djl/partition/trt_llm_partition.py");
+        commandList.add("--properties_dir");
+        commandList.add(propertiesDir.toString());
+        if (downloadS3Dir != null) {
+            commandList.add("--model_path");
+            commandList.add(downloadS3Dir.toAbsolutePath().toString());
+        }
+        try {
+            Process exec = new ProcessBuilder(commandList).redirectErrorStream(true).start();
+                String logOutput;
+                try (InputStream is = exec.getInputStream()) {
+                    logOutput = Utils.toString(is);
+                }
+                int exitCode = exec.waitFor();
+                if (0 != exitCode || logOutput.startsWith("ERROR ")) {
+                    logger.error(logOutput);
+                    throw new EngineException("Download model failed.");
+                } else {
+                    logger.info(logOutput);
+                }
+            } catch (IOException | InterruptedException e) {
+            throw new ModelException("Failed to build TensorRT-LLM engine", e);
+        }
+        logger.info("TensorRT-LLM engine built successfully");
     }
 
     private void downloadS3(String src, String dest) throws ModelException {
