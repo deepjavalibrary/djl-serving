@@ -41,6 +41,9 @@ ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
