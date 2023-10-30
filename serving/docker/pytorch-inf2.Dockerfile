@@ -48,6 +48,9 @@ ENV PYTORCH_KERNEL_CACHE_PATH=/tmp
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
