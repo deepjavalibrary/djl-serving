@@ -406,20 +406,21 @@ Let's run an example where we load a CV model in Java mode and run inference usi
 In this example, we will use a PyTorch resnet18 model.
 
 ```
-curl -O https://mlrepo.djl.ai/model/cv/image_classification/ai/djl/pytorch/resnet18_embedding/0.0.1/resnet18_embedding.zip
+curl -O https://mlrepo.djl.ai/model/cv/image_classification/ai/djl/pytorch/resnet/0.0.1/resnet18.zip
 ```
 
 The .zip file contains a `serving.properties` file that defines the `engine`, `translatorFactory` and so on.
 
 ```
+application=cv/image_classification
 engine=PyTorch
-width=224,
-height=224,
-resize=256,
-centerCrop=true,
-normalize=true,
-translatorFactory=ai.djl.modality.cv.translator.ImageFeatureExtractorFactory
+option.modelName=resnet18
+width=224
+height=224
+centerCrop=True
+applySoftmax=true
 option.mapLocation=true
+translatorFactory=ai.djl.modality.cv.translator.ImageClassificationTranslatorFactory
 ```
 
 #### Step 2: Start Server
@@ -429,16 +430,16 @@ Next, start DJL Serving and load this model at startup.
 ##### Linux/macOS
 
 ```
-djl-serving -m resnet18_embedding::PyTorch=file://$PWD/resnet18_embedding.zip
+djl-serving -m resnet::PyTorch=file://$PWD/resnet18.zip
 ```
 
 ##### Windows
 
 ```
-path-to-your\serving.bat -m "resnet18_embedding::PyTorch=file:///%cd%\resnet18_embedding.zip"
+path-to-your\serving.bat -m "resnet::PyTorch=file:///%cd%\resnet18.zip"
 ```
 
-This will launch the DJL Serving Model Server, bind to port 8080, and create an endpoint named `resnet18_embedding` with the model.
+This will launch the DJL Serving Model Server, bind to port 8080, and create an endpoint named `resnet` with the model.
 
 #### Step 3: Inference
 
@@ -448,7 +449,7 @@ To query the model using the prediction API, open another session and run the fo
 
 ```
 curl -O https://resources.djl.ai/images/kitten.jpg
-curl -X POST "http://127.0.0.1:8080/predictions/resnet18_embedding" -T "kitten.jpg"
+curl -X POST "http://127.0.0.1:8080/predictions/resnet" -T "kitten.jpg"
 ```
 
 This should return the following result:
