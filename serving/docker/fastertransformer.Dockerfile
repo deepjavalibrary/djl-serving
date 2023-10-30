@@ -46,6 +46,9 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 # Install all dependencies
 RUN apt-get update && apt-get install -y wget git zlib1g-dev && \
     mkdir ompi && cd ompi && \

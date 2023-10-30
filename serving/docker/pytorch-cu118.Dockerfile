@@ -36,6 +36,9 @@ ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu118-precxx11
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:-UseContainerSupport -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
