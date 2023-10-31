@@ -2,7 +2,7 @@ import os
 import sagemaker
 import boto3
 import time
-from sagemaker.djl_inference import DJLModel, HuggingFaceAccelerateModel, DeepSpeedModel, FasterTransformerModel
+from sagemaker.djl_inference import DJLModel, HuggingFaceAccelerateModel, DeepSpeedModel
 from sagemaker.huggingface import HuggingFaceModel
 from sagemaker.multidatamodel import MultiDataModel
 from sagemaker.utils import unique_name_from_base
@@ -59,15 +59,6 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
         "partition": True,
         "cls_to_use": HuggingFaceAccelerateModel,
     },
-    "flan-t5-xxl": {
-        "model_id": "s3://djl-llm-sm-endpoint-tests/flan-t5-xxl/",
-        "model_kwargs": {
-            "dtype": "fp32",
-            "tensor_parallel_degree": 4,
-        },
-        "partition": True,
-        "cls_to_use": FasterTransformerModel,
-    },
     "gpt-j-6b": {
         "model_id": "s3://djl-llm-sm-endpoint-tests/gpt-j-6b/",
         "model_kwargs": {
@@ -98,12 +89,6 @@ HUGGING_FACE_NO_CODE_CONFIGS = {
             "TENSOR_PARALLEL_DEGREE": "1",
         },
         "framework": "deepspeed"
-    },
-    "bloom-7b1": {
-        "env": {
-            "HF_MODEL_ID": "bigscience/bloom-7b1"
-        },
-        "framework": "fastertransformer"
     }
 }
 
@@ -135,18 +120,14 @@ NIGHTLY_IMAGES = {
     "python":
     "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:deepspeed-nightly",
     "deepspeed":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:deepspeed-nightly",
-    "fastertransformer":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:fastertransformer-nightly"
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:deepspeed-nightly"
 }
 
 CANDIDATE_IMAGES = {
     "python":
     f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
     "deepspeed":
-    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
-    "fastertransformer":
-    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-fastertransformer"
+    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed"
 }
 
 

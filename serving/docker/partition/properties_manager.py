@@ -149,8 +149,6 @@ class PropertiesManager(object):
                         raise ValueError("Please specify engine")
                     elif engine.lower() == "deepspeed":
                         entry_point = "djl_python.deepspeed"
-                    elif engine.lower() == "fastertransformer":
-                        entry_point = "djl_python.fastertransformer"
                     else:
                         raise ValueError(f"Invalid engine: {engine}")
                     self.properties['option.entryPoint'] = entry_point

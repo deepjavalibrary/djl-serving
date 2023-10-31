@@ -18,7 +18,7 @@ parser.add_argument("model", help="The name of model")
 parser.add_argument("--engine",
                     required=False,
                     type=str,
-                    choices=["deepspeed", "huggingface", "fastertransformer"],
+                    choices=["deepspeed", "huggingface"],
                     help="The engine used for inference")
 parser.add_argument("--dtype",
                     required=False,
@@ -184,57 +184,6 @@ ds_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
-    }
-}
-
-ft_model_spec = {
-    "bigscience/bloom-3b": {
-        "batch_size": [1, 2],
-        "seq_length": [64, 128],
-        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0]
-    },
-    "flan-t5-xxl": {
-        "batch_size": [1, 2],
-        "seq_length": [64, 128],
-        "max_memory_per_gpu": [15.0, 15.0, 15.0, 15.0]
-    },
-    "EleutherAI/pythia-2.8b": {
-        "batch_size": [1, 2],
-        "seq_length": [64, 128],
-        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0]
-    },
-    "llama2-7b": {
-        "batch_size": [1, 2],
-        "seq_length": [64, 128],
-        "max_memory_per_gpu": [10.0, 10.0, 10.0, 10.0]
-    },
-    "t5-base-lora": {
-        "batch_size": [1, 4],
-        "seq_length": [64, 128],
-        "max_memory_per_gpu": [4.0, 4.0, 4.0, 4.0]
-    }
-}
-
-ft_raw_model_spec = {
-    "t5-small": {
-        "batch_size": [1, 2],
-        "max_memory_per_gpu": 2
-    },
-    "gpt2-xl": {
-        "batch_size": [1, 2],
-        "max_memory_per_gpu": 8.0
-    },
-    "facebook/opt-6.7b": {
-        "batch_size": [1, 2],
-        "max_memory_per_gpu": 6.0
-    },
-    "bigscience/bloom-3b": {
-        "batch_size": [1, 2],
-        "max_memory_per_gpu": 6.0
-    },
-    "nomic-ai/gpt4all-j": {
-        "batch_size": [1, 2],
-        "max_memory_per_gpu": 9.0
     }
 }
 
@@ -770,30 +719,6 @@ def test_sd_handler(model, model_spec):
                     assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
-def test_ft_handler(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{model} is not one of the supporting models {list(ft_raw_model_spec.keys())}"
-        )
-    spec = model_spec[model]
-    for batch_size in spec['batch_size']:
-        logging.info(
-            f"testing ft_handler with model: {model}, batch_size: {batch_size} "
-        )
-        if "t5" in model:
-            req = {"inputs": t5_batch_generation(batch_size)}
-        else:
-            req = {"inputs": batch_generation(batch_size)}
-        res = send_json(req)
-        res = res.json()
-        logging.info(res)
-        assert len(res) == batch_size
-        memory_usage = get_gpu_memory()
-        logging.info(memory_usage)
-        for memory in memory_usage:
-            assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
-
-
 def test_transformers_neuronx_handler(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -858,10 +783,6 @@ if __name__ == "__main__":
         test_handler(args.model, ds_model_spec)
     elif args.handler == "stable-diffusion":
         test_sd_handler(args.model, sd_model_spec)
-    elif args.handler == "fastertransformer":
-        test_handler(args.model, ft_model_spec)
-    elif args.handler == "fastertransformer_raw":
-        test_ft_handler(args.model, ft_raw_model_spec)
     elif args.handler == "deepspeed_aot":
         test_ds_raw_model(args.model, ds_aot_model_spec)
     elif args.handler == "deepspeed_handler_aot":
