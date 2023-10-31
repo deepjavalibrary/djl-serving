@@ -1014,11 +1014,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         // check if downloadS3Dir or local model path is a trt-llm repo
         boolean isTrtLlmRepo = isValidTrtLlmModelRepo();
         if (!isTrtLlmRepo) {
-            build_trt_llm_engine();
+            buildTrtLlmEngine();
         }
     }
 
-    private void build_trt_llm_engine() throws ModelException, IOException {
+    private void buildTrtLlmEngine() throws ModelException, IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
         trtLlmRepoDir = Paths.get("/tmp/tensorrtllm");
         // invoke trt-llm build script
