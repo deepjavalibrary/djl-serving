@@ -22,6 +22,7 @@ import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
+import ai.djl.util.Utils;
 
 import com.google.gson.JsonObject;
 
@@ -204,9 +205,11 @@ class RollingBatch implements Runnable {
         Input input;
         ChunkedBytesSupplier data;
         Output output;
-        String nextToken;
         boolean last;
         String seed;
+        StringBuilder sb; // NOPMD
+        int count;
+        int threshold;
 
         Request(Input input, String seed, String contentType) {
             this.input = input;
@@ -216,18 +219,20 @@ class RollingBatch implements Runnable {
                 output.addProperty("Content-Type", contentType);
             }
             output.add(data);
+            sb = new StringBuilder(250);
+            threshold = Integer.parseInt(Utils.getenv("SERVING_ROLLING_BATCH_BUFFER", "4"));
             this.seed = seed;
         }
 
         BytesSupplier getRequest() {
-            if (nextToken != null) {
+            if (count > 0) {
                 return BytesSupplier.wrap("");
             }
             return input.getData();
         }
 
         Set<Map.Entry<String, String>> getProperties() {
-            if (nextToken != null) {
+            if (count > 0) {
                 return Collections.emptySet();
             }
             return input.getProperties().entrySet();
@@ -241,20 +246,21 @@ class RollingBatch implements Runnable {
          * @return seed, only for first forward
          */
         String getSeed() {
-            if (nextToken != null) {
+            if (count > 0) {
                 return null;
             }
             return seed;
         }
 
         void addResponse(byte[] json) {
+            ++count;
             if (json[0] == '{') {
                 // TODO: backward compatible for 0.23.0 release in case user
                 // customize huggingface.parse_input()
                 String s = new String(json, StandardCharsets.UTF_8);
                 JsonObject element = JsonUtils.GSON.fromJson(s, JsonObject.class);
                 last = element.get("last").getAsBoolean();
-                nextToken = element.get("data").getAsString();
+                String nextToken = element.get("data").getAsString();
                 try {
                     JsonObject content = JsonUtils.GSON.fromJson(nextToken, JsonObject.class);
                     output.setCode(content.get("code").getAsInt());
@@ -270,6 +276,7 @@ class RollingBatch implements Runnable {
             int size = buf.readShort();
             String code = null;
             String error = null;
+            String nextToken = null;
             for (int i = 0; i < size; ++i) {
                 String key = Objects.requireNonNull(CodecUtils.readUtf8(buf));
                 String value = Objects.requireNonNull(CodecUtils.readUtf8(buf));
@@ -296,9 +303,13 @@ class RollingBatch implements Runnable {
                 if (error != null) {
                     map.put("error", error);
                 }
-                data.appendContent(BytesSupplier.wrapAsJson(map), true);
+                data.appendContent(BytesSupplier.wrapAsJson(map).getAsBytes(), true);
             } else {
-                data.appendContent(BytesSupplier.wrap(nextToken), last);
+                sb.append(nextToken);
+                if (last || count % threshold == 1) {
+                    data.appendContent(BytesSupplier.wrap(sb.toString()), last);
+                    sb.setLength(0);
+                }
             }
         }
     }

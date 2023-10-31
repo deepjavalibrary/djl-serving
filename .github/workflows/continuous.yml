@@ -50,4 +50,7 @@ jobs:
         if: always()
         with:
           name: serving
-          path: serving/build/reports
+          path: |
+            serving/build/reports
+            wlm/build/reports
+            engines/python/build/reports
