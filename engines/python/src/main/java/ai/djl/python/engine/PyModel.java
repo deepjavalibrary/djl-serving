@@ -163,6 +163,8 @@ public class PyModel extends BaseModel {
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";
+                } else if ("TRT-LLM".equals(Utils.getenv("LMI_BACKEND"))) {
+                    entryPoint = "djl_python.trtllm";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")) {
                     entryPoint = "djl_python.huggingface";
                 } else {
