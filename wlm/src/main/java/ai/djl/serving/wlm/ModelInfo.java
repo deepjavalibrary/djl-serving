@@ -1069,6 +1069,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
         List<Path> configFiles = new ArrayList<>();
         List<Path> engineFiles = new ArrayList<>();
+        List<Path> tokenizerFiles = new ArrayList<>();
         try (Stream<Path> walk = Files.walk(dirToCheck)) {
             walk.filter(Files::isRegularFile).forEach(
             path -> {
@@ -1078,10 +1079,16 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 if (path.getFileName().toString().equals("config.pbtxt")) {
                     configFiles.add(path);
                 }
-              }
+                // TODO: research required tokenizer files and add a tighter check
+                if (path.getFileName().toString().equals("tokenizer_config.json")) {
+                    tokenizerFiles.add(path);
+                }
+            }
             );
         }
-        boolean isValidRepo = configFiles.size() == 1 && engineFiles.size() >= 1;
+        boolean isValidRepo = configFiles.size() == 1
+                              && engineFiles.size() >= 1
+                              && tokenizerFiles.size() == 1;
         if (isValidRepo) {
             logger.info("Valid TRT-LLM model repo found");
             trtLlmRepoDir = dirToCheck;
