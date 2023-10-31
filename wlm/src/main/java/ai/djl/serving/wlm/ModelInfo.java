@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1053,31 +1054,30 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     private boolean isValidTrtLlmModelRepo() throws IOException {
-        Path dirToCheck = null;
+        Optional<Path> dirToCheckOptional = Optional.empty();
         Path modelPath = Paths.get(prop.getProperty("option.model_id"));
         if (downloadS3Dir != null) {
-            dirToCheck = downloadS3Dir;
+            dirToCheckOptional = Optional.of(downloadS3Dir);
         }
-        logger.info("modelPath: {}", modelPath);
-        logger.info("exists: {}", Files.exists(modelPath));
         if (Files.exists(modelPath)) {
-            dirToCheck = modelPath;
+            dirToCheckOptional = Optional.of(modelPath);
         }
-        if (dirToCheck == null) {
+        if (!dirToCheckOptional.isPresent()) {
             return false;
         }
 
+        Path dirToCheck = dirToCheckOptional.get();
         List<Path> configFiles = new ArrayList<>();
-        List<Path> engineFiles = new ArrayList<>();
         List<Path> tokenizerFiles = new ArrayList<>();
         try (Stream<Path> walk = Files.walk(dirToCheck)) {
             walk.filter(Files::isRegularFile).forEach(
             path -> {
-                if (path.getFileName().toString().endsWith(".engine")) {
-                    engineFiles.add(path);
-                }
                 if (path.getFileName().toString().equals("config.pbtxt")) {
-                    configFiles.add(path);
+                    // check depth of config.pbtxt
+                    Path relativePath = dirToCheck.relativize(path);
+                    if (relativePath.getNameCount() == 2) {
+                        configFiles.add(path);
+                    }
                 }
                 // TODO: research required tokenizer files and add a tighter check
                 if (path.getFileName().toString().equals("tokenizer_config.json")) {
@@ -1086,8 +1086,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
             );
         }
-        boolean isValidRepo = configFiles.size() == 1
-                              && engineFiles.size() >= 1
+        boolean isValidRepo = configFiles.size() >= 1
                               && tokenizerFiles.size() == 1;
         if (isValidRepo) {
             logger.info("Valid TRT-LLM model repo found");

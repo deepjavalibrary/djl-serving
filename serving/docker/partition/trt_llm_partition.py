@@ -19,6 +19,7 @@ from utils import load_properties
 import logging
 import os
 
+
 def create_trt_llm_repo(properties, args):
     kwargs = {}
     for key, value in properties.items():
@@ -43,6 +44,7 @@ def update_kwargs_with_env_vars(kwargs):
             kwargs.setdefault(key, value)
     return kwargs
 
+
 def main():
     logging.basicConfig(stream=sys.stdout,
                         format="%(message)s",
@@ -58,19 +60,17 @@ def main():
         '--trt_llm_model_repo',
         type=str,
         required=True,
-        help='local path where trt llm model repo will be created'
-    )
-    parser.add_argument(
-        '--model_path',
-        type=str,
-        required=False,
-        default=None,
-        help='local path to downloaded model'
-    )
+        help='local path where trt llm model repo will be created')
+    parser.add_argument('--model_path',
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='local path to downloaded model')
 
     args = parser.parse_args()
     properties = load_properties(args.properties_dir)
     create_trt_llm_repo(properties, args)
+
 
 if __name__ == "__main__":
     main()

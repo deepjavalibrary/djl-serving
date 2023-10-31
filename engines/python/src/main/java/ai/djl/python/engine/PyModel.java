@@ -164,7 +164,7 @@ public class PyModel extends BaseModel {
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";
                 } else if ("TRT-LLM".equals(Utils.getenv("LMI_BACKEND"))) {
-                    entryPoint = "djl_python.trtllm";
+                    entryPoint = "djl_python.tensorrt_llm";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")) {
                     entryPoint = "djl_python.huggingface";
                 } else {
