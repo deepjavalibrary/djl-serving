@@ -1035,18 +1035,18 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
         try {
             Process exec = new ProcessBuilder(commandList).redirectErrorStream(true).start();
-                String logOutput;
-                try (InputStream is = exec.getInputStream()) {
-                    logOutput = Utils.toString(is);
-                }
-                int exitCode = exec.waitFor();
-                if (0 != exitCode || logOutput.startsWith("ERROR ")) {
-                    logger.error(logOutput);
-                    throw new EngineException("Download model failed.");
-                } else {
-                    logger.info(logOutput);
-                }
-            } catch (IOException | InterruptedException e) {
+            String logOutput;
+            try (InputStream is = exec.getInputStream()) {
+                logOutput = Utils.toString(is);
+            }
+            int exitCode = exec.waitFor();
+            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
+                logger.error(logOutput);
+                throw new EngineException("Download model failed.");
+            } else {
+                logger.info(logOutput);
+            }
+        } catch (IOException | InterruptedException e) {
             throw new ModelException("Failed to build TensorRT-LLM engine", e);
         }
         logger.info("TensorRT-LLM engine built successfully");
@@ -1069,24 +1069,23 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         List<Path> configFiles = new ArrayList<>();
         List<Path> tokenizerFiles = new ArrayList<>();
         try (Stream<Path> walk = Files.walk(dirToCheck)) {
-            walk.filter(Files::isRegularFile).forEach(
-            path -> {
-                if (path.getFileName().toString().equals("config.pbtxt")) {
-                    // check depth of config.pbtxt
-                    Path relativePath = dirToCheck.relativize(path);
-                    if (relativePath.getNameCount() == 2) {
-                        configFiles.add(path);
-                    }
-                }
-                // TODO: research required tokenizer files and add a tighter check
-                if (path.getFileName().toString().equals("tokenizer_config.json")) {
-                    tokenizerFiles.add(path);
-                }
-            }
-            );
+            walk.filter(Files::isRegularFile)
+                    .forEach(
+                            path -> {
+                                if ("config.pbtxt".equals(path.getFileName().toString())) {
+                                    // check depth of config.pbtxt
+                                    Path relativePath = dirToCheck.relativize(path);
+                                    if (relativePath.getNameCount() == 2) {
+                                        configFiles.add(path);
+                                    }
+                                }
+                                // TODO: research required tokenizer files and add a tighter check
+                                if ("tokenizer_config.json".equals(path.getFileName().toString())) {
+                                    tokenizerFiles.add(path);
+                                }
+                            });
         }
-        boolean isValidRepo = configFiles.size() >= 1
-                              && tokenizerFiles.size() == 1;
+        boolean isValidRepo = !configFiles.isEmpty() && tokenizerFiles.size() == 1;
         if (isValidRepo) {
             logger.info("Valid TRT-LLM model repo found");
             trtLlmRepoDir = dirToCheck;
