@@ -226,6 +226,7 @@ public class ModelServerTest {
 
             // management API
             testRegisterModel(channel);
+            testRegisterModelUnencoded(channel);
             testPerModelWorkers(channel);
             testRegisterModelAsync(channel);
             testRegisterWorkflow(channel);
@@ -498,6 +499,19 @@ public class ModelServerTest {
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
+    }
+
+    private void testRegisterModelUnencoded(Channel channel) throws InterruptedException {
+        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=mlp_2_unencoded&url=" + url));
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Model \"mlp_2_unencoded\" registered.");
     }
 
     private void testPerModelWorkers(Channel channel) throws InterruptedException {

@@ -80,27 +80,39 @@ class LmiDistRollingBatch(RollingBatch):
             self._warmup(**kwargs)
 
     def _warmup(self, **kwargs):
-        parameters = NextTokenChooserParameters(temperature=0.9,
-                                                repetition_penalty=1.2,
-                                                top_k=10,
-                                                top_p=0.9,
-                                                typical_p=0.9,
-                                                do_sample=False,
-                                                seed=0)
-        stop_parameters = StoppingCriteriaParameters(stop_sequences=[],
-                                                     max_new_tokens=2)
-
         max_prefill_tokens = int(
             self.properties.get(
                 "max_rolling_batch_prefill_tokens",
                 int(self.properties.get("max_rolling_batch_size", 4)) * 272))
-        requests = [
-            lmi_dist.utils.types.Request(id=0,
-                                         inputs='_test ' * max_prefill_tokens,
-                                         parameters=parameters,
-                                         stopping_parameters=stop_parameters,
-                                         truncate=max_prefill_tokens)
-        ]
+
+        # Todo: Find the maximum input_length dynamically
+        input_length = 1024
+
+        n_tokens = 0
+        req_id = 0
+        requests = []
+
+        while n_tokens < max_prefill_tokens:
+            truncate = min(input_length, max_prefill_tokens - n_tokens)
+            requests.append(
+                lmi_dist.utils.types.Request(
+                    id=req_id,
+                    inputs='_test ' * input_length,
+                    parameters=NextTokenChooserParameters(
+                        temperature=0.9,
+                        repetition_penalty=1.2,
+                        top_k=10,
+                        top_p=0.9,
+                        typical_p=0.9,
+                        do_sample=False,
+                        seed=0),
+                    stopping_parameters=StoppingCriteriaParameters(
+                        stop_sequences=[], max_new_tokens=2),
+                    truncate=truncate,
+                    prefill_logprobs=True))
+            n_tokens += input_length
+            req_id += 1
+
         batch = self.batch_cls.get_batch(
             Batch(id=0, requests=requests,
                   size=len(requests)), self.model.tokenizer,
@@ -143,14 +155,9 @@ class LmiDistRollingBatch(RollingBatch):
             if next_batch is not None:
                 self.cache[next_batch.batch_id] = next_batch
 
-        generation_dict = {
-            generation.request_id: generation
-            for generation in generations
-        }
-
         req_ids = []
         for request in self.active_requests:
-            generation = generation_dict.get(request.id, None)
+            generation = generations.get(request.id, None)
             if generation:
                 is_last_token = generation.generated_text is not None
                 if not is_last_token:

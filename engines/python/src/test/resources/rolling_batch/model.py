@@ -19,6 +19,7 @@ import time
 
 from djl_python import Input
 from djl_python import Output
+from djl_python.encode_decode import decode
 
 
 class Request(object):
@@ -73,7 +74,7 @@ class RollingBatch(object):
                     "data": req.get_next_token(),
                     "last": req.is_last_token(),
                 }
-                outputs.add_as_json(res, batch_index=i)
+                outputs.add(Output.binary_encode(res), batch_index=i)
 
             # remove input from pending_request if finished
             for i in range(1, batch_size + 1):
@@ -88,7 +89,8 @@ class RollingBatch(object):
 
     def _merge_request(self, batch):
         for i, item in enumerate(batch):
-            input_map = item.get_as_json()
+            content_type = item.get_property("Content-Type")
+            input_map = decode(item, content_type)
             data = input_map.pop("inputs", input_map)
             parameters = input_map.pop("parameters", {})
             if i >= len(self.pending_requests):

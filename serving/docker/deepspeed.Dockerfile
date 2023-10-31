@@ -15,7 +15,7 @@ ARG djl_version=0.24.0~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
-ARG vllm_version=0.2.0
+ARG vllm_version=0.2.1.post1
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-nightly-cp39-cp39-linux_x86_64.whl"
 ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp39-cp39-linux_x86_64.whl"
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp39-cp39-linux_x86_64.whl"
@@ -34,7 +34,7 @@ ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.13.2
 ARG auto_gptq_version=0.4.2
-ARG datasets_version=2.14.4
+ARG datasets_version=2.14.5
 
 EXPOSE 8080
 
@@ -64,6 +64,9 @@ RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
+
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \

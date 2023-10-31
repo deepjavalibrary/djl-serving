@@ -10,7 +10,6 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import json
 import logging
 import os
 import re
@@ -28,7 +27,6 @@ from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
-from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -103,8 +101,10 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
             from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
             return LmiDistRollingBatch
         else:
+            from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
             return SchedulerRollingBatch
     elif rolling_batch_type == "scheduler":
+        from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
         return SchedulerRollingBatch
     elif rolling_batch_type == "lmi-dist":
         from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
@@ -155,6 +155,7 @@ class HuggingFaceService(object):
         self.peft_config = None
         self.stopping_criteria_list = None
         self.disable_flash_attn = None
+        self.adapters = None
 
     def initialize(self, properties: dict):
         # model_id can point to huggingface model_id or local directory.
@@ -248,9 +249,10 @@ class HuggingFaceService(object):
             self.load_stopping_criteria_list(properties["stop_sequence"])
         self.initialized = True
 
-    def parse_stop_sequence_input(self, stop_sequence):
+    @staticmethod
+    def parse_stop_sequence_input(stop_sequence):
         """
-        Gets a list of stop sequences by parsing the string given in 
+        Gets a list of stop sequences by parsing the string given in
         serving.properties.
         Not robust against badly formatted input and commas in the stop sequence
         Input: stop_sequence (string)
@@ -288,76 +290,65 @@ class HuggingFaceService(object):
         adapters = []
         errors = {}
         batch = inputs.get_batches()
-        first = True
         for i, item in enumerate(batch):
             try:
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
-                _inputs = input_map.pop("inputs", input_map)
-                adapters_per_item = self._fetch_adapters_from_input(
-                    input_map, item)
-                if first or self.rolling_batch_type:
-                    parameters.append(input_map.pop("parameters", {}))
-                    first = False
-                else:
-                    param = input_map.pop("parameters", {})
-                    if parameters[0] != param:
-                        logging.warning(
-                            f"expected param: {parameters}, actual: {param}")
-                        raise ValueError(
-                            "In order to enable dynamic batching, all input batches must have the same parameters"
-                        )
-
-                if not isinstance(_inputs, list):
-                    _inputs = [_inputs]
-
-                if not isinstance(adapters_per_item, list):
-                    adapters_per_item = [adapters_per_item]
-
-                if not adapters_per_item:
-                    ## inference with just base model.
-                    adapters_per_item = [""] * len(_inputs)
-                else:
-                    if len(_inputs) != len(adapters_per_item):
-                        ## input_size list needs to be appended as it's used during output processing
-                        input_size.append(0)
-                        raise Exception(
-                            "Number of adapters is not equal to the number of inputs"
-                        )
-
-                input_data.extend(_inputs)
-                input_size.append(len(_inputs))
-                adapters.extend(adapters_per_item)
-
-                if "cached_prompt" in input_map:
-                    parameters[i]["cached_prompt"] = input_map.pop(
-                        "cached_prompt")
-
-                seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
-                if item.contains_key(seed_key):
-                    seed = parameters[i].get("seed")
-                    if not seed:
-                        # set server provided seed if seed is not part of request
-                        parameters[i]["seed"] = item.get_as_string(
-                            key=seed_key)
             except Exception as e:  # pylint: disable=broad-except
-                logging.exception(f"Parse input failed: {i}")
+                logging.warning(f"Parse input failed: {i}")
+                input_size.append(0)
                 errors[i] = str(e)
+                continue
 
-        return input_data, input_size, adapters, parameters, errors, batch
+            _inputs = input_map.pop("inputs", input_map)
+            if not isinstance(_inputs, list):
+                _inputs = [_inputs]
+            input_data.extend(_inputs)
+            input_size.append(len(_inputs))
+
+            _param = input_map.pop("parameters", {})
+            if "cached_prompt" in input_map:
+                _param["cached_prompt"] = input_map.pop("cached_prompt")
+            if not "seed" in _param:
+                # set server provided seed if seed is not part of request
+                if item.contains_key("seed"):
+                    _param["seed"] = item.get_as_string(key="seed")
+            for _ in range(input_size[i]):
+                parameters.append(_param)
+
+            adapters_per_item = self._fetch_adapters_from_input(
+                input_map, item)
+            if not isinstance(adapters_per_item, list):
+                adapters_per_item = [adapters_per_item]
+
+            if not adapters_per_item:
+                ## inference with just base model.
+                adapters_per_item = [""] * len(_inputs)
+            adapters.extend(adapters_per_item)
+            if len(_inputs) != len(adapters_per_item):
+                logging.warning(
+                    f"Number of adapters is not equal to the number of inputs")
+                errors[
+                    i] = "Number of adapters is not equal to the number of inputs"
+
+        self.adapters = adapters
+        return input_data, input_size, parameters, errors, batch
 
     def inference(self, inputs):
         outputs = Output()
 
-        input_data, input_size, adapters, parameters, errors, batch = self.parse_input(
+        input_data, input_size, parameters, errors, batch = self.parse_input(
             inputs)
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
-                err = json.dumps({"code": 424, "error": err})
                 if self.rolling_batch_type:
-                    err = json.dumps({"data": err, "last": True})
-                outputs.add(err, key="data", batch_index=i)
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
+                else:
+                    outputs.add(err, key="data", batch_index=i)
             return outputs
 
         if self.rolling_batch_type:
@@ -368,11 +359,14 @@ class HuggingFaceService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 if err:
-                    err = json.dumps({"code": 424, "error": err})
-                    err = json.dumps({"data": err, "last": True})
-                    outputs.add(err, key="data", batch_index=i)
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
                 else:
-                    outputs.add(result[idx], key="data", batch_index=i)
+                    outputs.add(Output.binary_encode(result[idx]),
+                                key="data",
+                                batch_index=i)
                     idx += 1
 
             content_type = self.rolling_batch.get_content_type()
@@ -397,8 +391,13 @@ class HuggingFaceService(object):
                                      self.device, **parameters[0]))
             return outputs
 
+        if not all(p == parameters[0] for p in parameters):
+            raise ValueError(
+                "In order to enable dynamic batching, all input batches must have the same parameters"
+            )
+
         if isinstance(self.model, PeftModelForCausalLM):
-            parameters[0]["adapters"] = adapters
+            parameters[0]["adapters"] = self.adapters
 
         prediction = self.hf_pipeline(input_data, **parameters[0])
 
@@ -616,17 +615,18 @@ class HuggingFaceService(object):
                 f"This is required for loading huggingface models")
             raise e
 
-    def _fetch_adapters_from_input(self, input_map: dict, input: Input):
+    @staticmethod
+    def _fetch_adapters_from_input(input_map: dict, inputs: Input):
         if "adapters" in input_map:
             return input_map.pop("adapters", [])
 
         # check content, possible in workflow approach
-        if input.contains_key("adapter"):
-            return input.get_as_string("adapter")
+        if inputs.contains_key("adapter"):
+            return inputs.get_as_string("adapter")
 
         # check properties, possible from header
-        if "adapter" in input.get_properties():
-            return input.get_properties()["adapter"]
+        if "adapter" in inputs.get_properties():
+            return inputs.get_properties()["adapter"]
 
         return []
 

@@ -103,6 +103,16 @@ public final class NettyUtils {
     }
 
     /**
+     * Returns the request session.
+     *
+     * @param channel the channel associated with the request
+     * @return the request session
+     */
+    public static Session getSession(Channel channel) {
+        return channel.attr(SESSION_KEY).get();
+    }
+
+    /**
      * Returns the request ID for the specified channel.
      *
      * @param channel the connection channel

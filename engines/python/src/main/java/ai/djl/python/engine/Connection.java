@@ -127,46 +127,50 @@ class Connection {
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            String[] args = new String[36];
+            String[] args = new String[40];
             args[0] = "mpirun";
-            args[1] = "-N";
+            args[1] = "-np";
             // TODO: When we support multi nodes, change it to the product of tensor parallel value
             // and
             // pipeline parallel value.
             args[2] = String.valueOf(tensorParallelDegree);
             args[3] = "--allow-run-as-root";
-            args[4] = "--mca";
-            args[5] = "btl_vader_single_copy_mechanism";
-            args[6] = "none";
-            args[7] = "--tag-output";
-            args[8] = "-x";
-            args[9] = "FI_PROVIDER=efa";
+            args[4] = "--bind-to";
+            args[5] = "none";
+            args[6] = "--mca";
+            args[7] = "btl_vader_single_copy_mechanism";
+            args[8] = "none";
+            args[9] = "--tag-output";
             args[10] = "-x";
-            args[11] = "RDMAV_FORK_SAFE=1";
+            args[11] = "FI_PROVIDER=efa";
             args[12] = "-x";
-            args[13] = "FI_EFA_USE_DEVICE_RDMA=1";
+            args[13] = "RDMAV_FORK_SAFE=1";
             args[14] = "-x";
-            args[15] = "LD_LIBRARY_PATH";
+            args[15] = "FI_EFA_USE_DEVICE_RDMA=1";
             args[16] = "-x";
-            args[17] = "PYTHONPATH";
+            args[17] = "LD_LIBRARY_PATH";
             args[18] = "-x";
-            args[19] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
+            args[19] = "PYTHONPATH";
             args[20] = "-x";
-            args[21] = "MASTER_ADDR=" + MASTER_ADDR;
+            args[21] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
             args[22] = "-x";
-            args[23] = "MASTER_PORT=" + port;
-            args[24] = pyEnv.getPythonExecutable();
-            args[25] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
-            args[26] = "--model-dir";
-            args[27] = model.getModelPath().toAbsolutePath().toString();
-            args[28] = "--entry-point";
-            args[29] = pyEnv.getEntryPoint();
-            args[30] = "--sock-type";
-            args[31] = "unix";
-            args[32] = "--sock-name";
-            args[33] = getSocketPath(port);
-            args[34] = "--tensor-parallel-degree";
-            args[35] = String.valueOf(tensorParallelDegree);
+            args[23] = "MASTER_ADDR=" + MASTER_ADDR;
+            args[24] = "-x";
+            args[25] = "MASTER_PORT=" + port;
+            args[26] = "-x";
+            args[27] = "MKL_DYNAMIC=FALSE";
+            args[28] = pyEnv.getPythonExecutable();
+            args[29] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
+            args[30] = "--model-dir";
+            args[31] = model.getModelPath().toAbsolutePath().toString();
+            args[32] = "--entry-point";
+            args[33] = pyEnv.getEntryPoint();
+            args[34] = "--sock-type";
+            args[35] = "unix";
+            args[36] = "--sock-name";
+            args[37] = getSocketPath(port);
+            args[38] = "--tensor-parallel-degree";
+            args[39] = String.valueOf(tensorParallelDegree);
             return args;
         }
 

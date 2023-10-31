@@ -49,6 +49,29 @@ MODEL_TYPE_TO_MODEL = {
 }
 
 
+class NeuronXSampleAdapter(HuggingFaceGenerationModelAdapter):
+
+    def __init__(self, _config, _model):
+        super().__init__(_config, _model)
+        self.model_type = _config.model_type
+        self.sample_options = ["start_ids", "top_k"]
+        if self.model_type == "llama":
+            self.sample_options = self.sample_options + [
+                "top_p", "eos_token_override", "temperature", "streamer"
+            ]
+
+    def neuron_sample(self, *args, **kwargs):
+        sample_kwargs = self.simple_sample_parser(**kwargs)
+        return self.model.sample(*args, **sample_kwargs)
+
+    def simple_sample_parser(self, **kwargs):
+        parsed_kwargs = dict()
+        for key in self.sample_options:
+            if key in kwargs:
+                parsed_kwargs[key] = kwargs[key]
+        return parsed_kwargs
+
+
 class TransformersNeuronXService(object):
 
     def __init__(self) -> None:
@@ -157,12 +180,7 @@ class TransformersNeuronXService(object):
         # TODO: workaround on Neuron Compiler bug for SM
         path = os.getcwd()
         os.chdir("/tmp")
-        if model_type == "gpt2":
-            self.model._load_compiled_artifacts(load_path)
-            self.model.to_neuron()
-            self.model._save_compiled_artifacts(load_path)
-        else:
-            self.model.to_neuron()
+        self.model.to_neuron()
         os.chdir(path)
         elapsed = time.time() - start
         logging.info(
@@ -229,9 +247,8 @@ class TransformersNeuronXService(object):
 
         self.load_model(model_config.model_type)
 
-        # HuggingFace compatible generate model
-        self.model = HuggingFaceGenerationModelAdapter(model_config,
-                                                       self.model)
+        # HuggingFace compatible generate model and Neuron custom sample method
+        self.model = NeuronXSampleAdapter(model_config, self.model)
         self.initialized = True
         if "rolling_batch" in properties:
             self.rolling_batch = NeuronRollingBatch(self.model, self.tokenizer,
@@ -334,15 +351,12 @@ class TransformersNeuronXService(object):
         encoded_inputs = self.tokenizer.batch_encode_plus(input_data,
                                                           return_tensors="pt",
                                                           padding=True)
-        use_sample = parameters.pop("use_sample", None)
+        use_sample = parameters.pop("use_sample", True)
         if use_sample:
-            # TODO: Watch transformer-neuronx release for fix on gpt-neox generate functionality
-            output_tokens = self.model.sample(
-                encoded_inputs.input_ids,
-                sequence_length=self.n_positions,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
-                **parameters)
+            sample_length = parameters.pop("max_new_tokens", self.n_positions)
+            output_tokens = self.model.neuron_sample(encoded_inputs.input_ids,
+                                                     sample_length,
+                                                     **parameters)
         else:
             output_tokens = self.model.generate(
                 input_ids=encoded_inputs.input_ids,

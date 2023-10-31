@@ -13,10 +13,10 @@ FROM ubuntu:20.04
 ARG djl_version=0.24.0~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.8
-ARG torch_neuronx_version=1.13.1.1.11.0
-ARG transformers_neuronx_version=0.7.84
-ARG neuronx_distributed_version=0.4.0
-ARG neuronx_cc_version=2.10.*
+ARG torch_neuronx_version=1.13.1.1.12.0
+ARG transformers_neuronx_version=0.8.268
+ARG neuronx_distributed_version=0.5.0
+ARG neuronx_cc_version=2.11.*
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
@@ -49,6 +49,9 @@ ENV NEURON_CC_FLAGS="--logfile /tmp/compile.log --temp-dir=/tmp"
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
+
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \

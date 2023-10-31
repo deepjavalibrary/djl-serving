@@ -95,24 +95,19 @@ class Input(object):
         batch_size = self.get_batch_size()
         batch = []
         for i in range(batch_size):
-            item = Input()
-            prefix = f"batch_{i}."
-            length = len(prefix)
-            for key, value in self.properties.items():
-                if key.startswith(prefix):
-                    key = key[length:]
-                    item.properties[key] = value
+            batch.append(Input())
 
-            batch.append(item)
+        for key, value in self.properties.items():
+            if key.startswith("batch_") and key != "batch_size":
+                index = int(key[6:9])
+                key = key[10:]
+                batch[index].properties[key] = value
 
-        p = re.compile("batch_(\\d+)\\.(.*)")
         for i in range(self.content.size()):
             key = self.content.key_at(i)
-            m = p.match(key)
-            if m is None:
-                raise ValueError(f"Unexpected key in batch input: {key}")
-            index = int(m.group(1))
-            batch[index].content.add(m.group(2), self.content.value_at(i))
+            index = int(key[6:9])
+            key = key[10:]
+            batch[index].content.add(key, self.content.value_at(i))
 
         return batch
 

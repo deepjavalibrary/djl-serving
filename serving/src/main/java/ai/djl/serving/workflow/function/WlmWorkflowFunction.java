@@ -53,7 +53,7 @@ public class WlmWorkflowFunction extends WorkflowFunction {
         }
 
         return evaluateArgs(args)
-                .thenComposeAsync(
+                .thenCompose(
                         processedArgs ->
                                 executor.getWlm()
                                         .runJob(

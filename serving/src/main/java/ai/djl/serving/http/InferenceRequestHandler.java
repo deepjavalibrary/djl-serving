@@ -144,6 +144,19 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        Session session = NettyUtils.getSession(ctx.channel());
+        if (session != null) {
+            Input input = session.getInput();
+            if (input != null) {
+                input.setCancelled(true);
+            }
+        }
+        super.channelInactive(ctx);
+    }
+
     private void handlePredictions(
             ChannelHandlerContext ctx,
             FullHttpRequest req,
@@ -276,6 +289,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     void runJob(
             ModelManager modelManager, ChannelHandlerContext ctx, Workflow workflow, Input input) {
+        Session session = NettyUtils.getSession(ctx.channel());
+        session.setInput(input);
         String sync = input.getProperty(X_SYNCHRONOUS, "true");
         if (Boolean.parseBoolean(sync)) { // Synchronous
             modelManager
