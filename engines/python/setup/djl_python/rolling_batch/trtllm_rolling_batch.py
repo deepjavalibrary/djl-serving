@@ -11,9 +11,11 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import numpy as np
 import tensorrt_llm_toolkit
 from transformers import AutoTokenizer
 from collections import OrderedDict
+import os
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 
 
