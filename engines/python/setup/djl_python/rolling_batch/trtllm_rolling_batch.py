@@ -71,6 +71,8 @@ class TRTLLMRollingBatch(RollingBatch):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
                                                        padding_side="left",
                                                        revision=kwargs.get('revision', None))
+        if not self.tokenizer.pad_token_id:
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
         self.request_cache = {}
 
 
@@ -103,12 +105,35 @@ class TRTLLMRollingBatch(RollingBatch):
             max_new_tokens = parameters.get("max_new_tokens")
         request_output_len_data = np.array([[max_new_tokens]], dtype=np.uint32)
         streaming_data = np.array([[True]], dtype=bool)
+        pad_id_data = np.array([[self.tokenizer.pad_token_id]], dtype=np.uint32)
+        end_id_data = np.array([[self.tokenizer.eos_token_id]], dtype=np.uint32)
         payload = {
             "input_ids": input_ids_data,
             "input_lengths": input_lengths_data,
             "request_output_len": request_output_len_data,
             "streaming": streaming_data,
+            "pad_id": pad_id_data,
+            "end_id": end_id_data,
         }
+        if "temperature" in parameters.keys():
+            temperature = parameters.get("temperature")
+            payload["temperature"] = np.array([[temperature]], dtype=np.float32)
+        if "min_length" in parameters.keys():
+            min_length = parameters.get("min_length")
+            payload["min_length"] = np.array([[min_length]], dtype=np.uint32)
+        if "top_k" in parameters.keys():
+            topk = parameters.get("top_k")
+            payload["runtime_top_k"] = np.array([[topk]], dtype=np.uint32)
+        if "top_p" in parameters.keys():
+            topp = parameters.get("top_p")
+            payload["runtime_top_p"] = np.array([[topp]], dtype=np.float32)
+        if "repetition_penalty" in parameters.keys():
+            repetition_penalty = parameters.get("repetition_penalty")
+            payload["repetition_penalty"] = np.array([[repetition_penalty]], dtype=np.float32)
+        if "seed" in parameters.keys():
+            seed = int(parameters.get("seed"))
+            payload["random_seed"] = np.array([[seed]], dtype=np.uint64)
+
         return payload
 
     @stop_on_any_exception
