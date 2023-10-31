@@ -24,7 +24,7 @@ parser.add_argument("--model",
 parser.add_argument("--engine",
                     required=False,
                     type=str,
-                    choices=["deepspeed", "huggingface", "fastertransformer"],
+                    choices=["deepspeed", "huggingface"],
                     help="The engine used for inference")
 parser.add_argument("--platform",
                     default="deepspeed",
