@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -152,14 +153,14 @@ public class PyModel extends BaseModel {
         }
 
         // Handle TRT-LLM
-        if ("TRT-LLM".equals(Utils.getenv("LMI_BACKEND")) || Boolean.parseBoolean(getProperty("option.trt_llm"))) {
+        boolean isTrtLlmBackend = "TRT-LLM".equals(Utils.getenv("LMI_BACKEND"));
+        if (isTrtLlmBackend) {
             try {
-                Path trtLlmRepoDir = TrtLLMUtils.initTrtLlmModel(this);
-                if (trtLlmRepoDir != null) {
-                    String modelId = trtLlmRepoDir.toAbsolutePath().toString();
+                Optional<Path> trtLlmRepoDir = TrtLLMUtils.initTrtLlmModel(this);
+                if (trtLlmRepoDir.isPresent()) {
+                    String modelId = trtLlmRepoDir.get().toAbsolutePath().toString();
                     setProperty("model_id", modelId);
                     pyEnv.addParameter("model_id", modelId);
-                    entryPoint = "djl_python.tensorrt_llm";
                 }
             } catch (ModelException e) {
                 throw new RuntimeException(e);
@@ -179,6 +180,8 @@ public class PyModel extends BaseModel {
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";
+                } else if (isTrtLlmBackend) {
+                    entryPoint = "djl_python.tensorrt_llm";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")) {
                     entryPoint = "djl_python.huggingface";
                 } else {

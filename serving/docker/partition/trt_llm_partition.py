@@ -29,7 +29,6 @@ def create_trt_llm_repo(properties, args):
             kwargs[key] = value
     kwargs['trt_llm_model_repo'] = args.trt_llm_model_repo
     kwargs = update_kwargs_with_env_vars(kwargs)
-    logging.info(f"kwargs : {kwargs}")
     model_id_or_path = args.model_path or kwargs['model_id']
     create_model_repo(model_id_or_path, **kwargs)
 

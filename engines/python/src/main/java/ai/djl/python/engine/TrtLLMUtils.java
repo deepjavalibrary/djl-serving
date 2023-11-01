@@ -31,16 +31,16 @@ public class TrtLLMUtils {
 
   private static final Logger logger = LoggerFactory.getLogger(TrtLLMUtils.class);
 
-  public static Path initTrtLlmModel(PyModel model) throws ModelException, IOException {
+  public static Optional<Path> initTrtLlmModel(PyModel model) throws ModelException, IOException {
     // check if downloadS3Dir or local model path is a trt-llm repo
     boolean isTrtLlmRepo = isValidTrtLlmModelRepo(model);
     if (!isTrtLlmRepo) {
-      return buildTrtLlmEngine(model);
+      return Optional.of(buildTrtLlmArtifacts(model));
     }
-    return null;
+    return Optional.empty();
   }
 
-  public static Path buildTrtLlmEngine(PyModel model) throws ModelException, IOException {
+  public static Path buildTrtLlmArtifacts(PyModel model) throws ModelException, IOException {
     logger.info("Converting model to TensorRT-LLM artifacts");
     Path trtLlmRepoDir = Paths.get("/tmp/tensorrtllm");
     String modelId = model.getProperty("model_id");
@@ -70,15 +70,15 @@ public class TrtLLMUtils {
         logger.info(logOutput);
       }
     } catch (IOException | InterruptedException e) {
-      throw new ModelException("Failed to build TensorRT-LLM engine", e);
+      throw new ModelException("Failed to build TensorRT-LLM artifacts", e);
     }
-    logger.info("TensorRT-LLM engine built successfully");
+    logger.info("TensorRT-LLM artifacts built successfully");
     return trtLlmRepoDir;
   }
 
   public static boolean isValidTrtLlmModelRepo(PyModel model) throws IOException {
     Optional<Path> dirToCheckOptional = Optional.empty();
-    Path modelPath = model.getModelPath();
+    Path modelPath = Paths.get(model.getProperty("model_id"));
     if (Files.exists(modelPath)) {
       dirToCheckOptional = Optional.of(modelPath);
     }
