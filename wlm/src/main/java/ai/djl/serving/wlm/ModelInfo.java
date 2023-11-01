@@ -54,7 +54,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,12 +82,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private String translator;
 
     private boolean dynamicAdapters;
-    private boolean isTrtLlmBackend;
 
     transient Path modelDir;
     private transient String artifactName;
     transient Path downloadS3Dir;
-    transient Path trtLlmRepoDir;
 
     transient Properties prop;
     private transient Status status;
@@ -246,12 +243,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             if (downloadS3Dir != null) {
                 // override model_id
                 builder.optOption("model_id", downloadS3Dir.toAbsolutePath().toString());
-            }
-            if (isTrtLlmBackend) {
-                if (trtLlmRepoDir != null) {
-                    // override model_id
-                    builder.optOption("model_id", trtLlmRepoDir.toAbsolutePath().toString());
-                }
             }
             ZooModel<I, O> m = builder.build().loadModel();
             if (engine == null) {
@@ -471,10 +462,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         downloadModel();
         loadServingProperties();
         downloadS3();
-        isTrtLlmBackend = "TRT-LLM".equals(Utils.getenv("LMI_BACKEND"));
-        if (isTrtLlmBackend) {
-            initTrtLlmModel();
-        }
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
         if (options == null) {
@@ -1008,89 +995,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         } catch (IOException | InterruptedException e) {
             throw new ModelNotFoundException("Model failed to download from s3", e);
         }
-    }
-
-    private void initTrtLlmModel() throws ModelException, IOException {
-        // check if downloadS3Dir or local model path is a trt-llm repo
-        boolean isTrtLlmRepo = isValidTrtLlmModelRepo();
-        if (!isTrtLlmRepo) {
-            buildTrtLlmEngine();
-        }
-    }
-
-    private void buildTrtLlmEngine() throws ModelException, IOException {
-        logger.info("Converting model to TensorRT-LLM artifacts");
-        trtLlmRepoDir = Paths.get("/tmp/tensorrtllm");
-        // invoke trt-llm build script
-        List<String> commandList = new ArrayList<>();
-        commandList.add("python");
-        commandList.add("/opt/djl/partition/trt_llm_partition.py");
-        commandList.add("--properties_dir");
-        commandList.add(modelDir.toAbsolutePath().toString());
-        commandList.add("--trt_llm_model_repo");
-        commandList.add(trtLlmRepoDir.toAbsolutePath().toString());
-        if (downloadS3Dir != null) {
-            commandList.add("--model_path");
-            commandList.add(downloadS3Dir.toAbsolutePath().toString());
-        }
-        try {
-            Process exec = new ProcessBuilder(commandList).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = exec.getInputStream()) {
-                logOutput = Utils.toString(is);
-            }
-            int exitCode = exec.waitFor();
-            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
-                logger.error(logOutput);
-                throw new EngineException("Download model failed.");
-            } else {
-                logger.info(logOutput);
-            }
-        } catch (IOException | InterruptedException e) {
-            throw new ModelException("Failed to build TensorRT-LLM engine", e);
-        }
-        logger.info("TensorRT-LLM engine built successfully");
-    }
-
-    private boolean isValidTrtLlmModelRepo() throws IOException {
-        Optional<Path> dirToCheckOptional = Optional.empty();
-        Path modelPath = Paths.get(prop.getProperty("option.model_id"));
-        if (downloadS3Dir != null) {
-            dirToCheckOptional = Optional.of(downloadS3Dir);
-        }
-        if (Files.exists(modelPath)) {
-            dirToCheckOptional = Optional.of(modelPath);
-        }
-        if (!dirToCheckOptional.isPresent()) {
-            return false;
-        }
-
-        Path dirToCheck = dirToCheckOptional.get();
-        List<Path> configFiles = new ArrayList<>();
-        List<Path> tokenizerFiles = new ArrayList<>();
-        try (Stream<Path> walk = Files.walk(dirToCheck)) {
-            walk.filter(Files::isRegularFile)
-                    .forEach(
-                            path -> {
-                                if ("config.pbtxt".equals(path.getFileName().toString())) {
-                                    // check depth of config.pbtxt
-                                    Path relativePath = dirToCheck.relativize(path);
-                                    if (relativePath.getNameCount() == 2) {
-                                        configFiles.add(path);
-                                    }
-                                }
-                                // TODO: research required tokenizer files and add a tighter check
-                                if ("tokenizer_config.json".equals(path.getFileName().toString())) {
-                                    tokenizerFiles.add(path);
-                                }
-                            });
-        }
-        boolean isValidRepo = !configFiles.isEmpty() && tokenizerFiles.size() == 1;
-        if (isValidRepo) {
-            logger.info("Valid TRT-LLM model repo found");
-            trtLlmRepoDir = dirToCheck;
-        }
-        return isValidRepo;
     }
 
     private static int intValue(Properties prop, String key, int defValue) {
