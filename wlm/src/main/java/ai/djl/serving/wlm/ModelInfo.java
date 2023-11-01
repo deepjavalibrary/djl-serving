@@ -244,7 +244,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 // override model_id
                 builder.optOption("model_id", downloadS3Dir.toAbsolutePath().toString());
             }
-
             ZooModel<I, O> m = builder.build().loadModel();
             if (engine == null) {
                 engine = m.getNDManager().getEngine();
