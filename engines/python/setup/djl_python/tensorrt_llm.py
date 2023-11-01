@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Copyright 2023 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file
 # except in compliance with the License. A copy of the License is located at
@@ -14,35 +14,10 @@
 import logging
 import os
 
-import torch
-from transformers import AutoConfig
-
 from djl_python.encode_decode import decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-
-
-def get_torch_dtype_from_str(dtype: str):
-    if dtype == "auto":
-        return dtype
-    if dtype == "fp32":
-        return torch.float32
-    if dtype == "fp16":
-        return torch.float16
-    if dtype == "bf16":
-        return torch.bfloat16
-    if dtype == "int8":
-        return torch.int8
-    if dtype is None:
-        return None
-    raise ValueError(f"Invalid data type: {dtype}")
-
-
-def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
-                                     model_config):
-    from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
-    return TRTLLMRollingBatch
-
+from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 
 class TRTLLMService(object):
 
@@ -58,56 +33,24 @@ class TRTLLMService(object):
         self.model_config = None
 
     def initialize(self, properties: dict):
-        # model_id can point to huggingface model_id or local directory.
-        # If option.model_id points to a s3 bucket, we download it and set model_id to the download directory.
-        # Otherwise we assume model artifacts are in the model_dir
         model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        device_id = int(properties.get("device_id", "-1"))
-        self.device = f"cuda:{device_id}" if device_id >= 0 else None
-        task = properties.get("task")
-        tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
-        if "trust_remote_code" in properties:
-            self.trust_remote_code = properties.get(
-                "trust_remote_code").lower() == "true"
-        # HF Acc handling
-        kwargs = {"trust_remote_code": self.trust_remote_code}
-        # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
-        if "device_map" in properties:
-            kwargs["device_map"] = properties.get("device_map")
-            self.device = None
-            logging.info(f"Using device map {kwargs['device_map']}")
-        elif tp_degree > 0 and torch.cuda.device_count() > 0:
-            kwargs["device_map"] = "auto"
-            self.device = None
-            world_size = torch.cuda.device_count()
-            assert world_size == tp_degree, f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
-            logging.info(f"Using {world_size} gpus")
+        self.rolling_batch_type = properties.get("rolling_batch", "trtllm").lower()
+        if "trtllm" != self.rolling_batch_type:
+            raise ValueError("only trtllm rollingbatch type supported")
 
-        if "data_type" in properties:
-            kwargs["torch_dtype"] = get_torch_dtype_from_str(
-                properties.get("data_type"))
-        if "dtype" in properties:
-            kwargs["torch_dtype"] = get_torch_dtype_from_str(
-                properties.get("dtype"))
-        if "revision" in properties:
-            kwargs["revision"] = properties.get('revision')
-        self.rolling_batch_type = properties.get("rolling_batch", None)
-
-        self._read_model_config(model_id_or_path,
-                                properties.get('revision', None))
+        kwargs = {}
 
         if "output_formatter" in properties:
             kwargs["output_formatter"] = properties.get("output_formatter")
         if "waiting_steps" in properties:
             kwargs["waiting_steps"] = int(properties.get("waiting_steps"))
-        self.rolling_batch_type = self.rolling_batch_type.lower()
-        is_mpi = properties.get("engine") != "Python"
-        if is_mpi:
-            self.device = int(os.getenv("LOCAL_RANK", 0))
-        _rolling_batch_cls = get_rolling_batch_class_from_str(
-            self.rolling_batch_type, is_mpi, self.model_config)
-        self.rolling_batch = _rolling_batch_cls(model_id_or_path, self.device,
+        if "trt_llm_model_name" in properties:
+            kwargs["trt_llm_model_name"] = properties.get("trt_llm_model_name")
+        if "trust_remote_code" in properties:
+            self.trust_remote_code = properties.get("trust_remote_code").lower() == "true"
+        kwargs["trust_remote_code"] = self.trust_remote_code
+        self.rolling_batch = TRTLLMRollingBatch(model_id_or_path, self.device,
                                                 properties, **kwargs)
         self.initialized = True
         return
@@ -185,18 +128,6 @@ class TRTLLMService(object):
         if content_type:
             outputs.add_property("content-type", content_type)
         return outputs
-
-    def _read_model_config(self, model_config_path: str, revision=None):
-        try:
-            self.model_config = AutoConfig.from_pretrained(
-                model_config_path,
-                trust_remote_code=self.trust_remote_code,
-                revision=revision)
-        except Exception as e:
-            logging.error(
-                f"{model_config_path} does not contain a config.json. "
-                f"This is required for loading huggingface models")
-            raise e
 
 
 _service = TRTLLMService()
