@@ -9,12 +9,16 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.2.2-runtime-ubuntu22.04
+ARG version=12.2.2-cudnn8-runtime-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG python_version=3.10
 ARG TRT_LLM_VERSION=release/0.5.0
 ARG TORCH_VERSION=2.1.0
 ARG djl_version=0.24.0~SNAPSHOT
+ARG transformers_version=4.34.0
+ARG accelerate_version=0.23.0
+ARG tensorrtlibs_version=9.1.0.post12.dev4
+ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 
 EXPOSE 8080
 
@@ -32,9 +36,7 @@ ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV BITSANDBYTES_NOWELCOME=1
-# TRT ENV
-ENV TRT_ROOT=/usr/local/tensorrt
-ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:/usr/local/tensorrt/lib:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:/usr/local/lib/python${python_version}/dist-packages/tensorrt_libs:${LD_LIBRARY_PATH}
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
@@ -58,20 +60,16 @@ RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev l
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install PyTorch
-RUN pip install torch==${TORCH_VERSION} && \
+RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece && \
+    pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt-libs==${tensorrtlibs_version} && \
     pip3 cache purge
 
-# Install TRT
-RUN scripts/install_tensorrt.sh && \
-    apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
 # download dependencies
-RUN pip install https://publish.djl.ai/tensorrt-llm/0.5.0/tensorrt_llm-0.5.0-py3-none-any.whl && \
-    pip install https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl && \
+RUN pip install https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl && \
     mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r23.09/libtritonserver.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/0.5.0/libtriton_tensorrtllm.so && \
-    cp /usr/local/lib/python${python_version}/dist-packages/tensorrt_llm/libs/libnvinfer_plugin_tensorrt_llm.so /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 && \
+    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/0.5.0/libnvinfer_plugin_tensorrt_llm.so.9 && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
