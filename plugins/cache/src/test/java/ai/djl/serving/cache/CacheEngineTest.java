@@ -30,7 +30,6 @@ import org.testng.annotations.Test;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -40,13 +39,12 @@ public class CacheEngineTest {
     final byte[] buf = new byte[1];
 
     @Test
-    public void testMemoryCacheEngine()
-            throws IOException, ExecutionException, InterruptedException {
+    public void testMemoryCacheEngine() throws ExecutionException, InterruptedException {
         testCacheEngine(new MemoryCacheEngine());
     }
 
     @Test
-    public void testDdbCacheEngine() throws InterruptedException, ExecutionException, IOException {
+    public void testDdbCacheEngine() throws InterruptedException, ExecutionException {
         DynamoDbLocal server = new DynamoDbLocal();
         server.startLocalServer();
         try {
@@ -69,7 +67,7 @@ public class CacheEngineTest {
     }
 
     @Test
-    public void testS3CacheEngine() throws IOException, ExecutionException, InterruptedException {
+    public void testS3CacheEngine() throws ExecutionException, InterruptedException {
         Localstack localstack = Localstack.INSTANCE;
         try {
             // Start Localstack
@@ -182,8 +180,8 @@ public class CacheEngineTest {
             // Test PublisherBytesSupplier streaming
             PublisherBytesSupplier pbs = new PublisherBytesSupplier();
             output2.add(pbs);
-            pbs.appendContent(buf, false);
             future = engine.put(key, output2);
+            pbs.appendContent(buf, false);
             for (int i = 0; i < 21; ++i) {
                 pbs.appendContent(buf, i == 20);
             }

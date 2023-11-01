@@ -51,6 +51,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class PyEngineTest {
 
@@ -188,7 +190,8 @@ public class PyEngineTest {
 
     @Test
     public void testStreamEcho()
-            throws TranslateException, IOException, ModelException, InterruptedException {
+            throws TranslateException, IOException, ModelException, InterruptedException,
+                    ExecutionException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
@@ -204,16 +207,15 @@ public class PyEngineTest {
             Assert.assertTrue(supplier instanceof PublisherBytesSupplier);
             PublisherBytesSupplier pub = (PublisherBytesSupplier) supplier;
             List<byte[]> dat = new ArrayList<>();
-            pub.subscribe(
-                    d -> {
-                        if (d != null) {
-                            dat.add(d);
-                        }
-                    });
-            pub.waitToRead();
-            byte[] buf = pub.getAsBytes();
+            CompletableFuture<Void> future =
+                    pub.subscribe(
+                            d -> {
+                                if (d != null) {
+                                    dat.add(d);
+                                }
+                            });
+            future.get();
             Assert.assertEquals(dat.stream().mapToInt(d -> d.length).sum(), 20);
-            Assert.assertEquals(buf.length, 20);
         }
     }
 
