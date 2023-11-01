@@ -49,6 +49,29 @@ MODEL_TYPE_TO_MODEL = {
 }
 
 
+class NeuronXSampleAdapter(HuggingFaceGenerationModelAdapter):
+
+    def __init__(self, _config, _model):
+        super().__init__(_config, _model)
+        self.model_type = _config.model_type
+        self.sample_options = ["start_ids", "top_k"]
+        if self.model_type == "llama":
+            self.sample_options = self.sample_options + [
+                "top_p", "eos_token_override", "temperature", "streamer"
+            ]
+
+    def neuron_sample(self, *args, **kwargs):
+        sample_kwargs = self.simple_sample_parser(**kwargs)
+        return self.model.sample(*args, **sample_kwargs)
+
+    def simple_sample_parser(self, **kwargs):
+        parsed_kwargs = dict()
+        for key in self.sample_options:
+            if key in kwargs:
+                parsed_kwargs[key] = kwargs[key]
+        return parsed_kwargs
+
+
 class TransformersNeuronXService(object):
 
     def __init__(self) -> None:
@@ -63,6 +86,7 @@ class TransformersNeuronXService(object):
         self.amp = None
         self.unroll = None
         self.n_positions = None
+        self.context_length_estimate = None
         self.model_type = None
         self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
                                                 "FALSE").lower() == 'true'
@@ -70,6 +94,7 @@ class TransformersNeuronXService(object):
         self.rolling_batch = None
         self.load_in_8bit = False
         self.low_cpu_mem_usage = False
+        self.load_split_model = False
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
@@ -97,56 +122,53 @@ class TransformersNeuronXService(object):
             revision=self.revision,
             low_cpu_mem_usage=True)
 
+    def get_model_specific_kwargs(self, model_type):
+        model_kwargs = {
+            "batch_size": self.batch_size,
+            "amp": self.amp,
+            'tp_degree': self.tensor_parallel_degree,
+            "n_positions": self.n_positions,
+            "unroll": self.unroll
+        }
+        if model_type == "llama":
+            model_kwargs[
+                'context_length_estimate'] = self.context_length_estimate
+        return model_kwargs
+
     def load_inf2_model_from_disk(self, model_type, load_path):
-        logging.info(f"Saving INF2 model to {load_path} ...")
-        save_pretrained_split(self.model, load_path)
+        if not self.load_split_model:
+            logging.info(f"Saving INF2 model to {load_path} ...")
+            save_pretrained_split(self.model, load_path)
+        model_kwargs = self.get_model_specific_kwargs(model_type)
         if self.load_in_8bit:
             neuron_config = NeuronConfig()
             neuron_config.quant = QuantizationConfig(quant_dtype='s8',
                                                      dequant_dtype=self.amp)
             return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
-                load_path,
-                batch_size=self.batch_size,
-                amp=self.amp,
-                tp_degree=self.tensor_parallel_degree,
-                n_positions=self.n_positions,
-                neuron_config=neuron_config,
-                unroll=self.unroll)
+                load_path, neuron_config=neuron_config, **model_kwargs)
         return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
-            load_path,
-            batch_size=self.batch_size,
-            amp=self.amp,
-            tp_degree=self.tensor_parallel_degree,
-            n_positions=self.n_positions,
-            unroll=self.unroll)
+            load_path, **model_kwargs)
 
     def load_inf2_model_from_memory(self, model_type):
+        model_kwargs = self.get_model_specific_kwargs(model_type)
         if self.load_in_8bit:
             neuron_config = NeuronConfig()
             neuron_config.quant = QuantizationConfig(quant_dtype='s8',
                                                      dequant_dtype=self.amp)
             model = MODEL_TYPE_TO_MODEL[model_type](
-                self.model.config,
-                batch_size=self.batch_size,
-                amp=self.amp,
-                tp_degree=self.tensor_parallel_degree,
-                n_positions=self.n_positions,
-                neuron_config=neuron_config,
-                unroll=self.unroll)
+                self.model.config, neuron_config=neuron_config, **model_kwargs)
         else:
-            model = MODEL_TYPE_TO_MODEL[model_type](
-                self.model.config,
-                batch_size=self.batch_size,
-                amp=self.amp,
-                tp_degree=self.tensor_parallel_degree,
-                n_positions=self.n_positions,
-                unroll=self.unroll)
+            model = MODEL_TYPE_TO_MODEL[model_type](self.model.config,
+                                                    **model_kwargs)
         model.load_state_dict_low_memory(self.model.state_dict())
         return model
 
     def load_model(self, model_type):
-        self.model = self.load_hf_model()
-        load_path = self.get_load_path(model_type)
+        if not self.load_split_model:
+            self.model = self.load_hf_model()
+            load_path = self.get_load_path(model_type)
+        else:
+            load_path = self.model_id_or_path
         if not self.low_cpu_mem_usage:
             logging.info("Transferring weights from HF to INF2 in-memory")
             self.model = self.load_inf2_model_from_memory(model_type)
@@ -158,15 +180,11 @@ class TransformersNeuronXService(object):
         # TODO: workaround on Neuron Compiler bug for SM
         path = os.getcwd()
         os.chdir("/tmp")
-        if model_type == "gpt2":
-            self.model._load_compiled_artifacts(load_path)
-            self.model.to_neuron()
-            self.model._save_compiled_artifacts(load_path)
-        else:
-            self.model.to_neuron()
+        self.model.to_neuron()
         os.chdir(path)
         elapsed = time.time() - start
-        logging.info(f"LLM sharding and compiling completed with {elapsed}s")
+        logging.info(
+            f"SysHealth: LLM sharding and compilation latency: {elapsed} secs")
 
     def initialize(self, properties):
         # Neuron recommendation for transformersneuronx speedup
@@ -204,6 +222,14 @@ class TransformersNeuronXService(object):
         if "low_cpu_mem_usage" in properties:
             self.low_cpu_mem_usage = properties.get(
                 "low_cpu_mem_usage").lower() == 'true'
+        if "load_split_model" in properties:
+            self.load_split_model = properties.get(
+                "load_split_model").lower() == 'true'
+            self.low_cpu_mem_usage = True
+        if "context_length_estimate" in properties:
+            # expect input like [256, 1024, 2048]
+            self.context_length_estimate = json.loads(
+                properties.get("context_length_estimate"))
         model_config = AutoConfig.from_pretrained(self.model_id_or_path,
                                                   revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
@@ -221,9 +247,8 @@ class TransformersNeuronXService(object):
 
         self.load_model(model_config.model_type)
 
-        # HuggingFace compatible generate model
-        self.model = HuggingFaceGenerationModelAdapter(model_config,
-                                                       self.model)
+        # HuggingFace compatible generate model and Neuron custom sample method
+        self.model = NeuronXSampleAdapter(model_config, self.model)
         self.initialized = True
         if "rolling_batch" in properties:
             self.rolling_batch = NeuronRollingBatch(self.model, self.tokenizer,
@@ -326,15 +351,12 @@ class TransformersNeuronXService(object):
         encoded_inputs = self.tokenizer.batch_encode_plus(input_data,
                                                           return_tensors="pt",
                                                           padding=True)
-        use_sample = parameters.pop("use_sample", None)
+        use_sample = parameters.pop("use_sample", True)
         if use_sample:
-            # TODO: Watch transformer-neuronx release for fix on gpt-neox generate functionality
-            output_tokens = self.model.sample(
-                encoded_inputs.input_ids,
-                sequence_length=self.n_positions,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
-                **parameters)
+            sample_length = parameters.pop("max_new_tokens", self.n_positions)
+            output_tokens = self.model.neuron_sample(encoded_inputs.input_ids,
+                                                     sample_length,
+                                                     **parameters)
         else:
             output_tokens = self.model.generate(
                 input_ids=encoded_inputs.input_ids,
