@@ -68,22 +68,28 @@ COPY partition /opt/djl/partition
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-RUN apt-get update && \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
     scripts/install_djl_serving.sh $djl_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} deepspeed" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
-    pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
-    ${deepspeed_wheel} ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
-    ${lmi_vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
+    pip3 cache purge && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
+    ${deepspeed_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} zstandard datasets==${datasets_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    optimum==${optimum_version} auto-gptq==${auto_gptq_version} vllm==${vllm_version} pandas pyarrow \
+    optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
-    scripts/install_aitemplate.sh && \
-    scripts/patch_oss_dlc.sh python && \
+    pip3 cache purge
+
+RUN pip3 install ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
+                 ${lmi_vllm_wheel} ${lmi_dist_wheel} vllm==${vllm_version} && \
+    pip3 cache purge
+
+RUN scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
