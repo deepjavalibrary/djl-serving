@@ -50,8 +50,6 @@ public final class LmiUtils {
                     "roberta",
                     "xlm-roberta");
 
-    private static final List<String> TRITON_MODELS = List.of("gptj");
-
     private LmiUtils() {}
 
     static String inferLmiEngine(ModelInfo<?, ?> modelInfo) throws ModelException {
