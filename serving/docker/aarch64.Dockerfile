@@ -58,3 +58,5 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch64="true"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-24-0.aarch64="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL torch-version=$torch_version
