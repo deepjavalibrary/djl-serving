@@ -15,7 +15,6 @@ package ai.djl.python.engine;
 import ai.djl.BaseModel;
 import ai.djl.Device;
 import ai.djl.Model;
-import ai.djl.ModelException;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.ndarray.NDManager;
@@ -155,15 +154,11 @@ public class PyModel extends BaseModel {
         // Handle TRT-LLM
         boolean isTrtLlmBackend = "TRT-LLM".equals(Utils.getenv("LMI_BACKEND"));
         if (isTrtLlmBackend) {
-            try {
-                Optional<Path> trtLlmRepoDir = TrtLLMUtils.initTrtLlmModel(this);
-                if (trtLlmRepoDir.isPresent()) {
-                    String modelId = trtLlmRepoDir.get().toAbsolutePath().toString();
-                    setProperty("model_id", modelId);
-                    pyEnv.addParameter("model_id", modelId);
-                }
-            } catch (ModelException e) {
-                throw new RuntimeException(e);
+            Optional<Path> trtLlmRepoDir = TrtLlmUtils.initTrtLlmModel(this);
+            if (trtLlmRepoDir.isPresent()) {
+                String modelId = trtLlmRepoDir.get().toAbsolutePath().toString();
+                setProperty("model_id", modelId);
+                pyEnv.addParameter("model_id", modelId);
             }
         }
 
