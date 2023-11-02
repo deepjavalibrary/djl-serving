@@ -11,11 +11,13 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
+ARG cuda_version=cu118
 ARG djl_version=0.22.1~SNAPSHOT
 ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG accelerate_version=0.19.0
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.9.2-py2.py3-none-any.whl"
+ARG deepspeed_version=0.9.2
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-py2.py3-none-any.whl"
 ARG transformers_version=4.29.2
 ARG diffusers_version=0.15.0
 ARG bitsandbytes_version=0.38.1
@@ -72,3 +74,6 @@ LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.deepspeed="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
+LABEL djl-version=$djl_version
+LABEL deepspeed-version=$deepspeed_version
+LABEL cuda-version=$cuda_version

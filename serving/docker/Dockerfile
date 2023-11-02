@@ -55,6 +55,7 @@ LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
+LABEL djl-version=$djl_version
 
 FROM base AS cpu-full
 
@@ -74,3 +75,4 @@ RUN scripts/install_python.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
+LABEL torch-version=$torch_version
