@@ -269,7 +269,7 @@ class RollingBatch implements Runnable {
                     // ignore
                 }
 
-                data.appendContent(BytesSupplier.wrap(nextToken), last);
+                data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
                 return;
             }
             ByteBuf buf = Unpooled.wrappedBuffer(json);
@@ -303,11 +303,12 @@ class RollingBatch implements Runnable {
                 if (error != null) {
                     map.put("error", error);
                 }
-                data.appendContent(BytesSupplier.wrapAsJson(map).getAsBytes(), true);
+                byte[] buffer = JsonUtils.GSON_PRETTY.toJson(map).getBytes(StandardCharsets.UTF_8);
+                data.appendContent(buffer, true);
             } else {
                 sb.append(nextToken);
                 if (last || count % threshold == 1) {
-                    data.appendContent(BytesSupplier.wrap(sb.toString()), last);
+                    data.appendContent(sb.toString().getBytes(StandardCharsets.UTF_8), last);
                     sb.setLength(0);
                 }
             }
