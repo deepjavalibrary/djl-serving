@@ -20,8 +20,10 @@ ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
 ARG tensorrtlibs_version=9.1.0.post12.dev4
 ARG trtllm_version=nightly
+ARG cuda_python_version=12.2.0
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/tensorrt_llm_toolkit-${trtllm_version}-py3-none-any.whl"
+ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.5.0/tensorrt_llm-0.5.0-py3-none-any.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl"
 EXPOSE 8080
 
@@ -63,10 +65,11 @@ RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev l
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch
+# Install PyTorch and TensorRT
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
-    mpi4py && \
+    mpi4py cuda-python==${cuda_python_version} onnx polygraphy && \
     pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} && \
+    pip install --no-deps ${trtllm_wheel} && \
     pip3 cache purge
 
 # download dependencies
