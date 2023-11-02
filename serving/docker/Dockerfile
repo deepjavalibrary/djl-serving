@@ -55,6 +55,8 @@ LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+
 
 FROM base AS cpu-full
 
@@ -75,3 +77,4 @@ RUN scripts/install_python.sh && \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-25-0.cpu-full="true"
+LABEL torch-version=$torch_version

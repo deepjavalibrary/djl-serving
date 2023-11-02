@@ -11,6 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=12.2.2-cudnn8-runtime-ubuntu22.04
 FROM nvidia/cuda:$version
+ARG cuda_version=cu122
 ARG python_version=3.10
 ARG TRT_LLM_VERSION=release/0.5.0
 ARG TORCH_VERSION=2.1.0
@@ -18,8 +19,9 @@ ARG djl_version=0.24.0~SNAPSHOT
 ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
 ARG tensorrtlibs_version=9.1.0.post12.dev4
+ARG trtllm_version=nightly
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
-ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/tensorrt_llm_toolkit-nightly-py3-none-any.whl"
+ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/tensorrt_llm_toolkit-${trtllm_version}-py3-none-any.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl"
 EXPOSE 8080
 
@@ -94,3 +96,6 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.tensorrtllm="true"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-25-0.tensorrtllm="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL trtllm-version=$trtllm_version
+LABEL cuda-version=$cuda_version
