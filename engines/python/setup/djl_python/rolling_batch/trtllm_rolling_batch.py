@@ -24,7 +24,8 @@ class TRTLLMRollingBatch(RollingBatch):
         :param properties: other properties of the model, such as decoder strategy
         """
         super().__init__(-1, **kwargs)
-        self.model = tensorrt_llm_toolkit.init_inference(model_id_or_path, **kwargs)
+        self.model = tensorrt_llm_toolkit.init_inference(
+            model_id_or_path, **kwargs)
         self.request_cache = {}
 
     def reset(self):
@@ -47,8 +48,10 @@ class TRTLLMRollingBatch(RollingBatch):
             parameters["random_seed"] = int(parameters.pop("seed"))
         if "do_sample" in parameters.keys():
             parameters.pop("do_sample")
-            logging.info("do_sample is not used for trtllm,"
-                         " please use sample params (e.g top_p, temperature) to allow sampling")
+            logging.info(
+                "do_sample is not used for trtllm,"
+                " please use sample params (e.g top_p, temperature) to allow sampling"
+            )
         parameters["streaming"] = parameters.get("streaming", True)
         return parameters
 
@@ -67,7 +70,8 @@ class TRTLLMRollingBatch(RollingBatch):
         for request in self.active_requests:
             trt_req = self.request_cache[request.id]
             output_text, complete = trt_req.fetch()
-            request.set_next_token(output_text, self.output_formatter, complete)
+            request.set_next_token(output_text, self.output_formatter,
+                                   complete)
             if complete:
                 self.request_cache.pop(request.id)
 

@@ -18,6 +18,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 
+
 class TRTLLMService(object):
 
     def __init__(self):
@@ -28,7 +29,8 @@ class TRTLLMService(object):
     def initialize(self, properties: dict):
         model_id_or_path = properties.get("model_id") or properties.get(
             "model_dir")
-        self.rolling_batch_type = properties.get("rolling_batch", "trtllm").lower()
+        self.rolling_batch_type = properties.get("rolling_batch",
+                                                 "trtllm").lower()
         if "trtllm" != self.rolling_batch_type:
             raise ValueError("only trtllm rollingbatch type supported")
 
