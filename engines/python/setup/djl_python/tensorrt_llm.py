@@ -12,7 +12,6 @@
 # the specific language governing permissions and limitations under the License.
 
 import logging
-import os
 
 from djl_python.encode_decode import decode
 from djl_python.inputs import Input
@@ -23,14 +22,8 @@ class TRTLLMService(object):
 
     def __init__(self):
         self.initialized = False
-        self.model = None
-        self.device = None
-        self.tokenizer = None
-        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
-                                                "FALSE").lower() == 'true'
         self.rolling_batch_type = None
         self.rolling_batch = None
-        self.model_config = None
 
     def initialize(self, properties: dict):
         model_id_or_path = properties.get("model_id") or properties.get(
@@ -39,19 +32,8 @@ class TRTLLMService(object):
         if "trtllm" != self.rolling_batch_type:
             raise ValueError("only trtllm rollingbatch type supported")
 
-        kwargs = {}
-
-        if "output_formatter" in properties:
-            kwargs["output_formatter"] = properties.get("output_formatter")
-        if "waiting_steps" in properties:
-            kwargs["waiting_steps"] = int(properties.get("waiting_steps"))
-        if "trt_llm_model_name" in properties:
-            kwargs["trt_llm_model_name"] = properties.get("trt_llm_model_name")
-        if "trust_remote_code" in properties:
-            self.trust_remote_code = properties.get("trust_remote_code").lower() == "true"
-        kwargs["trust_remote_code"] = self.trust_remote_code
-        self.rolling_batch = TRTLLMRollingBatch(model_id_or_path, self.device,
-                                                properties, **kwargs)
+        self.rolling_batch = TRTLLMRollingBatch(model_id_or_path, None,
+                                                properties, **properties)
         self.initialized = True
         return
 
