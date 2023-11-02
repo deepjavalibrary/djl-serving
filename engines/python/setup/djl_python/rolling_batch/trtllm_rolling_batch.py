@@ -49,7 +49,7 @@ class TRTLLMRollingBatch(RollingBatch):
             parameters.pop("do_sample")
             logging.info("do_sample is not used for trtllm,"
                          " please use sample params (e.g top_p, temperature) to allow sampling")
-        parameters["streaming"] = parameters.pop("streaming", default=True)
+        parameters["streaming"] = parameters.get("streaming", True)
         return parameters
 
     def inference(self, input_data, parameters):
