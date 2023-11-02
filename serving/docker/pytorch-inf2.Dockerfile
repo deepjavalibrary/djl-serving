@@ -13,6 +13,7 @@ FROM ubuntu:20.04
 ARG djl_version=0.23.0
 ARG torch_version=1.13.1
 ARG python_version=3.8
+ARG neuronsdk_version=2.12.0
 ARG torch_neuronx_version=1.13.1.1.9.0
 ARG transformers_neuronx_version=0.5.58
 ARG neuronx_distributed_version=0.2.0
@@ -77,3 +78,5 @@ LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL neuronsdk-version=$neuronsdk_version
