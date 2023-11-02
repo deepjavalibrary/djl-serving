@@ -239,6 +239,11 @@ transformers_neuronx_model_spec = {
         "seq_length": [128, 256],
         "batch_size": [4]
     },
+    "gpt2-quantize": {
+        "worker": 1,
+        "seq_length": [128, 256],
+        "batch_size": [4]
+    },
     "opt-1.3b": {
         "worker": 3,
         "seq_length": [128, 256],

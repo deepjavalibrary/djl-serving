@@ -33,10 +33,11 @@ from djl_python.encode_decode import decode, encode
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionService
 from djl_python.streaming_utils import StreamingUtils
+from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
+
+from djl_python.properties_manager.properties import StreamingEnum
 
 model = None
-
-DTYPE_MAPPER = {"fp32": "f32", "fp16": "f16", "bf16": "bf16"}
 
 SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj", "gpt_neox", "llama", "bloom"}
 
@@ -77,30 +78,17 @@ class TransformersNeuronXService(object):
 
     def __init__(self) -> None:
         self.initialized = False
-        self.batch_size = 1
-        self.model_id_or_path = None
-        self.tensor_parallel_degree = None
         self.model = None
         self.tokenizer = None
-        self.enable_streaming = None
         self.download_dir = None
-        self.amp = None
-        self.unroll = None
-        self.n_positions = None
-        self.context_length_estimate = None
         self.model_type = None
-        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
-                                                "FALSE").lower() == 'true'
-        self.revision = None
         self.rolling_batch = None
-        self.load_in_8bit = False
-        self.low_cpu_mem_usage = False
-        self.load_split_model = False
         self.compiled_graph_path = None
+        self.tnx_configs = None
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
-        folder = f"inf2_{model_type}_{self.amp}"
+        folder = f"inf2_{model_type}_{self.tnx_configs.amp}"
         if not path:
             path = tempfile.gettempdir()
         if os.path.exists(os.path.join(path, folder)):
@@ -117,35 +105,36 @@ class TransformersNeuronXService(object):
         return load_path
 
     def load_hf_model(self):
-        logging.info(f"Start loading the model {self.model_id_or_path}...")
+        logging.info(
+            f"Start loading the model {self.tnx_configs.model_id_or_path}...")
         return AutoModelForCausalLM.from_pretrained(
-            self.model_id_or_path,
-            trust_remote_code=self.trust_remote_code,
-            revision=self.revision,
+            self.tnx_configs.model_id_or_path,
+            trust_remote_code=self.tnx_configs.trust_remote_code,
+            revision=self.tnx_configs.revision,
             low_cpu_mem_usage=True)
 
     def get_model_specific_kwargs(self, model_type):
         model_kwargs = {
-            "batch_size": self.batch_size,
-            "amp": self.amp,
-            'tp_degree': self.tensor_parallel_degree,
-            "n_positions": self.n_positions,
-            "unroll": self.unroll
+            "batch_size": self.tnx_configs.batch_size,
+            "amp": self.tnx_configs.amp,
+            'tp_degree': self.tnx_configs.tensor_parallel_degree,
+            "n_positions": self.tnx_configs.n_positions,
+            "unroll": self.tnx_configs.unroll
         }
         if model_type == "llama":
             model_kwargs[
-                'context_length_estimate'] = self.context_length_estimate
+                'context_length_estimate'] = self.tnx_configs.context_length_estimate
         return model_kwargs
 
     def load_inf2_model_from_disk(self, model_type, load_path):
-        if not self.load_split_model:
+        if not self.tnx_configs.load_split_model:
             logging.info(f"Saving INF2 model to {load_path} ...")
             save_pretrained_split(self.model, load_path)
         model_kwargs = self.get_model_specific_kwargs(model_type)
-        if self.load_in_8bit:
+        if self.tnx_configs.load_in_8bit:
             neuron_config = NeuronConfig()
-            neuron_config.quant = QuantizationConfig(quant_dtype='s8',
-                                                     dequant_dtype=self.amp)
+            neuron_config.quant = QuantizationConfig(
+                quant_dtype='s8', dequant_dtype=self.tnx_configs.amp)
             return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
                 load_path, neuron_config=neuron_config, **model_kwargs)
         return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
@@ -153,10 +142,10 @@ class TransformersNeuronXService(object):
 
     def load_inf2_model_from_memory(self, model_type):
         model_kwargs = self.get_model_specific_kwargs(model_type)
-        if self.load_in_8bit:
+        if self.tnx_configs.load_in_8bit:
             neuron_config = NeuronConfig()
-            neuron_config.quant = QuantizationConfig(quant_dtype='s8',
-                                                     dequant_dtype=self.amp)
+            neuron_config.quant = QuantizationConfig(
+                quant_dtype='s8', dequant_dtype=self.tnx_configs.amp)
             model = MODEL_TYPE_TO_MODEL[model_type](
                 self.model.config, neuron_config=neuron_config, **model_kwargs)
         else:
@@ -166,12 +155,12 @@ class TransformersNeuronXService(object):
         return model
 
     def load_model(self, model_type):
-        if not self.load_split_model:
+        if not self.tnx_configs.load_split_model:
             self.model = self.load_hf_model()
             load_path = self.get_load_path(model_type)
         else:
-            load_path = self.model_id_or_path
-        if not self.low_cpu_mem_usage:
+            load_path = self.tnx_configs.model_id_or_path
+        if not self.tnx_configs.low_cpu_mem_usage:
             logging.info("Transferring weights from HF to INF2 in-memory")
             self.model = self.load_inf2_model_from_memory(model_type)
         else:
@@ -192,46 +181,7 @@ class TransformersNeuronXService(object):
         # Neuron recommendation for transformersneuronx speedup
         os.environ["NEURON_CC_FLAGS"] = os.environ[
             "NEURON_CC_FLAGS"] + " --model-type=transformer"
-        if "neuron_optimize_level" in properties:
-            level = properties.get("neuron_optimize_level")
-            os.environ["NEURON_CC_FLAGS"] = os.environ[
-                "NEURON_CC_FLAGS"] + f" -O{level}"
-        if "batch_size" in properties:
-            self.batch_size = int(properties.get("batch_size"))
-        if "max_rolling_batch_size" in properties:
-            self.batch_size = int(properties.get("max_rolling_batch_size"))
-        self.tensor_parallel_degree = int(
-            properties.get("tensor_parallel_degree", 1))
-        self.model_id_or_path = properties.get("model_id") or properties.get(
-            "model_dir")
-        self.enable_streaming = properties.get("enable_streaming", None)
-        if self.enable_streaming and self.enable_streaming.lower() == "false":
-            self.enable_streaming = None
-        dtype = properties.get("dtype", "fp32")
-        self.n_positions = int(properties.get("n_positions", 128))
-        self.unroll = properties.get("unroll", None)
-        if dtype not in DTYPE_MAPPER:
-            raise ValueError(f"{dtype} data type not supported!")
-        self.amp = DTYPE_MAPPER[dtype]
-        if "trust_remote_code" in properties:
-            self.trust_remote_code = properties.get(
-                "trust_remote_code").lower() == "true"
-        if "revision" in properties:
-            self.revision = properties.get("revision")
-        if "load_in_8bit" in properties:
-            self.load_in_8bit = properties.get(
-                "load_in_8bit").lower() == 'true'
-        if "low_cpu_mem_usage" in properties:
-            self.low_cpu_mem_usage = properties.get(
-                "low_cpu_mem_usage").lower() == 'true'
-        if "load_split_model" in properties:
-            self.load_split_model = properties.get(
-                "load_split_model").lower() == 'true'
-            self.low_cpu_mem_usage = True
-        if "context_length_estimate" in properties:
-            # expect input like [256, 1024, 2048]
-            self.context_length_estimate = json.loads(
-                properties.get("context_length_estimate"))
+        self.tnx_configs = TransformerNeuronXProperties(**properties)
         if "compiled_graph_path" in properties:
             # expects input of s3 URL or relative directory
             self.compiled_graph_path = properties.get("compiled_graph_path")
@@ -246,17 +196,17 @@ class TransformersNeuronXService(object):
                     self.compiled_graph_path = os.path.join(
                         os.getcwd(), self.compiled_graph_path)
             os.environ["NEURON_COMPILE_CACHE_URL"] = self.compiled_graph_path
-        model_config = AutoConfig.from_pretrained(self.model_id_or_path,
-                                                  revision=self.revision)
+        model_config = AutoConfig.from_pretrained(self.tnx_configs.model_id_or_path,
+                                                  revision=self.tnx_configs.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
             raise ValueError(
-                f"{model_config.model_type} type not supported for model {self.model_id_or_path}"
+                f"{model_config.model_type} type not supported for model {self.tnx_configs.model_id_or_path}"
                 f"Supported model arch: {SUPPORTED_MODEL_TYPES}")
         self.model_type = model_config.model_type
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_id_or_path,
-            trust_remote_code=self.trust_remote_code,
-            revision=self.revision,
+            self.tnx_configs.model_id_or_path,
+            trust_remote_code=self.tnx_configs.trust_remote_code,
+            revision=self.tnx_configs.revision,
             padding_side="left")
         if not self.tokenizer.pad_token_id:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
@@ -266,10 +216,11 @@ class TransformersNeuronXService(object):
         # HuggingFace compatible generate model and Neuron custom sample method
         self.model = NeuronXSampleAdapter(model_config, self.model)
         self.initialized = True
-        if "rolling_batch" in properties:
-            self.rolling_batch = NeuronRollingBatch(self.model, self.tokenizer,
-                                                    self.batch_size,
-                                                    self.n_positions)
+        if self.tnx_configs.rolling_batch != "disable":
+            self.rolling_batch = NeuronRollingBatch(
+                self.model, self.tokenizer,
+                self.tnx_configs.max_rolling_batch_size,
+                self.tnx_configs.n_positions)
 
     def parse_input(self, inputs):
         input_data = []
@@ -335,22 +286,22 @@ class TransformersNeuronXService(object):
         model_kwargs = {}
 
         prompt_size = len(input_data)
-        if prompt_size > self.batch_size:
+        if prompt_size > self.tnx_configs.batch_size:
             raise ValueError(
-                f"Batch size {prompt_size} beyond the max_batch size the model can support {self.batch_size}"
+                f"Batch size {prompt_size} beyond the max_batch size the model can support {self.tnx_configs.batch_size}"
             )
 
-        for i in range(prompt_size, self.batch_size):
+        for i in range(prompt_size, self.tnx_configs.batch_size):
             input_data.append(self.tokenizer.eos_token)
 
         # clean KV cache
         self.model.reset_generation()
-        if self.enable_streaming:
+        if self.tnx_configs.enable_streaming != StreamingEnum.false:
             if len(batch) > 1:
                 raise NotImplementedError(
                     "Dynamic batch not supported for generic streaming")
             outputs.add_property("content-type", "application/jsonlines")
-            if self.enable_streaming == "huggingface":
+            if self.tnx_configs.enable_streaming == StreamingEnum.huggingface:
                 outputs.add_stream_content(
                     StreamingUtils.use_hf_default_streamer(
                         self.model, self.tokenizer, input_data, None,
@@ -369,7 +320,8 @@ class TransformersNeuronXService(object):
                                                           padding=True)
         use_sample = parameters.pop("use_sample", True)
         if use_sample:
-            sample_length = parameters.pop("max_new_tokens", self.n_positions)
+            sample_length = parameters.pop("max_new_tokens",
+                                           self.tnx_configs.n_positions)
             output_tokens = self.model.neuron_sample(encoded_inputs.input_ids,
                                                      sample_length,
                                                      **parameters)
