@@ -19,7 +19,8 @@ ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
 ARG tensorrtlibs_version=9.1.0.post12.dev4
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
-
+ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/tensorrt_llm_toolkit-nightly-py3-none-any.whl"
+ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl"
 EXPOSE 8080
 
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
@@ -66,7 +67,7 @@ RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} ac
     pip3 cache purge
 
 # download dependencies
-RUN pip install https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl && \
+RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r23.09/libtritonserver.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/0.5.0/libtriton_tensorrtllm.so && \
