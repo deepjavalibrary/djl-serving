@@ -82,4 +82,4 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-25-0.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
-LABEL neuronxdk-version=$neuronsdk_version
+LABEL neuronsdk-version=$neuronsdk_version
