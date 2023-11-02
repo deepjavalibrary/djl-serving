@@ -62,7 +62,8 @@ RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev l
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install PyTorch
-RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece && \
+RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
+    mpi4py && \
     pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt-libs==${tensorrtlibs_version} && \
     pip3 cache purge
 

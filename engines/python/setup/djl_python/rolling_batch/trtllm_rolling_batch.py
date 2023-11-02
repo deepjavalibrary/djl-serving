@@ -10,13 +10,9 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
-import numpy as np
+import logging
 import tensorrt_llm_toolkit
-from transformers import AutoTokenizer
-from collections import OrderedDict
-import os
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch
 
 
 class TRTLLMRollingBatch(RollingBatch):
@@ -28,57 +24,52 @@ class TRTLLMRollingBatch(RollingBatch):
         :param properties: other properties of the model, such as decoder strategy
         """
         super().__init__(-1, **kwargs)
-        self.model = tensorrt_llm_toolkit.init_inference(
-            model_id_or_path)  # not sure kwargs okay or not
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
-                                                       padding_side="left",
-                                                       revision=kwargs.get(
-                                                           'revision', None))
-        self.request_cache = OrderedDict()
+        self.model = tensorrt_llm_toolkit.init_inference(model_id_or_path, **kwargs)
+        self.request_cache = {}
 
     def reset(self):
         """
         Stops all current requests and resets state of rolling batch portion of handler
         """
-        for key in self.request_cache.keys():
-            continue
-            # todo stop the asynchronous inference
-        self.request_cache = OrderedDict()
+        for req in self.request_cache.values():
+            self.model.delete_request(req)
+        self.request_cache.clear()
         super().reset()
+
+    def translate_triton_params(self, parameters):
+        if "max_new_tokens" in parameters.keys():
+            parameters["request_output_len"] = parameters.pop("max_new_tokens")
+        if "top_k" in parameters.keys():
+            parameters["runtime_top_k"] = parameters.pop("top_k")
+        if "top_p" in parameters.keys():
+            parameters["runtime_top_p"] = parameters.pop("top_p")
+        if "seed" in parameters.keys():
+            parameters["random_seed"] = int(parameters.pop("seed"))
+        if "do_sample" in parameters.keys():
+            parameters.pop("do_sample")
+            logging.info("do_sample is not used for trtllm,"
+                         " please use sample params (e.g top_p, temperature) to allow sampling")
+        parameters["streaming"] = parameters.get("streaming", True)
+        return parameters
 
     def inference(self, input_data, parameters):
         batch_size = len(input_data)
         # add pending requests to active requests list
         new_requests = self.get_new_requests(input_data, parameters,
                                              batch_size)
-        # register new active requests
+        # step 0: register new active requests
         for request in new_requests:
-            result = self.model.generate(request.input_text,
-                                         streaming=[True
-                                                    ])  #request parameters?
-            self.request_cache[request.id] = {
-                "response_obj": result,
-                "curr_length": 0,
-                "text": "",
-                "finished": False
-            }
+            param = self.translate_triton_params(request.parameters)
+            response = self.model.generate(request.input_text, **param)
+            self.request_cache[request.id] = response
 
-        # obtain new tokens in all active requests
-        finished_ids = set()
+        # step 1: loop the active requests to send result
         for request in self.active_requests:
-            cached_request = self.request_cache[request.id]
-            output_text, complete = cached_request["response_obj"].fetch()
-            cached_request["curr_length"] += 1
-            cached_request["text"] += output_text
-            request.set_next_token(output_text, self.output_formatter,
-                                   complete)
-            if (complete):
-                finished_ids.add(request.id)
-                cached_request["finished"] = True
-
-        # remove finished requests
-        for finished_id in finished_ids:
-            del self.request_cache[finished_id]
+            trt_req = self.request_cache[request.id]
+            output_text, complete = trt_req.fetch()
+            request.set_next_token(output_text, self.output_formatter, complete)
+            if complete:
+                self.request_cache.pop(request.id)
 
         return self.postprocess_results()
 
