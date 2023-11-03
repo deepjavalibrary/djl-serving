@@ -13,6 +13,7 @@
 package ai.djl.python.engine;
 
 import ai.djl.engine.EngineException;
+import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +80,8 @@ final class TrtLlmUtils {
         commandList.add(model.getModelPath().toAbsolutePath().toString());
         commandList.add("--trt_llm_model_repo");
         commandList.add(trtLlmRepoDir.toAbsolutePath().toString());
+        commandList.add("--gpu_count");
+        commandList.add(String.valueOf(CudaUtils.getGpuCount()));
         if (modelId != null) {
             commandList.add("--model_path");
             commandList.add(modelId);
