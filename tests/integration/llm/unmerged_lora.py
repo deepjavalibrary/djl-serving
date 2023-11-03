@@ -5,7 +5,7 @@ import torch
 import json
 import logging
 
-BASE_MODEL_ID = "decapoda-research/llama-7b-hf"
+BASE_MODEL_ID = "huggyllama/llama-7b"
 LORA_ADAPTER_1_ID = "tloen/alpaca-lora-7b"
 LORA_ADAPTER_2_ID = "22h/cabrita-lora-v0-1"
 LORA_ADAPTER_1_NAME = "english-alpaca"
