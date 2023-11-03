@@ -52,19 +52,16 @@ final class TrtLlmUtils {
         List<String> commandList = getStrings(model, trtLlmRepoDir, modelId);
         try {
             Process exec = new ProcessBuilder(commandList).redirectErrorStream(true).start();
-            StringBuilder logOutputBuilder = new StringBuilder();
             try (BufferedReader reader =
                     new BufferedReader(
                             new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    logger.info("{}: {}", "trtllm_py", line);
-                    logOutputBuilder.append(line);
+                    logger.info("convert_py: {}", line);
                 }
             }
-            String logOutput = logOutputBuilder.toString();
             int exitCode = exec.waitFor();
-            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
+            if (0 != exitCode) {
                 throw new EngineException("Model conversion process failed!");
             }
             logger.info("TensorRT-LLM artifacts built successfully");
