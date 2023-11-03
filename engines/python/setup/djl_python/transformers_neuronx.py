@@ -14,7 +14,6 @@ import json
 import shutil
 import tempfile
 import os
-import re
 import logging
 import time
 
@@ -83,7 +82,6 @@ class TransformersNeuronXService(object):
         self.download_dir = None
         self.model_type = None
         self.rolling_batch = None
-        self.compiled_graph_path = None
         self.tnx_configs = None
 
     def init_load_path(self, model_type):
@@ -182,20 +180,6 @@ class TransformersNeuronXService(object):
         os.environ["NEURON_CC_FLAGS"] = os.environ[
             "NEURON_CC_FLAGS"] + " --model-type=transformer"
         self.tnx_configs = TransformerNeuronXProperties(**properties)
-        if "compiled_graph_path" in properties:
-            # expects input of s3 URL or relative directory
-            self.compiled_graph_path = properties.get("compiled_graph_path")
-            if not re.search("^s3:\/\/([^/]+)\/([\w\W]+)",
-                             self.compiled_graph_path):
-                if not os.path.isdir(self.compiled_graph_path):
-                    raise ValueError(
-                        f"{self.compiled_graph_path} is not a valid value for compiled_graph_path. "
-                        f"Supported values are: directories, and S3 URIs to directories."
-                    )
-                else:
-                    self.compiled_graph_path = os.path.join(
-                        os.getcwd(), self.compiled_graph_path)
-            os.environ["NEURON_COMPILE_CACHE_URL"] = self.compiled_graph_path
         model_config = AutoConfig.from_pretrained(
             self.tnx_configs.model_id_or_path,
             revision=self.tnx_configs.revision)

@@ -46,7 +46,8 @@ class TestConfigManager(unittest.TestCase):
         properties = {
             "n_positions": "256",
             "load_split_model": "true",
-            "quantize": "bitsandbytes8"
+            "quantize": "bitsandbytes8",
+            "compiled_graph_path": "s3://test/bucket/folder"
         }
         tnx_configs = TransformerNeuronXProperties(**common_props,
                                                    **properties)
@@ -61,6 +62,35 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(tnx_configs.batch_size, 4)
         self.assertEqual(tnx_configs.max_rolling_batch_size, 2)
         self.assertEqual(tnx_configs.enable_streaming.value, 'false')
+        self.assertEqual(tnx_configs.compiled_graph_path,
+                         str(properties['compiled_graph_path']))
+
+    def test_tnx_configs_error_case(self):
+        common_props = common_properties
+        common_props["rolling_batch"] = "disable"
+        common_props['batch_size'] = 4
+        common_props['max_rolling_batch_size'] = 2
+        common_props['enable_streaming'] = 'False'
+        properties = {
+            "n_positions": "256",
+            "load_split_model": "true",
+            "quantize": "bitsandbytes8",
+        }
+
+        def test_url_not_s3_uri(url):
+            properties['compiled_graph_path'] = url
+            with self.assertRaises(ValueError):
+                TransformerNeuronXProperties(**common_props, **properties)
+            del properties['compiled_graph_path']
+
+        def test_non_existent_directory(directory):
+            properties['compiled_graph_path'] = directory
+            with self.assertRaises(ValueError):
+                TransformerNeuronXProperties(**common_props, **properties)
+            del properties['compiled_graph_path']
+
+        test_url_not_s3_uri("https://random.url.address/")
+        test_non_existent_directory("not_a_directory")
 
 
 if __name__ == '__main__':
