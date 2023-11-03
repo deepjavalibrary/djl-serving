@@ -14,6 +14,7 @@ import json
 import shutil
 import tempfile
 import os
+import re
 import logging
 import time
 
@@ -95,6 +96,7 @@ class TransformersNeuronXService(object):
         self.load_in_8bit = False
         self.low_cpu_mem_usage = False
         self.load_split_model = False
+        self.compiled_graph_path = None
 
     def init_load_path(self, model_type):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
@@ -230,6 +232,20 @@ class TransformersNeuronXService(object):
             # expect input like [256, 1024, 2048]
             self.context_length_estimate = json.loads(
                 properties.get("context_length_estimate"))
+        if "compiled_graph_path" in properties:
+            # expects input of s3 URL or relative directory
+            self.compiled_graph_path = properties.get("compiled_graph_path")
+            if not re.search("^s3:\/\/([^/]+)\/([\w\W]+)",
+                             self.compiled_graph_path):
+                if not os.path.isdir(self.compiled_graph_path):
+                    raise ValueError(
+                        f"{self.compiled_graph_path} is not a valid value for compiled_graph_path. "
+                        f"Supported values are: directories, and S3 URIs to directories."
+                    )
+                else:
+                    self.compiled_graph_path = os.path.join(
+                        os.getcwd(), self.compiled_graph_path)
+            os.environ["NEURON_COMPILE_CACHE_URL"] = self.compiled_graph_path
         model_config = AutoConfig.from_pretrained(self.model_id_or_path,
                                                   revision=self.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
