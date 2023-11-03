@@ -62,11 +62,10 @@ def main():
         type=str,
         required=True,
         help='local path where trt llm model repo will be created')
-    parser.add_argument(
-            '--gpu_count',
-            type=str,
-            required=True,
-            help='The total number of gpus in the system')
+    parser.add_argument('--gpu_count',
+                        type=str,
+                        required=True,
+                        help='The total number of gpus in the system')
     parser.add_argument('--model_path',
                         type=str,
                         required=False,

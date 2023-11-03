@@ -196,8 +196,9 @@ class TransformersNeuronXService(object):
                     self.compiled_graph_path = os.path.join(
                         os.getcwd(), self.compiled_graph_path)
             os.environ["NEURON_COMPILE_CACHE_URL"] = self.compiled_graph_path
-        model_config = AutoConfig.from_pretrained(self.tnx_configs.model_id_or_path,
-                                                  revision=self.tnx_configs.revision)
+        model_config = AutoConfig.from_pretrained(
+            self.tnx_configs.model_id_or_path,
+            revision=self.tnx_configs.revision)
         if model_config.model_type not in SUPPORTED_MODEL_TYPES:
             raise ValueError(
                 f"{model_config.model_type} type not supported for model {self.tnx_configs.model_id_or_path}"
