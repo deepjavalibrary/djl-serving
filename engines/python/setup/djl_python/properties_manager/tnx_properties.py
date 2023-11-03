@@ -13,6 +13,7 @@
 import json
 import logging
 import os
+import re
 from typing import Optional
 
 from pydantic import field_validator, model_validator
@@ -52,6 +53,7 @@ class TransformerNeuronXProperties(Properties):
     context_length_estimate: Optional[dict] = None
     amp: Optional[str] = None
     quantize: Optional[TnXQuantizeMethods] = None
+    compiled_graph_path: Optional[str] = None
 
     @field_validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
@@ -89,6 +91,20 @@ class TransformerNeuronXProperties(Properties):
                 logging.warning(
                     "We cannot enable streaming for dynamic batching")
         return batch_size
+
+    @field_validator('compiled_graph_path')
+    def validate_compiled_graph_path(cls, path: str) -> str:
+        """Transformer neuronx accepts compiled graph paths as directories and s3 uri"""
+        if not re.search("^s3:\/\/([^/]+)\/([\w\W]+)", path):
+            if not os.path.isdir(path):
+                raise ValueError(
+                    f"{path} is not a valid value for compiled_graph_path. "
+                    f"Supported values are: directories, and S3 URIs to directories."
+                )
+            else:
+                path = os.path.join(os.getcwd(), path)
+        os.environ["NEURON_COMPILE_CACHE_URL"] = path
+        return path
 
     @model_validator(mode='after')
     def set_amp_value(self, validation_info):
