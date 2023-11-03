@@ -26,7 +26,7 @@ ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.5.0/ten
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl"
 EXPOSE 8080
 
-COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
+COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
@@ -91,6 +91,9 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     rm -rf scripts && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Add CUDA-Compat
+RUN apt-get update && apt-get install -y cuda-compat-12-2 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
