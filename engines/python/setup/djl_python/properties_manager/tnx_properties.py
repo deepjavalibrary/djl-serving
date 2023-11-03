@@ -100,9 +100,3 @@ class TransformerNeuronXProperties(Properties):
         if self.quantize and self.quantize.value == TnXQuantizeMethods.bitsandbytes8.value:
             self.load_in_8bit = True
         return self
-
-    @model_validator(mode='after')
-    def set_load_split_model(self, validation_info):
-        if self.load_split_model:
-            self.low_cpu_mem_usage = True
-        return self

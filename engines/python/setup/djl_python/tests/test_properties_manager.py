@@ -50,8 +50,7 @@ class TestConfigManager(unittest.TestCase):
         }
         tnx_configs = TransformerNeuronXProperties(**common_props,
                                                    **properties)
-        print(tnx_configs)
-        self.assertTrue(tnx_configs.low_cpu_mem_usage)
+        self.assertFalse(tnx_configs.low_cpu_mem_usage)
         self.assertTrue(tnx_configs.load_split_model)
         self.assertEqual(int(properties['n_positions']),
                          tnx_configs.n_positions)
