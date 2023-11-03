@@ -13,13 +13,14 @@
 package ai.djl.python.engine;
 
 import ai.djl.engine.EngineException;
-import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -51,16 +52,17 @@ final class TrtLlmUtils {
         List<String> commandList = getStrings(model, trtLlmRepoDir, modelId);
         try {
             Process exec = new ProcessBuilder(commandList).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = exec.getInputStream()) {
-                logOutput = Utils.toString(is);
+            try (BufferedReader reader =
+                    new BufferedReader(
+                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info("convert_py: {}", line);
+                }
             }
             int exitCode = exec.waitFor();
-            if (0 != exitCode || logOutput.startsWith("ERROR ")) {
-                logger.error(logOutput);
-                throw new EngineException("Download model failed: " + logOutput);
-            } else {
-                logger.info(logOutput);
+            if (0 != exitCode) {
+                throw new EngineException("Model conversion process failed!");
             }
             logger.info("TensorRT-LLM artifacts built successfully");
             return trtLlmRepoDir;
