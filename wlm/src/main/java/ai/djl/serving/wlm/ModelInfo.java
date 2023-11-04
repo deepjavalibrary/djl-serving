@@ -85,7 +85,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     transient Path modelDir;
     private transient String artifactName;
-    transient Path downloadS3Dir;
+    transient Path downloadDir;
 
     transient Properties prop;
     private transient Status status;
@@ -240,9 +240,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             } else {
                 builder.optDevice(device);
             }
-            if (downloadS3Dir != null) {
+            if (downloadDir != null) {
                 // override model_id
-                builder.optOption("model_id", downloadS3Dir.toAbsolutePath().toString());
+                builder.optOption("model_id", downloadDir.toAbsolutePath().toString());
             }
             ZooModel<I, O> m = builder.build().loadModel();
             if (engine == null) {
@@ -462,6 +462,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         downloadModel();
         loadServingProperties();
         downloadS3();
+        LmiUtils.convertIfNeed(this);
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
         if (options == null) {
@@ -541,8 +542,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     public void close() {
         if (!getModels().isEmpty() && !Boolean.getBoolean("ai.djl.serving.keep_cache")) {
             logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
-            if (downloadS3Dir != null) {
-                Utils.deleteQuietly(downloadS3Dir);
+            if (downloadDir != null) {
+                Utils.deleteQuietly(downloadDir);
             }
             Path path = null;
             for (Model m : models.values()) {
@@ -771,8 +772,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             try (Stream<Path> walk = Files.walk(modelDir)) {
                 requiredMemory = walk.mapToLong(ModelInfo::getFileSize).sum();
             }
-            if (downloadS3Dir != null) {
-                try (Stream<Path> walk = Files.walk(downloadS3Dir)) {
+            if (downloadDir != null) {
+                try (Stream<Path> walk = Files.walk(downloadDir)) {
                     requiredMemory += walk.mapToLong(ModelInfo::getFileSize).sum();
                 }
             }
@@ -936,20 +937,20 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             logger.info("S3 url found, start downloading from {}", modelId);
             // Use fixed download path to avoid repeat download
             String hash = Utils.hash(modelId);
-            String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
-            Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
+            String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+            Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
             parent = parent.resolve("download");
-            downloadS3Dir = parent.resolve(hash);
-            if (Files.exists(downloadS3Dir)) {
-                logger.info("artifacts has been downloaded already: {}", downloadS3Dir);
+            this.downloadDir = parent.resolve(hash);
+            if (Files.exists(this.downloadDir)) {
+                logger.info("artifacts has been downloaded already: {}", this.downloadDir);
                 return;
             }
             Files.createDirectories(parent);
             Path tmp = Files.createTempDirectory(parent, "tmp");
             try {
                 downloadS3(modelId, tmp.toAbsolutePath().toString());
-                Utils.moveQuietly(tmp, downloadS3Dir);
-                logger.info("Download completed! Files saved to {}", downloadS3Dir);
+                Utils.moveQuietly(tmp, this.downloadDir);
+                logger.info("Download completed! Files saved to {}", this.downloadDir);
             } finally {
                 Utils.deleteQuietly(tmp);
             }

@@ -38,7 +38,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -79,6 +78,7 @@ public class PyModel extends BaseModel {
                     "Python engine does not support dynamic blocks");
         }
         String entryPoint = null;
+        boolean isTrtLlmBackend = false;
         if (options != null) {
             logger.debug("options in serving.properties for model: {}", modelName);
             for (Map.Entry<String, ?> entry : options.entrySet()) {
@@ -121,6 +121,9 @@ public class PyModel extends BaseModel {
                     case "entryPoint":
                         entryPoint = value;
                         break;
+                    case "rolling_batch":
+                        isTrtLlmBackend = "trtllm".equals(value);
+                        break;
                     case "parallel_loading":
                         parallelLoading = Boolean.parseBoolean(value);
                         break;
@@ -149,17 +152,6 @@ public class PyModel extends BaseModel {
         // MMS and TorchServe Bcc
         if (Files.isDirectory(modelDir.resolve("MAR-INF"))) {
             pyEnv.setFailOnInitialize(false);
-        }
-
-        // Handle TRT-LLM
-        boolean isTrtLlmBackend = "TRT-LLM".equals(Utils.getenv("LMI_BACKEND"));
-        if (isTrtLlmBackend) {
-            Optional<Path> trtLlmRepoDir = TrtLlmUtils.initTrtLlmModel(this);
-            if (trtLlmRepoDir.isPresent()) {
-                String modelId = trtLlmRepoDir.get().toAbsolutePath().toString();
-                setProperty("model_id", modelId);
-                pyEnv.addParameter("model_id", modelId);
-            }
         }
 
         if (entryPoint == null) {

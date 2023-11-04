@@ -12,12 +12,12 @@
 # the specific language governing permissions and limitations under the License.
 
 import argparse
-import sys
-import logging
-from tensorrt_llm_toolkit import create_model_repo
-from utils import load_properties
 import logging
 import os
+import sys
+from tensorrt_llm_toolkit import create_model_repo
+
+from utils import load_properties
 
 
 def create_trt_llm_repo(properties, args):
@@ -27,11 +27,10 @@ def create_trt_llm_repo(properties, args):
             kwargs[key[7:]] = value
         else:
             kwargs[key] = value
-    kwargs['trt_llm_model_repo'] = args.trt_llm_model_repo
     kwargs = update_kwargs_with_env_vars(kwargs)
+    kwargs['trt_llm_model_repo'] = args.trt_llm_model_repo
+    kwargs["tensor_parallel_degree"] = args.tensor_parallel_degree
     model_id_or_path = args.model_path or kwargs['model_id']
-    if 'max' == kwargs.get('tensor_parallel_degree', -1):
-        kwargs['tensor_parallel_degree'] = int(args.gpu_count)
     create_model_repo(model_id_or_path, **kwargs)
 
 
@@ -62,10 +61,10 @@ def main():
         type=str,
         required=True,
         help='local path where trt llm model repo will be created')
-    parser.add_argument('--gpu_count',
-                        type=str,
+    parser.add_argument('--tensor_parallel_degree',
+                        type=int,
                         required=True,
-                        help='The total number of gpus in the system')
+                        help='Tensor parallel degree')
     parser.add_argument('--model_path',
                         type=str,
                         required=False,
