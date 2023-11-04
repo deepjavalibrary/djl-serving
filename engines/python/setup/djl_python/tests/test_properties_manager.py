@@ -3,6 +3,7 @@ from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
+from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
 
 import torch
 
@@ -220,6 +221,51 @@ class TestConfigManager(unittest.TestCase):
         test_ds_invalid_quant()
         test_ds_invalid_sq_value()
         test_ds_invalid_dtype()
+
+    def test_hf_configs(self):
+        properties = {
+            "model_id": "model_id",
+            "model_dir": "model_dir",
+            "tensor_parallel_degree": "4",
+            "load_in_8bit": "true",
+            "low_cpu_mem_usage": "True",
+            "disable_flash_attn": "false",
+            "engine": "MPI",
+            "device_map": "auto"
+        }
+
+        hf_configs = HuggingFaceProperties(**properties)
+        self.assertTrue(hf_configs.load_in_8bit)
+        self.assertTrue(hf_configs.low_cpu_mem_usage)
+        self.assertFalse(hf_configs.disable_flash_attn)
+        self.assertEqual(hf_configs.device_map, properties['device_map'])
+        self.assertTrue(hf_configs.is_mpi)
+        self.assertDictEqual(
+            hf_configs.kwargs, {
+                'trust_remote_code': False,
+                "low_cpu_mem_usage": True,
+                "device_map": 'auto',
+                "load_in_8bit": True
+            })
+
+    def test_hf_quantize(self):
+        properties = {
+            'model_id': 'model_id',
+            'quantize': 'bitsandbytes8',
+            'rolling_batch': 'lmi-dist'
+        }
+        hf_configs = HuggingFaceProperties(**properties)
+        self.assertEqual(hf_configs.quantize.value,
+                         HFQuantizeMethods.bitsandbytes.value)
+
+    def test_hf_error_case(self):
+        properties = {"model_id": "model_id", 'load_in_8bit': True}
+        with self.assertRaises(ValueError):
+            HuggingFaceProperties(**properties)
+
+        properties = {"quantize": HFQuantizeMethods.bitsandbytes4.value}
+        with self.assertRaises(ValueError):
+            HuggingFaceProperties(**properties)
 
 
 if __name__ == '__main__':
