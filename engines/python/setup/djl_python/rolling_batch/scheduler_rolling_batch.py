@@ -175,7 +175,9 @@ class SchedulerRollingBatch(RollingBatch):
                                                DEFAULT_SEARCH_ALGORITHM)
         self.scheduler = SeqBatchScheduler(self.lm_block,
                                            self.search_algorithm,
-                                           self.search_config)
+                                           self.search_config,
+                                           max_sparsity=properties.get('max_sparsity', 0.33),
+                                           max_splits=properties.get('max_splits', 3))
 
     def _prefill_and_decode(self, new_requests):
 
