@@ -22,7 +22,7 @@ ARG protobuf_version=3.20.3
 ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
 ARG diffusers_version=0.16.0
-ARG pydantic_version=2.4
+ARG pydantic_version=1.10.13
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
