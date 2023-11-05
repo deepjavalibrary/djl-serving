@@ -14,7 +14,7 @@ import os
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, model_validator, field_validator, Field
+from pydantic import BaseModel, root_validator, validator, Field
 
 
 class RollingBatchEnum(str, Enum):
@@ -44,22 +44,20 @@ class Properties(BaseModel):
     dtype: Optional[str] = None
     revision: Optional[str] = None
 
-    @field_validator('enable_streaming', mode='before')
+    @validator('enable_streaming', pre=True)
     def validate_enable_streaming(cls, enable_streaming: str) -> str:
         return enable_streaming.lower()
 
-    @field_validator('batch_size')
-    def validate_batch_size(cls, batch_size: int, fields) -> int:
-        properties = fields.data
+    @validator('batch_size', pre=True)
+    def validate_batch_size(cls, batch_size, values):
         if batch_size > 1:
-            if properties[
-                    'rolling_batch'] == RollingBatchEnum.disable and properties[
-                        'enable_streaming'] != "false":
+            if values['rolling_batch'] == RollingBatchEnum.disable and values[
+                    'enable_streaming'] != "false":
                 raise ValueError(
                     "We cannot enable streaming for dynamic batching")
         return batch_size
 
-    @model_validator(mode='before')
+    @root_validator(pre=True)
     def set_model_id_or_path(cls, properties: dict) -> dict:
         # model_id can point to huggingface model_id or local directory.
         # If option.model_id points to a s3 bucket, we download it and set model_id to the download directory.

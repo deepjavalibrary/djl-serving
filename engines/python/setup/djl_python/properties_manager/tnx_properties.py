@@ -16,7 +16,7 @@ import os
 import re
 from typing import Optional
 
-from pydantic import field_validator, model_validator
+from pydantic import validator, root_validator
 from enum import IntEnum, Enum
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum
@@ -55,16 +55,16 @@ class TransformerNeuronXProperties(Properties):
     quantize: Optional[TnXQuantizeMethods] = None
     compiled_graph_path: Optional[str] = None
 
-    @field_validator('neuron_optimize_level')
+    @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
         os.environ[
             "NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + f" -O{level}"
 
-    @field_validator('context_length_estimate', mode='before')
+    @validator('context_length_estimate', pre=True)
     def parse_context_length(cls, context_length_estimate):
         return json.loads(context_length_estimate)
 
-    @field_validator('rolling_batch', mode='before')
+    @validator('rolling_batch', pre=True)
     def validate_rolling_batch(cls, rolling_batch: str) -> str:
         if rolling_batch == RollingBatchEnum.disable.value:
             return rolling_batch
@@ -76,23 +76,21 @@ class TransformerNeuronXProperties(Properties):
             return 'auto'
         return rolling_batch
 
-    @field_validator('batch_size')
-    def validate_batch_size(cls, batch_size: int, fields) -> int:
+    @validator('batch_size')
+    def validate_batch_size(cls, batch_size, values):
         """
         Transformer neuronx has both option.batch_size and batch_size.
         option.batch_size is to compile the model with batch size, which cannot be
         differentiated in neuronx handlers. Hence, just throwing a warning here.
         """
-        properties = fields.data
         if batch_size > 1:
-            if properties[
-                    'rolling_batch'] == RollingBatchEnum.disable and properties[
-                        'enable_streaming'] != StreamingEnum.false:
+            if values['rolling_batch'] == RollingBatchEnum.disable and values[
+                    'enable_streaming'] != StreamingEnum.false:
                 logging.warning(
                     "We cannot enable streaming for dynamic batching")
         return batch_size
 
-    @field_validator('compiled_graph_path')
+    @validator('compiled_graph_path')
     def validate_compiled_graph_path(cls, path: str) -> str:
         """Transformer neuronx accepts compiled graph paths as directories and s3 uri"""
         if not re.search("^s3:\/\/([^/]+)\/([\w\W]+)", path):
@@ -106,13 +104,14 @@ class TransformerNeuronXProperties(Properties):
         os.environ["NEURON_COMPILE_CACHE_URL"] = path
         return path
 
-    @model_validator(mode='after')
-    def set_amp_value(self, validation_info):
-        self.amp = self.dtype.name
-        return self
+    @root_validator()
+    def set_amp_value(cls, properties):
+        properties['amp'] = properties['dtype'].name
+        return properties
 
-    @model_validator(mode='after')
-    def set_quantize(self, validation_info):
-        if self.quantize and self.quantize.value == TnXQuantizeMethods.bitsandbytes8.value:
-            self.load_in_8bit = True
-        return self
+    @root_validator()
+    def set_quantize(cls, properties):
+        if properties['quantize'] and properties[
+                'quantize'].value == TnXQuantizeMethods.bitsandbytes8.value:
+            properties['load_in_8bit'] = True
+        return properties
