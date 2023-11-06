@@ -1,0 +1,15 @@
+Framework: pytorch
+FrameworkVersion: 2.1.0
+InferenceSpec: spec.pkl
+InferenceSpecHMAC: b61b8541bb77c191fa9ff9dff91e7ee3bb809b452fa0c614fbcc5e651ae4fc35
+Model: null
+ModelHMAC: null
+ModelType: PyTorchModel
+OptimizerInputs:
+  ModelSizeInMemory: 16
+PythonVersion: 3.9.6
+Requirements: requirements.txt
+Schema: schema.pkl
+SchemaHMAC: 3c7f02d50742576e6a8d4683292739df8f0029e6d9b19eac86cc392293dec50f
+Task: unknown
+Version: 1.0.0

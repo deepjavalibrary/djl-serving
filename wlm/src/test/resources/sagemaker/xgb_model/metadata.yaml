@@ -1,0 +1,13 @@
+Framework: xgboost
+FrameworkVersion: 2.0.0
+Model: model.xgb
+ModelHMAC: 10074a565332a9f362d1c30f67395d3149b06e20f2d7bdc999a421b342050223
+ModelType: XGBoostModel
+OptimizerInputs:
+  ModelSizeInMemory: 48
+PythonVersion: 3.9.6
+Requirements: requirements.txt
+Schema: schema.yaml
+SchemaHMAC: 4cca025adbbaf7c76fc81f15b032701678fc5f39b48d27f99abbc0f77d782b51
+Task: unknown
+Version: 1.0.0
