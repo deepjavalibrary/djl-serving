@@ -123,7 +123,7 @@ class SchedulerRollingBatch(RollingBatch):
         else:
             device_map = "cpu"
             if device:
-                if isinstance(device, str):
+                if isinstance(device, str) or isinstance(device, int):
                     device_map = device
                 elif isinstance(device,
                                 torch.device) and device.type == "cuda":
