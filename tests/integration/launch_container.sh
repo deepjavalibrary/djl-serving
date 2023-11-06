@@ -23,7 +23,7 @@ fi
 is_llm=false
 if [[ "$platform" == *"cu1"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
-elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
+elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"*]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
   shm="12gb"
