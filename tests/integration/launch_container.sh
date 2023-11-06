@@ -23,7 +23,7 @@ fi
 is_llm=false
 if [[ "$platform" == *"cu1"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
-elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
+elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
   shm="12gb"
@@ -106,6 +106,10 @@ if $is_llm; then
   total=60
   if [[ "$platform" == *"inf2"* ]]; then
     total=80
+  fi
+  if [[ "$platform" == *"trtllm-sq"* ]]; then
+    echo "extra sleep of 15 min for smoothquant calibration"
+    total=120
   fi
   sleep 120
 fi
