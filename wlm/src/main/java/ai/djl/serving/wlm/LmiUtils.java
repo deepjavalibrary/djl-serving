@@ -142,6 +142,20 @@ public final class LmiUtils {
             }
         } else if (modelId != null) {
             modelInfo.prop.setProperty("option.model_id", modelId);
+            Path dir = Paths.get(modelId);
+            if (Files.isDirectory(dir)) {
+                Path configFile = dir.resolve("config.json");
+                if (Files.isRegularFile(configFile)) {
+                    return configFile.toUri();
+                }
+                // stable diffusion models have a different file name with the config...
+                configFile = dir.resolve("model_index.json");
+                if (Files.isRegularFile(configFile)) {
+                    return configFile.toUri();
+                }
+                return null;
+            }
+
             configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
             HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
             // stable diffusion models have a different file name with the config... sometimes
@@ -269,7 +283,8 @@ public final class LmiUtils {
                                 Path confFile = p.resolve("config.pbtxt");
                                 // TODO: add stricter check for tokenizer
                                 Path tokenizer = p.resolve("tokenizer_config.json");
-                                if (Files.isRegularFile(confFile) && Files.isRegularFile(tokenizer)) {
+                                if (Files.isRegularFile(confFile)
+                                        && Files.isRegularFile(tokenizer)) {
                                     logger.info("Found triton model: {}", p);
                                     isValid.set(true);
                                 }
