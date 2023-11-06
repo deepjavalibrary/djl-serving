@@ -24,6 +24,7 @@ ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
 ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.5.0/tensorrt_llm-0.5.0-py3-none-any.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl"
+ARG pydantic_version=1.10.13
 EXPOSE 8080
 
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
@@ -67,6 +68,7 @@ RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev l
 # Install PyTorch and TensorRT
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy datasets && \
+    pydantic==${pydantic_version} && \
     pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} && \
     pip install --no-deps ${trtllm_wheel} && \
     pip3 cache purge

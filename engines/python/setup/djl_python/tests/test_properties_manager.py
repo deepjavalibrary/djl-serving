@@ -1,6 +1,7 @@
 import unittest
 from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
+from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 
 common_properties = {
     "model_id": "model_id",
@@ -91,6 +92,36 @@ class TestConfigManager(unittest.TestCase):
 
         test_url_not_s3_uri("https://random.url.address/")
         test_non_existent_directory("not_a_directory")
+
+    def test_trtllm_configs(self):
+        properties = {
+            "model_id": "model_id",
+            "model_dir": "model_dir",
+            "rolling_batch": "auto",
+        }
+        trt_configs = TensorRtLlmProperties(**properties)
+        self.assertEqual(trt_configs.model_id_or_path, properties['model_id'])
+        self.assertEqual(trt_configs.rolling_batch.value,
+                         properties['rolling_batch'])
+
+    def test_trtllm_error_cases(self):
+        properties = {
+            "model_id": "model_id",
+            "model_dir": "model_dir",
+        }
+
+        def test_trtllm_rb_disable():
+            properties['rolling_batch'] = 'disable'
+            with self.assertRaises(ValueError):
+                TensorRtLlmProperties(**properties)
+
+        def test_trtllm_rb_invalid():
+            properties['rolling_batch'] = 'lmi-dist'
+            with self.assertRaises(ValueError):
+                TensorRtLlmProperties(**properties)
+
+        test_trtllm_rb_invalid()
+        test_trtllm_rb_disable()
 
 
 if __name__ == '__main__':

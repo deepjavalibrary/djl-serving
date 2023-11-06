@@ -20,6 +20,7 @@ from pydantic import BaseModel, root_validator, validator, Field
 class RollingBatchEnum(str, Enum):
     auto = "auto"
     disable = "disable"
+    trtllm = "trtllm"
 
 
 class StreamingEnum(str, Enum):

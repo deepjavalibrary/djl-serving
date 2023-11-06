@@ -17,25 +17,22 @@ from djl_python.encode_decode import decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
+from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 
 
 class TRTLLMService(object):
 
     def __init__(self):
         self.initialized = False
+        self.trt_configs = None
         self.rolling_batch_type = None
         self.rolling_batch = None
 
     def initialize(self, properties: dict):
-        model_id_or_path = properties.get("model_id") or properties.get(
-            "model_dir")
-        self.rolling_batch_type = properties.get("rolling_batch",
-                                                 "trtllm").lower()
-        if "trtllm" != self.rolling_batch_type:
-            raise ValueError("only trtllm rollingbatch type supported")
+        self.trt_configs = TensorRtLlmProperties(**properties)
 
-        self.rolling_batch = TRTLLMRollingBatch(model_id_or_path, None,
-                                                properties, **properties)
+        self.rolling_batch = TRTLLMRollingBatch(
+            self.trt_configs.model_id_or_path, None, properties, **properties)
         self.initialized = True
         return
 
