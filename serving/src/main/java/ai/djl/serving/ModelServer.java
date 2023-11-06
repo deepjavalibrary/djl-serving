@@ -443,7 +443,8 @@ public class ModelServer {
 
     String mapModelUrl(Path path) {
         try {
-            if (Files.isHidden(path)
+            if (!Files.exists(path)
+                    || Files.isHidden(path)
                     || (!Files.isDirectory(path)
                             && !FilenameUtils.isArchiveFile(path.toString()))) {
                 return null;
