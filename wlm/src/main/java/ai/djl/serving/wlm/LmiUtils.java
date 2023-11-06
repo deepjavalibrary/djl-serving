@@ -269,7 +269,8 @@ public final class LmiUtils {
                                 Path confFile = p.resolve("config.pbtxt");
                                 // TODO: add stricter check for tokenizer
                                 Path tokenizer = p.resolve("tokenizer_config.json");
-                                if (Files.isRegularFile(confFile) && Files.isRegularFile(tokenizer)) {
+                                if (Files.isRegularFile(confFile)
+                                        && Files.isRegularFile(tokenizer)) {
                                     logger.info("Found triton model: {}", p);
                                     isValid.set(true);
                                 }

@@ -601,6 +601,13 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         String prefix = prop.getProperty("option.modelName", artifactName);
+        if (Files.isRegularFile(modelDir.resolve("metadata.yaml"))) {
+            eng = SageMakerUtils.inferSageMakerEngine(this);
+            if (eng != null) {
+                return eng;
+            }
+        }
+
         if (isPythonModel(prefix)) {
             return LmiUtils.inferLmiEngine(this);
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))

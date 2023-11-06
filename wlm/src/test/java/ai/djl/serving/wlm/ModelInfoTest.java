@@ -266,4 +266,25 @@ public class ModelInfoTest {
         model = new ModelInfo<>("build/models/lmi_test_model");
         Assert.assertThrows(model::initialize);
     }
+
+    @Test
+    public void testInferSageMakerEngine() throws IOException, ModelException {
+        ModelInfo<Input, Output> model = new ModelInfo<>("src/test/resources/sagemaker/xgb_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "XGBoost");
+
+        // test case for valid pytorch model with customized schema and inference spec
+        model = new ModelInfo<>("src/test/resources/sagemaker/pytorch_model");
+        model.initialize();
+        assertEquals(model.getEngineName(), "Python");
+        assertEquals(model.prop.getProperty("option.entryPoint"), "djl_python.sagemaker");
+
+        // test case for invalid model format
+        model = new ModelInfo<>("src/test/resources/sagemaker/invalid_pytorch_model");
+        Assert.assertThrows(model::initialize);
+
+        // test case for invalid inference spec
+        model = new ModelInfo<>("src/test/resources/sagemaker/invalid_inference_spec");
+        Assert.assertThrows(model::initialize);
+    }
 }
