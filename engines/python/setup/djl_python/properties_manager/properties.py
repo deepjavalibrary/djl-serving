@@ -29,6 +29,14 @@ class StreamingEnum(str, Enum):
     huggingface = "huggingface"
 
 
+def is_streaming_enabled(enable_streaming: StreamingEnum) -> bool:
+    return enable_streaming.value != StreamingEnum.false.value
+
+
+def is_rolling_batch_enabled(rolling_batch: RollingBatchEnum) -> bool:
+    return rolling_batch.value != RollingBatchEnum.disable.value
+
+
 class Properties(BaseModel):
     """ Configures common properties for all engines """
     # Required configurations from user
@@ -52,8 +60,9 @@ class Properties(BaseModel):
     @validator('batch_size', pre=True)
     def validate_batch_size(cls, batch_size, values):
         if batch_size > 1:
-            if values['rolling_batch'] == RollingBatchEnum.disable and values[
-                    'enable_streaming'] != "false":
+            if not is_rolling_batch_enabled(
+                    values['rolling_batch']) and is_streaming_enabled(
+                        values['enable_streaming']):
                 raise ValueError(
                     "We cannot enable streaming for dynamic batching")
         return batch_size

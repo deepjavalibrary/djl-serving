@@ -2,24 +2,37 @@ import unittest
 from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
+from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 
-common_properties = {
+import torch
+
+min_common_properties = {
     "model_id": "model_id",
     "model_dir": "model_dir",
     "rolling_batch": "auto",
     "tensor_parallel_degree": "4",
 }
 
+common_properties = {
+    "model_id": "model_id",
+    "model_dir": "model_dir",
+    "rolling_batch": "disable",
+    "tensor_parallel_degree": "4",
+    'batch_size': 4,
+    'max_rolling_batch_size': 2,
+    'enable_streaming': 'False'
+}
+
 
 class TestConfigManager(unittest.TestCase):
 
     def test_common_configs(self):
-        configs = Properties(**common_properties)
-        self.assertEqual(common_properties['model_id'],
+        configs = Properties(**min_common_properties)
+        self.assertEqual(min_common_properties['model_id'],
                          configs.model_id_or_path)
-        self.assertEqual(common_properties['rolling_batch'],
+        self.assertEqual(min_common_properties['rolling_batch'],
                          configs.rolling_batch)
-        self.assertEqual(int(common_properties['tensor_parallel_degree']),
+        self.assertEqual(int(min_common_properties['tensor_parallel_degree']),
                          configs.tensor_parallel_degree)
 
         self.assertEqual(configs.batch_size, 1)
@@ -31,7 +44,7 @@ class TestConfigManager(unittest.TestCase):
         self.assertIsNone(configs.revision)
 
     def test_common_configs_error_case(self):
-        other_properties = common_properties
+        other_properties = min_common_properties
         other_properties["rolling_batch"] = "disable"
         other_properties["enable_streaming"] = "true"
         other_properties["batch_size"] = 2
@@ -39,25 +52,20 @@ class TestConfigManager(unittest.TestCase):
             Properties(**other_properties)
 
     def test_tnx_configs(self):
-        common_props = common_properties
-        common_props["rolling_batch"] = "disable"
-        common_props['batch_size'] = 4
-        common_props['max_rolling_batch_size'] = 2
-        common_props['enable_streaming'] = 'False'
         properties = {
             "n_positions": "256",
             "load_split_model": "true",
             "quantize": "bitsandbytes8",
             "compiled_graph_path": "s3://test/bucket/folder"
         }
-        tnx_configs = TransformerNeuronXProperties(**common_props,
+        tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
         self.assertFalse(tnx_configs.low_cpu_mem_usage)
         self.assertTrue(tnx_configs.load_split_model)
         self.assertEqual(int(properties['n_positions']),
                          tnx_configs.n_positions)
         self.assertEqual(tnx_configs.tensor_parallel_degree,
-                         int(common_properties['tensor_parallel_degree']))
+                         int(min_common_properties['tensor_parallel_degree']))
         self.assertEqual(tnx_configs.quantize.value, properties['quantize'])
         self.assertTrue(tnx_configs.load_in_8bit)
         self.assertEqual(tnx_configs.batch_size, 4)
@@ -67,11 +75,6 @@ class TestConfigManager(unittest.TestCase):
                          str(properties['compiled_graph_path']))
 
     def test_tnx_configs_error_case(self):
-        common_props = common_properties
-        common_props["rolling_batch"] = "disable"
-        common_props['batch_size'] = 4
-        common_props['max_rolling_batch_size'] = 2
-        common_props['enable_streaming'] = 'False'
         properties = {
             "n_positions": "256",
             "load_split_model": "true",
@@ -81,13 +84,13 @@ class TestConfigManager(unittest.TestCase):
         def test_url_not_s3_uri(url):
             properties['compiled_graph_path'] = url
             with self.assertRaises(ValueError):
-                TransformerNeuronXProperties(**common_props, **properties)
+                TransformerNeuronXProperties(**common_properties, **properties)
             del properties['compiled_graph_path']
 
         def test_non_existent_directory(directory):
             properties['compiled_graph_path'] = directory
             with self.assertRaises(ValueError):
-                TransformerNeuronXProperties(**common_props, **properties)
+                TransformerNeuronXProperties(**common_properties, **properties)
             del properties['compiled_graph_path']
 
         test_url_not_s3_uri("https://random.url.address/")
@@ -122,6 +125,90 @@ class TestConfigManager(unittest.TestCase):
 
         test_trtllm_rb_invalid()
         test_trtllm_rb_disable()
+
+    def test_ds_properties(self):
+        ds_properties = {
+            'quantize': "dynamic_int8",
+            'dtype': 'fp16',
+            'max_tokens': "2048",
+            'task': 'fill-mask',
+            'low_cpu_mem_usage': "false",
+            'enable_cuda_graph': "True",
+            'triangular_masking': "false",
+        }
+
+        def test_ds_basic_configs():
+            ds_configs = DeepSpeedProperties(**ds_properties, **common_properties)
+            self.assertEqual(ds_configs.quantize.value,
+                             DsQuantizeMethods.dynamicint8.value)
+            self.assertEqual(ds_configs.dtype, torch.float16)
+            self.assertEqual(ds_configs.max_tokens, 2048)
+            self.assertEqual(ds_configs.task, ds_properties['task'])
+            self.assertEqual(ds_configs.device, 0)
+            self.assertFalse(ds_configs.low_cpu_mem_usage)
+            self.assertTrue(ds_configs.enable_cuda_graph)
+            self.assertFalse(ds_configs.triangular_masking)
+
+            ds_config = {
+                'tensor_parallel': {
+                    'tp_size': 4
+                },
+                'enable_cuda_graph': True,
+                'triangular_masking': False,
+                'return_tuple': True,
+                'training_mp_size': 1,
+                'max_tokens': 2048,
+                'save_mp_checkpoint_path': None,
+                'dynamic_quant': {
+                    'enabled': True,
+                    'use_cutlass': False
+                }
+            }
+
+            self.assertDictEqual(ds_configs.ds_config, ds_config)
+
+        def test_ds_smoothquant_configs():
+            ds_properties['quantize'] = 'smoothquant'
+            ds_configs = DeepSpeedProperties(**ds_properties, **common_properties)
+            self.assertEqual(ds_configs.quantize.value, DsQuantizeMethods.smoothquant.value)
+            self.assertDictEqual(ds_configs.ds_config['dynamic_quant'], {'enabled': True, 'use_cutlass': False})
+            self.assertDictEqual(ds_configs.ds_config['smoothing'], {'smooth': True, 'calibrate': True})
+            self.assertDictEqual(ds_configs.ds_config['tensor_parallel'], {'tp_size': 4})
+
+        def test_ds_invalid_quant_method():
+            ds_properties['quantize'] = 'invalid'
+            ds_configs = DeepSpeedProperties(**ds_properties, **common_properties)
+            self.assertIsNone(ds_configs.quantize)
+
+        test_ds_basic_configs()
+        test_ds_smoothquant_configs()
+        test_ds_invalid_quant_method()
+
+    def test_ds_error_properties(self):
+        ds_properties = {
+            "model_id": "model_id",
+            "model_dir": "model_dir",
+            "quantize": "smoothquant",
+        }
+
+        def test_ds_invalid_quant():
+            ds_properties['dtype'] = 'bf16'
+            with self.assertRaises(ValueError):
+                DeepSpeedProperties(**ds_properties)
+
+        def test_ds_invalid_sq_value():
+            ds_properties['smoothquant_alpha'] = 1.5
+            with self.assertRaises(ValueError):
+                DeepSpeedProperties(**ds_properties)
+
+        def test_ds_invalid_dtype():
+            ds_properties['dtype'] = 'invalid'
+            with self.assertRaises(ValueError):
+                DeepSpeedProperties(**ds_properties)
+
+        test_ds_invalid_quant()
+        test_ds_invalid_sq_value()
+        test_ds_invalid_dtype()
 
 
 if __name__ == '__main__':
