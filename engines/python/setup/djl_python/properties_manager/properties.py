@@ -29,6 +29,14 @@ class StreamingEnum(str, Enum):
     huggingface = "huggingface"
 
 
+def is_streaming_enabled(enable_streaming: StreamingEnum) -> bool:
+    return enable_streaming.value != StreamingEnum.false.value
+
+
+def is_rolling_batch_enabled(rolling_batch: RollingBatchEnum) -> bool:
+    return rolling_batch.value != RollingBatchEnum.disable.value
+
+
 class Properties(BaseModel):
     """ Configures common properties for all engines """
     # Required configurations from user
@@ -39,7 +47,8 @@ class Properties(BaseModel):
     tensor_parallel_degree: int = 1
     trust_remote_code: bool = os.environ.get("HF_TRUST_REMOTE_CODE",
                                              "FALSE").lower() == 'true'
-    enable_streaming: StreamingEnum = StreamingEnum.true
+    # TODO: disabling streaming, as it is not supported for all models of the frameworks. Will revisit this
+    enable_streaming: StreamingEnum = StreamingEnum.false
     batch_size: int = 1
     max_rolling_batch_size: int = 32
     dtype: Optional[str] = None
@@ -52,8 +61,9 @@ class Properties(BaseModel):
     @validator('batch_size', pre=True)
     def validate_batch_size(cls, batch_size, values):
         if batch_size > 1:
-            if values['rolling_batch'] == RollingBatchEnum.disable and values[
-                    'enable_streaming'] != "false":
+            if not is_rolling_batch_enabled(
+                    values['rolling_batch']) and is_streaming_enabled(
+                        values['enable_streaming']):
                 raise ValueError(
                     "We cannot enable streaming for dynamic batching")
         return batch_size

@@ -142,24 +142,28 @@ ds_handler_list = {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
-        "option.dtype": "bf16"
+        "option.dtype": "bf16",
+        "option.enable_streaming": False
     },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.task": "text-generation",
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     },
     "open-llama-7b": {
         "option.model_id": "s3://djl-llm/open-llama-7b/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     },
     "opt-13b": {
         "option.model_id": "s3://djl-llm/opt-13b/",
         "option.tensor_parallel_degree": 2,
         "option.task": "text-generation",
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     },
     "gpt-neo-1.3b": {
         "option.model_id": "EleutherAI/gpt-neo-1.3B",
@@ -172,7 +176,8 @@ ds_handler_list = {
         "option.model_id": "nomic-ai/gpt4all-lora",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     }
 }
 
