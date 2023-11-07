@@ -551,25 +551,26 @@ lmi_dist_aiccl_model_list = {
 }
 
 trtllm_handler_list = {
-    "llama2-13b" : {
-         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
-         "option.tensor_parallel_degree": 4,
-         "option.output_formatter": "jsonlines",
+    "llama2-13b": {
+        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.output_formatter": "jsonlines",
     },
-    "falcon-7b" : {
-         "option.model_id": "s3://djl-llm/triton/falcon-7b-tp1-bs4/",
-         "option.tensor_parallel_degree": 1,
-         "option.output_formatter": "jsonlines",
+    "falcon-7b": {
+        "option.model_id": "s3://djl-llm/triton/falcon-7b-tp1-bs4/",
+        "option.tensor_parallel_degree": 1,
+        "option.output_formatter": "jsonlines",
     },
-    "llama2-7b-smoothquant" : {
-         "option.model_id": "s3://djl-llm/llama-2-7b-hf/",
-         "option.tensor_parallel_degree": 4,
-         "option.use_smoothquant": "True",
-         "option.smoothquant_per_token": "True",
-         "option.smoothquant_per_channel": "True",
-         "option.output_formatter": "jsonlines",
+    "llama2-7b-smoothquant": {
+        "option.model_id": "s3://djl-llm/llama-2-7b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.use_smoothquant": "True",
+        "option.smoothquant_per_token": "True",
+        "option.smoothquant_per_channel": "True",
+        "option.output_formatter": "jsonlines",
     },
 }
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -779,6 +780,7 @@ def build_lmi_dist_aiccl_model(model):
     options["option.output_formatter"] = "jsonlines"
     options["option.max_rolling_batch_size"] = 4
     write_model_artifacts(options)
+
 
 def build_trtllm_handler_model(model):
     if model not in trtllm_handler_list:

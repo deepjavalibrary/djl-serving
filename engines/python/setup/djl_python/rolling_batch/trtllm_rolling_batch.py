@@ -38,7 +38,8 @@ class TRTLLMRollingBatch(RollingBatch):
         super().reset()
 
     def translate_triton_params(self, parameters):
-        parameters["request_output_len"] = int(parameters.get("max_new_tokens", 128))
+        parameters["request_output_len"] = int(
+            parameters.get("max_new_tokens", 128))
         if "top_k" in parameters.keys():
             parameters["runtime_top_k"] = parameters.pop("top_k")
         if "top_p" in parameters.keys():
