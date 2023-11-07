@@ -271,7 +271,8 @@ public class ModelInfoTest {
     public void testInferSageMakerEngine() throws IOException, ModelException {
         ModelInfo<Input, Output> model = new ModelInfo<>("src/test/resources/sagemaker/xgb_model");
         model.initialize();
-        assertEquals(model.getEngineName(), "XGBoost");
+        assertEquals(model.getEngineName(), "Python");
+        assertEquals(model.prop.getProperty("option.entryPoint"), "djl_python.sagemaker");
 
         // test case for valid pytorch model with customized schema and inference spec
         model = new ModelInfo<>("src/test/resources/sagemaker/pytorch_model");

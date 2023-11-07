@@ -44,7 +44,6 @@ public final class SageMakerUtils {
     private static final String TASK = "Task";
     private static final String VERSION = "Version";
     private static final String XGBOOST_MODEL_TYPE = "XGBoostModel";
-    private static final String YAML_FORMAT = ".yaml";
 
     private SageMakerUtils() {}
 
@@ -110,8 +109,7 @@ public final class SageMakerUtils {
 
     private static boolean hasCustomizedSchema(Map<String, Object> metaDataMap)
             throws ModelException {
-        if (metaDataMap.containsKey(SCHEMA)
-                && !metaDataMap.get(SCHEMA).toString().contains(YAML_FORMAT)) {
+        if (metaDataMap.containsKey(SCHEMA)) {
             if (!metaDataMap.containsKey(SCHEMA_HMAC)) {
                 throw new ModelException(
                         "Invalid SageMaker Model format due to SchemaHMAC is not found");
