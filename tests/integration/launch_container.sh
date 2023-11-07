@@ -16,6 +16,10 @@ if [[ $4 == "partition" ]] || [[ $4 == "train" ]]; then
   is_partition=true
 fi
 
+if [[ $4 == "smoothquant" ]]; then
+  is_smoothquant=true
+fi
+
 if [[ "$model_path" == "no_code" ]]; then
   unset model_path
 fi
@@ -23,7 +27,7 @@ fi
 is_llm=false
 if [[ "$platform" == *"cu1"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
-elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"*]]; then # Runs multi-gpu
+elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
   shm="12gb"
@@ -106,6 +110,10 @@ if $is_llm; then
   total=60
   if [[ "$platform" == *"inf2"* ]]; then
     total=80
+  fi
+  if $is_smoothquant; then
+    echo "extra sleep for 10 min smoothquant calibration"
+    total=100
   fi
   sleep 120
 fi
