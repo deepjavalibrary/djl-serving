@@ -108,8 +108,8 @@ if $is_llm; then
     total=80
   fi
   if [[ "$platform" == *"trtllm-sq"* ]]; then
-    echo "extra sleep of 10 min for smoothquant calibration"
-    total=100
+    echo "extra sleep of 15 min for smoothquant calibration"
+    total=120
   fi
   sleep 120
 fi
