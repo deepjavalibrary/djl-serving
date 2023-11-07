@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
       run_test:
-        description: 'Run only the tests you need [ds, hf, aot, trtllm, lora-correctness]'
+        description: 'Run only the tests you need [ds, hf, aot, trtllm, lora-correctness, smoothquant]'
         required: false
         default: ''
   schedule:
