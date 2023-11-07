@@ -148,7 +148,8 @@ class DeepSpeedProperties(Properties):
                 if properties[
                         'quantize'] == DsQuantizeMethods.smoothquant.value:
                     smoothing_value = {'smooth': True, 'calibrate': True}
-                    if 'smoothquant_alpha' in properties and properties['smoothquant_alpha']:
+                    if 'smoothquant_alpha' in properties and properties[
+                            'smoothquant_alpha']:
                         smoothing_value['alpha'] = properties[
                             'smoothquant_alpha']
                     ds_config['smoothing'] = smoothing_value

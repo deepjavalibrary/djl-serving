@@ -47,7 +47,8 @@ class Properties(BaseModel):
     tensor_parallel_degree: int = 1
     trust_remote_code: bool = os.environ.get("HF_TRUST_REMOTE_CODE",
                                              "FALSE").lower() == 'true'
-    enable_streaming: StreamingEnum = StreamingEnum.true
+    # TODO: disabling streaming, as it is not supported for all models of the frameworks. Will revisit this
+    enable_streaming: StreamingEnum = StreamingEnum.false
     batch_size: int = 1
     max_rolling_batch_size: int = 32
     dtype: Optional[str] = None

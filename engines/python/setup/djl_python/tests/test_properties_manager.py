@@ -37,7 +37,7 @@ class TestConfigManager(unittest.TestCase):
 
         self.assertEqual(configs.batch_size, 1)
         self.assertEqual(configs.max_rolling_batch_size, 32)
-        self.assertEqual(configs.enable_streaming.value, 'true')
+        self.assertEqual(configs.enable_streaming.value, 'false')
 
         self.assertFalse(configs.trust_remote_code)
         self.assertIsNone(configs.dtype)
@@ -138,7 +138,8 @@ class TestConfigManager(unittest.TestCase):
         }
 
         def test_ds_basic_configs():
-            ds_configs = DeepSpeedProperties(**ds_properties, **common_properties)
+            ds_configs = DeepSpeedProperties(**ds_properties,
+                                             **common_properties)
             self.assertEqual(ds_configs.quantize.value,
                              DsQuantizeMethods.dynamicint8.value)
             self.assertEqual(ds_configs.dtype, torch.float16)
@@ -169,15 +170,25 @@ class TestConfigManager(unittest.TestCase):
 
         def test_ds_smoothquant_configs():
             ds_properties['quantize'] = 'smoothquant'
-            ds_configs = DeepSpeedProperties(**ds_properties, **common_properties)
-            self.assertEqual(ds_configs.quantize.value, DsQuantizeMethods.smoothquant.value)
-            self.assertDictEqual(ds_configs.ds_config['dynamic_quant'], {'enabled': True, 'use_cutlass': False})
-            self.assertDictEqual(ds_configs.ds_config['smoothing'], {'smooth': True, 'calibrate': True})
-            self.assertDictEqual(ds_configs.ds_config['tensor_parallel'], {'tp_size': 4})
+            ds_configs = DeepSpeedProperties(**ds_properties,
+                                             **common_properties)
+            self.assertEqual(ds_configs.quantize.value,
+                             DsQuantizeMethods.smoothquant.value)
+            self.assertDictEqual(ds_configs.ds_config['dynamic_quant'], {
+                'enabled': True,
+                'use_cutlass': False
+            })
+            self.assertDictEqual(ds_configs.ds_config['smoothing'], {
+                'smooth': True,
+                'calibrate': True
+            })
+            self.assertDictEqual(ds_configs.ds_config['tensor_parallel'],
+                                 {'tp_size': 4})
 
         def test_ds_invalid_quant_method():
             ds_properties['quantize'] = 'invalid'
-            ds_configs = DeepSpeedProperties(**ds_properties, **common_properties)
+            ds_configs = DeepSpeedProperties(**ds_properties,
+                                             **common_properties)
             self.assertIsNone(ds_configs.quantize)
 
         test_ds_basic_configs()
