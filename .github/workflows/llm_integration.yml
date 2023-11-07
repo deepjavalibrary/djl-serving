@@ -771,13 +771,13 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: llama2-13b HF model with tp=4
+      - name: llama2-7b HF model with tp=1
         working-directory: tests/integration
         run: |
           rm -rf models
           echo -en "CUDA_VISIBLE_DEVICES=0" > docker_env
           python3 llm/prepare.py trtllm llama2-7b-smoothquant
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm smoothquant\
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm-sq \
           serve
           python3 llm/client.py trtllm llama2-7b-smoothquant
           rm -rf docker_env

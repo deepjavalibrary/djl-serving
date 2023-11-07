@@ -16,10 +16,6 @@ if [[ $4 == "partition" ]] || [[ $4 == "train" ]]; then
   is_partition=true
 fi
 
-if [[ $4 == "smoothquant" ]]; then
-  is_smoothquant=true
-fi
-
 if [[ "$model_path" == "no_code" ]]; then
   unset model_path
 fi
@@ -111,8 +107,8 @@ if $is_llm; then
   if [[ "$platform" == *"inf2"* ]]; then
     total=80
   fi
-  if $is_smoothquant; then
-    echo "extra sleep for 10 min smoothquant calibration"
+  if [[ "$platform" == *"trtllm-sq"* ]]; then
+    echo "extra sleep of 10 min for smoothquant calibration"
     total=100
   fi
   sleep 120
