@@ -177,8 +177,12 @@ class SchedulerRollingBatch(RollingBatch):
             self.lm_block,
             self.search_algorithm,
             self.search_config,
-            max_sparsity=properties.get('max_sparsity', 0.33),
-            max_splits=properties.get('max_splits', 3))
+            max_sparsity=properties.get(
+                'max_sparsity',
+                0.33),  # a threshold to control the padding sparsity
+            max_splits=properties.get(
+                'max_splits',
+                3))  # a threshold to control the number of batch splits
 
     def _prefill_and_decode(self, new_requests):
 
