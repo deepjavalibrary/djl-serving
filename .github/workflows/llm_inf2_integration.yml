@@ -177,6 +177,17 @@ jobs:
           python3 llm/client.py stable-diffusion stable-diffusion-2.1-base-neuron
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
+      - name: Test load split model with llama2 7B in handler
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx llama-7b-split
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx llama-7b-split
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration

@@ -158,12 +158,12 @@ class TransformersNeuronXService(object):
             load_path = self.get_load_path(model_type)
         else:
             load_path = self.tnx_configs.model_id_or_path
-        if not self.tnx_configs.low_cpu_mem_usage:
-            logging.info("Transferring weights from HF to INF2 in-memory")
-            self.model = self.load_inf2_model_from_memory(model_type)
-        else:
+        if self.tnx_configs.low_cpu_mem_usage or self.tnx_configs.load_split_model:
             logging.info("Transferring weights from HF to INF2 through disk")
             self.model = self.load_inf2_model_from_disk(model_type, load_path)
+        else:
+            logging.info("Transferring weights from HF to INF2 in-memory")
+            self.model = self.load_inf2_model_from_memory(model_type)
         logging.info(f"LLM sharding and compiling Started ...")
         start = time.time()
         # TODO: workaround on Neuron Compiler bug for SM
