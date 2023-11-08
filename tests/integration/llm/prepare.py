@@ -389,7 +389,8 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 2048,
         "option.model_loading_timeout": 1200,
         "option.load_split_model": True,
-        "option.compiled_graph_path": "s3://djl-llm/llama-2-7b-split-inf2/compile/"
+        "option.compiled_graph_path":
+        "s3://djl-llm/llama-2-7b-split-inf2/compile/"
     },
     "opt-1.3b-streaming": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
