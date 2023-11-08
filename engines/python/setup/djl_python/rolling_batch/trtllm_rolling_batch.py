@@ -38,20 +38,20 @@ class TRTLLMRollingBatch(RollingBatch):
         super().reset()
 
     def translate_triton_params(self, parameters):
-        parameters["max_new_tokens"] = parameters.get("max_new_tokens", 128)
-        parameters["request_output_len"] = parameters.pop("max_new_tokens")
+        if "request_output_len" not in parameters.keys():
+            parameters["request_output_len"] = parameters.pop(
+                "max_new_tokens", 128)
         if "top_k" in parameters.keys():
             parameters["runtime_top_k"] = parameters.pop("top_k")
         if "top_p" in parameters.keys():
             parameters["runtime_top_p"] = parameters.pop("top_p")
         if "seed" in parameters.keys():
             parameters["random_seed"] = int(parameters.pop("seed"))
-        if "do_sample" in parameters.keys():
-            parameters.pop("do_sample")
-            logging.info(
-                "do_sample is not used for trtllm,"
-                " please use sample params (e.g top_p, temperature) to allow sampling"
-            )
+        if parameters.pop("do_sample", False):
+            # TODO: Set better default values for do_sample
+            parameters["runtime_top_k"] = parameters.get("runtime_top_k", 2)
+            parameters["temperature"] = parameters.get("temperature", 0.7)
+
         parameters["streaming"] = parameters.get("streaming", True)
         return parameters
 
