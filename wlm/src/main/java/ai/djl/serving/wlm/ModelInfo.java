@@ -709,12 +709,13 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         // load default settings from env
         for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
             String key = entry.getKey();
-            if (key.startsWith("OPTION_")) {
+            String value = entry.getValue();
+            if (key.startsWith("OPTION_") && value != null && !value.isEmpty()) {
                 key = key.substring(7).toLowerCase(Locale.ROOT);
                 if ("entrypoint".equals(key)) {
                     key = "entryPoint";
                 }
-                prop.putIfAbsent("option." + key, entry.getValue());
+                prop.putIfAbsent("option." + key, value);
             }
         }
 
