@@ -11,7 +11,10 @@ FILES_TO_EXTRACT = [
     'djl_python/', 'djl_python/__init__.py', 'djl_python/deepspeed.py',
     'djl_python/inputs.py', 'djl_python/outputs.py', 'djl_python/pair_list.py',
     'djl_python/np_util.py', 'djl_python/service_loader.py',
-    'djl_python/streaming_utils.py', 'djl_python/encode_decode.py'
+    'djl_python/streaming_utils.py', 'djl_python/encode_decode.py',
+    'djl_python/properties_manager/__init__.py',
+    'djl_python/properties_manager/properties.py',
+    'djl_python/properties_manager/ds_properties.py'
 ]
 
 
