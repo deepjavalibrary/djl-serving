@@ -264,7 +264,7 @@ transformers_neuronx_model_spec = {
     "llama-7b-split": {
         "worker": 1,
         "seq_length": [128, 256],
-        "batch_size": [4],
+        "batch_size": [1],
     },
     "bloom-7b1": {
         "worker": 1,

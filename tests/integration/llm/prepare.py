@@ -384,13 +384,11 @@ transformers_neuronx_handler_list = {
     },
     "llama-7b-split": {
         "option.model_id": "s3://djl-llm/llama-2-7b-split-inf2/split-model/",
-        "option.batch_size": 4,
+        "option.batch_size": 1,
         "option.tensor_parallel_degree": 4,
-        "option.n_positions": 2048,
-        "option.model_loading_timeout": 1200,
+        "option.n_positions": 512,
+        "option.model_loading_timeout": 2400,
         "option.load_split_model": True,
-        "option.compiled_graph_path":
-        "s3://djl-llm/llama-2-7b-split-inf2/compile/"
     },
     "opt-1.3b-streaming": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
