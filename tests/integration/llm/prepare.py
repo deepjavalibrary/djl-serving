@@ -569,7 +569,7 @@ trtllm_handler_list = {
     "llama2-7b-smoothquant": {
         "option.model_id": "s3://djl-llm/llama-2-7b-hf/",
         "option.tensor_parallel_degree": 4,
-        "option.use_smoothquant": "True",
+        "option.quantize": "smoothquant",
         "option.smoothquant_per_token": "True",
         "option.smoothquant_per_channel": "True",
         "option.output_formatter": "jsonlines",
