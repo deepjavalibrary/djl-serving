@@ -35,6 +35,8 @@ class DeepSpeedProperties(Properties):
     smoothquant_alpha: Optional[float]
     return_tuple: bool = True
     training_mp_size: Optional[int] = 1
+    checkpoint: Optional[str] = None
+    save_mp_checkpoint_path: Optional[str] = None
     ds_config: Optional[Any] = None
 
     @validator('device', always=True)
@@ -131,7 +133,7 @@ class DeepSpeedProperties(Properties):
                 properties.get("save_mp_checkpoint_path")
             }
 
-            if "checkpoint" in properties:
+            if "checkpoint" in properties and properties['checkpoint']:
                 ds_config["checkpoint"] = os.path.join(
                     properties['model_id_or_path'],
                     properties.get("checkpoint"))

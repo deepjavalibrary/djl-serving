@@ -136,6 +136,8 @@ class TestConfigManager(unittest.TestCase):
             'low_cpu_mem_usage': "false",
             'enable_cuda_graph': "True",
             'triangular_masking': "false",
+            'checkpoint': 'ml/model',
+            'save_mp_checkpoint_path': '/opt/ml/model'
         }
 
         def test_ds_basic_configs():
@@ -160,7 +162,9 @@ class TestConfigManager(unittest.TestCase):
                 'return_tuple': True,
                 'training_mp_size': 1,
                 'max_tokens': 2048,
-                'save_mp_checkpoint_path': None,
+                'base_dir': 'model_id',
+                'checkpoint': 'model_id/ml/model',
+                'save_mp_checkpoint_path': '/opt/ml/model',
                 'dynamic_quant': {
                     'enabled': True,
                     'use_cutlass': False
