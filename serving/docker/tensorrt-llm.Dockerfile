@@ -65,10 +65,13 @@ RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev l
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch and TensorRT
+# Install PyTorch
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy datasets pydantic==${pydantic_version} && \
-    pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} && \
+    pip3 cache purge
+
+# Install TensorRT and TRT LLM
+RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} && \
     pip install --no-deps ${trtllm_wheel} && \
     pip3 cache purge
 
