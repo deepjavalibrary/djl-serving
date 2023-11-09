@@ -37,7 +37,7 @@ class DeepSpeedProperties(Properties):
     training_mp_size: Optional[int] = 1
     checkpoint: Optional[str] = None
     save_mp_checkpoint_path: Optional[str] = None
-    ds_config: Optional[Any] = None
+    ds_config: Optional[Any] = Field(default={}, alias='deepspeed_config_path')
 
     @validator('device', always=True)
     def set_device(cls, device):
@@ -111,10 +111,7 @@ class DeepSpeedProperties(Properties):
 
     @root_validator()
     def construct_ds_config(cls, properties):
-        if properties.get("deepspeed_config_path"):
-            with open(properties.get("deepspeed_config_path"), "r") as f:
-                properties['ds_config'] = json.load(f)
-        else:
+        if not properties.get("ds_config"):
             ds_config = {
                 "tensor_parallel": {
                     "tp_size": properties['tensor_parallel_degree']

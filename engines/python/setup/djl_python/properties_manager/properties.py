@@ -63,6 +63,7 @@ class Properties(BaseModel):
 
     @validator('batch_size', pre=True)
     def validate_batch_size(cls, batch_size, values):
+        batch_size = int(batch_size)
         if batch_size > 1:
             if not is_rolling_batch_enabled(
                     values['rolling_batch']) and is_streaming_enabled(

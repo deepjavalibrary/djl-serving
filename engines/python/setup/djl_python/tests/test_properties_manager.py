@@ -1,3 +1,5 @@
+import os
+import json
 import unittest
 from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
@@ -19,9 +21,12 @@ common_properties = {
     "model_dir": "model_dir",
     "rolling_batch": "disable",
     "tensor_parallel_degree": "4",
-    'batch_size': 4,
-    'max_rolling_batch_size': 2,
-    'enable_streaming': 'False'
+    'batch_size': "4",
+    'max_rolling_batch_size': '2',
+    'enable_streaming': 'False',
+    'dtype': 'fp16',
+    'revision': 'shdghdfgdfg',
+    'trust_remote_code': 'true'
 }
 
 
@@ -44,11 +49,32 @@ class TestConfigManager(unittest.TestCase):
         self.assertIsNone(configs.dtype)
         self.assertIsNone(configs.revision)
 
+    def test_all_common_configs(self):
+        configs = Properties(**common_properties)
+        self.assertEqual(configs.batch_size, 4)
+        self.assertEqual(configs.tensor_parallel_degree, 4)
+        self.assertEqual(common_properties['model_id'],
+                         configs.model_id_or_path)
+        self.assertEqual(common_properties['rolling_batch'],
+                         configs.rolling_batch)
+        self.assertEqual(int(common_properties['tensor_parallel_degree']),
+                         configs.tensor_parallel_degree)
+
+        self.assertEqual(int(common_properties['batch_size']),
+                         configs.batch_size)
+        self.assertEqual(int(common_properties['max_rolling_batch_size']),
+                         configs.max_rolling_batch_size)
+        self.assertEqual(configs.enable_streaming.value, 'false')
+
+        self.assertTrue(configs.trust_remote_code)
+        self.assertEqual(configs.dtype, common_properties['dtype'])
+        self.assertEqual(configs.revision, common_properties['revision'])
+
     def test_common_configs_error_case(self):
         other_properties = min_common_properties
         other_properties["rolling_batch"] = "disable"
         other_properties["enable_streaming"] = "true"
-        other_properties["batch_size"] = 2
+        other_properties["batch_size"] = '2'
         with self.assertRaises(ValueError):
             Properties(**other_properties)
 
@@ -130,7 +156,6 @@ class TestConfigManager(unittest.TestCase):
     def test_ds_properties(self):
         ds_properties = {
             'quantize': "dynamic_int8",
-            'dtype': 'fp16',
             'max_tokens': "2048",
             'task': 'fill-mask',
             'low_cpu_mem_usage': "false",
@@ -173,6 +198,26 @@ class TestConfigManager(unittest.TestCase):
 
             self.assertDictEqual(ds_configs.ds_config, ds_config)
 
+        def test_deepspeed_configs_file():
+            ds_properties['deepspeed_config_path'] = './sample.json'
+            ds_config = {
+                'tensor_parallel': {
+                    'tp_size': 42
+                },
+                'save_mp_checkpoint_path': None,
+                'dynamic_quant': {
+                    'enabled': False,
+                    'use_cutlass': True
+                }
+            }
+            with open('sample.json', 'w') as fp:
+                json.dump(ds_config, fp)
+
+            ds_configs = DeepSpeedProperties(**ds_properties,
+                                             **common_properties)
+            self.assertDictEqual(ds_configs.ds_config, ds_config)
+            os.remove('sample.json')
+
         def test_ds_smoothquant_configs():
             ds_properties['quantize'] = 'smoothquant'
             ds_configs = DeepSpeedProperties(**ds_properties,
@@ -199,6 +244,7 @@ class TestConfigManager(unittest.TestCase):
         test_ds_basic_configs()
         test_ds_smoothquant_configs()
         test_ds_invalid_quant_method()
+        test_deepspeed_configs_file()
 
     def test_ds_error_properties(self):
         ds_properties = {
@@ -263,7 +309,7 @@ class TestConfigManager(unittest.TestCase):
                          HFQuantizeMethods.bitsandbytes.value)
 
     def test_hf_error_case(self):
-        properties = {"model_id": "model_id", 'load_in_8bit': True}
+        properties = {"model_id": "model_id", 'load_in_8bit': 'true'}
         with self.assertRaises(ValueError):
             HuggingFaceProperties(**properties)
 
