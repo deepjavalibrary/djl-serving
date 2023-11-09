@@ -212,10 +212,12 @@ class SchedulerRollingBatch(RollingBatch):
         )
 
         # Collect output into scheduler.results
-        for request_id, generated_token_id in zip(request_ids, generated_token_ids):
+        for request_id, generated_token_id in zip(request_ids,
+                                                  generated_token_ids):
             self.scheduler.results[request_id].extend(generated_token_id)
 
-        generated_tokens: List[str] = self.tokenizer_streaming.decode_token(request_ids, self.scheduler.results)
+        generated_tokens: List[str] = self.tokenizer_streaming.decode_token(
+            request_ids, self.scheduler.results)
 
         # Deleting the finished results here
         for request_id in exit_req_ids:
@@ -305,7 +307,8 @@ class TokenizerStreaming:
             del self.prefix_offset[req_id]
             del self.read_offset[req_id]
 
-    def decode_token(self, request_ids: List[int], results: Dict[int, List[int]]) -> List[str]:
+    def decode_token(self, request_ids: List[int],
+                     results: Dict[int, List[int]]) -> List[str]:
         """Hack to hopefully support generate_stream for the maximum number of tokenizers"""
         # The prefix text is necessary only to defeat cleanup algorithms in the decode
         # which decide to add a space or not depending on the surrounding ids.
