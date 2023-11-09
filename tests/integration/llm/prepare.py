@@ -512,6 +512,11 @@ vllm_model_list = {
         "option.dtype": "fp16",
         "option.tensor_parallel_degree": 4
     },
+    "llama2-13b-awq": {
+        "option.model_id": "TheBloke/Llama-2-13B-chat-AWQ",
+        "option.quantize": "awq",
+        "option.tensor_parallel_degree": 4
+    },
     "gpt-neox-20b": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b",
         "option.task": "text-generation",

@@ -327,6 +327,15 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm llama2-13b
           docker rm -f $(docker ps -aq)
+      - name: Test llama2-13b awq
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama2-13b-awq
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm llama2-13b
+          docker rm -f $(docker ps -aq)
       - name: Test gpt-neox-20b
         working-directory: tests/integration
         run: |
