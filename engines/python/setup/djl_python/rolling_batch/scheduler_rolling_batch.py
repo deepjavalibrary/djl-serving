@@ -59,7 +59,7 @@ class SchedulerRollingBatch(RollingBatch):
                                        **kwargs)
         self._init_scheduler(properties)
 
-    # @stop_on_any_exception
+    @stop_on_any_exception
     def inference(self, input_text, parameters):
         """
         Performs prefill and decode operations for the batch.
