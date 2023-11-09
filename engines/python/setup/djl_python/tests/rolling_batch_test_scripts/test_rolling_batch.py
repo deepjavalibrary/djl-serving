@@ -7,9 +7,8 @@ relative_path = "../../../"
 new_path = os.path.normpath(os.path.join(script_directory, relative_path))
 sys.path.append(new_path)
 
-from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
-from djl_python.tests.test_rolling_batch.generator import Generator, print_rank0
+from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 """
