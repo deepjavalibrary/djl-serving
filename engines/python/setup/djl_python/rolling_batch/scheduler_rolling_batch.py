@@ -20,6 +20,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
 
+import logging
+
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
@@ -121,20 +123,19 @@ class SchedulerRollingBatch(RollingBatch):
                 "ForConditionalGeneration"):
             raise ValueError('Seq2Seq model is not supported by scheduler')
         else:
-            device_map = "cpu"
-            if device:
-                if isinstance(device, str) or isinstance(device, int):
-                    device_map = device
-                elif isinstance(device,
-                                torch.device) and device.type == "cuda":
-                    # TODO: enable specifying the cuda device
-                    device_map = 'auto'
-                else:
-                    raise Exception("Wrong input type of device")
+            device_map = "auto" if torch.cuda.is_available() else "cpu"
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
+            elif device:
+                if isinstance(device, str) or isinstance(device, int):
+                    device_map = device
+                elif isinstance(device, torch.device):
+                    device_map = 'auto' if device.type == 'cuda' else 'cpu'
+                else:
+                    logging.info(f"Wrong input type of device {device}")
 
-            if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
+            if architectures and architectures[
+                    0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
                 if properties.get("disable_flash_attn",
                                   "true").lower() != 'true':
                     kwargs['use_flash_attention_2'] = True
