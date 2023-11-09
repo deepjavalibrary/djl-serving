@@ -20,8 +20,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
 
-import logging
-
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
@@ -131,8 +129,6 @@ class SchedulerRollingBatch(RollingBatch):
                     device_map = device
                 elif isinstance(device, torch.device):
                     device_map = 'auto' if device.type == 'cuda' else 'cpu'
-                else:
-                    logging.info(f"Wrong input type of device {device}")
 
             if architectures and architectures[
                     0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
