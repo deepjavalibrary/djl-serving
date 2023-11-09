@@ -50,6 +50,8 @@ gen = Generator(rolling_batch=rolling_batch)
 print('========== init inference ===========')
 input_str1 = ["write a program to add two numbers in python",
               "write a program to add two numbers in python\n"]
+input_str1 = ["As the sun dipped below the horizon, painting the in hues of crimson and gold\n",
+              "I'm sorry but I can' "]
 params1 = [{"max_new_tokens":236, "do_sample":True, "temperature":0.001},
            {"max_new_tokens":236, "do_sample":True, "temperature":0.001}]
 
@@ -59,6 +61,8 @@ for _ in range(7):
     print('========== inference1 ===========')
     input_str_delta = ["write a program to add two numbers in python",
                 "write a program to add two numbers in python\n"]
+    input_str_delta = ["As the sun dipped below the horizon, painting the in hues of crimson and gold\n",
+              "I'm sorry but I can' "]
 
     params_delta = [{"max_new_tokens":236, "do_sample":True, "temperature":0.001},
             {"max_new_tokens":236, "do_sample":True, "temperature":0.001}]

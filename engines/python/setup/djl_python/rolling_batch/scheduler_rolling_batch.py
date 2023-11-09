@@ -20,6 +20,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
 
+from typing import Set, List, Dict
+
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
@@ -160,6 +162,8 @@ class SchedulerRollingBatch(RollingBatch):
                                                        padding_side="left")
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+        
+        self.tokenizer_streaming = TokenizerStreaming(self.tokenizer)
 
     def _init_scheduler(self, properties):
         lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
@@ -200,29 +204,30 @@ class SchedulerRollingBatch(RollingBatch):
                     search_configs=search_configs,
                     kv_cache_prompt_ids=prompt_ids)
 
+                self.tokenizer_streaming.add_request(request_ids=request_ids, results=self.scheduler.results)
+
         # Decoding step. Generates a token for all the requests in a batch.
         generated_token_ids, request_ids, exit_req_ids = self.scheduler.inference_call(
         )
+        # Collect output
+        for request_id, generated_token_id in zip(request_ids, generated_token_ids):
+            self.scheduler.results[request_id].extend(generated_token_id)
 
-        if self.scheduler and self.scheduler.seq_batchers and self.scheduler.seq_batchers[
-                0]:
-            seq_len = self.scheduler.seq_batchers[
-                0].seq_len - self.scheduler.seq_batchers[0].offsets[0]
+        generated_tokens: List[str] = self.tokenizer_streaming.decode_token(self.scheduler.results)
 
-        # TODO: Deleting the finished results here temporarily
+        # Deleting the finished results here
         for request_id in exit_req_ids:
             if request_id in self.scheduler.results:
                 del self.scheduler.results[request_id]
-
-        generated_tokens = self.tokenizer.batch_decode(generated_token_ids)
+        self.tokenizer_streaming.remove_request(exit_req_ids=exit_req_ids)
 
         for request_id, generated_token, request in zip(
                 request_ids, generated_tokens, self.active_requests):
             is_last_token = (request_id in exit_req_ids)
-            request.set_next_token(f" {generated_token}",
+            request.set_next_token(generated_token,
                                    self.output_formatter,
                                    last_token=is_last_token)
-
+    
     def _get_input_ids(self, input_texts):
         input_ids = self.tokenizer(input_texts,
                                    return_tensors="pt",
@@ -277,3 +282,51 @@ def _calculate_req_id_counter(scheduler):
         if request_ids:
             return request_ids[-1] + 1
     return 0
+
+
+class TokenizerStreaming:
+    def __init__(self, tokenizer) -> None:
+        self.tokenizer = tokenizer
+
+        self.request_ids: Set[int] = set()
+        self.prefix_offset: defaultdict = defaultdict(int)
+        self.read_offset: defaultdict = defaultdict(int)
+
+    def add_request(self, request_ids: List[int], results: Dict[int, List[int]]):
+        for req_id in request_ids:
+            self.request_ids.add(req_id)
+            self.prefix_offset[req_id] = len(results[req_id])
+            self.read_offset[req_id] = len(results[req_id])
+    
+    def remove_request(self, exit_req_ids: List[int]):
+        for req_id in exit_req_ids:
+            del self.request_ids[req_id]
+            del self.prefix_offset[req_id]
+            del self.read_offset[req_id]
+
+    def decode_token(self, results: Dict[int, List[int]]) -> List[str]:
+        """Hack to hopefully support generate_stream for the maximum number of tokenizers"""
+        # The prefix text is necessary only to defeat cleanup algorithms in the decode
+        # which decide to add a space or not depending on the surrounding ids.
+        new_text_batch: List[str] = []
+        for req in self.request_ids:
+            prefix_text: str = self.tokenizer.decode(
+                results[req][self.prefix_offset[req]:self.read_offset[req]], skip_special_tokens=False
+            )
+            new_text: str = self.tokenizer.decode(
+                results[req][self.prefix_offset[req]:], skip_special_tokens=False
+            )
+            if len(new_text) > len(prefix_text) and not new_text.endswith("�"):
+                # utf-8 char at the end means it's a potential unfinished byte sequence
+                # from byte fallback tokenization.
+                # If it's in the middle, it's probably a real invalid id generated
+                # by the model
+                new_text = new_text[len(prefix_text):]
+                self.prefix_offset[req] = self.read_offset[req]
+                self.read_offset[req] = len(results[req])
+                new_text_batch.append(new_text)
+            else:
+                new_text_batch.append("")
+
+        return new_text_batch
+
