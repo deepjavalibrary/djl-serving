@@ -24,10 +24,20 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_inf2 $token djl-serving
+      - name: Create new Inf2.24xl instance
+        id: create_inf2_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_inf2 $token djl-serving
     outputs:
-      inf2_instance_id: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
+      inf2_instance_id_1: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
+      inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
 
-  transformers-neuronx-test:
+  transformers-neuronx-test-1:
     runs-on: [ self-hosted, inf2 ]
     timeout-minutes: 90
     needs: create-runners
@@ -111,6 +121,54 @@ jobs:
           python3 llm/client.py transformers_neuronx gpt-j-6b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
+      - name: Test transformers-neuronx pythia-2.8b with handler
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx pythia-2.8b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx pythia-2.8b
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: transformers-neuronx-${{ matrix.arch }}-logs
+          path: tests/integration/logs/
+
+  transformers-neuronx-test-2:
+    runs-on: [ self-hosted, inf2 ]
+    timeout-minutes: 90
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy pillow
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          mkdir logs
+          ./download_models.sh pytorch-inf2
       - name: Test transformers-neuronx bloom-7b1 with handler
         working-directory: tests/integration
         run: |
@@ -131,17 +189,6 @@ jobs:
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx open-llama-7b
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
-      - name: Test transformers-neuronx pythia-2.8b with handler
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py transformers_neuronx pythia-2.8b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
-          serve
-          curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx pythia-2.8b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: Test streaming transformers-neuronx opt-1.3b with handler
@@ -202,10 +249,12 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, transformers-neuronx-test ]
+    needs: [ create-runners, transformers-neuronx-test-1, transformers-neuronx-test-2 ]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.inf2_instance_id }}
+          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_2 }}
           ./stop_instance.sh $instance_id
