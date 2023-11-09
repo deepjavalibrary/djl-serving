@@ -20,7 +20,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
 
-from typing import Set, List, Dict
+from typing import List, Dict
 
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 DEFAULT_SEARCH_ALGORITHM = 'greedy'
