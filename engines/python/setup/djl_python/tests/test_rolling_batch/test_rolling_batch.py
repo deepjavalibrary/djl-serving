@@ -71,7 +71,7 @@ for _ in range(7):
 
 
 print('========== inference_infty ===========')
-gen.step(step=500)
+gen.step(step=100)
 for req_id, out in gen.output_all.items():
     print_rank0(f"\n====req_id: {req_id}=====\n{gen.input_all[req_id][0] + ''.join(out)}\n")
 

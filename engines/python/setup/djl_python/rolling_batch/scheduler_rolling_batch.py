@@ -59,7 +59,7 @@ class SchedulerRollingBatch(RollingBatch):
                                        **kwargs)
         self._init_scheduler(properties)
 
-    @stop_on_any_exception
+    # @stop_on_any_exception
     def inference(self, input_text, parameters):
         """
         Performs prefill and decode operations for the batch.
@@ -209,11 +209,11 @@ class SchedulerRollingBatch(RollingBatch):
         # Decoding step. Generates a token for all the requests in a batch.
         generated_token_ids, request_ids, exit_req_ids = self.scheduler.inference_call(
         )
-        # Collect output
+        # Collect output into scheduler.results
         for request_id, generated_token_id in zip(request_ids, generated_token_ids):
             self.scheduler.results[request_id].extend(generated_token_id)
 
-        generated_tokens: List[str] = self.tokenizer_streaming.decode_token(self.scheduler.results)
+        generated_tokens: List[str] = self.tokenizer_streaming.decode_token(request_ids, self.scheduler.results)
 
         # Deleting the finished results here
         for request_id in exit_req_ids:
@@ -288,28 +288,26 @@ class TokenizerStreaming:
     def __init__(self, tokenizer) -> None:
         self.tokenizer = tokenizer
 
-        self.request_ids: Set[int] = set()
         self.prefix_offset: defaultdict = defaultdict(int)
         self.read_offset: defaultdict = defaultdict(int)
 
     def add_request(self, request_ids: List[int], results: Dict[int, List[int]]):
         for req_id in request_ids:
-            self.request_ids.add(req_id)
             self.prefix_offset[req_id] = len(results[req_id])
             self.read_offset[req_id] = len(results[req_id])
     
     def remove_request(self, exit_req_ids: List[int]):
         for req_id in exit_req_ids:
-            del self.request_ids[req_id]
             del self.prefix_offset[req_id]
             del self.read_offset[req_id]
 
-    def decode_token(self, results: Dict[int, List[int]]) -> List[str]:
+    def decode_token(self, request_ids: List[int], results: Dict[int, List[int]]) -> List[str]:
         """Hack to hopefully support generate_stream for the maximum number of tokenizers"""
         # The prefix text is necessary only to defeat cleanup algorithms in the decode
         # which decide to add a space or not depending on the surrounding ids.
         new_text_batch: List[str] = []
-        for req in self.request_ids:
+        for req in request_ids:
+            # Here request_ids is assumed to be order-reserved
             prefix_text: str = self.tokenizer.decode(
                 results[req][self.prefix_offset[req]:self.read_offset[req]], skip_special_tokens=False
             )
