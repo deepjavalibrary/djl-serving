@@ -121,20 +121,17 @@ class SchedulerRollingBatch(RollingBatch):
                 "ForConditionalGeneration"):
             raise ValueError('Seq2Seq model is not supported by scheduler')
         else:
-            device_map = "cpu"
-            if device:
-                if isinstance(device, str) or isinstance(device, int):
-                    device_map = device
-                elif isinstance(device,
-                                torch.device) and device.type == "cuda":
-                    # TODO: enable specifying the cuda device
-                    device_map = 'auto'
-                else:
-                    raise Exception("Wrong input type of device")
+            device_map = "auto" if torch.cuda.is_available() else "cpu"
             if 'device_map' in kwargs:
                 device_map = kwargs.pop('device_map')
+            elif device:
+                if isinstance(device, str) or isinstance(device, int):
+                    device_map = device
+                elif isinstance(device, torch.device):
+                    device_map = 'auto' if device.type == 'cuda' else 'cpu'
 
-            if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
+            if architectures and architectures[
+                    0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
                 if properties.get("disable_flash_attn",
                                   "true").lower() != 'true':
                     kwargs['use_flash_attention_2'] = True
@@ -230,10 +227,7 @@ class SchedulerRollingBatch(RollingBatch):
         input_ids = self.tokenizer(input_texts,
                                    return_tensors="pt",
                                    padding=True).input_ids
-        if self.device:
-            input_ids = input_ids.to(self.device)
-        else:
-            input_ids = input_ids.to(self.model.device)
+        input_ids = input_ids.to(self.model.device)
         return input_ids
 
     def _get_prompt_ids(self, prompts):
