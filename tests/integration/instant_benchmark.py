@@ -46,6 +46,7 @@ def parse_raw_template(url):
     properties = []
     commandline = []
     requirements = []
+    info = None
     while iterator < len(lines):
         if '[test_name]' == lines[iterator]:
             iterator += 1
@@ -68,18 +69,29 @@ def parse_raw_template(url):
                     lines[iterator]):
                 commandline.append(lines[iterator].replace("\\", " "))
                 iterator += 1
+        elif '[info]' == lines[iterator]:
+            info = []
+            iterator += 1
+            while iterator < len(lines) and not is_square_bracket(
+                    lines[iterator]):
+                info.append(lines[iterator].replace("\\", " "))
+                iterator += 1
         else:
             iterator += 1
         if name and properties and commandline:
-            final_result[name] = {
+            cur_result = {
                 "properties": properties,
                 "awscurl": ' '.join(commandline).encode().hex(),
                 "requirements": requirements
             }
+            if info is not None:
+                cur_result['info'] = info
+            final_result[name] = cur_result
             name = ''
             properties = []
             commandline = []
             requirements = []
+            info = None
     return final_result
 
 
@@ -122,7 +134,7 @@ def build_running_script(template, job, instance, container):
     command_str = f"./launch_container.sh {container} $PWD/models {machine_translation(instance)}"
     bash_command = [
         'echo "Start Launching container..."', command_str,
-        job_template['awscurl']
+        job_template['awscurl'] + " | tee benchmark.log"
     ]
     with open("instant_benchmark.sh", "w") as f:
         f.write('\n'.join(bash_command))
