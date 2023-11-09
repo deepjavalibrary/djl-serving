@@ -70,6 +70,7 @@ class VLLMRollingBatch(RollingBatch):
         for request in new_requests:
             request_id = random_uuid()
             request.parameters.pop('seed', None)
+            request.parameters.pop('do_sample', None)
             if "max_new_tokens" in request.parameters.keys():
                 request.parameters["max_tokens"] = request.parameters.pop(
                     "max_new_tokens")
