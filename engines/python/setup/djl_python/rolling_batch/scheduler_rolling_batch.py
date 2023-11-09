@@ -162,7 +162,7 @@ class SchedulerRollingBatch(RollingBatch):
                                                        padding_side="left")
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        
+
         self.tokenizer_streaming = TokenizerStreaming(self.tokenizer)
 
     def _init_scheduler(self, properties):
@@ -204,11 +204,13 @@ class SchedulerRollingBatch(RollingBatch):
                     search_configs=search_configs,
                     kv_cache_prompt_ids=prompt_ids)
 
-                self.tokenizer_streaming.add_request(request_ids=request_ids, results=self.scheduler.results)
+                self.tokenizer_streaming.add_request(
+                    request_ids=request_ids, results=self.scheduler.results)
 
         # Decoding step. Generates a token for all the requests in a batch.
         generated_token_ids, request_ids, exit_req_ids = self.scheduler.inference_call(
         )
+
         # Collect output into scheduler.results
         for request_id, generated_token_id in zip(request_ids, generated_token_ids):
             self.scheduler.results[request_id].extend(generated_token_id)
@@ -227,7 +229,7 @@ class SchedulerRollingBatch(RollingBatch):
             request.set_next_token(generated_token,
                                    self.output_formatter,
                                    last_token=is_last_token)
-    
+
     def _get_input_ids(self, input_texts):
         input_ids = self.tokenizer(input_texts,
                                    return_tensors="pt",
@@ -285,17 +287,19 @@ def _calculate_req_id_counter(scheduler):
 
 
 class TokenizerStreaming:
+
     def __init__(self, tokenizer) -> None:
         self.tokenizer = tokenizer
 
         self.prefix_offset: defaultdict = defaultdict(int)
         self.read_offset: defaultdict = defaultdict(int)
 
-    def add_request(self, request_ids: List[int], results: Dict[int, List[int]]):
+    def add_request(self, request_ids: List[int], results: Dict[int,
+                                                                List[int]]):
         for req_id in request_ids:
             self.prefix_offset[req_id] = len(results[req_id])
             self.read_offset[req_id] = len(results[req_id])
-    
+
     def remove_request(self, exit_req_ids: List[int]):
         for req_id in exit_req_ids:
             del self.prefix_offset[req_id]
@@ -309,11 +313,11 @@ class TokenizerStreaming:
         for req in request_ids:
             # Here request_ids is assumed to be order-reserved
             prefix_text: str = self.tokenizer.decode(
-                results[req][self.prefix_offset[req]:self.read_offset[req]], skip_special_tokens=False
-            )
+                results[req][self.prefix_offset[req]:self.read_offset[req]],
+                skip_special_tokens=False)
             new_text: str = self.tokenizer.decode(
-                results[req][self.prefix_offset[req]:], skip_special_tokens=False
-            )
+                results[req][self.prefix_offset[req]:],
+                skip_special_tokens=False)
             if len(new_text) > len(prefix_text) and not new_text.endswith("�"):
                 # utf-8 char at the end means it's a potential unfinished byte sequence
                 # from byte fallback tokenization.
@@ -327,4 +331,3 @@ class TokenizerStreaming:
                 new_text_batch.append("")
 
         return new_text_batch
-
