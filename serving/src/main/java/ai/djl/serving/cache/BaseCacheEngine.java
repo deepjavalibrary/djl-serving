@@ -71,7 +71,7 @@ public abstract class BaseCacheEngine implements CacheEngine {
                                     List<byte[]> list = new ArrayList<>(writeBatch);
                                     while (cbs.hasNext()) {
                                         try {
-                                            list.add(cbs.nextChunk(1, TimeUnit.MINUTES));
+                                            list.add(cbs.nextChunk(60, TimeUnit.SECONDS));
                                         } catch (InterruptedException e) {
                                             throw new IllegalStateException(e);
                                         }
