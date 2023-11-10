@@ -7,6 +7,10 @@ on:
         description: 'The released version of DJL'
         required: false
         default: ''
+      run_test:
+        description: 'Run only the tests you need [scheduler, lmi-dist, vllm]'
+        required: false
+        default: ''
   schedule:
     - cron: '0 6 * * *'
 
@@ -39,6 +43,7 @@ jobs:
 
 
   scheduler-single-gpu-test:
+    if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -118,6 +123,7 @@ jobs:
           path: tests/integration/logs/
 
   scheduler-multi-gpu-test:
+    if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -179,6 +185,7 @@ jobs:
           path: tests/integration/logs/
 
   lmi-dist-test-1:
+    if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -259,6 +266,7 @@ jobs:
           path: tests/integration/logs/
 
   lmi-dist-test-2:
+    if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
@@ -331,6 +339,7 @@ jobs:
           path: tests/integration/logs/
 
   vllm-test:
+    if: contains(fromJson('["", "vllm"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 60
     needs: create-runners
