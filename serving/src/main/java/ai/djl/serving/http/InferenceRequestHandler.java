@@ -395,7 +395,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 int count = 0;
                 ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
                 while (supplier.hasNext()) {
-                    byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.MINUTES);
+                    byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.SECONDS);
                     // Defer sending HTTP header until first chunk received.
                     // This allows inference update HTTP code.
                     if (first) {
