@@ -12,6 +12,7 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.engine.EngineException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
@@ -124,12 +125,21 @@ class RollingBatch implements Runnable {
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
             } catch (InterruptedException e) {
+                logger.warn("rolling batch loop interrupted.", e);
                 break;
             } finally {
                 lock.unlock();
             }
 
-            Output output = process.predict(batch, timeout, false);
+            Output output;
+            try {
+                output = process.predict(batch, timeout, false);
+            } catch (EngineException e) {
+                logger.warn("prediction failed.", e);
+                list.clear();
+                resetRollingBatch = true;
+                continue;
+            }
 
             try {
                 lock.lock();
