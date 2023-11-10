@@ -32,8 +32,8 @@ class TRTLLMRollingBatch(RollingBatch):
         """
         Stops all current requests and resets state of rolling batch portion of handler
         """
-        for req in self.request_cache.values():
-            self.model.delete_request(req)
+        # TODO: delete running requests of Triton will cause backend crashes
+        # bare with memory leaks of failed requests
         self.request_cache.clear()
         super().reset()
 
