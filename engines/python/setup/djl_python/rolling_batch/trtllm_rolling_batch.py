@@ -48,10 +48,9 @@ class TRTLLMRollingBatch(RollingBatch):
         if "seed" in parameters.keys():
             parameters["random_seed"] = int(parameters.pop("seed"))
         if parameters.pop("do_sample", False):
-            # TODO: Set better default values for do_sample
-            parameters["runtime_top_k"] = parameters.get("runtime_top_k", 2)
-            parameters["temperature"] = parameters.get("temperature", 0.7)
-
+            parameters["runtime_top_k"] = parameters.get("runtime_top_k", 5)
+            parameters["runtime_top_p"] = parameters.get("runtime_top_p", 0.85)
+            parameters["temperature"] = parameters.get("temperature", 0.8)
         parameters["streaming"] = parameters.get("streaming", True)
         return parameters
 
