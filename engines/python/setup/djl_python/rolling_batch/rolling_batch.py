@@ -112,14 +112,13 @@ def stop_on_any_exception(func):
     def try_catch_handling(self, input_data, parameters):
         try:
             return func(self, input_data, parameters)
-        except Exception as e:
+        except Exception:
             logging.exception("Rolling batch inference error")
-            err = json.dumps({"code": 500, "error": str(e)})
+            err = {"data": "", "last": True, "code": 424, "error": ""}
             results = []
             for i in range(
                     len(self.active_requests) + len(self.pending_requests)):
-                res = {"data": err, "last": True}
-                results.append(res)
+                results.append(err)
             self.reset()
             return results
 
