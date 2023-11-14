@@ -26,7 +26,17 @@ on:
           - inf2.24xlarge
           - trn1.2xlarge
           - trn1.32xlarge
+      record:
+        description: 'Whether to record the results'
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - table
 
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   create-runners:
@@ -82,6 +92,11 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.10.x'
+      - name: install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+          pip3 install boto3
       - name: Setup awscurl
         working-directory: tests/integration
         run: |
@@ -95,6 +110,19 @@ jobs:
           --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }} \
           --container deepjavalibrary/djl-serving:${{ github.event.inputs.container }}
           bash instant_benchmark.sh
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.record == 'table' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Record benchmark job
+        if: ${{ github.event.inputs.record == 'table' }}
+        working-directory: tests/integration
+        run: |
+          python3 record_benchmark.py --template template.json \
+          --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }} \
+          --container deepjavalibrary/djl-serving:${{ github.event.inputs.container }} --record table
       - name: Get serving logs
         if: always()
         working-directory: tests/integration
