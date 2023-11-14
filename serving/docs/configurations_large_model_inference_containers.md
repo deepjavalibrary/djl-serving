@@ -1,7 +1,7 @@
 # Large Model Inference Containers
 
-DJL serving is highly configurable. This document tries to capture those configurations
-for [Large Model Inference Containers](https://github.com/aws/deep-learning-containers/blob/master/available_images.md#large-model-inference-containers).
+There are a number of shared configurations for python models running large language models.
+They are also available through the [Large Model Inference Containers](https://github.com/aws/deep-learning-containers/blob/master/available_images.md#large-model-inference-containers).
 
 ### Common ([doc](https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-configuration.html))
 
@@ -25,6 +25,7 @@ for [Large Model Inference Containers](https://github.com/aws/deep-learning-cont
 | option.return_tuple       | No       | Whether transformer layers need to return a tuple or a tensor.                                                                                                                                  | `false`                        |
 | option.training_mp_size   | No       | If the model was trained with DeepSpeed, this indicates the tensor parallelism degree with which the model was trained. Can be different than the tensor parallel degree desired for inference. | `2`                            |
 | option.checkpoint         | No       | Path to DeepSpeed compatible checkpoint file.                                                                                                                                                   | `ds_inference_checkpoint.json` |
+| option.parallel_loading   | No       | Loads multiple workers in parallel (faster but risks running out of memory).                                                                                                                    | `ds_inference_checkpoint.json` |
 
 ### FasterTransformer ([doc](https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-configuration.html))
 
@@ -56,3 +57,31 @@ for [Large Model Inference Containers](https://github.com/aws/deep-learning-cont
 |--------------------|----------|----------------------------------------------------------------------------------------------------------------------------------------|-----------------|
 | option.n_positions | No       | Input sequence length                                                                                                                  | Default: `128`  |
 | option.unroll      | No       | Unroll the model graph for compilation. With `unroll=None` compiler will have more opportunities to do optimizations across the layers | Default: `None` |
+
+## Aliases
+
+DJLServing provides a few alias for Python engine to make it easy for common LLM configurations.
+
+- `engine=DeepSpeed`, equivalent to:
+
+```
+engine=Python
+option.mpi_mode=true
+option.entryPoint=djl_python.deepspeed
+```
+
+- `engine=FasterTransformer`, this is equivalent to:
+
+```
+engine=Python
+option.mpi_mode=true
+option.entryPoint=djl_python.fastertransformer
+```
+
+- `engine=MPI`, this is equivalent to:
+
+```
+engine=Python
+option.mpi_mode=true
+option.entryPoint=djl_python.huggingface
+```
