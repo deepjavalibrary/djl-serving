@@ -402,10 +402,83 @@ jobs:
           name: vllm-logs
           path: tests/integration/logs/
 
+  deepspeed-test:
+    if: contains(fromJson('["", "deepspeed"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests pillow numpy
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test deepspeed_rolling_batch gpt-neox-20b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_rolling_batch gpt-neox-20b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_rolling_batch gpt-neox-20b
+          docker rm -f $(docker ps -aq)
+      - name: Test deepspeed_rolling_batch open-llama-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_rolling_batch open-llama-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_rolling_batch open-llama-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test deepspeed_rolling_batch gpt2
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_rolling_batch gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_rolling_batch gpt2
+          docker rm -f $(docker ps -aq)
+      - name: Test deepspeed_rolling_batch llama2-13b-smoothquant
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py deepspeed_rolling_batch llama2-13b-smoothquant
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py deepspeed_rolling_batch llama2-13b-smoothquant
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ds-rolling-batch-handler-logs
+          path: tests/integration/logs/
+
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, scheduler-single-gpu-test, scheduler-multi-gpu-test, lmi-dist-test-1, lmi-dist-test-2, vllm-test ]
+    needs: [ create-runners, scheduler-single-gpu-test, scheduler-multi-gpu-test, lmi-dist-test-1, lmi-dist-test-2, vllm-test, deepspeed-test ]
     steps:
       - name: Stop all instances
         run: |
