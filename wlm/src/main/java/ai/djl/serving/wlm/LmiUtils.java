@@ -109,6 +109,9 @@ public final class LmiUtils {
             } else {
                 trtRepo = info.modelDir;
                 modelId = info.prop.getProperty("option.model_id");
+                if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
+                    trtRepo = Paths.get(modelId);
+                }
             }
             if (!isValidTrtLlmModelRepo(trtRepo)) {
                 if (modelId == null) {
