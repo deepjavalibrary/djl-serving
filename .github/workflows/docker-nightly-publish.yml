@@ -36,6 +36,10 @@ jobs:
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         run: |
           ./gradlew :serving:dockerDeb -Psnapshot
+      - name: Build serving package for release
+        if: ${{ github.event.inputs.mode == 'release' }}
+        run: |
+          ./gradlew :serving:dockerDeb -Pstaging
       - name: Build and push nightly docker image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
