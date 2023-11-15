@@ -86,7 +86,9 @@ class LmiDistRollingBatch(RollingBatch):
 
     def _warmup(self, **kwargs):
         batch_size = int(self.properties.get("max_rolling_batch_size", 32))
-        self.model.warmup(batch_size)
+        max_batch_prefill_tokens = int(
+            self.properties.get("max_batch_prefill_tokens", -1))
+        self.model.warmup(batch_size, max_batch_prefill_tokens)
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
