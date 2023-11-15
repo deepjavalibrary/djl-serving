@@ -11,9 +11,9 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import os
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from transformers import AutoConfig
-from lmi_dist.models import get_model
 from lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
     StoppingCriteriaParameters,
@@ -65,8 +65,11 @@ class LmiDistRollingBatch(RollingBatch):
             raise ValueError(
                 f"Invalid value for quantize: {quantize}. Valid values when using option rolling_batch=lmi-dist are: {QUANTIZATION_SUPPORT_ALGO}"
             )
+        if quantize is not None:
+            os.environ["CUDA_MEMORY_FRACTION"] = "0.9"
         if quantize is None and dtype == "int8":
             quantize = "bitsandbytes"
+        from lmi_dist.models import get_model
         self.model = get_model(
             model_id_or_path,
             revision=revision,
@@ -80,44 +83,8 @@ class LmiDistRollingBatch(RollingBatch):
             self._warmup(**kwargs)
 
     def _warmup(self, **kwargs):
-        max_prefill_tokens = int(
-            self.properties.get(
-                "max_rolling_batch_prefill_tokens",
-                int(self.properties.get("max_rolling_batch_size", 4)) * 272))
-
-        # Todo: Find the maximum input_length dynamically
-        input_length = 1024
-
-        n_tokens = 0
-        req_id = 0
-        requests = []
-
-        while n_tokens < max_prefill_tokens:
-            truncate = min(input_length, max_prefill_tokens - n_tokens)
-            requests.append(
-                lmi_dist.utils.types.Request(
-                    id=req_id,
-                    inputs='_test ' * input_length,
-                    parameters=NextTokenChooserParameters(
-                        temperature=0.9,
-                        repetition_penalty=1.2,
-                        top_k=10,
-                        top_p=0.9,
-                        typical_p=0.9,
-                        do_sample=False,
-                        seed=0),
-                    stopping_parameters=StoppingCriteriaParameters(
-                        stop_sequences=[], max_new_tokens=2),
-                    truncate=truncate,
-                    prefill_logprobs=True))
-            n_tokens += input_length
-            req_id += 1
-
-        batch = self.batch_cls.get_batch(
-            Batch(id=0, requests=requests,
-                  size=len(requests)), self.model.tokenizer,
-            kwargs.get("torch_dtype", torch.float16), self.device)
-        self.model.warmup(batch)
+        batch_size = int(self.properties.get("max_rolling_batch_size", 32))
+        self.model.warmup(batch_size)
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
@@ -211,6 +178,7 @@ class LmiDistRollingBatch(RollingBatch):
 
             return self.batch_cls.get_batch(
                 batch, self.model.tokenizer,
-                kwargs.get("torch_dtype", torch.float16), self.device)
+                kwargs.get("torch_dtype", torch.float16),
+                torch.device(f"cuda:{self.device}"))
         else:
             return None
