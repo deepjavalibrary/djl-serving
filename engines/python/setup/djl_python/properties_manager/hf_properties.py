@@ -165,15 +165,13 @@ class HuggingFaceProperties(Properties):
             if "device_map" not in kwargs:
                 raise ValueError(
                     "device_map should be set when load_in_8bit is set")
-            kwargs["load_in_8bit"] = properties['load_in_8bit']
-            properties['quantize'] = HFQuantizeMethods.bitsandbytes8
+            kwargs["load_in_8bit"] = True
         if properties[
                 'quantize'].value == HFQuantizeMethods.bitsandbytes4.value:
             if "device_map" not in kwargs:
                 raise ValueError(
                     "device_map should set when load_in_4bit is set")
-            kwargs["load_in_4bit"] = properties['load_in_4bit']
-            properties['quantize'] = HFQuantizeMethods.bitsandbytes4
+            kwargs["load_in_4bit"] = True
 
         properties['kwargs'] = kwargs
         return properties

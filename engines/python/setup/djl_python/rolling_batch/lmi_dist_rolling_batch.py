@@ -23,7 +23,7 @@ from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
 
-QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes", "gptq"]
+QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes8", "bitsandbytes", "gptq"]
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -58,15 +58,17 @@ class LmiDistRollingBatch(RollingBatch):
         revision = self.properties.get('revision', None)
         paged_attention = self.properties.get("paged_attention",
                                               "true").lower() == "true"
-        if quantize is not None and dtype is not None:
-            raise ValueError(
-                f"Can't set both dtype: {dtype} and quantize: {quantize}")
-        if quantize is not None and quantize not in QUANTIZATION_SUPPORT_ALGO:
-            raise ValueError(
-                f"Invalid value for quantize: {quantize}. Valid values when using option rolling_batch=lmi-dist are: {QUANTIZATION_SUPPORT_ALGO}"
-            )
         if quantize is not None:
             os.environ["CUDA_MEMORY_FRACTION"] = "0.9"
+            if dtype is not None:
+                raise ValueError(
+                    f"Can't set both dtype: {dtype} and quantize: {quantize}")
+            if quantize not in QUANTIZATION_SUPPORT_ALGO:
+                raise ValueError(
+                    f"Invalid value for quantize: {quantize}. Valid values when using option rolling_batch=lmi-dist are: {QUANTIZATION_SUPPORT_ALGO}"
+                )
+            if quantize == "bitsandbytes8":
+                quantize = "bitsandbytes"
         if quantize is None and dtype == "int8":
             quantize = "bitsandbytes"
         from lmi_dist.models import get_model
