@@ -70,7 +70,7 @@ COPY partition /opt/djl/partition
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev && \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ && \
     scripts/install_djl_serving.sh $djl_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} deepspeed" > /opt/djl/bin/telemetry && \
