@@ -51,8 +51,6 @@ class TRTLLMRollingBatch(RollingBatch):
             parameters["runtime_top_k"] = parameters.get("runtime_top_k", 5)
             parameters["runtime_top_p"] = parameters.get("runtime_top_p", 0.85)
             parameters["temperature"] = parameters.get("temperature", 0.8)
-            parameters["repetition_penalty"] = parameters.get(
-                "repetition_penalty", 1.2)
         parameters["streaming"] = parameters.get("streaming", True)
         return parameters
 
