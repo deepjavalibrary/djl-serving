@@ -105,18 +105,12 @@ class TestConfigManager(unittest.TestCase):
         # TODO: Replace with actual example of context_length_estimate
 
         properties = {
-            "n_positions":
-            "2048",
-            "load_split_model":
-            "true",
-            "load_in_8bit":
-            "true",
-            "compiled_graph_path":
-            "s3://test/bucket/folder",
-            "low_cpu_mem_usage":
-            "true",
-            'context_length_estimate':
-            '{"context_length": "128", "variable_size": "12"}'
+            "n_positions": "2048",
+            "load_split_model": "true",
+            "load_in_8bit": "true",
+            "compiled_graph_path": "s3://test/bucket/folder",
+            "low_cpu_mem_usage": "true",
+            'context_length_estimate': '[256, 512, 102]'
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -128,10 +122,18 @@ class TestConfigManager(unittest.TestCase):
         self.assertTrue(tnx_configs.load_in_8bit)
         self.assertTrue(tnx_configs.low_cpu_mem_usage)
 
-        self.assertDictEqual(tnx_configs.context_length_estimate, {
-            'context_length': '128',
-            'variable_size': '12'
-        })
+        self.assertListEqual(tnx_configs.context_length_estimate,
+                             [256, 512, 102])
+
+        # tests context length estimate as integer
+        def test_tnx_cle_int(context_length_estimate):
+            properties['context_length_estimate'] = context_length_estimate
+            configs = TransformerNeuronXProperties(**common_properties,
+                                                   **properties)
+            self.assertEqual(configs.context_length_estimate, 256)
+            del properties['context_length_estimate']
+
+        test_tnx_cle_int('256')
 
     def test_tnx_configs_error_case(self):
         properties = {
@@ -152,8 +154,15 @@ class TestConfigManager(unittest.TestCase):
                 TransformerNeuronXProperties(**common_properties, **properties)
             del properties['compiled_graph_path']
 
+        def test_invalid_context_length(context_length_estimate):
+            properties['context_length_estimate'] = context_length_estimate
+            with self.assertRaises(ValueError):
+                TransformerNeuronXProperties(**common_properties, **properties)
+            del properties['context_length_estimate']
+
         test_url_not_s3_uri("https://random.url.address/")
         test_non_existent_directory("not_a_directory")
+        test_invalid_context_length("invalid")
 
     def test_trtllm_configs(self):
         properties = {

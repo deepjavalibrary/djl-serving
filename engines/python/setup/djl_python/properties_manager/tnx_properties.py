@@ -14,7 +14,7 @@ import json
 import logging
 import os
 import re
-from typing import Optional
+from typing import Optional, Union, List
 
 from pydantic import validator, root_validator
 from enum import IntEnum, Enum
@@ -50,7 +50,7 @@ class TransformerNeuronXProperties(Properties):
     load_in_8bit: Optional[bool] = False
     low_cpu_mem_usage: bool = False
     load_split_model: bool = False
-    context_length_estimate: Optional[dict] = None
+    context_length_estimate: Optional[Union[List[int], int]] = None
     amp: Optional[str] = None
     quantize: Optional[TnXQuantizeMethods] = None
     compiled_graph_path: Optional[str] = None

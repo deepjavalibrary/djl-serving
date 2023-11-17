@@ -389,6 +389,7 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 512,
         "option.model_loading_timeout": 2400,
         "option.load_split_model": True,
+        "option.context_length_estimate": [256, 512, 1024]
     },
     "opt-1.3b-streaming": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
