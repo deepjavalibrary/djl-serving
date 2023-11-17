@@ -14,6 +14,7 @@ ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.23.0~SNAPSHOT
+ARG cuda_version=cu118
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
 ARG python_version=3.9
@@ -36,6 +37,9 @@ ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu118-precxx11
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp
+
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
 
 COPY scripts scripts/
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
@@ -64,3 +68,6 @@ LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-cu118="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL cuda-version=$cuda_version
+LABEL torch-version=$torch_version

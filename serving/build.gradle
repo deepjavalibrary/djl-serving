@@ -68,6 +68,7 @@ run {
 clean {
     delete file("plugins")
     delete file("logs")
+    delete file("docker/distributions")
 }
 
 tasks.register('prepareDeb') {
@@ -96,6 +97,13 @@ tasks.register('createDeb', Deb) {
         into "/usr/local/djl-serving-${project.version}"
     }
     link("/usr/bin/djl-serving", "/usr/local/djl-serving-${project.version}/bin/serving")
+}
+
+tasks.register('dockerDeb', Copy) {
+    dependsOn createDeb
+    from layout.buildDirectory.dir("distributions")
+    include "*.deb"
+    into("${project.projectDir}/docker/distributions")
 }
 
 startScripts {

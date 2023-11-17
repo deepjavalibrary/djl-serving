@@ -11,11 +11,13 @@
 # the specific language governing permissions and limitations under the License.
 ARG version=11.8.0-cudnn8-devel-ubuntu20.04
 FROM nvidia/cuda:$version
+ARG cuda_version=cu118
 ARG djl_version=0.23.0
 ARG python_version=3.9
 ARG torch_version=2.0.1
 ARG torch_vision_version=0.15.2
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-0.9.5-py2.py3-none-any.whl"
+ARG deepspeed_version=0.9.5
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-py2.py3-none-any.whl"
 ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn-1.0.9-cp39-cp39-linux_x86_64.whl"
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp39-cp39-linux_x86_64.whl"
 ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp39-cp39-linux_x86_64.whl"
@@ -57,6 +59,9 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 RUN apt-get update && \
     scripts/install_djl_serving.sh $djl_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
@@ -83,3 +88,6 @@ LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.deepspeed="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL deepspeed-version=$deepspeed_version
+LABEL cuda-version=$cuda_version
