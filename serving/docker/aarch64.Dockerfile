@@ -33,6 +33,9 @@ RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
@@ -55,3 +58,5 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch64="true"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-24-0.aarch64="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL torch-version=$torch_version

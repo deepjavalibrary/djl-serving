@@ -29,6 +29,23 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: 11
+      - uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+      - name: Build serving package for nightly
+        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        run: |
+          ./gradlew :serving:dockerDeb -Psnapshot
+      - name: Build serving package for release
+        if: ${{ github.event.inputs.mode == 'release' }}
+        run: |
+          ./gradlew :serving:dockerDeb -Pstaging
       - name: Build and push nightly docker image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
@@ -94,6 +111,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: 11
+      - uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+      - name: Build serving package for nightly
+        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        run: |
+          ./gradlew :serving:dockerDeb -Psnapshot
       - name: Build and push nightly docker image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
@@ -127,6 +157,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: 11
+      - uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+      - name: Build serving package for nightly
+        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        run: |
+          ./gradlew :serving:dockerDeb -Psnapshot
       - name: Build and push nightly docker image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
