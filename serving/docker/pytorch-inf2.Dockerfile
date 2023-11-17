@@ -13,6 +13,7 @@ FROM ubuntu:20.04
 ARG djl_version=0.22.1~SNAPSHOT
 ARG torch_version=1.13.1
 ARG python_version=3.8
+ARG neuronsdk_version=2.10.0
 ARG torch_neuronx_version=1.13.1.1.7.0
 ARG transformers_neuronx_version=0.3.32
 ARG transformers_version=4.28.1
@@ -44,6 +45,9 @@ ENV JAVA_OPTS="-Xmx1g -Xms1g -Xss2m -XX:-UseContainerSupport -XX:+ExitOnOutOfMem
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
@@ -68,3 +72,5 @@ LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
+LABEL djl-version=$djl_version
+LABEL neuronsdk-version=$neuronsdk_version
