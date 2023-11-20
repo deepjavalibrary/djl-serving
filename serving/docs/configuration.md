@@ -44,4 +44,4 @@ The primary way is through the [DJL Model](https://javadoc.io/doc/ai.djl/api/lat
 These settings are ultimately dependent on the individual model.
 But, here are some documented applications that have additional configurations:
 
-- [Large Language Model Configurations](configurations_large_model_inference_containers.md)
+- [Large Language Model Configurations](lmi/configurations_large_model_inference_containers.md)
