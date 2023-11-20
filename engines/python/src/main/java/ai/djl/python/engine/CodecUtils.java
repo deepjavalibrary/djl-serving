@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
 /** This is a utility class for reading and writing to netty ByteBuf. */
 public final class CodecUtils {
 
-    public static final int MAX_BUFFER_SIZE = 20 * 1024 * 1024;
+    public static final int MAX_BUFFER_SIZE = 64 * 1024 * 1024;
 
     private CodecUtils() {}
 

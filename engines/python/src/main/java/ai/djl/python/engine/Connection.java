@@ -70,11 +70,13 @@ class Connection {
     private SocketAddress socketAddress;
     private Channel channel;
     private RequestHandler requestHandler;
+    private int maxBufferSize;
 
-    Connection(PyEnv pyEnv, int basePort, int rank) {
+    Connection(PyEnv pyEnv, int basePort, int rank, int maxBufferSize) {
         requestHandler = new RequestHandler();
         port = 19000 + basePort;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank);
+        this.maxBufferSize = maxBufferSize;
     }
 
     static Process startPython(PyEnv pyEnv, Model model, int workerId, int port)
@@ -246,9 +248,7 @@ class Connection {
                             protected void initChannel(Channel ch) {
                                 ch.pipeline()
                                         .addLast("encoder", new RequestEncoder())
-                                        .addLast(
-                                                "decoder",
-                                                new OutputDecoder(CodecUtils.MAX_BUFFER_SIZE))
+                                        .addLast("decoder", new OutputDecoder(maxBufferSize))
                                         .addLast("handler", requestHandler);
                             }
                         });

@@ -58,15 +58,23 @@ class PyProcess {
         this.pyEnv = pyEnv;
         this.workerId = workerId;
         int port = counter.getAndIncrement();
+        String size = model.getProperty("max_output_size");
+        int maxBufferSize;
+        if (size == null || size.isEmpty()) {
+            maxBufferSize = CodecUtils.MAX_BUFFER_SIZE;
+        } else {
+            maxBufferSize = Integer.parseInt(size);
+        }
+
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             connections = new ArrayList<>(tensorParallelDegree);
             for (int i = 0; i < tensorParallelDegree; ++i) {
-                connections.add(new Connection(pyEnv, port, i));
+                connections.add(new Connection(pyEnv, port, i, maxBufferSize));
             }
             counter.set(port + tensorParallelDegree);
         } else {
-            connections = Collections.singletonList(new Connection(pyEnv, port, -1));
+            connections = Collections.singletonList(new Connection(pyEnv, port, -1, maxBufferSize));
         }
         restartCount = new AtomicInteger(0);
         // TODO: avoid using this hack when TRT-LLM improve its behavior
