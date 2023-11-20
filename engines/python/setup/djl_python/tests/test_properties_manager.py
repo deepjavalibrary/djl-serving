@@ -82,7 +82,7 @@ class TestConfigManager(unittest.TestCase):
         properties = {
             "n_positions": "256",
             "load_split_model": "true",
-            "quantize": "bitsandbytes8",
+            "quantize": "static_int8",
             "compiled_graph_path": "s3://test/bucket/folder"
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
@@ -137,7 +137,7 @@ class TestConfigManager(unittest.TestCase):
         properties = {
             "n_positions": "256",
             "load_split_model": "true",
-            "quantize": "bitsandbytes8",
+            "quantize": "static_int8",
         }
 
         def test_url_not_s3_uri(url):

@@ -35,7 +35,7 @@ class Dtype(str, Enum):
 
 
 class TnXQuantizeMethods(str, Enum):
-    bitsandbytes8 = 'bitsandbytes8'
+    static_int8 = 'static_int8'
 
 
 TNX_SUPPORTED_ROLLING_BATCH_TYPES = ['auto']
@@ -112,6 +112,6 @@ class TransformerNeuronXProperties(Properties):
     @root_validator()
     def set_quantize(cls, properties):
         if properties['quantize'] and properties[
-                'quantize'].value == TnXQuantizeMethods.bitsandbytes8.value:
+                'quantize'].value == TnXQuantizeMethods.static_int8.value:
             properties['load_in_8bit'] = True
         return properties
