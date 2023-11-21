@@ -15,7 +15,7 @@ In this tutorial, we will be converting the Llama2-70b model to TensorRT-LLM mod
 
 ### Step 1: Choose your instance
 
-To do the model compilation you need to use **** the instance that has **the same GPU architecture** **** that will be used for your inference deployment **** (e.g model compiled on a g5 instance can be deployed only on g5 instances).
+To do the model compilation you need to use the instance that has **the same GPU architecture** that will be used for your inference deployment (e.g model compiled on a g5 instance can be deployed only on g5 instances).
 
 ### Step 2: Pull the docker image
 
