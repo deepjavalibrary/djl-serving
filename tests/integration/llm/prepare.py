@@ -316,6 +316,47 @@ performance_test_list = {
     }
 }
 
+transformers_neuronx_aot_handler_list = {
+    "gpt2": {
+        "option.model_id":
+        "gpt2",
+        "option.batch_size":
+        4,
+        "option.tensor_parallel_degree":
+        2,
+        "option.n_positions":
+        512,
+        "option.dtype":
+        "fp16",
+        "option.model_loading_timeout":
+        600,
+        "option.enable_streaming":
+        False,
+        "option.save_mp_checkpoint_path":
+        "/opt/ml/input/data/training/partition-test"
+    },
+    "gpt2-quantize": {
+        "option.model_id":
+        "gpt2",
+        "option.batch_size":
+        4,
+        "option.tensor_parallel_degree":
+        2,
+        "option.n_positions":
+        512,
+        "option.dtype":
+        "fp16",
+        "option.model_loading_timeout":
+        600,
+        "option.load_in_8bit":
+        True,
+        "option.enable_streaming":
+        False,
+        "option.save_mp_checkpoint_path":
+        "/opt/ml/input/data/training/partition-test"
+    },
+}
+
 transformers_neuronx_handler_list = {
     "gpt2": {
         "option.model_id": "gpt2",
@@ -390,6 +431,15 @@ transformers_neuronx_handler_list = {
         "option.model_loading_timeout": 2400,
         "option.load_split_model": True,
         "option.context_length_estimate": '256, 512, 1024'
+    },
+    "llama2-7b": {
+        "option.model_id": "s3://djl-llm/llama-2-7b-neuronx/",
+        "option.batch_size": 4,
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp16",
+        "option.n_positions": 2048,
+        "option.model_loading_timeout": 2400,
+        "option.enable_streaming": False
     },
     "opt-1.3b-streaming": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
@@ -756,6 +806,17 @@ def build_transformers_neuronx_handler_model(model):
     write_model_artifacts(options)
 
 
+def build_transformers_neuronx_aot_handler_model(model):
+    if model not in transformers_neuronx_aot_handler_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(transformers_neuronx_aot_handler_list.keys())}"
+        )
+    options = transformers_neuronx_aot_handler_list[model]
+    options["engine"] = "Python"
+    options["option.entryPoint"] = "djl_python.transformers_neuronx"
+    write_model_artifacts(options)
+
+
 def build_rolling_batch_model(model):
     if model not in rolling_batch_model_list.keys():
         raise ValueError(
@@ -852,21 +913,22 @@ def build_deepspeed_rolling_batch_model(model):
 
 supported_handler = {
     'deepspeed': build_ds_handler_model,
-    'huggingface': build_hf_handler_model,
     "deepspeed_raw": build_ds_raw_model,
-    'stable-diffusion': build_sd_handler_model,
     'deepspeed_aot': build_ds_aot_model,
     'deepspeed_handler_aot': build_ds_aot_handler_model,
+    'deepspeed_smoothquant': build_ds_smoothquant_model,
+    'deepspeed_rolling_batch': build_deepspeed_rolling_batch_model,
+    'huggingface': build_hf_handler_model,
+    'stable-diffusion': build_sd_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
+    'transformers_neuronx_aot': build_transformers_neuronx_aot_handler_model,
     'performance': build_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
     'lmi_dist': build_lmi_dist_model,
+    'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
     'unmerged_lora': build_unmerged_lora_correctness_model,
-    'deepspeed_smoothquant': build_ds_smoothquant_model,
-    'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'trtllm': build_trtllm_handler_model,
-    'deepspeed_rolling_batch': build_deepspeed_rolling_batch_model,
 }
 
 if __name__ == '__main__':

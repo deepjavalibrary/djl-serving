@@ -31,6 +31,7 @@ class PropertiesManager(object):
         self.entry_point_url = None
         self.properties_dir = args.properties_dir
         self.properties = load_properties(self.properties_dir)
+        self.skip_copy = args.skip_copy
 
         if args.model_id:
             self.properties['option.model_id'] = args.model_id
@@ -149,6 +150,8 @@ class PropertiesManager(object):
                         raise ValueError("Please specify engine")
                     elif engine.lower() == "deepspeed":
                         entry_point = "djl_python.deepspeed"
+                    elif engine.lower() == "python":
+                        entry_point = "djl_python.transformers_neuronx"
                     else:
                         raise ValueError(f"Invalid engine: {engine}")
                     self.properties['option.entryPoint'] = entry_point

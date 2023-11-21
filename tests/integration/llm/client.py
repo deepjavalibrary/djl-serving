@@ -282,6 +282,24 @@ transformers_neuronx_model_spec = {
         "batch_size": [2],
         "stream_output": True,
     },
+    "llama2-7b": {
+        "worker": 1,
+        "seq_length": [128, 256, 512],
+        "batch_size": [4],
+    },
+}
+
+transformers_neuronx_aot_model_spec = {
+    "gpt2": {
+        "worker": 1,
+        "seq_length": [512],
+        "batch_size": [4]
+    },
+    "gpt2-quantize": {
+        "worker": 1,
+        "seq_length": [512],
+        "batch_size": [4]
+    },
 }
 
 lmi_dist_model_spec = {
@@ -848,6 +866,9 @@ if __name__ == "__main__":
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)
+    elif args.handler == "transformers_neuronx-aot":
+        test_transformers_neuronx_handler(args.model,
+                                          transformers_neuronx_aot_model_spec)
     elif args.handler == "lmi_dist":
         test_handler(args.model, lmi_dist_model_spec)
     elif args.handler == "vllm":

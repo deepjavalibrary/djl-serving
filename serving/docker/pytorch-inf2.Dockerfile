@@ -10,19 +10,20 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
-ARG djl_version=0.24.0~SNAPSHOT
+ARG djl_version=0.25.0~SNAPSHOT
 ARG torch_version=1.13.1
-ARG python_version=3.8
+ARG python_version=3.9
 ARG neuronsdk_version=2.15.2
 ARG torch_neuronx_version=1.13.1.1.12.1
 ARG transformers_neuronx_version=0.8.268
 ARG neuronx_distributed_version=0.5.0
 ARG neuronx_cc_version=2.11.*
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.34.0
+ARG transformers_version=4.35.0
 ARG accelerate_version=0.23.0
-ARG diffusers_version=0.16.0
+ARG diffusers_version=0.22.0
 ARG pydantic_version=1.10.13
+ARG optimum_neuron_version=0.0.15
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -58,8 +59,10 @@ RUN mv *.deb djl-serving_all.deb || true
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
+    mkdir -p /opt/djl/partition && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
+COPY partition /opt/djl/partition
 RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh ${python_version} && \
@@ -69,7 +72,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
-    pydantic==${pydantic_version} && \
+    pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \

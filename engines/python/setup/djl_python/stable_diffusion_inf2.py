@@ -21,7 +21,7 @@ from io import BytesIO
 from PIL import Image
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
 from diffusers.models.unet_2d_condition import UNet2DConditionOutput
-from diffusers.models.cross_attention import CrossAttention
+from diffusers.models.attention_processor import Attention
 
 
 class UNetWrap(nn.Module):
@@ -55,10 +55,11 @@ class NeuronUNet(nn.Module):
                 sample,
                 timestep,
                 encoder_hidden_states,
-                cross_attention_kwargs=None):
+                cross_attention_kwargs=None,
+                return_dict=False):
         sample = self.unetwrap(
             sample,
-            timestep.to(sample.dtype).expand((sample.shape[0], )),
+            timestep.to(dtype=sample.dtype).expand((sample.shape[0], )),
             encoder_hidden_states)[0]
         return UNet2DConditionOutput(sample=sample)
 
@@ -154,7 +155,7 @@ class StableDiffusionService(object):
             self.pipeline.scheduler.config)
 
         # Replace original cross-attention module with custom cross-attention module for better performance
-        CrossAttention.get_attention_scores = get_attention_scores
+        Attention.get_attention_scores = get_attention_scores
 
         if os.path.exists(os.path.join(self.model_id_or_path,
                                        "compiled_model")):

@@ -54,6 +54,8 @@ class TransformerNeuronXProperties(Properties):
     amp: Optional[str] = None
     quantize: Optional[TnXQuantizeMethods] = None
     compiled_graph_path: Optional[str] = None
+    task: Optional[str] = None
+    save_mp_checkpoint_path: Optional[str] = None
 
     @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):

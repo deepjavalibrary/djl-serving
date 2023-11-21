@@ -177,7 +177,9 @@ class PartitionService(object):
             logging.info(f"Partitioning done.")
             self.properties_manager.validate_and_correct_checkpoints_json()
             self.properties_manager.generate_properties_file()
-            self.copy_config_files()
+            if not self.properties_manager.skip_copy:
+                logging.info("Copying config files...")
+                self.copy_config_files()
             self.load_the_generated_checkpoints()
             self.upload_checkpoints_to_s3()
             self.cleanup()
@@ -189,7 +191,8 @@ class PartitionService(object):
             saved_checkpoints_dir = self.properties[
                 "option.save_mp_checkpoint_path"]
             properties = utils.load_properties(saved_checkpoints_dir)
-            properties['model_dir'] = saved_checkpoints_dir
+            if not self.properties_manager.skip_copy:
+                properties['model_dir'] = saved_checkpoints_dir
             properties['option.entryPoint'] = self.properties[
                 'option.entryPoint']
             properties['partition_handler'] = 'handle'
@@ -242,6 +245,12 @@ def main():
                         type=str,
                         required=False,
                         help='tensor parallel degree')
+    parser.add_argument(
+        '--skip-copy',
+        action='store_true',
+        help=
+        'toggle to skip copying associated tokenizer and config files from source model'
+    )
 
     args = parser.parse_args()
 
