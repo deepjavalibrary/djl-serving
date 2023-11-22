@@ -1,9 +1,9 @@
-#  Seq-Scheduler Tutorial
+#  Seq-Scheduler and Max-Sparsity Thresholding
 
 Seq-scheduler is a language model serving system built on native Huggingface inference backend, and works with any 
 huggingface model out-of-box. It features dynamic batching, dynamic batch splitting and prompt caching, with the 
 support of various autoregressive search methods, including greedy, sampling and [contrastive search](https://huggingface.co/blog/introducing-csearch). In the 
-following part of the tutorial, the way to run these features will be introduced.
+following part of the document, the way to run these features will be introduced.
 
 ## Start a model server with a serving.properties file
 The model server is configured by a stand-along serving.properties file. Here `/workspace/llama-2-70b-hf/` model is 
@@ -27,9 +27,13 @@ option.max_splits=3
 option.decoding_strategy=contrastive  # other options: greedy, sample
 ```
 
-Then inside a djl-serving docker image, by running the following command, the server is started.
+Djl-serving typically is started with the following docker command. For comprehensive ways starting djl-serving, 
+please take look at the djl-serving introduction tutorial.
 ```bash
-djl-serving -m <directory-of-serving.properties>
+docker run -it --name zen_dirac --runtime=nvidia --gpus all --shm-size 3g \
+-v /home/ubuntu/model:/opt/ml/model -v /tmp:/tmp -v /home/ubuntu/mount_folder:/opt/mount_folder \
+-v /home/ubuntu/.cache/huggingface:/root/.cache/huggingface \
+-p 8080:8080 deepjavalibrary/djl-serving:deepspeed-nightly
 ```
 
 ## Send request to the server with a curl command
