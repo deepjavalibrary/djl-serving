@@ -30,8 +30,8 @@ option.decoding_strategy=contrastive  # other options: greedy, sample
 Djl-serving typically is started with the following docker command. For comprehensive ways starting djl-serving, 
 please take look at the djl-serving introduction tutorial.
 ```bash
-docker run -it --name zen_dirac --runtime=nvidia --gpus all --shm-size 3g \
--v /home/ubuntu/model:/opt/ml/model -v /tmp:/tmp -v /home/ubuntu/mount_folder:/opt/mount_folder \
+docker run -it --runtime=nvidia --gpus all --shm-size 3g \
+-v /home/ubuntu/model:/opt/ml/model -v /tmp:/tmp \
 -v /home/ubuntu/.cache/huggingface:/root/.cache/huggingface \
 -p 8080:8080 deepjavalibrary/djl-serving:deepspeed-nightly
 ```
@@ -42,8 +42,7 @@ looks like the following.
 ```bash
 export CONCURRENCY=64
 export REPETITION=3
-TOKENIZER=/workspace/llama-2-70b-hf/ ./awscurl -c ${CONCURRENCY} -N ${REPETITION} -X POST http://127.0.0.
-1:8080/invocations \
+TOKENIZER=/workspace/llama-2-70b-hf/ ./awscurl -c ${CONCURRENCY} -N ${REPETITION} -X POST http://127.0.0.1:8080/invocations \
   --connect-timeout 60 \
   -H "Content-type: application/json" \
   -d '{"inputs":"The new movie that got Oscar this year","parameters":{"max_new_tokens":50, "do_sample":true},
