@@ -71,7 +71,7 @@ docker run --runtime=nvidia --gpus all --shm-size 12gb \
 -e OPTION_TENSOR_PARALLEL_DEGREE=$OPTION_TENSOR_PARALLEL_DEGREE \
 -e OPTION_MAX_ROLLING_BATCH_SIZE=$OPTION_MAX_ROLLING_BATCH_SIZE \
 -e OPTION_DTYPE=$OPTION_DTYPE \
- deepjavalibrary/djl-serving:0.25.0-tensorrt-llm python /opt/djl/partition/trt_llm_partition.py \
+ 763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.25.0-tensorrtllm0.5.0-cu122 python /opt/djl/partition/trt_llm_partition.py \
 --properties_dir $PWD \
 --trt_llm_model_repo /tmp/trtllm \
 --tensor_parallel_degree $OPTION_TENSOR_PARALLEL_DEGREE
