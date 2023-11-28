@@ -158,6 +158,11 @@ class FasterTransformerService(object):
         output_len = parameters.pop("max_seq_len", max_length)
         if self.use_triton:
             output_length = [output_len] * len(input_data)
+            if "beam_width" in parameters:
+                beam_width = parameters.pop('beam_width')
+                if not isinstance(beam_width, list):
+                    parameters['beam_width'] = [int(beam_width)] * len(input_data)
+
             if self.enable_streaming:
                 outputs = Output()
                 outputs.add_property("content-type", "application/jsonlines")
