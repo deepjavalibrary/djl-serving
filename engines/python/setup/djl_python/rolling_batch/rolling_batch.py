@@ -13,33 +13,73 @@
 import json
 import logging
 from abc import ABC, abstractmethod
+from typing import Union
+
+FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 
 
-def _json_output_formatter(token_texts: list, first_token: bool,
-                           last_token: bool):
+class Token(object):
+    """
+        This class represents the token that comes to the output.
+    """
+
+    def __init__(self,
+                 id: int,
+                 text: str,
+                 log_prob: float = None,
+                 special_token: bool = None):
+        """
+        Initialize a Token
+
+        :param id: token id in tokenizer
+        :param text: the decoded text
+        :param log_prob: log probability for the token
+        :param special_token: if this token is special token
+        """
+        self.id = id
+        self.text = text
+        self.log_prob = log_prob
+        self.special_token = special_token
+
+
+def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
+                           details: dict):
     """
     json output formatter
 
     :return: formatted output
     """
     json_encoded_str = f"{{\"generated_text\": \"" if first_token else ""
-    text = json.dumps(''.join(token_texts), ensure_ascii=False)
-    json_encoded_str = f"{json_encoded_str}{text[1:-1]}"
+    json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
-        json_encoded_str = f"{json_encoded_str}\"}}"
+        if details:
+            details_str = f"\"details\": {json.dumps(details, ensure_ascii=False)}"
+            json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
+        else:
+            json_encoded_str = f"{json_encoded_str}\"}}"
 
     return json_encoded_str
 
 
-def _jsonlines_output_formatter(token_texts: list, first_token: bool,
-                                last_token: bool):
+def _jsonlines_output_formatter(token: Token, first_token: bool,
+                                last_token: bool, details: dict):
     """
     jsonlines output formatter
 
     :return: formatted output
     """
-    token_texts = {"outputs": token_texts}
-    json_encoded_str = json.dumps(token_texts, ensure_ascii=False) + "\n"
+    token_dict = token.__dict__
+    # backwards compatible to V5
+    final_dict = {
+        "token": token_dict,
+        "details": None,
+        "outputs": [token.text]
+    }
+    if last_token and details:
+        final_dict["details"] = {
+            "finish_reason": details.get("finish_reason", None)
+        }
+    json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 
 
@@ -64,29 +104,46 @@ class Request(object):
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
-        self.next_token = None
+        self.next_token_str = None
         self.first_token = True
         self.last_token = False
+        self.token_cache = None
+        if parameters.pop("details", False):
+            self.token_cache = []
 
     def __repr__(self):
         return f"<Request id: {self.id} Input {self.input_text} Parameters {self.parameters} Finished {self.last_token}>"
 
     def set_next_token(self,
-                       next_token: str,
+                       next_token: Union[Token, str],
                        output_formatter,
-                       last_token: bool = False):
+                       last_token: bool = False,
+                       finish_reason: str = None):
         """
         Sets the newly generated token.
 
         :param next_token: next token to be set.
         :param output_formatter: output formatter.
         :param last_token: whether this token is the last of the sequence.
+        :param finish_reason: what reason made the generation ends. Current options:
+            length: end because max_output_token size reached
+            eos_token: End of sequence token found
+            stop_sequence: Preset stop sequence token found
         """
+        if isinstance(next_token, str):
+            next_token = Token(-1, next_token)
+        if self.token_cache is not None:
+            self.token_cache.append(next_token.__dict__)
+        details = {}
+        if last_token and self.token_cache is not None:
+            details["finish_reason"] = finish_reason
+            details["tokens"] = self.token_cache
         if output_formatter is None:
-            self.next_token = next_token
+            self.next_token_str = next_token.text
         else:  # output only supports size one now
-            self.next_token = output_formatter([next_token], self.first_token,
-                                               last_token)
+            self.next_token_str = output_formatter(next_token,
+                                                   self.first_token,
+                                                   last_token, details)
         self.last_token = last_token
         self.first_token = False
 
@@ -96,7 +153,7 @@ class Request(object):
 
         :return: next_token
         """
-        return self.next_token
+        return self.next_token_str
 
     def is_last_token(self) -> bool:
         """

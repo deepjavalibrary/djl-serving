@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 import os
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from transformers import AutoConfig
 from lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
@@ -39,6 +39,9 @@ class LmiDistRollingBatch(RollingBatch):
         """
 
         super().__init__(device, **kwargs)
+        if properties.get("engine") != "MPI":
+            raise AssertionError(
+                f"Need MPI engine to start lmi-dist RollingBatcher")
         self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
@@ -130,14 +133,23 @@ class LmiDistRollingBatch(RollingBatch):
         for request in self.active_requests:
             generation = generations.get(request.id, None)
             if generation:
-                is_last_token = generation.generated_text is not None
+                is_last_token = False
+                finish_reason = None
+                if generation.generated_text is not None:
+                    is_last_token = True
+                    finish_reason = FINISH_REASON_MAPPER[int(
+                        generation.generated_text.finish_reason.value)]
                 if not is_last_token:
                     req_ids.append(request.id)
 
-                request.set_next_token("" if generation.token_is_special else
-                                       generation.token_text,
+                token = Token(
+                    generation.token_id, ""
+                    if generation.token_is_special else generation.token_text,
+                    generation.token_logprob, generation.token_is_special)
+                request.set_next_token(token,
                                        self.output_formatter,
-                                       last_token=is_last_token)
+                                       last_token=is_last_token,
+                                       finish_reason=finish_reason)
             else:
                 request.set_next_token("",
                                        self.output_formatter,

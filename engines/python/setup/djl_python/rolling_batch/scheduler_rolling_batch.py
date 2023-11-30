@@ -228,7 +228,7 @@ class SchedulerRollingBatch(RollingBatch):
         for request_id, generated_token, request in zip(
                 request_ids, generated_tokens, self.active_requests):
             is_last_token = (request_id in exit_req_ids)
-            request.set_next_token(generated_token,
+            request.set_next_token(''.join(generated_token),
                                    self.output_formatter,
                                    last_token=is_last_token)
 

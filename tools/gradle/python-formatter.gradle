@@ -14,7 +14,7 @@ class PythonFormatterPlugin implements Plugin<Project> {
         project.task('formatPython') {
             doLast {
                  project.exec {
-                    commandLine "bash", "-c", "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -print0 | xargs -0 yapf --in-place"
+                    commandLine "bash", "-c", "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -not -path '*/venv/*' -print0 | xargs -0 yapf --in-place"
                 }
             }
         }
@@ -23,7 +23,7 @@ class PythonFormatterPlugin implements Plugin<Project> {
             doFirst {
                 try {
                     project.exec {
-                        commandLine "bash", "-c", "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -print0 | xargs -0 yapf -d"
+                        commandLine "bash", "-c", "find . -name '*.py' -not -path '*/.gradle/*' -not -path '*/build/*' -not -path '*/venv/*' -print0 | xargs -0 yapf -d"
                     }
                 } catch (Exception e) {
                     throw new GradleException("Repo is improperly formatted, please run ./gradlew formatPython, and recommit", e)
