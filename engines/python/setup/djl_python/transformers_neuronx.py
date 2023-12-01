@@ -52,10 +52,11 @@ MODEL_TYPE_TO_MODEL = {
 
 class NeuronXSampleAdapter(HuggingFaceGenerationModelAdapter):
 
-    def __init__(self, _config, _model):
+    def __init__(self, _config, _model, batch_size):
         super().__init__(_config, _model)
         self.model_type = _config.model_type
         self.sample_options = ["start_ids", "top_k"]
+        self.batch_size = batch_size
         if self.model_type == "llama":
             self.sample_options = self.sample_options + [
                 "top_p", "eos_token_override", "temperature", "streamer"
@@ -199,12 +200,14 @@ class TransformersNeuronXService(object):
         self.load_model(model_config.model_type)
 
         # HuggingFace compatible generate model and Neuron custom sample method
-        self.model = NeuronXSampleAdapter(model_config, self.model)
+        self.model = NeuronXSampleAdapter(model_config, self.model,
+                                          self.tnx_configs.batch_size)
         self.initialized = True
         if self.tnx_configs.rolling_batch != "disable":
+            rolling_batch_size = min(self.tnx_configs.batch_size,
+                                     self.tnx_configs.max_rolling_batch_size)
             self.rolling_batch = NeuronRollingBatch(
-                self.model, self.tokenizer,
-                self.tnx_configs.max_rolling_batch_size,
+                self.model, self.tokenizer, rolling_batch_size,
                 self.tnx_configs.n_positions)
 
     def parse_input(self, inputs):
