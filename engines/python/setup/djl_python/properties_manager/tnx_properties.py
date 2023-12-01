@@ -14,7 +14,7 @@ import json
 import logging
 import os
 import re
-from typing import Optional
+from typing import Optional, Union, List
 
 from pydantic import validator, root_validator
 from enum import IntEnum, Enum
@@ -50,7 +50,7 @@ class TransformerNeuronXProperties(Properties):
     load_in_8bit: Optional[bool] = False
     low_cpu_mem_usage: bool = False
     load_split_model: bool = False
-    context_length_estimate: Optional[dict] = None
+    context_length_estimate: Optional[List[int]] = None
     amp: Optional[str] = None
     quantize: Optional[TnXQuantizeMethods] = None
     compiled_graph_path: Optional[str] = None
@@ -62,7 +62,10 @@ class TransformerNeuronXProperties(Properties):
 
     @validator('context_length_estimate', pre=True)
     def parse_context_length(cls, context_length_estimate):
-        return json.loads(context_length_estimate)
+        return [
+            int(context_length)
+            for context_length in context_length_estimate.split(',')
+        ]
 
     @validator('rolling_batch', pre=True)
     def validate_rolling_batch(cls, rolling_batch: str) -> str:
