@@ -58,7 +58,9 @@ option.disablePerSessionThreads=true
 option.ortDevice=TensorRT/ROCM/CoreML
 
 # Python model options
-retry_threshold=10 # Mark model as failure after python process crashing 10 times
+# Mark model as failure after python process crashing 10 times
+retry_threshold=10
+
 option.pythonExecutable=python3
 option.entryPoint=deepspeed.py
 option.handler=hanlde
@@ -72,6 +74,9 @@ option.rolling_batch=auto
 option.max_rolling_batch_size=64
 option.paged_attention=false
 option.max_rolling_batch_prefill_tokens=1088
+
+# max output size in bytes, default to 60M
+option.max_output_size=67108864
 ```
 
 Most of the options can also be overriden by an environment variable with the `OPTION_` prefix and all caps.
