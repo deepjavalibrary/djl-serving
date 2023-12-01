@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from deepspeed.external.lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
     StoppingCriteriaParameters,
@@ -126,12 +126,21 @@ class DeepSpeedRollingBatch(RollingBatch):
             if len(filtered_gens) > 0:
                 generation = filtered_gens[0]
             if generation:
-                is_last_token = generation.generated_text is not None
-
-                request.set_next_token("" if generation.token_is_special else
-                                       generation.token_text,
+                is_last_token = False
+                finish_reason = None
+                if generation.generated_text is not None:
+                    is_last_token = True
+                    finish_reason = FINISH_REASON_MAPPER[int(
+                        generation.generated_text.finish_reason.value)]
+                token = Token(
+                    generation.token_id, ""
+                    if generation.token_is_special else generation.token_text,
+                    generation.token_logprob.item(),
+                    generation.token_is_special)
+                request.set_next_token(token,
                                        self.output_formatter,
-                                       last_token=is_last_token)
+                                       last_token=is_last_token,
+                                       finish_reason=finish_reason)
             else:
                 request.set_next_token("",
                                        self.output_formatter,

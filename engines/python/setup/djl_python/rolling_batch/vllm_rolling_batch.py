@@ -15,13 +15,19 @@ from collections import OrderedDict
 
 from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 
 DTYPE_MAPPER = {
     "fp32": "float32",
     "fp16": "float16",
     "bf16": "bfloat16",
     "auto": "auto"
+}
+
+FINISH_REASON_MAPPER = {
+    "length": "length",
+    "stop": "eos_token",
+    "abort": "abort"
 }
 
 
@@ -80,13 +86,27 @@ class VLLMRollingBatch(RollingBatch):
             self.request_cache[request_id] = {
                 "curr_length": 0,
                 "text": "",
-                "finished": False
+                "cumulative_logprob": 0.0,
+                "log_prob": 0.0,
+                "finished": False,
+                "finish_reason": None
             }
         request_outputs = self.engine.step()
         # step 1: put result to cache
         for request_output in request_outputs:
             req_id = request_output.request_id
+            self.request_cache[req_id]["id"] = request_output.outputs[
+                0].token_ids[-1]
             self.request_cache[req_id]["text"] = request_output.outputs[0].text
+            # calculate log_prob of the token based on the diff between two cumulative log probs
+            self.request_cache[req_id]["log_prob"] = request_output.outputs[
+                0].cumulative_logprob - self.request_cache[req_id][
+                    "cumulative_logprob"]
+            self.request_cache[req_id][
+                "cumulative_logprob"] = request_output.outputs[
+                    0].cumulative_logprob
+            self.request_cache[req_id][
+                "finish_reason"] = request_output.outputs[0].finish_reason
             if len(request_output.outputs) > 1:
                 logging.warning(
                     f"Finding more than 1 output for single request {len(request_output.outputs)}"
@@ -97,11 +117,23 @@ class VLLMRollingBatch(RollingBatch):
         finished_id = []
         for (key, cache), request in zip(self.request_cache.items(),
                                          self.active_requests):
-            request.set_next_token(cache["text"][cache["curr_length"]:],
-                                   self.output_formatter, cache["finished"])
-            cache["curr_length"] = len(cache["text"])
+            finish_reason = None
             if cache["finished"]:
                 finished_id.append(key)
+                finish_reason = FINISH_REASON_MAPPER.get(
+                    cache["finish_reason"], None)
+            text = cache["text"][cache["curr_length"]:]
+            if len(text) > 0:
+                # token id is not determined since there could be multiple token comes at the same time
+                # only return the last one
+                token = Token(cache['id'], text, cache["log_prob"])
+                request.set_next_token(token, self.output_formatter,
+                                       cache["finished"], finish_reason)
+            else:
+                request.set_next_token("", self.output_formatter,
+                                       cache["finished"], finish_reason)
+            cache["curr_length"] = len(cache["text"])
+
         # step 3: clean finished requests
         for key in finished_id:
             self.request_cache.pop(key)
