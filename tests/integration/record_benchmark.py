@@ -92,6 +92,8 @@ def data_from_client():
                 data["P90"] = Decimal(line.split(" ")[1])
             if "P99:" in line:
                 data["P99"] = Decimal(line.split(" ")[1])
+            if "totalTime" in data and "requests" in data:
+                data["throughput"] = data["requests"] / data["totalTime"]
 
 
 def data_from_files():
