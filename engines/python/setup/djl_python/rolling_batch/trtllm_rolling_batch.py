@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import logging
 import tensorrt_llm_toolkit
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 
 
 class TRTLLMRollingBatch(RollingBatch):
@@ -63,17 +63,28 @@ class TRTLLMRollingBatch(RollingBatch):
         # step 0: register new active requests
         for request in new_requests:
             param = self.translate_triton_params(request.parameters)
+            output_len = param["request_output_len"]
             response = self.model.generate(request.input_text, **param)
-            self.request_cache[request.id] = response
+            self.request_cache[request.id] = {
+                "response": response,
+                "out_length": output_len
+            }
 
         # step 1: loop the active requests to send result
         for request in self.active_requests:
-            trt_req = self.request_cache[request.id]
-            output_text, complete = trt_req.fetch()
-            request.set_next_token(output_text, self.output_formatter,
-                                   complete)
-            if complete:
+            trt_resp = self.request_cache[request.id]["response"]
+            generation = trt_resp.fetch()
+            token = Token(generation.token_id, generation.token_text,
+                          generation.token_logprob, None)
+            if generation.finished:
+                finish_reason = "eos_token" if generation.seq_length < self.request_cache[
+                    request.id]["out_length"] else "length"
+                request.set_next_token(token, self.output_formatter,
+                                       generation.finished, finish_reason)
                 self.request_cache.pop(request.id)
+            else:
+                request.set_next_token(token, self.output_formatter,
+                                       generation.finished)
 
         return self.postprocess_results()
 
