@@ -35,8 +35,7 @@ ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.13.2
 ARG auto_gptq_version=0.4.2
-ARG datasets_version=2.14.4
-ARG pyarrow_version=13.0.0
+ARG datasets_version=2.14.5
 
 EXPOSE 8080
 
@@ -81,8 +80,9 @@ RUN apt-get update && \
     ${lmi_vllm_wheel} ${lmi_dist_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} zstandard datasets==${datasets_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    optimum==${optimum_version} auto-gptq==${auto_gptq_version} vllm==${vllm_version} pandas pyarrow==${pyarrow_version} \
+    optimum==${optimum_version} auto-gptq==${auto_gptq_version} vllm==${vllm_version} pandas pyarrow \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
+    pip3 install fsspec==2023.6.0 && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
