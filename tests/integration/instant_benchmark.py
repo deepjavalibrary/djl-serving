@@ -3,6 +3,8 @@ import logging
 import json
 import os
 import shutil
+import itertools
+import copy
 import urllib.request
 import subprocess as sp
 
@@ -35,6 +37,53 @@ def is_square_bracket(input_str):
     return input_str[0] == '[' and input_str[-1] == ']'
 
 
+def var_replace(template, vars):
+    if isinstance(template, dict):
+        for k, v in template.items():
+            if isinstance(v, str):
+                for var_key, var_val in vars.items():
+                    v = v.replace("$" + var_key, var_val)
+                template[k] = v
+            else:
+                var_replace(v, vars)
+    elif isinstance(template, list):
+        for k, v in enumerate(template):
+            if isinstance(v, str):
+                for var_key, var_val in vars.items():
+                    v = v.replace("$" + var_key, var_val)
+                template[k] = v
+            else:
+                var_replace(v, vars)
+
+
+def multiply_template_with_vars(name, template, raw_var):
+    if not raw_var:
+        return {name: template}
+    result = {}
+    vars = {}
+    for raw_var in raw_var:
+        [k, v] = raw_var.split("=", 2)
+        if "{" in v:
+            v = v[1:-1].split(",")
+        elif "[" in v:
+            v = v[1:-1]
+            [v_start, v_end] = v.split("..")
+            v = [str(i) for i in range(int(v_start), int(v_end))]
+        else:
+            raise Exception("Unknown var in template: " + raw_var)
+        vars[k] = v
+    var_combinations = [
+        dict(zip(vars.keys(), x)) for x in itertools.product(*vars.values())
+    ]
+    for cur_vars in var_combinations:
+        cur_name = "%s[%s]" % (name, ",".join(
+            [str(k) + "=" + str(v) for k, v in cur_vars.items()]))
+        cur_template = copy.deepcopy(template)
+        var_replace(cur_template, cur_vars)
+        result[cur_name] = cur_template
+    return result
+
+
 def parse_raw_template(url):
     data = urllib.request.urlopen(url)
     lines = [line.decode("utf-8").strip() for line in data]
@@ -46,6 +95,7 @@ def parse_raw_template(url):
     properties = []
     commandline = []
     requirements = []
+    vars = []
     info = None
     while iterator < len(lines):
         if '[test_name]' == lines[iterator]:
@@ -69,6 +119,12 @@ def parse_raw_template(url):
                     lines[iterator]):
                 commandline.append(lines[iterator].replace("\\", " "))
                 iterator += 1
+        elif '[vars]' == lines[iterator]:
+            iterator += 1
+            while iterator < len(lines) and not is_square_bracket(
+                    lines[iterator]):
+                vars.append(lines[iterator])
+                iterator += 1
         elif '[info]' == lines[iterator]:
             info = []
             iterator += 1
@@ -81,16 +137,20 @@ def parse_raw_template(url):
         if name and properties and commandline:
             cur_result = {
                 "properties": properties,
-                "awscurl": ' '.join(commandline).encode().hex(),
+                "awscurl": ' '.join(commandline),
                 "requirements": requirements
             }
             if info is not None:
                 cur_result['info'] = info
-            final_result[name] = cur_result
+            mul_results = multiply_template_with_vars(name, cur_result, vars)
+            for r in mul_results.values():
+                r['awscurl'] = r['awscurl'].encode().hex()
+            final_result.update(mul_results)
             name = ''
             properties = []
             commandline = []
             requirements = []
+            vars = []
             info = None
     return final_result
 
