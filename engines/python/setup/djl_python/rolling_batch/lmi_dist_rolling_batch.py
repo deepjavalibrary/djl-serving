@@ -142,10 +142,16 @@ class LmiDistRollingBatch(RollingBatch):
                 if not is_last_token:
                     req_ids.append(request.id)
 
+                token_id = generation.token_id
+                log_prob = generation.token_logprob
+                if isinstance(token_id, torch.Tensor):
+                    token_id = token_id.item()
+                if isinstance(log_prob, torch.Tensor):
+                    log_prob = log_prob.item()
                 token = Token(
-                    generation.token_id, ""
+                    token_id, ""
                     if generation.token_is_special else generation.token_text,
-                    generation.token_logprob, generation.token_is_special)
+                    log_prob, generation.token_is_special)
                 request.set_next_token(token,
                                        self.output_formatter,
                                        last_token=is_last_token,
