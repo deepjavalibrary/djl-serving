@@ -82,7 +82,7 @@ RUN apt-get update && \
     transformers==${transformers_version} zstandard datasets==${datasets_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} vllm==${vllm_version} pandas pyarrow==${pyarrow_version} \
-    diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
+    diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy fsspec==2023.6.0 && \
     scripts/install_aitemplate.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
