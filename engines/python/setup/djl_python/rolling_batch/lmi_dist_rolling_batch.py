@@ -39,7 +39,8 @@ class LmiDistRollingBatch(RollingBatch):
         """
 
         super().__init__(device, **kwargs)
-        if properties.get("engine") != "MPI":
+        if properties.get("engine") != "MPI" and int(
+                properties.get("tensor_parallel_degree", "1")) != 1:
             raise AssertionError(
                 f"Need MPI engine to start lmi-dist RollingBatcher")
         self.properties = properties
