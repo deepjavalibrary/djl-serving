@@ -41,46 +41,46 @@ def var_replace(template, vars):
     if isinstance(template, dict):
         for k, v in template.items():
             if isinstance(v, str):
-                for varKey, varVal in vars.items():
-                    v = v.replace("$" + varKey, varVal)
+                for var_key, var_val in vars.items():
+                    v = v.replace("$" + var_key, var_val)
                 template[k] = v
             else:
                 var_replace(v, vars)
     elif isinstance(template, list):
         for k, v in enumerate(template):
             if isinstance(v, str):
-                for varKey, varVal in vars.items():
-                    v = v.replace("$" + varKey, varVal)
+                for var_key, var_val in vars.items():
+                    v = v.replace("$" + var_key, var_val)
                 template[k] = v
             else:
                 var_replace(v, vars)
 
 
-def multiply_template_with_vars(name, template, rawVars):
-    if not rawVars:
+def multiply_template_with_vars(name, template, raw_var):
+    if not raw_var:
         return {name: template}
     result = {}
     vars = {}
-    for rawVar in rawVars:
-        [k, v] = rawVar.split("=", 2)
+    for raw_var in raw_var:
+        [k, v] = raw_var.split("=", 2)
         if "{" in v:
             v = v[1:-1].split(",")
         elif "[" in v:
             v = v[1:-1]
-            [vStart, vEnd] = v.split("..")
-            v = [str(i) for i in range(int(vStart), int(vEnd))]
+            [v_start, v_end] = v.split("..")
+            v = [str(i) for i in range(int(v_start), int(v_end))]
         else:
-            raise Exception("Unknown var in template: " + rawVar)
+            raise Exception("Unknown var in template: " + raw_var)
         vars[k] = v
-    varCombinations = [
+    var_combinations = [
         dict(zip(vars.keys(), x)) for x in itertools.product(*vars.values())
     ]
-    for curVars in varCombinations:
-        curName = "%s[%s]" % (name, ",".join(
-            [str(k) + "=" + str(v) for k, v in curVars.items()]))
-        curTemplate = copy.deepcopy(template)
-        var_replace(curTemplate, curVars)
-        result[curName] = curTemplate
+    for cur_vars in var_combinations:
+        cur_name = "%s[%s]" % (name, ",".join(
+            [str(k) + "=" + str(v) for k, v in cur_vars.items()]))
+        cur_template = copy.deepcopy(template)
+        var_replace(cur_template, cur_vars)
+        result[cur_name] = cur_template
     return result
 
 
