@@ -67,15 +67,20 @@ class TRTLLMRollingBatch(RollingBatch):
             response = self.model.generate(request.input_text, **param)
             self.request_cache[request.id] = {
                 "response": response,
-                "out_length": output_len
+                "out_length": output_len,
+                "cumulative_logprob": 0
             }
 
         # step 1: loop the active requests to send result
         for request in self.active_requests:
             trt_resp = self.request_cache[request.id]["response"]
             generation = trt_resp.fetch()
-            token = Token(generation.token_id, generation.token_text,
-                          generation.token_logprob, None)
+            log_prob = generation.cum_logprob - self.request_cache[
+                request.id]["cumulative_logprob"]
+            self.request_cache[
+                request.id]["cumulative_logprob"] = generation.cum_logprob
+            token = Token(generation.token_id, generation.token_text, log_prob,
+                          None)
             if generation.finished:
                 finish_reason = "eos_token" if generation.seq_length < self.request_cache[
                     request.id]["out_length"] else "length"
