@@ -17,6 +17,8 @@ from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 
+from engines.python.setup.djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
+
 DTYPE_MAPPER = {
     "fp32": "float32",
     "fp16": "float16",
@@ -40,24 +42,16 @@ class VLLMRollingBatch(RollingBatch):
         :param properties: other properties of the model, such as decoder strategy
         """
         super().__init__(-1, **kwargs)
-        self.dtype = properties.get("dtype", 'auto')
-        max_batched_prefill_tokens = None
-        if properties.get("engine") != "Python":
-            raise AssertionError(
-                f"Need python engine to start vLLM RollingBatcher")
-        if "max_rolling_batch_prefill_tokens" in properties:
-            max_batched_prefill_tokens = int(
-                properties.get("max_rolling_batch_prefill_tokens"))
-        tensor_parallel_degree = int(
-            properties.get("tensor_parallel_degree", None))
-        args = EngineArgs(model=model_id_or_path,
-                          tensor_parallel_size=tensor_parallel_degree,
-                          dtype=DTYPE_MAPPER[self.dtype],
-                          seed=0,
-                          max_num_batched_tokens=max_batched_prefill_tokens,
-                          trust_remote_code=kwargs.get("trust_remote_code",
-                                                       False),
-                          quantization=properties.get("quantize", None))
+        self.vllm_configs = VllmRbProperties(**properties)
+        args = EngineArgs(
+            model=model_id_or_path,
+            tensor_parallel_size=self.vllm_configs.tensor_parallel_degree,
+            dtype=DTYPE_MAPPER[self.vllm_configs.dtype],
+            seed=0,
+            max_num_batched_tokens=self.vllm_configs.
+            max_rolling_batch_prefill_tokens,
+            trust_remote_code=self.vllm_configs.trust_remote_code,
+            quantization=self.vllm_configs.quantize)
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
 

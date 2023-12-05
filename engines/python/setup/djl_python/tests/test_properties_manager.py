@@ -6,6 +6,9 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
+from engines.python.setup.djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
+from engines.python.setup.djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
+from engines.python.setup.djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 import torch
 
@@ -388,6 +391,62 @@ class TestConfigManager(unittest.TestCase):
         properties = {"quantize": HFQuantizeMethods.bitsandbytes4.value}
         with self.assertRaises(ValueError):
             HuggingFaceProperties(**properties)
+
+    def test_scheduler_properties(self):
+        properties = {
+            'model_id': 'sample_model_id',
+            'disable_flash_attn': 'false',
+            'decoding_strategy': 'beam',
+            'max_sparsity': '0.44',
+            'max_splits': '3'
+        }
+
+        scheduler_configs = SchedulerRbProperties(**properties)
+        self.assertFalse(scheduler_configs.disable_flash_attn)
+        self.assertEqual(scheduler_configs.model_id_or_path, properties['model_id'])
+        self.assertEqual(scheduler_configs.decoding_strategy, properties['decoding_strategy'])
+        self.assertEqual(scheduler_configs.max_sparsity, float(properties['max_sparsity']))
+        self.assertEqual(scheduler_configs.max_splits, int(properties['max_splits']))
+
+    def test_vllm_properties(self):
+        properties = {
+            'model_id': 'sample_model_id',
+            'engine': 'Python',
+            'max_rolling_batch_prefill_tokens': '12500',
+            'tensor_parallel_degree': '2',
+            'dtype': 'fp16',
+            'quantize': 'awq'
+        }
+        vllm_configs = VllmRbProperties(**properties)
+        self.assertEqual(vllm_configs.model_id_or_path, properties['model_id'])
+        self.assertEqual(vllm_configs.engine, properties['engine'])
+        self.assertEqual(vllm_configs.max_rolling_batch_prefill_tokens, int(properties['max_rolling_batch_prefill_tokens']))
+        self.assertEqual(vllm_configs.dtype, properties['dtype'])
+        self.assertEqual(vllm_configs.quantize, properties['quantize'])
+        self.assertEqual(vllm_configs.tensor_parallel_degree, int(properties['tensor_parallel_degree']))
+
+    def test_lmi_dist_properties(self):
+        properties = {
+            'engine': 'MPI',
+            'model_id': 'sample_model_id',
+            'tensor_parallel_degree': '2',
+            'quantize': 'gptq',
+            'revision': 'somerevisionstr',
+            'paged_attention': 'False',
+            'max_rolling_batch_size': '64',
+            'max_rolling_batch_prefill_tokens': '12500',
+        }
+
+        lmi_configs = LmiDistRbProperties(**properties)
+        print(lmi_configs)
+        self.assertEqual(lmi_configs.engine, properties['engine'])
+        self.assertEqual(lmi_configs.model_id_or_path, properties['model_id'])
+        self.assertEqual(lmi_configs.tensor_parallel_degree, int(properties['tensor_parallel_degree']))
+        self.assertEqual(lmi_configs.revision, properties['revision'])
+        self.assertFalse(lmi_configs.paged_attention)
+        self.assertEqual(lmi_configs.quantize, properties['quantize'])
+        self.assertEqual(lmi_configs.max_rolling_batch_size, int(properties['max_rolling_batch_size']))
+        self.assertEqual(lmi_configs.max_rolling_batch_prefill_tokens, int(properties['max_rolling_batch_prefill_tokens']))
 
 
 if __name__ == '__main__':

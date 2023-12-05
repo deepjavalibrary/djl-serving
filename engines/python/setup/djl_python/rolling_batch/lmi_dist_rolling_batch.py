@@ -23,6 +23,8 @@ from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
 
+from engines.python.setup.djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
+
 QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes8", "bitsandbytes", "gptq"]
 
 
@@ -39,10 +41,7 @@ class LmiDistRollingBatch(RollingBatch):
         """
 
         super().__init__(device, **kwargs)
-        if properties.get("engine") != "MPI":
-            raise AssertionError(
-                f"Need MPI engine to start lmi-dist RollingBatcher")
-        self.properties = properties
+        self.properties = LmiDistRbProperties(**properties)
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)
         self.batch_id_counter = 0
@@ -55,12 +54,11 @@ class LmiDistRollingBatch(RollingBatch):
 
     def _init_model(self, kwargs, model_id_or_path):
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
-        sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
-        quantize = self.properties.get("quantize", None)
-        dtype = self.properties.get("dtype", None)
-        revision = self.properties.get('revision', None)
-        paged_attention = self.properties.get("paged_attention",
-                                              "true").lower() == "true"
+        sharded = self.properties.tensor_parallel_degree > 1
+        quantize = self.properties.quantize
+        dtype = self.properties.dtype
+        revision = self.properties.revision
+        paged_attention = self.properties.paged_attention
         if quantize is not None:
             os.environ["CUDA_MEMORY_FRACTION"] = "0.9"
             if dtype is not None:
@@ -88,10 +86,9 @@ class LmiDistRollingBatch(RollingBatch):
             self._warmup(**kwargs)
 
     def _warmup(self, **kwargs):
-        batch_size = int(self.properties.get("max_rolling_batch_size", 32))
-        max_batch_prefill_tokens = int(
-            self.properties.get("max_rolling_batch_prefill_tokens", -1))
-        self.model.warmup(batch_size, max_batch_prefill_tokens)
+        batch_size = self.properties.max_rolling_batch_size
+        self.model.warmup(batch_size,
+                          self.properties.max_rolling_batch_prefill_tokens)
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):

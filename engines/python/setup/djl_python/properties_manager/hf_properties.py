@@ -118,7 +118,8 @@ class HuggingFaceProperties(Properties):
         if properties['revision']:
             kwargs["revision"] = properties['revision']
 
-        if properties['rolling_batch'].value != RollingBatchEnum.disable.value:
+        if properties['rolling_batch'].value != RollingBatchEnum.disable.value or \
+                properties['rolling_batch'].value != RollingBatchEnum.scheduler.value:
             if properties['output_formatter']:
                 kwargs["output_formatter"] = properties['output_formatter']
             if properties['waiting_steps']:

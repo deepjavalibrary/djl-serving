@@ -54,7 +54,7 @@ class Properties(BaseModel):
     # TODO: disabling streaming, as it is not supported for all models of the frameworks. Will revisit this
     enable_streaming: StreamingEnum = StreamingEnum.false
     batch_size: int = 1
-    max_rolling_batch_size: int = 32
+    max_rolling_batch_size: Optional[int] = 32
     dtype: Optional[str] = None
     revision: Optional[str] = None
 

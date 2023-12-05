@@ -22,8 +22,9 @@ import torch
 
 from typing import List, Dict
 
+from engines.python.setup.djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
+
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
-DEFAULT_SEARCH_ALGORITHM = 'greedy'
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
 FLASH_2_SUPPORTED_MODELS = {
     "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
@@ -51,13 +52,14 @@ class SchedulerRollingBatch(RollingBatch):
         """
 
         super().__init__(device, **kwargs)
+        configs = SchedulerRbProperties(**properties)
         self._init_model_and_tokenizer(model_id_or_path,
                                        device=device,
-                                       properties=properties,
+                                       properties=configs,
                                        multi_gpu=properties.get(
                                            'multi_gpu', None),
                                        **kwargs)
-        self._init_scheduler(properties)
+        self._init_scheduler(configs)
 
     @stop_on_any_exception
     def inference(self, input_text, parameters):
@@ -113,10 +115,6 @@ class SchedulerRollingBatch(RollingBatch):
                                   multi_gpu=None,
                                   properties=None,
                                   **kwargs):
-        if "waiting_steps" in kwargs:
-            kwargs.pop("waiting_steps")
-        if "output_formatter" in kwargs:
-            kwargs.pop("output_formatter")
         self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
         architectures = self.config.architectures
         if architectures and architectures[0].endswith(
@@ -134,8 +132,7 @@ class SchedulerRollingBatch(RollingBatch):
 
             if architectures and architectures[
                     0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
-                if properties.get("disable_flash_attn",
-                                  "true").lower() != 'true':
+                if properties.disable_flash_attn:
                     kwargs['use_flash_attention_2'] = True
 
             if "lmi_dist_sharding" == multi_gpu:
@@ -172,18 +169,13 @@ class SchedulerRollingBatch(RollingBatch):
         self.search_config = SearchConfig(
             eos_token_id=self.tokenizer.eos_token,
             pad_token_id=self.tokenizer.pad_token)
-        self.search_algorithm = properties.get('decoding_strategy',
-                                               DEFAULT_SEARCH_ALGORITHM)
+        self.search_algorithm = properties.decoding_strategy
         self.scheduler = SeqBatchScheduler(
             self.lm_block,
             self.search_algorithm,
             self.search_config,
-            max_sparsity=float(properties.get(
-                'max_sparsity',
-                0.33)),  # a threshold to limit the max padding sparsity
-            max_splits=int(properties.get(
-                'max_splits',
-                3)))  # a threshold to limit the max number of batch splits
+            max_sparsity=properties.max_sparsity,
+            max_splits=properties.max_splits)
 
     def _prefill_and_decode(self, new_requests):
 
