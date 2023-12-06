@@ -12,8 +12,10 @@
 # the specific language governing permissions and limitations under the License.
 
 import os
+import logging
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from transformers import AutoConfig
+from lmi_dist.models import get_model
 from lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
     StoppingCriteriaParameters,
@@ -75,7 +77,6 @@ class LmiDistRollingBatch(RollingBatch):
                 quantize = "bitsandbytes"
         if quantize is None and dtype == "int8":
             quantize = "bitsandbytes"
-        from lmi_dist.models import get_model
         self.model = get_model(
             model_id_or_path,
             revision=revision,
@@ -89,10 +90,42 @@ class LmiDistRollingBatch(RollingBatch):
             self._warmup(**kwargs)
 
     def _warmup(self, **kwargs):
-        batch_size = int(self.properties.get("max_rolling_batch_size", 32))
         max_batch_prefill_tokens = int(
-            self.properties.get("max_rolling_batch_prefill_tokens", -1))
-        self.model.warmup(batch_size, max_batch_prefill_tokens)
+            self.properties.get("max_rolling_batch_prefill_tokens", 4096))
+
+        input_length = 512
+        n_tokens = 0
+        req_id = 0
+        requests = []
+
+        while n_tokens < max_batch_prefill_tokens:
+            truncate = min(input_length, max_batch_prefill_tokens - n_tokens)
+            requests.append(
+                lmi_dist.utils.types.Request(
+                    id=req_id,
+                    inputs='_test ' * input_length,
+                    parameters=NextTokenChooserParameters(
+                        temperature=0.9,
+                        repetition_penalty=1.2,
+                        top_k=10,
+                        top_p=0.9,
+                        typical_p=0.9,
+                        do_sample=False,
+                        seed=0),
+                    stopping_parameters=StoppingCriteriaParameters(
+                        stop_sequences=[], max_new_tokens=2),
+                    truncate=truncate,
+                    prefill_logprobs=True))
+            n_tokens += input_length
+            req_id += 1
+
+        batch = self.batch_cls.get_batch(
+            Batch(id=0, requests=requests,
+                  size=len(requests)), self.model.tokenizer,
+            kwargs.get("torch_dtype", torch.float16), self.device)
+        max_batch_total_tokens = self.model.warmup(batch)
+        logging.info(
+            f"The max total sequence length is {max_batch_total_tokens}")
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
