@@ -17,13 +17,13 @@ ARG TORCH_VERSION=2.1.0
 ARG djl_version=0.24.0~SNAPSHOT
 ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
-ARG tensorrtlibs_version=9.1.0.post12.dev4
+ARG tensorrtlibs_version=9.2.0.post12.dev5
 ARG trtllm_toolkit_version=nightly
 ARG cuda_python_version=12.2.0
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.5.0/tensorrt_llm-0.5.0-py3-none-any.whl"
-ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.09/tritontoolkit-23.9-py310-none-any.whl"
+ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.6.1/tensorrt_llm-0.6.1-py3-none-any.whl"
+ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
 ARG pydantic_version=1.10.13
 EXPOSE 8080
 
@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev l
 
 # Install PyTorch
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
-    mpi4py cuda-python==${cuda_python_version} onnx polygraphy datasets pydantic==${pydantic_version} && \
+    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml datasets pydantic==${pydantic_version} && \
     pip3 cache purge
 
 # Install TensorRT and TRT LLM
@@ -76,11 +76,13 @@ RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorr
     pip3 cache purge
 
 # download dependencies
+# install manual-build boost fs library required by tritonserver 23.11
 RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
-    curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r23.09/libtritonserver.so && \
-    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/0.5.0/libtriton_tensorrtllm.so && \
-    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/0.5.0/libnvinfer_plugin_tensorrt_llm.so.9 && \
+    curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r23.11/libtritonserver.so && \
+    curl -o  /lib/x86_64-linux-gnu/libboost_filesystem.so.1.80.0 https://publish.djl.ai/tritonserver/r23.11/libboost_filesystem.so.1.80.0 && \
+    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/0.6.1/libtriton_tensorrtllm.so && \
+    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/0.6.1/libnvinfer_plugin_tensorrt_llm.so.9 && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
