@@ -6,6 +6,7 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
+from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 import torch
 
@@ -319,7 +320,7 @@ class TestConfigManager(unittest.TestCase):
             "model_dir": "model_dir",
             "low_cpu_mem_usage": "true",
             "disable_flash_attn": "false",
-            "engine": "MPI",
+            "mpi_mode": "true",
         }
 
         hf_configs = HuggingFaceProperties(**properties)
@@ -343,7 +344,7 @@ class TestConfigManager(unittest.TestCase):
             "load_in_8bit": "true",
             "low_cpu_mem_usage": "true",
             "disable_flash_attn": "false",
-            "engine": "MPI",
+            "mpi_mode": "true",
             "device_map": "cpu",
             "quantize": "bitsandbytes8",
             "output_formatter": "jsonlines",
@@ -388,6 +389,40 @@ class TestConfigManager(unittest.TestCase):
         properties = {"quantize": HFQuantizeMethods.bitsandbytes4.value}
         with self.assertRaises(ValueError):
             HuggingFaceProperties(**properties)
+
+    def test_vllm_properties(self):
+        # test with valid vllm properties
+
+        def test_vllm_valid():
+            vllm_configs = VllmRbProperties(**properties)
+            self.assertEqual(vllm_configs.model_id_or_path,
+                             properties['model_id'])
+            self.assertEqual(vllm_configs.engine, properties['engine'])
+            self.assertEqual(
+                vllm_configs.max_rolling_batch_prefill_tokens,
+                int(properties['max_rolling_batch_prefill_tokens']))
+            self.assertEqual(vllm_configs.dtype, properties['dtype'])
+            self.assertEqual(vllm_configs.quantize, properties['quantize'])
+            self.assertEqual(vllm_configs.tensor_parallel_degree,
+                             int(properties['tensor_parallel_degree']))
+
+        # test with invalid quantization
+        def test_invalid_quantization_method():
+            properties['quantize'] = 'gptq'
+            with self.assertRaises(ValueError):
+                VllmRbProperties(**properties)
+            properties['quantize'] = 'awq'
+
+        properties = {
+            'model_id': 'sample_model_id',
+            'engine': 'Python',
+            'max_rolling_batch_prefill_tokens': '12500',
+            'tensor_parallel_degree': '2',
+            'dtype': 'fp16',
+            'quantize': 'awq'
+        }
+        test_vllm_valid()
+        test_invalid_quantization_method()
 
 
 if __name__ == '__main__':

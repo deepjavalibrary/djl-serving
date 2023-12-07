@@ -23,7 +23,7 @@ class NeuronRollingBatch(RollingBatch):
         :param batch_size: the maximum batch size required by model
         :param tokenizer: the tokenizer used by model
         """
-        super().__init__(-1, **kwargs)
+        super().__init__(**kwargs)
         self.scheduler = NeuronGenerator(model, tokenizer, batch_size,
                                          n_postions)
 

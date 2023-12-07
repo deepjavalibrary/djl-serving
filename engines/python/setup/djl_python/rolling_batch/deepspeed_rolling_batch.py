@@ -33,7 +33,7 @@ class DeepSpeedRollingBatch(RollingBatch):
         :param kwargs passed while loading the model
         """
 
-        super().__init__(device, **kwargs)
+        super().__init__(**kwargs)
         self.error_requests = []
         self.properties = properties
         self.batch_cls = None

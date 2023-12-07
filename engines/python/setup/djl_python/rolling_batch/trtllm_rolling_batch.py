@@ -23,7 +23,7 @@ class TRTLLMRollingBatch(RollingBatch):
         :param model_id_or_path: model id or path
         :param properties: other properties of the model, such as decoder strategy
         """
-        super().__init__(-1, **kwargs)
+        super().__init__(**kwargs)
         if properties.get("mpi_mode") != "true":
             raise AssertionError(
                 f"Need mpi_mode to start tensorrt llm RollingBatcher")
