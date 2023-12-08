@@ -41,7 +41,7 @@ class Token(object):
         self.log_prob = log_prob
         self.special_token = special_token
 
-    def __dict__(self):
+    def as_dict(self):
         output = {}
         if self.id:
             output["id"] = self.id
@@ -80,7 +80,7 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
 
     :return: formatted output
     """
-    token_dict = token.__dict__
+    token_dict = token.as_dict()
     final_dict = {"token": token_dict}
     if last_token and details:
         final_dict["details"] = {
@@ -140,7 +140,7 @@ class Request(object):
         if isinstance(next_token, str):
             next_token = Token(-1, next_token)
         if self.token_cache is not None:
-            self.token_cache.append(next_token.__dict__)
+            self.token_cache.append(next_token.as_dict())
         details = {}
         if last_token and self.token_cache is not None:
             details["finish_reason"] = finish_reason
