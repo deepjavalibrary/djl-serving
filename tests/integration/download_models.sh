@@ -2,7 +2,7 @@
 
 set -e
 
-platform=$1 # expected values are "cpu" "cpu-full" "pytorch-cu118" "pytorch-inf2" "aarch64"
+platform=$1 # expected values are "cpu" "cpu-full" "pytorch-gpu" "pytorch-inf2" "aarch64"
 
 rm -rf models
 mkdir models && cd models
@@ -38,7 +38,7 @@ download() {
 }
 
 case $platform in
-cpu | cpu-full | pytorch-cu118)
+cpu | cpu-full | pytorch-gpu)
   download "${general_platform_models_urls[@]}"
   ;;
 pytorch-inf2)
@@ -48,7 +48,7 @@ aarch64)
   download "${aarch_models_urls[@]}"
   ;;
 *)
-  echo "Bad argument. Expecting one of the values: cpu, cpu-full, pytorch-cu118, pytorch-inf2, aarch64"
+  echo "Bad argument. Expecting one of the values: cpu, cpu-full, pytorch-gpu, pytorch-inf2, aarch64"
   exit 1
   ;;
 esac
