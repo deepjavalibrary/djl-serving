@@ -52,7 +52,13 @@ class RollingBatch implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(RollingBatch.class);
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
 
-    private static ExecutorService threadPool = Executors.newCachedThreadPool();
+    private static ExecutorService threadPool =
+            Executors.newCachedThreadPool(
+                    r -> {
+                        Thread t = Executors.defaultThreadFactory().newThread(r);
+                        t.setDaemon(true);
+                        return t;
+                    });
 
     private PyProcess process;
     private int maxRollingBatchSize;
