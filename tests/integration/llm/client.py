@@ -204,10 +204,17 @@ sd_model_spec = {
         "size": [512],
         "num_inference_steps": [50],
         "depth": True
+    }
+}
+
+neuron_sd_model_spec = {
+    "stable-diffusion-1.5-neuron": {
+        "num_inference_steps": [50, 100]
     },
-    "stable-diffusion-2.1-base-neuron": {
-        "worker": 2,
-        "size": [512],
+    "stable-diffusion-2.1-neuron": {
+        "num_inference_steps": [50, 100]
+    },
+    "stable-diffusion-xl-neuron": {
         "num_inference_steps": [50, 100]
     }
 }
@@ -791,6 +798,25 @@ def test_sd_handler(model, model_spec):
                     assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
 
 
+def test_neuron_sd_handler(model, model_spec):
+    from PIL import Image
+    if model not in model_spec:
+        raise ValueError(
+            f"{model} is not one of the supporting models {list(neuron_sd_model_spec.keys())}"
+        )
+    spec = neuron_sd_model_spec[model]
+    for step in spec["num_inference_steps"]:
+        req = {"prompt": "A bird and cat flying through space"}
+        params = {"num_inference_steps": step}
+        req["parameters"] = params
+        logging.info(f"req: {req}")
+        res = send_json(req)
+        try:
+            Image.open(BytesIO(res.content)).convert("RGB")
+        except Exception as e:
+            raise IOError("failed to deserialize image from response", e)
+
+
 def test_transformers_neuronx_handler(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -855,6 +881,8 @@ if __name__ == "__main__":
         test_handler(args.model, ds_model_spec)
     elif args.handler == "stable-diffusion":
         test_sd_handler(args.model, sd_model_spec)
+    elif args.handler == "neuron-stable-diffusion":
+        test_neuron_sd_handler(args.model, neuron_sd_model_spec)
     elif args.handler == "deepspeed_aot":
         test_ds_raw_model(args.model, ds_aot_model_spec)
     elif args.handler == "deepspeed_handler_aot":

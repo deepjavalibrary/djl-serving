@@ -7,6 +7,7 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
+from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
 
 import torch
 
@@ -429,6 +430,40 @@ class TestConfigManager(unittest.TestCase):
         }
         test_vllm_valid()
         test_invalid_quantization_method()
+
+    def test_sd_inf2_properties(self):
+        properties = {
+            'height': 128,
+            'width': 128,
+            'dtype': "bf16",
+            'num_images_per_prompt': 2,
+            'use_auth_token': 'auth_token',
+            'save_mp_checkpoint_path': 'path'
+        }
+        properties = {**common_properties, **properties}
+        neuron_sd_config = StableDiffusionNeuronXProperties(**properties)
+        self.assertEqual(properties['height'], neuron_sd_config.height)
+        self.assertEqual(properties['width'], neuron_sd_config.width)
+        self.assertEqual(properties['use_auth_token'],
+                         neuron_sd_config.use_auth_token)
+        self.assertEqual(properties['save_mp_checkpoint_path'],
+                         neuron_sd_config.save_mp_checkpoint_path)
+
+    def test_sd_inf2_properties_errors(self):
+        properties = {
+            'height': 128,
+            'width': 128,
+        }
+
+        def test_unsupported_dtype(dtype):
+            test_properties = {
+                **common_properties,
+                **properties, "dtype": dtype
+            }
+            with self.assertRaises(ValueError):
+                StableDiffusionNeuronXProperties(**test_properties)
+
+        test_unsupported_dtype("fp16")
 
 
 if __name__ == '__main__':

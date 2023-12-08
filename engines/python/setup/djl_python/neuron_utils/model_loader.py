@@ -13,6 +13,7 @@
 
 import os
 import time
+import json
 import shutil
 import logging
 import tempfile
@@ -22,6 +23,7 @@ from abc import ABC, abstractmethod
 from transformers import AutoModelForCausalLM
 from transformers_neuronx.config import NeuronConfig, QuantizationConfig
 from djl_python.neuron_utils.utils import NeuronXModelAdapter, save_pretrained_split
+from huggingface_hub import hf_hub_download
 
 _neuronxcc_version: Optional[str] = None
 
@@ -29,8 +31,8 @@ _neuronxcc_version: Optional[str] = None
 class ModelLoader(ABC):
 
     def __init__(self, *args, **kwargs):
-        self.config = kwargs.get('config')
-        self.model_config = kwargs.get('model_config', None)
+        self.config = kwargs.get("config")
+        self.model_config = kwargs.get("model_config", None)
 
     def init_load_path(self):
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
@@ -52,11 +54,11 @@ class ModelLoader(ABC):
         return load_path
 
     @abstractmethod
-    def load_model(self):
+    def load_model(self, **kwargs):
         """Model loading method which returns a loaded model"""
 
     @abstractmethod
-    def partition(self, save_path, tokenizer):
+    def partition(self, save_path, **kwargs):
         """Model compilation and export method which returns a loaded model"""
 
 
@@ -109,7 +111,7 @@ class TNXModelLoader(ModelLoader):
         }
         if self.model_config.model_type == "llama":
             model_kwargs[
-                'context_length_estimate'] = self.config.context_length_estimate
+                "context_length_estimate"] = self.config.context_length_estimate
         return model_kwargs
 
     def update_model_config_to_neuron(self):
@@ -154,7 +156,7 @@ class TNXModelLoader(ModelLoader):
         if self.config.load_in_8bit:
             neuron_config = NeuronConfig()
             neuron_config.quant = QuantizationConfig(
-                quant_dtype='s8', dequant_dtype=self.config.amp)
+                quant_dtype="s8", dequant_dtype=self.config.amp)
             model = self._neuronx_class(self.model.config,
                                         neuron_config=neuron_config,
                                         **model_kwargs)
@@ -199,7 +201,7 @@ class TNXModelLoader(ModelLoader):
         logging.info(
             f"SysHealth: LLM sharding and compilation latency: {elapsed} secs")
 
-    def load_model(self):
+    def load_model(self, **kwargs):
         self.set_load_path()
         self.set_neuron_model()
         self.compile_model()
@@ -208,7 +210,8 @@ class TNXModelLoader(ModelLoader):
                                          self.load_path)
         return self.model
 
-    def partition(self, save_path, tokenizer=None):
+    def partition(self, save_path, **kwargs):
+        tokenizer = kwargs.get('tokenizer')
         if self.config.load_split_model:
             raise ValueError(
                 "Model partitioning does not support split model artifacts. Use normal model artifacts and rerun."
@@ -304,7 +307,8 @@ class OptimumModelLoader(ModelLoader):
                                              input_shapes=input_shapes)
         return self.model
 
-    def partition(self, save_path, tokenizer=None):
+    def partition(self, save_path, **kwargs):
+        tokenizer = kwargs.get("tokenizer")
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
         self.model = self.load_model()
@@ -336,3 +340,87 @@ class OptimumModelLoader(ModelLoader):
             raise ValueError(
                 f"Mismatch between model server and compiled model configuration: {errors}"
             )
+
+
+class OptimumStableDiffusionLoader(ModelLoader):
+    """Pipeline loader and compiler for HuggingFace neuron model schema StableDiffusion artifacts"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pipeline = None
+        self.compile_model = True
+        self.compiler_args = kwargs.get("compiler_args", dict())
+        class_name = self.get_model_class()
+        module = importlib.import_module(f"optimum.neuron")
+        self._optimum_class = getattr(module, class_name, None)
+        self.device_ids = None
+        if self._optimum_class is None:
+            raise ImportError(
+                f"{class_name} not found in optimum.neuron. Please check optimum neuron version."
+            )
+
+    def get_model_class(self):
+        model_path = os.path.join(os.getcwd(), self.config.model_id_or_path)
+        if os.path.isdir(model_path):
+            file_path = os.path.join(model_path, "model_index.json")
+        else:
+            file_path = hf_hub_download(repo_id=self.config.model_id_or_path,
+                                        filename="model_index.json")
+        with open(file_path) as file:
+            model_index = json.load(file)
+            pipeline_class_name = model_index.get("_class_name", "")
+            if "Neuron" in pipeline_class_name:
+                self.compile_model = False
+            if "XL" in pipeline_class_name:
+                return "NeuronStableDiffusionXLPipeline"
+        return "NeuronStableDiffusionPipeline"
+
+    def get_compiler_args(self):
+        if self.compile_model:
+            self.compiler_args["export"] = True
+            self.compiler_args["auto_cast"] = "matmul"
+            self.compiler_args["auto_cast_type"] = self.config.amp
+        return self.compiler_args
+
+    def get_model_args(self):
+        input_shapes = dict()
+        input_shapes["batch_size"] = int(self.config.batch_size)
+        input_shapes["height"] = int(self.config.height)
+        input_shapes["width"] = int(self.config.width)
+        input_shapes["num_images_per_prompt"] = int(
+            self.config.num_images_per_prompt)
+        return input_shapes
+
+    def load_optimum_pipeline(self, compiler_args, input_shapes, **kwargs):
+        logging.info(
+            f"Start loading the model {self.config.model_id_or_path}...")
+        return self._optimum_class.from_pretrained(
+            self.config.model_id_or_path,
+            device_ids=[
+                i for i in range(int(self.config.tensor_parallel_degree))
+            ],
+            **compiler_args,
+            **input_shapes,
+            **kwargs)
+
+    def load_pipeline(self, **kwargs):
+        compiler_args = self.get_compiler_args()
+        input_shapes = self.get_model_args()
+        self.pipeline = self.load_optimum_pipeline(compiler_args=compiler_args,
+                                                   input_shapes=input_shapes,
+                                                   **kwargs)
+        return self.pipeline
+
+    def load_model(self, **kwargs):
+        self.load_pipeline(**kwargs)
+        return self.pipeline
+
+    def save_pipeline(self, save_path):
+        if not os.path.isdir(save_path):
+            os.mkdir(save_path)
+        self.pipeline.save_pretrained(save_path)
+
+    def partition(self, save_path, **kwargs):
+        self.load_pipeline(**kwargs)
+        self.save_pipeline(save_path)
+        return self.pipeline

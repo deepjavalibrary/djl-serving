@@ -27,6 +27,7 @@ FILES_TO_EXTRACT = [
     'djl_python/properties_manager/properties.py',
     'djl_python/properties_manager/ds_properties.py',
     'djl_python/properties_manager/tnx_properties.py',
+    'djl_python/properties_manager/sd_inf2_properties.py',
     'djl_python/rolling_batch/__init__.py',
     'djl_python/rolling_batch/rolling_batch.py',
     'djl_python/rolling_batch/neuron_rolling_batch.py',

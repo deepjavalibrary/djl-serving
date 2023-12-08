@@ -450,14 +450,34 @@ transformers_neuronx_handler_list = {
         "option.model_loading_timeout": 600,
         "option.enable_streaming": True,
     },
-    "stable-diffusion-2.1-base-neuron": {
-        "option.model_id": "s3://djl-llm/stable-diffusion-2-1-base-compiled/",
+    "stable-diffusion-2.1-neuron": {
+        "option.model_id":
+        "s3://djl-llm/stable-diffusion-2-1-neuron-compiled/",
+        "option.height": 512,
+        "option.width": 512,
+        "batch_size": 1,
+        "option.num_images_per_prompt": 1,
         "option.tensor_parallel_degree": 2,
+        "option.dtype": "bf16",
         "option.use_stable_diffusion": True
     },
-    "stable-diffusion-2.1-base-neuron-bf16": {
+    "stable-diffusion-1.5-neuron": {
         "option.model_id":
-        "s3://djl-llm/stable-diffusion-2-1-base-compiled-bf16/",
+        "s3://djl-llm/stable-diffusion-1-5-neuron-compiled/",
+        "option.height": 512,
+        "option.width": 512,
+        "batch_size": 1,
+        "option.num_images_per_prompt": 1,
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "bf16",
+        "option.use_stable_diffusion": True
+    },
+    "stable-diffusion-xl-neuron": {
+        "option.model_id": "s3://djl-llm/stable-diffusion-xl-neuron-compiled/",
+        "option.height": 1024,
+        "option.width": 1024,
+        "batch_size": 1,
+        "option.num_images_per_prompt": 1,
         "option.tensor_parallel_degree": 2,
         "option.dtype": "bf16",
         "option.use_stable_diffusion": True
