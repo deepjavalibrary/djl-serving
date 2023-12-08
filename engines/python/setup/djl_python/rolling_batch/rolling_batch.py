@@ -41,6 +41,18 @@ class Token(object):
         self.log_prob = log_prob
         self.special_token = special_token
 
+    def __dict__(self):
+        output = {}
+        if self.id:
+            output["id"] = self.id
+        if self.text:
+            output["text"] = self.text
+        if self.log_prob:
+            output["log_prob"] = self.log_prob
+        if self.special_token:
+            output["special_token"] = self.special_token
+        return output
+
 
 def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
                            details: dict):
@@ -69,12 +81,7 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
     :return: formatted output
     """
     token_dict = token.__dict__
-    # backwards compatible to V5
-    final_dict = {
-        "token": token_dict,
-        "details": None,
-        "outputs": [token.text]
-    }
+    final_dict = {"token": token_dict}
     if last_token and details:
         final_dict["details"] = {
             "finish_reason": details.get("finish_reason", None)
