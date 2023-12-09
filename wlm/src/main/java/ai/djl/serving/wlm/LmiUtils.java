@@ -69,8 +69,9 @@ public final class LmiUtils {
         Properties prop = modelInfo.prop;
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
         if (modelConfig == null) {
-            logger.info("No config.json found, use Python engine.");
-            return "Python";
+            String engineName = isTrtLLM(modelInfo) ? "MPI" : "Python";
+            logger.info("No config.json found, use {} engine.", engineName);
+            return engineName;
         }
         String features = Utils.getenv("SERVING_FEATURES");
         String modelType = modelConfig.getModelType();
@@ -90,18 +91,19 @@ public final class LmiUtils {
         return engineName;
     }
 
-    static void convertIfNeed(ModelInfo<?, ?> info) throws IOException {
+    static boolean isTrtLLM(ModelInfo<?, ?> info) {
         String rollingBatch = info.prop.getProperty("option.rolling_batch");
         if (rollingBatch == null || "auto".equals(rollingBatch)) {
             // FIXME: find a better way to set default rolling batch for trtllm
             String features = Utils.getenv("SERVING_FEATURES");
-            if (features != null && features.contains("trtllm")) {
-                info.prop.put("option.rolling_batch", "trtllm");
-                rollingBatch = "trtllm";
-            }
+            return features != null && features.contains("trtllm");
         }
+        return false;
+    }
 
-        if ("trtllm".equals(rollingBatch)) {
+    static void convertIfNeed(ModelInfo<?, ?> info) throws IOException {
+        if (isTrtLLM(info)) {
+            info.prop.put("option.rolling_batch", "trtllm");
             Path trtRepo;
             String modelId = null;
             if (info.downloadDir != null) {
