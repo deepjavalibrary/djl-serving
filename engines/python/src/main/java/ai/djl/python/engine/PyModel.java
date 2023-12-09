@@ -235,7 +235,6 @@ public class PyModel extends BaseModel {
             }
             mpiWorkers = Integer.parseInt(getProperty("gpu.maxWorkers"));
 
-            properties.put("mpi_mode", "true");
             properties.forEach((k, v) -> pyEnv.addParameter(k, v));
 
             createAllPyProcesses(mpiWorkers, partitions);

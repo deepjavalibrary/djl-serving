@@ -733,16 +733,21 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         }
 
+        if ("DeepSpeed".equals(engineName) || "MPI".equals(engineName)) {
+            prop.put("option.mpi_mode", "true");
+        }
+
         logger.info(
                 "Apply per model settings:\n\tjob_queue_size: {}\n\tbatch_size: {}"
                         + "\n\tmax_batch_delay: {}\n\tmax_idle_time: {}\n\tload_on_devices: {}"
-                        + "\n\tengine: {}\n\toption.entryPoint: {}{}",
+                        + "\n\tengine: {}\n\tmpi_mode: {}\n\toption.entryPoint: {}{}",
                 queueSize,
                 batchSize,
                 maxBatchDelayMillis,
                 maxIdleSeconds,
                 loadOnDevices,
                 engineName,
+                prop.get("option.mpi_mode"),
                 prop.get("option.entryPoint"),
                 sb);
     }
@@ -841,7 +846,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
             if (gpuCount > 0) {
                 int gpuPerWorker = 1;
-                if ("Python".equals(engineName)) {
+                if (Boolean.parseBoolean(prop.getProperty("option.mpi_mode"))) {
+                    return new String[] {"0"};
+                } else if ("Python".equals(engineName)) {
                     if (tpDegree > 0) {
                         gpuPerWorker = tpDegree;
                         int procs = gpuCount / gpuPerWorker;
@@ -851,10 +858,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                             + gpuPerWorker
                                             + " partitions.");
                         }
-                        gpuCount = procs;
+                        if (maxWorkers == null) {
+                            gpuCount = procs;
+                        } else {
+                            gpuCount = Math.min(procs, maxWorkers);
+                        }
                     }
-                } else if ("DeepSpeed".equals(engineName) || "MPI".equals(engineName)) {
-                    return new String[] {"0"};
                 }
 
                 String[] ret = new String[gpuCount];
