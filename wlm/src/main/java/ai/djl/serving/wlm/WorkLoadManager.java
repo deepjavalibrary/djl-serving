@@ -43,7 +43,13 @@ public class WorkLoadManager {
 
     /** Constructs a {@link WorkLoadManager} instance. */
     public WorkLoadManager() {
-        threadPool = Executors.newCachedThreadPool();
+        threadPool =
+                Executors.newCachedThreadPool(
+                        r -> {
+                            Thread t = Executors.defaultThreadFactory().newThread(r);
+                            t.setDaemon(true);
+                            return t;
+                        });
         workerPools = new ConcurrentHashMap<>();
     }
 
