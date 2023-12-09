@@ -60,7 +60,7 @@ LABEL djl-version=$djl_version
 
 FROM base AS cpu-full
 
-ARG torch_version=2.0.1
+ARG torch_version=2.1.1
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
@@ -76,5 +76,5 @@ RUN scripts/install_python.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-25-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-26-0.cpu-full="true"
 LABEL torch-version=$torch_version

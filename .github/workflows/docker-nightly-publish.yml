@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [ cpu, cpu-full, pytorch-inf2, pytorch-cu118, tensorrt-llm ]
+        arch: [ cpu, cpu-full, pytorch-inf2, pytorch-gpu, tensorrt-llm ]
     steps:
       - name: Clean disk space
         run: |

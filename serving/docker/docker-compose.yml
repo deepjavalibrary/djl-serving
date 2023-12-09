@@ -22,12 +22,12 @@ services:
       context: .
       dockerfile: deepspeed.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}deepspeed${NIGHTLY}"
-  pytorch-cu118:
+  pytorch-gpu:
     build:
       context: .
       target: base
-      dockerfile: pytorch-cu118.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu118${NIGHTLY}"
+      dockerfile: pytorch-gpu.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-gpu${NIGHTLY}"
   tensorrt-llm:
     build:
       context: .
