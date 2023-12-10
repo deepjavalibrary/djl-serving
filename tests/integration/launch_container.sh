@@ -21,7 +21,7 @@ if [[ "$model_path" == "no_code" ]]; then
 fi
 
 is_llm=false
-if [[ "$platform" == *"cu1"* ]]; then # if the platform has cuda capabilities
+if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
 elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
