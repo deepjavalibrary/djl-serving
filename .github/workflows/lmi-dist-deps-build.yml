@@ -3,6 +3,10 @@ name: LMI-Dist dependency build
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   create-runners-p4d:
     runs-on: [ self-hosted, scheduler ]
