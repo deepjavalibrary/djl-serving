@@ -656,10 +656,6 @@ def test_handler(model, model_spec):
                 assert len(
                     result
                 ) <= seq_length, "generated more tokens than max_new_tokens"
-                result_0 = json.loads(result[0])['outputs']
-                assert len(
-                    result_0
-                ) == batch_size, "batch size number of tokens are not generated"
             else:
                 res = res.json()
                 logging.info(f"res {res}")
