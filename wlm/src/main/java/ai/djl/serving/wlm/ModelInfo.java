@@ -858,7 +858,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                             + gpuPerWorker
                                             + " partitions.");
                         }
-                        if (maxWorkers == null) {
+                        if (maxWorkers == null || maxWorkers < 0) {
                             gpuCount = procs;
                         } else {
                             gpuCount = Math.min(procs, maxWorkers);
