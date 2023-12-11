@@ -9,6 +9,7 @@ from djl_python.properties_manager.hf_properties import HuggingFaceProperties, H
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
+from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
 
 import torch
 
@@ -560,6 +561,28 @@ class TestConfigManager(unittest.TestCase):
         test_quantization_with_dtype_error()
         test_quantization_with_dtype()
         test_quantization_bitsandbytes8()
+
+    def test_scheduler_properties(self):
+        properties = {
+            'model_id': 'sample_model_id',
+            'disable_flash_attn': 'false',
+            'decoding_strategy': 'beam',
+            'max_sparsity': '0.44',
+            'max_splits': '3',
+            'multi_gpu': 'lmi_dist_sharding'
+        }
+
+        scheduler_configs = SchedulerRbProperties(**properties)
+        self.assertFalse(scheduler_configs.disable_flash_attn)
+        self.assertEqual(scheduler_configs.model_id_or_path,
+                         properties['model_id'])
+        self.assertEqual(scheduler_configs.decoding_strategy,
+                         properties['decoding_strategy'])
+        self.assertEqual(scheduler_configs.max_sparsity,
+                         float(properties['max_sparsity']))
+        self.assertEqual(scheduler_configs.max_splits,
+                         int(properties['max_splits']))
+        self.assertEqual(scheduler_configs.multi_gpu, properties['multi_gpu'])
 
 
 if __name__ == '__main__':

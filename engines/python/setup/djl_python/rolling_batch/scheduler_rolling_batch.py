@@ -22,8 +22,9 @@ import torch
 
 from typing import List, Dict
 
+from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
+
 MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
-DEFAULT_SEARCH_ALGORITHM = 'greedy'
 # https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
 FLASH_2_SUPPORTED_MODELS = {
     "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
@@ -50,14 +51,12 @@ class SchedulerRollingBatch(RollingBatch):
         :param kwargs passed while loading the model
         """
 
-        super().__init__(**kwargs)
-        self._init_model_and_tokenizer(model_id_or_path,
-                                       device=device,
-                                       properties=properties,
-                                       multi_gpu=properties.get(
-                                           'multi_gpu', None),
-                                       **kwargs)
-        self._init_scheduler(properties)
+        self.scheduler_configs = SchedulerRbProperties(**properties)
+        super().__init__(
+            waiting_steps=self.scheduler_configs.waiting_steps,
+            output_formatter=self.scheduler_configs.output_formatter)
+        self._init_model_and_tokenizer()
+        self._init_scheduler()
 
     @stop_on_any_exception
     def inference(self, input_text, parameters):
@@ -107,25 +106,19 @@ class SchedulerRollingBatch(RollingBatch):
 
         return new_requests
 
-    def _init_model_and_tokenizer(self,
-                                  model_id_or_path,
-                                  device=None,
-                                  multi_gpu=None,
-                                  properties=None,
-                                  **kwargs):
-        if "waiting_steps" in kwargs:
-            kwargs.pop("waiting_steps")
-        if "output_formatter" in kwargs:
-            kwargs.pop("output_formatter")
-        self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
+    def _init_model_and_tokenizer(self):
+        self.config = AutoConfig.from_pretrained(
+            self.scheduler_configs.model_id_or_path,
+            **self.scheduler_configs.kwargs)
         architectures = self.config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
             raise ValueError('Seq2Seq model is not supported by scheduler')
         else:
             device_map = "auto" if torch.cuda.is_available() else "cpu"
-            if 'device_map' in kwargs:
-                device_map = kwargs.pop('device_map')
+            device = self.scheduler_configs.device
+            if 'device_map' in self.scheduler_configs.kwargs:
+                device_map = self.scheduler_configs.kwargs.pop('device_map')
             elif device:
                 if isinstance(device, str) or isinstance(device, int):
                     device_map = device
@@ -134,56 +127,57 @@ class SchedulerRollingBatch(RollingBatch):
 
             if architectures and architectures[
                     0] in FLASH_2_SUPPORTED_MODELS and enable_flash():
-                if properties.get("disable_flash_attn",
-                                  "true").lower() != 'true':
-                    kwargs['use_flash_attention_2'] = True
+                if not self.scheduler_configs.disable_flash_attn:
+                    self.scheduler_configs.kwargs[
+                        'use_flash_attention_2'] = True
 
-            if "lmi_dist_sharding" == multi_gpu:
-                if 'neox' in model_id_or_path:
+            # TODO: multi_gpu is deprecated.
+            if "lmi_dist_sharding" == self.scheduler_configs.multi_gpu:
+                # TODO: Check Neox using model config.
+                if 'neox' in self.scheduler_configs.model_id_or_path:
                     try:
                         from lmi_dist.models.gpt_neox import GPTNeoxSharded
                         from lmi_dist.utils import download_and_convert_weights
 
-                        download_and_convert_weights(model_id_or_path)
-                        self.model = GPTNeoxSharded(model_id_or_path)
+                        download_and_convert_weights(
+                            self.scheduler_configs.model_id_or_path)
+                        self.model = GPTNeoxSharded(
+                            self.scheduler_configs.model_id_or_path)
                     except ImportError:
                         print(
-                            f"Running {model_id_or_path} requires package lmi_dist."
+                            f"Running {self.scheduler_configs.model_id_or_path} requires package lmi_dist."
                         )
                 else:
                     raise Exception(
-                        f"{model_id_or_path} with lmi_dist_sharding is currently unsupported."
+                        f"{self.scheduler_configs.model_id_or_path} with lmi_dist_sharding is currently unsupported."
                     )
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
-                    model_id_or_path, device_map=device_map, **kwargs)
+                    self.scheduler_configs.model_id_or_path,
+                    device_map=device_map,
+                    **self.scheduler_configs.kwargs)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
-                                                       padding_side="left")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.scheduler_configs.model_id_or_path, padding_side="left")
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
         self.tokenizer_streaming = TokenizerStreaming(self.tokenizer)
 
-    def _init_scheduler(self, properties):
+    def _init_scheduler(self):
         lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
                                               HuggingfaceBlock)
         self.lm_block = lm_block_cls(self.model)
         self.search_config = SearchConfig(
             eos_token_id=self.tokenizer.eos_token,
             pad_token_id=self.tokenizer.pad_token)
-        self.search_algorithm = properties.get('decoding_strategy',
-                                               DEFAULT_SEARCH_ALGORITHM)
+        self.search_algorithm = self.scheduler_configs.decoding_strategy
         self.scheduler = SeqBatchScheduler(
             self.lm_block,
             self.search_algorithm,
             self.search_config,
-            max_sparsity=float(properties.get(
-                'max_sparsity',
-                0.33)),  # a threshold to limit the max padding sparsity
-            max_splits=int(properties.get(
-                'max_splits',
-                3)))  # a threshold to limit the max number of batch splits
+            max_sparsity=self.scheduler_configs.max_sparsity,
+            max_splits=self.scheduler_configs.max_splits)
 
     def _prefill_and_decode(self, new_requests):
 
