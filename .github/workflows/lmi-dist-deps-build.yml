@@ -35,14 +35,18 @@ jobs:
       - name: Setup Environment
         run: |
           apt-get update
-          apt-get install -y software-properties-common wget libaio-dev g++ git make
+          apt-get install -y software-properties-common wget libaio-dev g++ git gcc
           mkdir build_artifacts
       - name: Set up Python3
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+        run: |
+          ./serving/docker/scripts/install_python.sh 3.10
       - name: Install torch dependencies
-        run: pip install numpy cmake awscli packaging git-remote-codecommit torch==2.1.1 --extra-index-url https://download.pytorch.org/whl/cu121
+        run: |
+          python -m venv venv
+          . ./venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install numpy cmake awscli packaging wheel setuptools ninja \
+          git-remote-codecommit torch==2.1.1 --extra-index-url https://download.pytorch.org/whl/cu121
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -50,27 +54,31 @@ jobs:
           aws-region: us-east-1
       - name: Build FlashAttn V2
         run: |
+          . ./venv/bin/activate
+          export FLASH_ATTENTION_FORCE_BUILD=TRUE
           git clone https://github.com/Dao-AILab/flash-attention.git flash-attention-v2 -b v2.3.0
           cd flash-attention-v2
           pip wheel . --no-deps
-          cp flash_attn-*.whl build_artifacts
+          cp flash_attn-*.whl ../build_artifacts
       - name: Build FlashAttn V1
         run: |
+          . ./venv/bin/activate
           git clone codecommit::us-east-1://flash-attention-v1
           cd flash-attention-v1
           pip wheel . --no-deps
           cd csrc/layer_norm && pip wheel . --no-deps
           cd ../rotary && pip wheel . --no-deps
           cd ../../
-          cp flash_attn-*.whl build_artifacts
-          cp csrc/layer_norm/*.whl build_artifacts
-          cp csrc/rotary/*.whl build_artifacts
+          cp flash_attn*.whl ../build_artifacts
+          cp csrc/layer_norm/*.whl ../build_artifacts
+          cp csrc/rotary/*.whl ../build_artifacts
       - name: Build vllm 0.1.1
         run: |
+          . ./venv/bin/activate
           git clone codecommit::us-east-1://lmi_vllm
           cd lmi_vllm
           pip wheel . --no-deps
-          cp lmi_vllm-*.whl build_artifacts
+          cp lmi_vllm-*.whl ../build_artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
