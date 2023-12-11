@@ -10,67 +10,23 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import json
-import shutil
-import tempfile
-import os
-import logging
-import time
 
+import json
+import logging
 from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
-from transformers_neuronx.generation_utils import HuggingFaceGenerationModelAdapter
-from transformers_neuronx.gptneox.model import GPTNeoXForSampling
-from transformers_neuronx.gptj.model import GPTJForSampling
-from transformers_neuronx.gpt2.model import GPT2ForSampling
-from transformers_neuronx.opt.model import OPTForSampling
-from transformers_neuronx.llama.model import LlamaForSampling
-from transformers_neuronx.bloom.model import BloomForSampling
-from transformers_neuronx.module import save_pretrained_split
-from transformers_neuronx.config import NeuronConfig, QuantizationConfig
 from djl_python import Input, Output
 from djl_python.encode_decode import decode, encode
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
-
 from djl_python.properties_manager.properties import StreamingEnum
+from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
+from djl_python.neuron_utils.utils import task_from_config
 
 model = None
 
-SUPPORTED_MODEL_TYPES = {"opt", "gpt2", "gptj", "gpt_neox", "llama", "bloom"}
-
-MODEL_TYPE_TO_MODEL = {
-    "opt": OPTForSampling,
-    "gpt2": GPT2ForSampling,
-    "gptj": GPTJForSampling,
-    "gpt_neox": GPTNeoXForSampling,
-    "llama": LlamaForSampling,
-    "bloom": BloomForSampling
-}
-
-
-class NeuronXSampleAdapter(HuggingFaceGenerationModelAdapter):
-
-    def __init__(self, _config, _model):
-        super().__init__(_config, _model)
-        self.model_type = _config.model_type
-        self.sample_options = ["start_ids", "top_k"]
-        if self.model_type == "llama":
-            self.sample_options = self.sample_options + [
-                "top_p", "eos_token_override", "temperature", "streamer"
-            ]
-
-    def neuron_sample(self, *args, **kwargs):
-        sample_kwargs = self.simple_sample_parser(**kwargs)
-        return self.model.sample(*args, **sample_kwargs)
-
-    def simple_sample_parser(self, **kwargs):
-        parsed_kwargs = dict()
-        for key in self.sample_options:
-            if key in kwargs:
-                parsed_kwargs[key] = kwargs[key]
-        return parsed_kwargs
+OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama"}
 
 
 class TransformersNeuronXService(object):
@@ -78,134 +34,67 @@ class TransformersNeuronXService(object):
     def __init__(self) -> None:
         self.initialized = False
         self.model = None
+        self.model_config = None
+        self.model_loader = None
         self.tokenizer = None
-        self.download_dir = None
-        self.model_type = None
         self.rolling_batch = None
-        self.tnx_configs = None
+        self.config = None
+        self._model_loader_class = OptimumModelLoader
 
-    def init_load_path(self, model_type):
-        path = os.environ.get("SERVING_DOWNLOAD_DIR")
-        folder = f"inf2_{model_type}_{self.tnx_configs.amp}"
-        if not path:
-            path = tempfile.gettempdir()
-        if os.path.exists(os.path.join(path, folder)):
-            shutil.rmtree(os.path.join(path, folder))
-        os.mkdir(os.path.join(path, folder))
-        self.download_dir = os.path.join(path, folder)
-        return self.download_dir
+    def set_model_loader_class(self):
+        use_tnx = False
+        if self.model_config.architectures is not None and any(
+                "CausalLM" in arch
+                for arch in self.model_config.architectures):
+            use_tnx = self.model_config.model_type not in OPTIMUM_CAUSALLM_MODEL_TYPES
+        use_tnx = use_tnx or self.config.load_split_model or self.config.load_in_8bit
+        if use_tnx:
+            self._model_loader_class = TNXModelLoader
 
-    def get_load_path(self, model_type):
-        if self.download_dir:
-            load_path = self.download_dir
-        else:
-            load_path = self.init_load_path(model_type)
-        return load_path
+    def set_configs(self, properties):
+        self.config = TransformerNeuronXProperties(**properties)
+        self.model_config = AutoConfig.from_pretrained(
+            self.config.model_id_or_path, revision=self.config.revision)
 
-    def load_hf_model(self):
-        logging.info(
-            f"Start loading the model {self.tnx_configs.model_id_or_path}...")
-        return AutoModelForCausalLM.from_pretrained(
-            self.tnx_configs.model_id_or_path,
-            trust_remote_code=self.tnx_configs.trust_remote_code,
-            revision=self.tnx_configs.revision,
-            low_cpu_mem_usage=True)
+        self.set_model_loader_class()
+        if not self.config.task:
+            self.config.task = task_from_config(self.model_config)
 
-    def get_model_specific_kwargs(self, model_type):
-        model_kwargs = {
-            "batch_size": self.tnx_configs.batch_size,
-            "amp": self.tnx_configs.amp,
-            'tp_degree': self.tnx_configs.tensor_parallel_degree,
-            "n_positions": self.tnx_configs.n_positions,
-            "unroll": self.tnx_configs.unroll
-        }
-        if model_type == "llama":
-            model_kwargs[
-                'context_length_estimate'] = self.tnx_configs.context_length_estimate
-        return model_kwargs
-
-    def load_inf2_model_from_disk(self, model_type, load_path):
-        if not self.tnx_configs.load_split_model:
-            logging.info(f"Saving INF2 model to {load_path} ...")
-            save_pretrained_split(self.model, load_path)
-        model_kwargs = self.get_model_specific_kwargs(model_type)
-        if self.tnx_configs.load_in_8bit:
-            neuron_config = NeuronConfig()
-            neuron_config.quant = QuantizationConfig(
-                quant_dtype='s8', dequant_dtype=self.tnx_configs.amp)
-            return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
-                load_path, neuron_config=neuron_config, **model_kwargs)
-        return MODEL_TYPE_TO_MODEL[model_type].from_pretrained(
-            load_path, **model_kwargs)
-
-    def load_inf2_model_from_memory(self, model_type):
-        model_kwargs = self.get_model_specific_kwargs(model_type)
-        if self.tnx_configs.load_in_8bit:
-            neuron_config = NeuronConfig()
-            neuron_config.quant = QuantizationConfig(
-                quant_dtype='s8', dequant_dtype=self.tnx_configs.amp)
-            model = MODEL_TYPE_TO_MODEL[model_type](
-                self.model.config, neuron_config=neuron_config, **model_kwargs)
-        else:
-            model = MODEL_TYPE_TO_MODEL[model_type](self.model.config,
-                                                    **model_kwargs)
-        model.load_state_dict_low_memory(self.model.state_dict())
-        return model
-
-    def load_model(self, model_type):
-        if not self.tnx_configs.load_split_model:
-            self.model = self.load_hf_model()
-            load_path = self.get_load_path(model_type)
-        else:
-            load_path = self.tnx_configs.model_id_or_path
-        if self.tnx_configs.low_cpu_mem_usage or self.tnx_configs.load_split_model:
-            logging.info("Transferring weights from HF to INF2 through disk")
-            self.model = self.load_inf2_model_from_disk(model_type, load_path)
-        else:
-            logging.info("Transferring weights from HF to INF2 in-memory")
-            self.model = self.load_inf2_model_from_memory(model_type)
-        logging.info(f"LLM sharding and compiling Started ...")
-        start = time.time()
-        # TODO: workaround on Neuron Compiler bug for SM
-        path = os.getcwd()
-        os.chdir("/tmp")
-        self.model.to_neuron()
-        os.chdir(path)
-        elapsed = time.time() - start
-        logging.info(
-            f"SysHealth: LLM sharding and compilation latency: {elapsed} secs")
-
-    def initialize(self, properties):
-        # Neuron recommendation for transformersneuronx speedup
-        os.environ["NEURON_CC_FLAGS"] = os.environ[
-            "NEURON_CC_FLAGS"] + " --model-type=transformer"
-        self.tnx_configs = TransformerNeuronXProperties(**properties)
-        model_config = AutoConfig.from_pretrained(
-            self.tnx_configs.model_id_or_path,
-            revision=self.tnx_configs.revision)
-        if model_config.model_type not in SUPPORTED_MODEL_TYPES:
-            raise ValueError(
-                f"{model_config.model_type} type not supported for model {self.tnx_configs.model_id_or_path}"
-                f"Supported model arch: {SUPPORTED_MODEL_TYPES}")
-        self.model_type = model_config.model_type
+    def set_tokenizer(self):
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.tnx_configs.model_id_or_path,
-            trust_remote_code=self.tnx_configs.trust_remote_code,
-            revision=self.tnx_configs.revision,
+            self.config.model_id_or_path,
+            trust_remote_code=self.config.trust_remote_code,
+            revision=self.config.revision,
             padding_side="left")
         if not self.tokenizer.pad_token_id:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-        self.load_model(model_config.model_type)
+    def set_rolling_batch(self):
+        if self.config.rolling_batch != "disable":
+            self.rolling_batch = NeuronRollingBatch(self.model, self.tokenizer,
+                                                    self.config.batch_size,
+                                                    self.config.n_positions)
 
-        # HuggingFace compatible generate model and Neuron custom sample method
-        self.model = NeuronXSampleAdapter(model_config, self.model)
+    def set_model_loader(self):
+        self.model_loader = self._model_loader_class(
+            config=self.config, model_config=self.model_config)
+
+    def initialize(self, properties):
+        self.set_configs(properties)
+        self.set_tokenizer()
+        self.set_model_loader()
+        self.model = self.model_loader.load_model()
+        self.set_rolling_batch()
         self.initialized = True
-        if self.tnx_configs.rolling_batch != "disable":
-            self.rolling_batch = NeuronRollingBatch(
-                self.model, self.tokenizer,
-                self.tnx_configs.max_rolling_batch_size,
-                self.tnx_configs.n_positions)
+
+    def partition(self, properties):
+        self.set_configs(properties)
+        self.set_tokenizer()
+        self.set_model_loader()
+        self.model = self.model_loader.partition(
+            self.config.save_mp_checkpoint_path, tokenizer=self.tokenizer)
+        self.set_rolling_batch()
+        self.initialized = True
 
     def parse_input(self, inputs):
         input_data = []
@@ -271,22 +160,22 @@ class TransformersNeuronXService(object):
         model_kwargs = {}
 
         prompt_size = len(input_data)
-        if prompt_size > self.tnx_configs.batch_size:
+        if prompt_size > self.config.batch_size:
             raise ValueError(
-                f"Batch size {prompt_size} beyond the max_batch size the model can support {self.tnx_configs.batch_size}"
+                f"Batch size {prompt_size} beyond the max_batch size the model can support {self.config.batch_size}"
             )
 
-        for i in range(prompt_size, self.tnx_configs.batch_size):
+        for i in range(prompt_size, self.config.batch_size):
             input_data.append(self.tokenizer.eos_token)
 
         # clean KV cache
         self.model.reset_generation()
-        if self.tnx_configs.enable_streaming != StreamingEnum.false:
+        if self.config.enable_streaming != StreamingEnum.false:
             if len(batch) > 1:
                 raise NotImplementedError(
                     "Dynamic batch not supported for generic streaming")
             outputs.add_property("content-type", "application/jsonlines")
-            if self.tnx_configs.enable_streaming == StreamingEnum.huggingface:
+            if self.config.enable_streaming == StreamingEnum.huggingface:
                 outputs.add_stream_content(
                     StreamingUtils.use_hf_default_streamer(
                         self.model, self.tokenizer, input_data, None,
@@ -306,7 +195,7 @@ class TransformersNeuronXService(object):
         use_sample = parameters.pop("use_sample", True)
         if use_sample:
             sample_length = parameters.pop("max_new_tokens",
-                                           self.tnx_configs.n_positions)
+                                           self.config.n_positions)
             output_tokens = self.model.neuron_sample(encoded_inputs.input_ids,
                                                      sample_length,
                                                      **parameters)
@@ -352,6 +241,10 @@ class TransformersNeuronXService(object):
 
 
 _service = TransformersNeuronXService()
+
+
+def partition(inputs: Input):
+    _service.partition(inputs.get_properties())
 
 
 def handle(inputs: Input):

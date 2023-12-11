@@ -111,7 +111,9 @@ class TestConfigManager(unittest.TestCase):
             "load_in_8bit": "true",
             "compiled_graph_path": "s3://test/bucket/folder",
             "low_cpu_mem_usage": "true",
-            'context_length_estimate': '256, 512, 1024'
+            'context_length_estimate': '256, 512, 1024',
+            "task": "feature-extraction",
+            "save_mp_checkpoint_path": "/path/to/checkpoint"
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -125,6 +127,10 @@ class TestConfigManager(unittest.TestCase):
 
         self.assertListEqual(tnx_configs.context_length_estimate,
                              [256, 512, 1024])
+
+        self.assertEqual(tnx_configs.task, properties['task'])
+        self.assertEqual(tnx_configs.save_mp_checkpoint_path,
+                         properties['save_mp_checkpoint_path'])
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):
