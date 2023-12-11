@@ -3,7 +3,7 @@ PYTHON_VERSION=$1
 
 set -ex
 
-# Ubuntu 20.04 ships python3.8 by default
+# Ubuntu 22.04 ships python3.10 by default
 apt-get update
 
 if [ -z "$PYTHON_VERSION" ]; then
