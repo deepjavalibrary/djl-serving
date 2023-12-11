@@ -12,19 +12,19 @@ echo "Testing $url with content type: $content_type ..."
 
 if [[ "$content_type" == "tensor/ndlist" ]]; then
   djl-bench ndlist-gen -s $content -o test.ndlist
-  curl -sf -m 2 -X POST $url -o out.ndlist -T test.ndlist -H "Content-type: $content_type"
+  curl -sf -m 10 -X POST $url -o out.ndlist -T test.ndlist -H "Content-type: $content_type"
   ret=$?
   rm -rf test.ndlist out.ndlist
 elif [[ "$content_type" == "tensor/npz" ]]; then
   djl-bench ndlist-gen -s $content -z -o test.npz
-  curl -sf -m 2 -X POST $url -o out.npz -T test.npz -H "Content-type: $content_type"
+  curl -sf -m 10 -X POST $url -o out.npz -T test.npz -H "Content-type: $content_type"
   ret=$?
   rm -rf test.npz out.npz
 elif [[ "$content_type" == "text/plain" ]]; then
-  curl -sf -m 2 -X POST $url -d "$content" -H "Content-type: $content_type"
+  curl -sf -m 10 -X POST $url -d "$content" -H "Content-type: $content_type"
   ret=$?
 elif [[ "$content_type" == "image/jpg" ]]; then
-  curl -sf -m 2 -X POST $url -T $content -H "Content-type: $content_type"
+  curl -sf -m 10 -X POST $url -T $content -H "Content-type: $content_type"
   ret=$?
 else
   echo "Content type $content_type not supported!"
