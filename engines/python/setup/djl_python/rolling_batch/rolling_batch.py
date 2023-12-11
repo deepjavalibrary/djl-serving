@@ -197,15 +197,13 @@ class RollingBatch(ABC):
 
     """
 
-    def __init__(self, device, **kwargs):
+    def __init__(self, **kwargs):
         """
         Initializes the rolling batch scheduler.
 
-        :param device: device to load the model
         :param kwargs passed while loading the model
         """
 
-        self.device = device
         self.pending_requests = []
         self.active_requests = []
         self.req_id_counter = 0

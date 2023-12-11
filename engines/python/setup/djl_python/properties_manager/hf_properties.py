@@ -19,15 +19,10 @@ class HFQuantizeMethods(str, Enum):
     bitsandbytes4 = 'bitsandbytes4'
     bitsandbytes8 = 'bitsandbytes8'
 
+    # TODO remove this after refactor of all handlers
     # supported by vllm
     awq = 'awq'
 
-
-HF_SUPPORTED_ROLLING_BATCH_TYPES = [
-    RollingBatchEnum.scheduler.value, RollingBatchEnum.lmidist.value,
-    RollingBatchEnum.vllm.value, RollingBatchEnum.auto.value,
-    RollingBatchEnum.disable.value
-]
 
 LMI_DIST_ADV_MODEL = {
     "RWForCausalLM",
@@ -40,6 +35,22 @@ LMI_DIST_ADV_MODEL = {
 }
 
 
+def get_torch_dtype_from_str(dtype: str):
+    if dtype == "auto":
+        return dtype
+    if dtype == "fp32":
+        return torch.float32
+    if dtype == "fp16":
+        return torch.float16
+    if dtype == "bf16":
+        return torch.bfloat16
+    if dtype == "int8":
+        return torch.int8
+    if dtype is None:
+        return dtype
+    raise ValueError(f"Invalid data type: {dtype}")
+
+
 class HuggingFaceProperties(Properties):
     device_id: int = -1
     task: str = None
@@ -50,30 +61,9 @@ class HuggingFaceProperties(Properties):
     quantize: Optional[HFQuantizeMethods] = None
     low_cpu_mem_usage: Optional[bool] = False
     disable_flash_attn: Optional[bool] = True
-    output_formatter: Optional[str]
-    waiting_steps: Optional[int]
 
     device: Optional[str] = None
-    is_mpi: bool = False
     kwargs: Optional[dict] = {}
-
-    @root_validator(pre=True)
-    def calculate_is_mpi(cls, properties):
-        properties['is_mpi'] = properties.get("engine") != "Python"
-        return properties
-
-    @validator('rolling_batch', pre=True)
-    def validate_rolling_batch(cls, rolling_batch: str) -> str:
-        rolling_batch = rolling_batch.lower()
-        if rolling_batch == RollingBatchEnum.disable.value:
-            return rolling_batch
-        if rolling_batch not in HF_SUPPORTED_ROLLING_BATCH_TYPES:
-            logging.warning(
-                f"huggingface handler only supports "
-                f"rolling batch type {HF_SUPPORTED_ROLLING_BATCH_TYPES}."
-                f"choosing auto mode for rolling batch automatically.")
-            return 'auto'
-        return rolling_batch
 
     @validator('load_in_4bit')
     def validate_load_in_4bit(cls, load_in_4bit):
@@ -94,6 +84,7 @@ class HuggingFaceProperties(Properties):
         elif properties['load_in_8bit']:
             properties['quantize'] = HFQuantizeMethods.bitsandbytes8
 
+        # TODO remove this after refactor of all handlers
         # parsing bitsandbytes8, so it can be directly passed to lmi dist model loader.
         if properties['quantize'] == HFQuantizeMethods.bitsandbytes8 \
                 and properties['rolling_batch'] == RollingBatchEnum.lmidist:
@@ -178,22 +169,6 @@ class HuggingFaceProperties(Properties):
 
     @root_validator()
     def construct_kwargs_dtype(cls, properties):
-
-        def get_torch_dtype_from_str(dtype: str):
-            if dtype == "auto":
-                return dtype
-            if dtype == "fp32":
-                return torch.float32
-            if dtype == "fp16":
-                return torch.float16
-            if dtype == "bf16":
-                return torch.bfloat16
-            if dtype == "int8":
-                return torch.int8
-            if dtype is None:
-                return dtype
-            raise ValueError(f"Invalid data type: {dtype}")
-
         kwargs = properties['kwargs']
 
         if properties.get('data_type'):

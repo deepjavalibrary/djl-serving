@@ -50,7 +50,7 @@ class SchedulerRollingBatch(RollingBatch):
         :param kwargs passed while loading the model
         """
 
-        super().__init__(device, **kwargs)
+        super().__init__(**kwargs)
         self._init_model_and_tokenizer(model_id_or_path,
                                        device=device,
                                        properties=properties,

@@ -54,9 +54,17 @@ class Properties(BaseModel):
     # TODO: disabling streaming, as it is not supported for all models of the frameworks. Will revisit this
     enable_streaming: StreamingEnum = StreamingEnum.false
     batch_size: int = 1
-    max_rolling_batch_size: int = 32
+    max_rolling_batch_size: Optional[int] = 32
     dtype: Optional[str] = None
     revision: Optional[str] = None
+    output_formatter: Optional[str] = None
+    waiting_steps: Optional[int] = None
+    is_mpi: bool = False
+
+    @root_validator(pre=True)
+    def calculate_is_mpi(cls, properties):
+        properties['is_mpi'] = properties.get("mpi_mode") == "true"
+        return properties
 
     @validator('enable_streaming', pre=True)
     def validate_enable_streaming(cls, enable_streaming: str) -> str:
