@@ -14,7 +14,7 @@ FROM nvidia/cuda:$version
 ARG cuda_version=cu122
 ARG python_version=3.10
 ARG TORCH_VERSION=2.1.0
-ARG djl_version=0.24.0~SNAPSHOT
+ARG djl_version=0.26.0~SNAPSHOT
 ARG transformers_version=4.34.0
 ARG accelerate_version=0.23.0
 ARG tensorrtlibs_version=9.2.0.post12.dev5
@@ -105,7 +105,7 @@ RUN apt-get update && apt-get install -y cuda-compat-12-2 && apt-get clean -y &&
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.tensorrtllm="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-25-0.tensorrtllm="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-26-0.tensorrtllm="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
