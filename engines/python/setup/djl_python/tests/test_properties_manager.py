@@ -408,6 +408,7 @@ class TestConfigManager(unittest.TestCase):
                 vllm_configs.max_rolling_batch_prefill_tokens,
                 int(properties['max_rolling_batch_prefill_tokens']))
             self.assertEqual(vllm_configs.dtype, properties['dtype'])
+            self.assertEqual(vllm_configs.load_format, properties['load_format'])
             self.assertEqual(vllm_configs.quantize, properties['quantize'])
             self.assertEqual(vllm_configs.tensor_parallel_degree,
                              int(properties['tensor_parallel_degree']))
@@ -425,7 +426,8 @@ class TestConfigManager(unittest.TestCase):
             'max_rolling_batch_prefill_tokens': '12500',
             'tensor_parallel_degree': '2',
             'dtype': 'fp16',
-            'quantize': 'awq'
+            'quantize': 'awq',
+            'load_format': 'pt'
         }
         test_vllm_valid()
         test_invalid_quantization_method()
