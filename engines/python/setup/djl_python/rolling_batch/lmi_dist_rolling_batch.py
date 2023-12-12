@@ -45,6 +45,7 @@ class LmiDistRollingBatch(RollingBatch):
                 properties.get("tensor_parallel_degree", "1")) != 1:
             raise AssertionError(
                 f"Need mpi_mode to start lmi-dist RollingBatcher")
+        self.device = device
         self.properties = properties
         self.batch_cls = None
         self._init_model(kwargs, model_id_or_path)

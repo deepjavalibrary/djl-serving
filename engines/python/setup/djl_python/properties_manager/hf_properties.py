@@ -109,6 +109,7 @@ class HuggingFaceProperties(Properties):
         if properties['revision']:
             kwargs["revision"] = properties['revision']
 
+        # TODO remove this after refactor of all handlers
         if properties['rolling_batch'].value != RollingBatchEnum.disable.value:
             if properties['output_formatter']:
                 kwargs["output_formatter"] = properties['output_formatter']
@@ -146,7 +147,8 @@ class HuggingFaceProperties(Properties):
         if 'quantize' in properties and not properties['quantize']:
             return properties
 
-        # device map is not required for lmi dist and
+        # TODO remove this after refactor of all handlers
+        # device map is not required for lmi dist and vllm
         if properties['rolling_batch'] == RollingBatchEnum.lmidist or \
                 properties['rolling_batch'] == RollingBatchEnum.vllm:
             return properties
