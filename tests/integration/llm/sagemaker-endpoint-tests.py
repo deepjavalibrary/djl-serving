@@ -9,6 +9,11 @@ from sagemaker.utils import unique_name_from_base
 from argparse import ArgumentParser
 import numpy as np
 
+
+def boolean_arg(value):
+    return str(value).lower() == "true"
+
+
 parser = ArgumentParser(
     description=
     "This Script deploys a model with predefined configuration to a SageMaker Inference Endpoint"
@@ -23,6 +28,11 @@ parser.add_argument(
     "image_type",
     help="Whether to use release or nightly images for testing",
     choices=["nightly", "release", "candidate"])
+
+parser.add_argument(
+    "run_benchmark",
+    help="Whether to run benchmark and upload the metrics to cloudwatch",
+    type=boolean_arg)
 
 ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
 DEFAULT_INSTANCE_TYPE = "ml.g5.12xlarge"
@@ -95,12 +105,14 @@ HUGGING_FACE_NO_CODE_CONFIGS = {
 MME_CONFIGS = {
     "deepspeed-mme": {
         "models": [{
+            'name': 'gpt-neo-2-7b',
             "model_id": "EleutherAI/gpt-neo-2.7B",
             "model_kwargs": {
                 "dtype": "fp16",
                 "number_of_partitions": 1,
             }
         }, {
+            'name': 'opt-1-3b',
             "model_id": "s3://djl-llm-sm-endpoint-tests/opt-1.3b/",
             "model_kwargs": {
                 "dtype": "fp16",
@@ -114,7 +126,7 @@ MME_CONFIGS = {
     }
 }
 
-ENGINE_TO_METRIC_CONFIG_ENGINE = {"Python": "Accelerate"}
+ENGINE_TO_METRIC_CONFIG_ENGINE = {"python": "accelerate"}
 
 NIGHTLY_IMAGES = {
     "python":
@@ -172,56 +184,58 @@ def _upload_metrics(data):
                            'Unit': 'Milliseconds',
                            'Value': data['p90']
                        }, {
-                           'MetricName': f"{data['metric_name']}_p99",
+                           'MetricName': f"{data['metric_name']}-p99",
                            'Unit': 'Milliseconds',
                            'Value': data['p99']
                        }])
+    print(
+        f"Uploaded metrics data with metric prefix {data['metric_name']} to AWS CloudWatch"
+    )
 
 
-def _get_metric_name(name, model):
-
-    engine = model.engine.value[0]
-    metric_config_engine = ENGINE_TO_METRIC_CONFIG_ENGINE.get(engine, engine)
+def _get_metric_name(name, model, engine, instance_type):
+    engine_name = ENGINE_TO_METRIC_CONFIG_ENGINE.get(engine, engine)
 
     num_partitions = 1
-    if model.number_of_partitions:
+    if hasattr(model, 'number_of_partitions') and model.number_of_partitions:
         num_partitions = model.number_of_partitions
+    return f"{name}-{engine_name}-{num_partitions}p-{instance_type}"
 
-    return f"{name}-{metric_config_engine}-{num_partitions}p"
 
-
-def _run_benchmarks(predictor, config, metric_name):
-
-    for _ in range(10):
-        predictor.predict(config.get("payload", DEFAULT_PAYLOAD))
+def _run_benchmarks(predictor, payload_data, metric_name, target_model=None):
+    for _ in range(3):
+        predictor.predict(data=payload_data, target_model=target_model)
 
     latencies = []
-    iterations = 100
+    iterations = 25
     begin = time.time()
 
     for _ in range(iterations):
         start = time.time()
-        predictor.predict(config.get("payload", DEFAULT_PAYLOAD))
+        predictor.predict(data=payload_data, target_model=target_model)
         latencies.append((time.time() - start) * 1000)
 
     elapsed = (time.time() - begin) * 1000
 
-    benchmark_data = {}
-    benchmark_data['metric_name'] = metric_name
-    benchmark_data['throughput'] = iterations / elapsed * 1000
-    benchmark_data['avg'] = sum(latencies) / iterations
-    benchmark_data['p50'] = np.percentile(latencies, 50)
-    benchmark_data['p90'] = np.percentile(latencies, 90)
-    benchmark_data['p99'] = np.percentile(latencies, 99)
+    benchmark_data = {
+        'metric_name': metric_name,
+        'throughput': iterations / elapsed * 1000,
+        'avg': sum(latencies) / iterations,
+        'p50': np.percentile(latencies, 50),
+        'p90': np.percentile(latencies, 90),
+        'p99': np.percentile(latencies, 99)
+    }
 
     _upload_metrics(benchmark_data)
 
 
-def mme_test(name, image_type):
+def mme_test(name, image_type, run_benchmark):
     config = MME_CONFIGS.get(name)
     session = get_sagemaker_session(
         default_bucket_prefix=get_name_for_resource("mme-tests"))
     models = config.get("models")
+    framework = config.get("framework")
+    instance_type = config.get("instance_type", DEFAULT_INSTANCE_TYPE)
     created_models = []
     mme = None
     predictor = None
@@ -237,12 +251,12 @@ def mme_test(name, image_type):
             created_models.append(model)
 
         if image_type == "nightly":
-            mme_image_uri = NIGHTLY_IMAGES[config.get("framework")]
+            mme_image_uri = NIGHTLY_IMAGES[framework]
         elif image_type == "candidate":
-            mme_image_uri = CANDIDATE_IMAGES[config.get("framework")]
+            mme_image_uri = CANDIDATE_IMAGES[framework]
         else:
             mme_image_uri = sagemaker.image_uris.retrieve(
-                framework="djl-" + config.get("framework"),
+                framework="djl-" + framework,
                 version=RELEASE_VERSION,
                 region=REGION)
         mme = MultiDataModel(get_name_for_resource(name),
@@ -256,12 +270,20 @@ def mme_test(name, image_type):
 
         predictor = mme.deploy(
             1,
-            config.get("instance_type", DEFAULT_INSTANCE_TYPE),
+            instance_type,
             serializer=sagemaker.serializers.JSONSerializer(),
             deserializer=sagemaker.deserializers.JSONDeserializer())
-        for model in list(mme.list_models()):
+        for i, model in enumerate(list(mme.list_models())):
             outputs = predictor.predict(DEFAULT_PAYLOAD, target_model=model)
             print(outputs)
+
+            if run_benchmark:
+                _run_benchmarks(predictor=predictor,
+                                payload_data=DEFAULT_PAYLOAD,
+                                metric_name=_get_metric_name(
+                                    models[i]['name'], created_models[i],
+                                    framework, instance_type),
+                                target_model=model)
 
     except Exception as e:
         print(f"Encountered error for creating model {name}. Exception: {e}")
@@ -279,17 +301,17 @@ def mme_test(name, image_type):
 def no_code_endpoint_test(name, image_type):
     config = HUGGING_FACE_NO_CODE_CONFIGS.get(name)
     data = config.get("payload", DEFAULT_PAYLOAD)
+    framework = config.get("framework")
     session = get_sagemaker_session(
         default_bucket_prefix=get_name_for_resource("no-code-tests"))
     model = None
     predictor = None
     if image_type == "nightly":
-        image_uri = NIGHTLY_IMAGES[config.get("framework")]
+        image_uri = NIGHTLY_IMAGES[framework]
     elif image_type == "candidate":
-        image_uri = CANDIDATE_IMAGES[config.get("framework")]
+        image_uri = CANDIDATE_IMAGES[framework]
     else:
-        image_uri = sagemaker.image_uris.retrieve(framework="djl-" +
-                                                  config.get("framework"),
+        image_uri = sagemaker.image_uris.retrieve(framework="djl-" + framework,
                                                   version=RELEASE_VERSION,
                                                   region=REGION)
     try:
@@ -319,7 +341,7 @@ def no_code_endpoint_test(name, image_type):
             model.delete_model()
 
 
-def single_model_endpoint_test(name, image_type):
+def single_model_endpoint_test(name, image_type, run_benchmark):
     config = SINGLE_MODEL_ENDPOINT_CONFIGS.get(name)
     data = config.get("payload", DEFAULT_PAYLOAD)
     session = get_sagemaker_session(
@@ -335,10 +357,11 @@ def single_model_endpoint_test(name, image_type):
             name=get_name_for_resource(name),
             **config.get("model_kwargs"),
         )
+        engine_name = model.engine.value[0].lower()
         if image_type == "nightly":
-            model.image_uri = NIGHTLY_IMAGES[model.engine.value[0].lower()]
+            model.image_uri = NIGHTLY_IMAGES[engine_name]
         elif image_type == "candidate":
-            model.image_uri = CANDIDATE_IMAGES[model.engine.value[0].lower()]
+            model.image_uri = CANDIDATE_IMAGES[engine_name]
 
         if config.get("partition", False):
             model.partition(instance_type=DEFAULT_INSTANCE_TYPE,
@@ -351,10 +374,13 @@ def single_model_endpoint_test(name, image_type):
         outputs = predictor.predict(data=data)
         print(outputs)
 
-        if os.getenv("run_benchmark"):
+        if run_benchmark:
             _run_benchmarks(predictor=predictor,
-                            config=config,
-                            metric_name=_get_metric_name(name, model))
+                            payload_data=data,
+                            metric_name=_get_metric_name(
+                                name, model, engine_name,
+                                DEFAULT_INSTANCE_TYPE),
+                            target_model=None)
 
     except Exception as e:
         print(f"Encountered error for creating model {name}. Exception: {e}")
@@ -373,11 +399,12 @@ if __name__ == "__main__":
     test_case = args.test_case
     image_type = args.image_type
     if test_case == "djl":
-        single_model_endpoint_test(model_name, image_type)
+        single_model_endpoint_test(model_name, image_type, args.run_benchmark)
     elif test_case == "no_code":
+        # skipping running benchmark for this for now, as we are not testing new models here.
         no_code_endpoint_test(model_name, image_type)
     elif test_case == "djl_mme":
-        mme_test(model_name, image_type)
+        mme_test(model_name, image_type, args.run_benchmark)
     else:
         raise ValueError(
             f"{test_case} is not a valid test case. Valid choices: [djl, no_code, djl_mme])"
