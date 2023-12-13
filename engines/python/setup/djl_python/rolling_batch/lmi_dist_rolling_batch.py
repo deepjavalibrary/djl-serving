@@ -11,7 +11,6 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import os
 import logging
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from transformers import AutoConfig
@@ -66,7 +65,6 @@ class LmiDistRollingBatch(RollingBatch):
         paged_attention = self.properties.get("paged_attention",
                                               "true").lower() == "true"
         if quantize is not None:
-            os.environ["CUDA_MEMORY_FRACTION"] = "0.9"
             if dtype is not None:
                 raise ValueError(
                     f"Can't set both dtype: {dtype} and quantize: {quantize}")
@@ -121,12 +119,13 @@ class LmiDistRollingBatch(RollingBatch):
             req_id += 1
 
         batch = self.batch_cls.get_batch(
-            Batch(id=0, requests=requests,
-                  size=len(requests)), self.model.tokenizer,
+            Batch(id=0, requests=requests, size=len(requests)),
+            self.model.config, self.model.tokenizer,
             kwargs.get("torch_dtype", torch.float16), self.device)
         max_batch_total_tokens = self.model.warmup(batch)
-        logging.info(
-            f"The max total sequence length is {max_batch_total_tokens}")
+        if max_batch_total_tokens is not None and self.device == 0:
+            logging.info(
+                f"The max total sequence length is {max_batch_total_tokens}")
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
@@ -234,7 +233,7 @@ class LmiDistRollingBatch(RollingBatch):
             self.batch_id_counter += 1
 
             return self.batch_cls.get_batch(
-                batch, self.model.tokenizer,
+                batch, self.model.config, self.model.tokenizer,
                 kwargs.get("torch_dtype", torch.float16),
                 torch.device(f"cuda:{self.device}"))
         else:
