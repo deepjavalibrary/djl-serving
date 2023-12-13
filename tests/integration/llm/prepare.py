@@ -200,119 +200,136 @@ sd_handler_list = {
     }
 }
 
-default_accel_configs = {
-    "huggingface": {
-        "engine": "Python",
-        "option.entryPoint": "djl_python.huggingface"
-    },
-    "deepspeed": {
-        "engine": "DeepSpeed",
-        "option.entryPoint": "djl_python.deepspeed"
-    }
-}
-
 performance_test_list = {
-    "opt-30b": {
+    "opt-30b-fp16-deepspeed": {
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/opt-30b/"
+        "option.model_id": "s3://djl-llm/opt-30b/",
+        "option.parallel_loading": "true",
+        "engine": "DeepSpeed",
+        "option.dtype": "fp16",
+        "option.rolling_batch": "deepspeed",
+    },
+    "opt-30b-bf16-deepspeed": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/opt-30b/",
+        "option.parallel_loading": "true",
+        "engine": "DeepSpeed",
+        "option.dtype": "bf16",
+        "option.rolling_batch": "deepspeed",
+    },
+    "opt-30b-lmi-dist": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/opt-30b/",
+        "engine": "MPI",
+        "option.rolling_batch": "deepspeed",
     },
     "open-llama-13b-fp16-deepspeed": {
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.engine": "deepspeed",
-        "option.model_id": "s3://djl-llm/open-llama-13b/"
-    },
-    "open-llama-13b-fp16-huggingface": {
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.engine": "huggingface",
-        "option.model_id": "s3://djl-llm/open-llama-13b/"
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
     },
     "open-llama-13b-bf16-deepspeed": {
         "option.task": "text-generation",
         "option.dtype": "bf16",
-        "option.engine": "deepspeed",
-        "option.model_id": "s3://djl-llm/open-llama-13b/"
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
     },
-    "open-llama-13b-bf16-huggingface": {
+    "open-llama-13b-fp16-lmi-dist": {
         "option.task": "text-generation",
-        "option.dtype": "bf16",
-        "option.engine": "huggingface",
-        "option.model_id": "s3://djl-llm/open-llama-13b/"
+        "option.dtype": "fp16",
+        "engine": "MPI",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.rolling_batch": "lmi-dist",
     },
     "open-llama-13b-smoothquant": {
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/open-llama-13b/",
         "option.dtype": "fp16",
-        "option.engine": "deepspeed",
-        "option.quantize": "smoothquant"
+        "engine": "DeepSpeed",
+        "option.quantize": "smoothquant",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
     },
     "gpt-j-6b-fp16-deepspeed": {
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.engine": "deepspeed",
-        "option.model_id": "s3://djl-llm/gpt-j-6b/"
-    },
-    "gpt-j-6b-fp16-huggingface": {
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.engine": "huggingface",
-        "option.model_id": "s3://djl-llm/gpt-j-6b/"
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
     },
     "gpt-j-6b-bf16-deepspeed": {
         "option.task": "text-generation",
         "option.dtype": "bf16",
-        "option.engine": "deepspeed",
-        "option.model_id": "s3://djl-llm/gpt-j-6b/"
-    },
-    "gpt-j-6b-bf16-huggingface": {
-        "option.task": "text-generation",
-        "option.dtype": "bf16",
-        "option.engine": "huggingface",
-        "option.model_id": "s3://djl-llm/gpt-j-6b/"
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
     },
     "gpt-j-6b-smoothquant": {
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.engine": "deepspeed",
+        "engine": "DeepSpeed",
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
-        "option.quantize": "smoothquant"
+        "option.quantize": "smoothquant",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
     },
-    "bloom-7b1": {
+    "bloom-7b1-fp16-deepspeed": {
+        "engine": "DeepSpeed",
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/bloom-7b1/"
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
+        "option.dtype": "fp16",
+        "option.rolling_batch": "deepspeed",
+    },
+    "bloom-7b1-bf16-deepspeed": {
+        "engine": "DeepSpeed",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
+        "option.dtype": "bf16",
+        "option.rolling_batch": "deepspeed",
+    },
+    "bloom-7b1-fp16-lmi-dist": {
+        "engine": "MPI",
+        "option.task": "text-generation",
+        "option.rolling_batch": "lmi-dist",
     },
     "gpt-neox-20b-fp16-deepspeed": {
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.engine": "deepspeed",
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.parallel_loading": "true",
+        "option.rolling_batch": "deepspeed",
     },
-    "gpt-neox-20b-fp16-huggingface": {
+    "gpt-neox-20b-fp16-lmi-dist": {
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.engine": "huggingface",
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+        "engine": "MPI",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.rolling_batch": "lmi-dist",
     },
     "gpt-neox-20b-bf16-deepspeed": {
         "option.task": "text-generation",
         "option.dtype": "bf16",
-        "option.engine": "deepspeed",
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
-    },
-    "gpt-neox-20b-bf16-huggingface": {
-        "option.task": "text-generation",
-        "option.dtype": "bf16",
-        "option.engine": "huggingface",
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.parallel_loading": "true",
+        "option.rolling_batch": "deepspeed",
     },
     "gpt-neox-20b-smoothquant": {
         "option.task": "text-generation",
         "option.dtype": "fp16",
-        "option.engine": "deepspeed",
+        "engine": "DeepSpeed",
         "option.model_id": "s3://djl-llm/gpt-neox-20b/",
         "option.quantize": "smoothquant",
-        "option.smoothquant_alpha": 0.65
+        "option.smoothquant_alpha": 0.65,
+        "option.rolling_batch": "deepspeed",
     }
 }
 
@@ -785,14 +802,12 @@ def build_performance_model(model):
     if options.get('option.dtype') is None:
         raise ValueError("Need to provide dtype for performance benchmark")
     options["option.tensor_parallel_degree"] = args.tensor_parallel
-    engine = options.get('option.engine')
+    engine = options.get('engine')
     if args.engine:
         engine = args.engine
+        options['engine'] = engine
     if engine is None:
         raise ValueError("Need to provide engine for performance benchmark")
-    for k, v in default_accel_configs[engine].items():
-        if k not in options:
-            options[k] = v
     write_model_artifacts(options)
 
 

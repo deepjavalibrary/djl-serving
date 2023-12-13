@@ -15,15 +15,6 @@ jobs:
   create-runners:
     runs-on: [self-hosted, scheduler]
     steps:
-      - name: Create new G5XL instance
-        id: create_gpu_xl
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_lmic_g5 $token djl-serving
       - name: Create new G5 instance
         id: create_gpu
         run: |
@@ -43,12 +34,12 @@ jobs:
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g5 $token djl-serving
     outputs:
-      gpu_instance_id_g5xl: ${{ steps.create_gpu_xl.outputs.action_lmic_g5_instance_id }}
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
       gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g5_instance_id }}
 
+
   lmic-neox-g5-test:
-    runs-on: [ self-hosted, g5xl ]
+    runs-on: [ self-hosted, g5 ]
     timeout-minutes: 240
     needs: create-runners
     steps:
@@ -192,7 +183,7 @@ jobs:
           path: tests/integration/logs/
 
   lmic-opt-g5-test:
-    runs-on: [ self-hosted, g5xl ]
+    runs-on: [ self-hosted, g5 ]
     timeout-minutes: 180
     needs: create-runners
     steps:
@@ -227,21 +218,10 @@ jobs:
           name: performance-opt-30b-logs
           path: tests/integration/logs/
 
-  stop-g5xl-runners:
-    if: always()
-    runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, lmic-neox-g5-test, lmic-opt-g5-test ]
-    steps:
-      - name: Stop g5xl instances
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_g5xl }}
-          ./stop_instance.sh $instance_id "us-west-2"
-
   stop-g5-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test, lmic-llama-g5-test ]
+    needs: [ create-runners, lmic-gptj-g5-test, lmic-bloom-g5-test, lmic-llama-g5-test, lmic-neox-g5-test, lmic-opt-g5-test ]
     steps:
       - name: Stop g5 instances
         run: |

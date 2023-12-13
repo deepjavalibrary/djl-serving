@@ -1,10 +1,8 @@
 {
 	"test_series":"performance",
-	"engine":["deepspeed"],
-	"model": "opt-30b",
-	"dtype": ["fp16","bf16"],
+	"model": ["opt-30b-fp16-deepspeed", "opt-30b-bf16-deepspeed", "opt-30b-lmi-dist"],
 	"tensor_parallel": 4,
-	"batch_size": 4,
+	"batch_size": 1,
 	"in_tokens": [256, 512],
 	"out_tokens": 256,
 	"count": 10,
