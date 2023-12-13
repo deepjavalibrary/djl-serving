@@ -5,6 +5,7 @@ import os
 import shutil
 import itertools
 import copy
+import boto3
 import urllib.request
 import subprocess as sp
 
@@ -85,8 +86,19 @@ def multiply_template_with_vars(name, template, raw_var):
 
 
 def parse_raw_template(url):
-    data = urllib.request.urlopen(url)
-    lines = [line.decode("utf-8").strip() for line in data]
+    if url.startswith("http://") or url.startswith("https://"):
+        data = urllib.request.urlopen(url)
+        lines = [line.decode("utf-8").strip() for line in data]
+    elif url.startswith("s3://"):
+        s3 = boto3.resource('s3')
+        split = url[5:].split("/", 1)
+        obj = s3.Object(split[0], split[1])
+        data = obj.get()['Body'].read()
+        lines = [line.strip() for line in data.decode("utf-8").split("\n")]
+    else:
+        with open(url, "r") as f:
+            lines = [line.strip() for line in f.readlines()]
+
     # remove empty lines
     lines = [line for line in lines if len(line) > 0]
     iterator = 0
