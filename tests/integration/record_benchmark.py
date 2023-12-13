@@ -29,7 +29,7 @@ parser.add_argument("--instance",
                     type=str,
                     help="The current instance name")
 parser.add_argument("--record",
-                    choices=["table"],
+                    choices=["table", "cloudwatch"],
                     required=False,
                     type=str,
                     help="Where to record to")
@@ -61,6 +61,35 @@ class Benchmark:
 def record_table():
     table = boto3.resource("dynamodb").Table("RubikonBenchmarks")
     table.put_item(Item=data)
+
+
+def record_cloudwatch():
+    esc = lambda n: n.replace("/", "-").replace(".", "-").strip(' -')
+    metric_name = lambda n: f"lmi_{data['instance']}_{esc(data['image'])}_{esc(data['modelId'])}_{n}"
+    metric_data = [
+        {
+            'MetricName': metric_name("throughput"),
+            'Unit': 'Count/Second',
+            'Value': data['throughput']
+        },
+        {
+            'MetricName': metric_name("latency_p50"),
+            'Unit': 'Milliseconds',
+            'Value': data['P50']
+        },
+        {
+            'MetricName': metric_name("latency_p90"),
+            'Unit': 'Milliseconds',
+            'Value': data['P90']
+        },
+        {
+            'MetricName': metric_name("latency_p99"),
+            'Unit': 'Milliseconds',
+            'Value': data['P99']
+        },
+    ]
+    cw = boto3.client('cloudwatch', region_name='us-east-1')
+    cw.put_metric_data(Namespace="LMI_Benchmark", MetricData=metric_data)
 
 
 def data_basic():
@@ -179,5 +208,7 @@ if __name__ == "__main__":
     else:
         if args.record == "table":
             record_table()
+        elif args.record == "cloudwatch":
+            record_cloudwatch()
         else:
             print(data)
