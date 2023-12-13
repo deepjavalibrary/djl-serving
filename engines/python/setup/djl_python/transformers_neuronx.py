@@ -17,7 +17,7 @@ from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
 from djl_python import Input, Output
 from djl_python.encode_decode import decode, encode
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
-from djl_python.stable_diffusion_inf2 import StableDiffusionService
+from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
 from djl_python.properties_manager.properties import StreamingEnum
@@ -244,14 +244,18 @@ _service = TransformersNeuronXService()
 
 
 def partition(inputs: Input):
-    _service.partition(inputs.get_properties())
+    global _service
+    if not _service.initialized:
+        if "use_stable_diffusion" in inputs.get_properties():
+            _service = StableDiffusionNeuronXService()
+        _service.partition(inputs.get_properties())
 
 
 def handle(inputs: Input):
     global _service
     if not _service.initialized:
         if "use_stable_diffusion" in inputs.get_properties():
-            _service = StableDiffusionService()
+            _service = StableDiffusionNeuronXService()
         _service.initialize(inputs.get_properties())
 
     if inputs.is_empty():

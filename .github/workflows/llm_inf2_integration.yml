@@ -238,26 +238,37 @@ jobs:
           python3 llm/client.py transformers_neuronx opt-1.3b-streaming
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
-      - name: Test stable diffusion with handler
+      - name: Test stable diffusion 1.5 with handler
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py transformers_neuronx stable-diffusion-2.1-base-neuron
+          python3 llm/prepare.py transformers_neuronx stable-diffusion-1.5-neuron
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
-          python3 llm/client.py stable-diffusion stable-diffusion-2.1-base-neuron
+          python3 llm/client.py neuron-stable-diffusion stable-diffusion-1.5-neuron
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: Test stable diffusion bf16 with handler
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py transformers_neuronx stable-diffusion-2.1-base-neuron-bf16
+          python3 llm/prepare.py transformers_neuronx stable-diffusion-2.1-neuron
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
-          python3 llm/client.py stable-diffusion stable-diffusion-2.1-base-neuron
+          python3 llm/client.py neuron-stable-diffusion stable-diffusion-2.1-neuron
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: Test stable diffusion xl with handler
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx stable-diffusion-xl-neuron
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py neuron-stable-diffusion stable-diffusion-xl-neuron
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: Test load split model with llama2 7B in handler
