@@ -25,6 +25,7 @@ class VllmQuantizeMethods(str, Enum):
 class VllmRbProperties(Properties):
     engine: Optional[str] = None
     dtype: Optional[str] = "auto"
+    load_format: Optional[str] = "auto"
     quantize: Optional[VllmQuantizeMethods] = None
     tensor_parallel_degree: Optional[int] = None
     max_rolling_batch_prefill_tokens: Optional[int] = None
