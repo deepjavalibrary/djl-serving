@@ -132,6 +132,17 @@ jobs:
           python3 llm/client.py transformers_neuronx pythia-2.8b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
+      - name: Test transformers-neuronx bloom-7b1 with handler
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx bloom-7b1
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx bloom-7b1
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
       - name: Test gpt2 partition
         working-directory: tests/integration
         run: |
@@ -143,9 +154,10 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
           partition --model-dir /opt/ml/input/data/training/ --skip-copy | tee partition_output.log
 
-          # checking if pt files are generated.
+          # checking if neff files are generated.
           sudo mv $PWD/models/test/partition-test $PWD/models/
-          if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
+          if ls $PWD/models/partition-test/compiled/*.neff &>/dev/null; \
+          then echo "compiled files generated"; else exit 1; fi
           
           # checking whether requirements.txt download is successful
           if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
@@ -161,9 +173,10 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
           partition --model-dir /opt/ml/input/data/training/ --skip-copy | tee partition_output.log
 
-          # checking if pt files are generated.
+          # checking if neff files are generated.
           sudo mv $PWD/models/test/partition-test $PWD/models/
-          if ls $PWD/models/partition-test/*.pt &>/dev/null ; then echo "checkpoint files generated"; else exit 1;  fi
+          if ls $PWD/models/partition-test/compiled/*.neff &>/dev/null; \
+          then echo "compiled files generated"; else exit 1; fi
           
           # checking whether requirements.txt download is successful
           if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
@@ -205,17 +218,6 @@ jobs:
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh pytorch-inf2
-      - name: Test transformers-neuronx bloom-7b1 with handler
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py transformers_neuronx bloom-7b1
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
-          serve
-          curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx bloom-7b1
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: Test transformers-neuronx open-llama-7b with handler
         working-directory: tests/integration
         run: |
