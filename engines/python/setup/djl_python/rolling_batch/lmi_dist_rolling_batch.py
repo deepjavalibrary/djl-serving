@@ -13,7 +13,6 @@
 
 import logging
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
-from transformers import AutoConfig
 from lmi_dist.models import get_model
 from lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
@@ -23,6 +22,8 @@ import lmi_dist
 from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
+
+from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
 QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes8", "bitsandbytes", "gptq"]
 
@@ -39,15 +40,12 @@ class LmiDistRollingBatch(RollingBatch):
         :param kwargs passed while loading the model
         """
 
-        super().__init__(**kwargs)
-        if properties.get("mpi_mode") != "true" and int(
-                properties.get("tensor_parallel_degree", "1")) != 1:
-            raise AssertionError(
-                f"Need mpi_mode to start lmi-dist RollingBatcher")
-        self.device = device
-        self.properties = properties
+        self.lmi_dist_configs = LmiDistRbProperties(**properties)
+
+        super().__init__(waiting_steps=self.lmi_dist_configs.waiting_steps,
+                         output_formatter=self.lmi_dist_configs.output_formatter)
         self.batch_cls = None
-        self._init_model(kwargs, model_id_or_path)
+        self._init_model(self.lmi_dist_configs.model_id_or_path)
         self.batch_id_counter = 0
         self.cache = {}
 
@@ -56,41 +54,25 @@ class LmiDistRollingBatch(RollingBatch):
         self.batch_id_counter = 0
         super().reset()
 
-    def _init_model(self, kwargs, model_id_or_path):
-        self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
-        sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
-        quantize = self.properties.get("quantize", None)
-        dtype = self.properties.get("dtype", None)
-        revision = self.properties.get('revision', None)
-        paged_attention = self.properties.get("paged_attention",
-                                              "true").lower() == "true"
+    def _init_model(self, model_id_or_path):
+        sharded = self.lmi_dist_configs.tensor_parallel_degree > 1
+        quantize = self.lmi_dist_configs.quantize
         if quantize is not None:
-            if dtype is not None:
-                raise ValueError(
-                    f"Can't set both dtype: {dtype} and quantize: {quantize}")
-            if quantize not in QUANTIZATION_SUPPORT_ALGO:
-                raise ValueError(
-                    f"Invalid value for quantize: {quantize}. Valid values when using option rolling_batch=lmi-dist are: {QUANTIZATION_SUPPORT_ALGO}"
-                )
-            if quantize == "bitsandbytes8":
-                quantize = "bitsandbytes"
-        if quantize is None and dtype == "int8":
-            quantize = "bitsandbytes"
+            quantize = quantize.value
         self.model = get_model(
             model_id_or_path,
-            revision=revision,
+            revision=self.lmi_dist_configs.revision,
             sharded=sharded,
             quantize=quantize,
-            dtype=dtype,
-            trust_remote_code=kwargs.get("trust_remote_code"),
-            paged_attention=paged_attention)
+            dtype=self.lmi_dist_configs.dtype,
+            trust_remote_code=self.lmi_dist_configs.trust_remote_code,
+            paged_attention=self.lmi_dist_configs.paged_attention)
         self.batch_cls = self.model.batch_type
-        if paged_attention:
-            self._warmup(**kwargs)
+        if self.lmi_dist_configs.paged_attention:
+            self._warmup()
 
-    def _warmup(self, **kwargs):
-        max_batch_prefill_tokens = int(
-            self.properties.get("max_rolling_batch_prefill_tokens", 4096))
+    def _warmup(self):
+        max_batch_prefill_tokens = self.lmi_dist_configs.max_rolling_batch_prefill_tokens
 
         input_length = 512
         n_tokens = 0
@@ -121,7 +103,7 @@ class LmiDistRollingBatch(RollingBatch):
         batch = self.batch_cls.get_batch(
             Batch(id=0, requests=requests, size=len(requests)),
             self.model.config, self.model.tokenizer,
-            kwargs.get("torch_dtype", torch.float16), self.device)
+            self.lmi_dist_configs.torch_dtype, self.lmi_dist_configs.device)
         max_batch_total_tokens = self.model.warmup(batch)
         if max_batch_total_tokens is not None and self.device == 0:
             logging.info(
@@ -234,7 +216,7 @@ class LmiDistRollingBatch(RollingBatch):
 
             return self.batch_cls.get_batch(
                 batch, self.model.config, self.model.tokenizer,
-                kwargs.get("torch_dtype", torch.float16),
-                torch.device(f"cuda:{self.device}"))
+                self.lmi_dist_configs.torch_dtype,
+                torch.device(f"cuda:{self.lmi_dist_configs.device}"))
         else:
             return None
