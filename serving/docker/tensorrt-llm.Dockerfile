@@ -20,6 +20,7 @@ ARG accelerate_version=0.23.0
 ARG tensorrtlibs_version=9.2.0.post12.dev5
 ARG trtllm_toolkit_version=nightly
 ARG cuda_python_version=12.2.0
+ARG ammo_version=0.5.0
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
 ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.6.1/tensorrt_llm-0.6.1-py3-none-any.whl"
@@ -70,9 +71,15 @@ RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} ac
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml datasets pydantic==${pydantic_version} && \
     pip3 cache purge
 
-# Install TensorRT and TRT LLM
+# Install TensorRT and TRT-LLM deps
 RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} && \
     pip install --no-deps ${trtllm_wheel} && \
+    pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
+    # Download and install the AMMO package from the DevZone.
+    wget https://developer.nvidia.com/downloads/assets/cuda/files/nvidia-ammo/nvidia_ammo-${ammo_version}.tar.gz && \
+    tar -xzf nvidia_ammo-0.5.0.tar.gz && \
+    pip install nvidia-pyindex onnx-graphsurgeon nvidia_ammo-${ammo_version}/nvidia_ammo-${ammo_version}-cp${pyver}-cp${pyver}-linux_x86_64.whl && \
+    rm -rf nvidia_ammo-* && \
     pip3 cache purge
 
 # download dependencies
