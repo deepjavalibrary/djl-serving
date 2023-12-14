@@ -78,7 +78,8 @@ RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorr
     # Download and install the AMMO package from the DevZone.
     wget https://developer.nvidia.com/downloads/assets/cuda/files/nvidia-ammo/nvidia_ammo-${ammo_version}.tar.gz && \
     tar -xzf nvidia_ammo-0.5.0.tar.gz && \
-    pip install nvidia-pyindex onnx-graphsurgeon nvidia_ammo-${ammo_version}/nvidia_ammo-${ammo_version}-cp${pyver}-cp${pyver}-linux_x86_64.whl && \
+    pip install nvidia-pyindex && \
+    pip install onnx-graphsurgeon nvidia_ammo-${ammo_version}/nvidia_ammo-${ammo_version}-cp${pyver}-cp${pyver}-linux_x86_64.whl && \
     rm -rf nvidia_ammo-* && \
     pip3 cache purge
 
