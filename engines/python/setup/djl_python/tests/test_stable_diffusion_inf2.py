@@ -17,8 +17,8 @@ from djl_python.tests.utils import parameterized, parameters, mock_import_module
 
 MOCK_MODULES = [
     "torch_neuronx", "transformers_neuronx", "transformers_neuronx.config",
-    "optimum", "optimum.neuron", "diffusers", "diffusers.models",
-    "diffusers.models.unet_2d_condition",
+    "transformers_neuronx.module", "optimum", "optimum.neuron", "diffusers",
+    "diffusers.models", "diffusers.models.unet_2d_condition",
     "diffusers.models.attention_processor"
 ]
 mock_import_modules(MOCK_MODULES)

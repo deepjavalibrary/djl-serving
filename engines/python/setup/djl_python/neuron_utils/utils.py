@@ -11,11 +11,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import os
-import re
-import json
 import torch
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, Dict
 from optimum.neuron import NeuronModelForCausalLM
 
 if TYPE_CHECKING:
@@ -42,35 +39,6 @@ def task_from_config(config) -> str:
         if key in arch:
             return value
     return "text-generation"
-
-
-def save_pretrained_split(model, save_directory):
-    model.save_pretrained(save_directory,
-                          save_function=save_split,
-                          max_shard_size='10000GB',
-                          safe_serialization=False)
-
-
-_KEY_TO_FILENAME_JSON = 'key_to_filename.json'
-
-
-def save_split(state_dict, save_dir):
-    os.makedirs(save_dir, exist_ok=True)
-    key_to_filename = {}
-    for idx, key in enumerate(state_dict.keys()):
-        key_to_filename[key] = f'p{idx}.{sanitize_file_name(key)}'
-    with open(os.path.join(save_dir, _KEY_TO_FILENAME_JSON), 'w') as f:
-        json.dump(key_to_filename, f, indent=2)
-    for key, tensor in state_dict.items():
-        torch.save(tensor, os.path.join(save_dir, key_to_filename[key]))
-
-
-def sanitize_file_name(name):
-    sanitized = name.strip().replace(' ', '_')
-    sanitized = re.sub(r'(?u)[^-\w.]', '', sanitized)
-    if sanitized in {'', '.', '..'}:
-        raise ValueError(f'Could not sanitize "{name}" to file name.')
-    return sanitized
 
 
 class NeuronXModelAdapter(NeuronModelForCausalLM):

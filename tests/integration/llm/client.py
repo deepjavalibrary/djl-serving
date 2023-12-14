@@ -289,9 +289,9 @@ transformers_neuronx_model_spec = {
         "batch_size": [2],
         "stream_output": True,
     },
-    "llama2-7b": {
+    "mistral-7b": {
         "worker": 1,
-        "seq_length": [128, 256, 512],
+        "seq_length": [128, 256],
         "batch_size": [4],
     },
 }

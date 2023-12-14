@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 # The below code is heavily inspired from Optimum Neuron under the following link:
 # https://github.com/huggingface/optimum-neuron/blob/974f34336bb36b1b64890c191c558a1575372be7/text-generation-inference/server/text_generation_server/generator.py
+
 import copy
 from enum import Enum
 from typing import List, Optional
@@ -49,6 +50,7 @@ class Slot:
         self._selector = None
         self._generated_tokens = 0
         self._next_token_text = ""
+        self._cache_id = torch.zeros(1)
 
     @property
     def id(self) -> int:
@@ -101,7 +103,7 @@ class Slot:
             "max_new_tokens", 30)
         # TODO: stop_sequences, ignore_eos_token
 
-    def reset(self, input_ids, attention_mask, selector):
+    def reset(self, input_ids, attention_mask, selector, cache_id):
         """Reset the slot for the next generation.
 
         Args:
@@ -111,10 +113,13 @@ class Slot:
                 The new attention_mask to use to generate the next token.
             selector: (`optimum.neuron.generation.TokenSelector`):
                 An object implementing the updated token selection logic.
+            cache_id: (torch.LongTensor):
+                The new cache_ids to use to generate the next token
         """
         self._tokens = input_ids
         self._mask = attention_mask
         self._selector = selector
+        self._cache_id = cache_id
 
     def pause(self):
         """Mark the current slot as paused for generation.
@@ -153,6 +158,7 @@ class Slot:
         # Now that a new token has been generated, we can append the previous one to the inputs
         self._inputs += self._next_token_text
         self._next_token_text = next_token_text
+        self.increment_cache_id()
 
     def select(self, input_ids: torch.LongTensor,
                logits: torch.Tensor) -> torch.LongTensor:
@@ -168,6 +174,12 @@ class Slot:
             `torch.LongTensor`: A scalar torch.LongTensor` containing the selected token.
         """
         return self._selector.select(input_ids, logits)[0]
+
+    def increment_cache_id(self):
+        self._cache_id += 1
+
+    def trim_cache_id(self):
+        self._cache_id = self._cache_id.max()
 
     @property
     def stopped(self) -> bool:
@@ -189,6 +201,10 @@ class Slot:
     def max_token(self) -> int:
         return self._generation_config.max_length
 
+    @property
+    def cache_id(self) -> torch.LongTensor:
+        return self._cache_id
+
 
 class NeuronGenerator:
     """A Generator for Neuron models."""
@@ -198,7 +214,7 @@ class NeuronGenerator:
         self.model = model
         # Specify padding options for decoder-only architecture
         tokenizer.pad_token_id = tokenizer.eos_token_id
-        tokenizer.padding_side = "left"
+        tokenizer.padding_side = "right"
         self.tokenizer = tokenizer
         self.special_tokens = [
             self.tokenizer.eos_token_id, self.tokenizer.pad_token_id
@@ -206,6 +222,13 @@ class NeuronGenerator:
         self.slots = [Slot(i) for i in range(batch_size)]
         self.batch_size = batch_size
         self.n_positions = n_positions
+        self.cache_ids = None
+
+    def get_slots_by_state(self, slot_state: Slot.State):
+        slots = {state: [] for state in Slot.State}
+        for slot in self.slots:
+            slots[slot.state].append(slot)
+        return slots[slot_state]
 
     def prefill(self, new_requests: List[Request]):
         """Prefill new requests.
@@ -213,11 +236,13 @@ class NeuronGenerator:
         Return:
             A list of `Generation` for each request and a `CachedBatch` containing all pending requests.
         """
-        slots = {state: [] for state in Slot.State}
-        for slot in self.slots:
-            slots[slot.state].append(slot)
-        active_slots = slots[Slot.State.READY]
-        empty_slots = slots[Slot.State.EMPTY]
+        active_slots = self.get_slots_by_state(Slot.State.READY)
+
+        # pause the currently active slots, we will only run prefill on new slots
+        for slot in active_slots:
+            slot.pause()
+
+        empty_slots = self.get_slots_by_state(Slot.State.EMPTY)
         if len(empty_slots) < len(new_requests):
             raise ValueError(
                 f"Cannot prefill {len(new_requests)} new request(s) with only {len(empty_slots)} empty slots."
@@ -227,13 +252,21 @@ class NeuronGenerator:
         logging.debug(
             f"Prefilling {len(new_requests)} new request(s) with {len(empty_slots)} empty slot(s)"
         )
+
+        prefill_slots = []
         for request in new_requests:
             slot = empty_slots.pop()
             slot.assign(request, self.model.generation_config)
+            prefill_slots.append(slot)
             logging.debug(
                 f"Request {slot.request_id} assigned to slot {slot.id}")
-        # Reconstruct the full inputs (without padding)
-        inputs = [slot.inputs for slot in self.slots]
+
+        inputs = [slot.inputs for slot in prefill_slots]
+
+        # Set and arrange active batch ids for prefill
+        seq_ids = [slot.id for slot in prefill_slots]
+        seq_ids = torch.as_tensor(sorted(seq_ids), dtype=torch.int32)
+
         # Tokenize with padding
         padded_inputs = self.tokenizer(inputs,
                                        return_tensors="pt",
@@ -242,25 +275,25 @@ class NeuronGenerator:
         seq_length = min(padded_inputs.input_ids.shape[-1], self.n_positions)
         input_ids = padded_inputs.input_ids[:, :seq_length]
         attention_mask = padded_inputs.attention_mask[:, :seq_length]
-        # Each slot must be reset with the padded inputs
-        for i, slot in enumerate(self.slots):
-            if slot.state != slot.state.EMPTY:
-                slot_input_ids = input_ids[i:i + 1, :]
-                # Padded input ids are also required to set logits processors and stopping criterias
-                selector = TokenSelector.create(slot_input_ids,
-                                                slot.generation_config,
-                                                self.model, self.n_positions)
-                slot_input_ids = slot_input_ids.squeeze().type(torch.int64)
-                slot_attention_mask = attention_mask[i]
-                slot.reset(slot_input_ids, slot_attention_mask, selector)
-        # Clear KV cache
-        self.model.reset_generation()
-        # Pause previously active slots during generation.
-        # Their KV cache will be prefilled but new tokens will be ignored, as they
-        # have already been generated and sent back in the last decode.
-        for slot in active_slots:
-            slot.pause()
-        generation = self._generate_token(input_ids, attention_mask)
+        n_active_seqs = len(input_ids)
+        prefill_batch_size, prefill_context_len = input_ids.shape
+        cache_ids = torch.arange(prefill_context_len).reshape(
+            1, prefill_context_len).expand(
+                n_active_seqs, prefill_context_len).mul(attention_mask)
+
+        for i, slot in enumerate(prefill_slots):
+            slot_input_ids = input_ids[i:i + 1, :]
+            # Padded input ids are also required to set logits processors and stopping criterion
+            selector = TokenSelector.create(slot_input_ids,
+                                            slot.generation_config, self.model,
+                                            self.n_positions)
+            slot_input_ids = slot_input_ids.squeeze().type(torch.int32)
+            slot_attention_mask = attention_mask[i]
+            slot_cache_ids = cache_ids[i]
+            slot.reset(slot_input_ids, slot_attention_mask, selector,
+                       slot_cache_ids)
+        generation = self._generate_token(input_ids, attention_mask, cache_ids,
+                                          seq_ids)
         # Reactivate previously active slots for the next decode.
         for slot in active_slots:
             slot.resume()
@@ -268,58 +301,66 @@ class NeuronGenerator:
         return generation
 
     def decode(self) -> List[Generation]:
-        """Decode the specified prefilled requests.
-
-        Args:
-            batches (`List[CachedBatch]`):
-                A list of previous batches containing the prefilled requests.
+        """Decode the specified requests.
 
         Return:
-            A list of `Generation` for each request and a `CachedBatch` containing all pending requests.
+            A list of `Generation` for each request.
         """
+        # TODO: Validate the refactor for continuous batching TNX implementation
         # Reconstruct input_ids and attention_mask from slots
+        active_slots = self.get_slots_by_state(Slot.State.READY)
         input_ids = None
         attention_mask = None
-        for i, slot in enumerate(self.slots):
-            if slot.state != Slot.State.EMPTY:
-                if input_ids is None:
-                    # Create blank inputs covering all slots (even empty ones)
-                    input_ids = torch.full(
-                        [self.model.batch_size, 1],
-                        fill_value=self.tokenizer.eos_token_id,
-                        dtype=torch.int64)
-                # input_ids are simply the tokens generated by the last decode or prefill requests (other tokens are cached)
-                input_ids[i, 0] = slot.next_token
-                if attention_mask is None:
-                    # Create default mask covering all slots (even empty ones)
-                    attention_mask = torch.zeros(
-                        [self.model.batch_size,
-                         slot.attention_mask.size(-1)],
-                        dtype=torch.int64)
-                    attention_mask[:, -1] = 1
-                attention_mask[i, :] = slot.attention_mask
+        cache_ids = None
+        seq_ids = None
+        for i, slot in enumerate(active_slots):
+            if input_ids is None:
+                # Create blank inputs covering all active slots
+                input_ids = torch.full([len(active_slots), 1],
+                                       fill_value=self.tokenizer.eos_token_id,
+                                       dtype=torch.int32)
+            # input_ids are simply the tokens generated by the last decode or prefill requests (other tokens are cached)
+            input_ids[i, 0] = slot.next_token
+            if attention_mask is None:
+                # Create default mask all active slots
+                attention_mask = torch.zeros([len(active_slots), 1],
+                                             dtype=torch.int32)
+                attention_mask[:, -1] = 1
+            if cache_ids is None:
+                cache_ids = torch.zeros([len(active_slots), 1],
+                                        dtype=torch.int32)
+            cache_ids[i, :] = slot.cache_id
+            if seq_ids is None:
+                seq_ids = torch.zeros(len(active_slots), dtype=torch.int32)
+            seq_ids[i] = slot.id
         if input_ids is None:
             raise ValueError(
                 "Unable to decode tokens for non-prefilled batches (probably due to a previous failure)"
             )
-        return self._generate_token(input_ids, attention_mask)
+        return self._generate_token(input_ids, attention_mask, cache_ids,
+                                    seq_ids)
 
     def _generate_token(
-            self,
-            input_ids: torch.LongTensor,
-            attention_mask: Optional[torch.LongTensor] = None
+        self,
+        input_ids: torch.LongTensor,
+        attention_mask: Optional[torch.LongTensor] = None,
+        cache_ids: Optional[torch.LongTensor] = None,
+        seq_ids: Optional[torch.LongTensor] = None,
     ) -> List[Generation]:
-        model_inputs = self.model.prepare_inputs_for_generation(
-            input_ids, attention_mask)
+        # TODO: Validate refactor for continuous batching TNX implementation
+        model_inputs = {
+            "input_ids": input_ids,
+            "cache_ids": cache_ids,
+            "start_ids": seq_ids
+        }
         outputs = self.model(
             **model_inputs,
             return_dict=True,
         )
         generations = []
         request_ids = []
-        for i, slot in enumerate(self.slots):
-            if slot.state != Slot.State.READY:
-                continue
+        active_slots = self.get_slots_by_state(Slot.State.READY)
+        for i, slot in enumerate(active_slots):
             request_id = slot.request_id
             request_ids.append(request_id)
             next_token_logits = outputs.logits[i:i + 1, -1, :]
@@ -333,6 +374,7 @@ class NeuronGenerator:
                     [slot.next_token, next_token])
                 if contextual_text[:-len(next_token_text)].endswith(" "):
                     next_token_text = " " + next_token_text
+            slot.trim_cache_id()
             slot.append(next_token, next_token_text)
             generated_text = None
             finish_reason = None

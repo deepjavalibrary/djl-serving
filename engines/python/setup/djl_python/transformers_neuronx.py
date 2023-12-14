@@ -46,8 +46,11 @@ class TransformersNeuronXService(object):
         if self.model_config.architectures is not None and any(
                 "CausalLM" in arch
                 for arch in self.model_config.architectures):
+            # Limit optimum model loading to implemented models listed in the constant above
             use_tnx = self.model_config.model_type not in OPTIMUM_CAUSALLM_MODEL_TYPES
-        use_tnx = use_tnx or self.config.load_split_model or self.config.load_in_8bit
+        # Limit optimum model loading from using non hf schema models or using non-implemented neuron configs
+        use_tnx = use_tnx or self.config.load_split_model or self.config.load_in_8bit or (
+            self.config.rolling_batch != "disable")
         if use_tnx:
             self._model_loader_class = TNXModelLoader
 

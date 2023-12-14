@@ -17,8 +17,10 @@ from unittest.mock import MagicMock, Mock, patch
 from djl_python.tests.utils import parameterized, parameters, mock_import_modules
 
 MOCK_MODULES = [
-    "torch_neuronx", "transformers_neuronx", "transformers_neuronx.config",
-    "optimum", "optimum.neuron", "diffusers", "diffusers.models",
+    "torch_neuronx", "neuronxcc", "transformers_neuronx",
+    "transformers_neuronx.config", "transformers_neuronx.module",
+    "transformers_neuronx.gpt2", "transformers_neuronx.gpt2.model", "optimum",
+    "optimum.neuron", "diffusers", "diffusers.models",
     "diffusers.models.unet_2d_condition",
     "diffusers.models.attention_processor"
 ]
@@ -58,9 +60,13 @@ class TestTransformerNeuronXService(unittest.TestCase):
 
     @staticmethod
     def patch_load_model():
-        return patch.object(OptimumModelLoader,
+        return patch.object(TNXModelLoader,
                             "load_model",
                             return_value="mock_model")
+
+    @staticmethod
+    def patch_model_loader():
+        return patch.object(TNXModelLoader, "__init__", return_value=None)
 
     @staticmethod
     def patch_partition():
@@ -168,17 +174,23 @@ class TestTransformerNeuronXService(unittest.TestCase):
         self.service._model_loader_class.assert_called_once_with(
             config=self.service.config, model_config=self.service.model_config)
 
-    @parameters([{"rolling_batch": "auto", "task": "text-generation"}])
+    @parameters([{
+        "rolling_batch": "auto",
+        "task": "text-generation",
+        "max_rolling_batch_size": 4
+    }])
     def test_initialize(self, params):
         # Setup
         test_properties = {**self.default_properties, **params}
 
         # Test
-        with self.patch_load_model() as mock_model_loader:
-            self.service.initialize(test_properties)
+        with self.patch_model_loader() as mock_model_loader_class:
+            with self.patch_load_model() as mock_model_loader:
+                self.service.initialize(test_properties)
 
         # Evaluate
         mock_model_loader.assert_called()
+        mock_model_loader_class.assert_called()
         self.assertTrue(self.service.initialized)
 
     @parameters([{
