@@ -53,6 +53,9 @@ class TransformersNeuronXService(object):
 
     def set_configs(self, properties):
         self.config = TransformerNeuronXProperties(**properties)
+        if self.config.rolling_batch != "disable":
+            """batch_size needs to match max_rolling_batch_size for precompiled neuron models running rolling batch"""
+            self.config.batch_size = self.config.max_rolling_batch_size
         self.model_config = AutoConfig.from_pretrained(
             self.config.model_id_or_path, revision=self.config.revision)
 

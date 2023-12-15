@@ -168,9 +168,18 @@ class TestConfigManager(unittest.TestCase):
                 TransformerNeuronXProperties(**common_properties, **properties)
             del properties['context_length_estimate']
 
+        def test_invalid_batch_sizes_rolling_batch():
+            rb_properties = {
+                **common_properties,
+                **properties, 'rolling_batch': "auto"
+            }
+            with self.assertRaises(ValueError):
+                TransformerNeuronXProperties(**rb_properties)
+
         test_url_not_s3_uri("https://random.url.address/")
         test_non_existent_directory("not_a_directory")
         test_invalid_context_length("invalid")
+        test_invalid_batch_sizes_rolling_batch()
 
     def test_trtllm_configs(self):
         properties = {

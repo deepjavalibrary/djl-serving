@@ -82,17 +82,18 @@ class TransformerNeuronXProperties(Properties):
         return rolling_batch
 
     @validator('batch_size')
-    def validate_batch_size(cls, batch_size, values):
+    def validate_batch_size(cls, batch_size: int, values) -> int:
         """
-        Transformer neuronx has both option.batch_size and batch_size.
-        option.batch_size is to compile the model with batch size, which cannot be
-        differentiated in neuronx handlers. Hence, just throwing a warning here.
+        Transformer neuronx supports batch_size, and max_rolling_batch_size.
+        The batch_size param is for dynamic batching, and max_rolling_batch_size is for rolling batch.
+        We validate here that the values are compatible and set for both compilation and inference.
         """
         if batch_size > 1:
-            if values['rolling_batch'] == RollingBatchEnum.disable and values[
-                    'enable_streaming'] != StreamingEnum.false:
-                logging.warning(
-                    "We cannot enable streaming for dynamic batching")
+            if values['rolling_batch'] != RollingBatchEnum.disable:
+                raise ValueError(
+                    "Dynamic batching and rolling batch cannot be enabled at the same time, please "
+                    "set either batch size or rolling batch with max_rolling_batch_size, but not both."
+                )
         return batch_size
 
     @validator('compiled_graph_path')

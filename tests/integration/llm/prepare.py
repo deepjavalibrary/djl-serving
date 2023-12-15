@@ -348,8 +348,8 @@ transformers_neuronx_aot_handler_list = {
         "fp16",
         "option.model_loading_timeout":
         600,
-        "option.load_in_8bit":
-        True,
+        "option.quantize":
+        "static_int8",
         "option.enable_streaming":
         False,
         "option.save_mp_checkpoint_path":
@@ -360,7 +360,7 @@ transformers_neuronx_aot_handler_list = {
 transformers_neuronx_handler_list = {
     "gpt2": {
         "option.model_id": "gpt2",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
         "option.dtype": "fp16",
@@ -369,17 +369,17 @@ transformers_neuronx_handler_list = {
     },
     "gpt2-quantize": {
         "option.model_id": "gpt2",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600,
-        "option.load_in_8bit": True,
+        "option.quantize": "static_int8",
         "option.enable_streaming": False
     },
     "opt-1.3b": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.dtype": "fp16",
@@ -388,7 +388,7 @@ transformers_neuronx_handler_list = {
     },
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
         "option.dtype": "fp32",
@@ -397,7 +397,7 @@ transformers_neuronx_handler_list = {
     },
     "pythia-2.8b": {
         "option.model_id": "s3://djl-llm/pythia-2.8b/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
         "option.dtype": "fp16",
@@ -406,7 +406,7 @@ transformers_neuronx_handler_list = {
     },
     "open-llama-7b": {
         "option.model_id": "s3://djl-llm/open-llama-7b/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.dtype": "fp16",
@@ -416,7 +416,7 @@ transformers_neuronx_handler_list = {
     },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 256,
         "option.dtype": "fp16",
@@ -425,7 +425,7 @@ transformers_neuronx_handler_list = {
     },
     "llama-7b-split": {
         "option.model_id": "s3://djl-llm/llama-2-7b-split-inf2/split-model/",
-        "option.batch_size": 1,
+        "batch_size": 1,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.model_loading_timeout": 2400,
@@ -434,7 +434,7 @@ transformers_neuronx_handler_list = {
     },
     "llama2-7b": {
         "option.model_id": "s3://djl-llm/llama-2-7b-neuronx/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp16",
         "option.n_positions": 2048,
