@@ -9,7 +9,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.2.2-cudnn8-runtime-ubuntu22.04
+ARG version=12.2.2-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu122
 ARG python_version=3.10
@@ -60,19 +60,25 @@ RUN mv *.deb djl-serving_all.deb || true
 
 # Install OpenMPI and other deps
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y wget unzip openmpi-bin libopenmpi-dev libffi-dev git-lfs rapidjson-dev && \
+RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-dev libffi-dev git-lfs rapidjson-dev && \
     scripts/install_python.sh ${python_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install PyTorch
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
-    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml datasets pydantic==${pydantic_version} && \
+    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml datasets pydantic==${pydantic_version} scipy torchprofile ninja && \
     pip3 cache purge
 
-# Install TensorRT and TRT LLM
+# Install TensorRT and TRT-LLM Deps
 RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} && \
     pip install --no-deps ${trtllm_wheel} && \
+    pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
+    # Download and install the AMMO package from the DevZone.
+    wget https://developer.nvidia.com/downloads/assets/cuda/files/nvidia-ammo/nvidia_ammo-${ammo_version}.tar.gz && \
+    tar -xzf nvidia_ammo-0.5.0.tar.gz && \
+    pip install --no-deps nvidia_ammo-${ammo_version}/nvidia_ammo-${ammo_version}-cp${pyver}-cp${pyver}-linux_x86_64.whl && \
+    rm -rf nvidia_ammo-* && \
     pip3 cache purge
 
 # download dependencies
