@@ -85,7 +85,7 @@ def multiply_template_with_vars(name, template, raw_var):
     return result
 
 
-def parse_raw_template(url):
+def parse_raw_template(url, override_container):
     if url.startswith("http://") or url.startswith("https://"):
         data = urllib.request.urlopen(url)
         lines = [line.decode("utf-8").strip() for line in data]
@@ -104,6 +104,7 @@ def parse_raw_template(url):
     iterator = 0
     final_result = {}
     name = ''
+    container = None
     properties = []
     commandline = []
     requirements = []
@@ -113,6 +114,9 @@ def parse_raw_template(url):
         if '[test_name]' == lines[iterator]:
             iterator += 1
             name = lines[iterator]
+        elif '[container]' == lines[iterator]:
+            iterator += 1
+            container = lines[iterator]
         elif '[serving_properties]' == lines[iterator]:
             iterator += 1
             while iterator < len(lines) and not is_square_bracket(
@@ -152,6 +156,11 @@ def parse_raw_template(url):
                 "awscurl": ' '.join(commandline),
                 "requirements": requirements
             }
+            if override_container is not None and override_container != "":
+                container = override_container
+            if container is None or container == "":
+                raise Exception("No container specified. Expected a container in either the job template, arg, or action")
+            cur_result['container'] = container
             if info is not None:
                 cur_result['info'] = info
             mul_results = multiply_template_with_vars(name, cur_result, vars)
@@ -159,6 +168,7 @@ def parse_raw_template(url):
                 r['awscurl'] = r['awscurl'].encode().hex()
             final_result.update(mul_results)
             name = ''
+            container = None
             properties = []
             commandline = []
             requirements = []
@@ -194,7 +204,7 @@ def machine_translation(machine_name: str):
         return "deepspeed"
 
 
-def build_running_script(template, job, instance, container):
+def build_running_script(template, job, instance):
     with open(template) as f:
         template = json.load(f)
     job_template = template[job]
@@ -203,9 +213,11 @@ def build_running_script(template, job, instance, container):
     write_model_artifacts(job_template['properties'],
                           job_template['requirements'])
 
-    command_str = f"./launch_container.sh {container} $PWD/models {machine_translation(instance)}"
+    container = job_template['container']
+
     bash_command = [
-        'echo "Start Launching container..."', command_str,
+        'echo "Start Launching container..."', f"docker pull {container}",
+        f"./launch_container.sh {container} $PWD/models {machine_translation(instance)}",
         job_template['awscurl'] + " | tee benchmark.log"
     ]
     with open("instant_benchmark.sh", "w") as f:
@@ -214,15 +226,14 @@ def build_running_script(template, job, instance, container):
 
 if __name__ == "__main__":
     if args.parse:
-        result = parse_raw_template(args.parse)
+        result = parse_raw_template(args.parse, args.container)
         logging.info(f"Parsed running instruction: {result}")
         command = f"echo \"jobs={json.dumps(json.dumps(list(result.keys())))}\" >> $GITHUB_OUTPUT"
         sp.call(command, shell=True)
         command = f"echo \"template={json.dumps(json.dumps(json.dumps(result)))}\" >> $GITHUB_OUTPUT"
         sp.call(command, shell=True)
-    elif args.template and args.job and args.instance and args.container:
-        build_running_script(args.template, args.job, args.instance,
-                             args.container)
+    elif args.template and args.job and args.instance:
+        build_running_script(args.template, args.job, args.instance)
     else:
         parser.print_help()
         raise ValueError("args not supported")

@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(
     description="Script for saving container benchmark results")
 parser.add_argument("--container",
-                    required=True,
+                    required=False,
                     type=str,
                     help="The container to run the job")
 parser.add_argument("--template",
@@ -99,16 +99,8 @@ def data_basic():
 
     data["instance"] = args.instance
 
-    container = args.container
-    data["container"] = container
-    if container.startswith("deepjavalibrary/djl-serving:"):
-        container = container[len("deepjavalibrary/djl-serving:"):]
-        split = container.split("-", 1)
-        data["djlVersion"] = split[0]
-        if len(split) > 1:
-            data["image"] = split[1]
-        else:
-            data["image"] = "cpu"
+    if args.container is not None:
+        data["container"] = args.container
 
     if args.info:
         for info in args.info:
@@ -140,6 +132,19 @@ def data_from_client():
                 data["P99"] = Decimal(line.split(" ")[1])
             if "totalTime" in data and "requests" in data:
                 data["throughput"] = data["requests"] / data["totalTime"]
+
+
+def data_container():
+    if "container" in data:
+        container = data["container"]
+        if container.startswith("deepjavalibrary/djl-serving:"):
+            container = container[len("deepjavalibrary/djl-serving:"):]
+            split = container.split("-", 1)
+            data["djlVersion"] = split[0]
+            if len(split) > 1:
+                data["image"] = split[1]
+            else:
+                data["image"] = "cpu"
 
 
 def data_from_model_files():
@@ -187,6 +192,8 @@ def data_from_template():
             job_template = template[args.job]
             data["awscurl"] = bytes.fromhex(
                 job_template['awscurl']).decode("utf-8")
+            if "container" not in data and "container" in job_template:
+                data["container"] = job_template["container"]
             if "info" in job_template:
                 for line in job_template["info"]:
                     split = line.split("=", 1)
@@ -199,6 +206,7 @@ def data_from_template():
 if __name__ == "__main__":
     data_from_template()
     data_basic()
+    data_container()
     data_from_client()
     data_from_model_files()
 

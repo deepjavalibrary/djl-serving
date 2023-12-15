@@ -3,10 +3,6 @@ name: instant benchmark tooling
 on:
   workflow_dispatch:
     inputs:
-      container:
-        description: 'The container used to run benchmark'
-        required: true
-        default: '0.23.0-deepspeed'
       running_template:
         description: 'A json file that contains benchmark plans'
         required: true
@@ -26,6 +22,10 @@ on:
           - inf2.24xlarge
           - trn1.2xlarge
           - trn1.32xlarge
+      container:
+        description: 'The container used to run benchmark (overrides the template). Should be a full docker path such as deepjavalibrary/djl-serving:0.25.0-deepspeed'
+        required: false
+        default: ''
       record:
         description: 'Whether to record the results'
         default: 'none'
@@ -82,10 +82,8 @@ jobs:
         working-directory: tests/integration
         id: generate_matrix
         run: |
-          python3 instant_benchmark.py --parse ${{ github.event.inputs.running_template }}
-      - name: Download container
-        run: |
-          docker pull deepjavalibrary/djl-serving:${{ github.event.inputs.container }}
+          python3 instant_benchmark.py --parse ${{ github.event.inputs.running_template }} \
+          --container "${{ github.event.inputs.container }}"
     outputs:
       jobs: ${{ steps.generate_matrix.outputs.jobs }}
       template: ${{ steps.generate_matrix.outputs.template }}
@@ -118,8 +116,8 @@ jobs:
         run: |
           echo "${{ needs.environment-setup.outputs.template }}" >> template.json
           python3 instant_benchmark.py --template template.json \
-          --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }} \
-          --container deepjavalibrary/djl-serving:${{ github.event.inputs.container }}
+          --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }}
+          
           bash instant_benchmark.sh
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -132,7 +130,6 @@ jobs:
         run: |
           python3 record_benchmark.py --template template.json \
           --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }} \
-          --container deepjavalibrary/djl-serving:${{ github.event.inputs.container }} \
           --model models/test --record ${{ github.event.inputs.record }}
       - name: Get serving logs
         if: always()
