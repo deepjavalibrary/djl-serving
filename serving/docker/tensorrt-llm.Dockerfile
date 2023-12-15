@@ -25,6 +25,7 @@ ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_l
 ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.6.1/tensorrt_llm-0.6.1-py3-none-any.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
 ARG pydantic_version=1.10.13
+ARG ammo_version=0.5.0
 EXPOSE 8080
 
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
