@@ -79,6 +79,10 @@ class TestTransformerNeuronXService(unittest.TestCase):
     }, {
         "load_in_8bit": True
     }, {
+        "rolling_batch": "auto",
+        "batch_size": 1,
+        "max_rolling_batch_size": 4
+    }, {
         "model_id":
         "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
     }, {
@@ -90,6 +94,8 @@ class TestTransformerNeuronXService(unittest.TestCase):
         expected = self.config_builder(test_properties)
         if expected.task is None:
             expected.task = "text-generation"
+        if expected.rolling_batch != "disable":
+            expected.batch_size = expected.max_rolling_batch_size
         model_loader_classes = [
             TNXModelLoader.__class__.__name__,
             OptimumModelLoader.__class__.__name__
