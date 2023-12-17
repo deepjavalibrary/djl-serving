@@ -1,0 +1,1 @@
+{"inputs":"The new movie that got Oscar this year","parameters":{"max_new_tokens":256, "do_sample":true}}
