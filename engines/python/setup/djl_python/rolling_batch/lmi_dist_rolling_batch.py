@@ -106,7 +106,7 @@ class LmiDistRollingBatch(RollingBatch):
                   size=len(requests)), self.model.config, self.model.tokenizer,
             self.lmi_dist_configs.torch_dtype, self.lmi_dist_configs.device)
         max_batch_total_tokens = self.model.warmup(batch)
-        if max_batch_total_tokens is not None and self.device == 0:
+        if max_batch_total_tokens is not None and self.lmi_dist_configs.device == 0:
             logging.info(
                 f"The max total sequence length is {max_batch_total_tokens}")
 
