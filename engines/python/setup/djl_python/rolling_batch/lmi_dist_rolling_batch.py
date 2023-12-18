@@ -45,7 +45,8 @@ class LmiDistRollingBatch(RollingBatch):
             waiting_steps=self.lmi_dist_configs.waiting_steps,
             output_formatter=self.lmi_dist_configs.output_formatter)
         self.batch_cls = None
-        self._init_model(self.lmi_dist_configs.model_id_or_path)
+        self._init_model(self.lmi_dist_configs.model_id_or_path,
+                         self.lmi_dist_configs.draft_model_id)
         self.batch_id_counter = 0
         self.cache = {}
 
@@ -54,7 +55,7 @@ class LmiDistRollingBatch(RollingBatch):
         self.batch_id_counter = 0
         super().reset()
 
-    def _init_model(self, model_id_or_path):
+    def _init_model(self, model_id_or_path, draft_model_id=None):
         sharded = self.lmi_dist_configs.tensor_parallel_degree > 1
         quantize = self.lmi_dist_configs.quantize
         if quantize is not None:
@@ -66,6 +67,14 @@ class LmiDistRollingBatch(RollingBatch):
             quantize=quantize,
             dtype=self.lmi_dist_configs.dtype,
             trust_remote_code=self.lmi_dist_configs.trust_remote_code)
+        self.draft_model = get_model(
+            draft_model_id,
+            revision=self.lmi_dist_configs.revision,
+            sharded=False,
+            quantize=quantize,
+            dtype=self.lmi_dist_configs.dtype,
+            trust_remote_code=self.lmi_dist_configs.trust_remote_code
+        ) if draft_model_id else None
         self.batch_cls = self.model.batch_type
         self._warmup()
 
@@ -99,13 +108,20 @@ class LmiDistRollingBatch(RollingBatch):
             req_id += 1
 
         batch = self.batch_cls.get_batch(
-            Batch(id=0, requests=requests,
-                  size=len(requests)), self.model.config, self.model.tokenizer,
-            self.lmi_dist_configs.torch_dtype, self.lmi_dist_configs.device)
-        max_batch_total_tokens = self.model.warmup(batch)
+            Batch(id=0, requests=requests, size=len(requests)),
+            self.model.config,
+            self.model.tokenizer,
+            self.lmi_dist_configs.torch_dtype,
+            self.lmi_dist_configs.device,
+            spec_length=self.lmi_dist_configs.spec_length
+            if self.draft_model else 0)
+        max_batch_total_tokens = self.model.warmup(batch, self.draft_model)
         if max_batch_total_tokens is not None and self.lmi_dist_configs.device == 0:
             logging.info(
                 f"The max total sequence length is {max_batch_total_tokens}")
+
+    def release_cache(self):
+        self.model.release_cache()
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
@@ -125,10 +141,27 @@ class LmiDistRollingBatch(RollingBatch):
         return self.postprocess_results()
 
     def _prefill_and_decode(self, new_batch):
+        """
+        About the text quality issue in Nov. 2023, it was temporarily solved by [RP#1189: Fix lmi_dist garbage output
+        issue](https://github.com/deepjavalibrary/djl-serving/pull/1189). The root cause of this issue is now
+        believed to be found. It should be the buggy memory management; the batch.release() was called inside
+        __del__ (see the code is in flash_causal_lm.py in lmi-dist repo), which won't be triggered until the reference
+        count of the batch is 0. So paged cached memory allocated to the batch won't be freed in time. Also,
+        the self.block_tables = None is missing, which will cause repetitive freeing of the paged cache memory,
+        and the non-uniqueness in batch.block_tables_tensor.
+
+        In [RP#1189: Fix lmi_dist garbage output issue](https://github.com/deepjavalibrary/djl-serving/pull/1189),
+        even though the algorithm remains equivalent, how the reference count to batch is different, so when __del__
+        is called is different. That's why this PR temporarily fixes the text quality issue. Now with this controlled
+        batch.release(), reverting this PR, the text quality issue is believed to disappear.
+        """
+
         # prefill step
         if new_batch:
             batch = new_batch
-            generations, next_batch = self.model.generate_token(batch)
+            generations, next_batch = self.model.generate_token(
+                batch,
+                draft_model=self.draft_model if self.draft_model else None)
             if next_batch is not None:
                 self.cache[next_batch.batch_id] = next_batch
         else:
@@ -139,7 +172,9 @@ class LmiDistRollingBatch(RollingBatch):
                 batch = self.model.batch_type.concatenate(batches)
             else:
                 batch = batches[0]
-            generations, next_batch = self.model.generate_token(batch)
+            generations, next_batch = self.model.generate_token(
+                batch,
+                draft_model=self.draft_model if self.draft_model else None)
             if next_batch is not None:
                 self.cache[next_batch.batch_id] = next_batch
 
@@ -162,10 +197,8 @@ class LmiDistRollingBatch(RollingBatch):
                     token_id = token_id.item()
                 if isinstance(log_prob, torch.Tensor):
                     log_prob = log_prob.item()
-                token = Token(
-                    token_id, ""
-                    if generation.token_is_special else generation.token_text,
-                    log_prob, generation.token_is_special)
+                token = Token(token_id, generation.token_text_no_special,
+                              log_prob, generation.token_is_special)
                 request.set_next_token(token,
                                        self.output_formatter,
                                        last_token=is_last_token,
@@ -213,9 +246,13 @@ class LmiDistRollingBatch(RollingBatch):
                           size=len(preprocessed_requests))
             self.batch_id_counter += 1
 
-            return self.batch_cls.get_batch(batch, self.model.config,
-                                            self.model.tokenizer,
-                                            self.lmi_dist_configs.torch_dtype,
-                                            self.lmi_dist_configs.device)
+            return self.batch_cls.get_batch(
+                batch,
+                self.model.config,
+                self.model.tokenizer,
+                self.lmi_dist_configs.torch_dtype,
+                self.lmi_dist_configs.device,
+                # spec_dec parameters
+                self.lmi_dist_configs.spec_length if self.draft_model else 0)
         else:
             return None

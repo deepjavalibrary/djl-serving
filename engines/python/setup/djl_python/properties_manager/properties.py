@@ -60,6 +60,10 @@ class Properties(BaseModel):
     waiting_steps: Optional[int] = None
     is_mpi: bool = False
 
+    # Spec_dec
+    draft_model_id: Optional[str] = None
+    spec_length: Optional[int] = 0
+
     class Config:
         arbitrary_types_allowed = True
 

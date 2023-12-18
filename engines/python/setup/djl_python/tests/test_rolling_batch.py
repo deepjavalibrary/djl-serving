@@ -27,7 +27,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
-                "id": 244,
+                "id": [244],
                 "text": "He",
                 "log_prob": -0.334532
             }
@@ -37,7 +37,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
-                "id": 576,
+                "id": [576],
                 "text": "llo",
                 "log_prob": -0.123123
             }
@@ -47,7 +47,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
-                "id": 4558,
+                "id": [4558],
                 "text": " world",
                 "log_prob": -0.567854
             },
@@ -76,15 +76,15 @@ class TestRollingBatch(unittest.TestCase):
                 "finish_reason":
                 "length",
                 "tokens": [{
-                    "id": 244,
+                    "id": [244],
                     "text": "He",
                     "log_prob": -0.334532
                 }, {
-                    "id": 576,
+                    "id": [576],
                     "text": "llo",
                     "log_prob": -0.123123
                 }, {
-                    "id": 4558,
+                    "id": [4558],
                     "text": " world",
                     "log_prob": -0.567854
                 }]
@@ -104,7 +104,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
-                "id": 4558,
+                "id": [4558],
                 "text": " world",
                 "log_prob": -0.567854
             },
@@ -148,14 +148,14 @@ class TestRollingBatch(unittest.TestCase):
         req.set_next_token(Token(244, "He", -0.334532), rb.output_formatter)
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
-            'token_id': 244,
+            'token_id': [244],
             'token_text': 'He',
             "request_id": 132
         }
         req.set_next_token(Token(576, "llo", -0.123123), rb.output_formatter)
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
-            'token_id': 576,
+            'token_id': [576],
             'token_text': 'llo',
             "request_id": 132
         }
@@ -163,7 +163,7 @@ class TestRollingBatch(unittest.TestCase):
                            rb.output_formatter, True, 'length')
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
-            'token_id': 4558,
+            'token_id': [4558],
             'token_text': ' world',
             'finish_reason': 'length',
             "request_id": 132
