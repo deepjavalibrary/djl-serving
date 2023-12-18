@@ -12,6 +12,7 @@
  */
 package ai.djl.awscurl;
 
+import ai.djl.repository.FilenameUtils;
 import ai.djl.util.RandomUtils;
 import ai.djl.util.Utils;
 
@@ -21,9 +22,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.output.NullOutputStream;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -913,7 +911,7 @@ public final class AwsCurl {
                 throw new FileNotFoundException("File not found: " + fileName);
             }
             try (InputStream is = Files.newInputStream(path)) {
-                return IOUtils.toByteArray(is);
+                return Utils.toByteArray(is);
             }
         }
 
@@ -931,9 +929,7 @@ public final class AwsCurl {
                             if (!Files.isRegularFile(path)) {
                                 throw new IOException("Invalid input file: " + dataFile);
                             }
-                            try (InputStream is = Files.newInputStream(path)) {
-                                IOUtils.copy(is, bos);
-                            }
+                            Files.copy(path, bos);
                         } else {
                             bos.write(content.getBytes(StandardCharsets.UTF_8));
                         }
@@ -972,8 +968,8 @@ public final class AwsCurl {
 
         private byte[] readContentUrlEncoded(String content) throws IOException {
             if (content.startsWith("@")) {
-                File file = new File(content.substring(1));
-                String value = IOUtils.toString(file.toURI(), StandardCharsets.UTF_8);
+                Path file = Paths.get(content.substring(1));
+                String value = Files.readString(file);
                 return URLEncoder.encode(value, StandardCharsets.UTF_8)
                         .getBytes(StandardCharsets.UTF_8);
             }
@@ -1037,7 +1033,7 @@ public final class AwsCurl {
         }
 
         private ContentType getMimeType(String fileName) {
-            String ext = FilenameUtils.getExtension(fileName).toLowerCase(Locale.ENGLISH);
+            String ext = FilenameUtils.getFileType(fileName).toLowerCase(Locale.ROOT);
             switch (ext.toLowerCase(Locale.ENGLISH)) {
                 case "txt":
                 case "text":

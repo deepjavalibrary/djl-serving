@@ -17,8 +17,6 @@ import ai.djl.util.Utils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.output.NullOutputStream;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
@@ -43,7 +41,6 @@ import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
 
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -114,8 +111,7 @@ final class HttpClient {
                         "HTTP error ("
                                 + resp.getStatusLine()
                                 + "): "
-                                + IOUtils.toString(
-                                        resp.getEntity().getContent(), StandardCharsets.UTF_8));
+                                + Utils.toString(resp.getEntity().getContent()));
                 return resp;
             }
 
@@ -214,7 +210,7 @@ final class HttpClient {
                     List<StringBuilder> list = new ArrayList<>();
                     handleEventStream(is, list, requestTime, jsonExpression, ps);
                 } else {
-                    IOUtils.copy(is, ps);
+                    is.transferTo(ps);
                     ps.flush();
                 }
                 requestTime[0] = System.nanoTime() - begin;
@@ -233,29 +229,28 @@ final class HttpClient {
         byte[] buf = new byte[12];
         byte[] payload = new byte[512];
         while (true) {
-            try {
-                IOUtils.readFully(is, buf);
-                ByteBuffer bb = ByteBuffer.wrap(buf);
-                bb.order(ByteOrder.BIG_ENDIAN);
-                int totalLength = bb.getInt();
-                int headerLength = bb.getInt();
-                int payloadLength = totalLength - headerLength - 12 - 4;
-                int size = totalLength - 12;
-                if (size > payload.length) {
-                    payload = new byte[size];
-                }
-                IOUtils.readFully(is, payload, 0, size);
-                if (payloadLength == 0) {
-                    break;
-                }
-                String line =
-                        new String(payload, headerLength, payloadLength, StandardCharsets.UTF_8)
-                                .trim();
-                if (JsonUtils.processJsonLine(list, requestTime, ps, line, jsonExpression)) {
-                    throw new IOException("Response contains error");
-                }
-            } catch (EOFException e) {
+            if (is.readNBytes(buf, 0, buf.length) == 0) {
                 break;
+            }
+            ByteBuffer bb = ByteBuffer.wrap(buf);
+            bb.order(ByteOrder.BIG_ENDIAN);
+            int totalLength = bb.getInt();
+            int headerLength = bb.getInt();
+            int payloadLength = totalLength - headerLength - 12 - 4;
+            int size = totalLength - 12;
+            if (size > payload.length) {
+                payload = new byte[size];
+            }
+            if (is.readNBytes(payload, 0, size) == 0) {
+                break;
+            }
+            if (payloadLength == 0) {
+                break;
+            }
+            String line =
+                    new String(payload, headerLength, payloadLength, StandardCharsets.UTF_8).trim();
+            if (JsonUtils.processJsonLine(list, requestTime, ps, line, jsonExpression)) {
+                throw new IOException("Response contains error");
             }
         }
     }
