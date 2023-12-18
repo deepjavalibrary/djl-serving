@@ -43,9 +43,8 @@ class LmiDistRbProperties(Properties):
     def validate_mpi_mode(cls, properties):
         if not properties.get("is_mpi") and int(
                 properties.get("tensor_parallel_degree", "1")) != 1:
-            raise ValueError(
-                f"Need mpi_mode to start lmi-dist RollingBatcher."
-                f"Try with engine=MPI in your serving.properties")
+            raise ValueError(f"Need mpi_mode to start lmi-dist RollingBatcher."
+                             f"Try with engine=MPI in your serving.properties")
         return properties
 
     @root_validator()
@@ -56,11 +55,13 @@ class LmiDistRbProperties(Properties):
         else:
             os.environ["CUDA_MEMORY_FRACTION"] = "0.9"
             # parsing bitsandbytes8, so it can be directly passed to lmi dist model loader.
-            if properties.get('quantize') == LmiDistQuantizeMethods.bitsandbytes8:
+            if properties.get(
+                    'quantize') == LmiDistQuantizeMethods.bitsandbytes8:
                 properties['quantize'] = LmiDistQuantizeMethods.bitsandbytes
             if properties.get('dtype') is not None:
                 raise ValueError(
-                    f"Can't set both dtype: {properties['dtype']} and quantize: {properties['quantize']}")
+                    f"Can't set both dtype: {properties['dtype']} and quantize: {properties['quantize']}"
+                )
         return properties
 
     @root_validator()

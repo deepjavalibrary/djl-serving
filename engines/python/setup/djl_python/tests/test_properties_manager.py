@@ -482,10 +482,12 @@ class TestConfigManager(unittest.TestCase):
 
         def test_with_min_properties():
             lmi_configs = LmiDistRbProperties(**min_properties)
-            self.assertEqual(lmi_configs.model_id_or_path, min_properties['model_id'])
+            self.assertEqual(lmi_configs.model_id_or_path,
+                             min_properties['model_id'])
             self.assertEqual(lmi_configs.tensor_parallel_degree, 1)
             self.assertEqual(lmi_configs.max_rolling_batch_size, 32)
-            self.assertEqual(lmi_configs.max_rolling_batch_prefill_tokens, 4096)
+            self.assertEqual(lmi_configs.max_rolling_batch_prefill_tokens,
+                             4096)
             self.assertEqual(lmi_configs.torch_dtype, torch.float16)
             self.assertEqual(lmi_configs.device, 0)
             self.assertIsNone(lmi_configs.dtype)
@@ -504,12 +506,16 @@ class TestConfigManager(unittest.TestCase):
 
             lmi_configs = LmiDistRbProperties(**properties, **min_properties)
             self.assertEqual(lmi_configs.engine, min_properties['engine'])
-            self.assertEqual(lmi_configs.model_id_or_path, min_properties['model_id'])
-            self.assertEqual(lmi_configs.tensor_parallel_degree, int(properties['tensor_parallel_degree']))
+            self.assertEqual(lmi_configs.model_id_or_path,
+                             min_properties['model_id'])
+            self.assertEqual(lmi_configs.tensor_parallel_degree,
+                             int(properties['tensor_parallel_degree']))
             self.assertEqual(lmi_configs.revision, properties['revision'])
-            self.assertEqual(lmi_configs.max_rolling_batch_size, int(properties['max_rolling_batch_size']))
-            self.assertEqual(lmi_configs.max_rolling_batch_prefill_tokens,
-                             int(properties['max_rolling_batch_prefill_tokens']))
+            self.assertEqual(lmi_configs.max_rolling_batch_size,
+                             int(properties['max_rolling_batch_size']))
+            self.assertEqual(
+                lmi_configs.max_rolling_batch_prefill_tokens,
+                int(properties['max_rolling_batch_prefill_tokens']))
             self.assertEqual(lmi_configs.dtype, 'fp32')
             self.assertEqual(lmi_configs.torch_dtype, torch.float32)
             self.assertEqual(lmi_configs.device, 0)
@@ -518,38 +524,30 @@ class TestConfigManager(unittest.TestCase):
             self.assertTrue(lmi_configs.trust_remote_code)
 
         def test_invalid_quantization():
-            properties = {
-                'quantize': 'invalid'
-            }
+            properties = {'quantize': 'invalid'}
             with self.assertRaises(ValueError):
                 LmiDistRbProperties(**properties, **min_properties)
 
         def test_quantization_with_dtype_error():
             # you cannot give both quantization method and dtype
-            properties = {
-                'quantize': 'gptq',
-                'dtype': 'int8'
-            }
+            properties = {'quantize': 'gptq', 'dtype': 'int8'}
             with self.assertRaises(ValueError):
                 LmiDistRbProperties(**properties, **min_properties)
 
         def test_quantization_with_dtype():
-            properties = {
-                'dtype': 'int8'
-            }
+            properties = {'dtype': 'int8'}
             lmi_configs = LmiDistRbProperties(**properties, **min_properties)
             self.assertEqual(lmi_configs.dtype, properties['dtype'])
             self.assertEqual(lmi_configs.torch_dtype, torch.int8)
-            self.assertEqual(lmi_configs.quantize.value, LmiDistQuantizeMethods.bitsandbytes.value)
+            self.assertEqual(lmi_configs.quantize.value,
+                             LmiDistQuantizeMethods.bitsandbytes.value)
 
         def test_quantization_bitsandbytes8():
-            properties = {
-                'quantize': 'bitsandbytes8'
-            }
+            properties = {'quantize': 'bitsandbytes8'}
             lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.quantize.value, LmiDistQuantizeMethods.bitsandbytes.value)
+            self.assertEqual(lmi_configs.quantize.value,
+                             LmiDistQuantizeMethods.bitsandbytes.value)
             self.assertEqual(os.environ.get('CUDA_MEMORY_FRACTION'), '0.9')
-
 
         min_properties = {
             'engine': 'MPI',

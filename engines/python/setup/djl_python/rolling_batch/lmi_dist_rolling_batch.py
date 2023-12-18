@@ -42,8 +42,9 @@ class LmiDistRollingBatch(RollingBatch):
 
         self.lmi_dist_configs = LmiDistRbProperties(**properties)
 
-        super().__init__(waiting_steps=self.lmi_dist_configs.waiting_steps,
-                         output_formatter=self.lmi_dist_configs.output_formatter)
+        super().__init__(
+            waiting_steps=self.lmi_dist_configs.waiting_steps,
+            output_formatter=self.lmi_dist_configs.output_formatter)
         self.batch_cls = None
         self._init_model(self.lmi_dist_configs.model_id_or_path)
         self.batch_id_counter = 0
@@ -101,8 +102,8 @@ class LmiDistRollingBatch(RollingBatch):
             req_id += 1
 
         batch = self.batch_cls.get_batch(
-            Batch(id=0, requests=requests, size=len(requests)),
-            self.model.config, self.model.tokenizer,
+            Batch(id=0, requests=requests,
+                  size=len(requests)), self.model.config, self.model.tokenizer,
             self.lmi_dist_configs.torch_dtype, self.lmi_dist_configs.device)
         max_batch_total_tokens = self.model.warmup(batch)
         if max_batch_total_tokens is not None and self.device == 0:
