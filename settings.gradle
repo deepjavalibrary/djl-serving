@@ -1,4 +1,5 @@
 rootProject.name = 'djl-serving'
+include ':awscurl'
 include ':benchmark'
 include ':engines:python'
 include ':plugins:cache'

@@ -51,6 +51,8 @@ jobs:
         with:
           name: serving
           path: |
+            awscurl/build/reports
+            benchmark/build/reports
             serving/build/reports
             wlm/build/reports
             engines/python/build/reports
