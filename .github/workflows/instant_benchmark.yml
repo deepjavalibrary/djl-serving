@@ -122,6 +122,7 @@ jobs:
         run: |
           python3 record_benchmark.py --template template.json \
           --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }} \
+          --model models/test \
           --container deepjavalibrary/djl-serving:${{ github.event.inputs.container }} --record table
       - name: Get serving logs
         if: always()

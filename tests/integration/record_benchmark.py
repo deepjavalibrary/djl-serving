@@ -17,9 +17,13 @@ parser.add_argument("--container",
                     type=str,
                     help="The container to run the job")
 parser.add_argument("--template",
-                    required=True,
+                    required=False,
                     type=str,
                     help="The template json string")
+parser.add_argument("--job",
+                    required=False,
+                    type=str,
+                    help="The job item within the template")
 parser.add_argument("--instance",
                     required=True,
                     type=str,
@@ -29,7 +33,15 @@ parser.add_argument("--record",
                     required=False,
                     type=str,
                     help="Where to record to")
-parser.add_argument("--job", required=True, type=str, help="The job string")
+parser.add_argument("--model",
+                    required=False,
+                    type=str,
+                    help="The path to the model input directory")
+parser.add_argument("--info",
+                    required=False,
+                    type=str,
+                    nargs="+",
+                    help="A set of info in format of --info a=1 b=2 c=3")
 args = parser.parse_args()
 
 data = {}
@@ -69,6 +81,11 @@ def data_basic():
         else:
             data["image"] = "cpu"
 
+    if args.info:
+        for info in args.info:
+            split = info.split("=", 1)
+            data[[split[0]]] = split[1]
+
 
 def data_from_client():
     with open("benchmark.log", "r") as f:
@@ -96,60 +113,65 @@ def data_from_client():
                 data["throughput"] = data["requests"] / data["totalTime"]
 
 
-def data_from_files():
-    with open("models/test/serving.properties", "r") as f:
-        properties = {}
-        for line in f.readlines():
-            line = line.strip()
-            if line[0] == "#":
-                continue
-            if "=" in line:
-                split = line.split("=", 1)
-                k = split[0].replace(".", "-")
-                v = split[1].replace(".", "-")
-                properties[k] = v
-        data["serving_properties"] = properties
+def data_from_model_files():
+    if args.model:
+        propsPath = os.path.join(args.model, "serving.properties")
+        if os.path.isfile(propsPath):
+            with open(propsPath, "r") as f:
+                properties = {}
+                for line in f.readlines():
+                    line = line.strip()
+                    if line[0] == "#":
+                        continue
+                    if "=" in line:
+                        split = line.split("=", 1)
+                        k = split[0].replace(".", "-")
+                        v = split[1].replace(".", "-")
+                        properties[k] = v
+                data["serving_properties"] = properties
 
-        # Standard properties
-        if "option-model_id" in properties:
-            data["modelId"] = properties["option-model_id"]
-        if "option-tensor_parallel_degree" in properties:
-            data["tensorParallel"] = properties[
-                "option-tensor_parallel_degree"]
+                # Standard properties
+                if "option-model_id" in properties:
+                    data["modelId"] = properties["option-model_id"]
+                if "option-tensor_parallel_degree" in properties:
+                    data["tensorParallel"] = properties[
+                        "option-tensor_parallel_degree"]
 
-    if os.path.isfile("models/test/requirements.txt"):
-        with open("models/test/requirements.txt", "r") as f:
-            req = {}
-            for line in f.readlines():
-                line = line.strip()
-                if line[0] == "#":
-                    continue
-                if "=" in line:
-                    split = line.split("=", 1)
-                    req[split[0]] = split[1]
-            data["requirements_txt"] = req
+        requirementsPath = os.path.join(args.model, "requirements.txt")
+        if os.path.isfile(requirementsPath):
+            with open(requirementsPath, "r") as f:
+                req = {}
+                for line in f.readlines():
+                    line = line.strip()
+                    if line[0] == "#":
+                        continue
+                    if "=" in line:
+                        split = line.split("=", 1)
+                        req[split[0]] = split[1]
+                data["requirements_txt"] = req
 
 
 def data_from_template():
-    with open(args.template, "r") as f:
-        template = json.load(f)
-        job_template = template[args.job]
-        data["awscurl"] = bytes.fromhex(
-            job_template['awscurl']).decode("utf-8")
-        if "info" in job_template:
-            for line in job_template["info"]:
-                split = line.split("=", 1)
-                data[split[0]] = split[1]
-            return True
-        else:
-            return False
+    if args.template:
+        with open(args.template, "r") as f:
+            template = json.load(f)
+            job_template = template[args.job]
+            data["awscurl"] = bytes.fromhex(
+                job_template['awscurl']).decode("utf-8")
+            if "info" in job_template:
+                for line in job_template["info"]:
+                    split = line.split("=", 1)
+                    data[split[0]] = split[1]
+                return True
+            else:
+                return False
 
 
 if __name__ == "__main__":
     data_from_template()
     data_basic()
     data_from_client()
-    data_from_files()
+    data_from_model_files()
 
     if "errorRate" not in data or data["errorRate"] == 100:
         print("Not recording failed benchmark")
