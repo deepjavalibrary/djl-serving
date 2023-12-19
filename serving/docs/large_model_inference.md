@@ -11,6 +11,7 @@ These configurations can be specified in two manners: firstly, through the servi
 ## Tutorials
 
 * [TensorRT-LLM ahead of time compilation of models tutorial](lmi/tutorials/trtllm_aot_tutorial.md)
+* [TensorRT-LLM manual compilation of models tutorial](lmi/tutorials/trtllm_manual_convert_tutorial.md)
 * [HuggingFace Accelerate scheduler tutorial](lmi/tutorials/seq_scheduler_tutorial.md)
 
 ## Tuning guides
