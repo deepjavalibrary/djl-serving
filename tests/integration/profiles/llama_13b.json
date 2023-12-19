@@ -1,8 +1,8 @@
 {
 	"test_series":"performance",
-	"model": ["open-llama-13b-fp16-deepspeed", "open-llama-13b-fp16-huggingface", "open-llama-13b-bf16-deepspeed", "open-llama-13b-bf16-huggingface", "open-llama-13b-smoothquant"],
+	"model": ["open-llama-13b-fp16-deepspeed", "open-llama-13b-fp16-lmi-dist", "open-llama-13b-bf16-deepspeed", "open-llama-13b-smoothquant"],
 	"tensor_parallel": 4,
-	"batch_size": 4,
+	"batch_size": 1,
 	"in_tokens": [256, 512],
 	"out_tokens": 256,
 	"count": 10,
