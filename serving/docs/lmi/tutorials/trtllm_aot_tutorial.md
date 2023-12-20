@@ -2,12 +2,22 @@
 
 ## Overview
 
-With LMI TensorRT-LLM container, you can run on the fly compilation of Falcon and Llama architecture models and then load the model and run inference. However, for larger models like Falcon 40B and Llama-2 70B models, compilation of models takes approximately 7 minutes and more. So, we recommend users to perform ahead-of-time compilation for these larger models and other model architectures to avoid this compilation overhead.
+With LMI TensorRT-LLM container, you can run on the fly compilation of different LLM architecture models and then load the model and run inference. However, for larger models like Falcon 40B and Llama-2 70B models, compilation of models takes approximately 7 minutes and more. So, we recommend users to perform ahead-of-time compilation for these larger models and other model architectures to avoid this compilation overhead.
 
 The goal of this document is for the user to be able to:
 
 1. Convert the HuggingFace model to TensorRT-LLM model format.
 2. Upload the model to S3 so you could use it for inference. 
+
+## Supported JIT architecture
+
+- LLAMA (since 0.5.0)
+- Falcon (since 0.5.0)
+- InternLM (since 0.6.1)
+- Baichuan (since 0.6.1)
+- ChatGLM (since 0.6.1)
+
+For model that are not listed here, you can use [this tutorial](trtllm_manual_convert_tutorial.md) instead to prepare model manually.
 
 ## Step by step tutorial
 
