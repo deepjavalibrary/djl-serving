@@ -32,7 +32,7 @@ mkdir models
 cd models
 curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_jit.tar.gz
 
-docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.23.0
+docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.25.0
 ```
 
 ### GPU
@@ -42,7 +42,7 @@ mkdir models
 cd models
 curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_jit.tar.gz
 
-docker run -it --runtime=nvidia --shm-size 2g -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.23.0-pytorch-cu118
+docker run -it --runtime=nvidia --shm-size 2g -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.25.0-pytorch-gpu
 ```
 
 ### AWS Inferentia
@@ -52,5 +52,5 @@ mkdir models
 cd models
 
 curl -O https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz
-docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.23.0-pytorch-inf2
+docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.25.0-pytorch-inf2
 ```

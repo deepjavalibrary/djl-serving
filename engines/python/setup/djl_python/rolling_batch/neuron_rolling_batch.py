@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NeuronGenerator
 
 
@@ -23,7 +23,7 @@ class NeuronRollingBatch(RollingBatch):
         :param batch_size: the maximum batch size required by model
         :param tokenizer: the tokenizer used by model
         """
-        super().__init__(-1, **kwargs)
+        super().__init__(**kwargs)
         self.scheduler = NeuronGenerator(model, tokenizer, batch_size,
                                          n_postions)
 
@@ -48,14 +48,23 @@ class NeuronRollingBatch(RollingBatch):
         for request in self.active_requests:
             generation = generation_dict.get(request.id, None)
             if generation:
-                is_last_token = generation.generated_text is not None
+                is_last_token = False
+                finish_reason = None
+                if generation.generated_text is not None:
+                    is_last_token = True
+                    finish_reason = FINISH_REASON_MAPPER[int(
+                        generation.generated_text.finish_reason.value)]
                 if not is_last_token:
                     req_ids.append(request.id)
 
-                request.set_next_token("" if generation.token_is_special else
-                                       generation.token_text,
+                token = Token(
+                    generation.token_id, ""
+                    if generation.token_is_special else generation.token_text,
+                    generation.token_logprob, generation.token_is_special)
+                request.set_next_token(token,
                                        self.output_formatter,
-                                       last_token=is_last_token)
+                                       last_token=is_last_token,
+                                       finish_reason=finish_reason)
             else:
                 request.set_next_token("",
                                        self.output_formatter,

@@ -15,7 +15,9 @@ from collections import OrderedDict
 
 from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
+
+from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 DTYPE_MAPPER = {
     "fp32": "float32",
@@ -24,34 +26,34 @@ DTYPE_MAPPER = {
     "auto": "auto"
 }
 
+FINISH_REASON_MAPPER = {
+    "length": "length",
+    "stop": "eos_token",
+    "abort": "abort"
+}
+
 
 class VLLMRollingBatch(RollingBatch):
 
+    # TODO: Make properties is the only parameter, after refactoring all rolling batch handlers
     def __init__(self, model_id_or_path, device, properties, **kwargs):
         """
         Initializes the VLLMRollingBatch.
-        :param model_id_or_path: model id or path
         :param properties: other properties of the model, such as decoder strategy
         """
-        super().__init__(-1, **kwargs)
-        self.dtype = properties.get("dtype", 'auto')
-        max_batched_prefill_tokens = None
-        if properties.get("engine") != "Python":
-            raise AssertionError(
-                f"Need python engine to start vLLM RollingBatcher")
-        if "max_rolling_batch_prefill_tokens" in properties:
-            max_batched_prefill_tokens = int(
-                properties.get("max_rolling_batch_prefill_tokens"))
-        tensor_parallel_degree = int(
-            properties.get("tensor_parallel_degree", None))
-        args = EngineArgs(model=model_id_or_path,
-                          tensor_parallel_size=tensor_parallel_degree,
-                          dtype=DTYPE_MAPPER[self.dtype],
-                          seed=0,
-                          max_num_batched_tokens=max_batched_prefill_tokens,
-                          trust_remote_code=kwargs.get("trust_remote_code",
-                                                       False),
-                          quantization=properties.get("quantize", None))
+        self.vllm_configs = VllmRbProperties(**properties)
+        super().__init__(waiting_steps=self.vllm_configs.waiting_steps,
+                         output_formatter=self.vllm_configs.output_formatter)
+        args = EngineArgs(
+            model=self.vllm_configs.model_id_or_path,
+            tensor_parallel_size=self.vllm_configs.tensor_parallel_degree,
+            dtype=DTYPE_MAPPER[self.vllm_configs.dtype],
+            seed=0,
+            max_num_batched_tokens=self.vllm_configs.
+            max_rolling_batch_prefill_tokens,
+            trust_remote_code=self.vllm_configs.trust_remote_code,
+            load_format=self.vllm_configs.load_format,
+            quantization=self.vllm_configs.quantize)
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
 
@@ -70,6 +72,7 @@ class VLLMRollingBatch(RollingBatch):
         for request in new_requests:
             request_id = random_uuid()
             request.parameters.pop('seed', None)
+            request.parameters.pop('do_sample', None)
             if "max_new_tokens" in request.parameters.keys():
                 request.parameters["max_tokens"] = request.parameters.pop(
                     "max_new_tokens")
@@ -79,13 +82,27 @@ class VLLMRollingBatch(RollingBatch):
             self.request_cache[request_id] = {
                 "curr_length": 0,
                 "text": "",
-                "finished": False
+                "cumulative_logprob": 0.0,
+                "log_prob": 0.0,
+                "finished": False,
+                "finish_reason": None
             }
         request_outputs = self.engine.step()
         # step 1: put result to cache
         for request_output in request_outputs:
             req_id = request_output.request_id
+            self.request_cache[req_id]["id"] = request_output.outputs[
+                0].token_ids[-1]
             self.request_cache[req_id]["text"] = request_output.outputs[0].text
+            # calculate log_prob of the token based on the diff between two cumulative log probs
+            self.request_cache[req_id]["log_prob"] = request_output.outputs[
+                0].cumulative_logprob - self.request_cache[req_id][
+                    "cumulative_logprob"]
+            self.request_cache[req_id][
+                "cumulative_logprob"] = request_output.outputs[
+                    0].cumulative_logprob
+            self.request_cache[req_id][
+                "finish_reason"] = request_output.outputs[0].finish_reason
             if len(request_output.outputs) > 1:
                 logging.warning(
                     f"Finding more than 1 output for single request {len(request_output.outputs)}"
@@ -96,11 +113,23 @@ class VLLMRollingBatch(RollingBatch):
         finished_id = []
         for (key, cache), request in zip(self.request_cache.items(),
                                          self.active_requests):
-            request.set_next_token(cache["text"][cache["curr_length"]:],
-                                   self.output_formatter, cache["finished"])
-            cache["curr_length"] = len(cache["text"])
+            finish_reason = None
             if cache["finished"]:
                 finished_id.append(key)
+                finish_reason = FINISH_REASON_MAPPER.get(
+                    cache["finish_reason"], None)
+            text = cache["text"][cache["curr_length"]:]
+            if len(text) > 0:
+                # token id is not determined since there could be multiple token comes at the same time
+                # only return the last one
+                token = Token(cache['id'], text, cache["log_prob"])
+                request.set_next_token(token, self.output_formatter,
+                                       cache["finished"], finish_reason)
+            else:
+                request.set_next_token("", self.output_formatter,
+                                       cache["finished"], finish_reason)
+            cache["curr_length"] = len(cache["text"])
+
         # step 3: clean finished requests
         for key in finished_id:
             self.request_cache.pop(key)

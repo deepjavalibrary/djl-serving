@@ -15,7 +15,10 @@ package ai.djl.serving.wlm;
 import ai.djl.inference.Predictor;
 import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.WorkerJob;
+import ai.djl.util.Utils;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -49,10 +52,25 @@ public abstract class Adapter {
      * @return the new adapter
      */
     public static Adapter newInstance(WorkerPoolConfig<?, ?> wpc, String name, String src) {
+        if (!Boolean.parseBoolean(Utils.getEnvOrSystemProperty("ENABLE_ADAPTERS_PREVIEW"))) {
+            throw new IllegalStateException("Adapters preview is not enabled");
+        }
+
         if (!(wpc instanceof ModelInfo)) {
             String modelName = wpc.getId();
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
         }
+
+        // TODO Allow URL support
+        try {
+            URI uri = new URI(src);
+            String scheme = uri.getScheme();
+            if (scheme != null && !"file".equals(scheme)) {
+                throw new IllegalArgumentException("URL adapters are not currently supported");
+            }
+        } catch (URISyntaxException ignored) {
+        }
+
         ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wpc;
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {

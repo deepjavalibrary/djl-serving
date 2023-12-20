@@ -371,12 +371,12 @@ public final class ConfigManager {
     }
 
     /**
-     * Returns the ChunkedBytesSupplier read time in minutes.
+     * Returns the ChunkedBytesSupplier read time in seconds.
      *
-     * @return the ChunkedBytesSupplier read time in minutes
+     * @return the ChunkedBytesSupplier read time in seconds
      */
     public int getChunkedReadTimeout() {
-        return getIntProperty(CHUNKED_READ_TIMEOUT, 2);
+        return getIntProperty(CHUNKED_READ_TIMEOUT, 60);
     }
 
     /**

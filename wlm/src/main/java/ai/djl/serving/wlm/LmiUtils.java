@@ -13,9 +13,11 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.ModelException;
+import ai.djl.engine.EngineException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
@@ -23,15 +25,20 @@ import com.google.gson.annotations.SerializedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 /** A utility class to detect optimal engine for LMI model. */
 public final class LmiUtils {
@@ -50,11 +57,6 @@ public final class LmiUtils {
                     "roberta",
                     "xlm-roberta");
 
-    private static final List<String> FASTERTRANSFORMER_MODELS =
-            List.of("bloom", "gpt_neox", "gpt2", "t5", "opt");
-
-    private static final List<String> TRITON_MODELS = List.of("gptj");
-
     private LmiUtils() {}
 
     static String inferLmiEngine(ModelInfo<?, ?> modelInfo) throws ModelException {
@@ -67,10 +69,11 @@ public final class LmiUtils {
         Properties prop = modelInfo.prop;
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
         if (modelConfig == null) {
-            logger.info("No config.json found, use Python engine.");
-            return "Python";
+            String engineName = isTrtLLM(modelInfo) ? "MPI" : "Python";
+            logger.info("No config.json found, use {} engine.", engineName);
+            return engineName;
         }
-
+        String features = Utils.getenv("SERVING_FEATURES");
         String modelType = modelConfig.getModelType();
         String engineName;
         if ("stable-diffusion".equals(modelType)) {
@@ -79,17 +82,53 @@ public final class LmiUtils {
             engineName = "DeepSpeed";
         } else if (isDeepSpeedRecommended(modelType)) {
             engineName = "DeepSpeed";
-        } else if (isTritonRecommended(modelType)) {
-            engineName = "Python";
-            prop.setProperty("option.entryPoint", "djl_python.fastertransformer");
-        } else if (isFasterTransformerRecommended(modelType)) {
-            engineName = "FasterTransformer";
-            prop.setProperty("engine", engineName); // FT handler requires engine property
+        } else if (features != null && features.contains("trtllm")) {
+            engineName = "MPI";
         } else {
             engineName = "Python";
         }
         logger.info("Detected engine: {}, modelType: {}", engineName, modelType);
         return engineName;
+    }
+
+    static boolean isTrtLLM(ModelInfo<?, ?> info) {
+        String rollingBatch = info.prop.getProperty("option.rolling_batch");
+        if (rollingBatch == null || "auto".equals(rollingBatch)) {
+            // FIXME: find a better way to set default rolling batch for trtllm
+            String features = Utils.getenv("SERVING_FEATURES");
+            return features != null && features.contains("trtllm");
+        }
+        return false;
+    }
+
+    static void convertIfNeed(ModelInfo<?, ?> info) throws IOException {
+        if (isTrtLLM(info)) {
+            info.prop.put("option.rolling_batch", "trtllm");
+            Path trtRepo;
+            String modelId = null;
+            if (info.downloadDir != null) {
+                trtRepo = info.downloadDir;
+            } else {
+                trtRepo = info.modelDir;
+                modelId = info.prop.getProperty("option.model_id");
+                if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
+                    trtRepo = Paths.get(modelId);
+                }
+            }
+            if (!isValidTrtLlmModelRepo(trtRepo)) {
+                if (modelId == null) {
+                    modelId = trtRepo.toString();
+                }
+                String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
+                if (tpDegree == null) {
+                    tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
+                }
+                if ("max".equals(tpDegree)) {
+                    tpDegree = String.valueOf(CudaUtils.getGpuCount());
+                }
+                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+            }
+        }
     }
 
     private static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId)
@@ -100,7 +139,7 @@ public final class LmiUtils {
             // This is definitely suboptimal, but for the majority of cases we need to download this
             // s3 model eventually, so it is not the worst thing to download it now.
             modelInfo.downloadS3();
-            Path downloadDir = modelInfo.downloadS3Dir;
+            Path downloadDir = modelInfo.downloadDir;
             if (Files.isRegularFile(downloadDir.resolve("config.json"))) {
                 configUri = downloadDir.resolve("config.json").toUri();
             } else if (Files.isRegularFile(downloadDir.resolve("model_index.json"))) {
@@ -108,6 +147,20 @@ public final class LmiUtils {
             }
         } else if (modelId != null) {
             modelInfo.prop.setProperty("option.model_id", modelId);
+            Path dir = Paths.get(modelId);
+            if (Files.isDirectory(dir)) {
+                Path configFile = dir.resolve("config.json");
+                if (Files.isRegularFile(configFile)) {
+                    return configFile.toUri();
+                }
+                // stable diffusion models have a different file name with the config...
+                configFile = dir.resolve("model_index.json");
+                if (Files.isRegularFile(configFile)) {
+                    return configFile.toUri();
+                }
+                return null;
+            }
+
             configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
             HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
             // stable diffusion models have a different file name with the config... sometimes
@@ -144,17 +197,6 @@ public final class LmiUtils {
         }
     }
 
-    private static boolean isTritonRecommended(String modelType) {
-        return isPythonDependencyInstalled("/opt/tritonserver/lib/", "tritontoolkit")
-                && TRITON_MODELS.contains(modelType);
-    }
-
-    private static boolean isFasterTransformerRecommended(String modelType) {
-        return isPythonDependencyInstalled(
-                        "/opt/tritonserver/backends/fastertransformer/", "fastertransformer")
-                && FASTERTRANSFORMER_MODELS.contains(modelType);
-    }
-
     private static boolean isDeepSpeedRecommended(String modelType) {
         return isPythonDependencyInstalled("/usr/local/bin/deepspeed", "deepspeed")
                 && DEEPSPEED_MODELS.contains(modelType);
@@ -183,6 +225,77 @@ public final class LmiUtils {
             logger.warn("pip check for {} failed", dependencyName, e);
         }
         return false;
+    }
+
+    private static Path buildTrtLlmArtifacts(Path modelDir, String modelId, String tpDegree)
+            throws IOException {
+        logger.info("Converting model to TensorRT-LLM artifacts");
+        String hash = Utils.hash(modelId + tpDegree);
+        String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
+        Path trtLlmRepoDir = parent.resolve("trtllm").resolve(hash);
+        if (Files.exists(trtLlmRepoDir)) {
+            logger.info("TensorRT-LLM artifacts already converted: {}", trtLlmRepoDir);
+            return trtLlmRepoDir;
+        }
+
+        String[] cmd = {
+            "python",
+            "/opt/djl/partition/trt_llm_partition.py",
+            "--properties_dir",
+            modelDir.toAbsolutePath().toString(),
+            "--trt_llm_model_repo",
+            trtLlmRepoDir.toString(),
+            "--tensor_parallel_degree",
+            tpDegree,
+            "--model_path",
+            modelId
+        };
+        boolean success = false;
+        try {
+            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            try (BufferedReader reader =
+                    new BufferedReader(
+                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info("convert_py: {}", line);
+                }
+            }
+            int exitCode = exec.waitFor();
+            if (0 != exitCode) {
+                throw new EngineException("Model conversion process failed!");
+            }
+            success = true;
+            logger.info("TensorRT-LLM artifacts built successfully");
+            return trtLlmRepoDir;
+        } catch (InterruptedException e) {
+            throw new IOException("Failed to build TensorRT-LLM artifacts", e);
+        } finally {
+            if (!success) {
+                Utils.deleteQuietly(trtLlmRepoDir);
+            }
+        }
+    }
+
+    static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
+        // TODO: match model name
+        AtomicBoolean isValid = new AtomicBoolean();
+        try (Stream<Path> walk = Files.list(modelPath)) {
+            walk.filter(Files::isDirectory)
+                    .forEach(
+                            p -> {
+                                Path confFile = p.resolve("config.pbtxt");
+                                // TODO: add stricter check for tokenizer
+                                Path tokenizer = p.resolve("tokenizer_config.json");
+                                if (Files.isRegularFile(confFile)
+                                        && Files.isRegularFile(tokenizer)) {
+                                    logger.info("Found triton model: {}", p);
+                                    isValid.set(true);
+                                }
+                            });
+        }
+        return isValid.get();
     }
 
     // This represents  the config of huggingface models NLP models as well

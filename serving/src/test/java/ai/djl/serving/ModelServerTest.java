@@ -160,6 +160,9 @@ public class ModelServerTest {
         String engineCacheDir = Utils.getEngineCacheDir().toString();
         System.setProperty("DJL_CACHE_DIR", "build/cache");
         System.setProperty("ENGINE_CACHE_DIR", engineCacheDir);
+
+        // TODO Remove when removing the temporary feature flag
+        System.setProperty("ENABLE_ADAPTERS_PREVIEW", "true");
     }
 
     @AfterSuite
@@ -223,6 +226,7 @@ public class ModelServerTest {
 
             // management API
             testRegisterModel(channel);
+            testRegisterModelUnencoded(channel);
             testPerModelWorkers(channel);
             testRegisterModelAsync(channel);
             testRegisterWorkflow(channel);
@@ -233,11 +237,13 @@ public class ModelServerTest {
             testDescribeModel(channel);
             testUnregisterModel(channel);
             testAsyncInference(channel);
+            testDjlModelZoo(channel);
 
             testPredictionsInvalidRequestSize(channel);
 
             // adapter API
             testAdapterRegister(channel);
+            testAdapterNoPredictRegister();
             testAdapterPredict(channel);
             testAdapterDirPredict(channel);
             testAdapterInvoke(channel);
@@ -493,6 +499,19 @@ public class ModelServerTest {
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
+    }
+
+    private void testRegisterModelUnencoded(Channel channel) throws InterruptedException {
+        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=mlp_2_unencoded&url=" + url));
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Model \"mlp_2_unencoded\" registered.");
     }
 
     private void testPerModelWorkers(Channel channel) throws InterruptedException {
@@ -779,6 +798,24 @@ public class ModelServerTest {
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
+    private void testDjlModelZoo(Channel channel) throws InterruptedException {
+        String url = "src/test/resources/zoomodel";
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1,
+                        HttpMethod.POST,
+                        "/models?model_name=zoomodel&url="
+                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Model \"zoomodel\" registered.");
+        request(
+                channel,
+                new DefaultFullHttpRequest(
+                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/zoomodel"));
+    }
+
     private void testThrottle(Channel channel) throws InterruptedException {
         String url = "/predictions/echo?delay=1000";
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
@@ -832,6 +869,28 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             assertEquals(httpStatus.code(), 503);
+        }
+    }
+
+    private void testAdapterNoPredictRegister() throws InterruptedException {
+        Channel channel = connect(Connector.ConnectorType.INFERENCE);
+        assertNotNull(channel);
+
+        String url = "/predictions/adaptecho?adapter=adaptable";
+        DefaultFullHttpRequest req =
+                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        req.headers().set("handler", "register_adapter");
+        req.headers().set("name", "malicious_name");
+        req.headers().set("src", "malicious_url");
+        req.content().writeBytes("tt".getBytes(StandardCharsets.UTF_8));
+        HttpUtil.setContentLength(req, req.content().readableBytes());
+        req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
+        request(channel, req);
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        if (!System.getProperty("os.name").startsWith("Win")) {
+            assertEquals(httpStatus.code(), 400);
         }
     }
 

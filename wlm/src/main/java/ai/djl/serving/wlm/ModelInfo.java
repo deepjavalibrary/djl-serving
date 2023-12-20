@@ -85,7 +85,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     transient Path modelDir;
     private transient String artifactName;
-    transient Path downloadS3Dir;
+    transient Path downloadDir;
 
     transient Properties prop;
     private transient Status status;
@@ -96,6 +96,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Map<Device, ZooModel<I, O>> models;
     private transient Map<String, Adapter> adapters;
     private transient Engine engine;
+    private transient boolean initialize;
 
     /**
      * Constructs a new {@code ModelInfo} instance.
@@ -239,11 +240,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             } else {
                 builder.optDevice(device);
             }
-            if (downloadS3Dir != null) {
+            if (downloadDir != null) {
                 // override model_id
-                builder.optOption("model_id", downloadS3Dir.toAbsolutePath().toString());
+                builder.optOption("model_id", downloadDir.toAbsolutePath().toString());
             }
-
             ZooModel<I, O> m = builder.build().loadModel();
             if (engine == null) {
                 engine = m.getNDManager().getEngine();
@@ -453,12 +453,16 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public void initialize() throws IOException, ModelException {
+        if (initialize) {
+            return;
+        }
         if (adapters == null) {
             adapters = new ConcurrentHashMap<>();
         }
         downloadModel();
         loadServingProperties();
         downloadS3();
+        LmiUtils.convertIfNeed(this);
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
         if (options == null) {
@@ -474,6 +478,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 arguments.put(key, prop.getProperty(key));
             }
         }
+        initialize = true;
     }
 
     /**
@@ -537,8 +542,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     public void close() {
         if (!getModels().isEmpty() && !Boolean.getBoolean("ai.djl.serving.keep_cache")) {
             logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
-            if (downloadS3Dir != null) {
-                Utils.deleteQuietly(downloadS3Dir);
+            if (downloadDir != null) {
+                Utils.deleteQuietly(downloadDir);
             }
             Path path = null;
             for (Model m : models.values()) {
@@ -596,6 +601,13 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         String prefix = prop.getProperty("option.modelName", artifactName);
+        if (Files.isRegularFile(modelDir.resolve("metadata.yaml"))) {
+            eng = SageMakerUtils.inferSageMakerEngine(this);
+            if (eng != null) {
+                return eng;
+            }
+        }
+
         if (isPythonModel(prefix)) {
             return LmiUtils.inferLmiEngine(this);
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
@@ -619,7 +631,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 || Files.isRegularFile(modelDir.resolve("__model__"))
                 || Files.isRegularFile(modelDir.resolve("inference.pdmodel"))) {
             return "PaddlePaddle";
-        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))) {
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".json"))
+                || Files.isRegularFile(modelDir.resolve(prefix + ".xgb"))
+                || Files.isRegularFile(modelDir.resolve("model.xgb"))) {
             return "XGBoost";
         } else {
             try {
@@ -695,9 +709,13 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         // load default settings from env
         for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
             String key = entry.getKey();
-            if (key.startsWith("OPTION_")) {
+            String value = entry.getValue();
+            if (key.startsWith("OPTION_") && value != null && !value.isEmpty()) {
                 key = key.substring(7).toLowerCase(Locale.ROOT);
-                prop.putIfAbsent("option." + key, entry.getValue());
+                if ("entrypoint".equals(key)) {
+                    key = "entryPoint";
+                }
+                prop.putIfAbsent("option." + key, value);
             }
         }
 
@@ -715,16 +733,21 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         }
 
+        if ("DeepSpeed".equals(engineName) || "MPI".equals(engineName)) {
+            prop.put("option.mpi_mode", "true");
+        }
+
         logger.info(
                 "Apply per model settings:\n\tjob_queue_size: {}\n\tbatch_size: {}"
                         + "\n\tmax_batch_delay: {}\n\tmax_idle_time: {}\n\tload_on_devices: {}"
-                        + "\n\tengine: {}\n\toption.entryPoint: {}{}",
+                        + "\n\tengine: {}\n\tmpi_mode: {}\n\toption.entryPoint: {}{}",
                 queueSize,
                 batchSize,
                 maxBatchDelayMillis,
                 maxIdleSeconds,
                 loadOnDevices,
                 engineName,
+                prop.get("option.mpi_mode"),
                 prop.get("option.entryPoint"),
                 sb);
     }
@@ -738,8 +761,19 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         int defMemory = wlmc.getReservedMemoryMb();
         long reservedMemory = intValue(prop, "reserved_memory_mb", defMemory) * 1024L * 1024;
-        int tpDegree = Integer.parseInt(Utils.getenv("TENSOR_PARALLEL_DEGREE", "0"));
-        tpDegree = intValue(prop, "option.tensor_parallel_degree", tpDegree);
+        String tpDegreeStr = Utils.getenv("TENSOR_PARALLEL_DEGREE", "0");
+        tpDegreeStr = prop.getProperty("option.tensor_parallel_degree", tpDegreeStr);
+        int tpDegree;
+        if ("max".equals(tpDegreeStr)) {
+            Engine eng = Engine.getEngine(engineName);
+            if (eng.getGpuCount() > 0) {
+                tpDegree = eng.getGpuCount();
+            } else {
+                tpDegree = NeuronUtils.getNeuronCores();
+            }
+        } else {
+            tpDegree = Integer.parseInt(tpDegreeStr);
+        }
         if (requiredMemory <= 0
                 && tpDegree < 1
                 && "true".equals(Utils.getenv("SAGEMAKER_MULTI_MODEL"))) {
@@ -751,8 +785,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             try (Stream<Path> walk = Files.walk(modelDir)) {
                 requiredMemory = walk.mapToLong(ModelInfo::getFileSize).sum();
             }
-            if (downloadS3Dir != null) {
-                try (Stream<Path> walk = Files.walk(downloadS3Dir)) {
+            if (downloadDir != null) {
+                try (Stream<Path> walk = Files.walk(downloadDir)) {
                     requiredMemory += walk.mapToLong(ModelInfo::getFileSize).sum();
                 }
             }
@@ -800,10 +834,21 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             int gpuCount = eng.getGpuCount();
             String v = Utils.getenv("TENSOR_PARALLEL_DEGREE", "-1");
             v = prop.getProperty("option.tensor_parallel_degree", v);
-            int tpDegree = Integer.parseInt(v);
+            int tpDegree;
+            if ("max".equals(v)) {
+                if (gpuCount > 0) {
+                    tpDegree = gpuCount;
+                } else {
+                    tpDegree = NeuronUtils.getNeuronCores();
+                }
+            } else {
+                tpDegree = Integer.parseInt(v);
+            }
             if (gpuCount > 0) {
                 int gpuPerWorker = 1;
-                if ("Python".equals(engineName)) {
+                if (Boolean.parseBoolean(prop.getProperty("option.mpi_mode"))) {
+                    return new String[] {"0"};
+                } else if ("Python".equals(engineName)) {
                     if (tpDegree > 0) {
                         gpuPerWorker = tpDegree;
                         int procs = gpuCount / gpuPerWorker;
@@ -813,12 +858,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                             + gpuPerWorker
                                             + " partitions.");
                         }
-                        gpuCount = procs;
+                        if (maxWorkers == null || maxWorkers < 0) {
+                            gpuCount = procs;
+                        } else {
+                            gpuCount = Math.min(procs, maxWorkers);
+                        }
                     }
-                } else if ("DeepSpeed".equals(engineName)
-                        || "FasterTransformer".equals(engineName)
-                        || "MPI".equals(engineName)) {
-                    return new String[] {"0"};
                 }
 
                 String[] ret = new String[gpuCount];
@@ -902,29 +947,35 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
             modelId = s3Url;
         }
-        if (modelId == null || !modelId.startsWith("s3://")) {
+        if (modelId == null) {
             return;
         }
-
-        logger.info("S3 url found, start downloading from {}", modelId);
-        // Use fixed download path to avoid repeat download
-        String hash = Utils.hash(modelId);
-        String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
-        Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
-        parent = parent.resolve("download");
-        downloadS3Dir = parent.resolve(hash);
-        if (Files.exists(downloadS3Dir)) {
-            logger.info("artifacts has been downloaded already: {}", downloadS3Dir);
-            return;
-        }
-        Files.createDirectories(parent);
-        Path tmp = Files.createTempDirectory(parent, "tmp");
-        try {
-            downloadS3(modelId, tmp.toAbsolutePath().toString());
-            Utils.moveQuietly(tmp, downloadS3Dir);
-            logger.info("Download completed! Files saved to {}", downloadS3Dir);
-        } finally {
-            Utils.deleteQuietly(tmp);
+        if (modelId.startsWith("s3://")) {
+            logger.info("S3 url found, start downloading from {}", modelId);
+            // Use fixed download path to avoid repeat download
+            String hash = Utils.hash(modelId);
+            String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+            Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
+            parent = parent.resolve("download");
+            this.downloadDir = parent.resolve(hash);
+            if (Files.exists(this.downloadDir)) {
+                logger.info("artifacts has been downloaded already: {}", this.downloadDir);
+                return;
+            }
+            Files.createDirectories(parent);
+            Path tmp = Files.createTempDirectory(parent, "tmp");
+            try {
+                downloadS3(modelId, tmp.toAbsolutePath().toString());
+                Utils.moveQuietly(tmp, this.downloadDir);
+                logger.info("Download completed! Files saved to {}", this.downloadDir);
+            } finally {
+                Utils.deleteQuietly(tmp);
+            }
+        } else if (modelId.startsWith("djl://")) {
+            logger.info("djl model zoo url found: {}", modelId);
+            modelUrl = modelId;
+            // download real model from model zoo
+            downloadModel();
         }
     }
 
@@ -1006,6 +1057,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             for (Job<I, O> job : jobs) {
                 if (job.getInput() instanceof Input) {
                     Input i = (Input) job.getInput();
+                    if (i.isCancelled()) {
+                        logger.debug("Skip cancelled job");
+                        continue;
+                    }
                     if (i.getContent().contains("adapter")) {
                         String adapter = i.getAsString("adapter");
                         if (!dynamicAdapters && !adapters.containsKey(adapter)) {

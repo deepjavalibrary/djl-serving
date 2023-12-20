@@ -8,11 +8,33 @@ MASTER_ADDR = "127.0.0.1"
 MASTER_PORT = 29761
 
 FILES_TO_EXTRACT = [
-    'djl_python/', 'djl_python/__init__.py', 'djl_python/deepspeed.py',
-    'djl_python/inputs.py', 'djl_python/outputs.py', 'djl_python/pair_list.py',
-    'djl_python/np_util.py', 'djl_python/service_loader.py',
-    'djl_python/fastertransformer.py', 'djl_python/streaming_utils.py',
-    'djl_python/encode_decode.py'
+    'djl_python/',
+    'djl_python/__init__.py',
+    'djl_python/deepspeed.py',
+    'djl_python/inputs.py',
+    'djl_python/outputs.py',
+    'djl_python/pair_list.py',
+    'djl_python/np_util.py',
+    'djl_python/service_loader.py',
+    'djl_python/transformers_neuronx.py',
+    'djl_python/streaming_utils.py',
+    'djl_python/encode_decode.py',
+    'djl_python/stable_diffusion_inf2.py',
+    'djl_python/neuron_utils/__init__.py',
+    'djl_python/neuron_utils/model_loader.py',
+    'djl_python/neuron_utils/utils.py',
+    'djl_python/properties_manager/__init__.py',
+    'djl_python/properties_manager/properties.py',
+    'djl_python/properties_manager/ds_properties.py',
+    'djl_python/properties_manager/tnx_properties.py',
+    'djl_python/properties_manager/sd_inf2_properties.py',
+    'djl_python/rolling_batch/__init__.py',
+    'djl_python/rolling_batch/rolling_batch.py',
+    'djl_python/rolling_batch/neuron_rolling_batch.py',
+    'djl_python/transformers_neuronx_scheduler/__init__.py',
+    'djl_python/transformers_neuronx_scheduler/optimum_neuron_scheduler.py',
+    'djl_python/transformers_neuronx_scheduler/token_selector.py',
+    'djl_python/transformers_neuronx_scheduler/utils.py',
 ]
 
 

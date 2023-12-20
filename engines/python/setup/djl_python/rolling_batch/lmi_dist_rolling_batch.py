@@ -11,8 +11,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
-from transformers import AutoConfig
+import logging
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from lmi_dist.models import get_model
 from lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
@@ -23,7 +23,9 @@ from lmi_dist.utils.types import (Batch, Request, Generation)
 
 import torch
 
-QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes", "gptq"]
+from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
+
+QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes8", "bitsandbytes", "gptq"]
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -38,74 +40,75 @@ class LmiDistRollingBatch(RollingBatch):
         :param kwargs passed while loading the model
         """
 
-        super().__init__(device, **kwargs)
-        self.properties = properties
+        self.lmi_dist_configs = LmiDistRbProperties(**properties)
+
+        super().__init__(
+            waiting_steps=self.lmi_dist_configs.waiting_steps,
+            output_formatter=self.lmi_dist_configs.output_formatter)
         self.batch_cls = None
-        self._init_model(kwargs, model_id_or_path)
+        self._init_model(self.lmi_dist_configs.model_id_or_path)
         self.batch_id_counter = 0
-        self.cache: Batch = None
+        self.cache = {}
 
     def reset(self):
-        self.cache = None
+        self.cache.clear()
         self.batch_id_counter = 0
         super().reset()
 
-    def _init_model(self, kwargs, model_id_or_path):
-        self.config = AutoConfig.from_pretrained(model_id_or_path, **kwargs)
-        sharded = int(self.properties.get("tensor_parallel_degree", "-1")) > 1
-        quantize = self.properties.get("quantize", None)
-        dtype = self.properties.get("dtype", None)
-        revision = self.properties.get('revision', None)
-        paged_attention = self.properties.get("paged_attention",
-                                              "true").lower() == "true"
-        if quantize is not None and dtype is not None:
-            raise ValueError(
-                f"Can't set both dtype: {dtype} and quantize: {quantize}")
-        if quantize is not None and quantize not in QUANTIZATION_SUPPORT_ALGO:
-            raise ValueError(
-                f"Invalid value for quantize: {quantize}. Valid values are: {QUANTIZATION_SUPPORT_ALGO}"
-            )
-        if quantize is None and dtype == "int8":
-            quantize = "bitsandbytes"
+    def _init_model(self, model_id_or_path):
+        sharded = self.lmi_dist_configs.tensor_parallel_degree > 1
+        quantize = self.lmi_dist_configs.quantize
+        if quantize is not None:
+            quantize = quantize.value
         self.model = get_model(
             model_id_or_path,
-            revision=revision,
+            revision=self.lmi_dist_configs.revision,
             sharded=sharded,
             quantize=quantize,
-            dtype=dtype,
-            trust_remote_code=kwargs.get("trust_remote_code"),
-            paged_attention=paged_attention)
+            dtype=self.lmi_dist_configs.dtype,
+            trust_remote_code=self.lmi_dist_configs.trust_remote_code,
+            paged_attention=self.lmi_dist_configs.paged_attention)
         self.batch_cls = self.model.batch_type
-        if paged_attention:
-            self._warmup(**kwargs)
+        if self.lmi_dist_configs.paged_attention:
+            self._warmup()
 
-    def _warmup(self, **kwargs):
-        parameters = NextTokenChooserParameters(temperature=0.9,
-                                                repetition_penalty=1.2,
-                                                top_k=10,
-                                                top_p=0.9,
-                                                typical_p=0.9,
-                                                do_sample=False,
-                                                seed=0)
-        stop_parameters = StoppingCriteriaParameters(stop_sequences=[],
-                                                     max_new_tokens=2)
+    def _warmup(self):
+        max_batch_prefill_tokens = self.lmi_dist_configs.max_rolling_batch_prefill_tokens
 
-        max_prefill_tokens = int(
-            self.properties.get(
-                "max_rolling_batch_prefill_tokens",
-                int(self.properties.get("max_rolling_batch_size", 4)) * 272))
-        requests = [
-            lmi_dist.utils.types.Request(id=0,
-                                         inputs='_test ' * max_prefill_tokens,
-                                         parameters=parameters,
-                                         stopping_parameters=stop_parameters,
-                                         truncate=max_prefill_tokens)
-        ]
+        input_length = 512
+        n_tokens = 0
+        req_id = 0
+        requests = []
+
+        while n_tokens < max_batch_prefill_tokens:
+            truncate = min(input_length, max_batch_prefill_tokens - n_tokens)
+            requests.append(
+                lmi_dist.utils.types.Request(
+                    id=req_id,
+                    inputs='_test ' * input_length,
+                    parameters=NextTokenChooserParameters(
+                        temperature=0.9,
+                        repetition_penalty=1.2,
+                        top_k=10,
+                        top_p=0.9,
+                        typical_p=0.9,
+                        do_sample=False,
+                        seed=0),
+                    stopping_parameters=StoppingCriteriaParameters(
+                        stop_sequences=[], max_new_tokens=2),
+                    truncate=truncate,
+                    prefill_logprobs=True))
+            n_tokens += input_length
+            req_id += 1
+
         batch = self.batch_cls.get_batch(
             Batch(id=0, requests=requests,
-                  size=len(requests)), self.model.tokenizer,
-            kwargs.get("torch_dtype", torch.float16), self.device)
-        self.model.warmup(batch)
+                  size=len(requests)), self.model.config, self.model.tokenizer,
+            self.lmi_dist_configs.torch_dtype, self.lmi_dist_configs.device)
+        max_batch_total_tokens = self.model.warmup(batch)
+        if max_batch_total_tokens is not None and self.lmi_dist_configs.device == 0:
+            logging.info(
+                f"The max total sequence length is {max_batch_total_tokens}")
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
@@ -127,48 +130,58 @@ class LmiDistRollingBatch(RollingBatch):
     def _prefill_and_decode(self, new_batch):
         # prefill step
         if new_batch:
-            generations, prefill_next_batch = self.model.generate_token(
-                new_batch)
-
-            if self.cache:
-                decode_generations, decode_next_batch = self.model.generate_token(
-                    self.cache)
-                generations.extend(decode_generations)
-
-                # concatenate with the existing batch of the model
-                if prefill_next_batch is None:
-                    self.cache = decode_next_batch
-                elif decode_next_batch is None:
-                    self.cache = prefill_next_batch
-                else:
-                    self.cache = self.model.batch_type.concatenate(
-                        [prefill_next_batch, decode_next_batch])
-            else:
-                self.cache = prefill_next_batch
+            batch = new_batch
+            generations, next_batch = self.model.generate_token(batch)
+            if next_batch is not None:
+                self.cache[next_batch.batch_id] = next_batch
         else:
-            generations, next_batch = self.model.generate_token(self.cache)
-            self.cache = next_batch
-
-        generation_dict = {
-            generation.request_id: generation
-            for generation in generations
-        }
+            # Get batches out of cache
+            batches = [x for x in self.cache.values()]
+            self.cache.clear()
+            if len(batches) > 1:
+                batch = self.model.batch_type.concatenate(batches)
+            else:
+                batch = batches[0]
+            generations, next_batch = self.model.generate_token(batch)
+            if next_batch is not None:
+                self.cache[next_batch.batch_id] = next_batch
 
         req_ids = []
         for request in self.active_requests:
-            generation = generation_dict[request.id]
-            is_last_token = generation.generated_text is not None
-            if not is_last_token:
-                req_ids.append(request.id)
+            generation = generations.get(request.id, None)
+            if generation:
+                is_last_token = False
+                finish_reason = None
+                if generation.generated_text is not None:
+                    is_last_token = True
+                    finish_reason = FINISH_REASON_MAPPER[int(
+                        generation.generated_text.finish_reason.value)]
+                if not is_last_token:
+                    req_ids.append(request.id)
 
-            request.set_next_token(
-                "" if generation.token_is_special else generation.token_text,
-                self.output_formatter,
-                last_token=is_last_token)
+                token_id = generation.token_id
+                log_prob = generation.token_logprob
+                if isinstance(token_id, torch.Tensor):
+                    token_id = token_id.item()
+                if isinstance(log_prob, torch.Tensor):
+                    log_prob = log_prob.item()
+                token = Token(
+                    token_id, ""
+                    if generation.token_is_special else generation.token_text,
+                    log_prob, generation.token_is_special)
+                request.set_next_token(token,
+                                       self.output_formatter,
+                                       last_token=is_last_token,
+                                       finish_reason=finish_reason)
+            else:
+                request.set_next_token("",
+                                       self.output_formatter,
+                                       last_token=False)
 
         # filter the requests that are stopped.
-        if self.cache:
-            self.cache = self.cache.filter(req_ids)
+        if self.cache and batch.batch_id in self.cache:
+            self.cache[batch.batch_id] = self.cache[batch.batch_id].filter(
+                req_ids)
 
     def preprocess_requests(self, requests, **kwargs):
         preprocessed_requests = []
@@ -186,13 +199,15 @@ class LmiDistRollingBatch(RollingBatch):
                 stop_sequences=param.get("stop_sequences", []),
                 max_new_tokens=param.get("max_new_tokens", 30))
 
-            preprocessed_requests.append(
-                lmi_dist.utils.types.Request(
-                    id=r.id,
-                    inputs=r.input_text,
-                    parameters=parameters,
-                    stopping_parameters=stop_parameters,
-                    truncate=param.get("truncate", 1000)))
+            request = lmi_dist.utils.types.Request(
+                id=r.id,
+                inputs=r.input_text,
+                parameters=parameters,
+                stopping_parameters=stop_parameters)
+            truncate = param.get("truncate", None)
+            if truncate is not None:
+                request.truncate = truncate
+            preprocessed_requests.append(request)
 
         if preprocessed_requests:
             batch = Batch(id=self.batch_id_counter,
@@ -201,7 +216,8 @@ class LmiDistRollingBatch(RollingBatch):
             self.batch_id_counter += 1
 
             return self.batch_cls.get_batch(
-                batch, self.model.tokenizer,
-                kwargs.get("torch_dtype", torch.float16), self.device)
+                batch, self.model.config, self.model.tokenizer,
+                self.lmi_dist_configs.torch_dtype,
+                torch.device(f"cuda:{self.lmi_dist_configs.device}"))
         else:
             return None

@@ -50,8 +50,8 @@ import java.util.regex.Pattern;
 /** A class handling inbound HTTP requests to the management API. */
 public class ManagementRequestHandler extends HttpRequestHandler {
 
-    private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?][^/]*)?");
-    private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?][^/]*)?");
+    private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?].*)?");
+    private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
     private static final Pattern INVOKE_PATTERN = Pattern.compile("^/models/.+/invoke$");
 
     /** {@inheritDoc} */
@@ -62,6 +62,8 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             String uri = req.uri();
             if (WORKFLOWS_PATTERN.matcher(uri).matches()) {
                 return true;
+            } else if (AdapterManagementRequestHandler.ADAPTERS_PATTERN.matcher(uri).matches()) {
+                return false;
             } else if (MODELS_PATTERN.matcher(uri).matches()) {
                 return req.method() != HttpMethod.POST || !INVOKE_PATTERN.matcher(uri).matches();
             }

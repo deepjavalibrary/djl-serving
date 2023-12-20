@@ -16,9 +16,9 @@ on:
         required: false
         default: ''
       run_benchmark:
-        description: 'Runs benchmark and upload to cloud watch mertcis if set to true.'
+        description: 'Runs benchmark and upload to cloud watch metrics'
         required: false
-        default: true
+        default: 'true'
   schedule:
     - cron: '0 4 * * *'
 
@@ -57,7 +57,8 @@ jobs:
     timeout-minutes: 120
     needs: create-runners
     env:
-      run_benchmark: ${{ github.event.inputs.run_benchmark }}
+      run_benchmark: ${{ github.event.inputs.run_benchmark || 'true' }}
+      image_type: ${{ github.event.inputs.mode || 'nightly' }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python3
@@ -77,32 +78,25 @@ jobs:
       - name: MME Test
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py deepspeed-mme djl_mme ${{ github.event.inputs.mode || 'nightly' }}
+          python3 llm/sagemaker-endpoint-tests.py deepspeed-mme djl_mme ${image_type} ${run_benchmark}
       - name: Test gpt2xl
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py gpt2-xl djl ${{ github.event.inputs.mode || 'nightly' }}
+          python3 llm/sagemaker-endpoint-tests.py gpt2-xl djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test stable diffusion
         if: success() || failure()
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py stable-diffusion-2-1-base djl ${{ github.event.inputs.mode || 'nightly' }}
+          python3 llm/sagemaker-endpoint-tests.py stable-diffusion-2-1-base djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test opt-1.3b
         if: success() || failure()
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py opt-1-3-b djl ${{ github.event.inputs.mode || 'nightly' }}
-          echo "sleep 30 seconds to allow endpoint deletion"
-          sleep 30
-      - name: Test flan-t5-xxl
-        if: success() || failure()
-        working-directory: tests/integration
-        run: |
-          python3 llm/sagemaker-endpoint-tests.py flan-t5-xxl djl ${{ github.event.inputs.mode || 'nightly' }}
+          python3 llm/sagemaker-endpoint-tests.py opt-1-3-b djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
         
@@ -111,7 +105,8 @@ jobs:
     timeout-minutes: 120
     needs: create-runners
     env:
-      run_benchmark: ${{ github.event.inputs.run_benchmark }}
+      run_benchmark: ${{ github.event.inputs.run_benchmark || 'true' }}
+      image_type: ${{ github.event.inputs.mode || 'nightly' }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python3
@@ -132,28 +127,21 @@ jobs:
         if: success() || failure()
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py gpt-j-6b djl ${{ github.event.inputs.mode || 'nightly' }}
+          python3 llm/sagemaker-endpoint-tests.py gpt-j-6b djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test gpt-neo-2.7b no code DeepSpeed
         if: success() || failure()
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py gpt-neo-2-7-b no_code ${{ github.event.inputs.mode || 'nightly' }}
-          echo "sleep 30 seconds to allow endpoint deletion"
-          sleep 30
-      - name: Test bloom-7b1 no code FasterTransformer
-        if: success() || failure()
-        working-directory: tests/integration
-        run: |
-          python3 llm/sagemaker-endpoint-tests.py bloom-7b1 no_code ${{ github.event.inputs.mode || 'nightly' }}
+          python3 llm/sagemaker-endpoint-tests.py gpt-neo-2-7-b no_code ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test DeepSpeed pythia-12b
         if: success() || failure()
         working-directory: tests/integration
         run: |
-          python3 llm/sagemaker-endpoint-tests.py pythia-12b djl ${{ github.event.inputs.mode || 'nightly' }}
+          python3 llm/sagemaker-endpoint-tests.py pythia-12b djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
 

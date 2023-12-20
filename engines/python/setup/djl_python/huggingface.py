@@ -10,19 +10,16 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import json
 import logging
 import os
 import re
 
 import torch
-from transformers import (pipeline, Pipeline, Conversation,
-                          AutoModelForCausalLM, AutoModelForSeq2SeqLM,
-                          AutoTokenizer, AutoConfig,
-                          AutoModelForSequenceClassification,
-                          AutoModelForTokenClassification,
-                          AutoModelForQuestionAnswering, StoppingCriteria,
-                          StoppingCriteriaList)
+from transformers import (
+    pipeline, Pipeline, Conversation, AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
+    AutoModelForSequenceClassification, AutoModelForTokenClassification,
+    AutoModelForQuestionAnswering, StoppingCriteria, StoppingCriteriaList)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from peft import PeftConfig, PeftModel, PeftModelForCausalLM
 
@@ -30,7 +27,9 @@ from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
-from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
+
+from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
+from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -50,8 +49,18 @@ ARCHITECTURES_2_TASK = {
 }
 
 LMI_DIST_ADV_MODEL = {
-    "RWForCausalLM", "GPTNeoXForCausalLM", "T5ForConditionalGeneration",
-    "LlamaForCausalLM"
+    "RWForCausalLM",
+    "GPTNeoXForCausalLM",
+    "T5ForConditionalGeneration",
+    "LlamaForCausalLM",
+    "FalconForCausalLM",
+    "MPTForCausalLM",
+    "GPTBigCodeForCausalLM",
+}
+
+# https://huggingface.co/docs/transformers/main/en/perf_infer_gpu_one#efficient-inference-on-a-single-gpu
+FLASH_2_SUPPORTED_MODELS = {
+    "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
 }
 
 PEFT_MODEL_TASK_TO_CLS = {
@@ -63,20 +72,12 @@ PEFT_MODEL_TASK_TO_CLS = {
 }
 
 
-def get_torch_dtype_from_str(dtype: str):
-    if dtype == "auto":
-        return dtype
-    if dtype == "fp32":
-        return torch.float32
-    if dtype == "fp16":
-        return torch.float16
-    if dtype == "bf16":
-        return torch.bfloat16
-    if dtype == "int8":
-        return torch.int8
-    if dtype is None:
-        return None
-    raise ValueError(f"Invalid data type: {dtype}")
+def enable_flash():
+    if torch.cuda.is_available():
+        major, _ = torch.cuda.get_device_capability()
+        if major >= 8:
+            return True
+    return False
 
 
 def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
@@ -87,36 +88,39 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
             from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
             return LmiDistRollingBatch
         else:
+            from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
             return SchedulerRollingBatch
     elif rolling_batch_type == "scheduler":
+        from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
         return SchedulerRollingBatch
     elif rolling_batch_type == "lmi-dist":
         from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
         return LmiDistRollingBatch
     elif rolling_batch_type == "vllm":
         from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
-        logging.warning(
-            "vLLM rolling batcher is experimental, use with caution")
         return VLLMRollingBatch
     raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
+
 class StopWord(StoppingCriteria):
+
     def __init__(self, tokenizer, stop_seq):
         StoppingCriteria.__init__(self)
         self.tokenizer = tokenizer
         self.stop_seq = stop_seq
 
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
-        decoded_input_ids = self.tokenizer.decode(input_ids[0][-len(self.stop_seq):])
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor,
+                 **kwargs):
+        decoded_input_ids = self.tokenizer.decode(
+            input_ids[0][-len(self.stop_seq):])
 
         matches = re.search(self.stop_seq, decoded_input_ids)
 
-        if(matches is not None):
+        if matches is not None:
             return True
-        else:
-            return False
 
-        return True
+        return False
+
 
 class HuggingFaceService(object):
 
@@ -124,119 +128,62 @@ class HuggingFaceService(object):
         self.hf_pipeline = None
         self.hf_pipeline_unwrapped = None
         self.initialized = False
-        self.enable_streaming = None
         self.model = None
-        self.device = None
         self.tokenizer = None
-        self.trust_remote_code = os.environ.get("HF_TRUST_REMOTE_CODE",
-                                                "FALSE").lower() == 'true'
-        self.rolling_batch_type = None
         self.rolling_batch = None
         self.model_config = None
         self.peft_config = None
         self.stopping_criteria_list = None
+        self.adapters = None
+        self.hf_configs = None
 
     def initialize(self, properties: dict):
-        # model_id can point to huggingface model_id or local directory.
-        # If option.model_id points to a s3 bucket, we download it and set model_id to the download directory.
-        # Otherwise we assume model artifacts are in the model_dir
-        model_id_or_path = properties.get("model_id") or properties.get(
-            "model_dir")
-        device_id = int(properties.get("device_id", "-1"))
-        self.device = f"cuda:{device_id}" if device_id >= 0 else None
-        task = properties.get("task")
-        tp_degree = int(properties.get("tensor_parallel_degree", "-1"))
-        self.enable_streaming = properties.get("enable_streaming", None)
-        if self.enable_streaming and self.enable_streaming.lower() == "false":
-            self.enable_streaming = None
-        if "trust_remote_code" in properties:
-            self.trust_remote_code = properties.get(
-                "trust_remote_code").lower() == "true"
-        # HF Acc handling
-        kwargs = {"trust_remote_code": self.trust_remote_code}
-        # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
-        if "device_map" in properties:
-            kwargs["device_map"] = properties.get("device_map")
-            self.device = None
-            logging.info(f"Using device map {kwargs['device_map']}")
-        elif tp_degree > 0 and torch.cuda.device_count() > 0:
-            kwargs["device_map"] = "auto"
-            self.device = None
-            world_size = torch.cuda.device_count()
-            assert world_size == tp_degree, f"TP degree ({tp_degree}) doesn't match available GPUs ({world_size})"
-            logging.info(f"Using {world_size} gpus")
-        if "load_in_8bit" in properties:
-            if "device_map" not in kwargs:
-                raise ValueError(
-                    "device_map should set when load_in_8bit is set")
-            kwargs["load_in_8bit"] = properties.get(
-                "load_in_8bit").lower() == 'true'
-        if "load_in_4bit" in properties:
-            if "device_map" not in kwargs:
-                raise ValueError(
-                    "device_map should set when load_in_4bit is set")
-            kwargs["load_in_4bit"] = properties.get(
-                "load_in_4bit").lower() == 'true'
-        if "low_cpu_mem_usage" in properties:
-            kwargs["low_cpu_mem_usage"] = properties.get(
-                "low_cpu_mem_usage").lower() == 'true'
+        self.hf_configs = HuggingFaceProperties(**properties)
+        self._read_model_config(self.hf_configs.model_id_or_path,
+                                self.hf_configs.revision)
 
-        if "data_type" in properties:
-            kwargs["torch_dtype"] = get_torch_dtype_from_str(
-                properties.get("data_type"))
-        if "dtype" in properties:
-            kwargs["torch_dtype"] = get_torch_dtype_from_str(
-                properties.get("dtype"))
-        if "revision" in properties:
-            kwargs["revision"] = properties.get('revision')
-        self.rolling_batch_type = properties.get("rolling_batch", None)
-
-        self._read_model_config(model_id_or_path,
-                                properties.get('revision', None))
-
-        if self.rolling_batch_type:
-            if "output_formatter" in properties:
-                kwargs["output_formatter"] = properties.get("output_formatter")
-            if "waiting_steps" in properties:
-                kwargs["waiting_steps"] = properties.get("waiting_steps")
-            self.rolling_batch_type = self.rolling_batch_type.lower()
-            is_mpi = properties.get("engine") != "Python"
-            if is_mpi:
-                self.device = int(os.getenv("LOCAL_RANK", 0))
+        if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             _rolling_batch_cls = get_rolling_batch_class_from_str(
-                self.rolling_batch_type, is_mpi, self.model_config)
-            self.rolling_batch = _rolling_batch_cls(model_id_or_path,
-                                                    self.device, properties,
-                                                    **kwargs)
+                self.hf_configs.rolling_batch.value, self.hf_configs.is_mpi,
+                self.model_config)
+            self.rolling_batch = _rolling_batch_cls(
+                self.hf_configs.model_id_or_path, self.hf_configs.device,
+                properties, **self.hf_configs.kwargs)
             self.initialized = True
             return
-        elif self.enable_streaming:
-            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
+        elif is_streaming_enabled(self.hf_configs.enable_streaming):
+            self._init_model_and_tokenizer(self.hf_configs.model_id_or_path,
+                                           **self.hf_configs.kwargs)
             self.initialized = True
             return
 
-        if not task:
-            task = self.infer_task_from_model_architecture()
+        if not self.hf_configs.task:
+            self.hf_configs.task = self.infer_task_from_model_architecture()
 
-        self.hf_pipeline = self.get_pipeline(task=task,
-                                             model_id_or_path=model_id_or_path,
-                                             kwargs=kwargs)
+        self.hf_pipeline = self.get_pipeline(
+            task=self.hf_configs.task,
+            model_id_or_path=self.hf_configs.model_id_or_path,
+            kwargs=self.hf_configs.kwargs)
 
-        if("stop_sequence" in properties):
+        if "stop_sequence" in properties:
             self.load_stopping_criteria_list(properties["stop_sequence"])
         self.initialized = True
 
-    def parse_stop_sequence_input(self, stop_sequence):
+    @staticmethod
+    def parse_stop_sequence_input(stop_sequence):
         """
-        Gets a list of stop sequences by parsing the string given in 
+        Gets a list of stop sequences by parsing the string given in
         serving.properties.
         Not robust against badly formatted input and commas in the stop sequence
         Input: stop_sequence (string)
         Output: list of strings
         """
-        assert stop_sequence[0] == '[' and stop_sequence[-1] == ']', "option.stop_sequence not properly formatted"
+        assert stop_sequence[0] == '[' and stop_sequence[
+            -1] == ']', "option.stop_sequence not properly formatted"
         stop_sequence = stop_sequence.replace(", ", ",")
-        stop_seq_list = [element[1:-1] for element in stop_sequence[1:-1].split(",")]
+        stop_seq_list = [
+            element[1:-1] for element in stop_sequence[1:-1].split(",")
+        ]
         return stop_seq_list
 
     def load_stopping_criteria_list(self, stop_sequence):
@@ -245,9 +192,9 @@ class HuggingFaceService(object):
         Input: (str) stop_sequence - currently just one stop sequence supported
         Output: none (loads into member variable)
         """
-        if(self.tokenizer is None):
+        if self.tokenizer is None:
             return
-        
+
         stop_seq_list = self.parse_stop_sequence_input(stop_sequence)
 
         stopwords = []
@@ -263,79 +210,68 @@ class HuggingFaceService(object):
         adapters = []
         errors = {}
         batch = inputs.get_batches()
-        first = True
         for i, item in enumerate(batch):
             try:
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
-                _inputs = input_map.pop("inputs", input_map)
-                adapters_per_item = self._fetch_adapters_from_input(
-                    input_map, item)
-                if first or self.rolling_batch_type:
-                    parameters.append(input_map.pop("parameters", {}))
-                    first = False
-                else:
-                    param = input_map.pop("parameters", {})
-                    if parameters[0] != param:
-                        logging.warning(
-                            f"expected param: {parameters}, actual: {param}")
-                        raise ValueError(
-                            "In order to enable dynamic batching, all input batches must have the same parameters"
-                        )
-
-                if not isinstance(_inputs, list):
-                    _inputs = [_inputs]
-
-                if not isinstance(adapters_per_item, list):
-                    adapters_per_item = [adapters_per_item]
-
-                if not adapters_per_item:
-                    ## inference with just base model.
-                    adapters_per_item = [""] * len(_inputs)
-                else:
-                    if len(_inputs) != len(adapters_per_item):
-                        ## input_size list needs to be appended as it's used during output processing
-                        input_size.append(0)
-                        raise Exception(
-                            "Number of adapters is not equal to the number of inputs"
-                        )
-
-                input_data.extend(_inputs)
-                input_size.append(len(_inputs))
-                adapters.extend(adapters_per_item)
-
-                if "cached_prompt" in input_map:
-                    parameters[i]["cached_prompt"] = input_map.pop(
-                        "cached_prompt")
-
-                seed_key = 'seed' if inputs.is_batch() else f'batch_{i}.seed'
-                if item.contains_key(seed_key):
-                    seed = parameters[i].get("seed")
-                    if not seed:
-                        # set server provided seed if seed is not part of request
-                        parameters[i]["seed"] = item.get_as_string(
-                            key=seed_key)
             except Exception as e:  # pylint: disable=broad-except
-                logging.exception(f"Parse input failed: {i}")
+                logging.warning(f"Parse input failed: {i}")
+                input_size.append(0)
                 errors[i] = str(e)
+                continue
 
-        return input_data, input_size, adapters, parameters, errors, batch
+            _inputs = input_map.pop("inputs", input_map)
+            if not isinstance(_inputs, list):
+                _inputs = [_inputs]
+            input_data.extend(_inputs)
+            input_size.append(len(_inputs))
+
+            _param = input_map.pop("parameters", {})
+            if "cached_prompt" in input_map:
+                _param["cached_prompt"] = input_map.pop("cached_prompt")
+            if not "seed" in _param:
+                # set server provided seed if seed is not part of request
+                if item.contains_key("seed"):
+                    _param["seed"] = item.get_as_string(key="seed")
+            for _ in range(input_size[i]):
+                parameters.append(_param)
+
+            adapters_per_item = self._fetch_adapters_from_input(
+                input_map, item)
+            if not isinstance(adapters_per_item, list):
+                adapters_per_item = [adapters_per_item]
+
+            if not adapters_per_item:
+                ## inference with just base model.
+                adapters_per_item = [""] * len(_inputs)
+            adapters.extend(adapters_per_item)
+            if len(_inputs) != len(adapters_per_item):
+                logging.warning(
+                    f"Number of adapters is not equal to the number of inputs")
+                errors[
+                    i] = "Number of adapters is not equal to the number of inputs"
+
+        self.adapters = adapters
+        return input_data, input_size, parameters, errors, batch
 
     def inference(self, inputs):
         outputs = Output()
 
-        input_data, input_size, adapters, parameters, errors, batch = self.parse_input(
+        input_data, input_size, parameters, errors, batch = self.parse_input(
             inputs)
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
-                err = json.dumps({"code": 424, "error": err})
-                if self.rolling_batch_type:
-                    err = json.dumps({"data": err, "last": True})
-                outputs.add(err, key="data", batch_index=i)
+                if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
+                else:
+                    outputs.add(err, key="data", batch_index=i)
             return outputs
 
-        if self.rolling_batch_type:
+        if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             if inputs.get_property("reset_rollingbatch"):
                 self.rolling_batch.reset()
             result = self.rolling_batch.inference(input_data, parameters)
@@ -343,37 +279,45 @@ class HuggingFaceService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 if err:
-                    err = json.dumps({"code": 424, "error": err})
-                    err = json.dumps({"data": err, "last": True})
-                    outputs.add(err, key="data", batch_index=i)
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
                 else:
-                    outputs.add(result[idx], key="data", batch_index=i)
+                    outputs.add(Output.binary_encode(result[idx]),
+                                key="data",
+                                batch_index=i)
                     idx += 1
 
             content_type = self.rolling_batch.get_content_type()
             if content_type:
                 outputs.add_property("content-type", content_type)
             return outputs
-        elif self.enable_streaming:
+        elif is_streaming_enabled(self.hf_configs.enable_streaming):
             if len(batch) > 1:
                 raise NotImplementedError(
                     "Dynamic batch not supported for generic streaming")
             outputs.add_property("content-type", "application/jsonlines")
-            if self.enable_streaming == "huggingface":
+            if self.hf_configs.enable_streaming.value == StreamingEnum.huggingface.value:
                 outputs.add_stream_content(
                     StreamingUtils.use_hf_default_streamer(
-                        self.model, self.tokenizer, input_data, self.device,
-                        **parameters[0]))
+                        self.model, self.tokenizer, input_data,
+                        self.hf_configs.device, **parameters[0]))
             else:
                 stream_generator = StreamingUtils.get_stream_generator(
                     "Accelerate")
                 outputs.add_stream_content(
                     stream_generator(self.model, self.tokenizer, input_data,
-                                     self.device, **parameters[0]))
+                                     self.hf_configs.device, **parameters[0]))
             return outputs
 
+        if not all(p == parameters[0] for p in parameters):
+            raise ValueError(
+                "In order to enable dynamic batching, all input batches must have the same parameters"
+            )
+
         if isinstance(self.model, PeftModelForCausalLM):
-            parameters[0]["adapters"] = adapters
+            parameters[0]["adapters"] = self.adapters
 
         prediction = self.hf_pipeline(input_data, **parameters[0])
 
@@ -439,14 +383,14 @@ class HuggingFaceService(object):
                 hf_pipeline = pipeline(task=task,
                                        tokenizer=self.tokenizer,
                                        model=self.model,
-                                       device=self.device)
+                                       device=self.hf_configs.device)
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     model_id_or_path, revision=kwargs.get('revision', None))
                 hf_pipeline = pipeline(task=task,
                                        tokenizer=self.tokenizer,
                                        model=model_id_or_path,
-                                       device=self.device,
+                                       device=self.hf_configs.device,
                                        **kwargs)
                 self.model = hf_pipeline.model
         else:
@@ -454,7 +398,7 @@ class HuggingFaceService(object):
             hf_pipeline = pipeline(task=task,
                                    model=self.model,
                                    tokenizer=self.tokenizer,
-                                   device=self.device)
+                                   device=self.hf_configs.device)
 
         # wrap specific pipeline to support better ux
         if task == "conversational":
@@ -490,6 +434,9 @@ class HuggingFaceService(object):
             model_cls = AutoModelForSeq2SeqLM
         else:
             model_cls = AutoModelForCausalLM
+            if architectures[0] in FLASH_2_SUPPORTED_MODELS and enable_flash(
+            ) and not self.hf_configs.disable_flash_attn:
+                kwargs['use_flash_attention_2'] = True
 
         if self.peft_config is not None:
             base_model = model_cls.from_pretrained(
@@ -506,8 +453,8 @@ class HuggingFaceService(object):
         else:
             self.model = model_cls.from_pretrained(model_id_or_path, **kwargs)
 
-        if self.device:
-            self.model.to(self.device)
+        if self.hf_configs.device:
+            self.model.to(self.hf_configs.device)
 
     @staticmethod
     def wrap_conversation_pipeline(hf_pipeline):
@@ -535,8 +482,8 @@ class HuggingFaceService(object):
             model = hf_pipeline.model
             tokenizer = hf_pipeline.tokenizer
             input_tokens = tokenizer(inputs, padding=True, return_tensors="pt")
-            if self.device:
-                input_tokens = input_tokens.to(self.device)
+            if self.hf_configs.device:
+                input_tokens = input_tokens.to(self.hf_configs.device)
             else:
                 input_tokens = input_tokens.to(model.device)
 
@@ -572,7 +519,7 @@ class HuggingFaceService(object):
         try:
             self.model_config = AutoConfig.from_pretrained(
                 model_config_path,
-                trust_remote_code=self.trust_remote_code,
+                trust_remote_code=self.hf_configs.trust_remote_code,
                 revision=revision)
         except OSError:
             logging.warning(
@@ -581,20 +528,27 @@ class HuggingFaceService(object):
             self.peft_config = PeftConfig.from_pretrained(model_config_path)
             self.model_config = AutoConfig.from_pretrained(
                 self.peft_config.base_model_name_or_path,
-                trust_remote_code=self.trust_remote_code)
+                trust_remote_code=self.hf_configs.trust_remote_code)
         except Exception as e:
             logging.error(
                 f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
                 f"This is required for loading huggingface models")
             raise e
 
-    def _fetch_adapters_from_input(self, input_map: dict, input: Input):
-        adapters = input_map.pop("adapters", [])
-        if not adapters:
-            ## check if input contains adapters, possible in workflow approach
-            if input.contains_key("adapter"):
-                adapters = input.get_as_string("adapter")
-        return adapters
+    @staticmethod
+    def _fetch_adapters_from_input(input_map: dict, inputs: Input):
+        if "adapters" in input_map:
+            return input_map.pop("adapters", [])
+
+        # check content, possible in workflow approach
+        if inputs.contains_key("adapter"):
+            return inputs.get_as_string("adapter")
+
+        # check properties, possible from header
+        if "adapter" in inputs.get_properties():
+            return inputs.get_properties()["adapter"]
+
+        return []
 
 
 _service = HuggingFaceService()
@@ -605,15 +559,17 @@ def register_adapter(inputs: Input):
     Registers lora adapter with the model.
     """
     adapter_name = inputs.get_property("name")
-    adapter_model_id_or_path = inputs.get_property("src")
-    logging.info(
-        f"Registering adapter {adapter_name} from {adapter_model_id_or_path}")
+    adapter_path = inputs.get_property("src")
+    if not os.path.exists(adapter_path):
+        raise ValueError(
+            f"Only local LoRA models are supported. {adapter_path} is not a valid path"
+        )
+    logging.info(f"Registering adapter {adapter_name} from {adapter_path}")
     if isinstance(_service.model, PeftModel):
-        _service.model.load_adapter(adapter_model_id_or_path, adapter_name)
+        _service.model.load_adapter(adapter_path, adapter_name)
     else:
         _service.model = PeftModel.from_pretrained(_service.model,
-                                                   adapter_model_id_or_path,
-                                                   adapter_name)
+                                                   adapter_path, adapter_name)
 
     if isinstance(_service.hf_pipeline, Pipeline):
         _service.hf_pipeline.model = _service.model

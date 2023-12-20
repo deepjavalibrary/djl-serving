@@ -8,6 +8,8 @@ DJL Serving provides a set of API allow user to manage models at runtime:
 4. [Unregister a model](#unregister-a-model-or-workflow)
 5. [List registered models](#list-workflows)
 
+In addition, there is also the [adapter management API](adapters_api.md) for managing adapters.
+
 Management API is listening on port 8080 and only accessible from localhost by default. To change the default setting, see [DJL Serving Configuration](configuration.md).
 
 Similar as [Inference API](inference_api.md).

@@ -9,9 +9,9 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-FROM arm64v8/ubuntu:20.04
-ARG djl_version=0.24.0~SNAPSHOT
-ARG torch_version=2.0.1
+FROM arm64v8/ubuntu:22.04
+ARG djl_version=0.26.0~SNAPSHOT
+ARG torch_version=2.1.1
 
 EXPOSE 8080
 
@@ -33,6 +33,9 @@ RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
@@ -52,6 +55,8 @@ RUN scripts/install_djl_serving.sh $djl_version && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch64="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-24-0.aarch64="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-26-0.aarch64="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL torch-version=$torch_version

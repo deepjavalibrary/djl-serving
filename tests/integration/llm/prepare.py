@@ -8,7 +8,7 @@ parser.add_argument('model', help='model that works with certain handler')
 parser.add_argument('--engine',
                     required=False,
                     type=str,
-                    choices=['deepspeed', 'huggingface', 'fastertransformer'],
+                    choices=['deepspeed', 'huggingface'],
                     help='The engine used for inference')
 parser.add_argument('--dtype',
                     required=False,
@@ -142,24 +142,28 @@ ds_handler_list = {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
-        "option.dtype": "bf16"
+        "option.dtype": "bf16",
+        "option.enable_streaming": False
     },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
         "option.task": "text-generation",
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     },
     "open-llama-7b": {
         "option.model_id": "s3://djl-llm/open-llama-7b/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     },
     "opt-13b": {
         "option.model_id": "s3://djl-llm/opt-13b/",
         "option.tensor_parallel_degree": 2,
         "option.task": "text-generation",
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     },
     "gpt-neo-1.3b": {
         "option.model_id": "EleutherAI/gpt-neo-1.3B",
@@ -172,7 +176,8 @@ ds_handler_list = {
         "option.model_id": "nomic-ai/gpt4all-lora",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
-        "option.dtype": "fp16"
+        "option.dtype": "fp16",
+        "option.enable_streaming": False
     }
 }
 
@@ -195,158 +200,263 @@ sd_handler_list = {
     }
 }
 
-ft_handler_list = {
-    "bigscience/bloom-3b": {
-        "option.model_id": "s3://djl-llm/bloom-3b/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1,
-    },
-    "flan-t5-xxl": {
-        "option.model_id": "s3://djl-llm/flan-t5-xxl/",
-        "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp32"
-    },
-    "EleutherAI/pythia-2.8b": {
-        "option.model_id": "s3://djl-llm/pythia-2.8b/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1
-    },
-    "Salesforce/xgen-7b-8k-base": {
-        "engine": "Python",
-        "option.entryPoint": "djl_python.fastertransformer",
-        "option.model_id": "Salesforce/xgen-7b-8k-base",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1,
-        "option.trust_remote_code": "true",
-    },
-    "t5-base-lora": {
-        "option.model_id": "s3://djl-llm/t5-base-lora/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp32",
-        "gpu.maxWorkers": 1
-    }
-}
-
-ft_model_list = {
-    "t5-small": {
-        "engine": "FasterTransformer",
-        "option.model_id": "t5-small",
-    },
-    "gpt2-xl": {
-        "engine": "FasterTransformer",
-        "option.model_id": "gpt2-xl",
-        "option.tensor_parallel_degree": 1,
-    },
-    "facebook/opt-6.7b": {
-        "engine": "FasterTransformer",
-        "option.model_id": "s3://djl-llm/opt-6b7/",
-        "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp16",
-    },
-    "bigscience/bloom-3b": {
-        "engine": "FasterTransformer",
-        "option.model_id": "s3://djl-llm/bloom-3b/",
-        "option.tensor_parallel_degree": 2,
-        "option.dtype": "fp16",
-        "gpu.maxWorkers": 1,
-    },
-    "nomic-ai/gpt4all-j": {
-        "option.model_id": "s3://djl-llm/gpt4all-j/",
-        "option.tensor_parallel_degree": 4,
-        "option.dtype": "fp32"
-    }
-}
-
-default_accel_configs = {
-    "huggingface": {
-        "engine": "Python",
-        "option.entryPoint": "djl_python.huggingface"
-    },
-    "deepspeed": {
-        "engine": "DeepSpeed",
-        "option.entryPoint": "djl_python.deepspeed"
-    },
-    "fastertransformer": {
-        "engine": "FasterTransformer",
-        "entryPoint": "djl_python.fastertransformer"
-    }
-}
-
 performance_test_list = {
-    "opt-30b": {
+    "opt-30b-fp16-deepspeed": {
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/opt-30b/"
+        "option.model_id": "s3://djl-llm/opt-30b/",
+        "option.parallel_loading": "true",
+        "engine": "DeepSpeed",
+        "option.dtype": "fp16",
+        "option.rolling_batch": "deepspeed",
     },
-    "open-llama-13b": {
+    "opt-30b-bf16-deepspeed": {
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/open-llama-13b/"
+        "option.model_id": "s3://djl-llm/opt-30b/",
+        "option.parallel_loading": "true",
+        "engine": "DeepSpeed",
+        "option.dtype": "bf16",
+        "option.rolling_batch": "deepspeed",
     },
-    "gpt-j-6b": {
+    "opt-30b-lmi-dist": {
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/gpt-j-6b/"
+        "option.model_id": "s3://djl-llm/opt-30b/",
+        "engine": "MPI",
+        "option.rolling_batch": "deepspeed",
     },
-    "bloom-7b1": {
+    "open-llama-13b-fp16-deepspeed": {
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/bloom-7b1/"
+        "option.dtype": "fp16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
     },
-    "gpt-neox-20b": {
+    "open-llama-13b-bf16-deepspeed": {
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/"
+        "option.dtype": "bf16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
+    },
+    "open-llama-13b-fp16-lmi-dist": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "engine": "MPI",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.rolling_batch": "lmi-dist",
+    },
+    "open-llama-13b-smoothquant": {
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/open-llama-13b/",
+        "option.dtype": "fp16",
+        "engine": "DeepSpeed",
+        "option.quantize": "smoothquant",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
+    },
+    "gpt-j-6b-fp16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
+    },
+    "gpt-j-6b-bf16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
+    },
+    "gpt-j-6b-smoothquant": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.quantize": "smoothquant",
+        "option.rolling_batch": "deepspeed",
+        "option.max_rolling_batch_size": 4,
+    },
+    "bloom-7b1-fp16-deepspeed": {
+        "engine": "DeepSpeed",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
+        "option.dtype": "fp16",
+        "option.rolling_batch": "deepspeed",
+    },
+    "bloom-7b1-bf16-deepspeed": {
+        "engine": "DeepSpeed",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/bloom-7b1/",
+        "option.dtype": "bf16",
+        "option.rolling_batch": "deepspeed",
+    },
+    "bloom-7b1-fp16-lmi-dist": {
+        "engine": "MPI",
+        "option.task": "text-generation",
+        "option.rolling_batch": "lmi-dist",
+    },
+    "gpt-neox-20b-fp16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.parallel_loading": "true",
+        "option.rolling_batch": "deepspeed",
+    },
+    "gpt-neox-20b-fp16-lmi-dist": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "engine": "MPI",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.rolling_batch": "lmi-dist",
+    },
+    "gpt-neox-20b-bf16-deepspeed": {
+        "option.task": "text-generation",
+        "option.dtype": "bf16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.parallel_loading": "true",
+        "option.rolling_batch": "deepspeed",
+    },
+    "gpt-neox-20b-smoothquant": {
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "engine": "DeepSpeed",
+        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
+        "option.quantize": "smoothquant",
+        "option.smoothquant_alpha": 0.65,
+        "option.rolling_batch": "deepspeed",
     }
+}
+
+transformers_neuronx_aot_handler_list = {
+    "gpt2": {
+        "option.model_id":
+        "gpt2",
+        "option.batch_size":
+        4,
+        "option.tensor_parallel_degree":
+        2,
+        "option.n_positions":
+        512,
+        "option.dtype":
+        "fp16",
+        "option.model_loading_timeout":
+        600,
+        "option.enable_streaming":
+        False,
+        "option.save_mp_checkpoint_path":
+        "/opt/ml/input/data/training/partition-test"
+    },
+    "gpt2-quantize": {
+        "option.model_id":
+        "gpt2",
+        "option.batch_size":
+        4,
+        "option.tensor_parallel_degree":
+        2,
+        "option.n_positions":
+        512,
+        "option.dtype":
+        "fp16",
+        "option.model_loading_timeout":
+        600,
+        "option.quantize":
+        "static_int8",
+        "option.enable_streaming":
+        False,
+        "option.save_mp_checkpoint_path":
+        "/opt/ml/input/data/training/partition-test"
+    },
 }
 
 transformers_neuronx_handler_list = {
     "gpt2": {
         "option.model_id": "gpt2",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
         "option.dtype": "fp16",
-        "option.model_loading_timeout": 600
+        "option.model_loading_timeout": 600,
+        "option.enable_streaming": False
+    },
+    "gpt2-quantize": {
+        "option.model_id": "gpt2",
+        "batch_size": 4,
+        "option.tensor_parallel_degree": 2,
+        "option.n_positions": 512,
+        "option.dtype": "fp16",
+        "option.model_loading_timeout": 600,
+        "option.quantize": "static_int8",
+        "option.enable_streaming": False
     },
     "opt-1.3b": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.dtype": "fp16",
-        "option.model_loading_timeout": 600
+        "option.model_loading_timeout": 600,
+        "option.enable_streaming": False
     },
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
         "option.dtype": "fp32",
-        "option.model_loading_timeout": 900
+        "option.model_loading_timeout": 900,
+        "option.enable_streaming": False
     },
-    "gpt-neox-20b": {
-        "option.model_id": "s3://djl-llm/gpt-neox-20b/",
-        "option.batch_size": 4,
-        "option.tensor_parallel_degree": 8,
+    "pythia-2.8b": {
+        "option.model_id": "s3://djl-llm/pythia-2.8b/",
+        "batch_size": 4,
+        "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
         "option.dtype": "fp16",
-        "option.model_loading_timeout": 900
+        "option.model_loading_timeout": 900,
+        "option.enable_streaming": False
     },
     "open-llama-7b": {
         "option.model_id": "s3://djl-llm/open-llama-7b/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.dtype": "fp16",
         "option.neuron_optimize_level": 1,
-        "option.model_loading_timeout": 1200
+        "option.model_loading_timeout": 1200,
+        "option.enable_streaming": False
     },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
-        "option.batch_size": 4,
+        "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 256,
         "option.dtype": "fp16",
-        "option.model_loading_timeout": 720
+        "option.model_loading_timeout": 720,
+        "option.enable_streaming": False
+    },
+    "llama-7b-split": {
+        "option.model_id": "s3://djl-llm/llama-2-7b-split-inf2/split-model/",
+        "batch_size": 1,
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 512,
+        "option.model_loading_timeout": 2400,
+        "option.load_split_model": True,
+        "option.context_length_estimate": '256, 512, 1024'
+    },
+    "llama2-7b": {
+        "option.model_id": "s3://djl-llm/llama-2-7b-neuronx/",
+        "batch_size": 4,
+        "option.tensor_parallel_degree": 4,
+        "option.dtype": "fp16",
+        "option.n_positions": 2048,
+        "option.model_loading_timeout": 2400,
+        "option.enable_streaming": False
     },
     "opt-1.3b-streaming": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
@@ -355,16 +465,36 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 512,
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600,
-        "option.enable_streaming": True
+        "option.enable_streaming": True,
     },
-    "stable-diffusion-2.1-base-neuron": {
-        "option.model_id": "s3://djl-llm/stable-diffusion-2-1-base-compiled/",
+    "stable-diffusion-2.1-neuron": {
+        "option.model_id":
+        "s3://djl-llm/stable-diffusion-2-1-neuron-compiled/",
+        "option.height": 512,
+        "option.width": 512,
+        "batch_size": 1,
+        "option.num_images_per_prompt": 1,
         "option.tensor_parallel_degree": 2,
+        "option.dtype": "bf16",
         "option.use_stable_diffusion": True
     },
-    "stable-diffusion-2.1-base-neuron-bf16": {
+    "stable-diffusion-1.5-neuron": {
         "option.model_id":
-        "s3://djl-llm/stable-diffusion-2-1-base-compiled-bf16/",
+        "s3://djl-llm/stable-diffusion-1-5-neuron-compiled/",
+        "option.height": 512,
+        "option.width": 512,
+        "batch_size": 1,
+        "option.num_images_per_prompt": 1,
+        "option.tensor_parallel_degree": 2,
+        "option.dtype": "bf16",
+        "option.use_stable_diffusion": True
+    },
+    "stable-diffusion-xl-neuron": {
+        "option.model_id": "s3://djl-llm/stable-diffusion-xl-neuron-compiled/",
+        "option.height": 1024,
+        "option.width": 1024,
+        "batch_size": 1,
+        "option.num_images_per_prompt": 1,
         "option.tensor_parallel_degree": 2,
         "option.dtype": "bf16",
         "option.use_stable_diffusion": True
@@ -461,6 +591,12 @@ lmi_dist_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.quantize": "gptq"
     },
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    }
 }
 
 vllm_model_list = {
@@ -470,11 +606,22 @@ vllm_model_list = {
         "option.dtype": "fp16",
         "option.tensor_parallel_degree": 4
     },
+    "llama2-13b-awq": {
+        "option.model_id": "TheBloke/Llama-2-13B-chat-AWQ",
+        "option.quantize": "awq",
+        "option.tensor_parallel_degree": 4
+    },
     "gpt-neox-20b": {
         "option.model_id": "s3://djl-llm/gpt-neox-20b",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4
     },
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    }
 }
 
 unmerged_lora_correctness_list = {
@@ -483,6 +630,94 @@ unmerged_lora_correctness_list = {
         "gpu.maxWorkers": 1,
         "load_on_devices": 0,
     }
+}
+
+ds_smoothquant_model_list = {
+    "gpt-j-6b": {
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.tensor_parallel_degree": 4,
+        "option.quantize": "smoothquant",
+    },
+    "gpt-neox-20b": {
+        "option.model_id": "s3://djl-llm/gpt-neox-20b",
+        "option.tensor_parallel_degree": 4,
+        "option.quantize": "smoothquant",
+        "option.smoothquant_alpha": 0.65,
+    },
+    "llama2-13b-dynamic-int8": {
+        "option.model_id": "TheBloke/Llama-2-13B-fp16",
+        "option.tensor_parallel_degree": 4,
+        "option.quantize": "dynamic_int8",
+    },
+    "llama2-13b-smoothquant": {
+        "option.model_id": "TheBloke/Llama-2-13B-fp16",
+        "option.tensor_parallel_degree": 4,
+        "option.quantize": "smoothquant",
+    },
+}
+
+lmi_dist_aiccl_model_list = {
+    "llama-2-70b-aiccl": {
+        "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
+    },
+    "codellama-34b-aiccl": {
+        "option.model_id": "codellama/CodeLlama-34b-hf",
+    },
+    "falcon-40b-aiccl": {
+        "option.model_id": "s3://djl-llm/falcon-40b/",
+    },
+}
+
+trtllm_handler_list = {
+    "llama2-13b": {
+        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.output_formatter": "jsonlines",
+    },
+    "falcon-7b": {
+        "option.model_id": "s3://djl-llm/triton/0.6.1/falcon-7b-tp1-bs16/",
+        "option.tensor_parallel_degree": 1,
+        "option.max_input_len": 1024,
+        "option.max_output_len": 512,
+        "option.max_rolling_batch_size": 16,
+        "option.output_formatter": "jsonlines",
+    },
+    "llama2-7b-smoothquant": {
+        "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.quantize": "smoothquant",
+        "option.smoothquant_per_token": "True",
+        "option.smoothquant_per_channel": "True",
+        "option.output_formatter": "jsonlines",
+    },
+}
+
+deepspeed_rolling_batch_model_list = {
+    "gpt-neox-20b": {
+        "option.model_id": "s3://djl-llm/gpt-neox-20b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
+    "open-llama-7b": {
+        "option.model_id": "s3://djl-llm/open-llama-7b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
+    "gpt2": {
+        "option.model_id": "gpt2",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 2
+    },
+    "llama2-13b-smoothquant": {
+        "option.model_id": "TheBloke/Llama-2-13B-fp16",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+        "option.quantize": "smoothquant",
+    },
 }
 
 
@@ -574,11 +809,17 @@ def build_performance_model(model):
     else:
         options = {"option.task": "text-generation", "option.model_id": model}
     options["option.predict_timeout"] = 240
-    options["option.dtype"] = args.dtype
+    if args.dtype:
+        options["option.dtype"] = args.dtype
+    if options.get('option.dtype') is None:
+        raise ValueError("Need to provide dtype for performance benchmark")
     options["option.tensor_parallel_degree"] = args.tensor_parallel
-    for k, v in default_accel_configs[args.engine].items():
-        if k not in options:
-            options[k] = v
+    engine = options.get('engine')
+    if args.engine:
+        engine = args.engine
+        options['engine'] = engine
+    if engine is None:
+        raise ValueError("Need to provide engine for performance benchmark")
     write_model_artifacts(options)
 
 
@@ -604,70 +845,23 @@ def build_sd_handler_model(model):
     write_model_artifacts(options)
 
 
-def build_ft_handler_model(model):
-    if model not in ft_handler_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_handler_list.keys())}"
-        )
-    options = ft_handler_list[model]
-    if "engine" not in options:
-        options["engine"] = "FasterTransformer"
-    write_model_artifacts(options)
-
-
-def build_ft_raw_model(model):
-    if model not in ft_model_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
-        )
-    options = ft_model_list[model]
-    if "engine" not in options:
-        options["engine"] = "Python"
-
-    write_model_artifacts(options)
-    shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
-
-
-def build_ft_raw_aot_model(model):
-    if model not in ft_model_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
-        )
-    options = ft_model_list[model]
-    options["engine"] = "FasterTransformer"
-    if model == 't5-small':
-        options[
-            "option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot/"
-    else:
-        options[
-            "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
-    write_model_artifacts(options)
-    shutil.copyfile("llm/fastertransformer-model.py", "models/test/model.py")
-
-
-def builder_ft_handler_aot_model(model):
-    if model not in ft_model_list:
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(ft_model_list.keys())}"
-        )
-    options = ft_model_list[model]
-    options["engine"] = "FasterTransformer"
-    # options["entryPoint"] = "djl_python.fastertransformer"
-    if model == 't5-small':
-        options[
-            "option.save_mp_checkpoint_path"] = "s3://djl-llm/t5-small-tp4/ft-aot-handler/"
-    else:
-        options[
-            "option.save_mp_checkpoint_path"] = "/opt/ml/input/data/training/partition-test"
-    write_model_artifacts(options)
-
-
 def build_transformers_neuronx_handler_model(model):
     if model not in transformers_neuronx_handler_list.keys():
         raise ValueError(
             f"{model} is not one of the supporting handler {list(transformers_neuronx_handler_list.keys())}"
         )
     options = transformers_neuronx_handler_list[model]
+    options["engine"] = "Python"
+    options["option.entryPoint"] = "djl_python.transformers_neuronx"
+    write_model_artifacts(options)
+
+
+def build_transformers_neuronx_aot_handler_model(model):
+    if model not in transformers_neuronx_aot_handler_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(transformers_neuronx_aot_handler_list.keys())}"
+        )
+    options = transformers_neuronx_aot_handler_list[model]
     options["engine"] = "Python"
     options["option.entryPoint"] = "djl_python.transformers_neuronx"
     write_model_artifacts(options)
@@ -704,7 +898,7 @@ def build_vllm_model(model):
     options["engine"] = "Python"
     options["option.rolling_batch"] = "vllm"
     options["option.output_formatter"] = "jsonlines"
-    write_model_artifacts(options, ["vllm==0.2.0", "pandas", "pyarrow"])
+    write_model_artifacts(options)
 
 
 def build_unmerged_lora_correctness_model(model):
@@ -718,23 +912,73 @@ def build_unmerged_lora_correctness_model(model):
     shutil.copyfile("llm/unmerged_lora.py", "models/test/model.py")
 
 
+def build_ds_smoothquant_model(model):
+    if model not in ds_smoothquant_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(ds_smoothquant_model_list.keys())}"
+        )
+    options = ds_smoothquant_model_list[model]
+    options["engine"] = "DeepSpeed"
+    options["entryPoint"] = "djl_python.deepspeed"
+    options["dtype"] = "fp16"
+    options["task"] = "text-generation"
+    write_model_artifacts(options)
+
+
+def build_lmi_dist_aiccl_model(model):
+    if model not in lmi_dist_aiccl_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(lmi_dist_aiccl_model_list.keys())}"
+        )
+    options = lmi_dist_aiccl_model_list[model]
+    options["engine"] = "MPI"
+    options["option.task"] = "text-generation"
+    options["option.tensor_parallel_degree"] = 8
+    options["option.rolling_batch"] = "lmi-dist"
+    options["option.output_formatter"] = "jsonlines"
+    options["option.max_rolling_batch_size"] = 4
+    write_model_artifacts(options)
+
+
+def build_trtllm_handler_model(model):
+    if model not in trtllm_handler_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(trtllm_handler_list.keys())}"
+        )
+    options = trtllm_handler_list[model]
+    write_model_artifacts(options)
+
+
+def build_deepspeed_rolling_batch_model(model):
+    if model not in deepspeed_rolling_batch_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(deepspeed_rolling_batch_model_list.keys())}"
+        )
+    options = deepspeed_rolling_batch_model_list[model]
+    options["engine"] = "DeepSpeed"
+    options["option.rolling_batch"] = "deepspeed"
+    options["option.output_formatter"] = "jsonlines"
+    write_model_artifacts(options)
+
+
 supported_handler = {
     'deepspeed': build_ds_handler_model,
-    'huggingface': build_hf_handler_model,
     "deepspeed_raw": build_ds_raw_model,
-    'stable-diffusion': build_sd_handler_model,
-    'fastertransformer': build_ft_handler_model,
-    'fastertransformer_raw': build_ft_raw_model,
-    'fastertransformer_raw_aot': build_ft_raw_aot_model,
-    'fastertransformer_handler_aot': builder_ft_handler_aot_model,
     'deepspeed_aot': build_ds_aot_model,
     'deepspeed_handler_aot': build_ds_aot_handler_model,
+    'deepspeed_smoothquant': build_ds_smoothquant_model,
+    'deepspeed_rolling_batch': build_deepspeed_rolling_batch_model,
+    'huggingface': build_hf_handler_model,
+    'stable-diffusion': build_sd_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
+    'transformers_neuronx_aot': build_transformers_neuronx_aot_handler_model,
     'performance': build_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
     'lmi_dist': build_lmi_dist_model,
+    'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
     'unmerged_lora': build_unmerged_lora_correctness_model,
+    'trtllm': build_trtllm_handler_model,
 }
 
 if __name__ == '__main__':

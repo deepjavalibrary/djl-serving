@@ -78,6 +78,7 @@ public class PyModel extends BaseModel {
                     "Python engine does not support dynamic blocks");
         }
         String entryPoint = null;
+        boolean isTrtLlmBackend = false;
         if (options != null) {
             logger.debug("options in serving.properties for model: {}", modelName);
             for (Map.Entry<String, ?> entry : options.entrySet()) {
@@ -120,6 +121,9 @@ public class PyModel extends BaseModel {
                     case "entryPoint":
                         entryPoint = value;
                         break;
+                    case "rolling_batch":
+                        isTrtLlmBackend = "trtllm".equals(value);
+                        break;
                     case "parallel_loading":
                         parallelLoading = Boolean.parseBoolean(value);
                         break;
@@ -160,11 +164,11 @@ public class PyModel extends BaseModel {
                     entryPoint = modelFile.toFile().getName();
                 } else if ("DeepSpeed".equals(engineName)) {
                     entryPoint = "djl_python.deepspeed";
-                } else if ("FasterTransformer".equals(engineName)) {
-                    entryPoint = "djl_python.fastertransformer";
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";
+                } else if (isTrtLlmBackend) {
+                    entryPoint = "djl_python.tensorrt_llm";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")) {
                     entryPoint = "djl_python.huggingface";
                 } else {
@@ -304,9 +308,10 @@ public class PyModel extends BaseModel {
             pool = Executors.newFixedThreadPool(mpiWorkers);
         }
         logger.info("Start {} mpiWorkers ...", mpiWorkers);
+        int deviceId = manager.getDevice().getDeviceId();
         for (int i = 0; i < mpiWorkers; ++i) {
             logger.debug("Pre-creating python worker: {} ", i);
-            PyProcess worker = new PyProcess(this, pyEnv, i * tp);
+            PyProcess worker = new PyProcess(this, pyEnv, deviceId + i * tp);
             workerQueue.offer(worker);
             if (pool != null) {
                 logger.debug("Submitting to pool: {}", i);

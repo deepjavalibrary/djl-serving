@@ -49,6 +49,7 @@ class PyProcess {
     private volatile boolean started; // NOPMD
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
+    private boolean trtLlmMode;
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
@@ -68,6 +69,8 @@ class PyProcess {
             connections = Collections.singletonList(new Connection(pyEnv, port, -1));
         }
         restartCount = new AtomicInteger(0);
+        // TODO: avoid using this hack when TRT-LLM improve its behavior
+        trtLlmMode = "trtllm".equals(model.getProperty("rolling_batch"));
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) {
@@ -80,32 +83,41 @@ class PyProcess {
             }
 
             List<CompletableFuture<Output>> futures = new ArrayList<>(connections.size());
-            for (Connection conn : connections) {
-                futures.add(conn.send(inputs));
+            if (initialLoad || !trtLlmMode) {
+                for (Connection conn : connections) {
+                    futures.add(conn.send(inputs));
+                }
+            } else {
+                futures.add(connections.get(0).send(inputs));
             }
 
             Output output = null;
-            for (CompletableFuture<Output> future : futures) {
-                output = future.get(timeout, TimeUnit.SECONDS);
-                if (initialLoad) {
-                    int code = output.getCode();
-                    if (code >= 300) {
-                        if (code == 507) {
-                            throw new EngineException("OOM");
-                        }
-                        if (pyEnv.isFailOnInitialize()) {
-                            throw new EngineException(
-                                    "Failed to initialize model: " + output.getMessage());
-                        }
-                        logger.warn("Model doesn't support initialize: {}", output.getMessage());
-                    } else {
-                        logger.info("Model [{}] initialized.", model.getName());
+            if (trtLlmMode) {
+                output = futures.get(0).get(timeout, TimeUnit.SECONDS);
+            } else {
+                for (CompletableFuture<Output> future : futures) {
+                    output = future.get(timeout, TimeUnit.SECONDS);
+                }
+            }
+
+            if (initialLoad && output != null) {
+                int code = output.getCode();
+                if (code >= 300) {
+                    if (code == 507) {
+                        throw new EngineException("OOM");
                     }
+                    if (pyEnv.isFailOnInitialize()) {
+                        throw new EngineException(
+                                "Failed to initialize model: " + output.getMessage());
+                    }
+                    logger.warn("Model doesn't support initialize: {}", output.getMessage());
+                } else {
+                    logger.info("Model [{}] initialized.", model.getName());
                 }
             }
 
             return output;
-        } catch (Exception e) {
+        } catch (Throwable e) { // use Throwable to workaround spotbug false alarm
             logger.debug("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
             stopPythonProcess(!initialLoad);
             if (!initialLoad) {

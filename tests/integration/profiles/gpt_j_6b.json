@@ -1,10 +1,8 @@
 {
 	"test_series":"performance",
-	"engine":["deepspeed","huggingface"],
-	"model": "gpt-j-6b",
-	"dtype": ["fp16","bf16"],
+	"model": ["gpt-j-6b-fp16-deepspeed", "gpt-j-6b-bf16-deepspeed", "gpt-j-6b-smoothquant"],
 	"tensor_parallel": 4,
-	"batch_size": 4,
+	"batch_size": 1,
 	"in_tokens": [256, 512],
 	"out_tokens": 256,
 	"count": 10,

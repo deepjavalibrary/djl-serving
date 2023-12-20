@@ -16,6 +16,7 @@ import ai.djl.ModelException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.inference.streaming.PublisherBytesSupplier;
 import ai.djl.metric.Metric;
+import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.BytesSupplier;
@@ -142,6 +143,19 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             default:
                 throw new AssertionError("Invalid request uri: " + req.uri());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        Session session = NettyUtils.getSession(ctx.channel());
+        if (session != null) {
+            Input input = session.getInput();
+            if (input != null) {
+                input.setCancelled(true);
+            }
+        }
+        super.channelInactive(ctx);
     }
 
     private void handlePredictions(
@@ -276,6 +290,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     void runJob(
             ModelManager modelManager, ChannelHandlerContext ctx, Workflow workflow, Input input) {
+        Session session = NettyUtils.getSession(ctx.channel());
+        session.setInput(input);
         String sync = input.getProperty(X_SYNCHRONOUS, "true");
         if (Boolean.parseBoolean(sync)) { // Synchronous
             modelManager
@@ -374,10 +390,12 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         BytesSupplier data = output.getData();
         if (data instanceof ChunkedBytesSupplier) {
             try {
+                long begin = System.nanoTime();
                 boolean first = true;
+                int count = 0;
                 ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
                 while (supplier.hasNext()) {
-                    byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.MINUTES);
+                    byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.SECONDS);
                     // Defer sending HTTP header until first chunk received.
                     // This allows inference update HTTP code.
                     if (first) {
@@ -394,8 +412,14 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
                     ByteBuf bb = Unpooled.wrappedBuffer(buf);
                     ctx.writeAndFlush(new DefaultHttpContent(bb));
+                    ++count;
                 }
                 ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+                long latency = (System.nanoTime() - begin) / 1000;
+                Metric metric = new Metric("TokenStreaming", latency, Unit.MICROSECONDS);
+                SERVER_METRIC.info("{}", metric);
+                metric = new Metric("TokenLatency", latency / count, Unit.MICROSECONDS);
+                SERVER_METRIC.info("{}", metric);
             } catch (InterruptedException | IllegalStateException e) {
                 logger.warn("Chunk reading interrupted", e);
                 ctx.disconnect();
@@ -404,6 +428,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             return;
         }
         if (data instanceof PublisherBytesSupplier) {
+            long begin = System.nanoTime();
             HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, true);
             for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
                 resp.headers().set(entry.getKey(), entry.getValue());
@@ -411,17 +436,24 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             NettyUtils.sendHttpResponse(ctx, resp, true);
             PublisherBytesSupplier supplier = (PublisherBytesSupplier) data;
             supplier.subscribe(
-                    buf -> {
-                        if (buf == null) {
-                            // End stream
-                            ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+                            buf -> {
+                                if (buf == null) {
+                                    // End stream
+                                    ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 
-                        } else if (buf.length > 0) {
-                            // Continue stream
-                            ByteBuf bb = Unpooled.wrappedBuffer(buf);
-                            ctx.writeAndFlush(new DefaultHttpContent(bb));
-                        }
-                    });
+                                } else if (buf.length > 0) {
+                                    // Continue stream
+                                    ByteBuf bb = Unpooled.wrappedBuffer(buf);
+                                    ctx.writeAndFlush(new DefaultHttpContent(bb));
+                                }
+                            })
+                    .thenAccept(
+                            b -> {
+                                long latency = (System.nanoTime() - begin) / 1000;
+                                Metric metric =
+                                        new Metric("TokenStreaming", latency, Unit.MICROSECONDS);
+                                SERVER_METRIC.info("{}", metric);
+                            });
             return;
         }
 

@@ -10,17 +10,20 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
-ARG djl_version=0.24.0~SNAPSHOT
+ARG djl_version=0.26.0~SNAPSHOT
 ARG torch_version=1.13.1
-ARG python_version=3.8
-ARG torch_neuronx_version=1.13.1.1.11.0
-ARG transformers_neuronx_version=0.7.84
-ARG neuronx_distributed_version=0.4.0
-ARG neuronx_cc_version=2.10.*
+ARG python_version=3.9
+ARG neuronsdk_version=2.15.2
+ARG torch_neuronx_version=1.13.1.1.12.1
+ARG transformers_neuronx_version=0.8.268
+ARG neuronx_distributed_version=0.5.0
+ARG neuronx_cc_version=2.11.0.35
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.33.2
+ARG transformers_version=4.35.0
 ARG accelerate_version=0.23.0
-ARG diffusers_version=0.16.0
+ARG diffusers_version=0.22.0
+ARG pydantic_version=1.10.13
+ARG optimum_neuron_version=0.0.16
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -38,9 +41,9 @@ ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
-ENV NEURON_SDK_PATH=/usr/local/lib/python3.8/dist-packages/torch_neuronx/lib
+ENV NEURON_SDK_PATH=/usr/local/lib/python3.9/dist-packages/torch_neuronx/lib
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.8/dist-packages/torch/lib
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.9/dist-packages/torch/lib
 ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=1.13.1
@@ -50,11 +53,16 @@ ENV NEURON_CC_FLAGS="--logfile /tmp/compile.log --temp-dir=/tmp"
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
 
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
+    mkdir -p /opt/djl/partition && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
+COPY partition /opt/djl/partition
 RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh ${python_version} && \
@@ -63,7 +71,8 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     pip install transformers==${transformers_version} accelerate==${accelerate_version} safetensors \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece \
-    diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com && \
+    diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
+    pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
@@ -74,6 +83,8 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.inf2="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-24-0.inf2="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-26-0.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+LABEL neuronsdk-version=$neuronsdk_version

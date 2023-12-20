@@ -86,7 +86,15 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             batch.addProperty("batch_size", String.valueOf(size));
             for (int i = 0; i < size; ++i) {
                 Input in = (Input) inputs.get(i);
-                String prefix = "batch_" + i + '.';
+                // TODO: max 999 batch size
+                String prefix;
+                if (i > 99) {
+                    prefix = "batch_" + i + '.';
+                } else if (i > 9) {
+                    prefix = "batch_0" + i + '.';
+                } else {
+                    prefix = "batch_00" + i + '.';
+                }
                 for (Map.Entry<String, String> entry : in.getProperties().entrySet()) {
                     String key = prefix + entry.getKey();
                     batch.addProperty(key, entry.getValue());

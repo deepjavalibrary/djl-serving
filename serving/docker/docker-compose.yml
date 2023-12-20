@@ -22,17 +22,17 @@ services:
       context: .
       dockerfile: deepspeed.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}deepspeed${NIGHTLY}"
-  pytorch-cu118:
+  pytorch-gpu:
     build:
       context: .
       target: base
-      dockerfile: pytorch-cu118.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-cu118${NIGHTLY}"
-  fastertransformer:
+      dockerfile: pytorch-gpu.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}pytorch-gpu${NIGHTLY}"
+  tensorrt-llm:
     build:
       context: .
-      dockerfile: fastertransformer.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}fastertransformer${NIGHTLY}"
+      dockerfile: tensorrt-llm.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}tensorrt-llm${NIGHTLY}"
   pytorch-inf2:
     build:
       context: .

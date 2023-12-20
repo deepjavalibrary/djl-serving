@@ -21,9 +21,9 @@ if [[ "$model_path" == "no_code" ]]; then
 fi
 
 is_llm=false
-if [[ "$platform" == *"cu1"* ]]; then # if the platform has cuda capabilities
+if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
-elif [[ "$platform" == *"deepspeed"* ]]; then # Runs multi-gpu
+elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
   shm="12gb"
@@ -62,6 +62,7 @@ if $is_partition; then
     ${model_path:+-v ${model_path}/test:/opt/ml/input/data/training} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     ${runtime:+--runtime="${runtime}"} \
@@ -83,6 +84,7 @@ else
     ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/home/djl/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     -e SERVING_OPTS='-Dai.djl.logging.level=debug' \
@@ -102,6 +104,13 @@ total=24
 if $is_llm; then
   echo "extra sleep for 2 min on LLM models"
   total=60
+  if [[ "$platform" == *"inf2"* ]]; then
+    total=80
+  fi
+  if [[ "$platform" == *"trtllm-sq"* ]]; then
+    echo "extra sleep of 15 min for smoothquant calibration"
+    total=120
+  fi
   sleep 120
 fi
 

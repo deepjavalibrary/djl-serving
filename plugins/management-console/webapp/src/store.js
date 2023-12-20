@@ -28,7 +28,8 @@ var store = new Vuex.Store({
           let res = await logAPI.inferenceAddress()
           let corsAllowed = res.corsAllowed
           let port = getPort(res.inferenceAddress)
-          if(port == window.location.port){
+          let mgmtPort = getPort(res.inferenceAddress)
+          if(port == window.location.port || port == mgmtPort){
             predictionUrl = env.baseUrl
           }else{
             if(corsAllowed !="1"){

@@ -1,0 +1,131 @@
+name: LMI-Dist dependency build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  create-runners-p4d:
+    runs-on: [ self-hosted, scheduler ]
+    steps:
+      - name: Create new P4d.24xl instance
+        id: create_gpu_p4d
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_p4d $token djl-serving
+    outputs:
+      p4d_instance_id: ${{ steps.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
+
+  lmi-deps-build:
+    runs-on: [ self-hosted, p4d ]
+    container:
+      image: nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+      options: --gpus all --runtime=nvidia --shm-size 20g
+    timeout-minutes: 30
+    needs: create-runners-p4d
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Environment
+        run: |
+          apt-get update
+          apt-get install -y software-properties-common wget libaio-dev g++ git gcc
+          mkdir build_artifacts
+      - name: Set up Python3
+        run: |
+          ./serving/docker/scripts/install_python.sh 3.10
+      - name: Install torch dependencies
+        run: |
+          python -m venv venv
+          . ./venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install numpy cmake awscli packaging wheel setuptools ninja \
+          git-remote-codecommit torch==2.1.1 --extra-index-url https://download.pytorch.org/whl/cu121
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Build FlashAttn V2
+        run: |
+          . ./venv/bin/activate
+          export FLASH_ATTENTION_FORCE_BUILD=TRUE
+          git clone https://github.com/Dao-AILab/flash-attention.git flash-attention-v2 -b v2.3.0
+          cd flash-attention-v2
+          pip wheel . --no-deps
+          cp flash_attn-*.whl ../build_artifacts
+      - name: Build FlashAttn V1
+        run: |
+          . ./venv/bin/activate
+          git clone codecommit::us-east-1://flash-attention-v1
+          cd flash-attention-v1
+          pip wheel . --no-deps
+          cd csrc/layer_norm && pip wheel . --no-deps
+          cd ../rotary && pip wheel . --no-deps
+          cd ../../
+          cp flash_attn*.whl ../build_artifacts
+          cp csrc/layer_norm/*.whl ../build_artifacts
+          cp csrc/rotary/*.whl ../build_artifacts
+      - name: Build vllm 0.1.1
+        run: |
+          . ./venv/bin/activate
+          git clone codecommit::us-east-1://lmi_vllm
+          cd lmi_vllm
+          pip wheel . --no-deps
+          cp lmi_vllm-*.whl ../build_artifacts
+      - name: Build megablocks 0.5.0+main
+        run: |
+          . ./venv/bin/activate
+          git clone https://github.com/stanford-futuredata/megablocks
+          # TODO: change commit to actual tag later
+          cd megablocks && git checkout 5897cd6f254b7b3edf7a708a3a3314ecb54b6f78
+          export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
+          pip wheel . --no-deps
+          cp megablocks-*.whl ../build_artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: build_artifacts/
+
+  lmi-deps-upload:
+    runs-on: [ self-hosted, p4d ]
+    needs: lmi-deps-build
+    steps:
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install awscli
+      - name: Download built-artifacts
+        uses: actions/download-artifact@v3
+        with:
+            name: build-artifacts
+      - name: upload to S3
+        run: |
+          aws s3 cp flash_attn_1*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
+          aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
+          aws s3 cp dropout_layer_norm*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
+          aws s3 cp rotary_emb*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
+          aws s3 cp rotary_emb*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
+          aws s3 cp lmi_vllm*.whl s3://djl-ai-staging/publish/lmi_vllm/cu121-pt211/
+          aws s3 cp megablocks*.whl s3://djl-ai-staging/publish/megablocks/cu121-pt211/
+
+
+  stop-runners-p4d:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners-p4d, lmi-deps-build, lmi-deps-upload ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners-p4d.outputs.p4d_instance_id }}
+          ./stop_instance.sh $instance_id

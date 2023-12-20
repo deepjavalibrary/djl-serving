@@ -34,8 +34,8 @@ import java.util.regex.Pattern;
 
 /** A class handling inbound HTTP requests to the management API for adapters. */
 public class AdapterManagementRequestHandler extends HttpRequestHandler {
-    private static final Pattern ADAPTERS_PATTERN =
-            Pattern.compile("^/models/.+/adapters([/?][^/]*)?");
+
+    static final Pattern ADAPTERS_PATTERN = Pattern.compile("^/models/[^/^?]+/adapters([/?].*)?");
 
     /** {@inheritDoc} */
     @Override

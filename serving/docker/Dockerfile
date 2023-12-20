@@ -9,13 +9,17 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-FROM ubuntu:20.04 AS base
-ARG djl_version=0.24.0~SNAPSHOT
+FROM ubuntu:22.04 AS base
+ARG djl_version=0.26.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/
+
+COPY distribution[s]/ ./
+RUN mv *.deb djl-serving_all.deb || true
+
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_s5cmd.sh x64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
@@ -51,10 +55,12 @@ LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
+LABEL djl-version=$djl_version
+
 
 FROM base AS cpu-full
 
-ARG torch_version=2.0.1
+ARG torch_version=2.1.1
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
@@ -70,4 +76,5 @@ RUN scripts/install_python.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-24-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-26-0.cpu-full="true"
+LABEL torch-version=$torch_version
