@@ -2,7 +2,7 @@
   "name": "BasicWorkflow",
   "version": "0.1",
   "models": {
-    "m": "https://resources.djl.ai/test-models/mlp.tar.gz",
+    "m": "djl://ai.djl.zoo/mlp/0.0.3/mlp",
     "local": "{model_dir}/local"
   },
   "workflow": {

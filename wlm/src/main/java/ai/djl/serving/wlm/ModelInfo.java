@@ -209,7 +209,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         try {
             Criteria.Builder<I, O> builder;
             if (criteria != null) {
-                builder = criteria.toBuilder();
+                builder = criteria.toBuilder().optEngine(engineName);
             } else {
                 builder =
                         Criteria.builder()

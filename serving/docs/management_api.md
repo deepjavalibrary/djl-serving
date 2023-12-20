@@ -40,7 +40,7 @@ Registers a new model as a single model workflow. The workflow name and version 
 * synchronous - if the creation of worker is synchronous, the default is `true`.
 
 ```bash
-curl -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai%2Ftest-models%2Fmlp.tar.gz"
+curl -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai%2Ftest-models%2Fmlp.zip"
 
 {
   "status": "Model \"mlp\" registered."
@@ -52,7 +52,7 @@ Download and load model may take some time, user can choose asynchronous call an
 The asynchronous call will return before trying to create workers with HTTP code 202:
 
 ```bash
-curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai%2Ftest-models%2Fmlp.tar.gz&synchronous=false"
+curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai%2Ftest-models%2Fmlp.zip&synchronous=false"
 
 < HTTP/1.1 202 Accepted
 < content-type: application/json
@@ -83,7 +83,7 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
 * synchronous - if the creation of worker is synchronous. The default value is true.
 
 ```bash
-curl -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.tar.gz"
+curl -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.zip"
 
 {
   "status": "Workflow \"mlp\" registered."
@@ -95,7 +95,7 @@ Download and load model may take some time, user can choose asynchronous call an
 The asynchronous call will return before trying to create workers with HTTP code 202:
 
 ```bash
-curl -v -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.tar.gz&synchronous=false"
+curl -v -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.zip&synchronous=false"
 
 < HTTP/1.1 202 Accepted
 < content-type: application/json
@@ -162,7 +162,7 @@ curl http://localhost:8080/models/mlp
     "models": [
       {
         "modelName": "mlp",
-        "modelUrl": "https://resources.djl.ai/test-models/mlp.tar.gz",
+        "modelUrl": "https://resources.djl.ai/test-models/mlp.zip",
         "batchSize": 1,
         "maxBatchDelayMillis": 100,
         "maxIdleSeconds": 60,
@@ -233,7 +233,7 @@ curl "http://localhost:8080/models?limit=2&next_page_token=0"
   "models": [
     {
       "modelName": "mlp",
-      "modelUrl": "https://resources.djl.ai/test-models/mlp.tar.gz",
+      "modelUrl": "https://resources.djl.ai/test-models/mlp.zip",
       "status": "READY"
     }
   ]

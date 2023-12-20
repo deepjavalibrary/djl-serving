@@ -72,7 +72,7 @@ Possible deviceNames strings include `*` for all devices and a `;` separated lis
 If no device is specified, it will use the DJL default device (usually GPU if available else CPU).
 
 ```properties
-load_models=https://resources.djl.ai/test-models/mlp.tar.gz,[mlp:v1:MXNet:*]=https://resources.djl.ai/test-models/mlp.tar.gz
+load_models=djl://ai.djl.zoo/mlp,[mlp:v1:PyTorch:*]=https://resources.djl.ai/test-models/mlp.zip
 ```
 
 **Workflows**
