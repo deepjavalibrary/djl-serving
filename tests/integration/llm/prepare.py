@@ -690,6 +690,19 @@ trtllm_handler_list = {
         "option.smoothquant_per_channel": "True",
         "option.output_formatter": "jsonlines",
     },
+    "internlm-7b": {
+        "option.model_id": "internlm/internlm-7b",
+        "option.tensor_parallel_degree": 4,
+        "option.output_formatter": "jsonlines",
+        "option.trust_remote_code": True
+    },
+    "baichuan2-13b": {
+        "option.model_id": "s3://djl-llm/baichuan2-13b/",
+        "option.tensor_parallel_degree": 4,
+        "option.baichuan_model_version": "v2_13b",
+        "option.output_formatter": "jsonlines",
+        "option.trust_remote_code": True
+    }
 }
 
 deepspeed_rolling_batch_model_list = {
