@@ -10,7 +10,7 @@ if [ -z "$PYTORCH_JNI" ]; then
   apt-get update
   DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     fakeroot \
-    openjdk-11-jdk-headless \
+    openjdk-17-jdk-headless \
     curl \
     jq \
     unzip

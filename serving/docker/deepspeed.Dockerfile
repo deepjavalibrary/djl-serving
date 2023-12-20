@@ -43,7 +43,7 @@ EXPOSE 8080
 COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 # ENV NO_OMP_NUM_THREADS=true
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.util.cuda.folk=true"
 ENV MODEL_SERVER_HOME=/opt/djl
