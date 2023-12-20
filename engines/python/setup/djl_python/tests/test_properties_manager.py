@@ -8,6 +8,7 @@ from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQ
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
+from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
 
 import torch
 
@@ -476,6 +477,89 @@ class TestConfigManager(unittest.TestCase):
                 StableDiffusionNeuronXProperties(**test_properties)
 
         test_unsupported_dtype("fp16")
+
+    def test_lmi_dist_properties(self):
+
+        def test_with_min_properties():
+            lmi_configs = LmiDistRbProperties(**min_properties)
+            self.assertEqual(lmi_configs.model_id_or_path,
+                             min_properties['model_id'])
+            self.assertEqual(lmi_configs.tensor_parallel_degree, 1)
+            self.assertEqual(lmi_configs.max_rolling_batch_size, 32)
+            self.assertEqual(lmi_configs.max_rolling_batch_prefill_tokens,
+                             4096)
+            self.assertEqual(lmi_configs.torch_dtype, torch.float16)
+            self.assertEqual(lmi_configs.device, 0)
+            self.assertIsNone(lmi_configs.dtype)
+            self.assertTrue(lmi_configs.is_mpi)
+
+        def test_with_most_properties():
+            properties = {
+                'trust_remote_code': 'TRUE',
+                'tensor_parallel_degree': '2',
+                'revision': 'somerevisionstr',
+                'paged_attention': 'False',
+                'max_rolling_batch_size': '64',
+                'max_rolling_batch_prefill_tokens': '12500',
+                'dtype': 'fp32',
+            }
+
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.engine, min_properties['engine'])
+            self.assertEqual(lmi_configs.model_id_or_path,
+                             min_properties['model_id'])
+            self.assertEqual(lmi_configs.tensor_parallel_degree,
+                             int(properties['tensor_parallel_degree']))
+            self.assertEqual(lmi_configs.revision, properties['revision'])
+            self.assertEqual(lmi_configs.max_rolling_batch_size,
+                             int(properties['max_rolling_batch_size']))
+            self.assertEqual(
+                lmi_configs.max_rolling_batch_prefill_tokens,
+                int(properties['max_rolling_batch_prefill_tokens']))
+            self.assertEqual(lmi_configs.dtype, 'fp32')
+            self.assertEqual(lmi_configs.torch_dtype, torch.float32)
+            self.assertEqual(lmi_configs.device, 0)
+            self.assertFalse(lmi_configs.paged_attention)
+            self.assertTrue(lmi_configs.is_mpi)
+            self.assertTrue(lmi_configs.trust_remote_code)
+
+        def test_invalid_quantization():
+            properties = {'quantize': 'invalid'}
+            with self.assertRaises(ValueError):
+                LmiDistRbProperties(**properties, **min_properties)
+
+        def test_quantization_with_dtype_error():
+            # you cannot give both quantization method and dtype
+            properties = {'quantize': 'gptq', 'dtype': 'int8'}
+            with self.assertRaises(ValueError):
+                LmiDistRbProperties(**properties, **min_properties)
+
+        def test_quantization_with_dtype():
+            properties = {'dtype': 'int8'}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.dtype, properties['dtype'])
+            self.assertEqual(lmi_configs.torch_dtype, torch.int8)
+            self.assertEqual(lmi_configs.quantize.value,
+                             LmiDistQuantizeMethods.bitsandbytes.value)
+
+        def test_quantization_bitsandbytes8():
+            properties = {'quantize': 'bitsandbytes8'}
+            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
+            self.assertEqual(lmi_configs.quantize.value,
+                             LmiDistQuantizeMethods.bitsandbytes.value)
+            self.assertEqual(os.environ.get('CUDA_MEMORY_FRACTION'), '0.9')
+
+        min_properties = {
+            'engine': 'MPI',
+            'mpi_mode': 'true',
+            'model_id': 'sample_model_id',
+        }
+        test_with_min_properties()
+        test_with_most_properties()
+        test_invalid_quantization()
+        test_quantization_with_dtype_error()
+        test_quantization_with_dtype()
+        test_quantization_bitsandbytes8()
 
 
 if __name__ == '__main__':

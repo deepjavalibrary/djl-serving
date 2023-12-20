@@ -61,6 +61,9 @@ class Properties(BaseModel):
     waiting_steps: Optional[int] = None
     is_mpi: bool = False
 
+    class Config:
+        arbitrary_types_allowed = True
+
     @root_validator(pre=True)
     def calculate_is_mpi(cls, properties):
         properties['is_mpi'] = properties.get("mpi_mode") == "true"
