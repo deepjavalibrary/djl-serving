@@ -76,8 +76,8 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
                 break;
             case BOTH:
             default:
-                pipeline.addLast("inference", new InferenceRequestHandler());
                 pipeline.addLast(new ConfigurableHttpRequestHandler(pluginManager));
+                pipeline.addLast("inference", new InferenceRequestHandler());
                 pipeline.addLast("management", new ManagementRequestHandler());
                 pipeline.addLast("management-adapter", new AdapterManagementRequestHandler());
                 break;
