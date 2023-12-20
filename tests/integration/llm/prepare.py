@@ -591,6 +591,12 @@ lmi_dist_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.quantize": "gptq"
     },
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    }
 }
 
 vllm_model_list = {
@@ -610,6 +616,12 @@ vllm_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4
     },
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    }
 }
 
 unmerged_lora_correctness_list = {

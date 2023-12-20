@@ -326,6 +326,15 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist llama2-13b-gptq
           docker rm -f $(docker ps -aq)
+      - name: Test Mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mistral-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist mistral-7b
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -389,6 +398,15 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm gpt-neox-20b
+          docker rm -f $(docker ps -aq)
+      - name: Test Mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm mistral-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm mistral-7b
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
