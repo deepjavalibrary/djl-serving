@@ -23,7 +23,7 @@ ARG transformers_version=4.35.0
 ARG accelerate_version=0.23.0
 ARG diffusers_version=0.22.0
 ARG pydantic_version=1.10.13
-ARG optimum_neuron_version=0.0.15
+ARG optimum_neuron_version=0.0.16
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
