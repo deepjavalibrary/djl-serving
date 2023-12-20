@@ -72,6 +72,9 @@ public final class DependencyManager {
 
         String djlVersion = Engine.getDjlVersion();
         switch (engineName) {
+            case "MXNet":
+                installDependency("ai.djl.mxnet:mxnet-engine:" + djlVersion);
+                break;
             case "OnnxRuntime":
                 installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
                 String ortVersion = getOrtVersion(djlVersion);

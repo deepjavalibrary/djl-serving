@@ -10,6 +10,6 @@ dependencies {
     }
 
     testRuntimeOnly "ai.djl:model-zoo"
-    testRuntimeOnly "ai.djl.mxnet:mxnet-model-zoo"
+    testRuntimeOnly "ai.djl.pytorch:pytorch-engine"
     testRuntimeOnly "org.slf4j:slf4j-simple:${slf4j_version}"
 }

@@ -1,6 +1,6 @@
 {
   "models": {
-    "m": "https://resources.djl.ai/test-models/mlp.tar.gz"
+    "m": "djl://ai.djl.zoo/mlp/0.0.3/mlp"
   },
   "functions": {
     "oid": "ai.djl.serving.workflow.function.OtherIdentityWF"

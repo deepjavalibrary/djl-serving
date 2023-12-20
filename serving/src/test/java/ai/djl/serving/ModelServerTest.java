@@ -472,7 +472,7 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelAsync(Channel channel) throws InterruptedException {
-        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        String url = "djl://ai.djl.zoo/mlp/0.0.3/mlp";
         request(
                 channel,
                 new DefaultFullHttpRequest(
@@ -488,7 +488,7 @@ public class ModelServerTest {
     }
 
     private void testRegisterModel(Channel channel) throws InterruptedException {
-        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        String url = "djl://ai.djl.zoo/mlp/0.0.3/mlp";
         request(
                 channel,
                 new DefaultFullHttpRequest(
@@ -502,7 +502,7 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelUnencoded(Channel channel) throws InterruptedException {
-        String url = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        String url = "djl://ai.djl.zoo/mlp/0.0.3/mlp";
         request(
                 channel,
                 new DefaultFullHttpRequest(
@@ -701,7 +701,7 @@ public class ModelServerTest {
         JsonElement json = JsonUtils.GSON.fromJson(result, JsonElement.class);
         JsonObject resp = json.getAsJsonObject();
         assertEquals(resp.get("name").getAsString(), "mlp");
-        assertEquals(resp.get("platform").getAsString(), "mxnet_mxnet");
+        assertEquals(resp.get("platform").getAsString(), "pytorch_torchscript");
     }
 
     private void testDescribeModel(Channel channel) throws InterruptedException {
@@ -728,7 +728,7 @@ public class ModelServerTest {
         assertFalse(model.isLoadedAtStartup());
 
         DescribeWorkflowResponse.Group group = model.getWorkGroups().get(0);
-        boolean hasGpu = Engine.getEngine("MXNet").getGpuCount() > 0;
+        boolean hasGpu = Engine.getEngine("PyTorch").getGpuCount() > 0;
         assertEquals(group.getDevice().isGpu(), hasGpu);
         assertEquals(group.getMinWorkers(), 2);
         assertEquals(group.getMaxWorkers(), 4);
@@ -1219,7 +1219,7 @@ public class ModelServerTest {
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        String modelUrl = "https://resources.djl.ai/test-models/mlp.tar.gz";
+        String modelUrl = "djl://ai.djl.zoo/mlp/0.0.3/mlp";
         Map<String, String> map = Map.of("model_name", "mlp_2", "url", modelUrl);
 
         DefaultFullHttpRequest req =

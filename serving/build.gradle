@@ -19,7 +19,6 @@ dependencies {
     runtimeOnly "com.lmax:disruptor:${disruptor_version}"
 
     runtimeOnly "ai.djl:model-zoo"
-    runtimeOnly "ai.djl.mxnet:mxnet-model-zoo"
     runtimeOnly "ai.djl.tensorflow:tensorflow-model-zoo"
     runtimeOnly "ai.djl.pytorch:pytorch-model-zoo"
     runtimeOnly "ai.djl.huggingface:tokenizers"

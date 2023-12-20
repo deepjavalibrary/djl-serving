@@ -1,8 +1,8 @@
 {
   "models": {
-    "m1": "https://resources.djl.ai/test-models/mlp.tar.gz",
-    "m2": "https://resources.djl.ai/test-models/mlp.tar.gz",
-    "m3": "https://resources.djl.ai/test-models/mlp.tar.gz"
+    "m1": "djl://ai.djl.zoo/mlp/0.0.3/mlp",
+    "m2": "djl://ai.djl.zoo/mlp/0.0.3/mlp",
+    "m3": "djl://ai.djl.zoo/mlp/0.0.3/mlp"
   },
   "workflow": {
     "out": ["ensemble", ["functionsApply",["m1", "m2", "m3"], "in"]]

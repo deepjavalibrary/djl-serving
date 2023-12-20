@@ -45,6 +45,10 @@ public class CacheEngineTest {
 
     @Test
     public void testDdbCacheEngine() throws InterruptedException, ExecutionException {
+        if ("aarch64".equals(System.getProperty("os.arch"))) {
+            throw new SkipException("This test requires a non-arm os.");
+        }
+
         DynamoDbLocal server = new DynamoDbLocal();
         server.startLocalServer();
         try {
