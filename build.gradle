@@ -45,8 +45,8 @@ configure(javaProjects()) {
 
     compileJava {
         options.encoding = "UTF-8"
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
         options.compilerArgs << "--release" << "11" << "-proc:none" << "-Xlint:all,-options,-static" << "-Werror"
     }
     compileTestJava {
@@ -79,11 +79,9 @@ configure(javaProjects()) {
         // tensorflow mobilenet and resnet require more cpu memory
         maxHeapSize = "4096m"
         doFirst {
-            if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
-                jvmArgs = [
-                        '--add-opens', "java.base/jdk.internal.loader=ALL-UNNAMED"
-                ]
-            }
+            jvmArgs = [
+                    '--add-opens', "java.base/jdk.internal.loader=ALL-UNNAMED"
+            ]
         }
 
         useTestNG() {
