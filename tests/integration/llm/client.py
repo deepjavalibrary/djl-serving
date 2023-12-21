@@ -456,6 +456,18 @@ trtllm_model_spec = {
         "seq_length": [64, 128, 256],
         "stream_output": True,
     },
+    "internlm-7b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True,
+    },
+    "baichuan2-13b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True,
+    }
 }
 
 deepspeed_rolling_batch_model_spec = {
