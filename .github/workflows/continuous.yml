@@ -49,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: serving
+          name: serving-${{ matrix.os }}
           path: |
             awscurl/build/reports
             benchmark/build/reports

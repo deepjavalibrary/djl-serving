@@ -237,6 +237,7 @@ public class ModelServerTest {
             testDescribeModel(channel);
             testUnregisterModel(channel);
             testAsyncInference(channel);
+            testThrottle(channel);
             testDjlModelZoo(channel);
 
             testPredictionsInvalidRequestSize(channel);
@@ -759,7 +760,7 @@ public class ModelServerTest {
 
     private void testAsyncInference(Channel channel) throws InterruptedException {
         String url = URLEncoder.encode("file:src/test/resources/echo", StandardCharsets.UTF_8);
-        url = "/models?model_name=echo&url=" + url;
+        url = "/models?model_name=echo&job_queue_size=10&url=" + url;
         request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
@@ -771,26 +772,25 @@ public class ModelServerTest {
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         String nextToken = headers.get("x-next-token");
         assertNotNull(nextToken);
-        Thread.sleep(500); // Sleep to wait for async to be finished
 
         url = "/predictions/echo";
-        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
-        req.headers().add("x-starting-token", nextToken);
-        req.headers().add("x-max-items", "1");
-        request(channel, req);
-        assertEquals(result, "tok_0\n");
-
+        String firstToken = "";
         int maxPoll = 10;
         while (headers.contains("x-next-token") && --maxPoll > 0) {
             nextToken = headers.get("x-next-token");
             req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
             req.headers().add("x-starting-token", nextToken);
+            if (firstToken.isEmpty()) {
+                req.headers().add("x-max-items", "1");
+            }
             request(channel, req);
-            assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+            assertTrue(httpStatus.code() < 300);
+            if (firstToken.isEmpty()) {
+                firstToken = result;
+            }
             Thread.sleep(1000);
         }
-
-        testThrottle(channel);
+        assertEquals(firstToken, "tok_0\n");
 
         // Unregister model
         url = "/models/echo";
@@ -817,6 +817,11 @@ public class ModelServerTest {
     }
 
     private void testThrottle(Channel channel) throws InterruptedException {
+        String url = URLEncoder.encode("file:src/test/resources/echo", StandardCharsets.UTF_8);
+        url = "/models?model_name=echo&url=" + url;
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+
         String url = "/predictions/echo?delay=1000";
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         reset();
@@ -837,6 +842,11 @@ public class ModelServerTest {
         // wait for 1st response
         f.sync();
         Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
+
+        // Unregister model
+        url = "/models/echo";
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, url));
+        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testAdapterRegister(Channel channel) throws InterruptedException {
