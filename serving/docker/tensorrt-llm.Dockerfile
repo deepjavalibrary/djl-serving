@@ -15,14 +15,14 @@ ARG cuda_version=cu122
 ARG python_version=3.10
 ARG TORCH_VERSION=2.1.0
 ARG djl_version=0.26.0~SNAPSHOT
-ARG transformers_version=4.34.0
-ARG accelerate_version=0.23.0
+ARG transformers_version=4.36.2
+ARG accelerate_version=0.25.0
 ARG tensorrtlibs_version=9.2.0.post12.dev5
 ARG trtllm_toolkit_version=nightly
 ARG cuda_python_version=12.2.0
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.6.1/tensorrt_llm-0.6.1-py3-none-any.whl"
+ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/0.7.0/tensorrt_llm-0.7.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
 ARG pydantic_version=1.10.13
 ARG ammo_version=0.5.0
@@ -88,8 +88,8 @@ RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r23.11/libtritonserver.so && \
     curl -o  /lib/x86_64-linux-gnu/libboost_filesystem.so.1.80.0 https://publish.djl.ai/tritonserver/r23.11/libboost_filesystem.so.1.80.0 && \
-    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/0.6.1/libtriton_tensorrtllm.so && \
-    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/0.6.1/libnvinfer_plugin_tensorrt_llm.so.9 && \
+    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/0.7.0/libtriton_tensorrtllm.so && \
+    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/0.7.0/libnvinfer_plugin_tensorrt_llm.so.9 && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
