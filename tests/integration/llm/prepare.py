@@ -702,6 +702,13 @@ trtllm_handler_list = {
         "option.baichuan_model_version": "v2_13b",
         "option.output_formatter": "jsonlines",
         "option.trust_remote_code": True
+    },
+    "chatglm3-6b": {
+        "option.model_id": "THUDM/chatglm3-6b",
+        "option.tensor_parallel_degree": 4,
+        "option.output_formatter": "jsonlines",
+        "option.trust_remote_code": True,
+        "option.chatglm_model_version": "chatglm3_6b"
     }
 }
 

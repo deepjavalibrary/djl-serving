@@ -467,7 +467,13 @@ trtllm_model_spec = {
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True,
-    }
+    },
+    "chatglm3-6b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "stream_output": True,
+    },
 }
 
 deepspeed_rolling_batch_model_spec = {
