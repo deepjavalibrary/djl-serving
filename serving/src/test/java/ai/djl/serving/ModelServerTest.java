@@ -822,7 +822,7 @@ public class ModelServerTest {
         request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
-        String url = "/predictions/echo?delay=1000";
+        url = "/predictions/echo?delay=1000";
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         reset();
         ChannelFuture f = channel.writeAndFlush(req);
