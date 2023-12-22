@@ -826,11 +826,11 @@ jobs:
           python3 llm/client.py trtllm mistral-7b
           rm -rf docker_env
           docker rm -f $(docker ps -aq)
-      - name: gpt-j-6b HF model with tp=4
+      - name: gpt-j-6b HF model with tp=1
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
+          echo -en "CUDA_VISIBLE_DEVICES=0" > docker_env
           python3 llm/prepare.py trtllm gpt-j-6b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
           serve

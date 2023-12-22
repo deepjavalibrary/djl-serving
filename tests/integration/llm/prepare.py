@@ -717,7 +717,7 @@ trtllm_handler_list = {
     },
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
-        "option.tensor_parallel_degree": 4,
+        "option.tensor_parallel_degree": 1,
         "option.output_formatter": "jsonlines"
     }
 }
