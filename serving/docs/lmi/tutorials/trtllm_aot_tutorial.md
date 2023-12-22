@@ -11,11 +11,13 @@ The goal of this document is for the user to be able to:
 
 ## Supported JIT architecture
 
-- LLAMA (since 0.5.0)
+- LLaMA (since 0.5.0)
 - Falcon (since 0.5.0)
 - InternLM (since 0.6.1)
 - Baichuan (since 0.6.1)
 - ChatGLM (since 0.6.1)
+- GPT-J (since 0.6.1)
+- Mistral (since 0.6.1)
 
 For model that are not listed here, you can use [this tutorial](trtllm_manual_convert_tutorial.md) instead to prepare model manually.
 
