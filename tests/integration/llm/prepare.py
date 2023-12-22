@@ -709,6 +709,16 @@ trtllm_handler_list = {
         "option.output_formatter": "jsonlines",
         "option.trust_remote_code": True,
         "option.chatglm_model_version": "chatglm3_6b"
+    },
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b/",
+        "option.tensor_parallel_degree": 4,
+        "option.output_formatter": "jsonlines"
+    },
+    "gpt-j-6b": {
+        "option.model_id": "s3://djl-llm/gpt-j-6b/",
+        "option.tensor_parallel_degree": 4,
+        "option.output_formatter": "jsonlines"
     }
 }
 

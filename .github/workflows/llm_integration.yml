@@ -779,7 +779,7 @@ jobs:
           name: trtllm-handler-logs
           path: tests/integration/logs/
 
-  trt-llm-handler-quantization-test:
+  trt-llm-handler-test-2:
     if: contains(fromJson('["", "trtllm"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, g5 ]
     timeout-minutes: 120
@@ -815,6 +815,28 @@ jobs:
           python3 llm/client.py trtllm llama2-7b-smoothquant
           rm -rf docker_env
           docker rm -f $(docker ps -aq)
+      - name: mistral-7b HF model with tp=4
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
+          python3 llm/prepare.py trtllm mistral-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
+          serve
+          python3 llm/client.py trtllm mistral-7b
+          rm -rf docker_env
+          docker rm -f $(docker ps -aq)
+      - name: gpt-j-6b HF model with tp=4
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
+          python3 llm/prepare.py trtllm gpt-j-6b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
+          serve
+          python3 llm/client.py trtllm gpt-j-6b
+          rm -rf docker_env
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -830,7 +852,7 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, hf-handler-test, hf-lora-correctness-test, ds-raw-test, ds-handler-test, ds-aot-raw-test, no-code-test, ds-handler-aot-test, ds-smoothquant-handler-test, trt-llm-handler-test,  trt-llm-handler-quantization-test]
+    needs: [ create-runners, hf-handler-test, hf-lora-correctness-test, ds-raw-test, ds-handler-test, ds-aot-raw-test, no-code-test, ds-handler-aot-test, ds-smoothquant-handler-test, trt-llm-handler-test,  trt-llm-handler-test-2]
     steps:
       - name: Stop all instances
         run: |
