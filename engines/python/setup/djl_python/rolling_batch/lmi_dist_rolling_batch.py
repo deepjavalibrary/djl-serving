@@ -25,7 +25,7 @@ import torch
 
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
-QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes8", "bitsandbytes", "gptq"]
+QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes8", "bitsandbytes", "gptq", "awq"]
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -215,9 +215,9 @@ class LmiDistRollingBatch(RollingBatch):
                           size=len(preprocessed_requests))
             self.batch_id_counter += 1
 
-            return self.batch_cls.get_batch(
-                batch, self.model.config, self.model.tokenizer,
-                self.lmi_dist_configs.torch_dtype,
-                torch.device(f"cuda:{self.lmi_dist_configs.device}"))
+            return self.batch_cls.get_batch(batch, self.model.config,
+                                            self.model.tokenizer,
+                                            self.lmi_dist_configs.torch_dtype,
+                                            self.lmi_dist_configs.device)
         else:
             return None

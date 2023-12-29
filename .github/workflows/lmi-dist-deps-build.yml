@@ -28,7 +28,7 @@ jobs:
     container:
       image: nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
       options: --gpus all --runtime=nvidia --shm-size 20g
-    timeout-minutes: 30
+    timeout-minutes: 35
     needs: create-runners-p4d
     steps:
       - uses: actions/checkout@v3
@@ -88,6 +88,14 @@ jobs:
           export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
           pip wheel . --no-deps
           cp megablocks-*.whl ../build_artifacts
+      - name: Build awq kernels
+        run: |
+          . ./venv/bin/activate
+          git clone https://github.com/mit-han-lab/llm-awq
+          # TODO: change commit to actual tag later
+          cd llm-awq/awq/kernels && git checkout 8baf5dd9c3bfe8bdc5987f52ae4dffde7471346f
+          pip wheel . --no-deps
+          cp awq*.whl ../../../build_artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -114,10 +122,9 @@ jobs:
           aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
           aws s3 cp dropout_layer_norm*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
           aws s3 cp rotary_emb*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
-          aws s3 cp rotary_emb*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
           aws s3 cp lmi_vllm*.whl s3://djl-ai-staging/publish/lmi_vllm/cu121-pt211/
           aws s3 cp megablocks*.whl s3://djl-ai-staging/publish/megablocks/cu121-pt211/
-
+          aws s3 cp awq*.whl s3://djl-ai-staging/publish/awq/cu121-pt211/
 
   stop-runners-p4d:
     if: always()

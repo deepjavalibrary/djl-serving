@@ -596,6 +596,19 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
+    },
+    "llama2-7b-32k": {
+        "option.model_id": "togethercomputer/LLaMA-2-7B-32K",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 2,
+        "option.max_rolling_batch_size": 4
+    },
+    "mistral-7b-128k-awq": {
+        "option.model_id": "TheBloke/Yarn-Mistral-7B-128k-AWQ",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 2,
+        "option.max_rolling_batch_size": 4,
+        "option.quantize": "awq"
     }
 }
 

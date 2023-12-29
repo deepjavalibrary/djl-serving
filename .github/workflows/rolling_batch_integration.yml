@@ -253,6 +253,15 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG nocode deepspeed
           python3 llm/client.py lmi_dist gpt2
           docker rm -f $(docker ps -aq)
+      - name: Test mpt-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mpt-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist mpt-7b
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -290,15 +299,6 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Test mpt-7b
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py lmi_dist mpt-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-            serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py lmi_dist mpt-7b
-          docker rm -f $(docker ps -aq)
       - name: Test octocoder
         working-directory: tests/integration
         run: |
@@ -334,6 +334,24 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist mistral-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-7b-32k
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama2-7b-32k
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist llama2-7b-32k
+          docker rm -f $(docker ps -aq)
+      - name: Test mistral-7b-128k-awq
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mistral-7b-128k-awq
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist mistral-7b-128k-awq
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}

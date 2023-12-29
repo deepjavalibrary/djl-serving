@@ -25,6 +25,7 @@ ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp39-cp39
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn_2-2.3.0-cp39-cp39-linux_x86_64.whl"
 ARG lmi_vllm_wheel="https://publish.djl.ai/lmi_vllm/lmi_vllm-0.1.1-cp39-cp39-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
+ARG awq_wheel="https://publish.djl.ai/awq/awq_inference_engine-0.0.0-cp39-cp39-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-nightly-py3-none-any.whl"
@@ -87,7 +88,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
-                 ${lmi_vllm_wheel} ${lmi_dist_wheel} vllm==${vllm_version} && \
+                 ${lmi_vllm_wheel} ${lmi_dist_wheel} ${awq_wheel} vllm==${vllm_version} && \
     pip3 cache purge
 
 RUN scripts/patch_oss_dlc.sh python && \

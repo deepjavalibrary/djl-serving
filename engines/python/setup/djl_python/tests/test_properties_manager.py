@@ -548,7 +548,6 @@ class TestConfigManager(unittest.TestCase):
             lmi_configs = LmiDistRbProperties(**properties, **min_properties)
             self.assertEqual(lmi_configs.quantize.value,
                              LmiDistQuantizeMethods.bitsandbytes.value)
-            self.assertEqual(os.environ.get('CUDA_MEMORY_FRACTION'), '0.9')
 
         min_properties = {
             'engine': 'MPI',

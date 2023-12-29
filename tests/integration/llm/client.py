@@ -369,6 +369,18 @@ lmi_dist_model_spec = {
         "batch_size": [1],
         "seq_length": [64, 128, 256],
         "stream_output": True
+    },
+    "llama2-7b-32k": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1],
+        "seq_length": [1024],
+        "stream_output": True
+    },
+    "mistral-7b-128k-awq": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1],
+        "seq_length": [1024],
+        "stream_output": True
     }
 }
 
