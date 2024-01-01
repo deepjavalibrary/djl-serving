@@ -470,6 +470,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
         if (arguments == null) {
             arguments = new ConcurrentHashMap<>();
+            // apply maxWorkers env for MPI mode
+            String maxWorkers = Utils.getenv("SERVING_MAX_WORKERS");
+            String minWorkers = Utils.getenv("SERVING_MIN_WORKERS");
+            if (maxWorkers != null) {
+                arguments.putIfAbsent("maxWorkers", maxWorkers);
+            }
+            if (minWorkers != null) {
+                arguments.putIfAbsent("minWorkers", minWorkers);
+            }
         }
         for (String key : prop.stringPropertyNames()) {
             if (key.startsWith("option.")) {
