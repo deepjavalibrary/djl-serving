@@ -27,6 +27,7 @@ class LmiDistQuantizeMethods(str, Enum):
     bitsandbytes = 'bitsandbytes'
     bitsandbytes8 = 'bitsandbytes8'
     gptq = 'gptq'
+    awq = 'awq'
 
 
 class LmiDistRbProperties(Properties):
@@ -53,7 +54,6 @@ class LmiDistRbProperties(Properties):
             if properties.get('dtype') == "int8":
                 properties['quantize'] = LmiDistQuantizeMethods.bitsandbytes
         else:
-            os.environ["CUDA_MEMORY_FRACTION"] = "0.9"
             # parsing bitsandbytes8, so it can be directly passed to lmi dist model loader.
             if properties.get(
                     'quantize') == LmiDistQuantizeMethods.bitsandbytes8:
