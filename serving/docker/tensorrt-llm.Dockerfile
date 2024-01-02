@@ -66,8 +66,10 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install PyTorch
+# Qwen needs transformers_stream_generator, tiktoken and einops
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
-    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja && \
+    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
+    transformers_stream_generator einops tiktoken && \
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
