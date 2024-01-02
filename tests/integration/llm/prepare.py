@@ -734,6 +734,11 @@ trtllm_handler_list = {
         "option.max_output_len": 256,
         "option.max_rolling_batch_size": 16,
         "option.output_formatter": "jsonlines"
+    },
+    "qwen-7b": {
+        "option.model_id": "Qwen/Qwen-7B",
+        "option.tensor_parallel_degree": 4,
+        "option.output_formatter": "jsonlines"
     }
 }
 

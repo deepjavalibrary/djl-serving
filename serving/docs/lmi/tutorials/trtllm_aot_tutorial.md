@@ -11,14 +11,15 @@ The goal of this document is for the user to be able to:
 
 ## Supported JIT architecture
 
-- LLaMA (since 0.5.0)
-- Falcon (since 0.5.0)
-- InternLM (since 0.6.1)
-- Baichuan (since 0.6.1)
-- ChatGLM (since 0.6.1)
-- GPT-J (since 0.6.1)
-- Mistral (since 0.6.1)
-- Mixtral (since 0.7.0)
+- LLaMA (since LMI V7 0.25.0)
+- Falcon (since LMI V7 0.25.0)
+- InternLM (since LMI V8 0.26.0)
+- Baichuan (since LMI V8 0.26.0)
+- ChatGLM (since LMI V8 0.26.0)
+- GPT-J (since LMI V8 0.26.0)
+- Mistral (since LMI V8 0.26.0)
+- Mixtral (since LMI V8 0.26.0)
+- Qwen (since LMI V8 0.26.0)
 
 For model that are not listed here, you can use [this tutorial](trtllm_manual_convert_tutorial.md) instead to prepare model manually.
 
