@@ -284,15 +284,15 @@ jobs:
           python3 llm/client.py transformers_neuronx llama-7b-split
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
-      - name: Test load optimum llama2 7B in handler
+      - name: Test mistral 7B with handler
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py transformers_neuronx llama2-7b
+          python3 llm/prepare.py transformers_neuronx mistral-7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx llama2-7b
+          python3 llm/client.py transformers_neuronx mistral-7b
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: On fail step

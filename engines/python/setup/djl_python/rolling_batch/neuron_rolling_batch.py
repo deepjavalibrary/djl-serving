@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NeuronGenerator
 
@@ -22,6 +23,7 @@ class NeuronRollingBatch(RollingBatch):
         :param model: the Neuron HuggingFace model
         :param batch_size: the maximum batch size required by model
         :param tokenizer: the tokenizer used by model
+        :param n_positions: the maximum sequence size for model
         """
         super().__init__(**kwargs)
         self.scheduler = NeuronGenerator(model, tokenizer, batch_size,

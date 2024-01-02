@@ -21,8 +21,9 @@ import importlib
 from typing import Optional
 from abc import ABC, abstractmethod
 from transformers import AutoModelForCausalLM
-from transformers_neuronx.config import NeuronConfig, QuantizationConfig
-from djl_python.neuron_utils.utils import NeuronXModelAdapter, save_pretrained_split
+from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig
+from transformers_neuronx.module import save_pretrained_split
+from djl_python.neuron_utils.utils import NeuronXModelAdapter
 from huggingface_hub import hf_hub_download
 
 _neuronxcc_version: Optional[str] = None
@@ -70,6 +71,7 @@ class TNXModelLoader(ModelLoader):
         "gptj": "gptj.model.GPTJForSampling",
         "gpt_neox": "gptneox.model.GPTNeoXForSampling",
         "llama": "llama.model.LlamaForSampling",
+        "mistral": "mistral.model.MistralForSampling",
         "bloom": "bloom.model.BloomForSampling"
     }
 
@@ -79,6 +81,8 @@ class TNXModelLoader(ModelLoader):
         self.load_path = None
         self.split_model_path = None
         self.compiled_graph_path = None
+        self.neuron_config = None
+        self.set_neuron_config()
         module_name, class_name = self.MODEL_TYPE_TO_CLS_LOADER[
             self.model_config.model_type].rsplit(".", maxsplit=1)
         module = importlib.import_module(f"transformers_neuronx.{module_name}")
@@ -101,17 +105,37 @@ class TNXModelLoader(ModelLoader):
         _neuronxcc_version = neuronxcc.__version__
         return _neuronxcc_version
 
+    def set_neuron_config(self):
+        neuron_config = {}
+        if self.config.rolling_batch != "disable":
+            neuron_config["continuous_batching"] = ContinuousBatchingConfig(
+                batch_size_for_shared_caches=self.config.max_rolling_batch_size
+            )
+
+        if self.config.load_in_8bit:
+            neuron_config["quant"] = QuantizationConfig(
+                quant_dtype="s8", dequant_dtype=self.config.amp)
+        self.neuron_config = NeuronConfig(**neuron_config)
+
     def get_model_specific_kwargs(self):
         model_kwargs = {
             "batch_size": self.config.batch_size,
             "amp": self.config.amp,
-            'tp_degree': self.config.tensor_parallel_degree,
+            "tp_degree": self.config.tensor_parallel_degree,
             "n_positions": self.config.n_positions,
-            "unroll": self.config.unroll
         }
-        if self.model_config.model_type == "llama":
+        if self.config.context_length_estimate is not None:
             model_kwargs[
                 "context_length_estimate"] = self.config.context_length_estimate
+
+        # Continuous batching requires positions and estimates as lists instead of int
+        if self.config.rolling_batch != "disable":
+            model_kwargs["n_positions"] = [self.config.n_positions]
+            if self.config.context_length_estimate is not None and type(
+                    self.config.context_length_estimate) is not list:
+                model_kwargs["context_length_estimate"] = [
+                    self.config.context_length_estimate
+                ]
         return model_kwargs
 
     def update_model_config_to_neuron(self):
@@ -142,26 +166,14 @@ class TNXModelLoader(ModelLoader):
             logging.info(f"Saving INF2 model to {self.load_path} ...")
             save_pretrained_split(self.model, self.load_path)
         model_kwargs = self.get_model_specific_kwargs()
-        if self.config.load_in_8bit:
-            neuron_config = NeuronConfig()
-            neuron_config.quant = QuantizationConfig(
-                quant_dtype='s8', dequant_dtype=self.config.amp)
-            return self._neuronx_class.from_pretrained(
-                self.load_path, neuron_config=neuron_config, **model_kwargs)
-        return self._neuronx_class.from_pretrained(self.load_path,
-                                                   **model_kwargs)
+        return self._neuronx_class.from_pretrained(
+            self.load_path, neuron_config=self.neuron_config, **model_kwargs)
 
     def load_inf2_model_from_memory(self):
         model_kwargs = self.get_model_specific_kwargs()
-        if self.config.load_in_8bit:
-            neuron_config = NeuronConfig()
-            neuron_config.quant = QuantizationConfig(
-                quant_dtype="s8", dequant_dtype=self.config.amp)
-            model = self._neuronx_class(self.model.config,
-                                        neuron_config=neuron_config,
-                                        **model_kwargs)
-        else:
-            model = self._neuronx_class(self.model_config, **model_kwargs)
+        model = self._neuronx_class(self.model.config,
+                                    neuron_config=self.neuron_config,
+                                    **model_kwargs)
         model.load_state_dict_low_memory(self.model.state_dict())
         return model
 
@@ -211,7 +223,7 @@ class TNXModelLoader(ModelLoader):
         return self.model
 
     def partition(self, save_path, **kwargs):
-        tokenizer = kwargs.get('tokenizer')
+        tokenizer = kwargs.get("tokenizer")
         if self.config.load_split_model:
             raise ValueError(
                 "Model partitioning does not support split model artifacts. Use normal model artifacts and rerun."
@@ -319,19 +331,19 @@ class OptimumModelLoader(ModelLoader):
 
     def _validate_neuron_config(self):
         errors = list()
-        if self.config.batch_size != self.model_config.neuron['batch_size']:
+        if self.config.batch_size != self.model_config.neuron["batch_size"]:
             errors.append(
                 f"Model server configuration for batch size {self.config.batch_size} "
                 f"does not match model config {self.model_config.neuron['batch_size']}"
             )
         if self.config.tensor_parallel_degree != self.model_config.neuron[
-                'num_cores']:
+                "num_cores"]:
             errors.append(
                 f"Model server configuration for tensor parallel degree {self.config.tensor_parallel_degree} "
                 f"does not match model config {self.model_config.neuron['num_cores']}"
             )
         if self.config.n_positions != self.model_config.neuron[
-                'sequence_length']:
+                "sequence_length"]:
             errors.append(
                 f"Model server configuration for n_positions {self.config.n_positions} "
                 f"does not match model config {self.model_config.neuron['sequence_length']}"

@@ -449,14 +449,13 @@ transformers_neuronx_handler_list = {
         "option.load_split_model": True,
         "option.context_length_estimate": '256, 512, 1024'
     },
-    "llama2-7b": {
-        "option.model_id": "s3://djl-llm/llama-2-7b-neuronx/",
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b/",
         "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.dtype": "fp16",
-        "option.n_positions": 2048,
+        "option.n_positions": 512,
         "option.model_loading_timeout": 2400,
-        "option.enable_streaming": False
     },
     "opt-1.3b-streaming": {
         "option.model_id": "s3://djl-llm/opt-1.3b/",
