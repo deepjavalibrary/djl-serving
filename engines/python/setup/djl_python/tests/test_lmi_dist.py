@@ -17,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 global_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class TestSchedulerBloom(unittest.TestCase):
+class TestLmiDist(unittest.TestCase):
 
     def test_models(self):
         model_names = [
@@ -36,12 +36,15 @@ class TestSchedulerBloom(unittest.TestCase):
                           "model_loading_timeout": 3600,
                           "max_rolling_batch_prefill_tokens": 1000,
                           "paged_attention": "True",
-                          "spec_length": 8}
+                        #   "spec_length": 8,
+                          "model_id": model_id}
 
             # ===================== lmi ============================
             print("=========== before =========")
             device = int(os.environ.get("RANK", 0))
-            rolling_batch = LmiDistRollingBatch(model_id, device, properties, draft_model_id_or_path=draft_model_id)
+            properties["device"] = int(os.environ.get("RANK", 0))
+
+            rolling_batch = LmiDistRollingBatch(model_id, device, properties)
             rolling_batch.output_formatter = None
             print("reach here")
 
@@ -78,4 +81,6 @@ class TestSchedulerBloom(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
+    c = TestLmiDist()
+    c.test_models()
