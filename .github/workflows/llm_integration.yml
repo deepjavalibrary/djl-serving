@@ -837,6 +837,17 @@ jobs:
           python3 llm/client.py trtllm gpt-j-6b
           rm -rf docker_env
           docker rm -f $(docker ps -aq)
+      - name: qwen-7b HF model with tp=4
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
+          python3 llm/prepare.py trtllm qwen-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
+          serve
+          python3 llm/client.py trtllm qwen-7b
+          rm -rf docker_env
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
