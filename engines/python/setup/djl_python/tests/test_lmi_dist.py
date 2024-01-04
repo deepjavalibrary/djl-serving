@@ -7,8 +7,10 @@ script_directory = os.path.dirname(os.path.abspath(__file__))
 relative_path = "../../"
 new_path = os.path.normpath(os.path.join(script_directory, relative_path))
 sys.path.append(new_path)
-import lmi_dist
-sys.path.append('/'.join(lmi_dist.__path__[0].split('/')[:-1]))
+# import lmi_dist as lmi_dist_preload
+# # sys.path.append('/'.join(lmi_dist.__path__[0].split('/')[:-1]))
+# sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
+# sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
 
 from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
@@ -134,4 +136,6 @@ class TestLmiDist(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
+    c = TestLmiDist()
+    c.test_models()
