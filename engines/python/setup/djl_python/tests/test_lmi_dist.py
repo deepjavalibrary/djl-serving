@@ -7,7 +7,6 @@ import os, sys
 # relative_path = "../../"
 # new_path = os.path.normpath(os.path.join(script_directory, relative_path))
 # sys.path.append(new_path)
-# import lmi_dist as lmi_dist_preload
 # # sys.path.append('/'.join(lmi_dist.__path__[0].split('/')[:-1]))
 # sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
 # sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
@@ -25,6 +24,8 @@ class TestLmiDist(unittest.TestCase):
     def test_models(self):
         model_names = [
             "TheBloke/Llama-2-7B-Chat-fp16",
+            # weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
+            # "TheBloke/Llama-2-7B-Chat-AWQ",
             "TinyLlama/TinyLlama-1.1B-Chat-v0.6",
             # weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TinyLlama/TinyLlama-1.1B-python-v0.1",
@@ -44,7 +45,7 @@ class TestLmiDist(unittest.TestCase):
             'Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is'
         }
 
-        for model_idx, model_id in enumerate(model_names):
+        for model_id in model_names:
             properties = {
                 "mpi_mode": "true",
                 "tensor_parallel_degree": 1,
@@ -120,7 +121,7 @@ class TestLmiDist(unittest.TestCase):
                 print_rank0(
                     f"\n====req_id: {req_id}=====\n{gen.input_all[req_id][0] + ''.join(out)}\n"
                 )
-                if model_idx == 0 and req_id in expected_text_model0:
+                if model_id == "TheBloke/Llama-2-7B-Chat-fp16" and req_id in expected_text_model0:
                     assert expected_text_model0[
                         req_id] == gen.input_all[req_id][0] + ''.join(out[:30])
 
@@ -136,6 +137,6 @@ class TestLmiDist(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # unittest.main()
-    c = TestLmiDist()
-    c.test_models()
+    unittest.main()
+    # c = TestLmiDist()
+    # c.test_models()

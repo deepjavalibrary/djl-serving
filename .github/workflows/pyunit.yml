@@ -19,6 +19,7 @@ jobs:
         run: |
           cd engines/python/setup
           pip install -e ".[test]"
+          pip install "https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
       - name: run pytests
         run: |
           cd engines/python/setup
