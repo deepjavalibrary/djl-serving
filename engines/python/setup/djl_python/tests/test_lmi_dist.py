@@ -24,6 +24,7 @@ class TestLmiDist(unittest.TestCase):
 
     def test_models(self):
         model_names = [
+            # Kept for mannual test
             # "TheBloke/Llama-2-7B-Chat-fp16",
             # TODO: fix this. weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TheBloke/Llama-2-7B-Chat-AWQ",
