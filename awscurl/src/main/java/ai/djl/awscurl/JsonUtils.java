@@ -31,18 +31,23 @@ final class JsonUtils {
 
     private JsonUtils() {}
 
-    static void getJsonList(JsonElement element, List<String> list, String name) {
-        if (name == null) {
-            name = "generated_text";
-        }
+    static void getJsonList(JsonElement element, List<String> list, String[] names) {
         if (element.isJsonArray()) {
             JsonArray array = element.getAsJsonArray();
             for (int i = 0; i < array.size(); ++i) {
-                getJsonList(array.get(i), list, name);
+                getJsonList(array.get(i), list, names);
             }
         } else if (element.isJsonObject()) {
             JsonObject obj = element.getAsJsonObject();
-            JsonElement e = obj.get(name);
+            JsonElement e;
+            if (names == null) {
+                e = find(obj, new String[] {"token", "text"});
+                if (e == null) {
+                    e = obj.get("generated_text");
+                }
+            } else {
+                e = find(obj, names);
+            }
             if (e != null) {
                 if (e.isJsonPrimitive()) {
                     list.add(e.getAsString());
@@ -67,7 +72,11 @@ final class JsonUtils {
 
     @SuppressWarnings("PMD.SystemPrintln")
     static boolean processJsonLine(
-            List<StringBuilder> list, long[] requestTime, OutputStream ps, String line, String name)
+            List<StringBuilder> list,
+            long[] requestTime,
+            OutputStream ps,
+            String line,
+            String[] name)
             throws IOException {
         boolean hasError = false;
         boolean first = requestTime[1] == 0L;
@@ -80,10 +89,13 @@ final class JsonUtils {
             if (name == null) {
                 outputs = map.get("outputs");
                 if (outputs == null) {
-                    outputs = map.get("generated_text");
+                    outputs = find(map, new String[] {"token", "text"});
+                    if (outputs == null) {
+                        outputs = map.get("generated_text");
+                    }
                 }
             } else {
-                outputs = map.get(name);
+                outputs = find(map, name);
             }
             if (outputs != null) {
                 if (outputs.isJsonArray()) {
@@ -117,5 +129,17 @@ final class JsonUtils {
         ps.write(line.getBytes(StandardCharsets.UTF_8));
         ps.write(new byte[] {'\n'});
         return hasError;
+    }
+
+    static JsonElement find(JsonObject root, String[] names) {
+        JsonElement ret = null;
+        JsonObject obj = root;
+        for (String key : names) {
+            ret = obj.get(key);
+            if (ret != null && ret.isJsonObject()) {
+                obj = ret.getAsJsonObject();
+            }
+        }
+        return ret;
     }
 }

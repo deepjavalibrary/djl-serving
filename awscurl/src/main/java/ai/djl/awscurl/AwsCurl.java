@@ -765,14 +765,6 @@ public final class AwsCurl {
             return clients;
         }
 
-        public String[] getForm() {
-            return form;
-        }
-
-        public String[] getFormString() {
-            return formString;
-        }
-
         public String getRequestMethod() {
             if (forceGet) {
                 return "GET";
@@ -890,8 +882,11 @@ public final class AwsCurl {
             return null;
         }
 
-        public String getJsonExpression() {
-            return jq;
+        public String[] getJsonExpression() {
+            if (jq == null) {
+                return null; // NOPMD
+            }
+            return jq.split("/");
         }
 
         public int getDelay() {

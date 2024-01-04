@@ -332,12 +332,40 @@ public class AwsCurlTest {
             "1",
             "-N",
             "2",
-            "-j",
-            "generated_text",
             "-t"
         };
         Result ret = AwsCurl.run(args);
         Assert.assertEquals(ret.getTotalTokens(), 6);
+        Assert.assertNotNull(ret.getTokenThroughput());
+    }
+
+    @Test
+    public void testCustomJsonKey() {
+        System.setProperty("TOKENIZER", "gpt2");
+        TokenUtils.setTokenizer(); // reset tokenizer
+        AsciiString contentType = AsciiString.cached("text/event-stream");
+        TestHttpHandler.setContent(
+                "data: {\"token\": {\"text\": \"Hello\"}}\n\n"
+                        + "data: {\"token\": {\"text\": \" world\"}}\n\n"
+                        + "data: {\"token\": {}, \"generated_text\"=\"Hello world.\","
+                        + " \"details\": {}}",
+                contentType);
+        String[] args = {
+            "http://localhost:18080/invocations",
+            "-H",
+            "Content-type: application/json",
+            "-d",
+            "{\"inputs\":[\"Hello workd\"]}",
+            "-c",
+            "1",
+            "-N",
+            "2",
+            "-j",
+            "token/text",
+            "-t"
+        };
+        Result ret = AwsCurl.run(args);
+        Assert.assertEquals(ret.getTotalTokens(), 4);
         Assert.assertNotNull(ret.getTokenThroughput());
     }
 
