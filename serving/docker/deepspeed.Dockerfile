@@ -87,8 +87,8 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     pip3 cache purge
 
-RUN pip3 install ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} ${flash_attn_2_wheel} \
-                 ${lmi_vllm_wheel} ${lmi_dist_wheel} ${awq_wheel} vllm==${vllm_version} && \
+RUN pip3 install ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} && \
+    pip3 install ${flash_attn_2_wheel} ${lmi_vllm_wheel} ${lmi_dist_wheel} ${awq_wheel} vllm==${vllm_version} && \
     pip3 cache purge
 
 RUN scripts/patch_oss_dlc.sh python && \
