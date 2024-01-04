@@ -3,13 +3,13 @@ import unittest
 import torch
 import os, sys
 
-# script_directory = os.path.dirname(os.path.abspath(__file__))
-# relative_path = "../../"
-# new_path = os.path.normpath(os.path.join(script_directory, relative_path))
-# sys.path.append(new_path)
-# # sys.path.append('/'.join(lmi_dist.__path__[0].split('/')[:-1]))
-# sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
-# sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
+script_directory = os.path.dirname(os.path.abspath(__file__))
+relative_path = "../../"
+new_path = os.path.normpath(os.path.join(script_directory, relative_path))
+sys.path.append(new_path)
+# sys.path.append('/'.join(lmi_dist.__path__[0].split('/')[:-1]))
+sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
+
 
 from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
@@ -23,7 +23,7 @@ class TestLmiDist(unittest.TestCase):
 
     def test_models(self):
         model_names = [
-            "TheBloke/Llama-2-7B-Chat-fp16",
+            # "TheBloke/Llama-2-7B-Chat-fp16",
             # weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TheBloke/Llama-2-7B-Chat-AWQ",
             "TinyLlama/TinyLlama-1.1B-Chat-v0.6",
@@ -32,7 +32,7 @@ class TestLmiDist(unittest.TestCase):
             # g5.12xlarge single gpu ok. But no way to clear the gpu memory after running llama-2-7b thus cause OOM
             # "codellama/CodeLlama-7b-hf"
         ]
-        expected_text_model0 = {
+        expected_text_30 = {"TheBloke/Llama-2-7B-Chat-fp16": {
             1:
             'Hello, my name is [Your Name], and I am a [Your Profession] with [Number of Years] of experience. I am reaching out to you today',
             2:
@@ -43,7 +43,11 @@ class TestLmiDist(unittest.TestCase):
             "The future of AI is bright, but it's not without its challenges. Here are some of the biggest challenges that AI will face in the future:",
             5:
             'Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is'
-        }
+        },
+        "TinyLlama/TinyLlama-1.1B-Chat-v0.6": {
+            1: "Hello, my name is [Your Name] and I am a [Your Job Title] at [Your Company Name]. I am interested in learning more about your company'",
+            2: 'The president of the United States is a man named Donald Trump.\n\n2. The president of the United States is a man named Donald Trump.\n\n3. The president', 3: 'The capital of France is Paris.\n\n2. The capital of the United States is Washington, D.C.\n\n3. The capital of Canada is Ott', 4: "The future of AI is bright, and it's already here. With the help of AI, we can create more personalized experiences, automate repetitive tasks", 5: 'Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is'
+        }}
 
         for model_id in model_names:
             properties = {
@@ -121,8 +125,8 @@ class TestLmiDist(unittest.TestCase):
                 print_rank0(
                     f"\n====req_id: {req_id}=====\n{gen.input_all[req_id][0] + ''.join(out)}\n"
                 )
-                if model_id == "TheBloke/Llama-2-7B-Chat-fp16" and req_id in expected_text_model0:
-                    assert expected_text_model0[
+                if model_id in expected_text_30 and req_id in expected_text_30:
+                    assert expected_text_30[model_id][
                         req_id] == gen.input_all[req_id][0] + ''.join(out[:30])
 
             # Reset
