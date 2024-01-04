@@ -312,96 +312,96 @@ transformers_neuronx_aot_model_spec = {
 lmi_dist_model_spec = {
     "gpt-neox-20b": {
         "max_memory_per_gpu": [25.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "EleutherAI/gpt-neox-20b"
     },
     "falcon-7b": {
         "max_memory_per_gpu": [25.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "tiiuae/falcon-7b"
     },
     "open-llama-7b": {
         "max_memory_per_gpu": [25.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "flan-t5-xxl": {
         "max_memory_per_gpu": [10.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "google/flan-t5-xxl"
     },
     "gpt2": {
         "max_memory_per_gpu": [25.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "gpt2"
     },
     "mpt-7b": {
         "max_memory_per_gpu": [20.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mosaicml/mpt-7b"
     },
     "octocoder": {
         "max_memory_per_gpu": [23.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "bigcode/octocoder"
     },
     "gpt-neox-20b-bitsandbytes": {
         "max_memory_per_gpu": [23.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "EleutherAI/gpt-neox-20b"
     },
     "llama2-13b-gptq": {
         "max_memory_per_gpu": [23.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mistral-7b": {
         "max_memory_per_gpu": [23.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
     },
     "llama2-7b-32k": {
         "max_memory_per_gpu": [23.0],
-        "batch_size": [1],
+        "batch_size": [1, 4],
         "seq_length": [1024],
-        "stream_output": True
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mistral-7b-128k-awq": {
         "max_memory_per_gpu": [23.0],
-        "batch_size": [1],
-        "seq_length": [1024],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
     }
 }
 
 vllm_model_spec = {
     "gpt-neox-20b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "EleutherAI/gpt-neox-20b"
     },
     "llama2-13b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mistral-7b": {
         "max_memory_per_gpu": [23.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
     }
 }
 
@@ -431,105 +431,105 @@ ds_smoothquant_model_spec = {
 lmi_dist_aiccl_model_spec = {
     "llama-2-70b-aiccl": {
         "max_memory_per_gpu": [40.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "codellama-34b-aiccl": {
         "max_memory_per_gpu": [40.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "codellama/CodeLlama-34b-hf"
     },
     "falcon-40b-aiccl": {
         "max_memory_per_gpu": [40.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "tiiuae/falcon-40b"
     },
 }
 
 trtllm_model_spec = {
     "llama2-13b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "falcon-7b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "tiiuae/falcon-7b"
     },
     "llama2-7b-smoothquant": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "internlm-7b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "internlm/internlm-7b"
     },
     "baichuan2-13b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "baichuan-inc/Baichuan2-7B-Base"
     },
     "chatglm3-6b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "THUDM/chatglm3-6b"
     },
     "mistral-7b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
     },
     "gpt-j-6b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "EleutherAI/gpt-j-6b"
     },
     "qwen-7b": {
         "max_memory_per_gpu": [22.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "Qwen/Qwen-7B"
     }
 }
 
 deepspeed_rolling_batch_model_spec = {
     "gpt-neox-20b": {
         "max_memory_per_gpu": [25.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "EleutherAI/gpt-neox-20b"
     },
     "open-llama-7b": {
         "max_memory_per_gpu": [25.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "openlm-research/open_llama_7b"
     },
     "gpt2": {
         "max_memory_per_gpu": [25.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "gpt2"
     },
     "llama2-13b-smoothquant": {
         "max_memory_per_gpu": [21.0],
-        "batch_size": [1],
-        "seq_length": [64, 128, 256],
-        "stream_output": True,
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
 }
 
@@ -556,6 +556,30 @@ def send_json(data):
         logging.exception(f"HTTP error: {resp}")
         raise ValueError("Failed to send reqeust to model server")
     return resp
+
+
+def find_awscurl():
+    command = "./awscurl -h"
+    try:
+        sp.check_output(command, shell=True)
+    except sp.CalledProcessError:
+        logging.info("Downloading awscurl...")
+        command = "wget https://publish.djl.ai/awscurl/awscurl && chmod +x awscurl"
+        sp.call(command, shell=True)
+
+
+def awscurl_run(data, tokenizer, concurrency, num_run=5):
+    find_awscurl()
+    json_data = json.dumps(data)
+    headers = "Content-type: application/json"
+    endpoint = f"http://127.0.0.1:8080/invocations"
+    command = (f"./awscurl -c {concurrency} "
+               f"-N {num_run} -X POST {endpoint} --connect-timeout 120 "
+               f"-H {headers} -d '{json_data}' -P -t")
+    if tokenizer:
+        command = f"TOKENIZER={tokenizer} {command}"
+    logging.info(f"Running command {command}")
+    sp.call(command, shell=True)
 
 
 def send_image_json(img_url, data):
@@ -715,6 +739,32 @@ def log_metrics(response_times):
         f.close()
 
 
+def test_handler_rolling_batch(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    # dryrun phase
+    req = {"inputs": batch_generation(1)[0]}
+    seq_length = 100
+    params = {"do_sample": True, "max_new_tokens": seq_length}
+    req["parameters"] = params
+    logging.info(f"req {req}")
+    res = send_json(req)
+    logging.info(f"res: {res.content}")
+    # awscurl little benchmark phase
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            logging.info(
+                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+            )
+            req["parameters"]["max_new_tokens"] = seq_length
+            awscurl_run(req, spec["tokenizer"], batch_size)
+
+
 def test_handler(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -751,28 +801,6 @@ def test_handler(model, model_spec):
             logging.info(memory_usage)
             for memory in memory_usage:
                 assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
-
-
-def test_vllm_handler(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
-    spec = model_spec[args.model]
-    if "worker" in spec:
-        check_worker_number(spec["worker"])
-    for seq_length in spec["seq_length"]:
-        req = {"inputs": "The new movie that got Oscar this year"}
-        params = {"max_tokens": seq_length}
-        req["parameters"] = params
-        logging.info(f"req {req}")
-        res = send_json(req)
-        if spec.get("stream_output", False):
-            logging.info(f"res: {res.content}")
-            result = res.content.decode().split("\n")[:-1]
-            assert len(
-                result
-            ) <= seq_length, "generated more tokens than max_new_tokens"
 
 
 def test_ds_raw_model(model, model_spec):
@@ -954,9 +982,9 @@ if __name__ == "__main__":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_aot_model_spec)
     elif args.handler == "lmi_dist":
-        test_handler(args.model, lmi_dist_model_spec)
+        test_handler_rolling_batch(args.model, lmi_dist_model_spec)
     elif args.handler == "vllm":
-        test_vllm_handler(args.model, vllm_model_spec)
+        test_handler_rolling_batch(args.model, vllm_model_spec)
     elif args.handler == "performance":
         test_performance()
     elif args.handler == "unmerged_lora":
@@ -964,11 +992,12 @@ if __name__ == "__main__":
     elif args.handler == "deepspeed_smoothquant":
         test_ds_smoothquant(args.model, ds_smoothquant_model_spec)
     elif args.handler == "lmi_dist_aiccl":
-        test_handler(args.model, lmi_dist_aiccl_model_spec)
+        test_handler_rolling_batch(args.model, lmi_dist_aiccl_model_spec)
     elif args.handler == "trtllm":
-        test_handler(args.model, trtllm_model_spec)
+        test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "deepspeed_rolling_batch":
-        test_handler(args.model, deepspeed_rolling_batch_model_spec)
+        test_handler_rolling_batch(args.model,
+                                   deepspeed_rolling_batch_model_spec)
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
