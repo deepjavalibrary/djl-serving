@@ -25,10 +25,10 @@ class TestLmiDist(unittest.TestCase):
     def test_models(self):
         model_names = [
             # "TheBloke/Llama-2-7B-Chat-fp16",
-            # weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
+            # TODO: fix this. weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TheBloke/Llama-2-7B-Chat-AWQ",
             "TinyLlama/TinyLlama-1.1B-Chat-v0.6",
-            # weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
+            # TODO: fix this. weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TinyLlama/TinyLlama-1.1B-python-v0.1",
             # g5.12xlarge single gpu ok. But no way to clear the gpu memory after running llama-2-7b thus cause OOM
             # "codellama/CodeLlama-7b-hf"
