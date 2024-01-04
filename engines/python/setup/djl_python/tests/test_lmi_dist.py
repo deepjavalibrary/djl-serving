@@ -3,10 +3,10 @@ import unittest
 import torch
 import os, sys
 
-script_directory = os.path.dirname(os.path.abspath(__file__))
-relative_path = "../../"
-new_path = os.path.normpath(os.path.join(script_directory, relative_path))
-sys.path.append(new_path)
+# script_directory = os.path.dirname(os.path.abspath(__file__))
+# relative_path = "../../"
+# new_path = os.path.normpath(os.path.join(script_directory, relative_path))
+# sys.path.append(new_path)
 # import lmi_dist as lmi_dist_preload
 # # sys.path.append('/'.join(lmi_dist.__path__[0].split('/')[:-1]))
 # sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
