@@ -75,7 +75,6 @@ If you specify Engine to be MPI, rolling_batch to auto or lmi-dist in DeepSpeed 
 |--------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------|
 | option.quantize	                                                   | No	       | Use `option.quantize` quantize technology to the model. gptq quantize requires to load a gptq model. `bitsandbytes` is deprecated, use `bitsandbytes8` instead, both the options are the same.  	                            | `bitsandbytes8, gptq` <br/> Default: `None`	 |
 | Advanced parameters	                                               |
-| option.paged_attention	                                            | No	       | Use PagedAttention or not. Default is always use. Disable this if you plan to run on G4 or older GPU architecture	                                                                                                           | Default: `true`	                             |
 | option.max_rolling_batch_prefill_tokens [Deprecated since 0.25.0]	 | No	       | Limits the number of tokens for caching. This needs to be tuned based on batch size and input sequence length to avoid GPU OOM. Currently we are calculating the best value for you from 0.25.0, this is no longer required	 | Default: `1088`	                             |
 
 
