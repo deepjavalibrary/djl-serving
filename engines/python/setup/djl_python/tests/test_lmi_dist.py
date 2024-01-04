@@ -1,22 +1,23 @@
+#!/usr/bin/env python
+#
+# Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file
+# except in compliance with the License. A copy of the License is located at
+#
+# http://aws.amazon.com/apache2.0/
+#
+# or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
+# BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
+# the specific language governing permissions and limitations under the License.
+
 import unittest
 
 import torch
-import os, sys
-
-script_directory = os.path.dirname(os.path.abspath(__file__))
-relative_path = "../../"
-new_path = os.path.normpath(os.path.join(script_directory, relative_path))
-sys.path.append(new_path)
-# sys.path.append('/'.join(lmi_dist.__path__[0].split('/')[:-1]))
-sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
-
+import os
 
 from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-global_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TestLmiDist(unittest.TestCase):
@@ -32,22 +33,32 @@ class TestLmiDist(unittest.TestCase):
             # g5.12xlarge single gpu ok. But no way to clear the gpu memory after running llama-2-7b thus cause OOM
             # "codellama/CodeLlama-7b-hf"
         ]
-        expected_text_30 = {"TheBloke/Llama-2-7B-Chat-fp16": {
-            1:
-            'Hello, my name is [Your Name], and I am a [Your Profession] with [Number of Years] of experience. I am reaching out to you today',
-            2:
-            'The president of the United States is the head of the executive branch of the federal government and is one of the most powerful political figures in the world. The president is elected by the',
-            3:
-            'The capital of France is Paris. It is located in the northern central part of the country and is known for its stunning architecture, art museums, fashion, and',
-            4:
-            "The future of AI is bright, but it's not without its challenges. Here are some of the biggest challenges that AI will face in the future:",
-            5:
-            'Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is'
-        },
-        "TinyLlama/TinyLlama-1.1B-Chat-v0.6": {
-            1: "Hello, my name is [Your Name] and I am a [Your Job Title] at [Your Company Name]. I am interested in learning more about your company'",
-            2: 'The president of the United States is a man named Donald Trump.\n\n2. The president of the United States is a man named Donald Trump.\n\n3. The president', 3: 'The capital of France is Paris.\n\n2. The capital of the United States is Washington, D.C.\n\n3. The capital of Canada is Ott', 4: "The future of AI is bright, and it's already here. With the help of AI, we can create more personalized experiences, automate repetitive tasks", 5: 'Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is'
-        }}
+        expected_text_30 = {
+            "TheBloke/Llama-2-7B-Chat-fp16": {
+                1:
+                'Hello, my name is [Your Name], and I am a [Your Profession] with [Number of Years] of experience. I am reaching out to you today',
+                2:
+                'The president of the United States is the head of the executive branch of the federal government and is one of the most powerful political figures in the world. The president is elected by the',
+                3:
+                'The capital of France is Paris. It is located in the northern central part of the country and is known for its stunning architecture, art museums, fashion, and',
+                4:
+                "The future of AI is bright, but it's not without its challenges. Here are some of the biggest challenges that AI will face in the future:",
+                5:
+                'Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is'
+            },
+            "TinyLlama/TinyLlama-1.1B-Chat-v0.6": {
+                1:
+                "Hello, my name is [Your Name] and I am a [Your Job Title] at [Your Company Name]. I am interested in learning more about your company'",
+                2:
+                'The president of the United States is a man named Donald Trump.\n\n2. The president of the United States is a man named Donald Trump.\n\n3. The president',
+                3:
+                'The capital of France is Paris.\n\n2. The capital of the United States is Washington, D.C.\n\n3. The capital of Canada is Ott',
+                4:
+                "The future of AI is bright, and it's already here. With the help of AI, we can create more personalized experiences, automate repetitive tasks",
+                5:
+                'Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is Hello, my name is'
+            }
+        }
 
         for model_id in model_names:
             properties = {
@@ -142,5 +153,3 @@ class TestLmiDist(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    # c = TestLmiDist()
-    # c.test_models()
