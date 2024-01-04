@@ -81,7 +81,7 @@ class TestLmiDist(unittest.TestCase):
 
             print('========== inference_infty ===========')
             gen.step(step=500)
-            for idx, (req_id, out) in enumerate(gen.output_all.items()):
+            for req_id, out in gen.output_all.items():
                 print_rank0(f"\n====req_id: {req_id}=====\n{gen.input_all[req_id][0] + ''.join(out)}\n")
                 if model_idx == 0 and req_id in expected_text_model0:
                     assert expected_text_model0[req_id] == gen.input_all[req_id][0] + ''.join(out[:30])
