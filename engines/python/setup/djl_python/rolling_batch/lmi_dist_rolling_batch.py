@@ -66,11 +66,9 @@ class LmiDistRollingBatch(RollingBatch):
             sharded=sharded,
             quantize=quantize,
             dtype=self.lmi_dist_configs.dtype,
-            trust_remote_code=self.lmi_dist_configs.trust_remote_code,
-            paged_attention=self.lmi_dist_configs.paged_attention)
+            trust_remote_code=self.lmi_dist_configs.trust_remote_code)
         self.batch_cls = self.model.batch_type
-        if self.lmi_dist_configs.paged_attention:
-            self._warmup()
+        self._warmup()
 
     def _warmup(self):
         max_batch_prefill_tokens = self.lmi_dist_configs.max_rolling_batch_prefill_tokens

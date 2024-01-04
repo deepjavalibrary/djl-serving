@@ -72,8 +72,6 @@ option.enable_venv=true
 option.rolling_batch=auto
 #option.rolling_batch=lmi-dist
 option.max_rolling_batch_size=64
-option.paged_attention=false
-option.max_rolling_batch_prefill_tokens=1088
 
 # max output size in bytes, default to 60M
 option.max_output_size=67108864
@@ -185,12 +183,6 @@ option.rolling_batch=auto
 #option.rolling_batch=lmi-dist
 #option.rolling_batch=scheduler
 option.max_rolling_batch_size=64
-
-# increase max_rolling_batch_prefill_tokens for long sequence
-option.max_rolling_batch_prefill_tokens=1088
-
-# disable PagedAttention if run into OOM
-option.paged_attention=false
 ```
 
 ## Appendix

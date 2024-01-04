@@ -499,7 +499,6 @@ class TestConfigManager(unittest.TestCase):
                 'trust_remote_code': 'TRUE',
                 'tensor_parallel_degree': '2',
                 'revision': 'somerevisionstr',
-                'paged_attention': 'False',
                 'max_rolling_batch_size': '64',
                 'max_rolling_batch_prefill_tokens': '12500',
                 'dtype': 'fp32',
@@ -520,7 +519,6 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(lmi_configs.dtype, 'fp32')
             self.assertEqual(lmi_configs.torch_dtype, torch.float32)
             self.assertEqual(lmi_configs.device, 0)
-            self.assertFalse(lmi_configs.paged_attention)
             self.assertTrue(lmi_configs.is_mpi)
             self.assertTrue(lmi_configs.trust_remote_code)
 

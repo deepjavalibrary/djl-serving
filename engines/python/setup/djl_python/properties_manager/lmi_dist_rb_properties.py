@@ -34,7 +34,6 @@ class LmiDistRbProperties(Properties):
     engine: Optional[str] = None
     quantize: Optional[LmiDistQuantizeMethods] = None
     tensor_parallel_degree: Optional[int] = 1
-    paged_attention: Optional[bool] = True
     max_rolling_batch_prefill_tokens: Optional[int] = 4096
     device: Optional[int] = None
     dtype: Optional[str] = None
