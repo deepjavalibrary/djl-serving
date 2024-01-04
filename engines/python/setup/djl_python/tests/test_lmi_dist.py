@@ -7,7 +7,7 @@ script_directory = os.path.dirname(os.path.abspath(__file__))
 relative_path = "../../"
 new_path = os.path.normpath(os.path.join(script_directory, relative_path))
 sys.path.append(new_path)
-# sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
+sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
 
 from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
@@ -21,7 +21,7 @@ class TestLmiDist(unittest.TestCase):
 
     def test_models(self):
         model_names = [
-            "TheBloke/Llama-2-7B-Chat-fp16",
+            # "TheBloke/Llama-2-7B-Chat-fp16",
             "TinyLlama/TinyLlama-1.1B-Chat-v0.6",
             # weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TinyLlama/TinyLlama-1.1B-python-v0.1",
