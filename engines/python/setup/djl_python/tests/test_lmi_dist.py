@@ -17,21 +17,23 @@ import torch
 import os
 import sys
 
-script_directory = os.path.dirname(os.path.abspath(__file__))
-relative_path = "../../"
-new_path = os.path.normpath(os.path.join(script_directory, relative_path))
-sys.path.append(new_path)
-sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
-
-from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
-from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
-
 
 class TestLmiDist(unittest.TestCase):
 
+    @unittest.skipIf(not torch.cuda.is_available(), "CUDA is not available")
     def test_models(self):
+        # === Preparation ===
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        relative_path = "../../"
+        new_path = os.path.normpath(
+            os.path.join(script_directory, relative_path))
+        sys.path.append(new_path)
+        sys.path.append("/usr/local/lib/python3.9/dist-packages/lmi_dist")
+        from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
+        from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
+
+        # --- Models ---
         model_names = [
-            # Kept for mannual test
             # "TheBloke/Llama-2-7B-Chat-fp16",
             # TODO: fix this. weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TheBloke/Llama-2-7B-Chat-AWQ",
@@ -68,6 +70,7 @@ class TestLmiDist(unittest.TestCase):
             }
         }
 
+        # === Test ===
         for model_id in model_names:
             properties = {
                 "mpi_mode": "true",
