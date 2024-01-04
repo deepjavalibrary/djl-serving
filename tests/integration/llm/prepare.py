@@ -738,6 +738,7 @@ trtllm_handler_list = {
     "qwen-7b": {
         "option.model_id": "Qwen/Qwen-7B",
         "option.tensor_parallel_degree": 4,
+        "option.trust_remote_code": True,
         "option.output_formatter": "jsonlines"
     }
 }
