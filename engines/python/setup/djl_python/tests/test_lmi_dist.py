@@ -68,7 +68,6 @@ class TestLmiDist(unittest.TestCase):
                 "dtype": "fp16",
                 "max_rolling_batch_size": 28,
                 "model_loading_timeout": 3600,
-                "paged_attention": "True",
                 "model_id": model_id
             }
 
