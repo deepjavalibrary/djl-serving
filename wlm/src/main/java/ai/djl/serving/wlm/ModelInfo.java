@@ -644,6 +644,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 || Files.isRegularFile(modelDir.resolve(prefix + ".xgb"))
                 || Files.isRegularFile(modelDir.resolve("model.xgb"))) {
             return "XGBoost";
+        } else if (Files.isRegularFile(modelDir.resolve(prefix + ".gguf"))) {
+            return "Llama";
         } else {
             try {
                 if (Utils.getCurrentEpoch(modelDir, prefix) >= 0) {
