@@ -49,7 +49,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests pillow numpy
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -135,7 +135,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests pillow numpy
+        run: pip3 install requests numpy
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
