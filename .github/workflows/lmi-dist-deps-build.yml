@@ -79,15 +79,6 @@ jobs:
           cd lmi_vllm
           pip wheel . --no-deps
           cp lmi_vllm-*.whl ../build_artifacts
-      - name: Build megablocks 0.5.0+main
-        run: |
-          . ./venv/bin/activate
-          git clone https://github.com/stanford-futuredata/megablocks
-          # TODO: change commit to actual tag later
-          cd megablocks && git checkout 5897cd6f254b7b3edf7a708a3a3314ecb54b6f78
-          export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
-          pip wheel . --no-deps
-          cp megablocks-*.whl ../build_artifacts
       - name: Build awq kernels
         run: |
           . ./venv/bin/activate
@@ -123,7 +114,6 @@ jobs:
           aws s3 cp dropout_layer_norm*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
           aws s3 cp rotary_emb*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
           aws s3 cp lmi_vllm*.whl s3://djl-ai-staging/publish/lmi_vllm/cu121-pt211/
-          aws s3 cp megablocks*.whl s3://djl-ai-staging/publish/megablocks/cu121-pt211/
           aws s3 cp awq*.whl s3://djl-ai-staging/publish/awq/cu121-pt211/
 
   stop-runners-p4d:
