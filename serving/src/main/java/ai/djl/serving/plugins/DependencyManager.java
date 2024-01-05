@@ -98,17 +98,7 @@ public final class DependencyManager {
             default:
                 break;
         }
-
-        // refresh EngineProvider
-        MutableClassLoader mcl = MutableClassLoader.getInstance();
-        for (EngineProvider provider : ServiceLoader.load(EngineProvider.class, mcl)) {
-            Engine.registerEngine(provider);
-        }
-
-        // refresh ZooProvider
-        for (ZooProvider provider : ServiceLoader.load(ZooProvider.class, mcl)) {
-            ModelZoo.registerModelZoo(provider);
-        }
+        refreshProviders();
     }
 
     /**
@@ -159,6 +149,20 @@ public final class DependencyManager {
         }
         MutableClassLoader mcl = MutableClassLoader.getInstance();
         mcl.addURL(file.toUri().toURL());
+    }
+
+    /** Loads engine providers and model zoo providers from "deps" folder. */
+    public static void refreshProviders() {
+        // refresh EngineProvider
+        MutableClassLoader mcl = MutableClassLoader.getInstance();
+        for (EngineProvider provider : ServiceLoader.load(EngineProvider.class, mcl)) {
+            Engine.registerEngine(provider);
+        }
+
+        // refresh ZooProvider
+        for (ZooProvider provider : ServiceLoader.load(ZooProvider.class, mcl)) {
+            ModelZoo.registerModelZoo(provider);
+        }
     }
 
     private static String getSnapshotUrl(String groupId, String artifactId, String version)
