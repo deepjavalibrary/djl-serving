@@ -127,6 +127,8 @@ public class ModelServer {
                 return;
             }
 
+            DependencyManager.refreshProviders();
+
             ConfigManager.init(arguments);
 
             ConfigManager configManager = ConfigManager.getInstance();
