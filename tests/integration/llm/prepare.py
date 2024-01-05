@@ -740,6 +740,20 @@ trtllm_handler_list = {
         "option.tensor_parallel_degree": 4,
         "option.trust_remote_code": True,
         "option.output_formatter": "jsonlines"
+    },
+    "llama2-70b": {
+        "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.use_custom_all_reduce": True,
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "jsonlines"
+    },
+    "mixtral-8x7b": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b/",
+        "option.tensor_parallel_degree": 8,
+        "option.use_custom_all_reduce": True,
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "jsonlines"
     }
 }
 
@@ -987,7 +1001,7 @@ def build_lmi_dist_aiccl_model(model):
     options["option.tensor_parallel_degree"] = 8
     options["option.rolling_batch"] = "lmi-dist"
     options["option.output_formatter"] = "jsonlines"
-    options["option.max_rolling_batch_size"] = 4
+    options["option.max_rolling_batch_size"] = 16
     write_model_artifacts(options)
 
 
