@@ -25,7 +25,6 @@ class TRTLLMService(object):
     def __init__(self):
         self.initialized = False
         self.trt_configs = None
-        self.rolling_batch_type = None
         self.rolling_batch = None
 
     def initialize(self, properties: dict):
@@ -78,13 +77,10 @@ class TRTLLMService(object):
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
-                if self.rolling_batch_type:
-                    err = {"data": "", "last": True, "code": 424, "error": err}
-                    outputs.add(Output.binary_encode(err),
-                                key="data",
-                                batch_index=i)
-                else:
-                    outputs.add(err, key="data", batch_index=i)
+                err = {"data": "", "last": True, "code": 424, "error": err}
+                outputs.add(Output.binary_encode(err),
+                            key="data",
+                            batch_index=i)
             return outputs
 
         if inputs.get_property("reset_rollingbatch"):
