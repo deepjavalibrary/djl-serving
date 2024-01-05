@@ -33,7 +33,7 @@ processResources {
         file("setup/djl_python/__init__.py").append("\n__version__ = '${djl_version}'\n")
     }
 
-    exclude "build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py"
+    exclude "build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py", "djl_python/tests"
     outputs.file file("${project.buildDir}/classes/java/main/native/lib/python.properties")
     doLast {
         // write properties
@@ -44,15 +44,14 @@ processResources {
         def list = []
         def dir = file("setup/djl_python")
         dir.eachFileRecurse(groovy.io.FileType.FILES) { file ->
-            if (file.isFile()) {
-                list.add(dir.relativePath(file))
+            def name = dir.relativePath(file);
+            if (file.isFile() && !name.contains("__pycache__") && !name.contains("tests")) {
+                list.add(name)
             }
         }
         list.sort()
         for (String name : list) {
-            if (!name.contains("__pycache__")) {
-                sb.append(",djl_python/").append(name)
-            }
+            sb.append(",djl_python/").append(name)
         }
         propFile.text = sb.toString()
     }
