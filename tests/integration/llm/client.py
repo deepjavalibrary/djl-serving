@@ -503,6 +503,18 @@ trtllm_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "Qwen/Qwen-7B"
+    },
+    "llama2-70b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mixtral-8x7b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
     }
 }
 
