@@ -55,7 +55,7 @@ class Token(object):
 
 
 def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
-                           details: dict):
+                           details: dict, generated_tokens: str):
     """
     json output formatter
 
@@ -74,7 +74,8 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
 
 
 def _jsonlines_output_formatter(token: Token, first_token: bool,
-                                last_token: bool, details: dict):
+                                last_token: bool, details: dict,
+                                generated_tokens: str):
     """
     jsonlines output formatter
 
@@ -82,10 +83,12 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
     """
     token_dict = token.as_dict()
     final_dict = {"token": token_dict}
-    if last_token and details:
-        final_dict["details"] = {
-            "finish_reason": details.get("finish_reason", None)
-        }
+    if last_token:
+        final_dict["generated_text"] = generated_tokens
+        if details:
+            final_dict["details"] = {
+                "finish_reason": details.get("finish_reason", None)
+            }
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 
@@ -115,6 +118,7 @@ class Request(object):
         self.first_token = True
         self.last_token = False
         self.token_cache = None
+        self.generated_tokens = []
         if parameters.pop("details", False):
             self.token_cache = []
 
@@ -141,16 +145,21 @@ class Request(object):
             next_token = Token(-1, next_token)
         if self.token_cache is not None:
             self.token_cache.append(next_token.as_dict())
+        self.generated_tokens.append(next_token.text)
         details = {}
-        if last_token and self.token_cache is not None:
-            details["finish_reason"] = finish_reason
-            details["tokens"] = self.token_cache
+        generated_text = None
+        if last_token:
+            generated_text = ''.join(self.generated_tokens)
+            if self.token_cache is not None:
+                details["finish_reason"] = finish_reason
+                details["tokens"] = self.token_cache
         if output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now
             self.next_token_str = output_formatter(next_token,
                                                    self.first_token,
-                                                   last_token, details)
+                                                   last_token, details,
+                                                   generated_text)
         self.last_token = last_token
         self.first_token = False
 
