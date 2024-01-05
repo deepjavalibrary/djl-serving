@@ -751,7 +751,7 @@ trtllm_handler_list = {
     "mixtral-8x7b": {
         "option.model_id": "s3://djl-llm/mixtral-8x7b/",
         "option.tensor_parallel_degree": 8,
-        "option.use_custom_all_reduce": True,
+        "option.use_custom_all_reduce": False,
         "option.max_rolling_batch_size": 32,
         "option.output_formatter": "jsonlines"
     }
