@@ -167,6 +167,4 @@ class TestLmiDist(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # unittest.main()
-    c = TestLmiDist()
-    c.test_models()
+    unittest.main()
