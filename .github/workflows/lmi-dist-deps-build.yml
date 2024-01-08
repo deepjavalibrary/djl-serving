@@ -72,13 +72,6 @@ jobs:
           cp flash_attn*.whl ../build_artifacts
           cp csrc/layer_norm/*.whl ../build_artifacts
           cp csrc/rotary/*.whl ../build_artifacts
-      - name: Build vllm 0.1.1
-        run: |
-          . ./venv/bin/activate
-          git clone codecommit::us-east-1://lmi_vllm
-          cd lmi_vllm
-          pip wheel . --no-deps
-          cp lmi_vllm-*.whl ../build_artifacts
       - name: Build awq kernels
         run: |
           . ./venv/bin/activate
@@ -113,7 +106,6 @@ jobs:
           aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
           aws s3 cp dropout_layer_norm*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
           aws s3 cp rotary_emb*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt211/
-          aws s3 cp lmi_vllm*.whl s3://djl-ai-staging/publish/lmi_vllm/cu121-pt211/
           aws s3 cp awq*.whl s3://djl-ai-staging/publish/awq/cu121-pt211/
 
   stop-runners-p4d:

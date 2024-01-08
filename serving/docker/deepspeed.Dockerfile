@@ -9,39 +9,42 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=11.8.0-cudnn8-runtime-ubuntu20.04
+ARG version=12.1.1-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu118
-ARG djl_version=0.24.0~SNAPSHOT
-ARG python_version=3.9
-ARG torch_version=2.0.1
-ARG torch_vision_version=0.15.2
-ARG vllm_version=0.2.1.post1
+ARG cuda_version=cu121
+ARG djl_version=0.26.0~SNAPSHOT
+# Base Deps
+ARG python_version=3.10
+ARG torch_version=2.1.2
+ARG torch_vision_version=0.16.2
+# HF Deps
+ARG protobuf_version=3.20.3
+ARG transformers_version=4.36.2
+ARG accelerate_version=0.25.0
+ARG diffusers_version=0.16.0
+ARG bitsandbytes_version=0.41.1
+ARG optimum_version=1.15.0
+ARG auto_gptq_version=0.5.1
+ARG datasets_version=2.15.0
+# DeepSpeed Deps
 ARG deepspeed_version=nightly
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp39-cp39-linux_x86_64.whl"
-ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp39-cp39-linux_x86_64.whl"
-ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp39-cp39-linux_x86_64.whl"
-ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp39-cp39-linux_x86_64.whl"
-ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn_2-2.3.0-cp39-cp39-linux_x86_64.whl"
-ARG lmi_vllm_wheel="https://publish.djl.ai/lmi_vllm/lmi_vllm-0.1.1-cp39-cp39-linux_x86_64.whl"
+ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
+# LMI-Dist Deps
+ARG vllm_version=0.2.7
+ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp310-cp310-linux_x86_64.whl"
+ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp310-cp310-linux_x86_64.whl"
+ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp310-cp310-linux_x86_64.whl"
+ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn-2.3.0-cp310-cp310-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
-ARG awq_wheel="https://publish.djl.ai/awq/awq_inference_engine-0.0.0-cp39-cp39-linux_x86_64.whl"
+ARG awq_wheel="https://publish.djl.ai/awq/awq_inference_engine-0.0.0-cp310-cp310-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-nightly-py3-none-any.whl"
-ARG aiccl_wheel="https://publish.djl.ai/aiccl/aiccl-1.0-cp39-cp39-linux_x86_64.whl"
-ARG protobuf_version=3.20.3
-ARG transformers_version=4.34.0
-ARG accelerate_version=0.23.0
-ARG diffusers_version=0.16.0
-ARG bitsandbytes_version=0.41.1
-ARG optimum_version=1.13.2
-ARG auto_gptq_version=0.4.2
-ARG datasets_version=2.14.5
+ARG aiccl_wheel="https://publish.djl.ai/aiccl/aiccl-1.0%2Bcu121torch2.1-cp310-cp310-linux_x86_64.whl"
 
 EXPOSE 8080
 
-COPY dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
+COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -79,7 +82,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
+RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
     ${deepspeed_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} zstandard datasets==${datasets_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
@@ -88,8 +91,11 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} && \
-    pip3 install ${flash_attn_2_wheel} ${lmi_vllm_wheel} ${lmi_dist_wheel} ${awq_wheel} vllm==${vllm_version} && \
+    pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${awq_wheel} vllm==${vllm_version} && \
     pip3 cache purge
+
+# Add CUDA-Compat
+RUN apt-get update && apt-get install -y cuda-compat-12-1 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh deepspeed && \
