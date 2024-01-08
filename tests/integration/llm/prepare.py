@@ -633,6 +633,23 @@ vllm_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
+    },
+    "phi-2": {
+        "option.model_id": "microsoft/phi-2",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    },
+    "llama2-70b": {
+        "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "jsonlines"
+    },
+    "mixtral-8x7b": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b/",
+        "option.tensor_parallel_degree": 8,
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "jsonlines"
     }
 }
 
@@ -678,6 +695,9 @@ lmi_dist_aiccl_model_list = {
     "falcon-40b-aiccl": {
         "option.model_id": "s3://djl-llm/falcon-40b/",
     },
+    "mixtral-8x7b-aiccl": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b/",
+    }
 }
 
 trtllm_handler_list = {
@@ -725,7 +745,6 @@ trtllm_handler_list = {
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
         "option.tensor_parallel_degree": 4,
-        "option.enable_kv_cache_reuse": "true",
         "option.output_formatter": "jsonlines"
     },
     "gpt-j-6b": {

@@ -56,6 +56,21 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test Mixtral-8x7B with aiccl backend
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist_aiccl mixtral-8x7b-aiccl
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py lmi_dist_aiccl mixtral-8x7b-aiccl
+          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
+            echo "aiccl backend not used"
+            return 1
+          else
+            echo "Using aiccl backend"
+          fi
+          docker rm -f $(docker ps -aq)
       - name: Test Llama-2-70B with aiccl backend
         working-directory: tests/integration
         run: |
@@ -177,10 +192,69 @@ jobs:
           name: trtllm-logs
           path: tests/integration/logs/
 
+  vllm-test:
+    runs-on: [ self-hosted, p4d ]
+    timeout-minutes: 120
+    needs: create-runners-p4d
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test llama-2-70B with TP8
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama2-70b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py vllm llama2-70b
+          docker rm -f $(docker ps -aq)
+      - name: Test mixtral-8x7b with with TP8
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm mixtral-8x7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py vllm mixtral-8x7b
+          docker rm -f $(docker ps -aq)
+      - name: Remove models dir
+        working-directory: tests/integration
+        run: |
+          sudo rm -rf models
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          sudo rm -rf models
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: trtllm-logs
+          path: tests/integration/logs/
+
   stop-runners-p4d:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners-p4d, lmi-dist-aiccl-test, trtllm-test ]
+    needs: [ create-runners-p4d, lmi-dist-aiccl-test, trtllm-test, vllm-test ]
     steps:
       - name: Stop all instances
         run: |

@@ -402,6 +402,24 @@ vllm_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "mistralai/Mistral-7B-v0.1"
+    },
+    "phi-2": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "microsoft/phi-2"
+    },
+    "llama2-70b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mixtral-8x7b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
     }
 }
 
@@ -446,6 +464,12 @@ lmi_dist_aiccl_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-40b"
+    },
+    "mixtral-8x7b-aiccl": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
     },
 }
 
