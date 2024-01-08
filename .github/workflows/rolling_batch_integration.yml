@@ -426,6 +426,15 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm mistral-7b
           docker rm -f $(docker ps -aq)
+      - name: Test phi-2
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm phi-2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm phi-2
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
