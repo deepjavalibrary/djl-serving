@@ -725,6 +725,7 @@ trtllm_handler_list = {
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
         "option.tensor_parallel_degree": 4,
+        "option.enable_kv_cache_reuse": "true",
         "option.output_formatter": "jsonlines"
     },
     "gpt-j-6b": {
