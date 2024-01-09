@@ -74,6 +74,7 @@ public final class DependencyManager {
         switch (engineName) {
             case "MXNet":
                 installDependency("ai.djl.mxnet:mxnet-engine:" + djlVersion);
+                installDependency("ai.djl.mxnet:mxnet-model-zoo:" + djlVersion);
                 break;
             case "OnnxRuntime":
                 installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
@@ -94,6 +95,9 @@ public final class DependencyManager {
                 installDependency("ai.djl.ml.xgboost:xgboost:" + djlVersion);
                 // TODO: Avoid hard code version
                 installDependency("commons-logging:commons-logging:1.2");
+                break;
+            case "Llama":
+                installDependency("ai.djl.llama:llama:" + djlVersion);
                 break;
             default:
                 break;
@@ -151,8 +155,14 @@ public final class DependencyManager {
         mcl.addURL(file.toUri().toURL());
     }
 
+    /** Initialize dependencies for model server. */
+    public void initialize() {
+        ModelZoo.setModelZooResolver(this::resolveModelZoo);
+        refreshProviders();
+    }
+
     /** Loads engine providers and model zoo providers from "deps" folder. */
-    public static void refreshProviders() {
+    void refreshProviders() {
         // refresh EngineProvider
         MutableClassLoader mcl = MutableClassLoader.getInstance();
         for (EngineProvider provider : ServiceLoader.load(EngineProvider.class, mcl)) {
@@ -191,6 +201,28 @@ public final class DependencyManager {
         } catch (SAXException | ParserConfigurationException e) {
             throw new AssertionError("Failed to parse maven metadata", e);
         }
+    }
+
+    private ModelZoo resolveModelZoo(String groupId) {
+        try {
+            if ("ai.djl.mxnet".equals(groupId)) {
+                installEngine("MXNet");
+            } else if ("ai.djl.huggingface.gguf".equals(groupId)) {
+                installEngine("Llama");
+            } else {
+                logger.warn("Unknown model zoo: {}", groupId);
+            }
+        } catch (IOException e) {
+            logger.warn("Failed to install dependencies for model zoo:{}", groupId);
+        }
+        MutableClassLoader mcl = MutableClassLoader.getInstance();
+        for (ZooProvider provider : ServiceLoader.load(ZooProvider.class, mcl)) {
+            ModelZoo zoo = provider.getModelZoo();
+            if (groupId.equals(zoo.getGroupId())) {
+                return provider.getModelZoo();
+            }
+        }
+        return null;
     }
 
     private String getOrtVersion(String djlVersion) throws IOException {
