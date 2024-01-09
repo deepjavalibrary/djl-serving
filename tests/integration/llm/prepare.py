@@ -636,6 +636,7 @@ vllm_model_list = {
     },
     "phi-2": {
         "option.model_id": "microsoft/phi-2",
+        "option.trust_remote_code": True,
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
     },
