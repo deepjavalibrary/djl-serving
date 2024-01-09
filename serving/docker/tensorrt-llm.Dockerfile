@@ -27,6 +27,7 @@ ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
 ARG pydantic_version=1.10.13
 ARG ammo_version=0.5.0
+ARG pynvml_verison=11.4.1
 EXPOSE 8080
 
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
@@ -69,7 +70,7 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
 # Install PyTorch
 # Qwen needs transformers_stream_generator, tiktoken and einops
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
-    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
+    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
     transformers_stream_generator einops tiktoken && \
     pip3 cache purge
 
