@@ -306,10 +306,69 @@ jobs:
           name: transformers-neuronx-${{ matrix.arch }}-logs
           path: tests/integration/logs/
 
+  transformers-neuronx-rolling-batch:
+    runs-on: [ self-hosted, inf2 ]
+    timeout-minutes: 90
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy pillow
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          mkdir logs
+          ./download_models.sh pytorch-inf2
+      - name: Test transformers-neuronx llama-7b rolling batch
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx llama-7b-rb
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx_rolling_batch llama-7b-rb
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: Test transformers-neuronx mistral-7b rolling batch
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx mistral-7b-rb
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx_rolling_batch mistral-7b-rb
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: transformers-neuronx-${{ matrix.arch }}-logs
+          path: tests/integration/logs/
+
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, transformers-neuronx-test-1, transformers-neuronx-test-2 ]
+    needs: [ create-runners, transformers-neuronx-test-1, transformers-neuronx-test-2, transformers-neuronx-rolling-batch ]
     steps:
       - name: Stop all instances
         run: |
