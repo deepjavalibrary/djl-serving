@@ -67,6 +67,17 @@ jobs:
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
+      - name: install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+          pip3 install boto3
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.record == 'table' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Parse job schema
         working-directory: tests/integration
         id: generate_matrix
