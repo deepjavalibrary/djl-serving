@@ -16,17 +16,27 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class DependencyManagerTest {
 
     @Test
     public void testInstallDependency() throws IOException {
-        DependencyManager dm = DependencyManager.getInstance();
-        dm.installEngine("OnnxRuntime");
-        dm.installEngine("XGBoost");
+        Path home = Paths.get("build/home");
+        Files.createDirectories(home);
+        System.setProperty("MODEL_SERVER_HOME", "build/home");
+        try {
+            DependencyManager dm = DependencyManager.getInstance();
+            dm.installEngine("OnnxRuntime");
+            dm.installEngine("XGBoost");
 
-        dm.installDependency("ai.djl.pytorch:pytorch-jni:2.0.0-0.22.1");
+            dm.installDependency("ai.djl.pytorch:pytorch-jni:2.0.1-0.25.0");
 
-        Assert.assertThrows(() -> dm.installDependency("ai.djl.pytorch:pytorch-jni"));
+            Assert.assertThrows(() -> dm.installDependency("ai.djl.pytorch:pytorch-jni"));
+        } finally {
+            System.clearProperty("MODEL_SERVER_HOME");
+        }
     }
 }

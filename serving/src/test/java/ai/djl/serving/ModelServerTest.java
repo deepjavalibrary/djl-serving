@@ -116,6 +116,8 @@ import javax.net.ssl.SSLContext;
 
 public class ModelServerTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(ModelServerTest.class);
+
     private static final String ERROR_NOT_FOUND =
             "Requested resource is not found, please refer to API document.";
     private static final String ERROR_METHOD_NOT_ALLOWED =
@@ -333,9 +335,7 @@ public class ModelServerTest {
         try {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
-            request(
-                    channel,
-                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models"));
+            request(channel, HttpMethod.GET, "/models");
 
             ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
             Assert.assertNull(resp.getNextPageToken());
@@ -376,13 +376,13 @@ public class ModelServerTest {
     }
 
     private void testRoot(Channel channel) throws InterruptedException {
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/"));
+        request(channel, HttpMethod.OPTIONS, "/");
 
         assertEquals(result, "{}\n");
     }
 
     private void testPing(Channel channel) throws InterruptedException {
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/ping"));
+        request(channel, HttpMethod.GET, "/ping");
 
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
@@ -473,14 +473,9 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelAsync(Channel channel) throws InterruptedException {
-        String url = "djl://ai.djl.zoo/mlp/0.0.3/mlp";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?model_name=mlp_1&synchronous=false&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        String url = URLEncoder.encode("djl://ai.djl.zoo/mlp/0.0.3/mlp", StandardCharsets.UTF_8);
+        url = "/models?model_name=mlp_1&synchronous=false&url=" + url;
+        request(channel, HttpMethod.POST, url);
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(statusResp.getStatus(), "Model \"mlp_1\" registration scheduled.");
@@ -490,26 +485,16 @@ public class ModelServerTest {
 
     private void testRegisterModel(Channel channel) throws InterruptedException {
         String url = "djl://ai.djl.zoo/mlp/0.0.3/mlp";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?model_name=mlp_2&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        url = "/models?model_name=mlp_2&url=" + URLEncoder.encode(url, StandardCharsets.UTF_8);
+        request(channel, HttpMethod.POST, url);
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2\" registered.");
     }
 
     private void testRegisterModelUnencoded(Channel channel) throws InterruptedException {
-        String url = "djl://ai.djl.zoo/mlp/0.0.3/mlp";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?model_name=mlp_2_unencoded&url=" + url));
+        String url = "/models?model_name=mlp_2_unencoded&url=djl://ai.djl.zoo/mlp/0.0.3/mlp";
+        request(channel, HttpMethod.POST, url);
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"mlp_2_unencoded\" registered.");
@@ -517,18 +502,11 @@ public class ModelServerTest {
 
     private void testPerModelWorkers(Channel channel) throws InterruptedException {
         String url = "file:src/test/resources/identity";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        url = "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8);
+        request(channel, HttpMethod.POST, url);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/identity"));
+        request(channel, HttpMethod.GET, "/models/identity");
 
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
@@ -542,10 +520,7 @@ public class ModelServerTest {
         assertEquals(group.getMaxWorkers(), CudaUtils.hasCuda() ? 3 : 4);
 
         // unregister identity model
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity"));
+        request(channel, HttpMethod.DELETE, "/models/identity");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
@@ -557,11 +532,8 @@ public class ModelServerTest {
                         + "&topK=1";
         request(
                 channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?model_name=res18&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+                HttpMethod.POST,
+                "/models?model_name=res18&url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"res18\" registered.");
@@ -584,10 +556,7 @@ public class ModelServerTest {
         Assert.assertTrue(Files.exists(modelDir));
 
         // Unregister model
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/res18"));
+        request(channel, HttpMethod.DELETE, "/models/res18");
 
         resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model or workflow \"res18\" unregistered");
@@ -598,12 +567,8 @@ public class ModelServerTest {
 
     private void testRegisterWorkflow(Channel channel) throws InterruptedException {
         String url = "https://resources.djl.ai/test-models/basic-serving-workflow.json";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/workflows?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        url = "/workflows?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8);
+        request(channel, HttpMethod.POST, url);
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Workflow \"BasicWorkflow\" registered.");
@@ -611,13 +576,8 @@ public class ModelServerTest {
 
     private void testRegisterWorkflowAsync(Channel channel) throws InterruptedException {
         String url = "https://resources.djl.ai/test-models/basic-serving-workflow2.json";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/workflows?synchronous=false&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        url = "/workflows?synchronous=false&url=" + URLEncoder.encode(url, StandardCharsets.UTF_8);
+        request(channel, HttpMethod.POST, url);
 
         StatusResponse statusResp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(statusResp.getStatus(), "Workflow \"BasicWorkflow2\" registration scheduled.");
@@ -626,12 +586,7 @@ public class ModelServerTest {
     }
 
     private void testScaleModel(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.PUT,
-                        "/models/mlp_2?min_worker=2&max_worker=4"));
+        request(channel, HttpMethod.PUT, "/models/mlp_2?min_worker=2&max_worker=4");
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(
@@ -641,9 +596,7 @@ public class ModelServerTest {
     }
 
     private void testListModels(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models"));
+        request(channel, HttpMethod.GET, "/models");
 
         ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
         Assert.assertNull(resp.getNextPageToken());
@@ -663,18 +616,13 @@ public class ModelServerTest {
             assertTrue(modelProperties.containsAll(rawModel.keySet()));
         }
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models?limit=2"));
+        request(channel, HttpMethod.GET, "/models?limit=2");
         resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
         Assert.assertEquals(resp.getNextPageToken(), "2");
     }
 
     private void testListWorkflows(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/workflows"));
+        request(channel, HttpMethod.GET, "/workflows");
 
         ListWorkflowsResponse resp = JsonUtils.GSON.fromJson(result, ListWorkflowsResponse.class);
         for (String expectedWorkflow : new String[] {"mlp", "mlp_1", "mlp_2", "BasicWorkflow"}) {
@@ -695,9 +643,8 @@ public class ModelServerTest {
     }
 
     private void testKServeDescribeModel(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp"));
+        logTestFunction();
+        request(channel, HttpMethod.GET, "/v2/models/mlp");
 
         JsonElement json = JsonUtils.GSON.fromJson(result, JsonElement.class);
         JsonObject resp = json.getAsJsonObject();
@@ -706,9 +653,8 @@ public class ModelServerTest {
     }
 
     private void testDescribeModel(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/mlp_2"));
+        logTestFunction();
+        request(channel, HttpMethod.GET, "/models/mlp_2");
 
         Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
         DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
@@ -749,19 +695,18 @@ public class ModelServerTest {
     }
 
     private void testUnregisterModel(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/mlp_1"));
+        logTestFunction();
+        request(channel, HttpMethod.DELETE, "/models/mlp_1");
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model or workflow \"mlp_1\" unregistered");
     }
 
     private void testAsyncInference(Channel channel) throws InterruptedException {
+        logTestFunction();
         String url = URLEncoder.encode("file:src/test/resources/echo", StandardCharsets.UTF_8);
         url = "/models?model_name=echo&job_queue_size=10&url=" + url;
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
+        request(channel, HttpMethod.POST, url);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
         // send request
@@ -793,33 +738,26 @@ public class ModelServerTest {
         assertEquals(firstToken, "tok_0\n");
 
         // Unregister model
-        url = "/models/echo";
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, url));
+        request(channel, HttpMethod.DELETE, "/models/echo");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testDjlModelZoo(Channel channel) throws InterruptedException {
-        String url = "src/test/resources/zoomodel";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?model_name=zoomodel&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        logTestFunction();
+        String url = URLEncoder.encode("src/test/resources/zoomodel", StandardCharsets.UTF_8);
+        url = "/models?model_name=zoomodel&url=" + url;
+        request(channel, HttpMethod.POST, url);
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"zoomodel\" registered.");
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/zoomodel"));
+        request(channel, HttpMethod.DELETE, "/models/zoomodel");
     }
 
     private void testThrottle(Channel channel) throws InterruptedException {
+        logTestFunction();
         String url = URLEncoder.encode("file:src/test/resources/echo", StandardCharsets.UTF_8);
         url = "/models?model_name=echo&url=" + url;
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
+        request(channel, HttpMethod.POST, url);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
         url = "/predictions/echo?delay=1000";
@@ -844,26 +782,27 @@ public class ModelServerTest {
         Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
 
         // Unregister model
-        url = "/models/echo";
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, url));
+        request(channel, HttpMethod.DELETE, "/models/echo");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testAdapterRegister(Channel channel) throws InterruptedException {
+        logTestFunction();
         String url = URLEncoder.encode("file:src/test/resources/adaptecho", StandardCharsets.UTF_8);
         url = "/models?model_name=adaptecho&url=" + url;
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
+        request(channel, HttpMethod.POST, url);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
         // Test Missing Adapter before registering
         testAdapterMissing();
 
         url = "/models/adaptecho/adapters?name=" + "adaptable" + "&src=" + "src";
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url));
+        request(channel, HttpMethod.POST, url);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testAdapterMissing() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
@@ -883,6 +822,7 @@ public class ModelServerTest {
     }
 
     private void testAdapterNoPredictRegister() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
@@ -905,6 +845,7 @@ public class ModelServerTest {
     }
 
     private void testAdapterPredict(Channel channel) throws InterruptedException {
+        logTestFunction();
         String url = "/predictions/adaptecho?adapter=adaptable";
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
@@ -917,6 +858,7 @@ public class ModelServerTest {
     }
 
     private void testAdapterDirPredict(Channel channel) throws InterruptedException {
+        logTestFunction();
         String url = "/predictions/adaptecho?adapter=myBuiltinAdapter";
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
@@ -930,6 +872,7 @@ public class ModelServerTest {
 
     private void testAdapterWorkflowPredict(Channel channel, String workflow, String adapter)
             throws InterruptedException {
+        logTestFunction();
         String url = "/predictions/" + workflow;
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
@@ -942,6 +885,7 @@ public class ModelServerTest {
     }
 
     private void testAdapterInvoke(Channel channel) throws InterruptedException {
+        logTestFunction();
         String url = "/invocations?model_name=adaptecho&adapter=adaptable";
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
@@ -955,22 +899,16 @@ public class ModelServerTest {
     }
 
     private void testAdapterList(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/adaptecho/adapters"));
+        logTestFunction();
+        request(channel, HttpMethod.GET, "/models/adaptecho/adapters");
 
         ListAdaptersResponse resp = JsonUtils.GSON.fromJson(result, ListAdaptersResponse.class);
         assertTrue(resp.getAdapters().stream().anyMatch(a -> "adaptable".equals(a.getName())));
     }
 
     private void testAdapterDescribe(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.GET,
-                        "/models/adaptecho/adapters/adaptable"));
+        logTestFunction();
+        request(channel, HttpMethod.GET, "/models/adaptecho/adapters/adaptable");
 
         DescribeAdapterResponse resp =
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
@@ -979,12 +917,8 @@ public class ModelServerTest {
     }
 
     private void testAdapterScale(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.PUT,
-                        "/models/adaptecho?min_worker=4&max_worker=4"));
+        logTestFunction();
+        request(channel, HttpMethod.PUT, "/models/adaptecho?min_worker=4&max_worker=4");
 
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(
@@ -998,30 +932,30 @@ public class ModelServerTest {
     }
 
     private void testAdapterUnregister(Channel channel) throws InterruptedException {
-        String url = "/models/adaptecho/adapters/adaptable";
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.DELETE, url));
+        logTestFunction();
+        request(channel, HttpMethod.DELETE, "/models/adaptecho/adapters/adaptable");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/predictions/mlp"));
+        logTestFunction();
+        request(channel, HttpMethod.OPTIONS, "/predictions/mlp");
 
         assertEquals(result, "{}\n");
     }
 
     private void testStaticHtmlRequest() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
+        request(channel, HttpMethod.GET, "/");
 
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
     private void testPredictionsInvalidRequestSize(Channel channel) throws InterruptedException {
+        logTestFunction();
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/mlp");
@@ -1035,12 +969,11 @@ public class ModelServerTest {
     }
 
     private void testInvalidUri() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/InvalidUrl"));
+        request(channel, HttpMethod.GET, "/InvalidUrl");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1052,12 +985,11 @@ public class ModelServerTest {
     }
 
     private void testInvalidKServeDescribeModel() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/res"));
+        request(channel, HttpMethod.GET, "/v2/models/res");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1071,13 +1003,11 @@ public class ModelServerTest {
     }
 
     private void testInvalidDescribeModel() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "/predictions/InvalidModel"));
+        request(channel, HttpMethod.OPTIONS, "/predictions/InvalidModel");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1089,12 +1019,11 @@ public class ModelServerTest {
     }
 
     private void testInvalidPredictionsUri() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions"));
+        request(channel, HttpMethod.GET, "/predictions");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1106,13 +1035,11 @@ public class ModelServerTest {
     }
 
     private void testPredictionsModelNotFound() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.INFERENCE);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/predictions/InvalidModel"));
+        request(channel, HttpMethod.GET, "/predictions/InvalidModel");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1124,12 +1051,11 @@ public class ModelServerTest {
     }
 
     private void testInvalidManagementUri() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/InvalidUrl"));
+        request(channel, HttpMethod.GET, "/InvalidUrl");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1141,12 +1067,11 @@ public class ModelServerTest {
     }
 
     private void testInvalidManagementMethod() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/models"));
+        request(channel, HttpMethod.PUT, "/models");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1158,12 +1083,11 @@ public class ModelServerTest {
     }
 
     private void testInvalidPredictionsMethod() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models/noop"));
+        request(channel, HttpMethod.POST, "/models/noop");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1175,13 +1099,11 @@ public class ModelServerTest {
     }
 
     private void testDescribeModelNotFound() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/models/InvalidModel"));
+        request(channel, HttpMethod.GET, "/models/InvalidModel");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1193,12 +1115,11 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelMissingUrl() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        HttpRequest req =
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/models");
-        request(channel, req);
+        request(channel, HttpMethod.POST, "/models");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1210,11 +1131,10 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelNotFound() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
-        String uri = "/models?url=InvalidUrl";
-        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri);
-        request(channel, req);
+        request(channel, HttpMethod.POST, "/models?url=InvalidUrl");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1226,6 +1146,7 @@ public class ModelServerTest {
     }
 
     private void testRegisterModelConflict() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
@@ -1250,12 +1171,11 @@ public class ModelServerTest {
     }
 
     private void testScaleModelNotFound() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/models/fake"));
+        request(channel, HttpMethod.PUT, "/models/fake");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1267,13 +1187,11 @@ public class ModelServerTest {
     }
 
     private void testUnregisterModelNotFound() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/fake"));
+        request(channel, HttpMethod.DELETE, "/models/fake");
         channel.closeFuture().sync();
         channel.close().sync();
 
@@ -1285,15 +1203,11 @@ public class ModelServerTest {
     }
 
     private void testServiceUnavailable() throws InterruptedException {
+        logTestFunction();
         Channel channel = connect(Connector.ConnectorType.MANAGEMENT);
         assertNotNull(channel);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.PUT,
-                        "/models/mlp_2?min_worker=0&max_worker=0"));
+        request(channel, HttpMethod.PUT, "/models/mlp_2?min_worker=0&max_worker=0");
 
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
@@ -1313,41 +1227,31 @@ public class ModelServerTest {
     }
 
     private void testKServeV2HealthReady(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/ready"));
+        logTestFunction();
+        request(channel, HttpMethod.GET, "/v2/health/ready");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2HealthLive(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/health/live"));
+        logTestFunction();
+        request(channel, HttpMethod.GET, "/v2/health/live");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2ModelReady(Channel channel) throws InterruptedException {
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.GET, "/v2/models/mlp/ready"));
+        logTestFunction();
+        request(channel, HttpMethod.GET, "/v2/models/mlp/ready");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2Infer(Channel channel) throws InterruptedException {
-        String url = "file:src/test/resources/identity";
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1,
-                        HttpMethod.POST,
-                        "/models?model_name=identity&min_worker=1&url="
-                                + URLEncoder.encode(url, StandardCharsets.UTF_8)));
+        logTestFunction();
+        String url = URLEncoder.encode("file:src/test/resources/identity", StandardCharsets.UTF_8);
+        url = "/models?model_name=identity&min_worker=1&url=" + url;
+        request(channel, HttpMethod.POST, url);
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
 
         DefaultFullHttpRequest req =
@@ -1381,10 +1285,7 @@ public class ModelServerTest {
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         request(channel, req);
 
-        request(
-                channel,
-                new DefaultFullHttpRequest(
-                        HttpVersion.HTTP_1_1, HttpMethod.DELETE, "/models/identity"));
+        request(channel, HttpMethod.DELETE, "/models/identity");
         assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
     }
 
@@ -1393,12 +1294,7 @@ public class ModelServerTest {
         for (int i = 0; i < 5; ++i) {
             String token = "";
             while (token != null) {
-                request(
-                        channel,
-                        new DefaultFullHttpRequest(
-                                HttpVersion.HTTP_1_1,
-                                HttpMethod.GET,
-                                "/workflows?limit=1&next_page_token=" + token));
+                request(channel, HttpMethod.GET, "/workflows?limit=1&next_page_token=" + token);
 
                 ListWorkflowsResponse resp =
                         JsonUtils.GSON.fromJson(result, ListWorkflowsResponse.class);
@@ -1414,6 +1310,18 @@ public class ModelServerTest {
         return false;
     }
 
+    private void logTestFunction() {
+        StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+        StackTraceElement e = stacktrace[2];
+        String methodName = e.getMethodName();
+        logger.info("======== Running {}() ========", methodName);
+    }
+
+    private void request(Channel channel, HttpMethod method, String url)
+            throws InterruptedException {
+        request(channel, new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, url));
+    }
+
     private void request(Channel channel, HttpRequest req) throws InterruptedException {
         reset();
         channel.writeAndFlush(req).sync();
@@ -1425,8 +1333,6 @@ public class ModelServerTest {
     }
 
     private Channel connect(Connector.ConnectorType type, int mode) {
-        Logger logger = LoggerFactory.getLogger(ModelServerTest.class);
-
         final Connector connector = configManager.getConnector(type);
         try {
             Bootstrap b = new Bootstrap();
@@ -1493,7 +1399,6 @@ public class ModelServerTest {
         /** {@inheritDoc} */
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            Logger logger = LoggerFactory.getLogger(TestHandler.class);
             logger.error("Unknown exception", cause);
             ctx.close();
             countDown();
