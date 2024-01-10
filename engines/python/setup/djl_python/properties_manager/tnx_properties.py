@@ -44,6 +44,7 @@ TNX_SUPPORTED_ROLLING_BATCH_TYPES = ['auto']
 class TransformerNeuronXProperties(Properties):
     """Transformer neuronx related configurations"""
     neuron_optimize_level: Optional[OptimizeLevel] = None
+    enable_mixed_precision_accumulation: bool = False
     dtype: Dtype = Dtype.f32
     n_positions: int = 128
     unroll: Optional[str] = None
@@ -59,8 +60,17 @@ class TransformerNeuronXProperties(Properties):
 
     @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
+        if "NEURON_CC_FLAGS" not in os.environ:
+            os.environ["NEURON_CC_FLAGS"] = ""
         os.environ[
             "NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + f" -O{level}"
+
+    @validator('enable_mixed_precision_accumulation')
+    def set_mixed_precision_accumulation(cls, enablement):
+        if "NEURON_CC_FLAGS" not in os.environ:
+            os.environ["NEURON_CC_FLAGS"] = ""
+        os.environ["NEURON_CC_FLAGS"] = os.environ[
+            "NEURON_CC_FLAGS"] + f" --enable-mixed-precision-accumulation"
 
     @validator('context_length_estimate', pre=True)
     def parse_context_length(cls, context_length_estimate):

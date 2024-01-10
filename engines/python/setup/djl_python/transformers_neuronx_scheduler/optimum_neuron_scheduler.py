@@ -24,7 +24,7 @@ from transformers.generation import GenerationConfig
 
 from djl_python.rolling_batch.rolling_batch import Request
 from djl_python.transformers_neuronx_scheduler.token_selector import TokenSelector
-from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText
+from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText, TokenDecoder
 
 
 class Slot:
@@ -51,6 +51,7 @@ class Slot:
         self._generated_tokens = 0
         self._next_token_text = ""
         self._cache_id = torch.zeros(1)
+        self._token_decoder = None
 
     @property
     def id(self) -> int:
@@ -76,7 +77,12 @@ class Slot:
     def generated_tokens(self) -> torch.LongTensor:
         return self._generated_tokens
 
-    def assign(self, request: Request, generation_config: GenerationConfig):
+    @property
+    def decoder(self) -> TokenDecoder:
+        return self._token_decoder
+
+    def assign(self, request: Request, generation_config: GenerationConfig,
+               tokenizer):
         """Assign a request to a slot.
 
         Args:
@@ -84,6 +90,8 @@ class Slot:
                 The request to be assigned. Contains the inputs and tokens selection parameters.
             generation_config (`transformers.GenerationConfig`):
                 The base generation config (might be modified by the request generation parameters).
+            tokenizer:
+                The tokenizer used to decode token.
         """
         self._state = Slot.State.READY
         self._request_id = request.id
@@ -102,6 +110,7 @@ class Slot:
         self._generation_config.max_new_tokens = param.get(
             "max_new_tokens", 30)
         # TODO: stop_sequences, ignore_eos_token
+        self._token_decoder = TokenDecoder(tokenizer)
 
     def reset(self, input_ids, attention_mask, selector, cache_id):
         """Reset the slot for the next generation.
@@ -256,7 +265,7 @@ class NeuronGenerator:
         prefill_slots = []
         for request in new_requests:
             slot = empty_slots.pop()
-            slot.assign(request, self.model.generation_config)
+            slot.assign(request, self.model.generation_config, self.tokenizer)
             prefill_slots.append(slot)
             logging.debug(
                 f"Request {slot.request_id} assigned to slot {slot.id}")
@@ -366,14 +375,7 @@ class NeuronGenerator:
             next_token_logits = outputs.logits[i:i + 1, -1, :]
             slot_input_ids = input_ids[i:i + 1, :]
             next_token = slot.select(slot_input_ids, next_token_logits)
-            next_token_text = self.tokenizer.decode(next_token)
-            if not slot.generated_text.endswith(
-                    " ") and not next_token_text.startswith(" "):
-                # Some tokenizers do not prepend spaces automatically when decoding a single token
-                contextual_text = self.tokenizer.decode(
-                    [slot.next_token, next_token])
-                if contextual_text[:-len(next_token_text)].endswith(" "):
-                    next_token_text = " " + next_token_text
+            next_token_text = slot.decoder.decode(next_token.item())
             slot.trim_cache_id()
             slot.append(next_token, next_token_text)
             generated_text = None
@@ -381,7 +383,7 @@ class NeuronGenerator:
             if next_token == self.tokenizer.eos_token_id:
                 finish_reason = FinishReason.FINISH_REASON_EOS_TOKEN
             elif slot.stopped:
-                finish_reason = FinishReason.FINISH_REASON_STOP_SEQUENCE
+                finish_reason = FinishReason.FINISH_REASON_LENGTH
             if finish_reason is not None:
                 # We must include the generated text for each finished sequence in the response
                 generated_text = GeneratedText(
