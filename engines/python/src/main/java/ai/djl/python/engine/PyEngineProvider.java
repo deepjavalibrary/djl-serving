@@ -20,7 +20,8 @@ public class PyEngineProvider implements EngineProvider {
 
     private static final String ENGINE_NAME = "Python";
 
-    private Engine engine;
+    private volatile Engine engine; // NOPMD
+    private volatile boolean initialized; // NOPMD
     protected boolean mpiMode;
 
     /** {@inheritDoc} */
@@ -38,10 +39,13 @@ public class PyEngineProvider implements EngineProvider {
     /** {@inheritDoc} */
     @Override
     public Engine getEngine() {
-        if (engine == null) {
+        if (!initialized) {
             synchronized (this) {
-                PyEnv.init();
-                engine = new PyEngine(getEngineName(), mpiMode);
+                if (!initialized) {
+                    initialized = true;
+                    PyEnv.init();
+                    engine = new PyEngine(getEngineName(), mpiMode);
+                }
             }
         }
         return engine;
