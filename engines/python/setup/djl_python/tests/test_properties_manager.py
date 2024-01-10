@@ -116,7 +116,9 @@ class TestConfigManager(unittest.TestCase):
             "low_cpu_mem_usage": "true",
             'context_length_estimate': '256, 512, 1024',
             "task": "feature-extraction",
-            "save_mp_checkpoint_path": "/path/to/checkpoint"
+            "save_mp_checkpoint_path": "/path/to/checkpoint",
+            "neuron_optimize_level": 3,
+            "enable_mixed_precision_accumulation": "true"
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -134,6 +136,9 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(tnx_configs.task, properties['task'])
         self.assertEqual(tnx_configs.save_mp_checkpoint_path,
                          properties['save_mp_checkpoint_path'])
+        neuron_cc = os.environ["NEURON_CC_FLAGS"]
+        self.assertTrue("-O3" in neuron_cc)
+        self.assertTrue("--enable-mixed-precision-accumulation" in neuron_cc)
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):

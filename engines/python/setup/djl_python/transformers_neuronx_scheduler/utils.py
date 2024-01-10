@@ -15,7 +15,6 @@ from typing import Optional
 
 
 class FinishReason(str, Enum):
-
     FINISH_REASON_LENGTH = 0
     FINISH_REASON_EOS_TOKEN = 1
     FINISH_REASON_STOP_SEQUENCE = 2
@@ -49,3 +48,37 @@ class GeneratedText(object):
         self.generated_tokens = generated_tokens
         self.finish_reason = finish_reason
         self.seed = seed
+
+
+class TokenDecoder:
+
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+        self.prefix_offset = 0
+        self.read_offset = 0
+        self.all_input_ids = []
+
+    def _decode_token(self) -> str:
+        """Hack to hopefully support generate_stream for the maximum number of tokenizers"""
+        # The prefix text is necessary only to defeat cleanup algorithms in the decode
+        # which decide to add a space or not depending on the surrounding ids.
+        prefix_text = self.tokenizer.decode(
+            self.all_input_ids[self.prefix_offset:self.read_offset],
+            skip_special_tokens=False)
+        new_text = self.tokenizer.decode(
+            self.all_input_ids[self.prefix_offset:], skip_special_tokens=False)
+        if len(new_text) > len(prefix_text) and not new_text.endswith("�"):
+            # utf-8 char at the end means it's a potential unfinished byte sequence
+            # from byte fallback tokenization.
+            # If it's in the middle, it's probably a real invalid id generated
+            # by the model
+            new_text = new_text[len(prefix_text):]
+            self.prefix_offset = self.read_offset
+            self.read_offset = len(self.all_input_ids)
+            return new_text
+        else:
+            return ""
+
+    def decode(self, token_id: int):
+        self.all_input_ids.append(token_id)
+        return self._decode_token()

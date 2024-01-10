@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import torch
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NeuronGenerator
@@ -59,10 +60,17 @@ class NeuronRollingBatch(RollingBatch):
                 if not is_last_token:
                     req_ids.append(request.id)
 
+                token_id = generation.token_id
+                log_prob = generation.token_logprob
+                if isinstance(token_id, torch.Tensor):
+                    token_id = token_id.item()
+                if isinstance(log_prob, torch.Tensor):
+                    log_prob = log_prob.item()
+
                 token = Token(
-                    generation.token_id, ""
+                    token_id, ""
                     if generation.token_is_special else generation.token_text,
-                    generation.token_logprob, generation.token_is_special)
+                    log_prob, generation.token_is_special)
                 request.set_next_token(token,
                                        self.output_formatter,
                                        last_token=is_last_token,
