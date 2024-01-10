@@ -227,6 +227,8 @@ class RollingBatch(ABC):
             self.output_formatter = _jsonlines_output_formatter
         elif "none" == formatter:
             pass
+        elif callable(formatter):
+            self.output_formatter = formatter
         else:
             # TODO: allows to load custom formatter from a module
             logging.warning(f"Unsupported formatter: {formatter}")

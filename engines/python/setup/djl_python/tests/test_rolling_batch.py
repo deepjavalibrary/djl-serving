@@ -1,6 +1,7 @@
 import json
 import unittest
-from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter
+from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter, \
+    RollingBatch
 
 
 class TestRollingBatch(unittest.TestCase):
@@ -111,6 +112,54 @@ class TestRollingBatch(unittest.TestCase):
             "details": {
                 "finish_reason": "length"
             }
+        }
+
+    def test_custom_fmt(self):
+
+        def custom_fmt(token: Token, first_token: bool, last_token: bool,
+                       details: dict, generated_tokens: str):
+            result = {"token_id": token.id, "token_text": token.text}
+            if last_token:
+                result["finish_reason"] = details["finish_reason"]
+            return json.dumps(result) + "\n"
+
+        class CustomRB(RollingBatch):
+
+            def preprocess_requests(self, requests):
+                pass
+
+            def postprocess_results(self):
+                pass
+
+            def inference(self, input_data, parameters):
+                pass
+
+        rb = CustomRB(output_formatter=custom_fmt)
+
+        req = Request(0, "This is a wonderful day", {
+            "max_new_tokens": 256,
+            "details": True
+        })
+        final_str = []
+        req.set_next_token(Token(244, "He", -0.334532), rb.output_formatter)
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            'token_id': 244,
+            'token_text': 'He'
+        }
+        req.set_next_token(Token(576, "llo", -0.123123), rb.output_formatter)
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            'token_id': 576,
+            'token_text': 'llo'
+        }
+        req.set_next_token(Token(4558, " world", -0.567854),
+                           rb.output_formatter, True, 'length')
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            'token_id': 4558,
+            'token_text': ' world',
+            'finish_reason': 'length'
         }
 
 
