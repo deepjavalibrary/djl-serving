@@ -166,7 +166,9 @@ public final class DependencyManager {
         // refresh EngineProvider
         MutableClassLoader mcl = MutableClassLoader.getInstance();
         for (EngineProvider provider : ServiceLoader.load(EngineProvider.class, mcl)) {
-            Engine.registerEngine(provider);
+            if (!Engine.hasEngine(provider.getEngineName())) {
+                Engine.registerEngine(provider);
+            }
         }
 
         // refresh ZooProvider
