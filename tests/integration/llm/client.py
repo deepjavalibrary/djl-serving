@@ -135,7 +135,7 @@ hf_model_spec = {
         "worker": 2,
     },
     "gpt4all-lora": {
-        "max_memory_per_gpu": [8.0, 10.0],
+        "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
