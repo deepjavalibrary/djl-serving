@@ -401,8 +401,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                     if (first) {
                         code = output.getCode();
                         status = new HttpResponseStatus(code, output.getMessage());
-                        HttpResponse resp =
-                                new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, true);
+                        HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
                         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
                             resp.headers().set(entry.getKey(), entry.getValue());
                         }
@@ -429,7 +428,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
         if (data instanceof PublisherBytesSupplier) {
             long begin = System.nanoTime();
-            HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status, true);
+            HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
             for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
                 resp.headers().set(entry.getKey(), entry.getValue());
             }
@@ -457,7 +456,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             return;
         }
 
-        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, true);
+        FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
         for (Map.Entry<String, String> entry : output.getProperties().entrySet()) {
             resp.headers().set(entry.getKey(), entry.getValue());
         }
