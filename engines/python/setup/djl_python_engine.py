@@ -112,6 +112,10 @@ class PythonEngine(object):
             if self.tensor_parallel_degree:
                 prop["tensor_parallel_degree"] = self.tensor_parallel_degree
             prop["device_id"] = self.device_id
+            if "output_formatter" in prop and hasattr(
+                    self.service, prop["output_formatter"]):
+                prop["output_formatter"] = getattr(self.service,
+                                                   prop["output_formatter"])
             function_name = inputs.get_function_name()
             try:
                 outputs = self.service.invoke_handler(function_name, inputs)
