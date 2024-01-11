@@ -12,8 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import os
 from enum import Enum
-from typing import Optional
-
+from typing import Optional, Union, Callable
 from pydantic import BaseModel, root_validator, validator, Field
 
 
@@ -57,7 +56,7 @@ class Properties(BaseModel):
     max_rolling_batch_size: Optional[int] = 32
     dtype: Optional[str] = None
     revision: Optional[str] = None
-    output_formatter: Optional[str] = None
+    output_formatter: Optional[Union[str, Callable]] = None
     waiting_steps: Optional[int] = None
     is_mpi: bool = False
 
