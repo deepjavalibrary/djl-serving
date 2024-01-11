@@ -118,7 +118,8 @@ class TestConfigManager(unittest.TestCase):
             "task": "feature-extraction",
             "save_mp_checkpoint_path": "/path/to/checkpoint",
             "neuron_optimize_level": 3,
-            "enable_mixed_precision_accumulation": "true"
+            "enable_mixed_precision_accumulation": "true",
+            "group_query_attention": "shard-over-heads",
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -139,6 +140,8 @@ class TestConfigManager(unittest.TestCase):
         neuron_cc = os.environ["NEURON_CC_FLAGS"]
         self.assertTrue("-O3" in neuron_cc)
         self.assertTrue("--enable-mixed-precision-accumulation" in neuron_cc)
+        self.assertTrue(tnx_configs.group_query_attention,
+                        properties['group_query_attention'])
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):
@@ -183,10 +186,16 @@ class TestConfigManager(unittest.TestCase):
             with self.assertRaises(ValueError):
                 TransformerNeuronXProperties(**rb_properties)
 
+        def test_invalid_gqa_value(gqa):
+            properties["group_query_attention"] = gqa
+            with self.assertRaises(ValueError):
+                TransformerNeuronXProperties(**common_properties, **properties)
+
         test_url_not_s3_uri("https://random.url.address/")
         test_non_existent_directory("not_a_directory")
         test_invalid_context_length("invalid")
         test_invalid_batch_sizes_rolling_batch()
+        test_invalid_gqa_value("invalid")
 
     def test_trtllm_configs(self):
         properties = {
