@@ -131,11 +131,18 @@ class TNXModelLoader(ModelLoader):
         # Continuous batching requires positions and estimates as lists instead of int
         if self.config.rolling_batch != "disable":
             model_kwargs["n_positions"] = [self.config.n_positions]
-            if self.config.context_length_estimate is not None and type(
-                    self.config.context_length_estimate) is not list:
+            if self.config.context_length_estimate is None:
                 model_kwargs["context_length_estimate"] = [
-                    self.config.context_length_estimate
+                    self.config.n_positions
                 ]
+            elif self.config.context_length_estimate != [
+                    self.config.n_positions
+            ]:
+                raise RuntimeError(
+                    f"context_length_estimate {self.config.context_length_estimate}"
+                    f" need to be the same as n_positions {self.config.n_positions}"
+                    f" You can also unset option.context_length_estimate to make continuous batching to work"
+                )
         return model_kwargs
 
     def update_model_config_to_neuron(self):

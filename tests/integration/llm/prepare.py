@@ -497,6 +497,23 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 2,
         "option.dtype": "bf16",
         "option.use_stable_diffusion": True
+    },
+    "llama-7b-rb": {
+        "option.model_id": "s3://djl-llm/llama-2-7b-split-inf2/split-model/",
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 512,
+        "option.max_rolling_batch_size": 4,
+        "option.rolling_batch": 'auto',
+        "option.model_loading_timeout": 2400,
+        "option.load_split_model": True
+    },
+    "mistral-7b-rb": {
+        "option.model_id": "s3://djl-llm/mistral-7b/",
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 512,
+        "option.max_rolling_batch_size": 4,
+        "option.rolling_batch": 'auto',
+        "option.model_loading_timeout": 2400
     }
 }
 

@@ -294,6 +294,16 @@ transformers_neuronx_model_spec = {
         "seq_length": [128, 256],
         "batch_size": [4],
     },
+    "mistral-7b-rb": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
+    },
+    "llama-7b-rb": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    }
 }
 
 transformers_neuronx_aot_model_spec = {
@@ -1014,6 +1024,8 @@ if __name__ == "__main__":
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)
+    elif args.handler == "transformers_neuronx_rolling_batch":
+        test_handler_rolling_batch(args.model, transformers_neuronx_model_spec)
     elif args.handler == "transformers_neuronx-aot":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_aot_model_spec)
