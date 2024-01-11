@@ -513,8 +513,7 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 512,
         "option.max_rolling_batch_size": 4,
         "option.rolling_batch": 'auto',
-        "option.model_loading_timeout": 2400,
-        "option.load_split_model": True
+        "option.model_loading_timeout": 2400
     }
 }
 
