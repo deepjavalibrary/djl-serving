@@ -115,6 +115,11 @@ class TNXModelLoader(ModelLoader):
         if self.config.load_in_8bit:
             neuron_config["quant"] = QuantizationConfig(
                 quant_dtype="s8", dequant_dtype=self.config.amp)
+
+        if self.config.group_query_attention is not None:
+            neuron_config[
+                "group_query_attention"] = self.config.group_query_attention
+
         self.neuron_config = NeuronConfig(**neuron_config)
 
     def get_model_specific_kwargs(self):

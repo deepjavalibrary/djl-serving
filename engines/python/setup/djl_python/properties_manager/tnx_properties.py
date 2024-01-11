@@ -38,6 +38,13 @@ class TnXQuantizeMethods(str, Enum):
     static_int8 = 'static_int8'
 
 
+class TnXGQAMethods(str, Enum):
+    shard_over_heads = 'shard-over-heads'
+    shard_over_batch = 'shard-over-batch'
+    replicated_heads = 'replicated-heads'
+    all_gather_heads = 'all-gather-heads'
+
+
 TNX_SUPPORTED_ROLLING_BATCH_TYPES = ['auto']
 
 
@@ -57,6 +64,7 @@ class TransformerNeuronXProperties(Properties):
     compiled_graph_path: Optional[str] = None
     task: Optional[str] = None
     save_mp_checkpoint_path: Optional[str] = None
+    group_query_attention: Optional[str] = None
 
     @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
@@ -119,6 +127,19 @@ class TransformerNeuronXProperties(Properties):
                 path = os.path.join(os.getcwd(), path)
         os.environ["NEURON_COMPILE_CACHE_URL"] = path
         return path
+
+    @validator('group_query_attention')
+    def validate_gqa(cls, gqa: str) -> str:
+        """
+        Transformers neuronx supports GQA for Llama and Mistral model variants.
+        We validate here that the value provided maps to a known GQA type support by transformers neuronx
+        """
+        try:
+            return TnXGQAMethods(gqa).value
+        except ValueError:
+            raise ValueError(
+                f"{gqa} is not a valid value for group_query_attention. "
+                f"Supported values are: {[v.value for v in TnXGQAMethods]}")
 
     @root_validator()
     def set_amp_value(cls, properties):
