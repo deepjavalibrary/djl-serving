@@ -528,6 +528,18 @@ trtllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "Qwen/Qwen-7B"
     },
+    "gpt2": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "gpt2"
+    },
+    "santacoder": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "bigcode/santacoder"
+    },
     "llama2-70b": {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],

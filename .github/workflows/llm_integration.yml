@@ -767,6 +767,28 @@ jobs:
           python3 llm/client.py trtllm chatglm3-6b
           rm -rf docker_env
           docker rm -f $(docker ps -aq)
+      - name: GPT2 HF model with tp=4
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
+          python3 llm/prepare.py trtllm gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
+          serve
+          python3 llm/client.py trtllm gpt2
+          rm -rf docker_env
+          docker rm -f $(docker ps -aq)
+      - name: SantaCoder HF model with tp=4
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
+          python3 llm/prepare.py trtllm santacoder
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
+          serve
+          python3 llm/client.py trtllm santacoder
+          rm -rf docker_env
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
