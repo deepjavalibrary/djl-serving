@@ -505,7 +505,8 @@ transformers_neuronx_handler_list = {
         "option.max_rolling_batch_size": 4,
         "option.rolling_batch": 'auto',
         "option.model_loading_timeout": 2400,
-        "option.load_split_model": True
+        "option.load_split_model": True,
+        "option.output_formatter": "jsonlines"
     },
     "mistral-7b-rb": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
@@ -513,7 +514,8 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 512,
         "option.max_rolling_batch_size": 4,
         "option.rolling_batch": 'auto',
-        "option.model_loading_timeout": 2400
+        "option.model_loading_timeout": 2400,
+        "option.output_formatter": "jsonlines"
     }
 }
 

@@ -796,7 +796,7 @@ def test_handler_rolling_batch(model, model_spec):
     # dryrun phase
     req = {"inputs": batch_generation(1)[0]}
     seq_length = 100
-    params = {"do_sample": True, "max_new_tokens": seq_length}
+    params = {"do_sample": True, "max_new_tokens": seq_length, "details": True}
     req["parameters"] = params
     logging.info(f"req {req}")
     res = send_json(req)
