@@ -781,6 +781,22 @@ trtllm_handler_list = {
         "option.trust_remote_code": True,
         "option.output_formatter": "jsonlines"
     },
+    "gpt2": {
+        "option.model_id": "gpt2",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 16,
+        "option.trust_remote_code": True,
+        "option.max_draft_len": 20,
+        "option.output_formatter": "jsonlines"
+    },
+    "santacoder": {
+        "option.model_id": "bigcode/santacoder",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 16,
+        "option.trust_remote_code": True,
+        "option.gpt_model_version": "santacoder",
+        "option.output_formatter": "jsonlines"
+    },
     "llama2-70b": {
         "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
         "option.tensor_parallel_degree": 8,
