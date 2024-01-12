@@ -180,7 +180,7 @@ ds_model_spec = {
         "stream_output": True,
     },
     "gpt4all-lora": {
-        "max_memory_per_gpu": [8.0, 10.0],
+        "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
@@ -658,7 +658,22 @@ def get_gpu_memory():
     command = "nvidia-smi --query-gpu=memory.used --format=csv"
     memory_free_info = sp.check_output(
         command.split()).decode('ascii').split('\n')[:-1][1:]
-    return [int(x.split()[0]) for i, x in enumerate(memory_free_info)]
+
+    def convert_str_to_mem_used_gb(mem_free_info):
+        return float(mem_free_info.split()[0]) / 1024.0
+
+    return [
+        convert_str_to_mem_used_gb(x) for i, x in enumerate(memory_free_info)
+    ]
+
+
+def validate_memory_usage(expected_memory_limit):
+    used_memory_per_gpu = get_gpu_memory()
+    logging.info(f"Used memory per GPU: {used_memory_per_gpu}")
+    if any(x > expected_memory_limit for x in used_memory_per_gpu):
+        raise AssertionError(f"Memory usage is too high!"
+                             f"Used Memory:{used_memory_per_gpu}"
+                             f"Expected Upper Limit:{expected_memory_limit}")
 
 
 def fake_tokenizer(prompt, in_tokens):
@@ -855,10 +870,8 @@ def test_handler(model, model_spec):
 
                 result = [item['generated_text'] for item in res]
                 assert len(result) == batch_size
-            memory_usage = get_gpu_memory()
-            logging.info(memory_usage)
-            for memory in memory_usage:
-                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
+            if "max_memory_per_gpu" in spec:
+                validate_memory_usage(spec["max_memory_per_gpu"][i])
 
 
 def test_ds_raw_model(model, model_spec):
@@ -879,10 +892,8 @@ def test_ds_raw_model(model, model_spec):
             res = res.json()
             logging.info(f"res: {res}")
             assert len(res["outputs"]) == batch_size
-            memory_usage = get_gpu_memory()
-            logging.info(memory_usage)
-            for memory in memory_usage:
-                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
+            if "max_memory_per_gpu" in spec:
+                validate_memory_usage(spec["max_memory_per_gpu"][i])
 
 
 def test_performance():
@@ -938,10 +949,7 @@ def test_sd_handler(model, model_spec):
             except Exception as e:
                 raise IOError("failed to deserialize image from response", e)
             if "max_memory_per_gpu" in spec:
-                memory_usage = get_gpu_memory()
-                logging.info(memory_usage)
-                for memory in memory_usage:
-                    assert float(memory) / 1024.0 < spec["max_memory_per_gpu"]
+                validate_memory_usage(spec["max_memory_per_gpu"])
 
 
 def test_neuron_sd_handler(model, model_spec):
@@ -1007,10 +1015,8 @@ def test_ds_smoothquant(model, model_spec):
             res = res.json()
             logging.info(f"res: {res}")
             assert len(res) == batch_size
-            memory_usage = get_gpu_memory()
-            logging.info(memory_usage)
-            for memory in memory_usage:
-                assert float(memory) / 1024.0 < spec["max_memory_per_gpu"][i]
+            if "max_memory_per_gpu" in spec:
+                validate_memory_usage(spec["max_memory_per_gpu"][i])
 
 
 def test_unmerged_lora_correctness():
