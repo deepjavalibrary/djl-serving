@@ -70,7 +70,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_inferentia2.sh && \
     pip install transformers==${transformers_version} accelerate==${accelerate_version} safetensors \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
-    neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece \
+    neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece jinja2 \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
     pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} && \
     scripts/install_s5cmd.sh x64 && \

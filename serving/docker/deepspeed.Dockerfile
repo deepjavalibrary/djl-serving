@@ -92,7 +92,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     ${deepspeed_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow \
+    optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     pip3 cache purge
 
