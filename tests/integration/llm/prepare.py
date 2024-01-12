@@ -627,7 +627,15 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 2,
         "option.max_rolling_batch_size": 4,
         "option.quantize": "awq"
-    }
+    },
+    "mistral-7b-lora": {
+        "option.model_id":
+        "agi-collective/mistral-7b-oh-siglip-so400m-finetune-lora",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 2,
+        "option.max_rolling_batch_size": 4,
+        "option.peft_model": True
+    },
 }
 
 vllm_model_list = {

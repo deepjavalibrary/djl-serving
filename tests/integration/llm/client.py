@@ -391,7 +391,13 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "mistralai/Mistral-7B-v0.1"
-    }
+    },
+    "mistral-7b-lora": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1],
+        "seq_length": [64, 128, 256],
+        "tokenizer": "teknium/OpenHermes-2.5-Mistral-7B"
+    },
 }
 
 vllm_model_spec = {

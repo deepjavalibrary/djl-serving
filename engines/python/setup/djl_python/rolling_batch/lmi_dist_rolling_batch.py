@@ -66,7 +66,8 @@ class LmiDistRollingBatch(RollingBatch):
             sharded=sharded,
             quantize=quantize,
             dtype=self.lmi_dist_configs.dtype,
-            trust_remote_code=self.lmi_dist_configs.trust_remote_code)
+            trust_remote_code=self.lmi_dist_configs.trust_remote_code,
+            peft_model=self.lmi_dist_configs.peft_model)
         self.batch_cls = self.model.batch_type
         self._warmup()
 
