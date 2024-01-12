@@ -35,6 +35,7 @@ ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp310
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp310-cp310-linux_x86_64.whl"
 ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp310-cp310-linux_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn-2.3.0-cp310-cp310-linux_x86_64.whl"
+ARG lmi_vllm_wheel="https://publish.djl.ai/lmi_vllm/lmi_vllm-0.1.1-cp310-cp310-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG awq_wheel="https://publish.djl.ai/awq/awq_inference_engine-0.0.0-cp310-cp310-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
@@ -58,6 +59,11 @@ ENV HF_HOME=/tmp/.cache/huggingface
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV BITSANDBYTES_NOWELCOME=1
 ENV USE_AICCL_BACKEND=true
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
+ENV SAFETENSORS_FAST_GPU=1
+ENV NCCL_BLOCKING_WAIT=0
+ENV NCCL_ASYNC_ERROR_HANDLING=1
+ENV TORCH_NCCL_AVOID_RECORD_STREAMS=1
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
@@ -84,7 +90,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
 
 RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
     ${deepspeed_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
-    transformers==${transformers_version} zstandard datasets==${datasets_version} \
+    transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
