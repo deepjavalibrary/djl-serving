@@ -118,7 +118,11 @@ class TestRollingBatch(unittest.TestCase):
 
         def custom_fmt(token: Token, first_token: bool, last_token: bool,
                        details: dict, generated_tokens: str):
-            result = {"token_id": token.id, "token_text": token.text}
+            result = {
+                "token_id": token.id,
+                "token_text": token.text,
+                "request_id": token.request_id
+            }
             if last_token:
                 result["finish_reason"] = details["finish_reason"]
             return json.dumps(result) + "\n"
@@ -136,7 +140,7 @@ class TestRollingBatch(unittest.TestCase):
 
         rb = CustomRB(output_formatter=custom_fmt)
 
-        req = Request(0, "This is a wonderful day", {
+        req = Request(132, "This is a wonderful day", {
             "max_new_tokens": 256,
             "details": True
         })
@@ -145,13 +149,15 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             'token_id': 244,
-            'token_text': 'He'
+            'token_text': 'He',
+            "request_id": 132
         }
         req.set_next_token(Token(576, "llo", -0.123123), rb.output_formatter)
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             'token_id': 576,
-            'token_text': 'llo'
+            'token_text': 'llo',
+            "request_id": 132
         }
         req.set_next_token(Token(4558, " world", -0.567854),
                            rb.output_formatter, True, 'length')
@@ -159,7 +165,8 @@ class TestRollingBatch(unittest.TestCase):
         assert json.loads(req.get_next_token()) == {
             'token_id': 4558,
             'token_text': ' world',
-            'finish_reason': 'length'
+            'finish_reason': 'length',
+            "request_id": 132
         }
 
 
