@@ -40,6 +40,7 @@ class Token(object):
         self.text = text
         self.log_prob = log_prob
         self.special_token = special_token
+        self.request_id = None
 
     def as_dict(self):
         output = {}
@@ -143,6 +144,7 @@ class Request(object):
         """
         if isinstance(next_token, str):
             next_token = Token(-1, next_token)
+        next_token.request_id = self.id
         if self.token_cache is not None:
             self.token_cache.append(next_token.as_dict())
         self.generated_tokens.append(next_token.text)
