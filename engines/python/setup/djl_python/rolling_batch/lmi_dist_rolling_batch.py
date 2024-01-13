@@ -196,7 +196,7 @@ class LmiDistRollingBatch(RollingBatch):
             stop_parameters = StoppingCriteriaParameters(
                 stop_sequences=param.get("stop_sequences", []),
                 max_new_tokens=param.get("max_new_tokens", 30),
-                ignore_eos_token=param.get("ignore_eos_token", True))
+                ignore_eos_token=param.get("ignore_eos_token", False))
 
             request = lmi_dist.utils.types.Request(
                 id=r.id,
