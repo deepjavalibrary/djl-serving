@@ -14,7 +14,7 @@ FROM nvidia/cuda:$version
 ARG cuda_version=cu122
 ARG python_version=3.10
 ARG TORCH_VERSION=2.1.0
-ARG djl_version=0.26.0~SNAPSHOT
+ARG djl_version=0.26.0
 ARG transformers_version=4.36.2
 ARG accelerate_version=0.25.0
 ARG tensorrtlibs_version=9.2.0.post12.dev5
