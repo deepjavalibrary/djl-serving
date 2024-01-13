@@ -27,7 +27,7 @@ ARG optimum_version=1.15.0
 ARG auto_gptq_version=0.5.1
 ARG datasets_version=2.15.0
 # DeepSpeed Deps
-ARG deepspeed_version=nightly
+ARG deepspeed_version=0.12.6
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
 # LMI-Dist Deps
 ARG vllm_version=0.2.7
