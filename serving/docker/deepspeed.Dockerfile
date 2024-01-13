@@ -40,7 +40,7 @@ ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-an
 ARG awq_wheel="https://publish.djl.ai/awq/awq_inference_engine-0.0.0-cp310-cp310-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
-ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-nightly-py3-none-any.whl"
+ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-1.0.0-py3-none-any.whl"
 ARG aiccl_wheel="https://publish.djl.ai/aiccl/aiccl-1.0%2Bcu121torch2.1-cp310-cp310-linux_x86_64.whl"
 
 EXPOSE 8080
