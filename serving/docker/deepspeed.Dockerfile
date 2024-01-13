@@ -12,7 +12,7 @@
 ARG version=12.1.1-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu121
-ARG djl_version=0.26.0~SNAPSHOT
+ARG djl_version=0.26.0
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.1.2
@@ -27,7 +27,7 @@ ARG optimum_version=1.15.0
 ARG auto_gptq_version=0.5.1
 ARG datasets_version=2.15.0
 # DeepSpeed Deps
-ARG deepspeed_version=nightly
+ARG deepspeed_version=0.12.6
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
 # LMI-Dist Deps
 ARG vllm_version=0.2.7
@@ -40,7 +40,7 @@ ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-an
 ARG awq_wheel="https://publish.djl.ai/awq/awq_inference_engine-0.0.0-cp310-cp310-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
-ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-nightly-py3-none-any.whl"
+ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-1.0.0-py3-none-any.whl"
 ARG aiccl_wheel="https://publish.djl.ai/aiccl/aiccl-1.0%2Bcu121torch2.1-cp310-cp310-linux_x86_64.whl"
 
 EXPOSE 8080
