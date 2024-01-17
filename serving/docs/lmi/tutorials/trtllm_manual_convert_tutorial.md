@@ -267,3 +267,25 @@ option.model_id=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
 option.tensor_parallel_degree=2
 option.max_rolling_batch_size=64
 ```
+
+If you plan to put everything to S3 in either compressed or uncompressed model artifacts, it should look like the followings:
+
+```
+├── serving.properties
+└── tensorrt_llm
+    ├── 1
+    │   ├── baichuan_float16_tp2_rank0.engine
+    │   ├── baichuan_float16_tp2_rank1.engine
+    │   ├── config.json
+    │   └── model.cache
+    ├── config.json
+    ├── config.pbtxt
+    ├── configuration_baichuan.py
+    ├── generation_config.json
+    ├── pytorch_model.bin.index.json
+    ├── requirements.txt
+    ├── special_tokens_map.json
+    ├── tokenization_baichuan.py
+    ├── tokenizer_config.json
+    └── tokenizer.model
+```
