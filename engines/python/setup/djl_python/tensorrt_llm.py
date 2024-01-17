@@ -69,12 +69,21 @@ class TRTLLMService(object):
 
         return input_data, input_size, parameters, errors, batch
 
+
+def is_broken_input_data(input_data):
+    if len(input_data) > 0 and isinstance(input_data[0],
+                                          dict) and input_data != [{
+                                              'inputs': ''
+                                          }]:
+        return True
+    return False
+
     def inference(self, inputs):
         outputs = Output()
 
         input_data, input_size, parameters, errors, batch = self.parse_input(
             inputs)
-        if len(input_data) == 0:
+        if len(input_data) == 0 or is_broken_input_data(input_data):
             for i in range(len(batch)):
                 err = errors.get(i)
                 err = {"data": "", "last": True, "code": 424, "error": err}
