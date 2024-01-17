@@ -246,9 +246,7 @@ class Connection {
                             protected void initChannel(Channel ch) {
                                 ch.pipeline()
                                         .addLast("encoder", new RequestEncoder())
-                                        .addLast(
-                                                "decoder",
-                                                new OutputDecoder(CodecUtils.MAX_BUFFER_SIZE))
+                                        .addLast("decoder", new OutputDecoder())
                                         .addLast("handler", requestHandler);
                             }
                         });
@@ -377,8 +375,11 @@ class Connection {
         private boolean hasMoreChunk;
         private ChunkedBytesSupplier data;
 
-        OutputDecoder(int maxBufferSize) {
-            this.maxBufferSize = maxBufferSize;
+        OutputDecoder() {
+            String val =
+                    Utils.getEnvOrSystemProperty(
+                            "MAX_NETTY_BUFFER_SIZE", String.valueOf(CodecUtils.MAX_BUFFER_SIZE));
+            this.maxBufferSize = Integer.parseInt(val);
         }
 
         /** {@inheritDoc} */
