@@ -250,16 +250,16 @@ aws s3 ls s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/baichuan-13b-chat/
 
 ## Load on SageMaker LMI container
 
-Finally, you can use the following configuration to load your model on SageMaker:
+Finally, you can use one of the following configuration to load your model on SageMaker:
 
-Environment variables:
+ ### 1. Environment variables:
 ```
 OPTION_MODEL_ID=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
 OPTION_TENSOR_PARALLEL_DEGREE=2
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
 
-Or `serving.properties`:
+### 2. `serving.properties`:
 
 ```
 engine=MPI
@@ -267,3 +267,49 @@ option.model_id=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
 option.tensor_parallel_degree=2
 option.max_rolling_batch_size=64
 ```
+
+### 3. extracted model artifacts:
+
+`serving.properties`:
+```
+engine=MPI
+option.rolling_batch=trtllm
+option.dtype=fp16
+option.tensor_parallel_degree=2
+```
+
+Artifacts need to be in the following structure:
+
+Mount sould be to `/opt/ml/model/`
+```
+├── serving.properties
+└── tensorrt_llm
+    ├── 1
+    │   ├── baichuan_float16_tp2_rank0.engine
+    │   ├── baichuan_float16_tp2_rank1.engine
+    │   ├── config.json
+    │   └── model.cache
+    ├── config.json
+    ├── config.pbtxt
+    ├── configuration_baichuan.py
+    ├── generation_config.json
+    ├── pytorch_model.bin.index.json
+    ├── requirements.txt
+    ├── special_tokens_map.json
+    ├── tokenization_baichuan.py
+    ├── tokenizer_config.json
+    └── tokenizer.model
+```
+
+`config.pbtxt`:
+Make sure to update `gpt_model_path` to the correct path including parent folder name (`/opt/ml/model/tensorrt_llm/1`)
+
+```
+parameters: {
+  key: "gpt_model_path"
+  value: {
+    string_value: "/opt/ml/model/tensorrt_llm/1"
+  }
+}
+```
+
