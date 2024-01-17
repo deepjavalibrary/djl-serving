@@ -8,7 +8,7 @@
     "build:test": "cross-env NODE_ENV='test' vue-cli-service build"
   },
   "dependencies": {
-    "axios": "^0.21.0",
+    "axios": "^1.6.5",
     "core-js": "^3.24.0",
     "element-ui": "^2.15.6",
     "js-md5": "^0.7.3",
