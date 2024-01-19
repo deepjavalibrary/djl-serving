@@ -39,6 +39,8 @@ Output schema: {
 }
 ```
 
+In the output, details will be generated, only if `details=True` is sent in the input. 
+
 #### When rolling batch is disabled
 ```
 Output schema: {
@@ -82,7 +84,8 @@ LmiDistRollingBatchParameters : {
     'stop_sequences' : list (default = None),
     'max_new_tokens' : integer (default = 30),
     'details' : boolean (default = false),
-    'truncate' : integer (default = None)
+    'truncate' : integer (default = None),
+    'ignore_eos_token' : boolean (default = false)
 }
 ```
 
@@ -96,7 +99,7 @@ vLLMRollingBatchParameters : {
     'repetition_penalty': float (default= 1.0),
     'top_k' : integer (default = 0), 
     'top_p' : float (default= 1.0),
-    'stop' : list,
+    'stop_sequences' : list,
     'max_new_tokens' : integer (default = 30),
     'details' : boolean (default = false),
     'best_of' : int (default = None),
@@ -106,7 +109,7 @@ vLLMRollingBatchParameters : {
     'use_beam_search': boolean (default = false),
     'stop_token_ids': list (default = None),
     'include_stop_str_in_output' : boolean (default = false),
-    'ignore_eos' : boolean (default = false),
+    'ignore_eos_token' : boolean (default = false),
     'logprobs' : int (default = None),
     'prompt_logprobs' : int (default = None),
     'skip_special_tokens': boolean (default = true),
@@ -124,9 +127,9 @@ TensorRTLLMRollingBatchParameters : {
     'top_p' : float (default= 0.85),
     'seed' : integer (default = None),
     'details' : boolean (default = false),
-    'return_log_probs' : boolean,
     'stop' : boolean, 
-    'len_penalty' : float, 
+    'presence_penalty': float,
+    'length_penalty' : float, 
     'stop_words_list' : list, 
     'bad_words_list' : list, 
     'min_length' : integer
