@@ -725,6 +725,7 @@ trtllm_handler_list = {
     "llama2-13b": {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
     },
     "falcon-7b": {
@@ -733,6 +734,7 @@ trtllm_handler_list = {
         "option.max_input_len": 1024,
         "option.max_output_len": 512,
         "option.max_rolling_batch_size": 16,
+        "option.rolling_batch": "auto",
         "option.output_formatter": "jsonlines",
     },
     "llama2-7b-smoothquant": {
@@ -741,6 +743,7 @@ trtllm_handler_list = {
         "option.quantize": "smoothquant",
         "option.smoothquant_per_token": "True",
         "option.smoothquant_per_channel": "True",
+        "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
     },
     "internlm-7b": {
@@ -766,6 +769,7 @@ trtllm_handler_list = {
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
         "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines"
     },
     "gpt-j-6b": {
@@ -774,6 +778,7 @@ trtllm_handler_list = {
         "option.max_input_len": 256,
         "option.max_output_len": 256,
         "option.max_rolling_batch_size": 16,
+        "option.rolling_batch": "auto",
         "option.output_formatter": "jsonlines"
     },
     "qwen-7b": {
