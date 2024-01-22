@@ -384,7 +384,7 @@ public class ModelServerTest {
     private void testPing(Channel channel) throws InterruptedException {
         request(channel, HttpMethod.GET, "/ping");
 
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertNotNull(resp);
         assertTrue(headers.contains("x-request-id"));
@@ -504,11 +504,11 @@ public class ModelServerTest {
         String url = "file:src/test/resources/identity";
         url = "/models?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8);
         request(channel, HttpMethod.POST, url);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
 
         request(channel, HttpMethod.GET, "/models/identity");
 
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         Type type = new TypeToken<DescribeWorkflowResponse[]>() {}.getType();
         DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
         DescribeWorkflowResponse wf = resp[0];
@@ -521,7 +521,7 @@ public class ModelServerTest {
 
         // unregister identity model
         request(channel, HttpMethod.DELETE, "/models/identity");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
     }
 
     private void testRegisterModelTranslator(Channel channel)
@@ -707,14 +707,14 @@ public class ModelServerTest {
         String url = URLEncoder.encode("file:src/test/resources/echo", StandardCharsets.UTF_8);
         url = "/models?model_name=echo&job_queue_size=10&url=" + url;
         request(channel, HttpMethod.POST, url);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
 
         // send request
         url = "/predictions/echo?stream=true&delay=1";
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         req.headers().add("x-synchronous", "false");
         request(channel, req);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         String nextToken = headers.get("x-next-token");
         assertNotNull(nextToken);
 
@@ -729,7 +729,10 @@ public class ModelServerTest {
                 req.headers().add("x-max-items", "1");
             }
             request(channel, req);
-            assertTrue(httpStatus.code() < 300);
+            if (httpStatus.code() >= 300) {
+                logger.error("Expected 2XX, actual: {}, result: {}", httpStatus, result);
+                Assert.fail();
+            }
             if (firstToken.isEmpty()) {
                 firstToken = result;
             }
@@ -739,7 +742,7 @@ public class ModelServerTest {
 
         // Unregister model
         request(channel, HttpMethod.DELETE, "/models/echo");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
     }
 
     private void testDjlModelZoo(Channel channel) throws InterruptedException {
@@ -758,7 +761,7 @@ public class ModelServerTest {
         String url = URLEncoder.encode("file:src/test/resources/echo", StandardCharsets.UTF_8);
         url = "/models?model_name=echo&url=" + url;
         request(channel, HttpMethod.POST, url);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
 
         url = "/predictions/echo?delay=1000";
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
@@ -774,7 +777,7 @@ public class ModelServerTest {
         Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
         if (CudaUtils.getGpuCount() <= 1) {
             // one request is not able to saturate workers in multi-GPU case
-            assertEquals(httpStatus.code(), 503);
+            assertHttpCode(503);
         }
 
         // wait for 1st response
@@ -783,7 +786,7 @@ public class ModelServerTest {
 
         // Unregister model
         request(channel, HttpMethod.DELETE, "/models/echo");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
     }
 
     private void testAdapterRegister(Channel channel) throws InterruptedException {
@@ -791,14 +794,14 @@ public class ModelServerTest {
         String url = URLEncoder.encode("file:src/test/resources/adaptecho", StandardCharsets.UTF_8);
         url = "/models?model_name=adaptecho&url=" + url;
         request(channel, HttpMethod.POST, url);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
 
         // Test Missing Adapter before registering
         testAdapterMissing();
 
         url = "/models/adaptecho/adapters?name=" + "adaptable" + "&src=" + "src";
         request(channel, HttpMethod.POST, url);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
     }
 
     private void testAdapterMissing() throws InterruptedException {
@@ -817,7 +820,7 @@ public class ModelServerTest {
         channel.close().sync();
 
         if (!System.getProperty("os.name").startsWith("Win")) {
-            assertEquals(httpStatus.code(), 503);
+            assertHttpCode(503);
         }
     }
 
@@ -840,7 +843,7 @@ public class ModelServerTest {
         channel.close().sync();
 
         if (!System.getProperty("os.name").startsWith("Win")) {
-            assertEquals(httpStatus.code(), 400);
+            assertHttpCode(400);
         }
     }
 
@@ -853,7 +856,7 @@ public class ModelServerTest {
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
         request(channel, req);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         assertEquals(result, "adaptabletestPredictAdapter");
     }
 
@@ -866,7 +869,7 @@ public class ModelServerTest {
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
         request(channel, req);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         assertEquals(result, "myBuiltinAdaptertestPredictBuiltinAdapter");
     }
 
@@ -880,7 +883,7 @@ public class ModelServerTest {
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
         request(channel, req);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         assertEquals(result, adapter + "testAWP");
     }
 
@@ -894,7 +897,7 @@ public class ModelServerTest {
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
         request(channel, req);
 
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         assertEquals(result, "adaptabletestInvokeAdapter");
     }
 
@@ -934,7 +937,7 @@ public class ModelServerTest {
     private void testAdapterUnregister(Channel channel) throws InterruptedException {
         logTestFunction();
         request(channel, HttpMethod.DELETE, "/models/adaptecho/adapters/adaptable");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
     }
 
     private void testDescribeApi(Channel channel) throws InterruptedException {
@@ -951,7 +954,7 @@ public class ModelServerTest {
 
         request(channel, HttpMethod.GET, "/");
 
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
     }
 
     private void testPredictionsInvalidRequestSize(Channel channel) throws InterruptedException {
@@ -965,7 +968,7 @@ public class ModelServerTest {
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
         request(channel, req);
 
-        assertEquals(httpStatus, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+        assertHttpCode(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE.code());
     }
 
     private void testInvalidUri() throws InterruptedException {
@@ -996,7 +999,7 @@ public class ModelServerTest {
         if (!System.getProperty("os.name").startsWith("Win")) {
             Type type = new TypeToken<HashMap<String, String>>() {}.getType();
             Map<String, String> map = JsonUtils.GSON.fromJson(result, type);
-            assertEquals(httpStatus.code(), HttpResponseStatus.NOT_FOUND.code());
+            assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
             String errorMsg = "Model not found: res";
             assertEquals(map.get("error"), errorMsg);
         }
@@ -1013,7 +1016,7 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            assertEquals(resp.getCode(), HttpResponseStatus.NOT_FOUND.code());
+            assertHttpCode(HttpResponseStatus.NOT_FOUND.code());
             assertEquals(resp.getMessage(), "Model or workflow not found: InvalidModel");
         }
     }
@@ -1229,21 +1232,21 @@ public class ModelServerTest {
     private void testKServeV2HealthReady(Channel channel) throws InterruptedException {
         logTestFunction();
         request(channel, HttpMethod.GET, "/v2/health/ready");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2HealthLive(Channel channel) throws InterruptedException {
         logTestFunction();
         request(channel, HttpMethod.GET, "/v2/health/live");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         assertTrue(headers.contains("x-request-id"));
     }
 
     private void testKServeV2ModelReady(Channel channel) throws InterruptedException {
         logTestFunction();
         request(channel, HttpMethod.GET, "/v2/models/mlp/ready");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
         assertTrue(headers.contains("x-request-id"));
     }
 
@@ -1252,7 +1255,7 @@ public class ModelServerTest {
         String url = URLEncoder.encode("file:src/test/resources/identity", StandardCharsets.UTF_8);
         url = "/models?model_name=identity&min_worker=1&url=" + url;
         request(channel, HttpMethod.POST, url);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
 
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(
@@ -1275,7 +1278,7 @@ public class ModelServerTest {
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
         request(channel, req);
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
 
         req =
                 new DefaultFullHttpRequest(
@@ -1286,7 +1289,7 @@ public class ModelServerTest {
         request(channel, req);
 
         request(channel, HttpMethod.DELETE, "/models/identity");
-        assertEquals(httpStatus.code(), HttpResponseStatus.OK.code());
+        assertHttpOk();
     }
 
     private boolean checkWorkflowRegistered(Channel channel, String workflowName)
@@ -1326,6 +1329,17 @@ public class ModelServerTest {
         reset();
         channel.writeAndFlush(req).sync();
         Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
+    }
+
+    private void assertHttpOk() {
+        assertHttpCode(HttpResponseStatus.OK.code());
+    }
+
+    private void assertHttpCode(int code) {
+        if (httpStatus.code() != code) {
+            logger.error("Expected {}, actual: {}, result: {}", code, httpStatus, result);
+            Assert.fail();
+        }
     }
 
     private Channel connect(Connector.ConnectorType type) {
