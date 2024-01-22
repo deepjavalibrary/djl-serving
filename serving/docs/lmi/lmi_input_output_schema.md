@@ -39,6 +39,8 @@ Output schema: {
 }
 ```
 
+In the output, details will be generated, only if `details=True` is sent in the input. 
+
 #### When rolling batch is disabled
 ```
 Output schema: {
@@ -47,21 +49,28 @@ Output schema: {
 ```
 When providing inputs following the input schema as a string, the output's generated text will be a string. Alternatively, if the inputs are in the form of a list, the generated text will be returned as a list, with each result corresponding to the input items in the list.
 
+### Common rolling batch input parameters
+```
+    'temperature' : float (default= 1.0),
+    'repetition_penalty': float (default= 1.0),
+    'top_k' : integer (default = 0), 
+    'top_p' : float (default= 1.0),
+    'max_new_tokens' : integer (default = 30),
+    'details' : boolean (default = false, details only available for rolling batch),
+```
+
+Note: For TensorRTLLM handler, it also has all the common parameters, but it uses different default values. Kindly check below to know the TensorRT LLM default values. 
+
+Apart from these common parameters, there are other parameters that are specific to each handler. 
 
 ### DeepSpeed rolling batch input parameters schema
 
 ```
 DeepSpeedRollingBatchParameters : {
-    'temperature' : float (default= 1.0),
-    'repetition_penalty': float (default= 1.0),
-    'top_k' : integer (default = 0), 
-    'top_p' : float (default= 1.0),
     'typical_p' : float (default= 1.0),
     'do_sample' : boolean (default = False), 
     'seed' : integer (default = 0),
     'stop_sequences' : list (default = None),
-    'max_new_tokens' : integer (default = 30),
-    'details' : boolean (default = false, details only available for rolling batch),
     'truncate' : integer (default = None),
 }
 ```
@@ -72,17 +81,12 @@ DeepSpeedRollingBatchParameters : {
 
 ```
 LmiDistRollingBatchParameters : {
-    'temperature' : float (default= 1.0),
-    'repetition_penalty': float (default= 1.0),
-    'top_k' : integer (default = 0), 
-    'top_p' : float (default= 1.0),
     'typical_p' : float (default= 1.0),
     'do_sample' : boolean (default = false), 
     'seed' : integer (default = 0),
     'stop_sequences' : list (default = None),
-    'max_new_tokens' : integer (default = 30),
-    'details' : boolean (default = false),
-    'truncate' : integer (default = None)
+    'truncate' : integer (default = None),
+    'ignore_eos_token' : boolean (default = false)
 }
 ```
 
@@ -92,13 +96,7 @@ LmiDistRollingBatchParameters : {
 
 ```
 vLLMRollingBatchParameters : {
-    'temperature' : float (default= 1.0),
-    'repetition_penalty': float (default= 1.0),
-    'top_k' : integer (default = 0), 
-    'top_p' : float (default= 1.0),
-    'stop' : list,
-    'max_new_tokens' : integer (default = 30),
-    'details' : boolean (default = false),
+    'stop_sequences' : list,
     'best_of' : int (default = None),
     'min_p': float (default = 0.0),
     'presence_penalty': float (default = 0.0),
@@ -106,7 +104,7 @@ vLLMRollingBatchParameters : {
     'use_beam_search': boolean (default = false),
     'stop_token_ids': list (default = None),
     'include_stop_str_in_output' : boolean (default = false),
-    'ignore_eos' : boolean (default = false),
+    'ignore_eos_token' : boolean (default = false),
     'logprobs' : int (default = None),
     'prompt_logprobs' : int (default = None),
     'skip_special_tokens': boolean (default = true),
@@ -116,17 +114,20 @@ vLLMRollingBatchParameters : {
 
 ### TensorRTLLM rolling batch input parameters schema
 
+For TensorRTLLM handler, it also has all the common parameters, but it uses different default values. 
+
 ```
 TensorRTLLMRollingBatchParameters : {
     'temperature' : float (default= 0.8),
     'repetition_penalty' : float (default = None),
+    'max_new_tokens' : integer (default = 128),
     'top_k' : integer (default = 5), 
     'top_p' : float (default= 0.85),
     'seed' : integer (default = None),
     'details' : boolean (default = false),
-    'return_log_probs' : boolean,
     'stop' : boolean, 
-    'len_penalty' : float, 
+    'presence_penalty': float,
+    'length_penalty' : float, 
     'stop_words_list' : list, 
     'bad_words_list' : list, 
     'min_length' : integer

@@ -64,6 +64,17 @@ class VLLMRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
         super().reset()
 
+    def translate_vllm_params(self, parameters):
+        parameters.pop('seed', None)
+        parameters.pop('do_sample', None)
+        if "max_new_tokens" in parameters.keys():
+            parameters["max_tokens"] = parameters.pop("max_new_tokens")
+        if "stop_sequences" in parameters.keys():
+            parameters["stop"] = parameters.pop("stop_sequences")
+        if "ignore_eos_token" in parameters.keys():
+            parameters["ignore_eos"] = parameters.pop("ignore_eos")
+        return parameters
+
     @stop_on_any_exception
     def inference(self, input_data, parameters):
         batch_size = len(input_data)
@@ -72,12 +83,8 @@ class VLLMRollingBatch(RollingBatch):
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()
-            request.parameters.pop('seed', None)
-            request.parameters.pop('do_sample', None)
-            if "max_new_tokens" in request.parameters.keys():
-                request.parameters["max_tokens"] = request.parameters.pop(
-                    "max_new_tokens")
-            sampling_params = SamplingParams(**request.parameters)
+            params = self.translate_vllm_params(request.parameters)
+            sampling_params = SamplingParams(**params)
             self.engine.add_request(request_id, request.input_text,
                                     sampling_params)
             self.request_cache[request_id] = {
