@@ -129,6 +129,7 @@ public class ModelServerTest {
     volatile CountDownLatch latch;
     volatile CountDownLatch latch2;
     volatile HttpResponseStatus httpStatus;
+    volatile HttpResponseStatus httpStatus2;
     volatile String result;
     volatile HttpHeaders headers;
 
@@ -777,7 +778,7 @@ public class ModelServerTest {
         Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
         if (CudaUtils.getGpuCount() <= 1) {
             // one request is not able to saturate workers in multi-GPU case
-            assertHttpCode(503);
+            Assert.assertEquals(httpStatus2.code(), 503);
         }
 
         // wait for 1st response
@@ -1338,6 +1339,7 @@ public class ModelServerTest {
     private void assertHttpCode(int code) {
         if (httpStatus.code() != code) {
             logger.error("Expected {}, actual: {}, result: {}", code, httpStatus, result);
+            logger.error("", new Exception());
             Assert.fail();
         }
     }
@@ -1404,7 +1406,11 @@ public class ModelServerTest {
         /** {@inheritDoc} */
         @Override
         public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
-            httpStatus = msg.status();
+            if (mode == 0) {
+                httpStatus = msg.status();
+            } else {
+                httpStatus2 = msg.status();
+            }
             result = msg.content().toString(StandardCharsets.UTF_8);
             headers = msg.headers();
             countDown();
