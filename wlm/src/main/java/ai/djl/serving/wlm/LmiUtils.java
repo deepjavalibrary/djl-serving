@@ -93,6 +93,9 @@ public final class LmiUtils {
 
     static boolean isTrtLLM(ModelInfo<?, ?> info) {
         String rollingBatch = info.prop.getProperty("option.rolling_batch");
+        if ("trtllm".equals(rollingBatch)) {
+            return true;
+        }
         if (rollingBatch == null || "auto".equals(rollingBatch)) {
             // FIXME: find a better way to set default rolling batch for trtllm
             String features = Utils.getenv("SERVING_FEATURES");
