@@ -1409,6 +1409,7 @@ public class ModelServerTest {
             if (mode == 0) {
                 httpStatus = msg.status();
             } else {
+                logger.info("received response: {}", msg.status());
                 httpStatus2 = msg.status();
             }
             result = msg.content().toString(StandardCharsets.UTF_8);
