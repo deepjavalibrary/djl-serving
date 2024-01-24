@@ -29,6 +29,8 @@ class VllmRbProperties(Properties):
     quantize: Optional[VllmQuantizeMethods] = None
     tensor_parallel_degree: Optional[int] = None
     max_rolling_batch_prefill_tokens: Optional[int] = None
+    # Adjustable prefix model length for certain 32k or longer model
+    max_model_len: Optional[int] = None
 
     @validator('engine')
     def validate_engine(cls, engine):
