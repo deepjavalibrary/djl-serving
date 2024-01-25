@@ -98,6 +98,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Engine engine;
     private transient boolean initialize;
 
+    private ModelInfo() {}
+
     /**
      * Constructs a new {@code ModelInfo} instance.
      *
@@ -233,10 +235,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     builder.optArgument("batchifier", "stack");
                 }
             }
-            logger.info("Loading model {} on {}", id, device);
+            logger.info("Loading model {} {} on {}", id, uid, device);
             if ("nc".equals(device.getDeviceType()) && "PyTorch".equals(engineName)) {
                 // assume neuron only support PyTorch
-                logger.info("Bypass NC core allocation");
+                logger.info("{}: Bypass NC core allocation", uid);
             } else {
                 builder.optDevice(device);
             }
@@ -339,7 +341,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 String def = Utils.getenv("SERVING_RETRY_THRESHOLD", "10");
                 int threshold = Integer.parseInt(m.getProperty("retry_threshold", def));
                 if (failures > threshold) {
-                    logger.info("exceed retry threshold: {}, mark model as failed.", threshold);
+                    logger.info(
+                            "{}: exceed retry threshold: {}, mark model as failed.",
+                            uid,
+                            threshold);
                     return Status.FAILED;
                 }
             }
@@ -550,7 +555,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     @Override
     public void close() {
         if (!getModels().isEmpty() && !Boolean.getBoolean("ai.djl.serving.keep_cache")) {
-            logger.info("Unloading model: {}{}", id, version == null ? "" : '/' + version);
+            logger.info("Unloading model: {}", this);
             if (downloadDir != null) {
                 Utils.deleteQuietly(downloadDir);
             }
@@ -653,7 +658,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     return Engine.getDefaultEngineName();
                 }
             } catch (IOException e) {
-                logger.warn("Failed search parameter files in folder: " + modelDir, e);
+                logger.warn(uid + ": Failed search parameter files in folder: {}", modelDir, e);
             }
         }
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
@@ -688,7 +693,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 try (InputStream is = Files.newInputStream(file)) {
                     prop.load(is);
                 } catch (IOException e) {
-                    logger.warn("Failed read serving.properties file", e);
+                    logger.warn(uid + ": Failed read serving.properties file", e);
                 }
             }
             configPerModelSettings();
@@ -749,9 +754,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         logger.info(
-                "Apply per model settings:\n\tjob_queue_size: {}\n\tbatch_size: {}"
+                "{}: Apply per model settings:\n\tjob_queue_size: {}\n\tbatch_size: {}"
                         + "\n\tmax_batch_delay: {}\n\tmax_idle_time: {}\n\tload_on_devices: {}"
                         + "\n\tengine: {}\n\tmpi_mode: {}\n\toption.entryPoint: {}{}",
+                uid,
                 queueSize,
                 batchSize,
                 maxBatchDelayMillis,
@@ -792,7 +798,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             // 1. handle LMI use case in future
             // 2. if huggingface model_id is specified, the model is downloaded
             // in the python process, current file size based estimation doesn't work
-            logger.warn("No reserved_memory_mb defined, estimating memory usage ...");
+            logger.warn("{}: No reserved_memory_mb defined, estimating memory usage ...", uid);
             try (Stream<Path> walk = Files.walk(modelDir)) {
                 requiredMemory = walk.mapToLong(ModelInfo::getFileSize).sum();
             }
@@ -807,7 +813,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         // Assume requires the same amount of CPU memory when load on GPU
         long free = getAvailableCpuMemory();
         logger.info(
-                "Available CPU memory: {} MB, required: {} MB, reserved: {} MB",
+                "{}: Available CPU memory: {} MB, required: {} MB, reserved: {} MB",
+                uid,
                 free / 1024 / 1024,
                 requiredMemory / 1024 / 1024,
                 reservedMemory / 1024 / 1024);
@@ -827,7 +834,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 requiredMemory = gpuMem;
             }
             logger.info(
-                    "Available GPU memory: {} MB, required: {} MB, reserved: {} MB",
+                    "{}: Available GPU memory: {} MB, required: {} MB, reserved: {} MB",
+                    uid,
                     free / 1024 / 1024,
                     requiredMemory / 1024 / 1024,
                     reservedMemory / 1024 / 1024);
@@ -940,9 +948,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         return Long.parseLong(m.group(1)) * 1024;
                     }
                 }
-                logger.warn("Failed to read free memory from /proc/meminfo");
+                logger.warn("{}: Failed to read free memory from /proc/meminfo", uid);
             } catch (IOException e) {
-                logger.warn("Failed open /proc/meminfo file", e);
+                logger.warn(uid + ": Failed open /proc/meminfo file", e);
             }
         }
         return Integer.MAX_VALUE * 1024L;
@@ -962,7 +970,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             return;
         }
         if (modelId.startsWith("s3://")) {
-            logger.info("S3 url found, start downloading from {}", modelId);
+            logger.info("{}: S3 url found, start downloading from {}", uid, modelId);
             // Use fixed download path to avoid repeat download
             String hash = Utils.hash(modelId);
             String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
@@ -970,7 +978,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             parent = parent.resolve("download");
             this.downloadDir = parent.resolve(hash);
             if (Files.exists(this.downloadDir)) {
-                logger.info("artifacts has been downloaded already: {}", this.downloadDir);
+                logger.info("{}: artifacts has been downloaded already: {}", uid, this.downloadDir);
                 return;
             }
             Files.createDirectories(parent);
@@ -978,12 +986,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             try {
                 downloadS3(modelId, tmp.toAbsolutePath().toString());
                 Utils.moveQuietly(tmp, this.downloadDir);
-                logger.info("Download completed! Files saved to {}", this.downloadDir);
+                logger.info("{}: Download completed! Files saved to {}", uid, this.downloadDir);
             } finally {
                 Utils.deleteQuietly(tmp);
             }
         } else if (modelId.startsWith("djl://")) {
-            logger.info("djl model zoo url found: {}", modelId);
+            logger.info("{}: djl model zoo url found: {}", uid, modelId);
             modelUrl = modelId;
             // download real model from model zoo
             downloadModel();

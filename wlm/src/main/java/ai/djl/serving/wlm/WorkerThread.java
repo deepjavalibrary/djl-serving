@@ -14,6 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Device;
 import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
+import ai.djl.serving.wlm.util.AutoIncIdGenerator;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.wlm.util.WorkerJob;
 import ai.djl.translate.TranslateException;
@@ -35,8 +36,7 @@ import java.util.stream.Collectors;
 public final class WorkerThread<I, O> implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerThread.class);
-
-    private String workerName;
+    private static final AutoIncIdGenerator ID_GEN = new AutoIncIdGenerator("WT-");
 
     private ThreadConfig<I, O> threadConfig;
     private AtomicBoolean running = new AtomicBoolean(true);
@@ -46,7 +46,7 @@ public final class WorkerThread<I, O> implements Runnable {
     private Device device;
     private AtomicReference<Thread> currentThread = new AtomicReference<>();
     private WorkerState state;
-    private int workerId;
+    private String workerId;
     private long startTime;
     private boolean fixPoolThread;
     private long stateChangeTime;
@@ -57,21 +57,26 @@ public final class WorkerThread<I, O> implements Runnable {
      * @param builder build a new worker thread using this builder.
      */
     private WorkerThread(Builder<I, O> builder) {
-        this.workerName = buildWorkerName(builder.workerPoolConfig);
         this.aggregator = builder.aggregator;
-        this.workerId = new WorkerIdGenerator().generate();
+        this.workerId = ID_GEN.generate();
         this.startTime = System.currentTimeMillis();
         this.fixPoolThread = builder.fixPoolThread;
         this.device = builder.device;
         threadConfig = builder.workerPoolConfig.newThread(device);
         configJobs = new LinkedBlockingDeque<>();
+
+        logger.info(
+                "Starting worker thread {} for model {} on device {}",
+                workerId,
+                builder.workerPoolConfig,
+                device);
     }
 
     /** {@inheritDoc} */
     @Override
     public void run() {
         Thread thread = Thread.currentThread();
-        thread.setName(workerName);
+        thread.setName(workerId);
         currentThread.set(thread);
         this.state = WorkerState.WORKER_STARTED;
         List<Job<I, O>> req = null;
@@ -87,7 +92,7 @@ public final class WorkerThread<I, O> implements Runnable {
                         runJobs(req);
                         aggregator.sendResponse();
                     } catch (TranslateException e) {
-                        logger.warn("Failed to predict", e);
+                        logger.warn("{}: Failed to predict", workerId, e);
                         aggregator.sendError(e);
                     } finally {
                         state = WorkerState.WORKER_STARTED;
@@ -96,12 +101,15 @@ public final class WorkerThread<I, O> implements Runnable {
                 req = null;
             }
         } catch (InterruptedException e) {
-            logger.debug("Shutting down the thread .. Scaling down.");
+            logger.debug("Shutting down worker thread {} .. Scaling down.", workerId);
         } catch (Throwable t) {
-            logger.error("Server error", t);
+            logger.error("{}: Server error", workerId, t);
             errorMessage = t.getMessage();
         } finally {
-            logger.debug("Shutting down worker thread .. {}", currentThread.get().getName());
+            logger.debug(
+                    "Shutting down the worker thread {} .. {}",
+                    workerId,
+                    currentThread.get().getName());
             currentThread.set(null);
             shutdown(WorkerState.WORKER_STOPPED);
             if (req != null) {
@@ -144,8 +152,17 @@ public final class WorkerThread<I, O> implements Runnable {
      *
      * @return the worker thread ID
      */
-    public int getWorkerId() {
+    public String getWorkerId() {
         return workerId;
+    }
+
+    /**
+     * Returns the worker thread ID (number without prefix).
+     *
+     * @return the worker thread ID (number without prefix)
+     */
+    public int getWorkerIdNum() {
+        return ID_GEN.stripPrefix(workerId);
     }
 
     /**
@@ -207,7 +224,7 @@ public final class WorkerThread<I, O> implements Runnable {
             Exception e = new WlmException("Worker shutting down");
             aggregator.sendError(e);
         }
-        logger.info("shutdown temporary worker: {}", workerName);
+        logger.info("Shutting down temporary worker {}", workerId);
         threadConfig.close();
     }
 
@@ -220,16 +237,8 @@ public final class WorkerThread<I, O> implements Runnable {
         configJobs.add(wj);
     }
 
-    private String buildWorkerName(WorkerPoolConfig<I, O> wpc) {
-        String modelId = wpc.getId();
-        if (modelId.length() > 25) {
-            modelId = modelId.substring(0, 25);
-        }
-        return "W-" + modelId + '-' + workerId;
-    }
-
     void setState(WorkerState newState) {
-        logger.debug("{} State change {} -> {}", workerName, state, newState);
+        logger.debug("Worker thread {} has state change: {} -> {}", workerId, state, newState);
         if (state != WorkerState.WORKER_SCALED_DOWN) {
             // Don't update the state if it was terminated on purpose.. Scaling in..
             this.state = newState;

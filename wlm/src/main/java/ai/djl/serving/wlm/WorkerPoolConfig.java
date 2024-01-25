@@ -15,6 +15,7 @@ package ai.djl.serving.wlm;
 import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.serving.wlm.util.AutoIncIdGenerator;
 import ai.djl.translate.TranslateException;
 
 import java.io.IOException;
@@ -34,7 +35,10 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public abstract class WorkerPoolConfig<I, O> {
 
+    private static final AutoIncIdGenerator ID_GEN = new AutoIncIdGenerator("M-");
+
     protected transient String id;
+    protected transient String uid;
     protected String version;
     protected String modelUrl;
     protected int queueSize;
@@ -43,6 +47,10 @@ public abstract class WorkerPoolConfig<I, O> {
     protected int maxIdleSeconds;
     protected Integer minWorkers; // Integer so it becomes null when parsed from JSON
     protected Integer maxWorkers; // Integer so it becomes null when parsed from JSON
+
+    protected WorkerPoolConfig() {
+        uid = ID_GEN.generate();
+    }
 
     /**
      * Loads the worker type to the specified device.
@@ -104,18 +112,27 @@ public abstract class WorkerPoolConfig<I, O> {
     public abstract String[] getLoadOnDevices();
 
     /**
-     * Sets the worker type ID.
+     * Sets the worker configs ID.
      *
-     * @param id the worker type ID
+     * @param id the worker configs ID
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Returns the worker type ID.
+     * Returns the worker configs unique ID.
      *
-     * @return the worker type ID
+     * @return the worker configs unique ID
+     */
+    public String getUid() {
+        return uid;
+    }
+
+    /**
+     * Returns the worker configs ID.
+     *
+     * @return the worker configs ID
      */
     public String getId() {
         return id;
@@ -308,9 +325,9 @@ public abstract class WorkerPoolConfig<I, O> {
     @Override
     public String toString() {
         if (version != null) {
-            return id + ':' + version + " (" + getStatus() + ')';
+            return id + ':' + version + " (" + uid + ", " + getStatus() + ')';
         }
-        return id + " (" + getStatus() + ')';
+        return id + " (" + uid + ", " + getStatus() + ')';
     }
 
     /** An enum represents state of a worker type. */

@@ -97,7 +97,7 @@ public class WorkLoadManager {
         CompletableFuture<O> result = new CompletableFuture<>();
         WorkerPoolConfig<I, O> wpc = job.getWpc();
         if (wpc.getStatus() != WorkerPoolConfig.Status.READY) {
-            result.completeExceptionally(new WlmException("Model is not ready: " + wpc));
+            result.completeExceptionally(new WlmException("Model is not ready: " + wpc.getId()));
             return result;
         }
 
@@ -105,7 +105,8 @@ public class WorkLoadManager {
         int maxWorkers = pool.getMaxWorkers();
         if (maxWorkers == 0) {
             result.completeExceptionally(
-                    new WlmShutdownException("All model workers has been shutdown: " + wpc));
+                    new WlmShutdownException(
+                            "All model workers has been shutdown: " + wpc.getId()));
             return result;
         }
         LinkedBlockingDeque<WorkerJob<I, O>> queue = pool.getJobQueue();
@@ -113,7 +114,8 @@ public class WorkLoadManager {
                 || pool.isAllWorkerDied()
                 || !queue.offer(new WorkerJob<>(job, result))) {
             result.completeExceptionally(
-                    new WlmCapacityException("Worker queue capacity exceeded for model: " + wpc));
+                    new WlmCapacityException(
+                            "Worker queue capacity exceeded for model: " + wpc.getId()));
             scaleUp(pool, wpc, maxWorkers);
             return result;
         }

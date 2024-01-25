@@ -78,7 +78,7 @@ public class DescribeWorkflowResponse {
                     targetWorker += group.getMinWorkers();
 
                     for (WorkerThread<Input, Output> worker : workers) {
-                        int workerId = worker.getWorkerId();
+                        int workerId = worker.getWorkerIdNum();
                         long startTime = worker.getStartTime();
                         boolean isRunning = worker.isRunning();
                         g.addWorker(workerId, startTime, isRunning);
