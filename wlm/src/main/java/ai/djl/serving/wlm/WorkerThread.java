@@ -157,6 +157,15 @@ public final class WorkerThread<I, O> implements Runnable {
     }
 
     /**
+     * Returns the worker thread ID (number without prefix).
+     *
+     * @return the worker thread ID (number without prefix)
+     */
+    public int getWorkerIdNum() {
+        return ID_GEN.stripPrefix(workerId);
+    }
+
+    /**
      * Returns the {@link WorkerPoolConfig}'s {@link ThreadConfig} for this thread.
      *
      * @return the {@link WorkerPoolConfig}'s {@link ThreadConfig} for this thread

@@ -78,7 +78,7 @@ public class DescribeWorkflowResponse {
                     targetWorker += group.getMinWorkers();
 
                     for (WorkerThread<Input, Output> worker : workers) {
-                        String workerId = worker.getWorkerId();
+                        int workerId = worker.getWorkerIdNum();
                         long startTime = worker.getStartTime();
                         boolean isRunning = worker.isRunning();
                         g.addWorker(workerId, startTime, isRunning);
@@ -369,7 +369,7 @@ public class DescribeWorkflowResponse {
          * @param startTime the worker's start time
          * @param isRunning {@code true} if worker is running
          */
-        public void addWorker(String id, long startTime, boolean isRunning) {
+        public void addWorker(int id, long startTime, boolean isRunning) {
             Worker worker = new Worker();
             worker.setId(id);
             worker.setStartTime(new Date(startTime));
@@ -390,7 +390,7 @@ public class DescribeWorkflowResponse {
     /** A class that holds workers information. */
     public static final class Worker {
 
-        private String id;
+        private int id;
         private Date startTime;
         private String status;
 
@@ -399,7 +399,7 @@ public class DescribeWorkflowResponse {
          *
          * @return the worker's ID
          */
-        public String getId() {
+        public int getId() {
             return id;
         }
 
@@ -408,7 +408,7 @@ public class DescribeWorkflowResponse {
          *
          * @param id the workers ID
          */
-        public void setId(String id) {
+        public void setId(int id) {
             this.id = id;
         }
 
