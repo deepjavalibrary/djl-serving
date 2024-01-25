@@ -1,4 +1,4 @@
-# Large Model Inference Containers
+# Large Model Inference Configurations
 
 There are a number of shared configurations for python models running large language models.
 They are also available through the [Large Model Inference Containers](https://github.com/aws/deep-learning-containers/blob/master/available_images.md#large-model-inference-containers).
@@ -81,7 +81,7 @@ If you specify Engine to be MPI, rolling_batch to auto or lmi-dist in DeepSpeed 
 
 ### vLLM 
 
-If you specify Engine to be MPI, rolling_batch to vllm in DeepSpeed container, the following parameters will be accessible.
+If you specify Engine to be Python, rolling_batch to vllm in DeepSpeed container, the following parameters will be accessible.
 
 | Item	                                   | Required	 | Description	                                                                                                                                                                                                                                                                                                                                                                                         | Example value	         |
 |-----------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
