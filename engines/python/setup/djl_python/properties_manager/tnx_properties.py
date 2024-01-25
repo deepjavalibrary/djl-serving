@@ -52,7 +52,7 @@ class TransformerNeuronXProperties(Properties):
     """Transformer neuronx related configurations"""
     neuron_optimize_level: Optional[OptimizeLevel] = None
     enable_mixed_precision_accumulation: bool = False
-    dtype: Dtype = Dtype.f32
+    dtype: Dtype = Dtype.f16
     n_positions: int = 128
     unroll: Optional[str] = None
     load_in_8bit: Optional[bool] = False
