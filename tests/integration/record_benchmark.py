@@ -145,6 +145,11 @@ def data_container():
                 data["image"] = split[1]
             else:
                 data["image"] = "cpu"
+        if "text-generation-inference" in container:
+            data["modelServer"] = "TGI"
+            version = container.split(":")[1]
+            if not version.startswith("sha"):
+                data["tgiVersion"] = version
 
 
 def data_from_model_files():
@@ -155,7 +160,7 @@ def data_from_model_files():
                 properties = {}
                 for line in f.readlines():
                     line = line.strip()
-                    if line[0] == "#":
+                    if len(line) == 0 or line[0] == "#":
                         continue
                     if "=" in line:
                         split = line.split("=", 1)
@@ -177,12 +182,27 @@ def data_from_model_files():
                 req = {}
                 for line in f.readlines():
                     line = line.strip()
-                    if line[0] == "#":
+                    if len(line) == 0 or line[0] == "#":
                         continue
                     if "=" in line:
                         split = line.split("=", 1)
                         req[split[0]] = split[1]
                 data["requirements_txt"] = req
+
+        envPath = os.path.join(args.model, "docker_env")
+        if os.path.isfile(envPath):
+            with open(envPath, "r") as f:
+                envs = {}
+                for line in f.readlines():
+                    line = line.strip()
+                    if len(line) == 0 or line[0] == "#":
+                        continue
+                    if "=" in line:
+                        split = line.split("=", 1)
+                        envs[split[0]] = split[1]
+                data["env"] = envs
+                if "modelId" not in data and "MODEL_ID" in envs:
+                    data["modelId"] = envs["MODEL_ID"]
 
 
 def data_from_template():

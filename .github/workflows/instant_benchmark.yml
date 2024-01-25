@@ -136,7 +136,7 @@ jobs:
         working-directory: tests/integration
         run: |
           docker rm -f $(docker ps -aq) || true
-          cat logs/serving.log
+          cat logs/serving.log || true
       - name: Upload test artifacts
         uses: actions/upload-artifact@v3
         if: always()

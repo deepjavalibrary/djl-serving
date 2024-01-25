@@ -72,6 +72,18 @@ if $is_partition; then
     ${args}
 
   exit 0
+elif [[ "$docker_image" == *"text-generation-inference"* ]]; then
+  container_id=$(docker run \
+    -itd \
+    --rm \
+    -p 8080:80 \
+    ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${env_file} \
+    ${runtime:+--runtime="${runtime}"} \
+    ${shm:+--shm-size="${shm}"} \
+    "${docker_image}" \
+    ${args})
 else
   echo "$(whoami), UID: $UID"
   if [[ "$UID" == "1000" ]]; then
