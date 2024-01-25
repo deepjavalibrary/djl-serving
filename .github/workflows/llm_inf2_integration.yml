@@ -382,3 +382,9 @@ jobs:
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.inf2_instance_id_2 }}
           ./stop_instance.sh $instance_id
+
+  publish-success-metric:
+    needs: [ stop-runners ]
+    uses: ./.github/workflows/publish-job-success.yml
+    with:
+      metric-name: DJLServing-LLMIntegrationTests-INF2-Failure
