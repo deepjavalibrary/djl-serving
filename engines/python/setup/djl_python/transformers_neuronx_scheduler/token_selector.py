@@ -175,7 +175,7 @@ class TokenSelector:
         )
 
     def select(self, input_ids: torch.LongTensor,
-               logits: torch.Tensor) -> torch.LongTensor:
+               logits: torch.Tensor) -> (torch.LongTensor, torch.Tensor):
         """Select the next tokens from the candidate logits.
 
         Args:
@@ -188,10 +188,14 @@ class TokenSelector:
             `torch.LongTensor`: A `torch.LongTensor` containing the selected tokens.
         """
         scores = self.logits_processor(input_ids, logits)
+        logprobs = torch.log_softmax(scores, -1)
         if self.mode == GenerationMode.SAMPLE:
-            return self._sample(scores)
+            next_ids = self._sample(scores)
         else:
-            return torch.argmax(scores, dim=-1)
+            next_ids = torch.argmax(scores, dim=-1)
+        next_logprobs = torch.gather(logprobs, 1, next_ids.view(-1,
+                                                                1)).view(-1)
+        return next_ids, next_logprobs
 
     def _sample(self, scores: torch.Tensor) -> torch.LongTensor:
         if self.fast_topk:

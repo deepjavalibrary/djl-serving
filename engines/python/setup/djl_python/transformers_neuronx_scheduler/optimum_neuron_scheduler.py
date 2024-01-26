@@ -170,7 +170,7 @@ class Slot:
         self.increment_cache_id()
 
     def select(self, input_ids: torch.LongTensor,
-               logits: torch.Tensor) -> torch.LongTensor:
+               logits: torch.Tensor) -> (torch.LongTensor, torch.Tensor):
         """Select the next token from the candidate logits.
 
         Args:
@@ -182,7 +182,8 @@ class Slot:
         Return:
             `torch.LongTensor`: A scalar torch.LongTensor` containing the selected token.
         """
-        return self._selector.select(input_ids, logits)[0]
+        next_ids, next_log_probs = self._selector.select(input_ids, logits)
+        return next_ids[0], next_log_probs
 
     def increment_cache_id(self):
         self._cache_id += 1
@@ -374,7 +375,8 @@ class NeuronGenerator:
             request_ids.append(request_id)
             next_token_logits = outputs.logits[i:i + 1, -1, :]
             slot_input_ids = input_ids[i:i + 1, :]
-            next_token = slot.select(slot_input_ids, next_token_logits)
+            next_token, next_log_prob = slot.select(slot_input_ids,
+                                                    next_token_logits)
             next_token_text = slot.decoder.decode(next_token.item())
             slot.trim_cache_id()
             slot.append(next_token, next_token_text)
@@ -400,7 +402,7 @@ class NeuronGenerator:
                     request_id=request_id,
                     prefill_tokens=None,
                     token_id=next_token,
-                    token_logprob=None,
+                    token_logprob=next_log_prob,
                     token_text=next_token_text,
                     token_is_special=(next_token in [self.special_tokens]),
                     generated_text=generated_text,
