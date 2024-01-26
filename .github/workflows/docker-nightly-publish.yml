@@ -266,6 +266,7 @@ jobs:
 
   publish-success-metric:
     needs: [ stop-runner ]
+    if: always()
     uses: ./.github/workflows/publish-job-success.yml
     with:
       metric-name: DJLServing-DockerNightlyPublish-Failure

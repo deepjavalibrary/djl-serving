@@ -66,6 +66,7 @@ jobs:
 
   publish-success-metric:
     needs: [ stop-aarch64-runner ]
+    if: always()
     uses: ./.github/workflows/publish-job-success.yml
     with:
       metric-name: DJLServing-NightlyDockerECRSync-Failure

@@ -264,6 +264,7 @@ jobs:
 
   publish-success-metric:
     needs: [ stop-runners-p4d ]
+    if: always()
     uses: ./.github/workflows/publish-job-success.yml
     with:
       metric-name: DJLServing-LLMIntegrationTests-P4D
