@@ -233,6 +233,7 @@ jobs:
 
   publish-success-metric:
     needs: [ stop-g5-runners ]
+    if: always()
     uses: ./.github/workflows/publish-job-success.yml
     with:
       metric-name: DJLServing-LMIPerformanceTests-Failure

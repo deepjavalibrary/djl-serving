@@ -385,6 +385,7 @@ jobs:
 
   publish-success-metric:
     needs: [ stop-runners ]
+    if: always()
     uses: ./.github/workflows/publish-job-success.yml
     with:
       metric-name: DJLServing-LLMIntegrationTests-INF2-Failure

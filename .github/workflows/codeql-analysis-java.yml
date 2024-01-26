@@ -71,6 +71,7 @@ jobs:
 
   publish-success-metric:
     needs: [ analyze ]
+    if: always()
     uses: ./.github/workflows/publish-job-success.yml
     with:
       metric-name: DJLServing-CodeQL-Failure
