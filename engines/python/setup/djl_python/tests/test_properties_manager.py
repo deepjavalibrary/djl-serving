@@ -439,6 +439,8 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(vllm_configs.quantize, properties['quantize'])
             self.assertEqual(vllm_configs.tensor_parallel_degree,
                              int(properties['tensor_parallel_degree']))
+            self.assertEqual(vllm_configs.max_model_len,
+                             int(properties['max_model_len']))
 
         # test with invalid quantization
         def test_invalid_quantization_method():
@@ -451,6 +453,7 @@ class TestConfigManager(unittest.TestCase):
             'model_id': 'sample_model_id',
             'engine': 'Python',
             'max_rolling_batch_prefill_tokens': '12500',
+            'max_model_len': '12800',
             'tensor_parallel_degree': '2',
             'dtype': 'fp16',
             'quantize': 'awq',
