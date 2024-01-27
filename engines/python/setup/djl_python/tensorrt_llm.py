@@ -12,13 +12,16 @@
 # the specific language governing permissions and limitations under the License.
 
 import logging
+import tensorrt_llm_toolkit
 
-from djl_python.encode_decode import decode
+from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
+from transformers import AutoConfig
 
+from djl_python.properties_manager.properties import is_rolling_batch_enabled
 
 class TRTLLMService(object):
 
@@ -26,14 +29,41 @@ class TRTLLMService(object):
         self.initialized = False
         self.trt_configs = None
         self.rolling_batch = None
+        self.model_config = None
+        self.model = None
+        self.enable_rolling_batch = True
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
-
-        self.rolling_batch = TRTLLMRollingBatch(
-            self.trt_configs.model_id_or_path, None, properties, **properties)
+        self.enable_rolling_batch = is_rolling_batch_enabled(self.trt_configs.rolling_batch)
+        self._read_model_config()
+        self._load_model(properties)
         self.initialized = True
         return
+
+    def _load_model(self, properties):
+        if self.model_config and self.model_config.model_type == "t5":
+            self.model = tensorrt_llm_toolkit.init_inference(self.trt_configs.model_id_or_path,
+                                                             **properties,
+                                                             use_python_backend=True)
+        else:
+            if not self.enable_rolling_batch:
+                raise ValueError(
+                    f"You cannot disable rolling batch for TensorRT LLM."
+                    f"Kindly enable it with auto or tensorrt values to option.rolling_batch"
+                )
+            self.rolling_batch = TRTLLMRollingBatch(
+                self.trt_configs.model_id_or_path, None, properties, **properties)
+
+    def _read_model_config(self):
+        try:
+            self.model_config = AutoConfig.from_pretrained(
+                self.trt_configs.model_id_or_path,
+                trust_remote_code=self.trt_configs.trust_remote_code)
+        except OSError:
+            self.logger.warning(
+                f"config.json not found for {self.trt_configs.model_id_or_path}."
+            )
 
     def parse_input(self, inputs):
         input_data = []
@@ -77,33 +107,57 @@ class TRTLLMService(object):
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
-                err = {"data": "", "last": True, "code": 424, "error": err}
-                outputs.add(Output.binary_encode(err),
-                            key="data",
-                            batch_index=i)
+                if self.enable_rolling_batch:
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
+                else:
+                    outputs.add(err, key="data", batch_index=i)
             return outputs
 
-        if inputs.get_property("reset_rollingbatch"):
-            self.rolling_batch.reset()
+        if self.enable_rolling_batch:
+            if inputs.get_property("reset_rollingbatch"):
+                self.rolling_batch.reset()
 
-        result = self.rolling_batch.inference(input_data, parameters)
-        idx = 0
-        for i in range(len(batch)):
-            err = errors.get(i)
-            if err:
-                err = {"data": "", "last": True, "code": 424, "error": err}
-                outputs.add(Output.binary_encode(err),
-                            key="data",
-                            batch_index=i)
-            else:
-                outputs.add(Output.binary_encode(result[idx]),
-                            key="data",
-                            batch_index=i)
-                idx += 1
+            result = self.rolling_batch.inference(input_data, parameters)
+            idx = 0
+            for i in range(len(batch)):
+                err = errors.get(i)
+                if err:
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
+                else:
+                    outputs.add(Output.binary_encode(result[idx]),
+                                key="data",
+                                batch_index=i)
+                    idx += 1
 
-        content_type = self.rolling_batch.get_content_type()
-        if content_type:
-            outputs.add_property("content-type", content_type)
+            content_type = self.rolling_batch.get_content_type()
+            if content_type:
+                outputs.add_property("content-type", content_type)
+        else:
+            params = parameters[0]
+            result = self.model.generate(input_data, **params)
+            result = [{"generated_text": s} for s in result]
+            idx = 0
+            for i, item in enumerate(batch):
+                content_type = item.get_property("Content-Type")
+                accept = item.get_property("Accept")
+                if not accept:
+                    content_type = content_type if content_type else "application/json"
+                    accept = content_type if content_type.startswith(
+                        "tensor/") else "application/json"
+                elif "*/*" in accept:
+                    accept = "application/json"
+
+                encode(outputs,
+                       result[idx:idx + input_size[i]],
+                       accept,
+                       key=inputs.get_content().key_at(i))
+                idx += input_size[i]
         return outputs
 
 

@@ -14,7 +14,7 @@ from djl_python.properties_manager.properties import Properties, RollingBatchEnu
 from pydantic import validator
 
 TRT_SUPPORTED_ROLLING_BATCH_TYPES = [
-    RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value
+    RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value, RollingBatchEnum.disable.value
 ]
 
 
@@ -23,12 +23,6 @@ class TensorRtLlmProperties(Properties):
     @validator('rolling_batch', pre=True)
     def validate_rolling_batch(cls, rolling_batch: str) -> str:
         rolling_batch = rolling_batch.lower()
-
-        if rolling_batch == RollingBatchEnum.disable.value:
-            raise ValueError(
-                f"You cannot disable rolling batch for TensorRT LLM."
-                f"Kindly enable it with auto or tensorrt values to option.rolling_batch"
-            )
         if rolling_batch not in TRT_SUPPORTED_ROLLING_BATCH_TYPES:
             raise ValueError(
                 f"tensorrt llm only supports "
