@@ -14,7 +14,8 @@ from djl_python.properties_manager.properties import Properties, RollingBatchEnu
 from pydantic import validator
 
 TRT_SUPPORTED_ROLLING_BATCH_TYPES = [
-    RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value, RollingBatchEnum.disable.value
+    RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value,
+    RollingBatchEnum.disable.value
 ]
 
 

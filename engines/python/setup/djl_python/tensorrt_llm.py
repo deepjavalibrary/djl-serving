@@ -23,6 +23,7 @@ from transformers import AutoConfig
 
 from djl_python.properties_manager.properties import is_rolling_batch_enabled
 
+
 class TRTLLMService(object):
 
     def __init__(self):
@@ -35,7 +36,8 @@ class TRTLLMService(object):
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
-        self.enable_rolling_batch = is_rolling_batch_enabled(self.trt_configs.rolling_batch)
+        self.enable_rolling_batch = is_rolling_batch_enabled(
+            self.trt_configs.rolling_batch)
         self._read_model_config()
         self._load_model(properties)
         self.initialized = True
@@ -43,9 +45,10 @@ class TRTLLMService(object):
 
     def _load_model(self, properties):
         if self.model_config and self.model_config.model_type == "t5":
-            self.model = tensorrt_llm_toolkit.init_inference(self.trt_configs.model_id_or_path,
-                                                             **properties,
-                                                             use_python_backend=True)
+            self.model = tensorrt_llm_toolkit.init_inference(
+                self.trt_configs.model_id_or_path,
+                **properties,
+                use_python_backend=True)
         else:
             if not self.enable_rolling_batch:
                 raise ValueError(
@@ -53,7 +56,8 @@ class TRTLLMService(object):
                     f"Kindly enable it with auto or tensorrt values to option.rolling_batch"
                 )
             self.rolling_batch = TRTLLMRollingBatch(
-                self.trt_configs.model_id_or_path, None, properties, **properties)
+                self.trt_configs.model_id_or_path, None, properties,
+                **properties)
 
     def _read_model_config(self):
         try:
