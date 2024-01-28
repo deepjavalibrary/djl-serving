@@ -60,9 +60,9 @@ jobs:
       run_benchmark: ${{ github.event.inputs.run_benchmark || 'true' }}
       image_type: ${{ github.event.inputs.mode || 'nightly' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -108,9 +108,9 @@ jobs:
       run_benchmark: ${{ github.event.inputs.run_benchmark || 'true' }}
       image_type: ${{ github.event.inputs.mode || 'nightly' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies

@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 240
     needs: create-runners
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -51,7 +51,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -87,7 +87,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -115,7 +115,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -123,7 +123,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -151,7 +151,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -159,7 +159,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
@@ -187,7 +187,7 @@ jobs:
     timeout-minutes: 180
     needs: create-runners
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -195,7 +195,7 @@ jobs:
           echo "wait dpkg lock..."
           while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
