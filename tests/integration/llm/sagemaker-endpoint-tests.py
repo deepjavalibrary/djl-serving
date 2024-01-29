@@ -66,7 +66,6 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
             "dtype": "fp32",
             "number_of_partitions": 1,
         },
-        "partition": True,
         "cls_to_use": HuggingFaceAccelerateModel,
     },
     "gpt-j-6b": {
@@ -76,7 +75,6 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
             "tensor_parallel_degree": 2,
             "parallel_loading": True,
         },
-        "partition": True,
         "cls_to_use": DeepSpeedModel,
     },
     "pythia-12b": {
@@ -86,7 +84,6 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
             "tensor_parallel_degree": 4,
             "parallel_loading": True,
         },
-        "partition": True,
         "partition_s3_uri": "s3://djl-llm-sm-endpoint-tests/pythia-12b-4p/",
         "cls_to_use": DeepSpeedModel,
     }
