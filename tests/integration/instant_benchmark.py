@@ -159,7 +159,9 @@ def parse_raw_template(url, override_container):
             if override_container is not None and override_container != "":
                 container = override_container
             if container is None or container == "":
-                raise Exception("No container specified. Expected a container in either the job template, arg, or action")
+                raise Exception(
+                    "No container specified. Expected a container in either the job template, arg, or action"
+                )
             cur_result['container'] = container
             if info is not None:
                 cur_result['info'] = info
