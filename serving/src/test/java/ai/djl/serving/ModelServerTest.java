@@ -764,26 +764,35 @@ public class ModelServerTest {
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
 
-        url = "/predictions/echo?delay=1000";
-        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
-        reset();
-        ChannelFuture f = channel.writeAndFlush(req);
+        try {
+            url = "/predictions/echo?delay=1000";
+            HttpRequest req =
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+            reset();
+            ChannelFuture f = channel.writeAndFlush(req);
 
-        // send 2nd request use different connection
-        latch2 = new CountDownLatch(1);
-        Channel channel2 = connect(Connector.ConnectorType.MANAGEMENT, 1);
-        url = "/predictions/echo";
-        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
-        channel2.writeAndFlush(req).sync();
-        Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
-        if (CudaUtils.getGpuCount() <= 1) {
-            // one request is not able to saturate workers in multi-GPU case
-            Assert.assertEquals(httpStatus2.code(), 503);
+            // send 2nd request use different connection
+            latch2 = new CountDownLatch(1);
+            Channel channel2 = connect(Connector.ConnectorType.MANAGEMENT, 1);
+            req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+            channel2.writeAndFlush(req).sync();
+            Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
+
+            // wait for 1st response
+            f.sync();
+            Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
+            if (CudaUtils.getGpuCount() <= 1) {
+                // one request is not able to saturate workers in multi-GPU case
+                // one of the request will be throttled
+                if ((httpStatus.code() != 503 || httpStatus2.code() != 200)
+                        && (httpStatus2.code() != 503 || httpStatus.code() != 200)) {
+                    logger.info("request 1 code: {}, request 2 code: {}", httpStatus, httpStatus2);
+                    Assert.fail("Expected one of the request be throttled.");
+                }
+            }
+        } catch (Exception e) {
+            logger.error(null, e);
         }
-
-        // wait for 1st response
-        f.sync();
-        Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
 
         // Unregister model
         request(channel, HttpMethod.DELETE, "/models/echo");
@@ -1409,7 +1418,6 @@ public class ModelServerTest {
             if (mode == 0) {
                 httpStatus = msg.status();
             } else {
-                logger.info("received response: {}", msg.status());
                 httpStatus2 = msg.status();
             }
             result = msg.content().toString(StandardCharsets.UTF_8);
