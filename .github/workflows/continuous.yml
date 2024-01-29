@@ -21,20 +21,20 @@ jobs:
           - os: ubuntu-latest
             format: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: 17
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: install Python Dependencies
         run: pip3 install numpy yapf
       # Enable gradle cache: https://github.com/actions/cache/blob/master/examples.md#java---gradle
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}

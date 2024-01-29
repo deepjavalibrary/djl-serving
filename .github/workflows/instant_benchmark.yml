@@ -60,9 +60,9 @@ jobs:
     timeout-minutes: 15
     needs: [ create-runners ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: Clean env
@@ -98,9 +98,9 @@ jobs:
       matrix:
         job: ${{ fromJSON(needs.environment-setup.outputs.jobs) }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10.x'
       - name: install deps

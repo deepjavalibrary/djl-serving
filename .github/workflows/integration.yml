@@ -43,13 +43,13 @@ jobs:
       matrix:
         arch: [ cpu, cpu-full ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'corretto'
           java-version: 17
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
@@ -148,7 +148,7 @@ jobs:
     timeout-minutes: 30
     needs: create-runners
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -160,7 +160,7 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 17
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
@@ -207,7 +207,7 @@ jobs:
     timeout-minutes: 30
     needs: create-runners
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Clean env
         run: |
           yes | docker system prune -a --volumes
@@ -218,7 +218,7 @@ jobs:
           distribution: 'corretto'
           java-version: 17
           architecture: aarch64
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
