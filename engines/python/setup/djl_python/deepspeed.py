@@ -387,6 +387,12 @@ class DeepSpeedService(object):
                             raise ValueError(
                                 "In order to enable dynamic batching, all input batches must have the same parameters"
                             )
+
+                if not "seed" in _param:
+                    # set server provided seed if seed is not part of request
+                    if item.contains_key("seed"):
+                        _param["seed"] = item.get_as_string(key="seed")
+
                 if not isinstance(_inputs, list):
                     _inputs = [_inputs]
                 input_data.extend(_inputs)
