@@ -12,7 +12,7 @@ local_model_path = Path("./model")
 local_model_path.mkdir(exist_ok=True)
 model_name = "facebook/opt-30b"
 # Only download pytorch checkpoint files
-allow_patterns = ["*.json", "*.pt", "*.bin", "*.txt", "*.model"]
+allow_patterns = ["*.json", "*.pt", "*.bin", "*.txt", "*.model", "*.tiktoken"]
 
 # - Leverage the snapshot library to donload the model since the model is stored in repository using LFS
 snapshot_download(
