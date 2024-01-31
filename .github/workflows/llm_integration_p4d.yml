@@ -261,10 +261,3 @@ jobs:
           cd /home/ubuntu/djl_benchmark_script/scripts
           instance_id=${{ needs.create-runners-p4d.outputs.p4d_instance_id }}
           ./stop_instance.sh $instance_id
-
-  publish-success-metric:
-    needs: [ stop-runners-p4d ]
-    if: always()
-    uses: ./.github/workflows/publish-job-success.yml
-    with:
-      metric-name: DJLServing-LLMIntegrationTests-P4D
