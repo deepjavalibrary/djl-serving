@@ -276,10 +276,3 @@ jobs:
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.aarch64_instance_id }}
           ./stop_instance.sh $instance_id
-
-  publish-success-metric:
-    needs: [ stop-runners ]
-    if: always()
-    uses: ./.github/workflows/publish-job-success.yml
-    with:
-      metric-name: DJLServing-IntegrationTests-Failure
