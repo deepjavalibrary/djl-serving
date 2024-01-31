@@ -72,7 +72,7 @@ jobs:
         run: |
           ./install_sagemaker_pysdk.sh ${{ github.event.inputs.sagemaker-repository }} $ {{ github.event.inputs.repository-branch }}
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
       - name: MME Test
@@ -120,7 +120,7 @@ jobs:
         run: |
           ./install_sagemaker_pysdk.sh ${{ github.event.inputs.sagemaker-repository }} $ {{ github.event.inputs.repository-branch }}
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
       - name: Test gpt-j-6b
