@@ -23,6 +23,8 @@ ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
+ENV DNNL_DEFAULT_FPMATH_MODE=BF16
+ENV LRU_CACHE_CAPACITY=1024
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
 CMD ["serve"]
