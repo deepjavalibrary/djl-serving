@@ -106,6 +106,7 @@ def parse_raw_template(url, override_container):
     name = ''
     container = None
     properties = []
+    env = []
     commandline = []
     requirements = []
     vars = []
@@ -122,6 +123,12 @@ def parse_raw_template(url, override_container):
             while iterator < len(lines) and not is_square_bracket(
                     lines[iterator]):
                 properties.append(lines[iterator])
+                iterator += 1
+        elif '[env]' == lines[iterator]:
+            iterator += 1
+            while iterator < len(lines) and not is_square_bracket(
+                    lines[iterator]):
+                env.append(lines[iterator])
                 iterator += 1
         elif '[requirements]' == lines[iterator]:
             iterator += 1
@@ -150,9 +157,10 @@ def parse_raw_template(url, override_container):
                 iterator += 1
         else:
             iterator += 1
-        if name and properties and commandline:
+        if name and commandline:
             cur_result = {
                 "properties": properties,
+                "env": env,
                 "awscurl": ' '.join(commandline),
                 "requirements": requirements
             }
@@ -172,6 +180,7 @@ def parse_raw_template(url, override_container):
             name = ''
             container = None
             properties = []
+            env = []
             commandline = []
             requirements = []
             vars = []
@@ -179,16 +188,20 @@ def parse_raw_template(url, override_container):
     return final_result
 
 
-def write_model_artifacts(properties, requirements=None):
+def write_model_artifacts(properties, requirements=None, env=None):
     model_path = "models/test"
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
     os.makedirs(model_path, exist_ok=True)
-    with open(os.path.join(model_path, "serving.properties"), "w") as f:
-        f.write('\n'.join(properties) + '\n')
+    if properties and len(properties) > 0:
+        with open(os.path.join(model_path, "serving.properties"), "w") as f:
+            f.write('\n'.join(properties) + '\n')
     if requirements:
         with open(os.path.join(model_path, "requirements.txt"), "w") as f:
             f.write('\n'.join(requirements) + '\n')
+    if env and len(env) > 0:
+        with open(os.path.join(model_path, "docker_env"), "w") as f:
+            f.write('\n'.join(env) + '\n')
 
 
 def machine_translation(machine_name: str):
@@ -213,7 +226,7 @@ def build_running_script(template, job, instance):
     job_template['awscurl'] = bytes.fromhex(
         job_template['awscurl']).decode("utf-8")
     write_model_artifacts(job_template['properties'],
-                          job_template['requirements'])
+                          job_template['requirements'], job_template['env'])
 
     container = job_template['container']
 
