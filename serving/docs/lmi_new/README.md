@@ -29,6 +29,7 @@ LMI containers provide many features, including:
 The [SageMaker Python SDK](https://github.com/aws/sagemaker-python-sdk) is our recommended way of deploying LLMs using LMI on SageMaker.
 
 Here is how you can deploy [TheBloke/Llama2-7b-fp16](https://huggingface.co/TheBloke/Llama-2-7B-fp16) model using LMI with the SDK:
+
 ```python
 # Assumes SageMaker Python SDK is installed. For example: "pip install sagemaker"
 import sagemaker
