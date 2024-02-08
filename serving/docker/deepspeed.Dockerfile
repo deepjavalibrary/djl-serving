@@ -19,7 +19,7 @@ ARG torch_version=2.1.2
 ARG torch_vision_version=0.16.2
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.36.2
+ARG transformers_version=4.37.2
 ARG accelerate_version=0.25.0
 ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
@@ -30,7 +30,7 @@ ARG datasets_version=2.15.0
 ARG deepspeed_version=nightly
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
 # LMI-Dist Deps
-ARG vllm_version=0.2.7
+ARG vllm_version=0.3.0
 ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp310-cp310-linux_x86_64.whl"
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp310-cp310-linux_x86_64.whl"
 ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp310-cp310-linux_x86_64.whl"
