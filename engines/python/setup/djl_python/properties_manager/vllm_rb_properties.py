@@ -13,7 +13,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic.class_validators import validator
+from pydantic.v1.class_validators import validator
 
 from djl_python.properties_manager.properties import Properties
 

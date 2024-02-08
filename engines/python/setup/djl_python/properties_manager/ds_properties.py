@@ -6,7 +6,7 @@ from enum import Enum
 import torch
 from typing import Optional, Any
 
-from pydantic import root_validator, validator, Field
+from pydantic.v1 import root_validator, validator, Field
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum
 

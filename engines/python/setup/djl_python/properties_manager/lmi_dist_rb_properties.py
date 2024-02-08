@@ -16,7 +16,7 @@ from enum import Enum
 from typing import Optional
 
 import torch
-from pydantic.class_validators import root_validator
+from pydantic.v1.class_validators import root_validator
 
 from djl_python.properties_manager.hf_properties import get_torch_dtype_from_str
 from djl_python.properties_manager.properties import Properties

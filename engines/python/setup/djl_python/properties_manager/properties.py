@@ -13,7 +13,7 @@
 import os
 from enum import Enum
 from typing import Optional, Union, Callable
-from pydantic import BaseModel, root_validator, validator, Field
+from pydantic.v1 import BaseModel, root_validator, validator, Field
 
 
 class RollingBatchEnum(str, Enum):

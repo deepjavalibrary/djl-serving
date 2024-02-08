@@ -16,7 +16,7 @@ import os
 import re
 from typing import Optional, Union, List
 
-from pydantic import validator, root_validator
+from pydantic.v1 import validator, root_validator
 from enum import IntEnum, Enum
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum

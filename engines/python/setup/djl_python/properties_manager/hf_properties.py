@@ -5,7 +5,7 @@ from typing import Optional, Union
 
 import torch
 
-from pydantic import validator, root_validator
+from pydantic.v1 import validator, root_validator
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum
 

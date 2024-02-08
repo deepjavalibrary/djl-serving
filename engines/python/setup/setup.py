@@ -67,7 +67,7 @@ if __name__ == '__main__':
         'protobuf',
         "peft",
         'yapf',
-        'pydantic==1.10.13',
+        'pydantic>=2.0',
     ]
 
     setup(name='djl_python',
