@@ -19,21 +19,6 @@ class HFQuantizeMethods(str, Enum):
     bitsandbytes4 = 'bitsandbytes4'
     bitsandbytes8 = 'bitsandbytes8'
 
-    # TODO remove this after refactor of all handlers
-    # supported by vllm
-    awq = 'awq'
-
-
-LMI_DIST_ADV_MODEL = {
-    "RWForCausalLM",
-    "GPTNeoXForCausalLM",
-    "T5ForConditionalGeneration",
-    "LlamaForCausalLM",
-    "FalconForCausalLM",
-    "MPTForCausalLM",
-    "GPTBigCodeForCausalLM",
-}
-
 
 def get_torch_dtype_from_str(dtype: str):
     if dtype == "auto":
