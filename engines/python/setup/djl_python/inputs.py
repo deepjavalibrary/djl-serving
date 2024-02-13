@@ -15,6 +15,7 @@ import io
 import struct
 import json
 import re
+from typing import List
 
 from .np_util import from_nd_list
 from .pair_list import PairList
@@ -88,7 +89,7 @@ class Input(object):
     def get_batch_size(self) -> int:
         return int(self.properties.get("batch_size", "1"))
 
-    def get_batches(self) -> list:
+    def get_batches(self) -> List["Input"]:
         if not self.is_batch():
             return [self]
 
@@ -98,12 +99,14 @@ class Input(object):
             batch.append(Input())
 
         for key, value in self.properties.items():
+            # e.g batch_001_eula and eula is the key
             if key.startswith("batch_") and key != "batch_size":
                 index = int(key[6:9])
                 key = key[10:]
                 batch[index].properties[key] = value
 
         for i in range(self.content.size()):
+            # e.g batch_001_inputs and inputs is the key
             key = self.content.key_at(i)
             index = int(key[6:9])
             key = key[10:]

@@ -27,7 +27,6 @@ def create_trt_llm_repo(properties, args):
             kwargs[key[7:]] = value
         else:
             kwargs[key] = value
-    kwargs = update_kwargs_with_env_vars(kwargs)
     kwargs['trt_llm_model_repo'] = args.trt_llm_model_repo
     kwargs["tensor_parallel_degree"] = args.tensor_parallel_degree
     model_id_or_path = args.model_path or kwargs['model_id']
@@ -38,9 +37,9 @@ def update_kwargs_with_env_vars(kwargs):
     env_vars = os.environ
     for key, value in env_vars.items():
         if key.startswith("OPTION_"):
-            key = key[7:].lower()
-            if key == "entrypoint":
-                key = "entryPoint"
+            key = key.lower()
+            if key == "option_entrypoint":
+                key = "option.entryPoint"
             kwargs.setdefault(key, value)
     return kwargs
 
@@ -72,7 +71,8 @@ def main():
                         help='local path to downloaded model')
 
     args = parser.parse_args()
-    properties = load_properties(args.properties_dir)
+    properties = update_kwargs_with_env_vars({})
+    properties.update(load_properties(args.properties_dir))
     create_trt_llm_repo(properties, args)
 
 

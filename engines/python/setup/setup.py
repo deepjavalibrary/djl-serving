@@ -65,6 +65,7 @@ if __name__ == '__main__':
         'accelerate',
         'sentencepiece',
         'protobuf',
+        "peft",
         'yapf',
         'pydantic==1.10.13',
     ]
