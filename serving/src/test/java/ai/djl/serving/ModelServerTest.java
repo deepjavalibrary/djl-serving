@@ -17,6 +17,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 import ai.djl.engine.Engine;
 import ai.djl.modality.Classifications.Classification;
@@ -240,7 +241,6 @@ public class ModelServerTest {
             testDescribeModel(channel);
             testUnregisterModel(channel);
             testAsyncInference(channel);
-            testThrottle(channel);
             testDjlModelZoo(channel);
 
             testPredictionsInvalidRequestSize(channel);
@@ -262,6 +262,7 @@ public class ModelServerTest {
             channel.close().sync();
 
             // negative test case that channel will be closed by server
+            testThrottle();
             testInvalidUri();
             testInvalidPredictionsUri();
             testInvalidPredictionsMethod();
@@ -757,46 +758,48 @@ public class ModelServerTest {
         request(channel, HttpMethod.DELETE, "/models/zoomodel");
     }
 
-    private void testThrottle(Channel channel) throws InterruptedException {
+    private void testThrottle() throws InterruptedException {
         logTestFunction();
+        Channel channel = connect(Connector.ConnectorType.INFERENCE);
         String url = URLEncoder.encode("file:src/test/resources/echo", StandardCharsets.UTF_8);
         url = "/models?model_name=echo&url=" + url;
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
 
-        try {
-            url = "/predictions/echo?delay=1000";
-            HttpRequest req =
-                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
-            reset();
-            ChannelFuture f = channel.writeAndFlush(req);
+        url = "/predictions/echo?delay=1000";
+        HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        reset();
+        ChannelFuture f = channel.writeAndFlush(req);
 
-            // send 2nd request use different connection
-            latch2 = new CountDownLatch(1);
-            Channel channel2 = connect(Connector.ConnectorType.MANAGEMENT, 1);
-            req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
-            channel2.writeAndFlush(req).sync();
-            Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
+        // send 2nd request use different connection
+        latch2 = new CountDownLatch(1);
+        Channel channel2 = connect(Connector.ConnectorType.MANAGEMENT, 1);
+        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
+        channel2.writeAndFlush(req).sync();
+        Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
 
-            // wait for 1st response
-            f.sync();
-            Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
-            if (CudaUtils.getGpuCount() <= 1) {
-                // one request is not able to saturate workers in multi-GPU case
-                // one of the request will be throttled
-                if ((httpStatus.code() != 503 || httpStatus2.code() != 200)
-                        && (httpStatus2.code() != 503 || httpStatus.code() != 200)) {
-                    logger.info("request 1 code: {}, request 2 code: {}", httpStatus, httpStatus2);
-                    Assert.fail("Expected one of the request be throttled.");
-                }
+        // wait for 1st response
+        f.sync();
+        Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
+        if (CudaUtils.getGpuCount() <= 1) {
+            // one request is not able to saturate workers in multi-GPU case
+            // one of the request will be throttled
+            if ((httpStatus.code() != 503 || httpStatus2.code() != 200)
+                    && (httpStatus2.code() != 503 || httpStatus.code() != 200)) {
+                logger.info("request 1 code: {}, request 2 code: {}", httpStatus, httpStatus2);
+                Assert.fail("Expected one of the request be throttled.");
             }
-        } catch (Exception e) {
-            logger.error(null, e);
         }
 
-        // Unregister model
-        request(channel, HttpMethod.DELETE, "/models/echo");
-        assertHttpOk();
+        // Unregister
+        if (channel.isActive()) {
+            request(channel, HttpMethod.DELETE, "/models/echo");
+        } else {
+            request(channel2, HttpMethod.DELETE, "/models/echo");
+        }
+
+        channel.close().sync();
+        channel2.close().sync();
     }
 
     private void testAdapterRegister(Channel channel) throws InterruptedException {
@@ -1337,7 +1340,11 @@ public class ModelServerTest {
 
     private void request(Channel channel, HttpRequest req) throws InterruptedException {
         reset();
-        channel.writeAndFlush(req).sync();
+        if (channel.isActive()) {
+            channel.writeAndFlush(req).sync();
+        } else {
+            fail("Channel closed unexpectedly.");
+        }
         Assert.assertTrue(latch.await(2, TimeUnit.MINUTES));
     }
 
