@@ -36,7 +36,7 @@ FINISH_REASON_MAPPER = {
 class VLLMRollingBatch(RollingBatch):
 
     # TODO: Make properties is the only parameter, after refactoring all rolling batch handlers
-    def __init__(self, model_id_or_path, device, properties, **kwargs):
+    def __init__(self, model_id_or_path, properties, **kwargs):
         """
         Initializes the VLLMRollingBatch.
         :param properties: other properties of the model, such as decoder strategy

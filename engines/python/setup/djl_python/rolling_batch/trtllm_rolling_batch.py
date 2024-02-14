@@ -17,7 +17,7 @@ from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exc
 
 class TRTLLMRollingBatch(RollingBatch):
 
-    def __init__(self, model_id_or_path, device, properties, **kwargs):
+    def __init__(self, model_id_or_path, properties, **kwargs):
         """
         Initializes the TRTLLMRollingBatch.
         :param model_id_or_path: model id or path
