@@ -147,8 +147,8 @@ class HuggingFaceService(object):
                 self.hf_configs.rolling_batch.value, self.hf_configs.is_mpi,
                 self.model_config)
             self.rolling_batch = _rolling_batch_cls(
-                self.hf_configs.model_id_or_path, self.hf_configs.device,
-                properties, **self.hf_configs.kwargs)
+                self.hf_configs.model_id_or_path, properties,
+                **self.hf_configs.kwargs)
             self.initialized = True
             return
         elif is_streaming_enabled(self.hf_configs.enable_streaming):

@@ -131,9 +131,8 @@ class DeepSpeedService(object):
             }
             if "output_formatter" in properties:
                 kwargs["output_formatter"] = properties.get("output_formatter")
-            self.rolling_batch = DeepSpeedRollingBatch(self.model,
-                                                       self.properties.device,
-                                                       properties, **kwargs)
+            self.rolling_batch = DeepSpeedRollingBatch(self.model, properties,
+                                                       **kwargs)
         else:
             self.create_model_pipeline()
         self.logger.info(

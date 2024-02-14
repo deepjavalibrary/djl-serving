@@ -23,12 +23,11 @@ from deepspeed.inference.rolling_batch import DeepSpeedRollingBatchGeneration
 
 class DeepSpeedRollingBatch(RollingBatch):
 
-    def __init__(self, model: InferenceEngine, device, properties, **kwargs):
+    def __init__(self, model: InferenceEngine, properties, **kwargs):
         """
-        Initializes the LmiDistRollingBatch.
+        Initializes the DeepSpeedRollingBatch.
 
         :param model_id_or_path: model id or path
-        :param device: model loaded device
         :param properties: other properties of the model, such as decoder strategy
         :param kwargs passed while loading the model
         """

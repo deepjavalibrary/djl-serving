@@ -41,8 +41,8 @@ model_id = "bigscience/bloom-560m"  # OOM on a single gpu and not sharded on mul
 
 # ===================== lmi ============================
 print("=========== before =========")
-rolling_batch = SchedulerRollingBatch(model_id, device, properties)
-# rolling_batch = LmiDistRollingBatch(model_id, device, properties)
+rolling_batch = SchedulerRollingBatch(model_id, properties)
+# rolling_batch = LmiDistRollingBatch(model_id, properties)
 rolling_batch.output_formatter = None
 print("reach here")
 

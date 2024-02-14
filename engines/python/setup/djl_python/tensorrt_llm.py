@@ -31,7 +31,7 @@ class TRTLLMService(object):
         self.trt_configs = TensorRtLlmProperties(**properties)
 
         self.rolling_batch = TRTLLMRollingBatch(
-            self.trt_configs.model_id_or_path, None, properties, **properties)
+            self.trt_configs.model_id_or_path, properties, **properties)
         self.initialized = True
         return
 
