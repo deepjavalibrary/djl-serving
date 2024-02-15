@@ -41,7 +41,7 @@ ENV TF_CPP_MIN_LOG_LEVEL=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError"
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
-ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
+ENV HF_HOME=/tmp/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 
 RUN useradd -m -d /home/djl djl && \

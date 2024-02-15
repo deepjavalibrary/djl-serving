@@ -29,8 +29,8 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 # ENV NO_OMP_NUM_THREADS=true
 ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
-ENV HUGGINGFACE_HUB_CACHE=/tmp
-ENV TRANSFORMERS_CACHE=/tmp
+ENV HF_HOME=/tmp/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
@@ -38,7 +38,7 @@ ENV PYTORCH_FLAVOR=cu121-precxx11
 # TODO: remove TORCH_CUDNN_V8_API_DISABLED once PyTorch bug is fixed
 ENV TORCH_CUDNN_V8_API_DISABLED=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
-ENV HUGGINGFACE_HUB_CACHE=/tmp/.cache/huggingface/hub
+ENV HF_HOME=/tmp/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 
