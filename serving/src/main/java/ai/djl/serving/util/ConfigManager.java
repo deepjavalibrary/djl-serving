@@ -451,6 +451,7 @@ public final class ConfigManager {
                     || key.startsWith("PYTHON")
                     || key.startsWith("DJL_")
                     || key.startsWith("HF_")
+                    || key.startsWith("OPTION_")
                     || key.contains("SAGEMAKER")
                     || "TENSOR_PARALLEL_DEGREE".equals(key)
                     || "OMP_NUM_THREADS".equals(key)
