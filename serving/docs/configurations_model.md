@@ -176,7 +176,7 @@ max_batch_delay=1
 To enable rolling batch for Python engine:
 
 ```
-# lmi-dist and vllm requires running mpi mode
+# lmi-dist requires running mpi mode
 engine=MPI
 option.rolling_batch=auto
 # use FlashAttention
