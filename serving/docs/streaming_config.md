@@ -12,12 +12,12 @@ option.tensor_parallel_degree=1
 option.enable_streaming=true
 ```
 
-Currently, DeepSpeed and Python are the two supported options for engine for streaming. As you can see, `enable_streaming` option has been set to true in the above example `serving.properties` file. Users can either use default handlers in djl-serving or custom model.py handler to stream responses.
+As you can see, `enable_streaming` option has been set to true in the above example `serving.properties` file. Users can either use default handlers in djl-serving or custom model.py handler to stream responses.
 
 
 ## Default handlers
 
-Default handlers facilitates no-code approach in djl-serving. With default handlers, model loading, inference and streaming logic is taken care of by djl-serving. Users will only need to care about sending requests and parsing output response. Currently, DeepSpeed, Hugging Face, transformers-neuronx default handlers support streaming capability.
+Default handlers facilitates no-code approach in djl-serving. With default handlers, model loading, inference and streaming logic is taken care of by djl-serving. Users will only need to care about sending requests and parsing output response. Currently, all default handlers support streaming capability.
 
 ## Custom model.py handler
 
