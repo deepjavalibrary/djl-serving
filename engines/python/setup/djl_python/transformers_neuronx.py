@@ -39,6 +39,7 @@ class TransformersNeuronXService(object):
         self.tokenizer = None
         self.rolling_batch = None
         self.config = None
+        self.rolling_batch_config = dict()
         self._model_loader_class = OptimumModelLoader
 
     def set_model_loader_class(self):
@@ -59,6 +60,10 @@ class TransformersNeuronXService(object):
         if self.config.rolling_batch != "disable":
             """batch_size needs to match max_rolling_batch_size for precompiled neuron models running rolling batch"""
             self.config.batch_size = self.config.max_rolling_batch_size
+            if "output_formatter" in properties:
+                self.rolling_batch_config["output_formatter"] = properties.get(
+                    "output_formatter")
+
         self.model_config = AutoConfig.from_pretrained(
             self.config.model_id_or_path, revision=self.config.revision)
 
@@ -77,9 +82,9 @@ class TransformersNeuronXService(object):
 
     def set_rolling_batch(self):
         if self.config.rolling_batch != "disable":
-            self.rolling_batch = NeuronRollingBatch(self.model, self.tokenizer,
-                                                    self.config.batch_size,
-                                                    self.config.n_positions)
+            self.rolling_batch = NeuronRollingBatch(
+                self.model, self.tokenizer, self.config.batch_size,
+                self.config.n_positions, **self.rolling_batch_config)
 
     def set_model_loader(self):
         self.model_loader = self._model_loader_class(

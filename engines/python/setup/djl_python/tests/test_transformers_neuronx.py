@@ -143,7 +143,8 @@ class TestTransformerNeuronXService(unittest.TestCase):
     @parameters([{
         "rolling_batch": "disable"
     }, {
-        "rolling_batch": "auto"
+        "rolling_batch": "auto",
+        "output_formatter": "jsonlines"
     }, {
         "rolling_batch": "mock"
     }])

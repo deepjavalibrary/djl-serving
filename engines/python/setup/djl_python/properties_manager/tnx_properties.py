@@ -141,12 +141,12 @@ class TransformerNeuronXProperties(Properties):
                 f"{gqa} is not a valid value for group_query_attention. "
                 f"Supported values are: {[v.value for v in TnXGQAMethods]}")
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_amp_value(cls, properties):
         properties['amp'] = properties['dtype'].name
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_quantize(cls, properties):
         if properties['quantize'] and properties[
                 'quantize'].value == TnXQuantizeMethods.static_int8.value:
