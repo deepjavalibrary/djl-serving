@@ -41,7 +41,7 @@ class StableDiffusionNeuronXProperties(Properties):
         os.environ[
             "NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + f" -O{level}"
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_dtype(cls, properties):
 
         def get_torch_dtype_from_str(dtype: str):
