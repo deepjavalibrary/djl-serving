@@ -128,6 +128,7 @@ final class HttpClient {
             }
 
             if (tokens != null) {
+                JsonUtils.resetException();
                 if (contentType == null || "text/plain".equals(contentType)) {
                     String body = EntityUtils.toString(resp.getEntity());
                     requestTime[0] += System.nanoTime() - begin;

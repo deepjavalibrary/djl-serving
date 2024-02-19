@@ -23,11 +23,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 final class JsonUtils {
 
     static final Gson GSON = new Gson();
     static final Gson GSON_PRETTY = new GsonBuilder().setPrettyPrinting().create();
+    private static AtomicBoolean printException = new AtomicBoolean(true);
 
     private JsonUtils() {}
 
@@ -68,6 +70,10 @@ final class JsonUtils {
         } else {
             AwsCurl.logger.debug("Ignore element: {}", element);
         }
+    }
+
+    static void resetException() {
+        printException.set(true);
     }
 
     @SuppressWarnings("PMD.SystemPrintln")
@@ -119,7 +125,7 @@ final class JsonUtils {
                 }
             }
         } catch (JsonParseException e) {
-            if (first) {
+            if (printException.getAndSet(false)) {
                 System.out.println("Invalid json line: " + line);
                 AwsCurl.logger.debug("Invalid json line", e);
             }
