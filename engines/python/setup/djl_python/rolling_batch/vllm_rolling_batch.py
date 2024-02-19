@@ -50,6 +50,7 @@ class VLLMRollingBatch(RollingBatch):
             dtype=DTYPE_MAPPER[self.vllm_configs.dtype],
             seed=0,
             max_model_len=self.vllm_configs.max_model_len,
+            enforce_eager=self.vllm_configs.enforce_eager,
             max_num_batched_tokens=self.vllm_configs.
             max_rolling_batch_prefill_tokens,
             trust_remote_code=self.vllm_configs.trust_remote_code,

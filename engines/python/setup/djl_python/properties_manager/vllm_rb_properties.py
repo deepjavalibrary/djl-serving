@@ -31,6 +31,7 @@ class VllmRbProperties(Properties):
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
+    enforce_eager: Optional[bool] = False
 
     @validator('engine')
     def validate_engine(cls, engine):

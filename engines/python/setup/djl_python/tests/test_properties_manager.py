@@ -441,6 +441,8 @@ class TestConfigManager(unittest.TestCase):
                              int(properties['tensor_parallel_degree']))
             self.assertEqual(vllm_configs.max_model_len,
                              int(properties['max_model_len']))
+            self.assertEqual(vllm_configs.enforce_eager,
+                             bool(properties['enforce_eager']))
 
         # test with invalid quantization
         def test_invalid_quantization_method():
@@ -457,6 +459,7 @@ class TestConfigManager(unittest.TestCase):
             'tensor_parallel_degree': '2',
             'dtype': 'fp16',
             'quantize': 'awq',
+            'enforce_eager': "True",
             'load_format': 'pt'
         }
         test_vllm_valid()
