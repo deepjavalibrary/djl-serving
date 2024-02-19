@@ -441,10 +441,14 @@ class TestConfigManager(unittest.TestCase):
                              int(properties['tensor_parallel_degree']))
             self.assertEqual(vllm_configs.max_model_len,
                              int(properties['max_model_len']))
+            self.assertEqual(vllm_configs.enforce_eager,
+                             bool(properties['enforce_eager']))
+            self.assertEqual(vllm_configs.gpu_memory_utilization,
+                             float(properties['gpu_memory_utilization']))
 
         # test with invalid quantization
         def test_invalid_quantization_method():
-            properties['quantize'] = 'gptq'
+            properties['quantize'] = 'gguf'
             with self.assertRaises(ValueError):
                 VllmRbProperties(**properties)
             properties['quantize'] = 'awq'
@@ -457,6 +461,8 @@ class TestConfigManager(unittest.TestCase):
             'tensor_parallel_degree': '2',
             'dtype': 'fp16',
             'quantize': 'awq',
+            'enforce_eager': "True",
+            "gpu_memory_utilization": "0.85",
             'load_format': 'pt'
         }
         test_vllm_valid()

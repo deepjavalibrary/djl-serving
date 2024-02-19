@@ -20,6 +20,8 @@ from djl_python.properties_manager.properties import Properties
 
 class VllmQuantizeMethods(str, Enum):
     awq = 'awq'
+    gptq = 'gptq'
+    squeezellm = 'squeezellm'
 
 
 class VllmRbProperties(Properties):
@@ -31,6 +33,11 @@ class VllmRbProperties(Properties):
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
+    enforce_eager: Optional[bool] = False
+    # TODO: this default may change with different vLLM versions
+    # TODO: try to get good default from vLLM to prevent revisiting
+    # TODO: last time check: vllm 0.3.1
+    gpu_memory_utilization: Optional[float] = 0.9
 
     @validator('engine')
     def validate_engine(cls, engine):
