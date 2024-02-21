@@ -13,7 +13,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, List
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 
@@ -215,8 +215,8 @@ class RollingBatch(ABC):
         :param kwargs passed while loading the model
         """
 
-        self.pending_requests = []
-        self.active_requests = []
+        self.pending_requests: List[Request] = []
+        self.active_requests: List[Request] = []
         self.req_id_counter = 0
         self.output_formatter = None
         self.waiting_steps = kwargs.get("waiting_steps", None)
@@ -251,7 +251,8 @@ class RollingBatch(ABC):
         """
         pass
 
-    def get_new_requests(self, input_data, parameters, batch_size):
+    def get_new_requests(self, input_data, parameters,
+                         batch_size) -> List[Request]:
         total_req_len = len(self.active_requests) + len(self.pending_requests)
         if batch_size > total_req_len:
             for i in range(total_req_len, batch_size):

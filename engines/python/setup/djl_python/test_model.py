@@ -13,13 +13,17 @@
 
 import logging
 import os
+import struct
 import sys
+from types import ModuleType
+from typing import List, Dict, Union
 
+from djl_python import PairList
 from .arg_parser import ArgParser
 from .inputs import Input
 from .outputs import Output
 from .np_util import to_nd_list
-from .service_loader import load_model_service
+from .service_loader import load_model_service, ModelService
 
 
 def create_request(input_files, parameters):
@@ -74,6 +78,31 @@ def create_request(input_files, parameters):
     return request
 
 
+def create_concurrent_batch_request(inputs: List[Dict],
+                                    properties: List[Dict] = None,
+                                    serving_properties={}) -> Input:
+    if properties is None:
+        properties = []
+    # Flatten operation properties
+    flatten_properties = serving_properties
+    for idx, data in enumerate(properties):
+        for key, value in data.items():
+            key = f"batch_{str(idx).zfill(3)}_{key}"
+            flatten_properties[key] = value
+    pair_list = PairList()
+    # Flatten operation data field
+    for idx, data in enumerate(inputs):
+        key = f"batch_{str(idx).zfill(3)}_data"
+        pair_list.add(key, Output._encode_json(data))
+
+    inputs_obj = Input()
+    inputs_obj.properties = flatten_properties
+    inputs_obj.function_name = flatten_properties.get("handler", "handle")
+    inputs_obj.content = pair_list
+    flatten_properties['batch_size'] = len(inputs)
+    return inputs_obj
+
+
 def create_text_request(text: str, key: str = None) -> Input:
     request = Input()
     request.properties["device_id"] = "-1"
@@ -103,7 +132,7 @@ def create_npz_request(list, key: str = None) -> Input:
     return request
 
 
-def _extract_output(outputs: Output) -> Input:
+def extract_output_as_input(outputs: Output) -> Input:
     inputs = Input()
     inputs.properties = outputs.properties
     inputs.content = outputs.content
@@ -111,19 +140,140 @@ def _extract_output(outputs: Output) -> Input:
 
 
 def extract_output_as_bytes(outputs: Output, key=None):
-    return _extract_output(outputs).get_as_bytes(key)
+    return extract_output_as_input(outputs).get_as_bytes(key)
 
 
 def extract_output_as_numpy(outputs: Output, key=None):
-    return _extract_output(outputs).get_as_numpy(key)
+    return extract_output_as_input(outputs).get_as_numpy(key)
 
 
 def extract_output_as_npz(outputs: Output, key=None):
-    return _extract_output(outputs).get_as_npz(key)
+    return extract_output_as_input(outputs).get_as_npz(key)
 
 
 def extract_output_as_string(outputs: Output, key=None):
-    return _extract_output(outputs).get_as_string(key)
+    return extract_output_as_input(outputs).get_as_string(key)
+
+
+def retrieve_int(bytearr: bytearray, start_iter):
+    end_iter = start_iter + 4
+    data = bytearr[start_iter:end_iter]
+    return struct.unpack(">i", data)[0], end_iter
+
+
+def retrieve_short(bytearr: bytearray, start_iter):
+    end_iter = start_iter + 2
+    data = bytearr[start_iter:end_iter]
+    return struct.unpack(">h", data)[0], end_iter
+
+
+def retrieve_utf8(bytearr: bytearray, start_iter):
+    length, start_iter = retrieve_short(bytearr, start_iter)
+    if length < 0:
+        return None
+    end_iter = start_iter + length
+    data = bytearr[start_iter:end_iter]
+    return data.decode("utf8"), end_iter
+
+
+def decode_encoded_output_binary(binary: bytearray):
+    start_iter = 0
+    prop_size, start_iter = retrieve_short(binary, start_iter)
+    content = {}
+    for _ in range(prop_size):
+        key, start_iter = retrieve_utf8(binary, start_iter)
+        val, start_iter = retrieve_utf8(binary, start_iter)
+        content[key] = val
+
+    return content
+
+
+def load_properties(properties_dir):
+    if not properties_dir:
+        return {}
+    properties = {}
+    properties_file = os.path.join(properties_dir, 'serving.properties')
+    if os.path.exists(properties_file):
+        with open(properties_file, 'r') as f:
+            for line in f:
+                # ignoring line starting with #
+                if line.startswith("#") or not line.strip():
+                    continue
+                key, value = line.strip().split('=', 1)
+                key = key.strip()
+                if key.startswith("option."):
+                    key = key[7:]
+                value = value.strip()
+                properties[key] = value
+    return properties
+
+
+def update_properties_with_env_vars(kwargs):
+    env_vars = os.environ
+    for key, value in env_vars.items():
+        if key.startswith("OPTION_"):
+            key = key[7:].lower()
+            if key == "entrypoint":
+                key = "entryPoint"
+            kwargs.setdefault(key, value)
+    return kwargs
+
+
+class TestHandler:
+
+    def __init__(self,
+                 entry_point: Union[str, ModuleType],
+                 model_dir: str = None):
+        self.serving_properties = update_properties_with_env_vars({})
+        self.serving_properties.update(load_properties(model_dir))
+
+        if isinstance(entry_point, str):
+            os.chdir(model_dir)
+            model_dir = os.getcwd()
+            sys.path.append(model_dir)
+            self.service = load_model_service(model_dir, entry_point, "-1")
+        else:
+            self.service = ModelService(entry_point, model_dir)
+
+    def inference(self, inputs: Input) -> Output:
+        function_name = inputs.get_function_name()
+        return self.service.invoke_handler(function_name, inputs)
+
+    def inference_batch(self,
+                        inputs: List[Dict],
+                        properties: List[Dict] = None,
+                        serving_properties=None) -> Output:
+        if serving_properties is None:
+            serving_properties = self.serving_properties
+        return self.inference(
+            create_concurrent_batch_request(inputs, properties,
+                                            serving_properties))
+
+    def inference_rolling_batch(self,
+                                inputs: List[Dict],
+                                properties: List[Dict] = None,
+                                serving_properties=None):
+        cached_result = {}
+        for idx in range(len(inputs)):
+            cached_result[idx] = ""
+        live_indices = [_ for _ in range(len(inputs))]
+        while len(live_indices) > 0:
+            outputs = self.inference_batch(inputs, properties,
+                                           serving_properties)
+            read_only_outputs = extract_output_as_input(outputs)
+            encoded_content = read_only_outputs.get_content().values
+            finished_indices = []
+            for idx, binary in enumerate(encoded_content):
+                data = decode_encoded_output_binary(binary)
+                cached_result[live_indices[idx]] += data['data']
+                if data['last'].lower() == 'true':
+                    print(f"Finished request {live_indices[idx]}")
+                    finished_indices.append(idx)
+            for index in sorted(finished_indices, reverse=True):
+                del live_indices[index]
+            inputs = [{"inputs": ""} for _ in range(len(live_indices))]
+
+        return cached_result
 
 
 def run():
@@ -133,17 +283,10 @@ def run():
     args = ArgParser.test_model_args().parse_args()
 
     inputs = create_request(args.input, args.parameters)
+    handler = TestHandler(args.entry_point, args.model_dir)
     inputs.function_name = args.handler
 
-    os.chdir(args.model_dir)
-    model_dir = os.getcwd()
-    sys.path.append(model_dir)
-
-    entry_point = args.entry_point
-    service = load_model_service(model_dir, entry_point, "-1")
-
-    function_name = inputs.get_function_name()
-    outputs = service.invoke_handler(function_name, inputs)
+    outputs = handler.inference(inputs)
     print("output: " + str(outputs))
 
 

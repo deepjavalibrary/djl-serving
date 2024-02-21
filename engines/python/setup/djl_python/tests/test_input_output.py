@@ -27,6 +27,27 @@ class TestInputOutput(unittest.TestCase):
         result = inputs.get_as_npz()
         self.assertTrue(np.array_equal(result[0], nd[0]))
 
+    def test_concurrent_batch(self):
+        input_list = [{
+            "inputs": "who win the oscar this year?",
+            "parameters": {
+                "max_new_tokens": 256
+            }
+        }]
+        properties = [{"eula": "true", "Content-type": "application/json"}]
+        serving_properties = {
+            "engine": "MPI",
+            "option.rolling_batch": "lmi-dist",
+            "option.model_id": "llama-70b"
+        }
+        inputs = test_model.create_concurrent_batch_request(
+            input_list, properties, serving_properties)
+        batches = inputs.get_batches()
+        self.assertEqual(batches[0].properties, properties[0])
+        self.assertEqual(batches[0].get_as_json(), input_list[0])
+        for key, value in serving_properties.items():
+            self.assertEqual(inputs.get_properties()[key], value)
+
     def test_output(self):
         test_dict = {"Key": "Value"}
         nd = [np.ones((1, 3, 2))]
