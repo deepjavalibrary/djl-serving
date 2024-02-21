@@ -19,16 +19,21 @@ In addition to the model artifacts, we expect that the tokenizer has been saved 
 A sample of what the model and tokenizer artifacts looks like is shown below:
 ```
 model/
-|- config.json (model configuration file with architecture details)
+|- config.json [Required](model configuration file with architecture details)
 |- model-000X-of-000Y.safetensors (safetensor checkpoint shard - large models will have multiple checkpoint shards)
 |- model.safetensors.index.json (safetensor weight mapping)
 |- pytorch_model-000X-of-000Y.bin (PyTorch pickle checkpoint shard - large models will have multiple checkpoint shards)
 |- pytorch_model.bin.index.json (PyTorch weight mapping)
-|- tokenizer_config.json (tokenizer configuration)
+|- tokenizer_config.json [Required] (tokenizer configuration)
 |- special_tokens_map.json (special token mapping)
+|- *modelling.py (custom modelling files)
+|- *tokenizer.py (custom tokenzer)
 |- tokenizer.json (tokenizer model)
 |- tokenizer.model (tokenizer model)
 ```
+
+Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true` if you have customized modelling and/or customized tokenizer.py files.
+
 
 ## Storing models in S3
 
