@@ -34,7 +34,7 @@ class Result {
     private Double p50Latency;
     private Double p90Latency;
     private Double p99Latency;
-    private Double firstByteLatency;
+    private Double timeToFirstByte;
 
     Result() {
         tokenizer = Utils.getEnvOrSystemProperty("TOKENIZER");
@@ -156,12 +156,12 @@ class Result {
         this.p99Latency = round(p99Latency);
     }
 
-    public Double getFirstByteLatency() {
-        return firstByteLatency;
+    public Double getTimeToFirstByte() {
+        return timeToFirstByte;
     }
 
-    public void setFirstByteLatency(double firstByteLatency) {
-        this.firstByteLatency = round(firstByteLatency);
+    public void setTimeToFirstByte(double timeToFirstByte) {
+        this.timeToFirstByte = round(timeToFirstByte);
     }
 
     @SuppressWarnings("PMD.SystemPrintln")
@@ -189,9 +189,7 @@ class Result {
             System.out.printf("%s/req: %d%n", n, getTokenPerRequest());
             System.out.printf("%s/s: %.2f/s%n", n, getTokenThroughput());
         }
-        if (getFirstByteLatency() != null) {
-            System.out.printf("First byte latency: %.2f ms.%n", getFirstByteLatency());
-        }
+        System.out.printf("Time to first byte: %.2f ms.%n", getTimeToFirstByte());
     }
 
     private static double round(double value) {

@@ -38,7 +38,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
 import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.util.EntityUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -127,104 +126,92 @@ final class HttpClient {
                 }
             }
 
-            if (tokens != null) {
-                JsonUtils.resetException();
-                if (contentType == null || "text/plain".equals(contentType)) {
-                    String body = EntityUtils.toString(resp.getEntity());
-                    requestTime[0] += System.nanoTime() - begin;
-                    ps.write(body.getBytes(StandardCharsets.UTF_8));
-                    updateTokenCount(Collections.singletonList(body), tokens, request);
-                    return resp;
-                } else if ("application/json".equals(contentType)) {
-                    String body = EntityUtils.toString(resp.getEntity());
-                    requestTime[0] += System.nanoTime() - begin;
-                    ps.write(body.getBytes(StandardCharsets.UTF_8));
-                    try {
-                        JsonElement element = JsonUtils.GSON.fromJson(body, JsonElement.class);
-                        List<String> lines = new ArrayList<>();
-                        JsonUtils.getJsonList(element, lines, names);
-                        updateTokenCount(lines, tokens, request);
-                    } catch (JsonParseException e) {
-                        AwsCurl.logger.warn("Invalid json response: {}", body);
-                        StatusLine status = new BasicStatusLine(HttpVersion.HTTP_1_1, 500, "error");
-                        return new BasicHttpResponse(status);
-                    }
-
-                    return resp;
-                } else if ("application/jsonlines".equals(contentType)) {
-                    InputStream is = resp.getEntity().getContent();
-                    boolean hasError = false;
-                    try (BufferedReader reader =
-                            new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-                        String line;
+            HttpResponse ret = resp;
+            try (FirstByteCounterInputStream is =
+                    new FirstByteCounterInputStream(resp.getEntity().getContent())) {
+                if (tokens != null) {
+                    JsonUtils.resetException();
+                    if (contentType == null || "text/plain".equals(contentType)) {
+                        String body = Utils.toString(is);
+                        ps.write(body.getBytes(StandardCharsets.UTF_8));
+                        updateTokenCount(Collections.singletonList(body), tokens, request);
+                    } else if ("application/json".equals(contentType)) {
+                        String body = Utils.toString(is);
+                        ps.write(body.getBytes(StandardCharsets.UTF_8));
+                        try {
+                            JsonElement element = JsonUtils.GSON.fromJson(body, JsonElement.class);
+                            List<String> lines = new ArrayList<>();
+                            JsonUtils.getJsonList(element, lines, names);
+                            updateTokenCount(lines, tokens, request);
+                        } catch (JsonParseException e) {
+                            AwsCurl.logger.warn("Invalid json response: {}", body);
+                            StatusLine status =
+                                    new BasicStatusLine(HttpVersion.HTTP_1_1, 500, "error");
+                            ret = new BasicHttpResponse(status);
+                        }
+                    } else if ("application/jsonlines".equals(contentType)) {
+                        boolean hasError = false;
+                        try (BufferedReader reader =
+                                new BufferedReader(
+                                        new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                            String line;
+                            List<StringBuilder> list = new ArrayList<>();
+                            while ((line = reader.readLine()) != null) {
+                                hasError =
+                                        JsonUtils.processJsonLine(list, ps, line, names)
+                                                || hasError;
+                            }
+                            updateTokenCount(list, tokens, request);
+                        }
+                        if (hasError) {
+                            StatusLine status =
+                                    new BasicStatusLine(HttpVersion.HTTP_1_1, 500, "error");
+                            ret = new BasicHttpResponse(status);
+                        }
+                    } else if ("text/event-stream".equals(contentType)) {
+                        List<String> list = new ArrayList<>();
+                        try (BufferedReader reader =
+                                new BufferedReader(
+                                        new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                line = line.trim();
+                                if (!line.startsWith("data:")) {
+                                    continue;
+                                }
+                                if (requestTime[1] == -1) {
+                                    requestTime[1] = System.nanoTime() - begin;
+                                }
+                                line = line.substring(5);
+                                JsonElement element =
+                                        JsonUtils.GSON.fromJson(line, JsonElement.class);
+                                JsonUtils.getJsonList(element, list, names);
+                            }
+                            updateTokenCount(list, tokens, request);
+                        }
+                    } else if ("application/vnd.amazon.eventstream".equals(contentType)) {
                         List<StringBuilder> list = new ArrayList<>();
-                        while ((line = reader.readLine()) != null) {
-                            hasError =
-                                    JsonUtils.processJsonLine(list, requestTime, ps, line, names)
-                                            || hasError;
-                        }
-                        requestTime[0] = System.nanoTime() - begin;
-                        requestTime[1] -= begin;
+                        handleEventStream(is, list, names, ps);
                         updateTokenCount(list, tokens, request);
                     }
-                    if (hasError) {
-                        StatusLine status = new BasicStatusLine(HttpVersion.HTTP_1_1, 500, "error");
-                        return new BasicHttpResponse(status);
-                    }
-                    return resp;
-                } else if ("text/event-stream".equals(contentType)) {
-                    InputStream is = resp.getEntity().getContent();
-                    List<String> list = new ArrayList<>();
-                    try (BufferedReader reader =
-                            new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            line = line.trim();
-                            if (!line.startsWith("data:")) {
-                                continue;
-                            }
-                            if (requestTime[1] == 0) {
-                                requestTime[1] = System.nanoTime() - begin;
-                            }
-                            line = line.substring(5);
-                            JsonElement element = JsonUtils.GSON.fromJson(line, JsonElement.class);
-                            JsonUtils.getJsonList(element, list, names);
-                        }
-                        requestTime[0] = System.nanoTime() - begin;
-                        updateTokenCount(list, tokens, request);
-                    }
-                    return resp;
                 } else if ("application/vnd.amazon.eventstream".equals(contentType)) {
                     List<StringBuilder> list = new ArrayList<>();
-                    InputStream is = resp.getEntity().getContent();
-                    handleEventStream(is, list, requestTime, names, ps);
-                    requestTime[0] = System.nanoTime() - begin;
-                    requestTime[1] -= begin;
-                    updateTokenCount(list, tokens, request);
-                    return resp;
-                }
-            }
-
-            try (InputStream is = resp.getEntity().getContent()) {
-                if ("application/vnd.amazon.eventstream".equals(contentType)) {
-                    List<StringBuilder> list = new ArrayList<>();
-                    handleEventStream(is, list, requestTime, names, ps);
+                    handleEventStream(is, list, names, ps);
                 } else {
                     is.transferTo(ps);
                     ps.flush();
                 }
-                requestTime[0] = System.nanoTime() - begin;
+                requestTime[0] += System.nanoTime() - begin;
+                if (requestTime[1] == -1) {
+                    requestTime[1] = is.getTimeToFirstByte() - begin;
+                }
             }
-            return resp;
+            return ret;
         }
     }
 
     private static void handleEventStream(
-            InputStream is,
-            List<StringBuilder> list,
-            long[] requestTime,
-            String[] names,
-            OutputStream ps)
+            InputStream is, List<StringBuilder> list, String[] names, OutputStream ps)
             throws IOException {
         byte[] buf = new byte[12];
         byte[] payload = new byte[512];
@@ -249,7 +236,7 @@ final class HttpClient {
             }
             String line =
                     new String(payload, headerLength, payloadLength, StandardCharsets.UTF_8).trim();
-            if (JsonUtils.processJsonLine(list, requestTime, ps, line, names)) {
+            if (JsonUtils.processJsonLine(list, ps, line, names)) {
                 throw new IOException("Response contains error");
             }
         }
@@ -341,6 +328,56 @@ final class HttpClient {
         tokens.addAndGet(TokenUtils.countTokens(list));
         if (Utils.getEnvOrSystemProperty("EXCLUDE_INPUT_TOKEN") != null) {
             tokens.addAndGet(-request.getInputTokens());
+        }
+    }
+
+    private static final class FirstByteCounterInputStream extends InputStream {
+
+        private long timeToFirstByte;
+        private InputStream is;
+
+        FirstByteCounterInputStream(InputStream is) {
+            this.is = is;
+        }
+
+        long getTimeToFirstByte() {
+            return timeToFirstByte;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public int read(byte[] b) throws IOException {
+            int read = is.read(b);
+            if (timeToFirstByte == 0 && read > 0) {
+                timeToFirstByte = System.nanoTime();
+            }
+            return read;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            int read = is.read(b, off, len);
+            if (timeToFirstByte == 0 && read > 0) {
+                timeToFirstByte = System.nanoTime();
+            }
+            return read;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public int read() throws IOException {
+            int read = is.read();
+            if (timeToFirstByte == 0 && read > 0) {
+                timeToFirstByte = System.nanoTime();
+            }
+            return read;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public void close() throws IOException {
+            is.close();
         }
     }
 }
