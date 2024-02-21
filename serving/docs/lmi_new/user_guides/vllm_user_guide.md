@@ -1,26 +1,8 @@
-# vLLM Engine in User Guide
+# vLLM Engine User Guide
 
 ## Model Artifacts Structure
 
-vLLM expect the model to be standard HuggingFace format.
-The source of the model could be:
-
-- model_id string from huggingface
-- s3 url that store the artifact that follows the HuggingFace model repo structure
-- A local path that contains everything in a folder follows HuggingFace model repo structure
-
-### Standard HuggingFace model artifacts
-Under the same folder level, we expect:
-- config.json: Store the model architecture and structure information
-- tokenizer_config.json: Store the tokenizer config information
-- modelling files (*.py): If your model has custom modelling or tokenizer files.
-  - Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true`
-- other files that needs to take care
-
-A safe way is just to keep every files inside.
-
-We don't support malformed model repo from HuggingFace or other source that does not contain config.json or typical model style
-like GGUF format and more.
+vLLM expect the model to be [standard HuggingFace format](../deployment_guide/model-artifacts.md#huggingface-transformers-pretrained-format).
 
 ## Supported Model architecture
 
