@@ -78,17 +78,9 @@ final class JsonUtils {
 
     @SuppressWarnings("PMD.SystemPrintln")
     static boolean processJsonLine(
-            List<StringBuilder> list,
-            long[] requestTime,
-            OutputStream ps,
-            String line,
-            String[] name)
+            List<StringBuilder> list, OutputStream ps, String line, String[] name)
             throws IOException {
         boolean hasError = false;
-        boolean first = requestTime[1] == 0L;
-        if (first) {
-            requestTime[1] = System.nanoTime();
-        }
         try {
             JsonObject map = GSON.fromJson(line, JsonObject.class);
             JsonElement outputs;

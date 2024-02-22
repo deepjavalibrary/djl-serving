@@ -209,7 +209,7 @@ public final class AwsCurl {
                                 Thread.sleep(delay);
                             }
                             OutputStream os = config.getOutput(clientId);
-                            long[] requestTime = {0L, 0L};
+                            long[] requestTime = {0L, -1L};
                             while (totalReq.getAndDecrement() > 0) {
                                 SignableRequest request = new SignableRequest(serviceName, uri);
                                 request.setContent(config.getRequestBody());
@@ -218,7 +218,7 @@ public final class AwsCurl {
                                 request.setSigner(signer);
                                 request.sign();
                                 requestTime[0] = 0L;
-                                requestTime[1] = 0L;
+                                requestTime[1] = -1L;
                                 HttpResponse resp =
                                         HttpClient.sendRequest(
                                                 request,
@@ -324,7 +324,7 @@ public final class AwsCurl {
             if (!firstTokens.isEmpty()) {
                 long sum = firstTokens.stream().mapToLong(val -> val).sum();
                 int size = firstTokens.size();
-                ret.setFirstByteLatency(sum / 1000000d / size);
+                ret.setTimeToFirstByte(sum / 1000000d / size);
             }
             AwsCurl.logger.debug("Total request time: {} ms", totalTime / 1000000d);
             ret.print(config.isJsonOutput());
