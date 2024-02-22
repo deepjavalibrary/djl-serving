@@ -39,6 +39,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -53,6 +54,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private static final Pattern WORKFLOWS_PATTERN = Pattern.compile("^/workflows([/?].*)?");
     private static final Pattern MODELS_PATTERN = Pattern.compile("^/models([/?].*)?");
     private static final Pattern INVOKE_PATTERN = Pattern.compile("^/models/.+/invoke$");
+    private static final Pattern SERVER_PATTERN = Pattern.compile("^/server/.+");
 
     /** {@inheritDoc} */
     @Override
@@ -60,7 +62,7 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         if (super.acceptInboundMessage(msg)) {
             FullHttpRequest req = (FullHttpRequest) msg;
             String uri = req.uri();
-            if (WORKFLOWS_PATTERN.matcher(uri).matches()) {
+            if (WORKFLOWS_PATTERN.matcher(uri).matches() || SERVER_PATTERN.matcher(uri).matches()) {
                 return true;
             } else if (AdapterManagementRequestHandler.ADAPTERS_PATTERN.matcher(uri).matches()) {
                 return false;
@@ -80,16 +82,23 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             String[] segments)
             throws ModelException {
         HttpMethod method = req.method();
+        if ("server".equals(segments[1])) {
+            if ("logging".equals(segments[2])) {
+                handleConfigLogs(ctx, decoder);
+                return;
+            }
+            throw new ResourceNotFoundException();
+        }
         if (segments.length < 3) {
             if (HttpMethod.GET.equals(method)) {
-                if (MODELS_PATTERN.matcher(req.uri()).matches()) {
+                if ("models".equals(segments[1])) {
                     handleListModels(ctx, decoder);
                 } else {
                     handleListWorkflows(ctx, decoder);
                 }
                 return;
             } else if (HttpMethod.POST.equals(method)) {
-                if (MODELS_PATTERN.matcher(req.uri()).matches()) {
+                if ("models".equals(segments[1])) {
                     handleRegisterModel(ctx, req, decoder);
                 } else {
                     handleRegisterWorkflow(ctx, decoder);
@@ -351,5 +360,30 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         } catch (NumberFormatException ex) {
             throw new BadRequestException("parameter is invalid number." + ex.getMessage(), ex);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleConfigLogs(ChannelHandlerContext ctx, QueryStringDecoder decoder) {
+        String logLevel = NettyUtils.getParameter(decoder, "level", null);
+        if (logLevel == null) {
+            logLevel = "info";
+        }
+
+        System.setProperty("ai.djl.logging.level", logLevel);
+        try {
+            Class<?> manager = Class.forName("org.apache.logging.log4j.LogManager");
+            Class<?> context = Class.forName("org.apache.logging.log4j.core.LoggerContext");
+            Method getContext = manager.getDeclaredMethod("getContext", boolean.class);
+            Method reconfigure = context.getDeclaredMethod("reconfigure");
+            Method updateLoggers = context.getDeclaredMethod("updateLoggers");
+            Object logCtx = getContext.invoke(null, false);
+            reconfigure.invoke(logCtx);
+            updateLoggers.invoke(logCtx);
+        } catch (ReflectiveOperationException e) {
+            throw new InternalServerException("Failed to reload log4j configuration", e);
+        }
+
+        StatusResponse resp = new StatusResponse("OK");
+        NettyUtils.sendJsonResponse(ctx, resp);
     }
 }
