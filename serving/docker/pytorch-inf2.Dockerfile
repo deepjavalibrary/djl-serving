@@ -22,7 +22,7 @@ ARG protobuf_version=3.19.6
 ARG transformers_version=4.35.0
 ARG accelerate_version=0.23.0
 ARG diffusers_version=0.22.0
-ARG pydantic_version=1.10.13
+ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.16
 EXPOSE 8080
 

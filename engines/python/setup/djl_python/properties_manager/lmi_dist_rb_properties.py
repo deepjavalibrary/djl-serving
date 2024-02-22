@@ -16,7 +16,7 @@ from enum import Enum
 from typing import Optional
 
 import torch
-from pydantic.class_validators import root_validator
+from pydantic.v1.class_validators import root_validator
 
 from djl_python.properties_manager.hf_properties import get_torch_dtype_from_str
 from djl_python.properties_manager.properties import Properties
@@ -39,7 +39,7 @@ class LmiDistRbProperties(Properties):
     dtype: Optional[str] = None
     torch_dtype: Optional[torch.dtype] = None
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def validate_mpi_mode(cls, properties):
         if not properties.get("is_mpi") and int(
                 properties.get("tensor_parallel_degree", "1")) != 1:
@@ -47,7 +47,7 @@ class LmiDistRbProperties(Properties):
                              f"Try with engine=MPI in your serving.properties")
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def validate_quantize(cls, properties):
         if properties.get('quantize') is None:
             if properties.get('dtype') == "int8":
@@ -63,13 +63,13 @@ class LmiDistRbProperties(Properties):
                 )
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_device(cls, properties):
         if properties.get('is_mpi'):
             properties['device'] = int(os.getenv("LOCAL_RANK", 0))
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def construct_dtype(cls, properties):
         if properties.get('dtype'):
             properties["torch_dtype"] = get_torch_dtype_from_str(

@@ -5,7 +5,7 @@ from typing import Optional, Union
 
 import torch
 
-from pydantic import validator, root_validator
+from pydantic.v1 import validator, root_validator
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum
 
@@ -66,7 +66,7 @@ class HuggingFaceProperties(Properties):
                         'Kindly use option.quantize=bitsandbytes8 instead')
         return load_in_8bit
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_quantize_for_backward_compatibility(cls, properties):
         if properties['load_in_4bit']:
             properties['quantize'] = HFQuantizeMethods.bitsandbytes4
@@ -80,7 +80,7 @@ class HuggingFaceProperties(Properties):
             properties['quantize'] = HFQuantizeMethods.bitsandbytes
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_device(cls, properties):
         if properties['device_id'] >= 0:
             properties['device'] = f"cuda:{properties['device_id']}"
@@ -88,7 +88,7 @@ class HuggingFaceProperties(Properties):
             properties['device'] = None
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def construct_kwargs(cls, properties):
         kwargs = properties['kwargs']
 
@@ -108,7 +108,7 @@ class HuggingFaceProperties(Properties):
         properties['kwargs'] = kwargs
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def construct_kwargs_device_map(cls, properties):
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
         kwargs = properties['kwargs']
@@ -129,7 +129,7 @@ class HuggingFaceProperties(Properties):
         properties['kwargs'] = kwargs
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def construct_kwargs_quantize(cls, properties):
         kwargs = properties['kwargs']
 
@@ -158,7 +158,7 @@ class HuggingFaceProperties(Properties):
         properties['kwargs'] = kwargs
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def construct_kwargs_dtype(cls, properties):
         kwargs = properties['kwargs']
 
@@ -174,7 +174,7 @@ class HuggingFaceProperties(Properties):
         properties['kwargs'] = kwargs
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_device_mpi(cls, properties):
         if properties['rolling_batch'].value != RollingBatchEnum.disable.value:
             if properties['is_mpi']:

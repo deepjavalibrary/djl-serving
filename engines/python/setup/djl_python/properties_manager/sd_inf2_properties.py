@@ -15,7 +15,7 @@ import os
 import torch
 from enum import IntEnum
 from typing import Optional, Any
-from pydantic import validator, root_validator
+from pydantic.v1 import validator, root_validator
 from djl_python.properties_manager.properties import Properties
 
 

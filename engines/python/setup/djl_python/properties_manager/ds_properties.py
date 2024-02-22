@@ -6,7 +6,7 @@ from enum import Enum
 import torch
 from typing import Optional, Any
 
-from pydantic import root_validator, validator, Field
+from pydantic.v1 import root_validator, validator, Field
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum
 
@@ -88,7 +88,7 @@ class DeepSpeedProperties(Properties):
                 f"rolling batch type {DS_SUPPORTED_ROLLING_BATCH_TYPES}.")
         return rolling_batch
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def set_dtype(cls, properties):
 
         def get_default_dtype(quantize_mode: str):
@@ -122,7 +122,7 @@ class DeepSpeedProperties(Properties):
             properties.get('dtype', default_dtype))
         return properties
 
-    @root_validator()
+    @root_validator(skip_on_failure=True)
     def construct_ds_config(cls, properties):
         if not properties.get("ds_config"):
             ds_config = {

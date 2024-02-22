@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum
-from pydantic import validator
+from pydantic.v1 import validator
 
 TRT_SUPPORTED_ROLLING_BATCH_TYPES = [
     RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value
