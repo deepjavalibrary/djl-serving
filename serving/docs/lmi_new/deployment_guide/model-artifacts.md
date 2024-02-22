@@ -36,7 +36,7 @@ Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMO
 
 ## TensorRT-LLM(TRT-LLM) LMI model format
  TRT-LLM LMI supports loading models in a custom format that includes compiled TRT-LLM engine files and Hugging Face model config files.
- Users can create these artifacts for model architectures that are supported for JIT compilation following this [tutorial](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/tutorials/trtllm_aot_tutorial.md). For model architectures that are not supported by TRT-LLM LMI for JIT compilation, follow this [tutorial](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/tutorials/trtllm_manual_convert_tutorial.md) to create model artifacts. Users can specify the resulting artifacts path as `OPTION_MODEL_ID` during deployment for faster loading than compared to raw Hugging Face model for TRT-LLM LMI.
+ Users can create these artifacts for model architectures that are supported for JIT compilation following this [tutorial](../../lmi/tutorials/trtllm_aot_tutorial.md). For model architectures that are not supported by TRT-LLM LMI for JIT compilation, follow this [tutorial](../../lmi/tutorials/trtllm_manual_convert_tutorial.md) to create model artifacts. Users can specify the resulting artifacts path as `OPTION_MODEL_ID` during deployment for faster loading than compared to raw Hugging Face model for TRT-LLM LMI.
 
  Below directory structure represents an example of TensorRT-LLM LMI model artifacts structure.
 
