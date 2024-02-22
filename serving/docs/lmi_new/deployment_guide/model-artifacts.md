@@ -34,6 +34,29 @@ model/
 
 Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true` if you have customized modelling and/or customized tokenizer.py files.
 
+## TensorRT-LLM(TRT-LLM) LMI model format
+ TRT-LLM LMI supports loading models in a custom format that includes compiled TRT-LLM engine files and Hugging Face model config files.
+ Users can create these artifacts for model architectures that are supported for JIT compilation following this [tutorial](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/tutorials/trtllm_aot_tutorial.md). For model architectures that are not supported by TRT-LLM LMI for JIT compilation, follow this [tutorial](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/tutorials/trtllm_manual_convert_tutorial.md) to create model artifacts. Users can specify the resulting artifacts path as `OPTION_MODEL_ID` during deployment for faster loading than compared to raw Hugging Face model for TRT-LLM LMI.
+
+ Below directory structure represents an example of TensorRT-LLM LMI model artifacts structure.
+
+```
+  trt_llm_model_repo
+    └── tensorrt_llm
+        ├── 1
+        │ ├── trt_llm_model_float16_tp2_rank0.engine # trt-llm engine
+        │ ├── trt_llm_model_float16_tp2_rank1.engine # trt-llm engine
+        │ ├── config.json # trt-llm config file
+        │ └── model.cache
+        ├── config.pbtxt # trt-llm triton backend config
+        ├── config.json # Below are HuggingFace model config files and may vary per model
+        ├── pytorch_model.bin.index.json
+        ├── requirements.txt
+        ├── special_tokens_map.json
+        ├── tokenizer_config.json
+        └── tokenizer.model
+```
+
 
 ## Storing models in S3
 
