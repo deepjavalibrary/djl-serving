@@ -46,15 +46,13 @@ class TRTLLMService(object):
         """
         Preprocessing function that extracts information from Input objects.
 
-        Args:
-            inputs (Input): a batch of inputs, each corresponding to a new request
+        :param inputs (Input): a batch of inputs, each corresponding to a new request
 
-        Returns:
-            input_data (list[str]): a list of strings, each string being the prompt in a new request
-            input_size (list[int]): a list of ints being the size of each new request
-            parameters (list[dict]): parameters pertaining to each request
-            errors (dict): a dictionary mapping int indices to corresponding error strings if any
-            batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
+        :return input_data (list[str]): a list of strings, each string being the prompt in a new request
+        :return input_size (list[int]): a list of ints being the size of each new request
+        :return parameters (list[dict]): parameters pertaining to each request
+        :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
+        :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """
         input_data = []
         input_size = []
@@ -93,11 +91,9 @@ class TRTLLMService(object):
         """
         Does preprocessing and sends new requests to the rolling batch script for inference
 
-        Args:
-            inputs (Input): a batch of inputs, each corresponding to a new request
+        :param inputs (Input): a batch of inputs, each corresponding to a new request
 
-        Returns:
-            outputs (Output): a batch of outputs that contain status code, output text, and other information
+        :return outputs (Output): a batch of outputs that contain status code, output text, and other information
         """
         outputs = Output()
 
@@ -143,11 +139,9 @@ def handle(inputs: Input) -> Output:
     """
     Handler function for the default TensorRT-LLM handler.
 
-    Args:
-        inputs (Input): a batch of inputs, each corresponding to a new request
+    :param inputs (Input): a batch of inputs, each corresponding to a new request
 
-    Returns:
-        outputs (Output): a batch of outputs that contain status code, output text, and other information.
+    :return outputs (Output): a batch of outputs that contain status code, output text, and other information.
     """
     if not _service.initialized:
         # stateful model
