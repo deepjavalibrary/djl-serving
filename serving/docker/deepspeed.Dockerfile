@@ -17,20 +17,21 @@ ARG djl_version=0.27.0~SNAPSHOT
 ARG python_version=3.10
 ARG torch_version=2.1.2
 ARG torch_vision_version=0.16.2
+ARG pydantic_version=2.6.1
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.37.2
-ARG accelerate_version=0.25.0
+ARG transformers_version=4.38.1
+ARG accelerate_version=0.27.2
 ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.15.0
 ARG auto_gptq_version=0.5.1
-ARG datasets_version=2.15.0
+ARG datasets_version=2.17.1
 # DeepSpeed Deps
 ARG deepspeed_version=nightly
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
 # LMI-Dist Deps
-ARG vllm_version=0.3.0
+ARG vllm_wheel="https://publish.djl.ai/vllm/cu121-pt212/vllm-0.3.1-cp310-cp310-linux_x86_64.whl"
 ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp310-cp310-linux_x86_64.whl"
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp310-cp310-linux_x86_64.whl"
 ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp310-cp310-linux_x86_64.whl"
@@ -97,7 +98,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} && \
-    pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${awq_wheel} ${lmi_vllm_wheel} vllm==${vllm_version} && \
+    pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${awq_wheel} ${lmi_vllm_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \
     pip3 cache purge
 
 # Add CUDA-Compat

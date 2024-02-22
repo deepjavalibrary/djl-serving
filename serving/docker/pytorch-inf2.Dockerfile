@@ -22,6 +22,7 @@ ARG protobuf_version=3.19.6
 ARG transformers_version=4.35.0
 ARG accelerate_version=0.23.0
 ARG diffusers_version=0.22.0
+ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.16
 EXPOSE 8080
 
@@ -71,7 +72,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece jinja2 \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
-    pydantic optimum optimum-neuron==${optimum_neuron_version} && \
+    pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
