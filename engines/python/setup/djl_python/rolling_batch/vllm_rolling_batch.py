@@ -34,12 +34,19 @@ FINISH_REASON_MAPPER = {
 
 
 class VLLMRollingBatch(RollingBatch):
+    """
+    VLLMRollingBatch connects the handler to the backend (VLLM inference). It receives new
+    requests from the handler and sends them to the backend when there is space available in the batch.
+    It also gets any new tokens from the backend and sends them back to the handler.
+    """
 
     # TODO: Make properties is the only parameter, after refactoring all rolling batch handlers
-    def __init__(self, model_id_or_path, properties, **kwargs):
+    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
         """
         Initializes the VLLMRollingBatch.
-        :param properties: other properties of the model, such as decoder strategy
+
+        :param model_id_or_path (str): Currently unused since there is a copy inside properties
+        :param properties (dict): other properties of the model, such as decoder strategy
         """
         self.vllm_configs = VllmRbProperties(**properties)
         super().__init__(waiting_steps=self.vllm_configs.waiting_steps,
@@ -62,12 +69,23 @@ class VLLMRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
 
     def reset(self):
+        """
+        Aborts all requests
+        """
         for key in self.request_cache.keys():
             self.engine.abort_request(key)
         self.request_cache = OrderedDict()
         super().reset()
 
-    def translate_vllm_params(self, parameters):
+    def translate_vllm_params(self, parameters: dict):
+        """
+        Helper function to convert DJL Serving parameter names to parameter names
+        that VLLM recognizes.
+
+        :param parameters (dict): Parameters pertaining to a specific request
+
+        :return: The same parameters dict, but with VLLM style parameter names.
+        """
         parameters.pop('seed', None)
         parameters.pop('do_sample', None)
         if "max_new_tokens" in parameters.keys():
@@ -80,6 +98,14 @@ class VLLMRollingBatch(RollingBatch):
 
     @stop_on_any_exception
     def inference(self, input_data, parameters):
+        """
+        Adds new requests and gets output tokens from the backend.
+
+        :param input_data (list[str]): List of input prompts.
+        :param parameters (list[str]): List of settings pertaining to each request.
+
+        :return results (list): List of dictionaries, one for each request, that contain output tokens and other data.
+        """
         batch_size = len(input_data)
         new_requests = self.get_new_requests(input_data, parameters,
                                              batch_size)
@@ -148,4 +174,7 @@ class VLLMRollingBatch(RollingBatch):
         return self.postprocess_results()
 
     def preprocess_requests(self, requests):
+        """
+        Currently not applicable for VLLM.
+        """
         raise NotImplementedError("Not implemented for vLLM rolling batcher")
