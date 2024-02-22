@@ -239,3 +239,17 @@ curl "http://localhost:8080/models?limit=2&next_page_token=0"
   ]
 }
 ```
+
+### Configure server logging
+
+`POST /server/logging`
+
+* level - set logging level: TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF, if no log level specified, `INFO` level will be set.
+
+```bash
+curl -X POST "http://localhost:8080/server/logging?level=debug"
+
+{
+  "status": "OK"
+}
+```

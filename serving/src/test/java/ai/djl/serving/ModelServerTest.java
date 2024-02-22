@@ -242,6 +242,7 @@ public class ModelServerTest {
             testUnregisterModel(channel);
             testAsyncInference(channel);
             testDjlModelZoo(channel);
+            testConfigLogging(channel);
 
             testPredictionsInvalidRequestSize(channel);
 
@@ -756,6 +757,21 @@ public class ModelServerTest {
         StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
         assertEquals(resp.getStatus(), "Model \"zoomodel\" registered.");
         request(channel, HttpMethod.DELETE, "/models/zoomodel");
+    }
+
+    private void testConfigLogging(Channel channel) throws InterruptedException, IOException {
+        logTestFunction();
+        String url = "/server/logging?level=trace";
+        request(channel, HttpMethod.POST, url);
+        assertHttpOk();
+
+        Logger log = LoggerFactory.getLogger(ModelServer.class);
+        Assert.assertTrue(log.isTraceEnabled());
+
+        url = "/server/logging";
+        request(channel, HttpMethod.POST, url);
+        assertHttpOk();
+        Assert.assertFalse(log.isTraceEnabled());
     }
 
     private void testThrottle() throws InterruptedException {
