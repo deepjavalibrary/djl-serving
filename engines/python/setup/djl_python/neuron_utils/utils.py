@@ -12,8 +12,10 @@
 # the specific language governing permissions and limitations under the License.
 
 import torch
-from typing import TYPE_CHECKING, Optional, Union, Dict
-from optimum.neuron import NeuronModelForCausalLM
+from typing import TYPE_CHECKING, Optional, Union
+from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
+from optimum.exporters.neuron.model_configs import *
+from optimum.exporters.tasks import TasksManager
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,7 +43,12 @@ def task_from_config(config) -> str:
     return "text-generation"
 
 
-class NeuronXModelAdapter(NeuronModelForCausalLM):
+def get_exporter(config, task):
+    return TasksManager.get_exporter_config_constructor(
+        model_type=config.model_type, exporter="neuron", task=task)()
+
+
+class NeuronXModelAdapter(OptimumModelForCausalLM):
 
     def __init__(self,
                  model: torch.nn.Module,
@@ -51,6 +58,7 @@ class NeuronXModelAdapter(NeuronModelForCausalLM):
         super().__init__(model, config, model_path, generation_config)
         self.model_type = config.model_type
         self.sample_options = ["start_ids", "top_k"]
+        self.cur_len = 0
         if self.model_type == "llama":
             self.sample_options = self.sample_options + [
                 "top_p", "eos_token_override", "temperature", "streamer"

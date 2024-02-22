@@ -33,6 +33,7 @@ FILES_TO_EXTRACT = [
     'djl_python/rolling_batch/neuron_rolling_batch.py',
     'djl_python/transformers_neuronx_scheduler/__init__.py',
     'djl_python/transformers_neuronx_scheduler/optimum_neuron_scheduler.py',
+    'djl_python/transformers_neuronx_scheduler/optimum_modeling.py',
     'djl_python/transformers_neuronx_scheduler/token_selector.py',
     'djl_python/transformers_neuronx_scheduler/utils.py',
 ]

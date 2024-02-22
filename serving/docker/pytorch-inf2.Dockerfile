@@ -19,11 +19,11 @@ ARG transformers_neuronx_version=0.9.474
 ARG neuronx_distributed_version=0.6.0
 ARG neuronx_cc_version=2.12.68.0
 ARG protobuf_version=3.19.6
-ARG transformers_version=4.35.0
+ARG transformers_version=4.36.2
 ARG accelerate_version=0.23.0
-ARG diffusers_version=0.22.0
+ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
-ARG optimum_neuron_version=0.0.16
+ARG optimum_neuron_version=0.0.20
 EXPOSE 8080
 
 # Sets up Path for Neuron tools

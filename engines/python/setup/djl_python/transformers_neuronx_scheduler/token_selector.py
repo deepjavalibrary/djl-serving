@@ -113,12 +113,6 @@ class TokenSelector:
                 raise ValueError("{flag} is not supported for generation.")
 
         if generation_config.max_new_tokens is not None:
-            logging.warning(
-                f"Both `max_new_tokens` (={generation_config.max_new_tokens}) and `max_length`(="
-                f"{generation_config.max_length}) seem to have been set. `max_new_tokens` will take precedence. "
-                "Please refer to the documentation for more information. "
-                "(https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)"
-            )
             generation_config.max_length = generation_config.max_new_tokens + input_ids.shape[
                 -1]
 
@@ -129,9 +123,6 @@ class TokenSelector:
             )
         max_length = generation_config.max_length
         if max_length > max_seq_length:
-            logging.warning(
-                f"Adjusting the maximum generation length ({max_length}) to the model maximum sequence length ({max_seq_length})"
-            )
             generation_config.max_length = max_seq_length
 
         # Instantiate transformers library processors and criterias
@@ -150,9 +141,6 @@ class TokenSelector:
         # This is not supposed to happen for any of the models we support
         assert eos_token_id is not None and not isinstance(eos_token_id, list)
         if generation_config.pad_token_id is None:
-            logging.warning(
-                f"Setting `pad_token_id` to `eos_token_id`:{eos_token_id} for open-end generation."
-            )
             generation_config.pad_token_id = eos_token_id
 
         generation_mode = model._get_generation_mode(generation_config, None)
