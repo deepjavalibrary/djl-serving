@@ -317,27 +317,30 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             pending.setCode(202);
             pending.addProperty(X_NEXT_TOKEN, nextToken);
             pending.addProperty(X_CUSTOM_ATTRIBUTES, X_NEXT_TOKEN + '=' + nextToken);
-            cache.put(nextToken, pending);
+            cache.put(nextToken, pending)
+                    .thenAccept(
+                            ignored -> {
+                                // Send back token to user
+                                Output out = new Output();
+                                out.addProperty(X_NEXT_TOKEN, nextToken);
+                                out.addProperty(
+                                        X_CUSTOM_ATTRIBUTES, X_NEXT_TOKEN + '=' + nextToken);
+                                sendOutput(out, ctx);
 
-            // Send back token to user
-            Output out = new Output();
-            out.addProperty(X_NEXT_TOKEN, nextToken);
-            out.addProperty(X_CUSTOM_ATTRIBUTES, X_NEXT_TOKEN + '=' + nextToken);
-            sendOutput(out, ctx);
-
-            // Run model
-            modelManager
-                    .runJob(workflow, input)
-                    .whenCompleteAsync(
-                            (o, t) -> {
-                                if (o != null) {
-                                    cache.put(nextToken, o);
-                                } else {
-                                    Output failOut = new Output();
-                                    failOut.setCode(500);
-                                    failOut.setMessage(t.getMessage());
-                                    cache.put(nextToken, failOut);
-                                }
+                                // Run model
+                                modelManager
+                                        .runJob(workflow, input)
+                                        .whenCompleteAsync(
+                                                (o, t) -> {
+                                                    if (o != null) {
+                                                        cache.put(nextToken, o);
+                                                    } else {
+                                                        Output failOut = new Output();
+                                                        failOut.setCode(500);
+                                                        failOut.setMessage(t.getMessage());
+                                                        cache.put(nextToken, failOut);
+                                                    }
+                                                });
                             });
         }
     }
