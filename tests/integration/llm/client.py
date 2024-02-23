@@ -430,6 +430,12 @@ vllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
+    },
+    "speculative-llama-13b": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     }
 }
 
@@ -450,7 +456,7 @@ ds_smoothquant_model_spec = {
         "seq_length": [64, 128, 256],
     },
     "llama2-13b-smoothquant": {
-        "max_memory_per_gpu": [9.0, 9.0, 9.0],
+        "max_memory_per_gpu": [9.2, 9.2, 9.2],
         "batch_size": [2, 4, 8],
         "seq_length": [64, 128, 256],
     },
