@@ -9,15 +9,15 @@ If you have a custom model, it must be saved in the HuggingFace Transformers Pre
 You can read [this guide](model-artifacts.md) to verify your model is saved in the correct format for LMI.
 
 This guide is organized as follows:
-- [1. Instance Type Selection]()
+- [1. Instance Type Selection](instance-type-selection.md)
   - Pick a SageMaker instance type based on your model size and expected runtime usage 
-- [2. Container Selection](#2-container-selection)
+- [2. Backend Selection](backend-selection.md)
   - Pick a backend (vLLM, TensorRT-LLM, DeepSpeed, LMI-Dist, Transformers NeuronX) and corresponding container
-- [3. Model and Container Configurations](#3-container-and-model-configurations)
-  - Configure your setup for optimized performance based on your use-case 
-- [4. Deploying a SageMaker Endpoint](#4-deploying-a-sagemaker-endpoint)
-  - Deploy your setup to a SageMaker Endpoint 
-- [5. Benchmarking your setup](#5-benchmarking-your-endpoint)
+- [3. Model and Container Configurations](configurations.md)
+  - Configure your model for optimized performance based on your use-case 
+- [4. Deploying a SageMaker Endpoint](deploying-your-endpoint.md)
+  - Deploy your model to a SageMaker Endpoint and make inference requests
+- [5. Benchmarking your setup](benchmarking-your-endpoint.md)
   - Benchmark your setup to determine whether additional tuning is needed
 - [6. Advanced Guides]()
   - A collection of advanced guides to further tune your deployment
@@ -30,6 +30,7 @@ We recommend reading this overview to become familiar with some of the LMI speci
 ## Components of LMI
 
 LMI containers bundle together a model server, LLM inference libraries, and inference handler code to deliver a batteries included LLM serving solution.
+The model server, inference libraries, and default inference handler code are brought together through a unified configuration that specifies your deployment setup.
 Brief overviews of the components relevant to LMI are presented below.
 
 ### Model Server
@@ -57,3 +58,13 @@ These libraries expose features and capabilities through different APIs and mech
 With LMI's built-in handlers, there is no need to learn each library and write custom code to leverage the features and optimizations they offer.
 We expose a unified configuration format that allows you to easily switch between libraries as they evolve and improve over time.
 As the ecosystem grows and new libraries become available, LMI can integrate them and offer the same consistent experience.
+
+### Configuration
+
+The configuration provided to LMI specifies your entire setup. The configuration covers many aspects including:
+* Where your model artifacts are stored (HuggingFace ModelId, S3 URI)
+* Model Server Configurations like job/request queue size, auto-scaling behavior for model workers, which engine to use (either Python or MPI for LMI)
+* Engine/Backend Configurations like whether to use quantization, input sequence limits, continuous batching size, tensor parallel degree, and more depending on the specific backend you use
+
+Configurations can be provided as either a `serving.properties` file, or through environment variables passed to the container.
+A more in-depth explanation about configurations is presented in the deployment guide in the [Container and Model Configurations](configurations.md) section.

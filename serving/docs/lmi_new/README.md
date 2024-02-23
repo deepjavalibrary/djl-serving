@@ -51,7 +51,7 @@ model = Model(
   role=iam_role,
   env={
     "HF_MODEL_ID": "TheBloke/Llama-2-7B-fp16",
-    "OPTION_TENSOR_PARALLEL_DEGREE": "max",
+    "TENSOR_PARALLEL_DEGREE": "max",
     "OPTION_ROLLING_BATCH": "vllm",
   }
 )
