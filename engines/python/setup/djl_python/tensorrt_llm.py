@@ -21,6 +21,11 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 
 
 class TRTLLMService(object):
+    """
+    A TRTLLMService is an intermediary for the default TensorRT-LLM handler. Its functions are invoked to turn
+    Inputs into Outputs and it is responsible for sending new requests to the rolling batcher, which
+    calls TensorRT-LLM in the back-end.
+    """
 
     def __init__(self):
         self.initialized = False
@@ -35,7 +40,20 @@ class TRTLLMService(object):
         self.initialized = True
         return
 
-    def parse_input(self, inputs):
+    def parse_input(
+            self, inputs: Input
+    ) -> tuple[list[str], list[int], list[dict], dict, list]:
+        """
+        Preprocessing function that extracts information from Input objects.
+
+        :param inputs (Input): a batch of inputs, each corresponding to a new request
+
+        :return input_data (list[str]): a list of strings, each string being the prompt in a new request
+        :return input_size (list[int]): a list of ints being the size of each new request
+        :return parameters (list[dict]): parameters pertaining to each request
+        :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
+        :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
+        """
         input_data = []
         input_size = []
         parameters = []
@@ -69,7 +87,14 @@ class TRTLLMService(object):
 
         return input_data, input_size, parameters, errors, batch
 
-    def inference(self, inputs):
+    def inference(self, inputs: Input) -> Output:
+        """
+        Does preprocessing and sends new requests to the rolling batch script for inference
+
+        :param inputs (Input): a batch of inputs, each corresponding to a new request
+
+        :return outputs (Output): a batch of outputs that contain status code, output text, and other information
+        """
         outputs = Output()
 
         input_data, input_size, parameters, errors, batch = self.parse_input(
@@ -110,9 +135,13 @@ class TRTLLMService(object):
 _service = TRTLLMService()
 
 
-def handle(inputs: Input):
+def handle(inputs: Input) -> Output:
     """
-    Default handler function
+    Handler function for the default TensorRT-LLM handler.
+
+    :param inputs (Input): a batch of inputs, each corresponding to a new request
+
+    :return outputs (Output): a batch of outputs that contain status code, output text, and other information.
     """
     if not _service.initialized:
         # stateful model
