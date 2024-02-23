@@ -435,6 +435,15 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm phi-2
           docker rm -f $(docker ps -aq)
+      - name: Test Speculative Decoding with LLAMA 13B model
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm speculative-llama-13b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm speculative-llama-13b
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration

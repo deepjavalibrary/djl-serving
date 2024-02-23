@@ -57,6 +57,9 @@ class VLLMRollingBatch(RollingBatch):
             trust_remote_code=self.vllm_configs.trust_remote_code,
             load_format=self.vllm_configs.load_format,
             quantization=self.vllm_configs.quantize,
+            draft_model=self.vllm_configs.speculative_draft_model,
+            speculate_length=self.vllm_configs.speculative_length,
+            draft_model_tp_size=self.vllm_configs.draft_model_tp_size,
             revision=self.vllm_configs.revision)
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()

@@ -956,9 +956,39 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         return Integer.MAX_VALUE * 1024L;
     }
 
+    private Path downloadS3ToDownloadDir(String s3Url) throws IOException, ModelException {
+        logger.info("{}: S3 url found, start downloading from {}", uid, s3Url);
+        // Use fixed download path to avoid repeat download
+        String hash = Utils.hash(s3Url);
+        String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
+        parent = parent.resolve("download");
+        Path downloadModelDir = parent.resolve(hash);
+        if (Files.exists(downloadModelDir)) {
+            logger.info("{}: artifacts has been downloaded already: {}", uid, downloadModelDir);
+        } else {
+            Files.createDirectories(parent);
+            Path tmp = Files.createTempDirectory(parent, "tmp");
+            try {
+                downloadS3(s3Url, tmp.toAbsolutePath().toString());
+                Utils.moveQuietly(tmp, downloadModelDir);
+                logger.info("{}: Download completed! Files saved to {}", uid, downloadModelDir);
+            } finally {
+                Utils.deleteQuietly(tmp);
+            }
+        }
+        return downloadModelDir;
+    }
+
     void downloadS3() throws ModelException, IOException {
         String s3Url = prop.getProperty("option.s3url");
         String modelId = prop.getProperty("option.model_id");
+        String draftModelId = prop.getProperty("option.speculative_draft_model");
+        if (draftModelId != null && draftModelId.startsWith("s3://")) {
+            Path draftDownloadDir = downloadS3ToDownloadDir(draftModelId);
+            prop.setProperty(
+                    "option.speculative_draft_model", draftDownloadDir.toAbsolutePath().toString());
+        }
         if (s3Url != null) {
             // s3url is deprecated, use model_id instead
             if (modelId != null) {
@@ -970,26 +1000,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             return;
         }
         if (modelId.startsWith("s3://")) {
-            logger.info("{}: S3 url found, start downloading from {}", uid, modelId);
-            // Use fixed download path to avoid repeat download
-            String hash = Utils.hash(modelId);
-            String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
-            Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
-            parent = parent.resolve("download");
-            this.downloadDir = parent.resolve(hash);
-            if (Files.exists(this.downloadDir)) {
-                logger.info("{}: artifacts has been downloaded already: {}", uid, this.downloadDir);
-                return;
-            }
-            Files.createDirectories(parent);
-            Path tmp = Files.createTempDirectory(parent, "tmp");
-            try {
-                downloadS3(modelId, tmp.toAbsolutePath().toString());
-                Utils.moveQuietly(tmp, this.downloadDir);
-                logger.info("{}: Download completed! Files saved to {}", uid, this.downloadDir);
-            } finally {
-                Utils.deleteQuietly(tmp);
-            }
+            this.downloadDir = downloadS3ToDownloadDir(modelId);
         } else if (modelId.startsWith("djl://")) {
             logger.info("{}: djl model zoo url found: {}", uid, modelId);
             modelUrl = modelId;

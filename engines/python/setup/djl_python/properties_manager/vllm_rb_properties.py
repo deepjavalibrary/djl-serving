@@ -38,6 +38,10 @@ class VllmRbProperties(Properties):
     # TODO: try to get good default from vLLM to prevent revisiting
     # TODO: last time check: vllm 0.3.1
     gpu_memory_utilization: Optional[float] = 0.9
+    # TODO: speculative decoding changes
+    speculative_draft_model: Optional[str] = None
+    speculative_length: int = 5
+    draft_model_tp_size: int = 1
 
     @validator('engine')
     def validate_engine(cls, engine):
