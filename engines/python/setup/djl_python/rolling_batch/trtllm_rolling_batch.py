@@ -16,10 +16,15 @@ from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exc
 
 
 class TRTLLMRollingBatch(RollingBatch):
+    """
+    TRTLLMRollingBatch connects the TensorRT-LLM handler to the TensorRT-LLM backend. It receives new
+    requests from the handler and sends them to the backend when there is space available in the batch.
+    It also gets any new tokens from the backend and sends them back to the handler.
+    """
 
-    def __init__(self, model_id_or_path, properties, **kwargs):
+    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
         """
-        Initializes the TRTLLMRollingBatch.
+        Initializes the TRTLLMRollingBatch
         :param model_id_or_path: model id or path
         :param properties: other properties of the model, such as decoder strategy
         """
@@ -40,7 +45,15 @@ class TRTLLMRollingBatch(RollingBatch):
         self.request_cache.clear()
         super().reset()
 
-    def translate_triton_params(self, parameters):
+    def translate_triton_params(self, parameters: dict) -> dict:
+        """
+        Helper function to convert DJL Serving parameter names to Triton
+        parameter names that TensorRT-LLM recognizes.
+
+        :param parameters (dict): Parameters pertaining to a specific request
+
+        :return: The same parameters dict, but with TensorRT-LLM style parameter names.
+        """
         if "request_output_len" not in parameters.keys():
             parameters["request_output_len"] = parameters.pop(
                 "max_new_tokens", 128)
@@ -60,7 +73,16 @@ class TRTLLMRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self, input_data, parameters):
+    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
+        """
+        Loads new requests into the batch when there is availability, and gets output tokens from the backend
+        asynchronously.
+
+        :param input_data (list[str]): List of input prompts.
+        :param parameters (list[str]): List of settings pertaining to each request.
+
+        :return results (list): List of dictionaries, one for each request, that contain output tokens and other data.
+        """
         batch_size = len(input_data)
         # add pending requests to active requests list
         new_requests = self.get_new_requests(input_data, parameters,
@@ -98,6 +120,9 @@ class TRTLLMRollingBatch(RollingBatch):
 
         return self.postprocess_results()
 
-    def preprocess_requests(self, requests):
+    def preprocess_requests(self, requests: list):
+        """
+        Currently not applicable for TensorRT-LLM.
+        """
         raise NotImplementedError(
             "Not implemented for tensorrtllm rolling batcher")

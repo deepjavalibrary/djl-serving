@@ -13,7 +13,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Union, List
+from typing import Union, List, Callable, Optional
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 
@@ -128,14 +128,15 @@ class Request(object):
 
     def set_next_token(self,
                        next_token: Union[Token, str],
-                       output_formatter,
+                       output_formatter: Callable,
                        last_token: bool = False,
                        finish_reason: str = None):
         """
         Sets the newly generated token.
 
         :param next_token: next token to be set.
-        :param output_formatter: output formatter.
+        :param output_formatter: output formatter function (for example,
+            _json_output_formatter, _jsonlines_output_formatter, or user provided function
         :param last_token: whether this token is the last of the sequence.
         :param finish_reason: what reason made the generation ends. Current options:
             length: end because max_output_token size reached
@@ -183,6 +184,9 @@ class Request(object):
 
 
 def stop_on_any_exception(func):
+    """
+    Decorator that handles errors sent from backend
+    """
 
     def try_catch_handling(self, input_data, parameters):
         try:
@@ -247,12 +251,22 @@ class RollingBatch(ABC):
 
         :param input_data: List of input texts for each request in a batch
         :param parameters: List of kwargs for each request in a batch
+
         :return: generated batch decoded tokens
         """
         pass
 
-    def get_new_requests(self, input_data, parameters,
-                         batch_size) -> List[Request]:
+    def get_new_requests(self, input_data: list[str], parameters: list[dict],
+                         batch_size: int) -> list[Request]:
+        """
+        Adds requests to the batch when there is availability
+
+        :param input_data (list[str]): List of input prompts.
+        :param parameters (list[str]): List of settings pertaining to each request.
+        :param batch_size (int): Maximum number of requests in a batch
+
+        :return: list of current active requests (including those that have just been added)
+        """
         total_req_len = len(self.active_requests) + len(self.pending_requests)
         if batch_size > total_req_len:
             for i in range(total_req_len, batch_size):
@@ -274,10 +288,20 @@ class RollingBatch(ABC):
         return self.active_requests[active_pos:]
 
     @abstractmethod
-    def preprocess_requests(self, requests):
+    def preprocess_requests(self, requests: list[Request]):
+        """
+        Converts requests into specific formats that are required by specific backends.
+
+        :param requests (list[Request]): requests that will be sent to the backend after preprocessing
+        """
         pass
 
-    def postprocess_results(self):
+    def postprocess_results(self) -> list[dict]:
+        """
+        Returns most recent produced token by each request in a list of dicts
+
+        :return: a list of dicts, each one containing token and metadata
+        """
         results = []
         for i in range(len(self.active_requests)):
             req = self.active_requests[i]
@@ -299,7 +323,12 @@ class RollingBatch(ABC):
 
         return results
 
-    def get_content_type(self):
+    def get_content_type(self) -> Optional[str]:
+        """
+        Returns information that can be added to the metadata in an Output object
+
+        :return Optional[str]: format of output if applicable (None if user provided output formatter)
+        """
         # TODO: find a way to return content-type for custom output formatter
         if self.output_formatter == _jsonlines_output_formatter:
             return "application/jsonlines"
