@@ -183,7 +183,6 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "ENABLE_ADAPTERS_PREVIEW=true" > docker_env
           python3 llm/prepare.py huggingface llama-7b-unmerged-lora
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
@@ -252,7 +251,6 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "ENABLE_ADAPTERS_PREVIEW=true" > docker_env
           python3 llm/prepare.py unmerged_lora llama-7b-unmerged-lora
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
@@ -362,7 +360,6 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "ENABLE_ADAPTERS_PREVIEW=true" > docker_env
           python3 llm/prepare.py deepspeed gpt4all-lora
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve

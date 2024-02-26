@@ -1,6 +1,6 @@
 # Adapters
 
-**Note that this API is experimental and is subject to change. Using it requires the environment variable feature flag `ENABLE_ADAPTERS_PREVIEW`.**
+**Note that this API is experimental and is subject to change.
 
 DJL Serving has first class support for adapters.
 Adapters are patches or changes that can be made to a model to fine tune it for a particular usage.

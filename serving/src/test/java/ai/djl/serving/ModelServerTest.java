@@ -164,9 +164,6 @@ public class ModelServerTest {
         String engineCacheDir = Utils.getEngineCacheDir().toString();
         System.setProperty("DJL_CACHE_DIR", "build/cache");
         System.setProperty("ENGINE_CACHE_DIR", engineCacheDir);
-
-        // TODO Remove when removing the temporary feature flag
-        System.setProperty("ENABLE_ADAPTERS_PREVIEW", "true");
     }
 
     @AfterSuite

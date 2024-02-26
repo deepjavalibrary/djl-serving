@@ -1,6 +1,6 @@
 # DJL Serving Adapters Management API
 
-**Note that this API is experimental and is subject to change. Using it requires the environment variable feature flag `ENABLE_ADAPTERS_PREVIEW`.**
+**Note that this API is experimental and is subject to change.
 
 DJL Serving provides a set of API allow user to manage adapters at runtime:
 
