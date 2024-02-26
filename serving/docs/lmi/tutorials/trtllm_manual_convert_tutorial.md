@@ -24,13 +24,13 @@ Refer [here](https://github.com/aws/deep-learning-containers/blob/master/availab
 For example:
 
 ```
-docker pull 763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.25.0-tensorrtllm0.5.0-cu122
+docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-tensorrtllm0.7.1-cu122
 ```
 
 You can also pull the container from DockerHub:
 
 ```
-docker pull deepjavalibrary/djl-serving:0.25.0-tensorrt-llm
+docker pull deepjavalibrary/djl-serving:0.26.0-tensorrt-llm
 ```
 
 ### Step 3: Login the container and prepare the environment
@@ -40,7 +40,7 @@ You need to manually login into the container to proceed for conversion
 ```
 docker run -it --runtime=nvidia --gpus all \
 --shm-size 12g \
-deepjavalibrary/djl-serving:0.25.0-tensorrt-llm \
+deepjavalibrary/djl-serving:0.26.0-tensorrt-llm \
 /bin/bash
 ```
 
@@ -53,7 +53,7 @@ You can check it with
 pip show tensorrt-llm
 # Output
 # Name: tensorrt-llm
-# Version: 0.5.0
+# Version: 0.7.1
 ```
 
 Then just clone the TensorRT-LLM Triton backend for model preparation. If the version is 0.5.0, then you need to checkout the tag for that version (v0.5.0).

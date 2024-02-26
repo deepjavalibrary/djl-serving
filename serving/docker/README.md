@@ -17,7 +17,8 @@ You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `de
 
 ## Run docker image
 
-DJLServing is doing nightly publish to the [dockerhub](https://hub.docker.com/r/deepjavalibrary/djl-serving/tags).
+You can find DJL latest release docker image on [dockerhub](https://hub.docker.com/r/deepjavalibrary/djl-serving/tags?page=1&name=0.26.0).
+DJLServing also publishes nightly publish to the [dockerhub nightly](https://hub.docker.com/r/deepjavalibrary/djl-serving/tags?page=1&name=nightly).
 You can just pull the image you need from there.
 
 **djl-serving** will load all models stored in `/opt/ml/model` folder. You only need to
@@ -28,29 +29,55 @@ Here are a few examples to run djl-serving docker image:
 ### CPU
 
 ```shell
+docker pull deepjavalibrary/djl-serving:0.26.0
+
 mkdir models
 cd models
 curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_jit.tar.gz
 
-docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.25.0
+docker run -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.26.0
 ```
 
 ### GPU
 
 ```shell
+docker pull deepjavalibrary/djl-serving:0.26.0-pytorch-gpu
+
 mkdir models
 cd models
 curl -O https://resources.djl.ai/test-models/pytorch/bert_qa_jit.tar.gz
 
-docker run -it --runtime=nvidia --shm-size 2g -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.25.0-pytorch-gpu
+docker run -it --runtime=nvidia --shm-size 2g -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.26.0-pytorch-gpu
 ```
 
 ### AWS Inferentia
 
 ```shell
+docker pull deepjavalibrary/djl-serving:0.26.0-pytorch-inf2
+
 mkdir models
 cd models
 
 curl -O https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz
-docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.25.0-pytorch-inf2
+docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.26.0-pytorch-inf2
+```
+
+### aarch64 machine
+
+```shell
+docker pull deepjavalibrary/djl-serving:0.26.0-aarch64
+
+mkdir models
+cd models
+
+curl -O https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz
+docker run --device /dev/neuron0 -it --rm -v $PWD:/opt/ml/model -p 8080:8080 deepjavalibrary/djl-serving:0.26.0-aarch64
+```
+
+## Run docker image with custom command line arguments
+
+You can pass command line arguments to `djl-serving` directly when you using `docker run`
+
+```
+docker run -it --rm -p 8080:8080 deepjavalibrary/djl-serving:0.26.0 djl-serving -m "djl://ai.djl.huggingface.pytorch/sentence-transformers/all-MiniLM-L6-v2"
 ```
