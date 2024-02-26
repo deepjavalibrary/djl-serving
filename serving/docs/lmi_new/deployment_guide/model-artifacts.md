@@ -57,6 +57,76 @@ Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMO
         └── tokenizer.model
 ```
 
+## Neuron Pretrained Model Formats
+
+For pretrained models that will be compiled at runtime, the HuggingFace Transformers pretrained format is preferred.
+
+Model compile time can quickly become an issue for larger models, so compiled models are accepted in the following formats.
+
+### Standard Optimum-Neuron model artifacts 2.16.0 SDK
+Under the same folder level, we expect:
+- config.json: Store the model architecture, structure information, and neuron compiler configuration
+- tokenizer_config.json: Store the tokenizer config information
+- modelling files (*.py): If your model has custom modelling or tokenizer files.
+  - Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true`
+- checkpoint directory: Directory containing the split-weights model
+  - other files that are needed for split model loading
+- compiled directory: Directory containing the `neff` files
+- other files that are needed for model loading and inference
+
+A sample of what the model and tokenizer artifacts looks like is shown below:
+```
+model/
+|- checkpoint/ 
+|- - pytorch_model.bin/ (directory containing the split model weights)
+|- - config.json (model configuration of the model before compilation)
+|- compiled/
+|- - *.neff (files containing the serialization of the compiled model graph)
+|- config.json [Required](model configuration file with architecture details)
+|- tokenizer_config.json [Required] (tokenizer configuration)
+|- special_tokens_map.json (special token mapping)
+|- *modelling.py (custom modelling files)
+|- *tokenizer.py (custom tokenzer)
+|- tokenizer.json (tokenizer model)
+|- tokenizer.model (tokenizer model)
+```
+
+### Split Model and Compiled Graph 2.16.0 SDK
+Split Model: Under the same folder level, we expect:
+- config.json: Store the model architecture, structure information, and neuron compiler configuration
+- tokenizer_config.json: Store the tokenizer config information
+- modelling files (*.py): If your model has custom modelling or tokenizer files.
+  - Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true`
+- pytorch_model.bin: Directory containing the split-weights model (This is not a typo it is a directory)
+  - other files that are needed for split model loading
+
+Compiled Graph: Under the same folder level, we expect:
+- The files specifying the compiled graph. This can be `.neff` files, or a dump of the `neff` cache.
+
+A sample of what the model and tokenizer artifacts looks like is shown below:
+```
+model/
+|- pytorch_model.bin/ (directory containing the split model weights)
+|- config.json [Required](model configuration file with architecture details)
+|- tokenizer_config.json [Required] (tokenizer configuration)
+|- special_tokens_map.json (special token mapping)
+|- *modelling.py (custom modelling files)
+|- *tokenizer.py (custom tokenzer)
+|- tokenizer.json (tokenizer model)
+|- tokenizer.model (tokenizer model)
+
+compiled/
+|- *.neff (files containing the serialization, or dumped NEFF cache, of the compiled model graph)
+```
+
+To use this format when loading in LMI there are a few advanced configuration details required. The first is the flag
+for loading a split model `option.load_split_model`, which indicates the model has already been split and is ready for
+loading on neuron devices. The second is the `option.compiled_graph_path` which allows the user to specify either, 
+the `*.neff` files compiled for a serialized model, or to a neuron cache directory containing the compiled graph.
+This allows for a workaround for models that do not support serialization, or other advanced use cases.
+
+**Note**: Compiled model artifacts must be compiled under the same compiler version as the container being used, if 
+the precompiled models compiler version does not match the image the model will fail to load.
 
 ## Storing models in S3
 

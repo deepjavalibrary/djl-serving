@@ -9,47 +9,9 @@ The source of the model could be:
 - s3 url that store the artifact that follows the HuggingFace model repo structure, the Optimum compiled model repo structure, or a split model with a second url for the `neff` cache.
 - A local path that contains everything in a folder follows HuggingFace model repo structure, the Optimum compiled model repo structure, or a split model with a second directory for the `neff` cache.
 
-### Standard HuggingFace model artifacts
-Under the same folder level, we expect:
-- config.json: Store the model architecture and structure information
-- tokenizer_config.json: Store the tokenizer config information
-- model weights: Store the model weights; sharded or whole
-- modelling files (*.py): If your model has custom modelling or tokenizer files.
-  - Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true`
-- other files that are needed for model loading and inference
-
-A safe way is just to keep the file inside.
-
-We don't support malformed model repo from HuggingFace or other source that does not contain config.json or alternative model styles
-like GGUF format and more.
-
-### Standard Optimum-Neuron model artifacts 2.16.0 SDK (changing in an upcoming release to support optimum-cache)
-Under the same folder level, we expect:
-- config.json: Store the model architecture, structure information, and neuron compiler configuration
-- tokenizer_config.json: Store the tokenizer config information
-- modelling files (*.py): If your model has custom modelling or tokenizer files.
-  - Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true`
-- checkpoint directory: Directory containing the split-weights model
-  - other files that are needed for split model loading
-- compiled directory: Directory containing the `neff` files
-- other files that are needed for model loading and inference
-
-### BYO Compiled Model 2.16.0 SDK
-Split Model: Under the same folder level, we expect:
-- config.json: Store the model architecture, structure information, and neuron compiler configuration
-- tokenizer_config.json: Store the tokenizer config information
-- modelling files (*.py): If your model has custom modelling or tokenizer files.
-  - Please remember to turn on `option.trust_remote_code=true` or `OPTION_TRUST_REMOTE_CODE=true`
-- pytorch_model.bin: Directory containing the split-weights model (This is not a typo it is a directory)
-  - other files that are needed for split model loading
-
-Compiled Model: Under the same folder level, we expect:
-- The files specifying the compiled graph. This can be `.neff` files, or a dump of the `neff` cache.
+More detail on the options for model artifacts available for the LMI Transformers-NeuronX container available [here](../deployment_guide/model-artifacts.md#neuron-pretrained-model-formats)
 
 ## Supported Model architecture
-
-LMI is shipping vLLM 0.2.7 with 0.26.0 containers, 
-so technically we support all LLM that [vLLM 0.2.7 support](https://github.com/vllm-project/vllm/tree/v0.2.7?tab=readme-ov-file#about).
 
 The model architectures that are tested daily for LMI Transformers-NeuronX (in CI):
 - LLAMA
@@ -79,7 +41,7 @@ Currently, we allow customer to use `option.quantize=static_int8` or `OPTION_QUA
 
 ## Quick Start Configurations
 
-Most of the LMI Transformers-NeuronX models use the following template:
+Most of the LMI Transformers-NeuronX models use the following template (quantization, and other advanced features will require additional configuration which is described [here](../../lmi/configurations_large_model_inference_containers.md#transformers-neuronx-doc)):
 
 ### Use serving.properties
 You can deploy with a serving.properties:
@@ -112,4 +74,4 @@ OPTION_MODEL_LOADING_TIMEOUT=1600
 
 ### SageMaker notebook deployment samples
 
-Here you can find deployment samples with SageMaker notebooks [tutorial](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi_new/README.md).
+Here you can find deployment samples with SageMaker notebooks [tutorial](../README.md).
