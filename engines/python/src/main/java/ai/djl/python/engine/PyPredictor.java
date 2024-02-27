@@ -55,9 +55,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
                 model.getProperty("rolling_batch") != null
                         && !"disable".equals(model.getProperty("rolling_batch"));
         if (isRollingBatch) {
-            String outputFormatter = model.getProperty("output_formatter");
-            int maxRollingBatchSize = model.intProperty("max_rolling_batch_size", 32);
-            rollingBatch = new RollingBatch(process, maxRollingBatchSize, timeout, outputFormatter);
+            rollingBatch = new RollingBatch(process, model, timeout);
         }
     }
 

@@ -12,9 +12,11 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.metric.Metric;
+import ai.djl.metric.Metrics;
 import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -49,7 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 class RollingBatch implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(RollingBatch.class);
-    private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
+    private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private static ExecutorService threadPool =
             Executors.newCachedThreadPool(
@@ -70,11 +72,13 @@ class RollingBatch implements Runnable {
     private Condition canAdd;
     private Condition canRead;
     private boolean resetRollingBatch;
+    private Metrics metrics;
 
-    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, String outputFormatter) {
+    RollingBatch(PyProcess process, Model model, int timeout) {
         this.process = process;
-        this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
+        maxRollingBatchSize = model.intProperty("max_rolling_batch_size", 32);
+        String outputFormatter = model.getProperty("output_formatter");
         if (outputFormatter == null || "json".equals(outputFormatter)) {
             contentType = "application/json";
         } else if ("jsonlines".equals(outputFormatter)) {
@@ -86,6 +90,17 @@ class RollingBatch implements Runnable {
         canAdd = lock.newCondition();
         canRead = lock.newCondition();
         threadPool.submit(this);
+        if (Boolean.parseBoolean(model.getProperty("log_model_metric"))) {
+            int metricsAggregation = model.intProperty("metrics_aggregation", 1000);
+            String id = model.getProperty("endpoint_id", "model");
+            metrics = new Metrics();
+            metrics.setLimit(metricsAggregation);
+            metrics.setOnLimit(
+                    (m, s) -> {
+                        MODEL_METRIC.info("{}-{}", id, m.percentile(s, 50));
+                        MODEL_METRIC.info("{}-{}", id, m.percentile(s, 90));
+                    });
+        }
     }
 
     /** {@inheritDoc} */
@@ -136,6 +151,7 @@ class RollingBatch implements Runnable {
                 lock.unlock();
             }
 
+            long begin = System.nanoTime();
             Output output;
             try {
                 output = process.predict(batch, timeout, false);
@@ -181,6 +197,11 @@ class RollingBatch implements Runnable {
                     canAdd.signal();
                 }
                 logger.trace("rolling batch size: {}", size);
+                if (metrics != null) {
+                    long duration = (System.nanoTime() - begin) / 1000;
+                    metrics.addMetric(new Metric("TokenLatency", duration, Unit.MICROSECONDS));
+                    metrics.addMetric(new Metric("RollingBatchSize", size, Unit.COUNT));
+                }
             } finally {
                 lock.unlock();
             }
@@ -193,13 +214,13 @@ class RollingBatch implements Runnable {
             if (list.size() >= maxRollingBatchSize) {
                 logger.debug("exceed max_rolling_batch_size: {}", maxRollingBatchSize);
                 if (!canAdd.await(timeout, TimeUnit.SECONDS)) {
-                    SERVER_METRIC.info("{}", new Metric("RollingTimeout", list.size(), Unit.COUNT));
+                    MODEL_METRIC.info("{}", new Metric("RollingTimeout", list.size(), Unit.COUNT));
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, String.valueOf(RandomUtils.nextInt()), contentType);
+            String seed = String.valueOf(RandomUtils.nextInt());
+            Request req = new Request(input, seed, contentType, metrics);
             list.add(req);
-            SERVER_METRIC.info("{}", new Metric("RollingBatchSize", list.size(), Unit.COUNT));
             canRead.signal();
             return req.output;
         } catch (InterruptedException e) {
@@ -223,8 +244,11 @@ class RollingBatch implements Runnable {
         String nextToken;
         boolean last;
         String seed;
+        Metrics metrics;
+        int count;
+        long creationTime;
 
-        Request(Input input, String seed, String contentType) {
+        Request(Input input, String seed, String contentType, Metrics metrics) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
@@ -233,6 +257,8 @@ class RollingBatch implements Runnable {
             }
             output.add(data);
             this.seed = seed;
+            this.metrics = metrics;
+            creationTime = System.nanoTime();
         }
 
         BytesSupplier getRequest() {
@@ -264,6 +290,7 @@ class RollingBatch implements Runnable {
         }
 
         void addResponse(byte[] json) {
+            ++count;
             if (json[0] == '{') {
                 // TODO: backward compatible for 0.23.0 release in case user
                 // customize huggingface.parse_input()
@@ -315,6 +342,13 @@ class RollingBatch implements Runnable {
                 byte[] buffer = JsonUtils.GSON_PRETTY.toJson(map).getBytes(StandardCharsets.UTF_8);
                 data.appendContent(buffer, true);
             } else {
+                if (last && metrics != null) {
+                    long duration = System.nanoTime() - creationTime;
+                    double throughput = count * 1_000_000_000d / duration;
+                    metrics.addMetric(
+                            new Metric("TokenThroughput", throughput, Unit.COUNT_PER_SECOND));
+                    metrics.addMetric(new Metric("OutputTokens", count, Unit.COUNT));
+                }
                 data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
             }
         }
