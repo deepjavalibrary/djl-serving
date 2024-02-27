@@ -226,14 +226,14 @@ public class PyModel extends BaseModel {
                 }
                 setProperty("gpu.maxWorkers", getProperty("maxWorkers"));
             }
-            if (mpiWorkers < Integer.parseInt(getProperty("gpu.maxWorkers"))) {
+            if (mpiWorkers < intProperty("gpu.maxWorkers", -1)) {
                 throw new IllegalArgumentException(
                         "We can only expand worker to "
                                 + mpiWorkers
                                 + " but the value is set to "
                                 + getProperty("gpu.maxWorkers"));
             }
-            mpiWorkers = Integer.parseInt(getProperty("gpu.maxWorkers"));
+            mpiWorkers = intProperty("gpu.maxWorkers", -1);
 
             properties.forEach((k, v) -> pyEnv.addParameter(k, v));
 

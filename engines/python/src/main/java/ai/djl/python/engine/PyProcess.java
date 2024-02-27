@@ -191,7 +191,7 @@ class PyProcess {
         restartCount.getAndIncrement();
         logger.info("Stop process: {}:{}, failure={}", workerId, pid, error);
         if (error) {
-            int failures = Integer.parseInt(model.getProperty("failed", "0"));
+            int failures = model.intProperty("failed", 0);
             model.setProperty("failed", String.valueOf(failures + 1));
             logger.info("Failure count: {}", failures);
         }

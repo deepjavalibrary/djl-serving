@@ -368,10 +368,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         for (Model m : getModels().values()) {
-            int failures = Integer.parseInt(m.getProperty("failed", "0"));
+            int failures = m.intProperty("failed", 0);
             if (failures > 0) {
-                String def = Utils.getenv("SERVING_RETRY_THRESHOLD", "10");
-                int threshold = Integer.parseInt(m.getProperty("retry_threshold", def));
+                int def = Integer.parseInt(Utils.getenv("SERVING_RETRY_THRESHOLD", "10"));
+                int threshold = m.intProperty("retry_threshold", def);
                 if (failures > threshold) {
                     logger.info(
                             "{}: exceed retry threshold: {}, mark model as failed.",
@@ -1114,8 +1114,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
             boolean logModelMetric = Boolean.parseBoolean(model.getProperty("log_model_metric"));
             if (logModelMetric) {
-                int metricsAggregation =
-                        Integer.parseInt(model.getProperty("metrics_aggregation", "1000"));
+                int metricsAggregation = model.intProperty("metrics_aggregation", 1000);
                 Metrics metrics = new Metrics();
                 metrics.setLimit(metricsAggregation);
                 metrics.setOnLimit((m, s) -> MODEL_METRIC.info("{}-{}", id, m.percentile(s, 50)));
