@@ -30,6 +30,7 @@ import ai.djl.repository.Repository;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.repository.zoo.ZooModel;
+import ai.djl.serving.wlm.util.EventManager;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
 import ai.djl.translate.TranslateException;
@@ -97,8 +98,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Map<String, Adapter> adapters;
     private transient Engine engine;
     private transient boolean initialize;
+    private transient EventManager eventManager;
 
-    private ModelInfo() {}
+    private ModelInfo() {
+        eventManager = EventManager.getInstance();
+    }
 
     /**
      * Constructs a new {@code ModelInfo} instance.
@@ -113,6 +117,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         this.outputClass = (Class<O>) Output.class;
 
         adapters = new ConcurrentHashMap<>();
+        eventManager = EventManager.getInstance();
     }
 
     /**
@@ -130,6 +135,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         outputClass = criteria.getOutputClass();
 
         adapters = new ConcurrentHashMap<>();
+        eventManager = EventManager.getInstance();
     }
 
     /**
@@ -178,6 +184,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         this.maxWorkers = maxWorkers;
 
         adapters = new ConcurrentHashMap<>();
+        eventManager = EventManager.getInstance();
     }
 
     /**
@@ -190,6 +197,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             throw new JsonParseException("modelUrl is required in workflow definition.");
         }
         modelUrl = modelUrl.replaceAll("\\{model_dir}", workflowDir);
+    }
+
+    /**
+     * Returns the properties of the model.
+     *
+     * @return the properties of the model
+     */
+    public Properties getProperties() {
+        return prop;
     }
 
     /** {@inheritDoc} */
@@ -208,6 +224,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             throw new ModelNotFoundException(e);
         }
 
+        eventManager.onModelLoading(this, device);
         try {
             Criteria.Builder<I, O> builder;
             if (criteria != null) {
@@ -247,6 +264,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 builder.optOption("model_id", downloadDir.toAbsolutePath().toString());
             }
             ZooModel<I, O> m = builder.build().loadModel();
+            eventManager.onModelLoaded(this);
             if (engine == null) {
                 engine = m.getNDManager().getEngine();
             }
@@ -257,6 +275,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     Files.list(modelDir.resolve("adapters"))
                             .forEach(
                                     adapterDir -> {
+                                        eventManager.onAdapterLoading(this, adapterDir);
                                         String adapterName = adapterDir.getFileName().toString();
                                         Adapter adapter =
                                                 Adapter.newInstance(
@@ -264,6 +283,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                                         adapterName,
                                                         adapterDir.toAbsolutePath().toString());
                                         registerAdapter(adapter);
+                                        eventManager.onAdapterLoaded(this, adapter);
                                     });
                 }
             }
@@ -464,10 +484,17 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         if (adapters == null) {
             adapters = new ConcurrentHashMap<>();
         }
+        eventManager.onModelDownloading(this);
+
         downloadModel();
         loadServingProperties();
         downloadS3();
-        LmiUtils.convertIfNeed(this);
+        eventManager.onModelDownloaded(this, downloadDir);
+        if (LmiUtils.needConvert(this)) {
+            eventManager.onModelConverting(this, "trtllm");
+            LmiUtils.convertTrtLLM(this);
+            eventManager.onModelConverted(this, "trtllm");
+        }
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
         if (options == null) {
@@ -697,6 +724,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 }
             }
             configPerModelSettings();
+            eventManager.onModelConfigured(this);
         }
     }
 

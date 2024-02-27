@@ -104,33 +104,35 @@ public final class LmiUtils {
         return false;
     }
 
-    static void convertIfNeed(ModelInfo<?, ?> info) throws IOException {
-        if (isTrtLLM(info)) {
-            info.prop.put("option.rolling_batch", "trtllm");
-            Path trtRepo;
-            String modelId = null;
-            if (info.downloadDir != null) {
-                trtRepo = info.downloadDir;
-            } else {
-                trtRepo = info.modelDir;
-                modelId = info.prop.getProperty("option.model_id");
-                if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
-                    trtRepo = Paths.get(modelId);
-                }
+    static boolean needConvert(ModelInfo<?, ?> info) {
+        return isTrtLLM(info);
+    }
+
+    static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
+        info.prop.put("option.rolling_batch", "trtllm");
+        Path trtRepo;
+        String modelId = null;
+        if (info.downloadDir != null) {
+            trtRepo = info.downloadDir;
+        } else {
+            trtRepo = info.modelDir;
+            modelId = info.prop.getProperty("option.model_id");
+            if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
+                trtRepo = Paths.get(modelId);
             }
-            if (!isValidTrtLlmModelRepo(trtRepo)) {
-                if (modelId == null) {
-                    modelId = trtRepo.toString();
-                }
-                String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
-                if (tpDegree == null) {
-                    tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
-                }
-                if ("max".equals(tpDegree)) {
-                    tpDegree = String.valueOf(CudaUtils.getGpuCount());
-                }
-                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+        }
+        if (!isValidTrtLlmModelRepo(trtRepo)) {
+            if (modelId == null) {
+                modelId = trtRepo.toString();
             }
+            String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
+            if (tpDegree == null) {
+                tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
+            }
+            if ("max".equals(tpDegree)) {
+                tpDegree = String.valueOf(CudaUtils.getGpuCount());
+            }
+            info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
         }
     }
 
