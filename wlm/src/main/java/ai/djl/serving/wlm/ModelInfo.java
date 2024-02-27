@@ -19,7 +19,9 @@ import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
+import ai.djl.metric.Metric;
 import ai.djl.metric.Metrics;
+import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.ndarray.NDManager;
@@ -225,6 +227,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         eventManager.onModelLoading(this, device);
+        long begin = System.nanoTime();
+
         try {
             Criteria.Builder<I, O> builder;
             if (criteria != null) {
@@ -264,6 +268,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 builder.optOption("model_id", downloadDir.toAbsolutePath().toString());
             }
             ZooModel<I, O> m = builder.build().loadModel();
+
+            long duration = (System.nanoTime() - begin) / 1000;
+            Metric metric = new Metric("LoadModel", duration, Unit.MICROSECONDS);
+            MODEL_METRIC.info("{}-{}", id, metric);
             eventManager.onModelLoaded(this);
             if (engine == null) {
                 engine = m.getNDManager().getEngine();
@@ -276,6 +284,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                             .forEach(
                                     adapterDir -> {
                                         eventManager.onAdapterLoading(this, adapterDir);
+                                        long start = System.nanoTime();
                                         String adapterName = adapterDir.getFileName().toString();
                                         Adapter adapter =
                                                 Adapter.newInstance(
@@ -283,6 +292,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                                         adapterName,
                                                         adapterDir.toAbsolutePath().toString());
                                         registerAdapter(adapter);
+                                        long d = (System.nanoTime() - start) / 1000;
+                                        Metric me = new Metric("LoadAdapter", d, Unit.MICROSECONDS);
+                                        MODEL_METRIC.info("{}-{}", id, me);
                                         eventManager.onAdapterLoaded(this, adapter);
                                     });
                 }
@@ -485,14 +497,23 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             adapters = new ConcurrentHashMap<>();
         }
         eventManager.onModelDownloading(this);
+        long begin = System.nanoTime();
 
         downloadModel();
         loadServingProperties();
         downloadS3();
+        long duration = (System.nanoTime() - begin) / 1000;
+        Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS);
+        MODEL_METRIC.info("{}-{}", id, metric);
+
         eventManager.onModelDownloaded(this, downloadDir);
         if (LmiUtils.needConvert(this)) {
             eventManager.onModelConverting(this, "trtllm");
+            begin = System.nanoTime();
             LmiUtils.convertTrtLLM(this);
+            duration = (System.nanoTime() - begin) / 1000;
+            metric = new Metric("ConvertTrtllm", duration, Unit.MICROSECONDS);
+            MODEL_METRIC.info("{}-{}", id, metric);
             eventManager.onModelConverted(this, "trtllm");
         }
         // override prop keys are not write to serving.properties,
