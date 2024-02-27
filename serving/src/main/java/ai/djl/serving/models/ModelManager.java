@@ -13,6 +13,8 @@
 package ai.djl.serving.models;
 
 import ai.djl.ModelException;
+import ai.djl.metric.Metric;
+import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -52,6 +54,7 @@ import java.util.stream.Collectors;
 public final class ModelManager {
 
     private static final Logger logger = LoggerFactory.getLogger(ModelManager.class);
+    private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private static ModelManager modelManager = new ModelManager();
 
@@ -89,6 +92,7 @@ public final class ModelManager {
 
         return CompletableFuture.supplyAsync(
                 () -> {
+                    long begin = System.nanoTime();
                     Map<String, WorkerPoolConfig<Input, Output>> wpcs = workflow.getWpcMap();
                     for (Map.Entry<String, WorkerPoolConfig<Input, Output>> entry :
                             wpcs.entrySet()) {
@@ -158,6 +162,9 @@ public final class ModelManager {
                         }
                     }
                     workflow.prepare(wlm);
+                    long duration = (System.nanoTime() - begin) / 1000;
+                    Metric metric = new Metric("RegisterWorkflow", duration, Unit.MICROSECONDS);
+                    MODEL_METRIC.info("{}-{}", workflow.getName(), metric);
                     return null;
                 });
     }

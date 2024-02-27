@@ -12,6 +12,7 @@
  */
 package ai.djl.serving;
 
+import ai.djl.Device;
 import ai.djl.engine.Engine;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
@@ -32,6 +33,7 @@ import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
 import ai.djl.util.RandomUtils;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -53,6 +55,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.lang.management.MemoryUsage;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -180,6 +183,7 @@ public class ModelServer {
     public List<ChannelFuture> start()
             throws InterruptedException, IOException, GeneralSecurityException,
                     ServerStartupException {
+        long begin = System.nanoTime();
         stopped.set(false);
 
         String version = Engine.getDjlVersion();
@@ -214,6 +218,15 @@ public class ModelServer {
         } else {
             futures.add(initializeServer(inferenceConnector, serverGroup, workerGroup));
             futures.add(initializeServer(managementConnector, serverGroup, workerGroup));
+        }
+
+        long duration = (System.nanoTime() - begin) / 1000;
+        Metric metric = new Metric("ServerStartup", duration, Unit.MICROSECONDS);
+        SERVER_METRIC.info("{}", metric);
+        for (int i = 0; i < CudaUtils.getGpuCount(); ++i) {
+            Device device = Device.gpu(i);
+            MemoryUsage mem = CudaUtils.getGpuMemory(device);
+            SERVER_METRIC.info("{}", new Metric("GPU-" + i, mem.getCommitted(), Unit.BYTES));
         }
 
         if (stopped.get()) {
