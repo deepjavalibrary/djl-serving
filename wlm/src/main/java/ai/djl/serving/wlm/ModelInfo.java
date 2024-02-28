@@ -19,6 +19,7 @@ import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
+import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Metrics;
 import ai.djl.metric.Unit;
@@ -101,9 +102,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Engine engine;
     private transient boolean initialize;
     private transient EventManager eventManager;
+    private transient Dimension dimension;
 
     private ModelInfo() {
         eventManager = EventManager.getInstance();
+        dimension = new Dimension("Model", "model");
     }
 
     /**
@@ -120,6 +123,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
         adapters = new ConcurrentHashMap<>();
         eventManager = EventManager.getInstance();
+        dimension = new Dimension("Model", id);
     }
 
     /**
@@ -138,6 +142,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
         adapters = new ConcurrentHashMap<>();
         eventManager = EventManager.getInstance();
+        dimension = new Dimension("Model", id);
     }
 
     /**
@@ -187,6 +192,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
         adapters = new ConcurrentHashMap<>();
         eventManager = EventManager.getInstance();
+        dimension = new Dimension("Model", id);
     }
 
     /**
@@ -271,8 +277,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             m.setProperty("endpoint_id", id);
 
             long duration = (System.nanoTime() - begin) / 1000;
-            Metric metric = new Metric("LoadModel", duration, Unit.MICROSECONDS);
-            MODEL_METRIC.info("{}-{}", id, metric);
+            Metric metric = new Metric("LoadModel", duration, Unit.MICROSECONDS, dimension);
+            MODEL_METRIC.info("{}", metric);
             eventManager.onModelLoaded(this);
             if (engine == null) {
                 engine = m.getNDManager().getEngine();
@@ -294,8 +300,13 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                                         adapterDir.toAbsolutePath().toString());
                                         registerAdapter(adapter);
                                         long d = (System.nanoTime() - start) / 1000;
-                                        Metric me = new Metric("LoadAdapter", d, Unit.MICROSECONDS);
-                                        MODEL_METRIC.info("{}-{}", id, me);
+                                        Metric me =
+                                                new Metric(
+                                                        "LoadAdapter",
+                                                        d,
+                                                        Unit.MICROSECONDS,
+                                                        dimension);
+                                        MODEL_METRIC.info("{}", me);
                                         eventManager.onAdapterLoaded(this, adapter);
                                     });
                 }
@@ -504,8 +515,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         loadServingProperties();
         downloadS3();
         long duration = (System.nanoTime() - begin) / 1000;
-        Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS);
-        MODEL_METRIC.info("{}-{}", id, metric);
+        Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS, dimension);
+        MODEL_METRIC.info("{}", metric);
 
         eventManager.onModelDownloaded(this, downloadDir);
         if (LmiUtils.needConvert(this)) {
@@ -513,8 +524,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             begin = System.nanoTime();
             LmiUtils.convertTrtLLM(this);
             duration = (System.nanoTime() - begin) / 1000;
-            metric = new Metric("ConvertTrtllm", duration, Unit.MICROSECONDS);
-            MODEL_METRIC.info("{}-{}", id, metric);
+            metric = new Metric("ConvertTrtllm", duration, Unit.MICROSECONDS, dimension);
+            MODEL_METRIC.info("{}", metric);
             eventManager.onModelConverted(this, "trtllm");
         }
         // override prop keys are not write to serving.properties,
@@ -1119,12 +1130,16 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             model = getModel(device);
             predictor = model.newPredictor();
 
-            boolean logModelMetric = Boolean.parseBoolean(model.getProperty("log_model_metric"));
+            boolean logModelMetric = Boolean.parseBoolean(model.getProperty("log_request_metric"));
             if (logModelMetric) {
                 int metricsAggregation = model.intProperty("metrics_aggregation", 1000);
                 Metrics metrics = new Metrics();
                 metrics.setLimit(metricsAggregation);
-                metrics.setOnLimit((m, s) -> MODEL_METRIC.info("{}-{}", id, m.percentile(s, 50)));
+                metrics.setOnLimit(
+                        (m, s) -> {
+                            MODEL_METRIC.info("{}", m.percentile(s, 50));
+                            MODEL_METRIC.info("{}", m.percentile(s, 90));
+                        });
                 predictor.setMetrics(metrics);
             }
 

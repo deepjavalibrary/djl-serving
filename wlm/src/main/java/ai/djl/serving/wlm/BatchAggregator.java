@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  */
 abstract class BatchAggregator<I, O> {
 
-    private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
+    private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private Dimension dimension;
     protected int batchSize;
@@ -69,12 +69,13 @@ abstract class BatchAggregator<I, O> {
         for (WorkerJob<I, O> wj : wjs) {
             Job<I, O> job = wj.getJob();
             long queueTime = job.getWaitingMicroSeconds();
-            SERVER_METRIC.info("{}", new Metric("QueueTime", queueTime, Unit.MICROSECONDS));
+            Metric metric = new Metric("QueueTime", queueTime, Unit.MICROSECONDS, dimension);
+            MODEL_METRIC.info("{}", metric);
             list.add(job);
         }
         int size = list.size();
         if (size > 1) {
-            SERVER_METRIC.info("{}", new Metric("BatchSize", size, Unit.COUNT));
+            MODEL_METRIC.info("{}", new Metric("BatchSize", size, Unit.COUNT, dimension));
         }
         return list;
     }
@@ -85,7 +86,7 @@ abstract class BatchAggregator<I, O> {
             wj.getFuture().complete(wj.getJob().getOutput());
             long latency = wj.getJob().getWaitingMicroSeconds();
             Metric metric = new Metric("ModelLatency", latency, Unit.MICROSECONDS, dimension);
-            SERVER_METRIC.info("{}", metric);
+            MODEL_METRIC.info("{}", metric);
         }
         wjs.clear();
     }

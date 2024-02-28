@@ -17,7 +17,7 @@ and python handler functions.
 - `batch_size`: the dynamic batch size, default is `1`.
 - `max_batch_delay` - the maximum delay for batch aggregation in millis, default value is `100` milliseconds.
 - `max_idle_time` - the maximum idle time in seconds before the worker thread is scaled down, default is `60` seconds.
-- `log_model_metric`: Enable model metrics (inference, pre-process and post-process latency) logging.
+- `log_request_metric`: Enable model metrics (inference, pre-process and post-process latency) logging.
 - `metrics_aggregation`: Number of model metrics to aggregate, default is `1000`.
 - `minWorkers`: Minimum number of workers, default is `1`.
 - `maxWorkers`: Maximum number of workers, default is `#CPU/OMP_NUM_THREAD` for CPU, GPU default is `2`, inferentia default is `2` (PyTorch engine), `1` (Python engine) .

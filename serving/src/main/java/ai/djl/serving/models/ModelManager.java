@@ -13,6 +13,7 @@
 package ai.djl.serving.models;
 
 import ai.djl.ModelException;
+import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
@@ -163,8 +164,10 @@ public final class ModelManager {
                     }
                     workflow.prepare(wlm);
                     long duration = (System.nanoTime() - begin) / 1000;
-                    Metric metric = new Metric("RegisterWorkflow", duration, Unit.MICROSECONDS);
-                    MODEL_METRIC.info("{}-{}", workflow.getName(), metric);
+                    Dimension dimension = new Dimension("Model", workflow.getName());
+                    Metric metric =
+                            new Metric("RegisterWorkflow", duration, Unit.MICROSECONDS, dimension);
+                    MODEL_METRIC.info("{}", metric);
                     return null;
                 });
     }

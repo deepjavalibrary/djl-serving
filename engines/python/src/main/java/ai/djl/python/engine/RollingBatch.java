@@ -15,6 +15,7 @@ package ai.djl.python.engine;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
+import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Metrics;
 import ai.djl.metric.Unit;
@@ -73,10 +74,12 @@ class RollingBatch implements Runnable {
     private Condition canRead;
     private boolean resetRollingBatch;
     private Metrics metrics;
+    private Dimension dimension;
 
     RollingBatch(PyProcess process, Model model, int timeout) {
         this.process = process;
         this.timeout = timeout;
+        this.dimension = new Dimension("Model", model.getProperty("endpoint_id", "model"));
         maxRollingBatchSize = model.intProperty("max_rolling_batch_size", 32);
         String outputFormatter = model.getProperty("output_formatter");
         if (outputFormatter == null || "json".equals(outputFormatter)) {
@@ -90,15 +93,14 @@ class RollingBatch implements Runnable {
         canAdd = lock.newCondition();
         canRead = lock.newCondition();
         threadPool.submit(this);
-        if (Boolean.parseBoolean(model.getProperty("log_model_metric"))) {
+        if (Boolean.parseBoolean(model.getProperty("log_request_metric"))) {
             int metricsAggregation = model.intProperty("metrics_aggregation", 1000);
-            String id = model.getProperty("endpoint_id", "model");
             metrics = new Metrics();
             metrics.setLimit(metricsAggregation);
             metrics.setOnLimit(
                     (m, s) -> {
-                        MODEL_METRIC.info("{}-{}", id, m.percentile(s, 50));
-                        MODEL_METRIC.info("{}-{}", id, m.percentile(s, 90));
+                        MODEL_METRIC.info("{}", m.percentile(s, 50));
+                        MODEL_METRIC.info("{}", m.percentile(s, 90));
                     });
         }
     }
@@ -199,8 +201,9 @@ class RollingBatch implements Runnable {
                 logger.trace("rolling batch size: {}", size);
                 if (metrics != null) {
                     long duration = (System.nanoTime() - begin) / 1000;
-                    metrics.addMetric(new Metric("TokenLatency", duration, Unit.MICROSECONDS));
-                    metrics.addMetric(new Metric("RollingBatchSize", size, Unit.COUNT));
+                    metrics.addMetric(
+                            new Metric("TokenLatency", duration, Unit.MICROSECONDS, dimension));
+                    metrics.addMetric(new Metric("RollingBatchSize", size, Unit.COUNT, dimension));
                 }
             } finally {
                 lock.unlock();
@@ -214,12 +217,14 @@ class RollingBatch implements Runnable {
             if (list.size() >= maxRollingBatchSize) {
                 logger.debug("exceed max_rolling_batch_size: {}", maxRollingBatchSize);
                 if (!canAdd.await(timeout, TimeUnit.SECONDS)) {
-                    MODEL_METRIC.info("{}", new Metric("RollingTimeout", list.size(), Unit.COUNT));
+                    Metric metric =
+                            new Metric("RollingBatchTimeout", list.size(), Unit.COUNT, dimension);
+                    MODEL_METRIC.info("{}", metric);
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
             String seed = String.valueOf(RandomUtils.nextInt());
-            Request req = new Request(input, seed, contentType, metrics);
+            Request req = new Request(input, seed, contentType, metrics, dimension);
             list.add(req);
             canRead.signal();
             return req.output;
@@ -245,10 +250,16 @@ class RollingBatch implements Runnable {
         boolean last;
         String seed;
         Metrics metrics;
+        Dimension dimension;
         int count;
         long creationTime;
 
-        Request(Input input, String seed, String contentType, Metrics metrics) {
+        Request(
+                Input input,
+                String seed,
+                String contentType,
+                Metrics metrics,
+                Dimension dimension) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
@@ -258,6 +269,7 @@ class RollingBatch implements Runnable {
             output.add(data);
             this.seed = seed;
             this.metrics = metrics;
+            this.dimension = dimension;
             creationTime = System.nanoTime();
         }
 
@@ -345,9 +357,16 @@ class RollingBatch implements Runnable {
                 if (last && metrics != null) {
                     long duration = System.nanoTime() - creationTime;
                     double throughput = count * 1_000_000_000d / duration;
+                    long latency = duration / count / 1000;
                     metrics.addMetric(
-                            new Metric("TokenThroughput", throughput, Unit.COUNT_PER_SECOND));
-                    metrics.addMetric(new Metric("OutputTokens", count, Unit.COUNT));
+                            new Metric("TokenLatency", latency, Unit.MICROSECONDS, dimension));
+                    metrics.addMetric(
+                            new Metric(
+                                    "TokenThroughput",
+                                    throughput,
+                                    Unit.COUNT_PER_SECOND,
+                                    dimension));
+                    metrics.addMetric(new Metric("OutputTokens", count, Unit.COUNT, dimension));
                 }
                 data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
             }

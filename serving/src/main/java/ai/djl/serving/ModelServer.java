@@ -140,13 +140,16 @@ public class ModelServer {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
             new ModelServer(configManager).startAndWait();
         } catch (IllegalArgumentException e) {
-            logger.error("Invalid configuration: {}", e.getMessage());
+            logger.error("Invalid configuration", e);
+            SERVER_METRIC.info("{}", new Metric("ConfigurationError", 1));
             System.exit(1); // NOPMD
         } catch (ParseException e) {
             printHelp(e.getMessage(), options);
+            SERVER_METRIC.info("{}", new Metric("CmdError", 1));
             System.exit(1); // NOPMD
         } catch (Throwable t) {
             logger.error("Unexpected error", t);
+            SERVER_METRIC.info("{}", new Metric("ServerError", 1));
             System.exit(1); // NOPMD
         }
     }
@@ -228,7 +231,8 @@ public class ModelServer {
             try {
                 Device device = Device.gpu(i);
                 MemoryUsage mem = CudaUtils.getGpuMemory(device);
-                SERVER_METRIC.info("{}", new Metric("GPU-" + i, mem.getCommitted(), Unit.BYTES));
+                SERVER_METRIC.info(
+                        "{}", new Metric("GPUMemory_" + i, mem.getCommitted(), Unit.BYTES));
             } catch (IllegalArgumentException | EngineException e) {
                 logger.warn("Failed get GPU memory", e);
                 break;
