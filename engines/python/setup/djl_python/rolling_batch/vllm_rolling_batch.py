@@ -100,12 +100,12 @@ class VLLMRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self, input_data, parameters):
+    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
         """
         Adds new requests and gets output tokens from the backend.
 
         :param input_data (list[str]): List of input prompts.
-        :param parameters (list[str]): List of settings pertaining to each request.
+        :param parameters (list[dict]): List of settings pertaining to each request.
 
         :return results (list): List of dictionaries, one for each request, that contain output tokens and other data.
         """
