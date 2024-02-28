@@ -147,4 +147,5 @@ outputs = predictor.predict({
 ```
 
 Next: [Benchmark your endpoint](benchmarking-your-endpoint.md)
+
 Previous: [Container Configurations](configurations.md)
