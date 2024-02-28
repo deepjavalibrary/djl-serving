@@ -50,7 +50,8 @@ class SchedulerRollingBatch(RollingBatch):
     and other experimental features.
     """
 
-    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
+    def __init__(self, model_id_or_path: str, properties: dict,
+                 **kwargs) -> None:
         """
         Initializes the rolling batch scheduler.
 
@@ -120,7 +121,7 @@ class SchedulerRollingBatch(RollingBatch):
 
         return new_requests
 
-    def _init_model_and_tokenizer(self):
+    def _init_model_and_tokenizer(self) -> None:
         """
         Helper function for __init__ that creates a huggingface model and tokenizer.
         """
@@ -181,7 +182,7 @@ class SchedulerRollingBatch(RollingBatch):
 
         self.tokenizer_streaming = TokenizerStreaming(self.tokenizer)
 
-    def _init_scheduler(self):
+    def _init_scheduler(self) -> None:
         """
         Helper function for __init__ that creates a scheduler equipped with
         the strategies defined in properties
@@ -200,7 +201,7 @@ class SchedulerRollingBatch(RollingBatch):
             max_sparsity=self.scheduler_configs.max_sparsity,
             max_splits=self.scheduler_configs.max_splits)
 
-    def _prefill_and_decode(self, new_requests):
+    def _prefill_and_decode(self, new_requests) -> None:
         """
         Helper function for inference() that adds new requests to the batch.
 
