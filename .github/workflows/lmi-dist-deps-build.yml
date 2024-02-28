@@ -87,10 +87,10 @@ jobs:
           cd llm-awq/awq/kernels && git checkout 8baf5dd9c3bfe8bdc5987f52ae4dffde7471346f
           pip wheel . --no-deps
           cp awq*.whl ../../../build_artifacts
-      - name: Build vllm 0.3.1 speculative decoding
+      - name: Build vllm 0.3.2 speculative decoding
         run: |
           . ./venv/bin/activate
-          git clone https://github.com/ymwangg/vllm -b specdec_v0.3.1
+          git clone https://github.com/ymwangg/vllm -b specdec_v0.3.2
           cd vllm
           export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
           export VLLM_INSTALL_PUNICA_KERNELS=1
