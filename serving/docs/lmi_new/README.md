@@ -22,6 +22,11 @@ LMI containers provide many features, including:
 * Multi GPU inference using Tensor Parallelism
 * Serving LoRA fine-tuned models
 
+LMI containers are able to provide these features by integrating popular inference libraries and exposing configurations through a unified interface.
+We will refer to each of these libraries as `backends` throughout the documentation. 
+The term backend refers to a combination of Engine (LMI uses the Python and MPI Engines) and inference library.
+You can learn more about the components of LMI [here](deployment_guide/README.md#components-of-lmi).
+
 ## QuickStart
 
 ### Using the SageMaker Python SDK to deploy your first model with LMI
@@ -42,7 +47,7 @@ iam_role = sagemaker.get_execution_role()
 sagemaker_session = sagemaker.session.Session()
 region = sagemaker_session._region_name
 
-# Fetch the uri of the LMI DeepSpeed container that supports vLLM, LMI-Dist, and DeepSpeed
+# Fetch the uri of the LMI DeepSpeed container that supports vLLM, LMI-Dist, and DeepSpeed backends
 container_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.26.0", region=region)
 
 # Create the SageMaker Model object. In this example we'll use vLLM as our inference backend
