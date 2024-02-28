@@ -14,6 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.BaseModel;
 import ai.djl.Device;
+import ai.djl.Device.MultiDevice;
 import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
@@ -21,7 +22,6 @@ import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.translate.Translator;
 import ai.djl.util.Utils;
-import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,13 +127,6 @@ public class PyModel extends BaseModel {
                     case "parallel_loading":
                         parallelLoading = Boolean.parseBoolean(value);
                         break;
-                    case "tensor_parallel_degree":
-                        if ("max".equals(value)) {
-                            pyEnv.setTensorParallelDegree(PyEnv.getDefaultTensorParallelDegree());
-                        } else {
-                            pyEnv.setTensorParallelDegree(Integer.parseInt(value));
-                        }
-                        break;
                     case "handler":
                         pyEnv.setHandler(value);
                         break;
@@ -164,8 +157,13 @@ public class PyModel extends BaseModel {
                     entryPoint = modelFile.toFile().getName();
                 } else if ("DeepSpeed".equals(engineName)) {
                     entryPoint = "djl_python.deepspeed";
-                } else if ("nc".equals(manager.getDevice().getDeviceType())
-                        && pyEnv.getTensorParallelDegree() > 0) {
+                } else if (manager.getDevice() instanceof MultiDevice
+                        && "nc"
+                                .equals(
+                                        ((MultiDevice) manager.getDevice())
+                                                .getDevices()
+                                                .get(0)
+                                                .getDeviceType())) {
                     entryPoint = "djl_python.transformers_neuronx";
                 } else if (isTrtLlmBackend) {
                     entryPoint = "djl_python.tensorrt_llm";
@@ -200,17 +198,13 @@ public class PyModel extends BaseModel {
         }
 
         if (pyEnv.isMpiMode()) {
-            int partitions = pyEnv.getTensorParallelDegree();
-            if (partitions == 0) {
-                partitions = CudaUtils.getGpuCount();
-                pyEnv.setTensorParallelDegree(partitions);
-                setProperty("tensor_parallel_degree", String.valueOf(partitions));
-                logger.info(
-                        "No tensor parallel degree specified. Defaulting to all available GPUs.");
-            }
-            logger.info("Loading model in MPI mode with TP: {}.", partitions);
+            MultiDevice multiDevice = (MultiDevice) manager.getDevice();
+            int partitions = multiDevice.getDevices().size();
+            setProperty("tensor_parallel_degree", String.valueOf(partitions));
+            logger.info(
+                    "Loading model in MPI mode with TP: {}. Devices {}", partitions, multiDevice);
 
-            int mpiWorkers = pyEnv.getMpiWorkers();
+            int mpiWorkers = pyEnv.getMpiWorkers(multiDevice);
             if (mpiWorkers <= 0) {
                 throw new EngineException(
                         "GPU devices are not enough to run " + partitions + " partitions.");
@@ -233,13 +227,14 @@ public class PyModel extends BaseModel {
                                 + " but the value is set to "
                                 + getProperty("gpu.maxWorkers"));
             }
-            mpiWorkers = Integer.parseInt(getProperty("gpu.maxWorkers"));
-
             properties.forEach((k, v) -> pyEnv.addParameter(k, v));
 
-            createAllPyProcesses(mpiWorkers, partitions);
+            createAllPyProcesses(multiDevice.getDevices(), partitions);
         } else {
-            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+            int tensorParallelDegree = 0;
+            if (manager.getDevice() instanceof MultiDevice) {
+                tensorParallelDegree = ((MultiDevice) manager.getDevice()).getDevices().size();
+            }
             if (tensorParallelDegree > 0) {
                 if (getProperty("maxWorkers") == null && getProperty("gpu.maxWorkers") == null) {
                     setProperty("gpu.minWorkers", "1");
@@ -300,7 +295,8 @@ public class PyModel extends BaseModel {
         return modelFile;
     }
 
-    private void createAllPyProcesses(int mpiWorkers, int tp) {
+    private void createAllPyProcesses(List<Device> devices, int tp) {
+        int mpiWorkers = devices.size();
         long begin = System.currentTimeMillis();
         ExecutorService pool = null;
         List<Future<?>> futures = new ArrayList<>();
@@ -308,13 +304,13 @@ public class PyModel extends BaseModel {
             pool = Executors.newFixedThreadPool(mpiWorkers);
         }
         logger.info("Start {} mpiWorkers ...", mpiWorkers);
-        int deviceId = manager.getDevice().getDeviceId();
-        for (int i = 0; i < mpiWorkers; ++i) {
-            logger.debug("Pre-creating python worker: {} ", i);
-            PyProcess worker = new PyProcess(this, pyEnv, deviceId + i * tp);
+        for (Device device : devices) {
+            int deviceId = device.getDeviceId();
+            logger.debug("Pre-creating python worker: {} ", deviceId);
+            PyProcess worker = new PyProcess(this, pyEnv, deviceId * tp);
             workerQueue.offer(worker);
             if (pool != null) {
-                logger.debug("Submitting to pool: {}", i);
+                logger.debug("Submitting to pool: {}", deviceId);
                 futures.add(pool.submit(worker::startPythonProcess));
             } else {
                 worker.startPythonProcess();
