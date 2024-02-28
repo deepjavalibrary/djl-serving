@@ -872,7 +872,13 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         if (device.isGpu()) {
-            MemoryUsage usage = CudaUtils.getGpuMemory(device);
+            MemoryUsage usage;
+            try {
+                usage = CudaUtils.getGpuMemory(device);
+            } catch (IllegalArgumentException | EngineException e) {
+                logger.warn("Failed to get GPU memory", e);
+                throw new WlmOutOfMemoryException("No enough memory to load the model."); // NOPMD
+            }
             free = usage.getMax() - usage.getCommitted();
             long gpuMem = intValue(prop, "gpu.reserved_memory_mb", -1) * 1024L * 1024;
             if (gpuMem > 0) {

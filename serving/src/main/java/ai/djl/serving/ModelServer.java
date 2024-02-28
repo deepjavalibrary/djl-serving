@@ -14,6 +14,7 @@ package ai.djl.serving;
 
 import ai.djl.Device;
 import ai.djl.engine.Engine;
+import ai.djl.engine.EngineException;
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
 import ai.djl.metric.Unit;
@@ -224,9 +225,14 @@ public class ModelServer {
         Metric metric = new Metric("ServerStartup", duration, Unit.MICROSECONDS);
         SERVER_METRIC.info("{}", metric);
         for (int i = 0; i < CudaUtils.getGpuCount(); ++i) {
-            Device device = Device.gpu(i);
-            MemoryUsage mem = CudaUtils.getGpuMemory(device);
-            SERVER_METRIC.info("{}", new Metric("GPU-" + i, mem.getCommitted(), Unit.BYTES));
+            try {
+                Device device = Device.gpu(i);
+                MemoryUsage mem = CudaUtils.getGpuMemory(device);
+                SERVER_METRIC.info("{}", new Metric("GPU-" + i, mem.getCommitted(), Unit.BYTES));
+            } catch (IllegalArgumentException | EngineException e) {
+                logger.warn("Failed get GPU memory", e);
+                break;
+            }
         }
 
         if (stopped.get()) {
