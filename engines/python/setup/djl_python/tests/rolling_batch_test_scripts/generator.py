@@ -7,7 +7,6 @@ relative_path = "../../../"
 new_path = os.path.normpath(os.path.join(script_directory, relative_path))
 sys.path.append(new_path)
 
-from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 import torch.distributed as dist
 
 
@@ -31,6 +30,9 @@ class Generator:
         self.params = []
         self.req_ids = []
 
+        # Spec_dec
+        self.token_numbers = defaultdict(list)
+
     def reset(self):
         # Store the results
         self.output_all = defaultdict(list)
@@ -40,6 +42,8 @@ class Generator:
         self.input_str = []
         self.params = []
         self.req_ids = []
+
+        self.token_numbers = defaultdict(list)
 
     def step(self, step=20, input_str_delta=None, params_delta=None):
         if input_str_delta:
@@ -54,10 +58,11 @@ class Generator:
                                               params_delta):
                 self.input_all[req_id] = (input_s, param)
 
-        for _ in range(step):
+        for i in range(step):
             result = self.rolling_batch.inference(self.input_str, self.params)
             for res, req_id in zip(result, self.req_ids):
                 self.output_all[req_id].append(res['data'])
+                self.token_numbers[req_id].append(res['step_token_num'])
             self.req_ids = [
                 req_id for req_id, res in zip(self.req_ids, result)
                 if not res['last']

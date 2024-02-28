@@ -13,7 +13,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Union, List, Callable, Optional
+from typing import List, Union, List, Callable, Optional
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 
@@ -24,7 +24,7 @@ class Token(object):
     """
 
     def __init__(self,
-                 id: int,
+                 id: List[int],
                  text: str,
                  log_prob: float = None,
                  special_token: bool = None):
@@ -36,7 +36,7 @@ class Token(object):
         :param log_prob: log probability for the token
         :param special_token: if this token is special token
         """
-        self.id = id
+        self.id = id if isinstance(id, list) else [id]
         self.text = text
         self.log_prob = log_prob
         self.special_token = special_token
@@ -122,6 +122,8 @@ class Request(object):
         self.generated_tokens = []
         if parameters.pop("details", False):
             self.token_cache = []
+        # spec_dec
+        self.step_token_number = 0
 
     def __repr__(self):
         return f"<Request id: {self.id} Input {self.input_text} Parameters {self.parameters} Finished {self.last_token}>"
@@ -144,11 +146,13 @@ class Request(object):
             stop_sequence: Preset stop sequence token found
         """
         if isinstance(next_token, str):
-            next_token = Token(-1, next_token)
+            next_token = Token([-1], next_token)
         next_token.request_id = self.id
         if self.token_cache is not None:
             self.token_cache.append(next_token.as_dict())
         self.generated_tokens.append(next_token.text)
+        self.step_token_number = len(
+            next_token.id) if next_token.id[0] != -1 else -1
         details = {}
         generated_text = None
         if last_token:
@@ -174,6 +178,14 @@ class Request(object):
         """
         return self.next_token_str
 
+    def get_step_token_number(self) -> int:
+        """
+        Gets the token number generated at each step
+
+        :return: step_token_number
+        """
+        return self.step_token_number
+
     def is_last_token(self) -> bool:
         """
         Whether the generated token is the last one
@@ -193,7 +205,13 @@ def stop_on_any_exception(func):
             return func(self, input_data, parameters)
         except Exception:
             logging.exception("Rolling batch inference error")
-            err = {"data": "", "last": True, "code": 424, "error": ""}
+            err = {
+                "data": "",
+                "last": True,
+                "step_token_num": 0,
+                "code": 424,
+                "error": ""
+            }
             results = []
             for i in range(
                     len(self.active_requests) + len(self.pending_requests)):
@@ -305,13 +323,17 @@ class RollingBatch(ABC):
         results = []
         for i in range(len(self.active_requests)):
             req = self.active_requests[i]
-            res = {"data": req.get_next_token(), "last": req.is_last_token()}
+            res = {
+                "data": req.get_next_token(),
+                "last": req.is_last_token(),
+                "step_token_num": req.get_step_token_number()
+            }
             results.append(res)
 
         # add empty tokens to pending requests
         for i in range(len(self.active_requests),
                        len(self.active_requests) + len(self.pending_requests)):
-            res = {"data": "", "last": False}
+            res = {"data": "", "last": False, "step_token_num": 0}
             results.append(res)
 
         self.active_requests = [

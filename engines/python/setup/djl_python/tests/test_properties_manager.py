@@ -30,7 +30,10 @@ common_properties = {
     'enable_streaming': 'False',
     'dtype': 'fp16',
     'revision': 'shdghdfgdfg',
-    'trust_remote_code': 'true'
+    'trust_remote_code': 'true',
+    # spec_dec
+    "draft_model_id": "draft_model_id",
+    "spec_length": "0"
 }
 
 
@@ -73,6 +76,10 @@ class TestConfigManager(unittest.TestCase):
         self.assertTrue(configs.trust_remote_code)
         self.assertEqual(configs.dtype, common_properties['dtype'])
         self.assertEqual(configs.revision, common_properties['revision'])
+
+        self.assertEqual(common_properties['draft_model_id'],
+                         configs.draft_model_id)
+        self.assertEqual(configs.spec_length, 0)
 
     def test_common_configs_error_case(self):
         other_properties = min_common_properties
