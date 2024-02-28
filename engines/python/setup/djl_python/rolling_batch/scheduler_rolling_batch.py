@@ -31,7 +31,12 @@ FLASH_2_SUPPORTED_MODELS = {
 }
 
 
-def enable_flash():
+def enable_flash() -> bool:
+    """
+    Flash Attention-2 only compatible with sm80 architecture and above
+
+    :return: bool
+    """
     if torch.cuda.is_available():
         major, _ = torch.cuda.get_device_capability()
         if major >= 8:
@@ -40,13 +45,17 @@ def enable_flash():
 
 
 class SchedulerRollingBatch(RollingBatch):
+    """
+    Rolling Batch class with the option to set particular search strategy, batching strategy,
+    and other experimental features.
+    """
 
-    def __init__(self, model_id_or_path, properties, **kwargs):
+    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
         """
         Initializes the rolling batch scheduler.
 
-        :param model_id_or_path: model id or path
-        :param properties: other properties of the model, such as decoder strategy
+        :param model_id_or_path (str): model id or path
+        :param properties (dict): other properties of the model, such as decoder strategy
         :param kwargs passed while loading the model
         """
 
@@ -58,7 +67,7 @@ class SchedulerRollingBatch(RollingBatch):
         self._init_scheduler()
 
     @stop_on_any_exception
-    def inference(self, input_text, parameters):
+    def inference(self, input_text: list[str], parameters: list[dict]) -> list:
         """
         Performs prefill and decode operations for the batch.
 
@@ -74,7 +83,13 @@ class SchedulerRollingBatch(RollingBatch):
         self._prefill_and_decode(preprocessed_new_requests)
         return self.postprocess_results()
 
-    def preprocess_requests(self, requests):
+    def preprocess_requests(self, requests: list):
+        """
+        Aggregates a batch of requests.
+
+        :param requests: List of Request objects
+        :return: aggregate data structure containing request data for the whole batch
+        """
         Requests = namedtuple(
             'Requests',
             ['input_texts', 'search_configs', 'request_ids', 'prompts'])
@@ -106,6 +121,9 @@ class SchedulerRollingBatch(RollingBatch):
         return new_requests
 
     def _init_model_and_tokenizer(self):
+        """
+        Helper function for __init__ that creates a huggingface model and tokenizer.
+        """
         self.config = AutoConfig.from_pretrained(
             self.scheduler_configs.model_id_or_path,
             **self.scheduler_configs.kwargs)
@@ -164,6 +182,10 @@ class SchedulerRollingBatch(RollingBatch):
         self.tokenizer_streaming = TokenizerStreaming(self.tokenizer)
 
     def _init_scheduler(self):
+        """
+        Helper function for __init__ that creates a scheduler equipped with
+        the strategies defined in properties
+        """
         lm_block_cls = MODEL_TYPE_2_BLOCK.get(self.config.model_type,
                                               HuggingfaceBlock)
         self.lm_block = lm_block_cls(self.model)
@@ -179,7 +201,11 @@ class SchedulerRollingBatch(RollingBatch):
             max_splits=self.scheduler_configs.max_splits)
 
     def _prefill_and_decode(self, new_requests):
+        """
+        Helper function for inference() that adds new requests to the batch.
 
+        :param new_requests (Requests): Aggregate of new requests
+        """
         for search_algorithm in new_requests.request_ids.keys():
             request_ids = new_requests.request_ids[search_algorithm]
             if request_ids:
@@ -225,14 +251,28 @@ class SchedulerRollingBatch(RollingBatch):
                                    self.output_formatter,
                                    last_token=is_last_token)
 
-    def _get_input_ids(self, input_texts):
+    def _get_input_ids(self, input_texts: list) -> torch.Tensor:
+        """
+        Converts input texts into token IDs
+
+        :param input_texts (list): Input texts for a particular strategy
+
+        :return input_ids: torch.Tensor of token IDs
+        """
         input_ids = self.tokenizer(input_texts,
                                    return_tensors="pt",
                                    padding=True).input_ids
         input_ids = input_ids.to(self.model.device)
         return input_ids
 
-    def _get_prompt_ids(self, prompts):
+    def _get_prompt_ids(self, prompts: dict) -> dict:
+        """
+        Gets prompt ids
+
+        :param prompts (dict): Prompts for a particular strategy
+
+        :return prompt_ids (dict): Dictionary mapping request ID to torch.Tensor of token IDs
+        """
         prompt_ids = {}
         for req_id, prompt in prompts.items():
             prompt_id = self.tokenizer(prompt,
@@ -242,7 +282,14 @@ class SchedulerRollingBatch(RollingBatch):
             prompt_ids[req_id] = prompt_id
         return prompt_ids
 
-    def _construct_search_config(self, parameters):
+    def _construct_search_config(self, parameters: dict) -> SearchConfig:
+        """
+        Builds SearchConfig object from parameters
+
+        :param parameters: Inference parameters dictionary
+
+        :return: SearchConfig
+        """
         use_lru_kv_cache = str(
             parameters.get(
                 'use_lru_kv_cache',
@@ -266,14 +313,27 @@ class SchedulerRollingBatch(RollingBatch):
             eos_token_id=self.tokenizer.eos_token_id)
 
 
-def _get_request_ids_tensor(request_ids):
+def _get_request_ids_tensor(request_ids: list[int]) -> torch.Tensor:
+    """
+    Converts a list of request ids into a 2-d pytorch tensor.
+
+    :param request_ids (list[int]): List of request IDs
+
+    :return: 2-D torch Tensor
+    """
     request_ids_tensor = torch.tensor(request_ids)
     request_ids_tensor = torch.reshape(request_ids_tensor,
                                        (len(request_ids), 1))
     return request_ids_tensor
 
 
-def _calculate_req_id_counter(scheduler):
+def _calculate_req_id_counter(scheduler: SeqBatchScheduler) -> int:
+    """
+    Gets a new request ID
+
+    :param scheduler: SeqBatchScheduler
+    :return: the new request ID
+    """
     if scheduler:
         request_ids = scheduler.get_request_ids()
         if request_ids:

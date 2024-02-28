@@ -25,6 +25,7 @@ class TRTLLMRollingBatch(RollingBatch):
     def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
         """
         Initializes the TRTLLMRollingBatch
+
         :param model_id_or_path: model id or path
         :param properties: other properties of the model, such as decoder strategy
         """
@@ -79,7 +80,7 @@ class TRTLLMRollingBatch(RollingBatch):
         asynchronously.
 
         :param input_data (list[str]): List of input prompts.
-        :param parameters (list[str]): List of settings pertaining to each request.
+        :param parameters (list[dict]): List of settings pertaining to each request.
 
         :return results (list): List of dictionaries, one for each request, that contain output tokens and other data.
         """
