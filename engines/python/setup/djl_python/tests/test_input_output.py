@@ -18,6 +18,12 @@ class TestInputOutput(unittest.TestCase):
         with self.assertRaises(KeyError):
             inputs.get_as_string("not-exist-key")
 
+    def test_json_input(self):
+        input_json = {"Hello": "World"}
+        inputs = test_model.create_json_request(input_json)
+        result = inputs.get_as_json()
+        self.assertEqual(input_json, result)
+
     def test_numpy_input(self):
         nd = [np.ones((1, 3, 2))]
         inputs = test_model.create_numpy_request(nd)
