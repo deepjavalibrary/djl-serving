@@ -72,9 +72,13 @@ OPTION_MAX_ROLLING_BATCH_PREFILL_TOKENS=4096
 
 You can use the [SageMaker deployment template](../README.md#using-the-sagemaker-python-sdk-to-deploy-your-first-model-with-lmi) to deploy the model with environment variables.
 
+## Advanced LMI-Dist Configurations
 
-| Item                                                              | LMI Version | Required   | Description                                                                                                                                                                                                                                                                                                                                                                                           | Example value          |
-|-------------------------------------------------------------------|-------------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
-| option.quantize                                                   | \>= 0.23.0  | No         | Quantize the model with the supported quantization methods                                                                                                                                                                   | Default: `None`   |
-| option.max_rolling_batch_prefill_tokens [Deprecated since 0.25.0] | \>= 0.24.0  | No         | Limits the number of tokens for caching. This needs to be tuned based on batch size and input sequence length to avoid GPU OOM. Currently we are calculating the best value for you from 0.25.0, this is no longer required  | Default: 4096     |
+Here are the advanced parameters that are available when using LMI-Dist.
+
+
+| Item                                                              | LMI Version | Description                                                                                                                                                                                                                 | Example value   |
+|-------------------------------------------------------------------|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|
+| option.quantize                                                   | \>= 0.23.0  | Quantize the model with the supported quantization methods                                                                                                                                                                  | Default: `None` |
+| option.max_rolling_batch_prefill_tokens [Deprecated since 0.25.0] | \>= 0.24.0  | Limits the number of tokens for caching. This needs to be tuned based on batch size and input sequence length to avoid GPU OOM. Currently we are calculating the best value for you from 0.25.0, this is no longer required | Default: 4096   |
 
