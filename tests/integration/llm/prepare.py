@@ -671,6 +671,16 @@ vllm_model_list = {
         "option.gpu_memory_utilization": "0.8",
         "option.tensor_parallel_degree": "max",
         "option.output_formatter": "jsonlines"
+    },
+    "llama-7b-unmerged-lora": {
+        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
+        "option.tensor_parallel_degree": 1,
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
+        "adapter_names": ["english-alpaca", "portugese-alpaca"],
     }
 }
 
@@ -887,13 +897,8 @@ def build_hf_handler_model(model):
     options["option.entryPoint"] = "djl_python.huggingface"
     options["option.predict_timeout"] = 240
 
-    adapter_ids = []
-    adapter_names = []
-    if "option.adapters" in options:
-        adapter_ids = options["adapter_ids"]
-        adapter_names = options["adapter_names"]
-        del options["adapter_ids"]
-        del options["adapter_names"]
+    adapter_ids = options.pop("adapter_ids", [])
+    adapter_names = options.pop("adapter_names", [])
 
     write_model_artifacts(options,
                           adapter_ids=adapter_ids,
@@ -1025,7 +1030,13 @@ def build_vllm_model(model):
     options["engine"] = "Python"
     options["option.rolling_batch"] = "vllm"
     options["option.output_formatter"] = "jsonlines"
-    write_model_artifacts(options)
+
+    adapter_ids = options.pop("adapter_ids", [])
+    adapter_names = options.pop("adapter_names", [])
+
+    write_model_artifacts(options,
+                          adapter_ids=adapter_ids,
+                          adapter_names=adapter_names)
 
 
 def build_unmerged_lora_correctness_model(model):

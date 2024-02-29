@@ -105,17 +105,23 @@ class Request(object):
 
     """
 
-    def __init__(self, id: int, input_text: str, parameters: dict):
+    def __init__(self,
+                 id: int,
+                 input_text: str,
+                 parameters: dict,
+                 adapter=None):
         """
         Initialize a request
 
         :param id: request id
         :param input_text: request's input text
         :param parameters: list of parameters
+        :param adapter: list of parameters
         """
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
+        self.adapter = adapter
         self.next_token_str = None
         self.first_token = True
         self.last_token = False
@@ -204,9 +210,9 @@ def stop_on_any_exception(func):
     Decorator that handles errors sent from backend
     """
 
-    def try_catch_handling(self, input_data, parameters):
+    def try_catch_handling(self, *args, **kwargs):
         try:
-            return func(self, input_data, parameters)
+            return func(self, *args, **kwargs)
         except Exception:
             logging.exception("Rolling batch inference error")
             err = {
@@ -267,24 +273,26 @@ class RollingBatch(ABC):
         self.req_id_counter = 0
 
     @abstractmethod
-    def inference(self, input_data, parameters):
+    def inference(self, input_data, parameters, adapters=None):
         """
         Performs prefill and decode operations for the batch.
 
         :param input_data: List of input texts for each request in a batch
         :param parameters: List of kwargs for each request in a batch
+        :param adapters: List of adapters inputs for each request in a batch
 
         :return: generated batch decoded tokens
         """
         pass
 
     def get_new_requests(self, input_data: list[str], parameters: list[dict],
-                         batch_size: int) -> list[Request]:
+                         adapters, batch_size: int) -> list[Request]:
         """
         Adds requests to the batch when there is availability
 
         :param input_data (list[str]): List of input prompts.
         :param parameters (list[str]): List of settings pertaining to each request.
+        :param adapters: List of adapters inputs for each request in a batch
         :param batch_size (int): Maximum number of requests in a batch
 
         :return: list of current active requests (including those that have just been added)
@@ -294,7 +302,12 @@ class RollingBatch(ABC):
             for i in range(total_req_len, batch_size):
                 data = input_data[i]
                 params = parameters[i] if i < len(parameters) else {}
-                request = Request(self.req_id_counter, data, params)
+                adapter = adapters[i] if adapters is not None and i < len(
+                    parameters) else None
+                request = Request(self.req_id_counter,
+                                  data,
+                                  params,
+                                  adapter=adapter)
                 self.pending_requests.append(request)
                 self.req_id_counter += 1
         # wait steps and not feeding new requests

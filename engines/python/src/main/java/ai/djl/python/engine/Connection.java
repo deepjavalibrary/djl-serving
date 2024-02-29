@@ -362,9 +362,14 @@ class Connection {
             out.writeShort(size);
             for (int i = 0; i < size; ++i) {
                 CodecUtils.writeUtf8(out, content.keyAt(i));
-                ByteBuffer bb = content.valueAt(i).toByteBuffer();
-                out.writeInt(bb.remaining());
-                out.writeBytes(bb);
+                BytesSupplier supplier = content.valueAt(i);
+                if (supplier != null) {
+                    ByteBuffer bb = supplier.toByteBuffer();
+                    out.writeInt(bb.remaining());
+                    out.writeBytes(bb);
+                } else {
+                    out.writeInt(0);
+                }
             }
         }
     }

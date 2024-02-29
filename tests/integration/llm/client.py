@@ -436,6 +436,14 @@ vllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama-7b-unmerged-lora": {
+        "max_memory_per_gpu": [15.0, 15.0],
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     }
 }
 
@@ -831,6 +839,8 @@ def test_handler_rolling_batch(model, model_spec):
     seq_length = 100
     params = {"do_sample": True, "max_new_tokens": seq_length, "details": True}
     req["parameters"] = params
+    if "adapters" in spec:
+        req["adapters"] = spec.get("adapters")[0]
     logging.info(f"req {req}")
     res = send_json(req)
     logging.info(f"res: {res.content}")

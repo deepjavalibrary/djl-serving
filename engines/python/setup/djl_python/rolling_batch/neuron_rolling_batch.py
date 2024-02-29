@@ -40,13 +40,17 @@ class NeuronRollingBatch(RollingBatch):
         super().reset()
 
     @stop_on_any_exception
-    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
+    def inference(self,
+                  input_data: list[str],
+                  parameters: list[dict],
+                  adapters=None) -> list:
         """
         Loads new requests and gets output tokens from all currently active requests from
         the Neuron backend.
 
         :param input_data: List of input texts for each request in a batch
         :param parameters: List of kwargs for each request in a batch
+        :param adapters: Optional adapters to apply
 
         :return: generated batch decoded tokens - list of dictionaries, one for
                  each request, that contain output tokens and other data.

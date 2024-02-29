@@ -75,13 +75,17 @@ class TRTLLMRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
+    def inference(self,
+                  input_data: list[str],
+                  parameters: list[dict],
+                  adapters=None) -> list:
         """
         Loads new requests into the batch when there is availability, and gets output tokens from the backend
         asynchronously.
 
         :param input_data: List of input prompts.
         :param parameters: List of settings pertaining to each request.
+        :param adapters: List of adapters inputs for each request in a batch
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """

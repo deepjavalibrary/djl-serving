@@ -43,6 +43,11 @@ class VllmRbProperties(Properties):
     speculative_length: int = 5
     draft_model_tp_size: int = 1
     record_acceptance_rate: Optional[bool] = False
+    enable_lora: Optional[bool] = False
+    max_loras: Optional[int] = 1
+    max_lora_rank: Optional[int] = 16
+    lora_extra_vocab_size: Optional[int] = 256
+    max_cpu_loras: Optional[int] = None
 
     @validator('engine')
     def validate_engine(cls, engine):

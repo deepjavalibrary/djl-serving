@@ -72,10 +72,11 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             int size = inputs.size();
             if (size == 1) {
                 Output output;
-                if (isRollingBatch) {
-                    output = rollingBatch.addInput((Input) first, timeout);
+                Input input = (Input) first;
+                if (isRollingBatch && !input.getProperties().containsKey("handler")) {
+                    output = rollingBatch.addInput(input, timeout);
                 } else {
-                    output = process.predict((Input) first, timeout, false);
+                    output = process.predict(input, timeout, false);
                 }
                 return Collections.singletonList((O) output);
             }

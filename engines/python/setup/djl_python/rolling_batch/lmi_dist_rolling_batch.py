@@ -124,12 +124,13 @@ class LmiDistRollingBatch(RollingBatch):
         self.model.release_cache()
 
     @stop_on_any_exception
-    def inference(self, input_data, parameters):
+    def inference(self, input_data, parameters, adapters=None):
         """
         Performs prefill and decode operations for the batch.
 
         :param input_data: List of input texts for each request in a batch
         :param parameters: List of kwargs for each request in a batch
+        :param adapters: List of adapters inputs for each request in a batch
         :return: generated batch decoded tokens
         """
         batch_size = len(input_data)
