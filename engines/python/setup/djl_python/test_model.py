@@ -80,11 +80,11 @@ def create_request(input_files, parameters):
 
 def create_concurrent_batch_request(inputs: List[Dict],
                                     properties: List[Dict] = None,
-                                    serving_properties={}) -> Input:
+                                    serving_properties=None) -> Input:
     if properties is None:
         properties = []
     # Flatten operation properties
-    flatten_properties = serving_properties
+    flatten_properties = serving_properties if serving_properties else {}
     for idx, data in enumerate(properties):
         for key, value in data.items():
             key = f"batch_{str(idx).zfill(3)}_{key}"
@@ -101,6 +101,14 @@ def create_concurrent_batch_request(inputs: List[Dict],
     inputs_obj.content = pair_list
     flatten_properties['batch_size'] = len(inputs)
     return inputs_obj
+
+
+def create_json_request(json_data: dict, key: str = None) -> Input:
+    request = Input()
+    request.properties["device_id"] = "-1"
+    request.properties["content-type"] = "application/json"
+    request.content.add(key=key, value=Output._encode_json(json_data))
+    return request
 
 
 def create_text_request(text: str, key: str = None) -> Input:
@@ -224,6 +232,15 @@ class TestHandler:
     def __init__(self,
                  entry_point: Union[str, ModuleType],
                  model_dir: str = None):
+        # Support MPI environment args
+        if os.getenv('OMPI_COMM_WORLD_SIZE'):
+            os.environ["WORLD_SIZE"] = os.getenv('OMPI_COMM_WORLD_SIZE')
+        if os.getenv('OMPI_COMM_WORLD_LOCAL_RANK'):
+            os.environ["LOCAL_RANK"] = os.getenv('OMPI_COMM_WORLD_LOCAL_RANK')
+        rank = os.environ.get("OMPI_COMM_WORLD_RANK")
+        if rank:
+            os.environ["RANK"] = rank
+
         self.serving_properties = update_properties_with_env_vars({})
         self.serving_properties.update(load_properties(model_dir))
 
@@ -236,15 +253,15 @@ class TestHandler:
             self.service = ModelService(entry_point, model_dir)
 
     def inference(self, inputs: Input) -> Output:
-        function_name = inputs.get_function_name()
+        function_name = inputs.get_function_name() if inputs.get_function_name(
+        ) else "handle"
+        inputs.properties.update(self.serving_properties)
         return self.service.invoke_handler(function_name, inputs)
 
     def inference_batch(self,
                         inputs: List[Dict],
                         properties: List[Dict] = None,
                         serving_properties=None) -> Output:
-        if serving_properties is None:
-            serving_properties = self.serving_properties
         return self.inference(
             create_concurrent_batch_request(inputs, properties,
                                             serving_properties))
