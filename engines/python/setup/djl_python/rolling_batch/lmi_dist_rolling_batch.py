@@ -24,15 +24,13 @@ from lmi_dist.utils.types import (Batch, Request, Generation)
 import torch
 
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
-from typing import Optional
 
 QUANTIZATION_SUPPORT_ALGO = ["bitsandbytes8", "bitsandbytes", "gptq", "awq"]
 
 
 class LmiDistRollingBatch(RollingBatch):
 
-    def __init__(self, model_id_or_path: str, properties: dict,
-                 **kwargs) -> None:
+    def __init__(self, model_id_or_path, properties, **kwargs):
         """
         Initializes the LmiDistRollingBatch.
 
@@ -52,23 +50,12 @@ class LmiDistRollingBatch(RollingBatch):
         self.batch_id_counter = 0
         self.cache = {}
 
-    def reset(self) -> None:
-        """
-        Aborts all requests.
-        """
+    def reset(self):
         self.cache.clear()
         self.batch_id_counter = 0
         super().reset()
 
-    def _init_model(self,
-                    model_id_or_path: str,
-                    draft_model_id: Optional[str] = None) -> None:
-        """
-        Helper function for __init__ that creates a model in the LMIDist backend.
-
-        :param model_id_or_path: model id or path
-        :param draft_model_id: model ID of draft model in speculative decoding, if applicable
-        """
+    def _init_model(self, model_id_or_path, draft_model_id=None):
         sharded = self.lmi_dist_configs.tensor_parallel_degree > 1
         quantize = self.lmi_dist_configs.quantize
         if quantize is not None:
@@ -91,11 +78,7 @@ class LmiDistRollingBatch(RollingBatch):
         self.batch_cls = self.model.batch_type
         self._warmup()
 
-    def _warmup(self) -> None:
-        """
-        Sends requests to the model before any actual requests come in to get
-        the rolling batch rolling.
-        """
+    def _warmup(self):
         max_batch_prefill_tokens = self.lmi_dist_configs.max_rolling_batch_prefill_tokens
 
         input_length = 512
@@ -137,19 +120,17 @@ class LmiDistRollingBatch(RollingBatch):
             logging.info(
                 f"The max total sequence length is {max_batch_total_tokens}")
 
-    def release_cache(self) -> None:
+    def release_cache(self):
         self.model.release_cache()
 
     @stop_on_any_exception
-    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
+    def inference(self, input_data, parameters):
         """
         Performs prefill and decode operations for the batch.
 
         :param input_data: List of input texts for each request in a batch
         :param parameters: List of kwargs for each request in a batch
-
-        :return: generated batch decoded tokens - list of dictionaries, one for
-                 each request, that contain output tokens and other data.
+        :return: generated batch decoded tokens
         """
         batch_size = len(input_data)
         new_requests = self.get_new_requests(input_data, parameters,
@@ -159,13 +140,8 @@ class LmiDistRollingBatch(RollingBatch):
             self._prefill_and_decode(new_batch)
         return self.postprocess_results()
 
-    def _prefill_and_decode(self, new_batch: Batch) -> None:
+    def _prefill_and_decode(self, new_batch):
         """
-        Helper function for inference() - adds new requests to the batch
-        and gets output tokens from model for each request
-
-        :param new_batch: Contains all the new requests
-
         About the text quality issue in Nov. 2023, it was temporarily solved by [RP#1189: Fix lmi_dist garbage output
         issue](https://github.com/deepjavalibrary/djl-serving/pull/1189). The root cause of this issue is now
         believed to be found. It should be the buggy memory management; the batch.release() was called inside
@@ -237,15 +213,7 @@ class LmiDistRollingBatch(RollingBatch):
             self.cache[batch.batch_id] = self.cache[batch.batch_id].filter(
                 req_ids)
 
-    def preprocess_requests(self, requests: list, **kwargs) -> Batch:
-        """
-        Preprocesses requests by producing an aggregate batch object to send to
-        lmi-dist.
-
-        :param requests: list of Request objects
-
-        :return: An object from lmi-dist that is a kind of Batch
-        """
+    def preprocess_requests(self, requests, **kwargs):
         preprocessed_requests = []
         for r in requests:
             param = r.parameters
