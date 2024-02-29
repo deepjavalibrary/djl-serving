@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import json
 import logging
 from collections import OrderedDict
 
@@ -149,6 +150,20 @@ class VLLMRollingBatch(RollingBatch):
                     f"Beam search is not supported yet, use first output by default"
                 )
             self.request_cache[req_id]["finished"] = request_output.finished
+            # Record SD metrics
+            completion_output = request_output.outputs[0]
+            if self.vllm_configs.record_acceptance_rate and request_output.finished and completion_output.acceptance_history:
+                record = {}
+                record["id"] = req_id
+                if len(completion_output.acceptance_history) > 0:
+                    record["mean_acceptance"] = 1.0 * sum(
+                        completion_output.acceptance_history) / len(
+                            completion_output.acceptance_history)
+                else:
+                    record["mean_acceptance"] = 0
+                record["prompt_size"] = len(request_output.prompt_token_ids)
+                record["output_size"] = len(completion_output.token_ids)
+                logging.info(f"Speculative Decoding {record}")
         # step 2: send result back
         finished_id = []
         for (key, cache), request in zip(self.request_cache.items(),
