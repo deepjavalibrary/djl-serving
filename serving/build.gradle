@@ -14,6 +14,7 @@ dependencies {
 
     //noinspection GradlePackageUpdate
     implementation "commons-cli:commons-cli:${commons_cli_version}"
+    implementation project(":prometheus")
 
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_slf4j_version}"
     runtimeOnly "com.lmax:disruptor:${disruptor_version}"
@@ -59,9 +60,17 @@ run {
     systemProperties.remove("user.dir")
     systemProperty("file.encoding", "UTF-8")
     // systemProperty("ai.djl.logging.level", "debug")
+    systemProperty("SERVING_PROMETHEUS", "true")
     systemProperty("log4j.configurationFile", "${project.projectDir}/src/main/conf/log4j2.xml")
     application.applicationDefaultJvmArgs = ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=4000"]
     workingDir getProjectDir()
+}
+
+test {
+    doFirst {
+        systemProperty("SERVING_PROMETHEUS", "true")
+        systemProperty("log4j.configurationFile", "${project.projectDir}/src/main/conf/log4j2.xml")
+    }
 }
 
 clean {

@@ -274,7 +274,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 builder.optOption("model_id", downloadDir.toAbsolutePath().toString());
             }
             ZooModel<I, O> m = builder.build().loadModel();
-            m.setProperty("endpoint_id", id);
+            m.setProperty("metric_dimension", id);
 
             long duration = (System.nanoTime() - begin) / 1000;
             Metric metric = new Metric("LoadModel", duration, Unit.MICROSECONDS, dimension);

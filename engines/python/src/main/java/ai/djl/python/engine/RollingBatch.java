@@ -79,7 +79,7 @@ class RollingBatch implements Runnable {
     RollingBatch(PyProcess process, Model model, int timeout) {
         this.process = process;
         this.timeout = timeout;
-        this.dimension = new Dimension("Model", model.getProperty("endpoint_id", "model"));
+        this.dimension = new Dimension("Model", model.getProperty("metric_dimension", "model"));
         maxRollingBatchSize = model.intProperty("max_rolling_batch_size", 32);
         String outputFormatter = model.getProperty("output_formatter");
         if (outputFormatter == null || "json".equals(outputFormatter)) {
@@ -153,7 +153,6 @@ class RollingBatch implements Runnable {
                 lock.unlock();
             }
 
-            long begin = System.nanoTime();
             Output output;
             try {
                 output = process.predict(batch, timeout, false);
@@ -200,10 +199,7 @@ class RollingBatch implements Runnable {
                 }
                 logger.trace("rolling batch size: {}", size);
                 if (metrics != null) {
-                    long duration = (System.nanoTime() - begin) / 1000;
-                    metrics.addMetric(
-                            new Metric("TokenLatency", duration, Unit.MICROSECONDS, dimension));
-                    metrics.addMetric(new Metric("RollingBatchSize", size, Unit.COUNT, dimension));
+                    metrics.addMetric("RollingBatchSize", size, Unit.COUNT_PER_ITEM, dimension);
                 }
             } finally {
                 lock.unlock();
@@ -358,15 +354,10 @@ class RollingBatch implements Runnable {
                     long duration = System.nanoTime() - creationTime;
                     double throughput = count * 1_000_000_000d / duration;
                     long latency = duration / count / 1000;
+                    metrics.addMetric("TokenLatency", latency, Unit.MICROSECONDS, dimension);
                     metrics.addMetric(
-                            new Metric("TokenLatency", latency, Unit.MICROSECONDS, dimension));
-                    metrics.addMetric(
-                            new Metric(
-                                    "TokenThroughput",
-                                    throughput,
-                                    Unit.COUNT_PER_SECOND,
-                                    dimension));
-                    metrics.addMetric(new Metric("OutputTokens", count, Unit.COUNT, dimension));
+                            "TokenThroughput", throughput, Unit.COUNT_PER_SECOND, dimension);
+                    metrics.addMetric("OutputTokens", count, Unit.COUNT_PER_ITEM, dimension);
                 }
                 data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
             }

@@ -86,6 +86,12 @@ public class ManagementRequestHandler extends HttpRequestHandler {
             if ("logging".equals(segments[2])) {
                 handleConfigLogs(ctx, decoder);
                 return;
+            } else if ("metrics".equals(segments[2])) {
+                if (!HttpMethod.GET.equals(method)) {
+                    throw new MethodNotAllowedException();
+                }
+                PrometheusExporter.handle(ctx, decoder);
+                return;
             }
             throw new ResourceNotFoundException();
         }

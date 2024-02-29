@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO">
+    <Appenders>
+        <Prometheus name="prometheus"/>
+    </Appenders>
+    <Loggers>
+        <Root level="info" additivity="false" includeLocation="false"/>
+        <Logger name="test_metric">
+            <AppenderRef ref="prometheus"/>
+        </Logger>
+    </Loggers>
+</Configuration>

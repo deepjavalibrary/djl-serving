@@ -149,7 +149,7 @@ public class ModelServer {
             System.exit(1); // NOPMD
         } catch (Throwable t) {
             logger.error("Unexpected error", t);
-            SERVER_METRIC.info("{}", new Metric("ServerError", 1));
+            SERVER_METRIC.info("{}", new Metric("StartupFailed", 1));
             System.exit(1); // NOPMD
         }
     }
@@ -194,7 +194,7 @@ public class ModelServer {
         logger.info("Starting djl-serving: {} ...", version);
         logger.info(configManager.dumpConfigurations());
         Dimension dim = new Dimension("Version", version);
-        SERVER_METRIC.info("{}", new Metric("djl-serving", 1, Unit.COUNT, dim));
+        SERVER_METRIC.info("{}", new Metric("DJLServingStart", 1, Unit.COUNT, dim));
 
         pluginManager.loadPlugins(true);
 
@@ -225,7 +225,7 @@ public class ModelServer {
         }
 
         long duration = (System.nanoTime() - begin) / 1000;
-        Metric metric = new Metric("ServerStartup", duration, Unit.MICROSECONDS);
+        Metric metric = new Metric("StartupLatency", duration, Unit.MICROSECONDS);
         SERVER_METRIC.info("{}", metric);
         for (int i = 0; i < CudaUtils.getGpuCount(); ++i) {
             try {

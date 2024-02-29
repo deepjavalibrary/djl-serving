@@ -34,7 +34,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: Install DJLServing dependencies
         run: |
-          cd serving && ./gradlew createDeb
+          cd serving && ./gradlew --refresh-dependencies createDeb
           sudo dpkg -i build/distributions/*.deb
           cd ../engines/python/setup
           pip install -e ".[test]"

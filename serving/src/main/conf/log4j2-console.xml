@@ -34,6 +34,7 @@
             </Policies>
             <DefaultRolloverStrategy max="5"/>
         </RollingFile>
+        <Prometheus name="prometheus"/>
     </Appenders>
     <Loggers>
         <Root level="info" additivity="false" includeLocation="false">
@@ -50,9 +51,11 @@
         </Logger>
         <Logger name="server_metric" level="info" additivity="false" includeLocation="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="prometheus"/>
         </Logger>
         <Logger name="model_metric" level="info" additivity="false" includeLocation="false">
             <AppenderRef ref="console"/>
+            <AppenderRef ref="prometheus"/>
         </Logger>
     </Loggers>
 </Configuration>

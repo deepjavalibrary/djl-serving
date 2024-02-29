@@ -61,9 +61,9 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final Logger logger = LoggerFactory.getLogger(InferenceRequestHandler.class);
 
     private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
-    private static final Metric RESPONSE_2_XX = new Metric("2XX", 1);
-    private static final Metric RESPONSE_4_XX = new Metric("4XX", 1);
-    private static final Metric RESPONSE_5_XX = new Metric("5XX", 1);
+    private static final Metric RESPONSE_2_XX = new Metric("Response_2XX", 1);
+    private static final Metric RESPONSE_4_XX = new Metric("Response_4XX", 1);
+    private static final Metric RESPONSE_5_XX = new Metric("Response_5XX", 1);
     private static final Metric WLM_ERROR = new Metric("WlmError", 1);
     private static final Metric SERVER_ERROR = new Metric("ServerError", 1);
     private static final Pattern PATTERN =
