@@ -12,9 +12,11 @@
  */
 package ai.djl.python.engine;
 
+import ai.djl.Model;
 import ai.djl.engine.EngineException;
 import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.metric.Metric;
+import ai.djl.metric.Metrics;
 import ai.djl.metric.Unit;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -23,7 +25,6 @@ import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
-import ai.djl.util.Utils;
 
 import com.google.gson.JsonObject;
 
@@ -50,7 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 class RollingBatch implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(RollingBatch.class);
-    private static final Logger SERVER_METRIC = LoggerFactory.getLogger("server_metric");
+    private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private static ExecutorService threadPool =
             Executors.newCachedThreadPool(
@@ -71,11 +72,13 @@ class RollingBatch implements Runnable {
     private Condition canAdd;
     private Condition canRead;
     private boolean resetRollingBatch;
+    private Metrics metrics;
 
-    RollingBatch(PyProcess process, int maxRollingBatchSize, int timeout, String outputFormatter) {
+    RollingBatch(PyProcess process, Model model, int timeout) {
         this.process = process;
-        this.maxRollingBatchSize = maxRollingBatchSize;
         this.timeout = timeout;
+        maxRollingBatchSize = model.intProperty("max_rolling_batch_size", 32);
+        String outputFormatter = model.getProperty("output_formatter");
         if (outputFormatter == null || "json".equals(outputFormatter)) {
             contentType = "application/json";
         } else if ("jsonlines".equals(outputFormatter)) {
@@ -87,6 +90,17 @@ class RollingBatch implements Runnable {
         canAdd = lock.newCondition();
         canRead = lock.newCondition();
         threadPool.submit(this);
+        if (Boolean.parseBoolean(model.getProperty("log_model_metric"))) {
+            int metricsAggregation = model.intProperty("metrics_aggregation", 1000);
+            String id = model.getProperty("endpoint_id", "model");
+            metrics = new Metrics();
+            metrics.setLimit(metricsAggregation);
+            metrics.setOnLimit(
+                    (m, s) -> {
+                        MODEL_METRIC.info("{}-{}", id, m.percentile(s, 50));
+                        MODEL_METRIC.info("{}-{}", id, m.percentile(s, 90));
+                    });
+        }
     }
 
     /** {@inheritDoc} */
@@ -137,6 +151,7 @@ class RollingBatch implements Runnable {
                 lock.unlock();
             }
 
+            long begin = System.nanoTime();
             Output output;
             try {
                 output = process.predict(batch, timeout, false);
@@ -182,6 +197,11 @@ class RollingBatch implements Runnable {
                     canAdd.signal();
                 }
                 logger.trace("rolling batch size: {}", size);
+                if (metrics != null) {
+                    long duration = (System.nanoTime() - begin) / 1000;
+                    metrics.addMetric(new Metric("TokenLatency", duration, Unit.MICROSECONDS));
+                    metrics.addMetric(new Metric("RollingBatchSize", size, Unit.COUNT));
+                }
             } finally {
                 lock.unlock();
             }
@@ -194,13 +214,13 @@ class RollingBatch implements Runnable {
             if (list.size() >= maxRollingBatchSize) {
                 logger.debug("exceed max_rolling_batch_size: {}", maxRollingBatchSize);
                 if (!canAdd.await(timeout, TimeUnit.SECONDS)) {
-                    SERVER_METRIC.info("{}", new Metric("RollingTimeout", list.size(), Unit.COUNT));
+                    MODEL_METRIC.info("{}", new Metric("RollingTimeout", list.size(), Unit.COUNT));
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
-            Request req = new Request(input, String.valueOf(RandomUtils.nextInt()), contentType);
+            String seed = String.valueOf(RandomUtils.nextInt());
+            Request req = new Request(input, seed, contentType, metrics);
             list.add(req);
-            SERVER_METRIC.info("{}", new Metric("RollingBatchSize", list.size(), Unit.COUNT));
             canRead.signal();
             return req.output;
         } catch (InterruptedException e) {
@@ -221,13 +241,14 @@ class RollingBatch implements Runnable {
         Input input;
         ChunkedBytesSupplier data;
         Output output;
+        String nextToken;
         boolean last;
         String seed;
-        StringBuilder sb; // NOPMD
+        Metrics metrics;
         int count;
-        int threshold;
+        long creationTime;
 
-        Request(Input input, String seed, String contentType) {
+        Request(Input input, String seed, String contentType, Metrics metrics) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
@@ -235,20 +256,20 @@ class RollingBatch implements Runnable {
                 output.addProperty("Content-Type", contentType);
             }
             output.add(data);
-            sb = new StringBuilder(250);
-            threshold = Integer.parseInt(Utils.getenv("SERVING_ROLLING_BATCH_BUFFER", "4"));
             this.seed = seed;
+            this.metrics = metrics;
+            creationTime = System.nanoTime();
         }
 
         BytesSupplier getRequest() {
-            if (count > 0) {
+            if (nextToken != null) {
                 return BytesSupplier.wrap("");
             }
             return input.getData();
         }
 
         Set<Map.Entry<String, String>> getProperties() {
-            if (count > 0) {
+            if (nextToken != null) {
                 return Collections.emptySet();
             }
             return input.getProperties().entrySet();
@@ -262,7 +283,7 @@ class RollingBatch implements Runnable {
          * @return seed, only for first forward
          */
         String getSeed() {
-            if (count > 0) {
+            if (nextToken != null) {
                 return null;
             }
             return seed;
@@ -276,7 +297,7 @@ class RollingBatch implements Runnable {
                 String s = new String(json, StandardCharsets.UTF_8);
                 JsonObject element = JsonUtils.GSON.fromJson(s, JsonObject.class);
                 last = element.get("last").getAsBoolean();
-                String nextToken = element.get("data").getAsString();
+                nextToken = element.get("data").getAsString();
                 try {
                     JsonObject content = JsonUtils.GSON.fromJson(nextToken, JsonObject.class);
                     output.setCode(content.get("code").getAsInt());
@@ -292,7 +313,6 @@ class RollingBatch implements Runnable {
             int size = buf.readShort();
             String code = null;
             String error = null;
-            String nextToken = null;
             for (int i = 0; i < size; ++i) {
                 String key = Objects.requireNonNull(CodecUtils.readUtf8(buf));
                 String value = Objects.requireNonNull(CodecUtils.readUtf8(buf));
@@ -322,11 +342,14 @@ class RollingBatch implements Runnable {
                 byte[] buffer = JsonUtils.GSON_PRETTY.toJson(map).getBytes(StandardCharsets.UTF_8);
                 data.appendContent(buffer, true);
             } else {
-                sb.append(nextToken);
-                if (last || count % threshold == 1) {
-                    data.appendContent(sb.toString().getBytes(StandardCharsets.UTF_8), last);
-                    sb.setLength(0);
+                if (last && metrics != null) {
+                    long duration = System.nanoTime() - creationTime;
+                    double throughput = count * 1_000_000_000d / duration;
+                    metrics.addMetric(
+                            new Metric("TokenThroughput", throughput, Unit.COUNT_PER_SECOND));
+                    metrics.addMetric(new Metric("OutputTokens", count, Unit.COUNT));
                 }
+                data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
             }
         }
     }
