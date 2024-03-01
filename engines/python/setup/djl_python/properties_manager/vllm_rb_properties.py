@@ -13,7 +13,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic.v1.class_validators import validator
+from pydantic.v1.class_validators import validator, root_validator
 
 from djl_python.properties_manager.properties import Properties
 
@@ -33,7 +33,8 @@ class VllmRbProperties(Properties):
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
-    enforce_eager: Optional[bool] = False
+    # TODO: change Enforce eager to False once SageMaker driver issue resolved
+    enforce_eager: Optional[bool] = None
     # TODO: this default may change with different vLLM versions
     # TODO: try to get good default from vLLM to prevent revisiting
     # TODO: last time check: vllm 0.3.1
@@ -49,3 +50,13 @@ class VllmRbProperties(Properties):
             raise AssertionError(
                 f"Need python engine to start vLLM RollingBatcher")
         return engine
+
+    # TODO: Remove this once SageMaker resolved driver issue
+    @root_validator(skip_on_failure=True)
+    def set_eager_model_for_quantize(cls, properties):
+        if "quantize" in properties and properties["quantize"] == "awq":
+            if properties["enforce_eager"] is None:
+                properties["enforce_eager"] = True
+        if properties["enforce_eager"] is None:
+            properties["enforce_eager"] = False
+        return properties

@@ -432,7 +432,7 @@ class TestConfigManager(unittest.TestCase):
     def test_vllm_properties(self):
         # test with valid vllm properties
 
-        def test_vllm_valid():
+        def test_vllm_valid(properties):
             vllm_configs = VllmRbProperties(**properties)
             self.assertEqual(vllm_configs.model_id_or_path,
                              properties['model_id'])
@@ -454,11 +454,26 @@ class TestConfigManager(unittest.TestCase):
                              float(properties['gpu_memory_utilization']))
 
         # test with invalid quantization
-        def test_invalid_quantization_method():
+        def test_invalid_quantization_method(properties):
             properties['quantize'] = 'gguf'
             with self.assertRaises(ValueError):
                 VllmRbProperties(**properties)
             properties['quantize'] = 'awq'
+
+        # TODO remove this once the SageMaker driver issue addressed
+        def test_eager_model_with_quantize(properties):
+            properties['quantize'] = 'awq'
+            properties.pop('enforce_eager')
+            self.assertTrue("enforce_eager" not in properties)
+            vllm_props = VllmRbProperties(**properties)
+            self.assertTrue(vllm_props.enforce_eager)
+
+        def test_enforce_eager(properties):
+            properties.pop('enforce_eager')
+            properties.pop('quantize')
+            self.assertTrue("enforce_eager" not in properties)
+            vllm_props = VllmRbProperties(**properties)
+            self.assertTrue(vllm_props.enforce_eager is False)
 
         properties = {
             'model_id': 'sample_model_id',
@@ -472,8 +487,10 @@ class TestConfigManager(unittest.TestCase):
             "gpu_memory_utilization": "0.85",
             'load_format': 'pt'
         }
-        test_vllm_valid()
-        test_invalid_quantization_method()
+        test_vllm_valid(properties.copy())
+        test_invalid_quantization_method(properties.copy())
+        test_eager_model_with_quantize(properties.copy())
+        test_enforce_eager(properties.copy())
 
     def test_sd_inf2_properties(self):
         properties = {
