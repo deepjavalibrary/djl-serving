@@ -18,9 +18,11 @@ from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import N
 
 class NeuronRollingBatch(RollingBatch):
 
-    def __init__(self, model, tokenizer, batch_size, n_postions, **kwargs):
+    def __init__(self, model, tokenizer, batch_size: int, n_positions: int,
+                 **kwargs) -> None:
         """
         Initializes the NeuronRollingBatch.
+
         :param model: the Neuron HuggingFace model
         :param batch_size: the maximum batch size required by model
         :param tokenizer: the tokenizer used by model
@@ -28,14 +30,27 @@ class NeuronRollingBatch(RollingBatch):
         """
         super().__init__(**kwargs)
         self.scheduler = NeuronGenerator(model, tokenizer, batch_size,
-                                         n_postions)
+                                         n_positions)
 
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Aborts all requests.
+        """
         self.scheduler.clear()
         super().reset()
 
     @stop_on_any_exception
-    def inference(self, input_data, parameters):
+    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
+        """
+        Loads new requests and gets output tokens from all currently active requests from
+        the Neuron backend.
+
+        :param input_data: List of input texts for each request in a batch
+        :param parameters: List of kwargs for each request in a batch
+
+        :return: generated batch decoded tokens - list of dictionaries, one for
+                 each request, that contain output tokens and other data.
+        """
         batch_size = len(input_data)
         new_requests = self.get_new_requests(input_data, parameters,
                                              batch_size)
@@ -85,5 +100,8 @@ class NeuronRollingBatch(RollingBatch):
         self.scheduler.filter(req_ids)
         return self.postprocess_results()
 
-    def preprocess_requests(self, requests):
+    def preprocess_requests(self, requests: list):
+        """
+        Currently not applicable for Neuron.
+        """
         raise NotImplementedError("Not implemented for Neuron rolling batcher")

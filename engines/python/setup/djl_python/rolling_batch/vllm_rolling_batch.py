@@ -41,12 +41,13 @@ class VLLMRollingBatch(RollingBatch):
     """
 
     # TODO: Make properties is the only parameter, after refactoring all rolling batch handlers
-    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
+    def __init__(self, model_id_or_path: str, properties: dict,
+                 **kwargs) -> None:
         """
         Initializes the VLLMRollingBatch.
 
-        :param model_id_or_path (str): Currently unused since there is a copy inside properties
-        :param properties (dict): other properties of the model, such as decoder strategy
+        :param model_id_or_path: Currently unused since there is a copy inside properties
+        :param properties: other properties of the model, such as decoder strategy
         """
         self.vllm_configs = VllmRbProperties(**properties)
         super().__init__(waiting_steps=self.vllm_configs.waiting_steps,
@@ -71,7 +72,7 @@ class VLLMRollingBatch(RollingBatch):
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Aborts all requests
         """
@@ -80,12 +81,12 @@ class VLLMRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
         super().reset()
 
-    def translate_vllm_params(self, parameters: dict):
+    def translate_vllm_params(self, parameters: dict) -> dict:
         """
         Helper function to convert DJL Serving parameter names to parameter names
         that VLLM recognizes.
 
-        :param parameters (dict): Parameters pertaining to a specific request
+        :param parameters: Parameters pertaining to a specific request
 
         :return: The same parameters dict, but with VLLM style parameter names.
         """
@@ -104,10 +105,10 @@ class VLLMRollingBatch(RollingBatch):
         """
         Adds new requests and gets output tokens from the backend.
 
-        :param input_data (list[str]): List of input prompts.
-        :param parameters (list[dict]): List of settings pertaining to each request.
+        :param input_data: List of input prompts.
+        :param parameters: List of settings pertaining to each request.
 
-        :return results (list): List of dictionaries, one for each request, that contain output tokens and other data.
+        :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
         batch_size = len(input_data)
         new_requests = self.get_new_requests(input_data, parameters,

@@ -22,7 +22,8 @@ class TRTLLMRollingBatch(RollingBatch):
     It also gets any new tokens from the backend and sends them back to the handler.
     """
 
-    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
+    def __init__(self, model_id_or_path: str, properties: dict,
+                 **kwargs) -> None:
         """
         Initializes the TRTLLMRollingBatch
 
@@ -37,7 +38,7 @@ class TRTLLMRollingBatch(RollingBatch):
             model_id_or_path, **kwargs)
         self.request_cache = {}
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Stops all current requests and resets state of rolling batch portion of handler
         """
@@ -51,7 +52,7 @@ class TRTLLMRollingBatch(RollingBatch):
         Helper function to convert DJL Serving parameter names to Triton
         parameter names that TensorRT-LLM recognizes.
 
-        :param parameters (dict): Parameters pertaining to a specific request
+        :param parameters: Parameters pertaining to a specific request
 
         :return: The same parameters dict, but with TensorRT-LLM style parameter names.
         """
@@ -79,10 +80,10 @@ class TRTLLMRollingBatch(RollingBatch):
         Loads new requests into the batch when there is availability, and gets output tokens from the backend
         asynchronously.
 
-        :param input_data (list[str]): List of input prompts.
-        :param parameters (list[dict]): List of settings pertaining to each request.
+        :param input_data: List of input prompts.
+        :param parameters: List of settings pertaining to each request.
 
-        :return results (list): List of dictionaries, one for each request, that contain output tokens and other data.
+        :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
         batch_size = len(input_data)
         # add pending requests to active requests list
