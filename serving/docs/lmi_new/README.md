@@ -122,3 +122,14 @@ Each inference framework provides a unique set of features and optimizations tha
 With LMIs built-in inference handlers and unified configuration, experimenting with different stacks is as simple as changing a few configurations.
 Refer to the stack specific user guides, and the [LMI deployment guide](deployment_guide.md) to learn more.
 An overview of the different LMI components is provided in the [deployment guide](deployment_guide/README.md#components-of-lmi)
+
+The following table shows which SageMaker DLC (deep learning container) to use for each backend.
+This information is also available on the SageMaker DLC [GitHub repository](https://github.com/aws/deep-learning-containers/blob/master/available_images.md#large-model-inference-containers).
+
+| Backend                | SageMakerDLC    | Example URI                                                                              |
+|------------------------|-----------------|------------------------------------------------------------------------------------------|
+| `vLLM`                 | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-deepspeed0.12.6-cu121  |
+| `lmi-dist`             | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-deepspeed0.12.6-cu121  |
+| `deepspeed`            | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-deepspeed0.12.6-cu121  |
+| `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-tensorrtllm0.7.1-cu122 |
+| `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-neuronx-sdk2.16.0      |
