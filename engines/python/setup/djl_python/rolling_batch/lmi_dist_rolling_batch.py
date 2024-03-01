@@ -74,8 +74,7 @@ class LmiDistRollingBatch(RollingBatch):
             quantize=quantize,
             dtype=self.lmi_dist_configs.dtype,
             trust_remote_code=self.lmi_dist_configs.trust_remote_code,
-            is_draft_model=True
-        ) if draft_model_id else None
+            is_draft_model=True) if draft_model_id else None
         self.batch_cls = self.model.batch_type
         self._warmup()
 
