@@ -77,10 +77,10 @@ class TestLmiDist(unittest.TestCase):
         # --- Models ---
         model_names = [
             # "TheBloke/Llama-2-13B-Chat-fp16",
-            # "TheBloke/Llama-2-7B-Chat-fp16",
+            "TheBloke/Llama-2-7B-Chat-fp16",
             # TODO: fix this. weight model.layers.0.self_attn.rotary_emb.inv_freq does not exist
             # "TheBloke/Llama-2-7B-Chat-AWQ",
-            "TinyLlama/TinyLlama-1.1B-Chat-v0.6",
+            # "TinyLlama/TinyLlama-1.1B-Chat-v0.6",
             # "TinyLlama/TinyLlama-1.1B-python-v0.1",
             # g5.12xlarge single gpu ok. But no way to clear the gpu memory after running llama-2-7b thus cause OOM
             # "codellama/CodeLlama-7b-hf"
@@ -97,15 +97,13 @@ class TestLmiDist(unittest.TestCase):
                 "model_id": model_id
             }
             properties["draft_model_id"] = "TinyLlama/TinyLlama-1.1B-Chat-v0.6"
-            properties[
-                "draft_model_id"] = "TinyLlama/TinyLlama-1.1B-python-v0.1"
-            properties['spec_length'] = 5
+            # properties["draft_model_id"] = "TinyLlama/TinyLlama-1.1B-python-v0.1"
+            properties['spec_length'] = 1
 
             # draft_model_id = None
             # properties["draft_model_id"] = None
 
             # ===================== lmi_dist ============================
-            device = int(os.environ.get("RANK", 0))
             properties["device"] = int(os.environ.get("RANK", 0))
 
             rolling_batch = LmiDistRollingBatch(model_id, properties)
@@ -121,23 +119,20 @@ class TestLmiDist(unittest.TestCase):
                 "The future of AI is"
             ]  # 7
 
+            input_str1 = ([
+                "Hello, my name is",  # 6
+                "The president of the United States is",  # 8
+                "The capital of France is",  # 6
+                "The future of AI is",  # 7,
+                "Write a program to add two numbers in python",
+                "Write a program to add two numbers in c++",
+            ] * 30)[:6]
+
             params1 = [{
                 "max_new_tokens": 100,
                 "do_sample": False,
                 "temperature": 0.001
-            }, {
-                "max_new_tokens": 100,
-                "do_sample": False,
-                "temperature": 0.001
-            }, {
-                "max_new_tokens": 100,
-                "do_sample": False,
-                "temperature": 0.001
-            }, {
-                "max_new_tokens": 100,
-                "do_sample": False,
-                "temperature": 0.001
-            }]
+            }.copy() for _ in range(len(input_str1))]
 
             gen.step(step=10, input_str_delta=input_str1, params_delta=params1)
 
@@ -163,8 +158,12 @@ class TestLmiDist(unittest.TestCase):
                          params_delta=params_delta)
 
             print('========== inference_infty ===========')
-            gen.step(step=500)
+            gen.step(step=200)
+            accp_tkns = [[e for e in list_cnt if e > 0]
+                         for list_cnt in gen.token_numbers.values()]
+            print_rank0(accp_tkns[:2])
             for req_id, out in gen.output_all.items():
+                if req_id > min(4, len(input_str1)): continue
                 print_rank0(
                     f"\n====req_id: {req_id}=====\n{gen.input_all[req_id][0] + ''.join(out)}\n"
                 )
@@ -172,13 +171,13 @@ class TestLmiDist(unittest.TestCase):
                         model_id]:
                     expected_prefix_30_req_id = expected_text_30[model_id][
                         req_id]
+                    backup_check = -req_id in expected_text_30[model_id] and (
+                        gen.input_all[req_id][0] + ''.join(out[:30])
+                    )[:len(expected_text_30[model_id][-req_id]
+                           )] == expected_text_30[model_id][-req_id]
                     assert expected_prefix_30_req_id == (
                         gen.input_all[req_id][0] + ''.join(out[:30])
-                    )[:len(expected_prefix_30_req_id
-                           )] or -req_id in expected_text_30[model_id] and (
-                               gen.input_all[req_id][0] + ''.join(out[:30])
-                           )[:len(expected_text_30[model_id][-req_id]
-                                  )] == expected_text_30[model_id][-req_id]
+                    )[:len(expected_prefix_30_req_id)] or backup_check
                 elif req_id < 6:
                     warnings.warn(
                         f"\nWARNING:-----------v_v\nmodel_id = {model_id}, req_id = {req_id} is not asserted!\n\n",
