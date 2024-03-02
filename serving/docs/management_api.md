@@ -72,7 +72,8 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
 
 `POST /workflows`
 
-* url - Workflow url.
+* url - Workflow url
+* template - A workflow template to use
 * engine - the name of engine to load the model. DJL will try to infer engine if not specified.
 * device - the device to load the model. DJL will pick optimal device if not specified, the value device can be:
     * CPU device: cpu or simply -1
@@ -81,6 +82,8 @@ curl -v -X POST "http://localhost:8080/models?url=https%3A%2F%2Fresources.djl.ai
 * min_worker - the minimum number of worker processes. The default value is `1`.
 * max_worker - the maximum number of worker processes. The default is the same as the setting for `min_worker`.
 * synchronous - if the creation of worker is synchronous. The default value is true.
+
+Either a url or [template](workflow_templates.md) is required.
 
 ```bash
 curl -X POST "http://localhost:8080/workflows?url=https%3A%2F%2Fresources.djl.ai%2Ftest-workflows%2Fmlp.zip"

@@ -318,6 +318,7 @@ public class ModelServerTest {
 
             testAdapterWorkflowPredict(channel, "adapter1", "a1");
             testAdapterWorkflowPredict(channel, "adapter2", "a2");
+            testRegisterAdapterWorkflowTemplate(channel);
 
             channel.close().sync();
 
@@ -914,6 +915,19 @@ public class ModelServerTest {
         request(channel, req);
         assertHttpOk();
         assertEquals(result, adapter + "testAWP");
+    }
+
+    private void testRegisterAdapterWorkflowTemplate(Channel channel) throws InterruptedException {
+        logTestFunction();
+        String adapterUrl = "dummy";
+        String modelUrl = URLEncoder.encode("src/test/resources/adaptecho", StandardCharsets.UTF_8);
+
+        String url =
+                "/workflows?template=adapter&adapter=a&url=" + adapterUrl + "&model=" + modelUrl;
+        request(channel, HttpMethod.POST, url);
+
+        StatusResponse resp = JsonUtils.GSON.fromJson(result, StatusResponse.class);
+        assertEquals(resp.getStatus(), "Workflow \"a\" registered.");
     }
 
     private void testAdapterInvoke(Channel channel) throws InterruptedException {

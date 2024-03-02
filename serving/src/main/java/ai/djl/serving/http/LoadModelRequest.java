@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 class LoadModelRequest {
 
     static final String URL = "url";
+    static final String TEMPLATE = "template";
     static final String DEVICE = "device";
     static final String MAX_WORKER = "max_worker";
     static final String MIN_WORKER = "min_worker";
