@@ -43,6 +43,7 @@ class VllmRbProperties(Properties):
     speculative_draft_model: Optional[str] = None
     speculative_length: int = 5
     draft_model_tp_size: int = 1
+    record_acceptance_rate: Optional[bool] = False
 
     @validator('engine')
     def validate_engine(cls, engine):
