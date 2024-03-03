@@ -1,19 +1,22 @@
-name: Large model integration tests with P4D and compiler optimizations
+name: Integration tests - LLM P4D + Compiler Optimizations
 
 on:
   workflow_dispatch:
     inputs:
-      djl-version:
-        description: 'The released version of DJL'
-        required: false
-        default: ''
       run_test:
         description: 'Run only the tests you need [aiccl]'
         required: false
         default: ''
-  schedule:
-    - cron: '0 15 * * *'
+  workflow_call:
+    inputs:
+      run_test:
+        description: 'Run only the tests you need [aiccl]'
+        type: string
+        default: ''
 
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   create-runners-p4d:
@@ -50,18 +53,28 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed temp
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DJLSERVING_TEMP_REPO
+          docker pull $DJLSERVING_DOCKER
       - name: Test Mixtral-8x7B with aiccl backend
         working-directory: tests/integration
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl mixtral-8x7b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models deepspeed \
           serve
           python3 llm/client.py lmi_dist_aiccl mixtral-8x7b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -76,7 +89,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl llama-2-70b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models deepspeed \
           serve
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -91,7 +104,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl codellama-34b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models deepspeed \
           serve
           python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -106,7 +119,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl falcon-40b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models deepspeed \
           serve
           python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -151,18 +164,28 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm temp
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DJLSERVING_TEMP_REPO
+          docker pull $DJLSERVING_DOCKER
       - name: Test llama-2-70B with TP8
         working-directory: tests/integration
         run: |
           rm -rf models
           python3 llm/prepare.py trtllm llama2-70b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm llama2-70b
           docker rm -f $(docker ps -aq)
@@ -171,7 +194,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py trtllm mixtral-8x7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm mixtral-8x7b
           docker rm -f $(docker ps -aq)
@@ -210,18 +233,28 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed temp
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DJLSERVING_TEMP_REPO
+          docker pull $DJLSERVING_DOCKER
       - name: Test llama-2-70B with TP8
         working-directory: tests/integration
         run: |
           rm -rf models
           python3 llm/prepare.py vllm llama2-70b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models deepspeed \
           serve
           python3 llm/client.py vllm llama2-70b
           docker rm -f $(docker ps -aq)
@@ -230,7 +263,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm mixtral-8x7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models deepspeed \
           serve
           python3 llm/client.py vllm mixtral-8x7b
           docker rm -f $(docker ps -aq)

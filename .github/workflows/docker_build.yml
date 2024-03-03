@@ -1,14 +1,22 @@
-name: Build and push docker nightly
+name: Docker build
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'release/nightly/temp, default is nightly'
+        description: 'release/nightly, default is nightly'
         required: true
         default: 'nightly'
-  schedule:
-    - cron: '0 13 * * *'
+        options:
+          - release
+          - nightly
+  workflow_call:
+    inputs:
+      mode:
+        description: 'release/nightly, default is nightly'
+        type: string
+        required: true
+        default: 'nightly'
 
 permissions:
   id-token: write
@@ -35,6 +43,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: install awscli
         run: |
+          sudo dpkg --configure -a
           sudo apt-get update
           sudo apt-get install awscli -y
       - name: Configure AWS Credentials
@@ -55,16 +64,8 @@ jobs:
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         run: |
           ./gradlew :serving:dockerDeb -Psnapshot
-      - name: Build and push nightly docker image
+      - name: Build and push nightly image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
-        working-directory: serving/docker
-        run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT ${{ matrix.arch }}
-          docker compose push ${{ matrix.arch }}
-      - name: Build and push temp image
-        if: ${{ github.event.inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
@@ -75,7 +76,7 @@ jobs:
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
           docker push $tempTag
-      - name: Build and push release docker image
+      - name: Build and push release image
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
@@ -83,14 +84,11 @@ jobs:
           export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} ${{ matrix.arch }}
-          docker compose push ${{ matrix.arch }}
-      - name: Retag image for release
-        if: ${{ matrix.arch == 'cpu' && github.event.inputs.mode == 'release' }}
-        working-directory: serving/docker
-        run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
-          docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
-          docker push deepjavalibrary/djl-serving:latest
+          repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
+          tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
+          docker tag deepjavalibrary/djl-serving:${{ matrix.arch }} $tempTag
+          docker push $tempTag
 
   create-runner:
     runs-on: [ self-hosted, scheduler ]
@@ -123,6 +121,11 @@ jobs:
     needs: create-runner
     steps:
       - uses: actions/checkout@v4
+      - name: install awscli
+        run: |
+          sudo dpkg --configure -a
+          sudo apt-get update
+          sudo apt-get install awscli -y
       - name: Clean docker env
         working-directory: serving/docker
         run: |
@@ -132,10 +135,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: install awscli
-        run: |
-          sudo apt-get update
-          sudo apt-get install awscli -y
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -154,16 +153,8 @@ jobs:
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         run: |
           ./gradlew :serving:dockerDeb -Psnapshot
-      - name: Build and push nightly docker image
+      - name: Build and push nightly image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
-        working-directory: serving/docker
-        run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT aarch64
-          docker compose push aarch64
-      - name: Build and push temp image
-        if: ${{ github.event.inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
@@ -174,7 +165,7 @@ jobs:
           tempTag="$repo:aarch64-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:aarch64-nightly $tempTag
           docker push $tempTag
-      - name: Build and push release docker image
+      - name: Build and push release image
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
@@ -182,7 +173,11 @@ jobs:
           export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} aarch64
-          docker compose push aarch64
+          repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
+          tempTag="$repo:aarch64-${GITHUB_SHA}"
+          docker tag deepjavalibrary/djl-serving:aarch64 $tempTag
+          docker push $tempTag
 
   nightly-deepspeed:
     runs-on: [ self-hosted, cpu ]
@@ -190,6 +185,11 @@ jobs:
     needs: create-runner
     steps:
       - uses: actions/checkout@v4
+      - name: install awscli
+        run: |
+          sudo dpkg --configure -a
+          sudo apt-get update
+          sudo apt-get install awscli -y
       - name: Clean docker env
         working-directory: serving/docker
         run: |
@@ -199,10 +199,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: install awscli
-        run: |
-          sudo apt-get update
-          sudo apt-get install awscli -y
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -221,16 +217,8 @@ jobs:
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         run: |
           ./gradlew :serving:dockerDeb -Psnapshot
-      - name: Build and push nightly docker image
+      - name: Build and push nightly image
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
-        working-directory: serving/docker
-        run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
-          export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT deepspeed
-          docker compose push deepspeed
-      - name: Build and push temp image
-        if: ${{ github.event.inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
@@ -238,10 +226,10 @@ jobs:
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT deepspeed
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          tempTag="$repo:deepspeed-$GITHUB_SHA"
+          tempTag="$repo:deepspeed-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:deepspeed-nightly $tempTag
           docker push $tempTag
-      - name: Build and push release docker image
+      - name: Build and push release image
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
@@ -249,7 +237,11 @@ jobs:
           export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} deepspeed
-          docker compose push deepspeed
+          repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
+          tempTag="$repo:deepspeed-${GITHUB_SHA}"
+          docker tag deepjavalibrary/djl-serving:deepspeed $tempTag
+          docker push $tempTag
 
   stop-runner:
     if: always()
