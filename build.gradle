@@ -103,7 +103,7 @@ configure(javaProjects()) {
             systemProperty "org.slf4j.simpleLogger.log.io.netty", "warn"
             systemProperty "disableProgressBar", "true"
             if (gradle.startParameter.offline) {
-                systemProperty "offline", "true"
+                systemProperty "ai.djl.offline", "true"
             }
             // This is used to avoid overriding on default engine for modules:
             // mxnet-engine, mxnet-model-zoo, api (MockEngine), basicdataset, fasttext, etc
