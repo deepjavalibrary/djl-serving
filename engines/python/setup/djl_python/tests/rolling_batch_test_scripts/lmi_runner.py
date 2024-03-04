@@ -35,16 +35,17 @@ class RunnerLmi:
 
         self.gen.reset()
         peak_memory = PeakMemory()
-        torch.cuda.reset_max_memory_allocated()        
+        torch.cuda.reset_max_memory_allocated()
 
-        # Add              
+        # Add
         N = len(input_str)
         params = [self.param.copy() for _ in range(N)]
 
         self.gen.step(step=0, input_str_delta=input_str, params_delta=params)
 
         # Run inference
-        iterator = tqdm(range(max_infer_call)) if max_infer_call >= 0 and int(os.environ.get("RANK", 0)) == 0 else range(1000000)
+        iterator = tqdm(range(max_infer_call)) if max_infer_call >= 0 and int(
+            os.environ.get("RANK", 0)) == 0 else range(1000000)
         for cnt in iterator:
             self.gen.step(step=1)
 
@@ -53,7 +54,8 @@ class RunnerLmi:
             if self.gen.is_empty():
                 break
 
-        return self.gen.output_all, self.gen.token_numbers, 0, torch.cuda.max_memory_allocated() / 1024**2, peak_memory.get() / 1024**2
+        return self.gen.output_all, self.gen.token_numbers, 0, torch.cuda.max_memory_allocated(
+        ) / 1024**2, peak_memory.get() / 1024**2
 
     def release_cache(self):
         self.gen.rolling_batch.release_cache()
