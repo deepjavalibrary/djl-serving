@@ -243,6 +243,7 @@ public class ModelServerTest {
             testAsyncInference(channel);
             testDjlModelZoo(channel);
             testConfigLogging(channel);
+            testPrometheusMetrics(channel);
 
             testPredictionsInvalidRequestSize(channel);
 
@@ -759,7 +760,7 @@ public class ModelServerTest {
         request(channel, HttpMethod.DELETE, "/models/zoomodel");
     }
 
-    private void testConfigLogging(Channel channel) throws InterruptedException, IOException {
+    private void testConfigLogging(Channel channel) throws InterruptedException {
         logTestFunction();
         String url = "/server/logging?level=trace";
         request(channel, HttpMethod.POST, url);
@@ -772,6 +773,14 @@ public class ModelServerTest {
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
         Assert.assertFalse(log.isTraceEnabled());
+    }
+
+    private void testPrometheusMetrics(Channel channel) throws InterruptedException {
+        logTestFunction();
+        String url = "/server/metrics?name[]=DJLServingStart&name[]=StartupLatency";
+        request(channel, HttpMethod.GET, url);
+        assertHttpOk();
+        Assert.assertTrue(result.contains("StartupLatency{Host="));
     }
 
     private void testThrottle() throws InterruptedException {
@@ -789,7 +798,7 @@ public class ModelServerTest {
 
         // send 2nd request use different connection
         latch2 = new CountDownLatch(1);
-        Channel channel2 = connect(Connector.ConnectorType.MANAGEMENT, 1);
+        Channel channel2 = connect(Connector.ConnectorType.INFERENCE, 1);
         req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
         channel2.writeAndFlush(req).sync();
         Assert.assertTrue(latch2.await(2, TimeUnit.MINUTES));
@@ -1104,6 +1113,19 @@ public class ModelServerTest {
         assertNotNull(channel);
 
         request(channel, HttpMethod.PUT, "/models");
+        channel.closeFuture().sync();
+        channel.close().sync();
+
+        if (!System.getProperty("os.name").startsWith("Win")) {
+            ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
+            assertEquals(resp.getCode(), HttpResponseStatus.METHOD_NOT_ALLOWED.code());
+            assertEquals(resp.getMessage(), ERROR_METHOD_NOT_ALLOWED);
+        }
+
+        channel = connect(Connector.ConnectorType.MANAGEMENT);
+        assertNotNull(channel);
+
+        request(channel, HttpMethod.PUT, "/server/metrics");
         channel.closeFuture().sync();
         channel.close().sync();
 

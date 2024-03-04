@@ -253,3 +253,22 @@ curl -X POST "http://localhost:8080/server/logging?level=debug"
   "status": "OK"
 }
 ```
+
+### Get metrics
+
+`POST /server/metrics`
+
+* name[] - metric name filters. Multiple `name[]` HTTP parameters are allowed
+
+Use the get metrics to get metrics in prometheus format.
+
+```
+curl "http://localhost:8080/server/metrics?name[]=DJLServingStart&name[]=StartupLatency"
+
+# HELP DJLServingStart_total : prometheus counter metric, unit: Count
+# TYPE DJLServingStart_total counter
+DJLServingStart_total{Version="0.27.0-SNAPSHOT"} 1.0
+# HELP StartupLatency : prometheus gauge metric, unit: Microseconds
+# TYPE StartupLatency gauge
+StartupLatency{Host="localhost"} 425941.0
+```

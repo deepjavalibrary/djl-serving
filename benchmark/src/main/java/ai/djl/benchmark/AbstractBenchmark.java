@@ -157,9 +157,12 @@ public abstract class AbstractBenchmark {
                 }
 
                 if (metrics.hasMetric("Inference") && iteration > 1) {
-                    float totalP50 = metrics.percentile("Total", 50).getValue().longValue() / 1000f;
-                    float totalP90 = metrics.percentile("Total", 90).getValue().longValue() / 1000f;
-                    float totalP99 = metrics.percentile("Total", 99).getValue().longValue() / 1000f;
+                    float totalP50 =
+                            metrics.percentile("Prediction", 50).getValue().longValue() / 1000f;
+                    float totalP90 =
+                            metrics.percentile("Prediction", 90).getValue().longValue() / 1000f;
+                    float totalP99 =
+                            metrics.percentile("Prediction", 99).getValue().longValue() / 1000f;
                     float p50 = metrics.percentile("Inference", 50).getValue().longValue() / 1000f;
                     float p90 = metrics.percentile("Inference", 90).getValue().longValue() / 1000f;
                     float p99 = metrics.percentile("Inference", 99).getValue().longValue() / 1000f;

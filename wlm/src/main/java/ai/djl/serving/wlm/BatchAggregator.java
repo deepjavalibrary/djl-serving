@@ -75,7 +75,8 @@ abstract class BatchAggregator<I, O> {
         }
         int size = list.size();
         if (size > 1) {
-            MODEL_METRIC.info("{}", new Metric("BatchSize", size, Unit.COUNT, dimension));
+            MODEL_METRIC.info(
+                    "{}", new Metric("DynamicBatchSize", size, Unit.COUNT_PER_ITEM, dimension));
         }
         return list;
     }
@@ -85,7 +86,7 @@ abstract class BatchAggregator<I, O> {
         for (WorkerJob<I, O> wj : wjs) {
             wj.getFuture().complete(wj.getJob().getOutput());
             long latency = wj.getJob().getWaitingMicroSeconds();
-            Metric metric = new Metric("ModelLatency", latency, Unit.MICROSECONDS, dimension);
+            Metric metric = new Metric("RequestLatency", latency, Unit.MICROSECONDS, dimension);
             MODEL_METRIC.info("{}", metric);
         }
         wjs.clear();

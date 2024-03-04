@@ -47,7 +47,7 @@ configure(javaProjects()) {
         options.encoding = "UTF-8"
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        options.compilerArgs << "--release" << "11" << "-proc:none" << "-Xlint:all,-options,-static" << "-Werror"
+        options.compilerArgs << "--release" << "11" << "-Xlint:all,-options,-static" << "-Werror"
     }
     compileTestJava {
         options.encoding = "UTF-8"
@@ -98,7 +98,6 @@ configure(javaProjects()) {
             systemProperties System.getProperties()
             systemProperties.remove("user.dir")
             // systemProperty "ai.djl.logging.level", "debug"
-            systemProperty("log4j.configurationFile", "${project.projectDir}/src/main/conf/log4j2.xml")
             systemProperty "org.slf4j.simpleLogger.defaultLogLevel", "debug"
             systemProperty "org.slf4j.simpleLogger.log.org.mortbay.log", "warn"
             systemProperty "org.slf4j.simpleLogger.log.io.netty", "warn"
