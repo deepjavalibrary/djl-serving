@@ -242,14 +242,15 @@ public class PyEnv {
             cmd.add("-r");
             cmd.add(file.toAbsolutePath().toString());
             Path dir = modelDir.resolve("requirements");
+            boolean offline = Utils.isOfflineMode();
             if (Files.isDirectory(dir)) {
-                if (Boolean.getBoolean("offline")) {
+                if (offline) {
                     // if folder exists, we assume user want to resolve dependencies in the folder
                     cmd.add("--no-index");
                 }
                 cmd.add("-f");
                 cmd.add(dir.toAbsolutePath().toString());
-            } else if (Boolean.getBoolean("offline")) {
+            } else if (offline) {
                 cmd.add("--no-deps");
             }
 

@@ -14,7 +14,8 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 | ENGINE_CACHE_DIR               | env var/system prop | The cache directory for engine native libraries: default: $DJL_CACHE_DIR            |
 | ai.djl.dataiterator.autoclose  | system prop         | Automatically close data set iterator, default: true                                |
 | ai.djl.repository.zoo.location | system prop         | global model zoo search locations, not recommended                                  |
-| offline                        | system prop         | Don't access network for downloading engine's native library and model zoo metadata |
+| DJL_OFFLINE                    | env var             | Don't access network for downloading engine's native library and model zoo metadata |
+| ai.djl.offline                 | system prop         | Don't access network for downloading engine's native library and model zoo metadata |
 | collect-memory                 | system prop         | Enable memory metric collection, default: false                                     |
 | disableProgressBar             | system prop         | Disable progress bar, default: false                                                |
 
