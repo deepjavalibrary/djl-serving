@@ -88,7 +88,8 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
         final_dict["generated_text"] = generated_tokens
         if details:
             final_dict["details"] = {
-                "finish_reason": details.get("finish_reason", None)
+                "finish_reason": details.get("finish_reason", None),
+                "generated_tokens": details.get("generated_tokens", None),
             }
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
@@ -160,6 +161,7 @@ class Request(object):
             if self.token_cache is not None:
                 details["finish_reason"] = finish_reason
                 details["tokens"] = self.token_cache
+                details["generated_tokens"] = len(self.token_cache)
         if output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now
