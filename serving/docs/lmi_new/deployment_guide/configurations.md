@@ -7,6 +7,7 @@ LMI containers accept configurations provided in two formats. In order of priori
 * Environment Variables (global configurations)
 
 We recommend using the `serving.properties` configuration file for the following reasons:
+
 * Supports SageMaker Multi Model Endpoints with per model configurations 
   * Environment Variables are applied globally to all models hosted by the model server, so they can't be used for model specific configuration
 * Separates model configuration from the SageMaker Model Object (deployment unit)
@@ -51,7 +52,7 @@ If a model provides custom model (*modeling.py) and custom tokenizer (*tokenizer
 
 If you are deploying a model hosted in S3, `option.model_id=<s3 uri>` should be the s3 object prefix of the model artifacts.
 Alternatively, you can upload the `serving.properties` file to S3 alongside your model artifacts (under the same prefix) and omit the `option.model_id` config from your `serving.properties` file.
-To deploy uncompressed model artifacts with SageMaker, see [this guide](https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-uncompressed.html).
+Example code for leveraging uncompressed artifacts in S3 are provided in the [deploying your endpoint](deploying-your-endpoint.md#configuration---servingproperties) section.
 
 ## Inference Library Configuration
 
@@ -62,14 +63,17 @@ LMI expects the following two configurations to determine which backend to use:
 * `option.entryPoint`. This represents the default inference handler to use. In most cases, this can be auto-detected and does not need to be specified
 
 In the DeepSpeed Container:
+
 * to use vLLM, use `engine=Python` and `option.rolling_batch=vllm`
 * to use lmi-dist, use `engine=MPI` and `option.rolling_batch=lmi-dist`
 * to use DeepSpeed, use `engine=MPI`, `option.rolling_batch=deepspeed`, and `option.entryPoint=djl_python.deepspeed`
 
 In the TensorRT-LLM Container:
+
 * use `engine=MPI` and `option.rolling_batch=trtllm` to use TensorRT-LLM
 
 In the Transformers NeuronX Container:
+
 * use `engine=Python` and `option.rolling_batch=auto` to use Transformers NeuronX
 
 ## Tensor Parallelism Configuration

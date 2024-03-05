@@ -17,6 +17,7 @@ Most open source models available on the HuggingFace Hub offer checkpoints in at
 In addition to the model artifacts, we expect that the tokenizer has been saved as part of the model artifacts and is loadable using the [`AutoTokenizer.from_pretrained`](https://huggingface.co/docs/transformers/model_doc/auto#transformers.AutoTokenizer.from_pretrained) method.
 
 A sample of what the model and tokenizer artifacts looks like is shown below:
+
 ```
 model/
 |- config.json [Required](model configuration file with architecture details)
@@ -65,6 +66,7 @@ Model compile time can quickly become an issue for larger models, so compiled mo
 
 ### Standard Optimum-Neuron model artifacts 2.16.0 SDK
 Under the same folder level, we expect:
+
 - config.json: Store the model architecture, structure information, and neuron compiler configuration
 - tokenizer_config.json: Store the tokenizer config information
 - modelling files (*.py): If your model has custom modelling or tokenizer files.
@@ -75,6 +77,7 @@ Under the same folder level, we expect:
 - other files that are needed for model loading and inference
 
 A sample of what the model and tokenizer artifacts looks like is shown below:
+
 ```
 model/
 |- checkpoint/ 
@@ -93,6 +96,7 @@ model/
 
 ### Split Model and Compiled Graph 2.16.0 SDK
 Split Model: Under the same folder level, we expect:
+
 - config.json: Store the model architecture, structure information, and neuron compiler configuration
 - tokenizer_config.json: Store the tokenizer config information
 - modelling files (*.py): If your model has custom modelling or tokenizer files.
@@ -104,6 +108,7 @@ Compiled Graph: Under the same folder level, we expect:
 - The files specifying the compiled graph. This can be `.neff` files, or a dump of the `neff` cache.
 
 A sample of what the model and tokenizer artifacts looks like is shown below:
+
 ```
 model/
 |- pytorch_model.bin/ (directory containing the split model weights)
@@ -133,6 +138,7 @@ the precompiled models compiler version does not match the image the model will 
 For custom models and production use-cases, we recommend that you store model artifacts in S3.
 
 If you want to use a model available from the huggingface hub, you can download the files locally with `git`:
+
 ```shell
 # Make sure you have git-lfs installed (https://git-lfs.com)
 git lfs install
@@ -140,17 +146,21 @@ git clone https://huggingface.co/<namespace>/<model>
 ```
 
 With the model saved locally (either downloaded from the hub, or your own pretrained/fine-tuned model), upload it to S3:
+
 ```shell
 # Assuming the model artifacts are stored in a directory called model/
 aws s3 cp model s3://my-model-bucket/model/ --recursive
 ```
+
+When specifying configurations for the LMI container, you can also upload the `serving.properties` file to this directory. See the [configuration](configurations.md) section for more details.
 
 ## Compiled models (TensorRT-LLM, Transformers NeuronX)
 
 We recommend that you precompile models when using TensorRT-LLM or Transformers NeuronX in production to reduce the endpoint startup time.
 If HuggingFace Pretrained Model artifacts are provided to these backends, they will just-in-time (JIT) compile the model at runtime before it can be used for inference.
 This compilation process increases the endpoint startup time, especially as the model size grows.
-Please see the respective compilation guides for steps on how to compile your model for the given framework.
+Please see the respective compilation guides for steps on how to compile your model for the given framework:
+
 * [TensorRT-LLM Compilation Guide]()
 * [Transformers NeuronX Compilation Guide]()
 

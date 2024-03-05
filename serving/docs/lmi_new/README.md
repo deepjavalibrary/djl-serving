@@ -1,19 +1,22 @@
 # Table of Contents
+
 - [Overview - Large Model Inference (LMI) Containers](#overview---large-model-inference-lmi-containers)
 - [QuickStart](#quickstart)
+  - [Using the SageMaker Python SDK](#using-the-sagemaker-python-sdk-to-deploy-your-first-model-with-lmi)
   - [Sample Notebooks](#sample-notebooks)
   - [Deployment Guide](#deployment-guide)
-- [Components of LMI](#components-of-lmi)
 - [Supported LMI Inference Libraries](#supported-lmi-inference-libraries)
 
 # Overview - Large Model Inference (LMI) Containers
 
 LMI containers are a set of high performance Docker Containers purpose built for large language model (LLM) inference. 
-With these containers you can leverage high performance inference libraries like [vLLM](), [TensorRT-LLM](), [DeepSpeed](), [Transformers NeuronX]() to deploy LLMs on [AWS SageMaker Endpoints](). 
-These containers bundle together a model server with open source inference libraries to deliver an all-in-one LLM serving solution.
+With these containers you can leverage high performance open-source inference libraries like [vLLM](https://github.com/vllm-project/vllm), [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM), 
+[DeepSpeed](https://github.com/microsoft/DeepSpeed), [Transformers NeuronX](https://github.com/aws-neuron/transformers-neuronx) to deploy LLMs on [AWS SageMaker Endpoints](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html). 
+These containers bundle together a model server with open-source inference libraries to deliver an all-in-one LLM serving solution.
 We provide quick start notebooks that get you deploying popular open source models in minutes, and advanced guides to maximize performance of your endpoint.
 
 LMI containers provide many features, including:
+
 * Optimized inference performance for popular model architectures like Llama, Bloom, Falcon, T5, Mixtral, and more
 * Integration with open source inference libraries like vLLM, TensorRT-LLM, DeepSpeed, and Transformers NeuronX
 * Continuous Batching for maximizing throughput at high concurrency
@@ -22,7 +25,8 @@ LMI containers provide many features, including:
 * Multi GPU inference using Tensor Parallelism
 * Serving LoRA fine-tuned models
 
-LMI containers are able to provide these features by integrating popular inference libraries and exposing configurations through a unified interface.
+LMI containers provide these features through integrations with popular inference libraries.
+A unified configuration format enables users to easily leverage the latest optimizations and technologies across libraries.
 We will refer to each of these libraries as `backends` throughout the documentation. 
 The term backend refers to a combination of Engine (LMI uses the Python and MPI Engines) and inference library.
 You can learn more about the components of LMI [here](deployment_guide/README.md#components-of-lmi).
@@ -104,23 +108,24 @@ We link to the specific model we tested with, but we expect same model from a di
 
 ### Deployment Guide
 
-We have put together a comprehensive [deployment guide](deployment_guide.md) that takes you through the steps needed to deploy a model using LMI containers on SageMaker.
+We have put together a comprehensive [deployment guide](deployment_guide) that takes you through the steps needed to deploy a model using LMI containers on SageMaker.
 The document covers the phases from storing your model artifacts through benchmarking your SageMaker endpoint.
 
 ## Supported LMI Inference Libraries
 
 LMI Containers provide integration with multiple inference libraries.
 You can learn more about their integration with LMI from the respective user guides:
+
 * [DeepSpeed - User Guide](user_guides/deepspeed_user_guide.md)
 * [vLLM - User Guide](user_guides/vllm_user_guide.md)
 * [LMI-Dist - User Guide](user_guides/lmi-dist_user_guide.md)
-* [TensorRT-LLM - User Guide](user_guides/tensorrt-llm_user_guide.md)
-* [Transformers NeuronX - User Guide](user_guides/transformers-neuronx_user_guide.md)
+* [TensorRT-LLM - User Guide](user_guides/trt_llm_user_guide.md)
+* [Transformers NeuronX - User Guide](user_guides/tnx_user_guide.md)
 
 LMI provides access to multiple libraries to enable users to find the best stack for their model and use-case. 
 Each inference framework provides a unique set of features and optimizations that can be tuned for your model and use case.
 With LMIs built-in inference handlers and unified configuration, experimenting with different stacks is as simple as changing a few configurations.
-Refer to the stack specific user guides, and the [LMI deployment guide](deployment_guide.md) to learn more.
+Refer to the stack specific user guides, and the [LMI deployment guide](deployment_guide) to learn more.
 An overview of the different LMI components is provided in the [deployment guide](deployment_guide/README.md#components-of-lmi)
 
 The following table shows which SageMaker DLC (deep learning container) to use for each backend.

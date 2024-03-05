@@ -3,6 +3,7 @@
 We recommend using the SageMaker Python SDK to deploy your model on SageMaker. 
 Depending on which configuration format you are using (`serving.properties` file or environment variables), the steps are slightly different.
 You will need the following to deploy your model with LMI on SageMaker:
+
 * Model Artifacts (either HuggingFace Hub Model Id, or S3 URI pointing to model artifacts)
 * Instance Type
 * Container URI

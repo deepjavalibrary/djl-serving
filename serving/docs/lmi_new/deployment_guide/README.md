@@ -9,6 +9,7 @@ If you have a custom model, it must be saved in the HuggingFace Transformers Pre
 You can read [this guide](model-artifacts.md) to verify your model is saved in the correct format for LMI.
 
 This guide is organized as follows:
+
 - [1. Instance Type Selection](instance-type-selection.md)
   - Pick a SageMaker instance type based on your model size and expected runtime usage 
 - [2. Backend Selection](backend-selection.md)
@@ -62,6 +63,7 @@ As the ecosystem grows and new libraries become available, LMI can integrate the
 ### Configuration
 
 The configuration provided to LMI specifies your entire setup. The configuration covers many aspects including:
+
 * Where your model artifacts are stored (HuggingFace ModelId, S3 URI)
 * Model Server Configurations like job/request queue size, auto-scaling behavior for model workers, which engine to use (either Python or MPI for LMI)
 * Engine/Backend Configurations like whether to use quantization, input sequence limits, continuous batching size, tensor parallel degree, and more depending on the specific backend you use
