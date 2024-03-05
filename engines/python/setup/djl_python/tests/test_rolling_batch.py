@@ -75,6 +75,8 @@ class TestRollingBatch(unittest.TestCase):
             "details": {
                 "finish_reason":
                 "length",
+                "generated_tokens":
+                3,
                 "tokens": [{
                     "id": [244],
                     "text": "He",
@@ -110,7 +112,8 @@ class TestRollingBatch(unittest.TestCase):
             },
             "generated_text": "Hello world",
             "details": {
-                "finish_reason": "length"
+                "finish_reason": "length",
+                "generated_tokens": 3,
             }
         }
 
