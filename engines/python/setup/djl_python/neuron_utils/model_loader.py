@@ -31,11 +31,16 @@ _neuronxcc_version: Optional[str] = None
 
 class ModelLoader(ABC):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         self.config = kwargs.get("config")
         self.model_config = kwargs.get("model_config", None)
 
-    def init_load_path(self):
+    def init_load_path(self) -> str:
+        """
+        Gets the path where artifacts should be put.
+
+        :return: path
+        """
         path = os.environ.get("SERVING_DOWNLOAD_DIR")
         folder = f"inf2_{self.model_config.model_type}_{self.config.amp}"
         if not path:
@@ -46,7 +51,13 @@ class ModelLoader(ABC):
         os.mkdir(folder_path)
         return folder_path
 
-    def get_load_path(self):
+    def get_load_path(self) -> str:
+        """
+        Gets the path where artifacts should be put, either from the config or using
+        a default name based on the model name.
+
+        :return: path
+        """
         model_path = os.path.join(os.getcwd(), self.config.model_id_or_path)
         if os.path.isdir(model_path):
             load_path = model_path
@@ -75,7 +86,7 @@ class TNXModelLoader(ModelLoader):
         "bloom": "bloom.model.BloomForSampling"
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.model = None
         self.load_path = None
@@ -93,7 +104,12 @@ class TNXModelLoader(ModelLoader):
             )
 
     @staticmethod
-    def get_neuronxcc_version():
+    def get_neuronxcc_version() -> str:
+        """
+        Gets version of NeuronX Compiler
+
+        :return: NeuronX compiler version
+        """
         global _neuronxcc_version
         if _neuronxcc_version is not None:
             return _neuronxcc_version
@@ -105,7 +121,10 @@ class TNXModelLoader(ModelLoader):
         _neuronxcc_version = neuronxcc.__version__
         return _neuronxcc_version
 
-    def set_neuron_config(self):
+    def set_neuron_config(self) -> None:
+        """
+        Creates neuron config based on whether rolling batch, quantization, GQA is on
+        """
         neuron_config = {}
         if self.config.rolling_batch != "disable":
             neuron_config["continuous_batching"] = ContinuousBatchingConfig(
@@ -122,7 +141,12 @@ class TNXModelLoader(ModelLoader):
 
         self.neuron_config = NeuronConfig(**neuron_config)
 
-    def get_model_specific_kwargs(self):
+    def get_model_specific_kwargs(self) -> dict:
+        """
+        Populates a dictionary based on properties and detects incompatible options
+
+        :return: Dictionary of properties
+        """
         model_kwargs = {
             "batch_size": self.config.batch_size,
             "amp": self.config.amp,
@@ -150,7 +174,10 @@ class TNXModelLoader(ModelLoader):
                 )
         return model_kwargs
 
-    def update_model_config_to_neuron(self):
+    def update_model_config_to_neuron(self) -> None:
+        """
+        Adds a key-value pair to the model config with neuron settings.
+        """
         neuron_config = {
             "neuron": {
                 "auto_cast_type": self.config.amp,
@@ -164,7 +191,7 @@ class TNXModelLoader(ModelLoader):
         }
         self.model_config.update(neuron_config)
 
-    def load_hf_model(self):
+    def load_hf_model(self) -> "PreTrainedModel":
         logging.info(
             f"Start loading the model {self.config.model_id_or_path}...")
         return AutoModelForCausalLM.from_pretrained(
@@ -173,7 +200,7 @@ class TNXModelLoader(ModelLoader):
             revision=self.config.revision,
             low_cpu_mem_usage=True)
 
-    def load_inf2_model_from_disk(self):
+    def load_inf2_model_from_disk(self) -> "PreTrainedModel":
         if not self.config.load_split_model:
             logging.info(f"Saving INF2 model to {self.load_path} ...")
             save_pretrained_split(self.model, self.load_path)
@@ -181,7 +208,7 @@ class TNXModelLoader(ModelLoader):
         return self._neuronx_class.from_pretrained(
             self.load_path, neuron_config=self.neuron_config, **model_kwargs)
 
-    def load_inf2_model_from_memory(self):
+    def load_inf2_model_from_memory(self) -> "PreTrainedModel":
         model_kwargs = self.get_model_specific_kwargs()
         model = self._neuronx_class(self.model.config,
                                     neuron_config=self.neuron_config,
@@ -189,7 +216,10 @@ class TNXModelLoader(ModelLoader):
         model.load_state_dict_low_memory(self.model.state_dict())
         return model
 
-    def set_load_path(self):
+    def set_load_path(self) -> None:
+        """
+        Sets the path to which to load artifacts - based on specified format
+        """
         if "neuron" in self.model_config.to_dict():
             self.config.load_split_model = True
             self.split_model_path = os.path.join(self.get_load_path(),
@@ -203,7 +233,10 @@ class TNXModelLoader(ModelLoader):
         else:
             self.load_path = self.config.model_id_or_path
 
-    def set_neuron_model(self):
+    def set_neuron_model(self) -> None:
+        """
+        Decides to either load from disk or from memory based on configuration
+        """
         if self.config.low_cpu_mem_usage or self.config.load_split_model:
             logging.info("Transferring weights from HF to INF2 through disk")
             self.model = self.load_inf2_model_from_disk()
@@ -211,7 +244,10 @@ class TNXModelLoader(ModelLoader):
             logging.info("Transferring weights from HF to INF2 in-memory")
             self.model = self.load_inf2_model_from_memory()
 
-    def compile_model(self):
+    def compile_model(self) -> None:
+        """
+        Convert model to Neuron compiled format
+        """
         logging.info(f"LLM sharding and compiling Started ...")
         start = time.time()
         # TODO: workaround on Neuron Compiler bug for SM
@@ -225,7 +261,12 @@ class TNXModelLoader(ModelLoader):
         logging.info(
             f"SysHealth: LLM sharding and compilation latency: {elapsed} secs")
 
-    def load_model(self, **kwargs):
+    def load_model(self, **kwargs) -> NeuronXModelAdapter:
+        """
+        Builds the NeuronX model.
+
+        :return: model (NeuronXModelAdapter)
+        """
         self.set_load_path()
         self.set_neuron_model()
         self.compile_model()
@@ -234,7 +275,14 @@ class TNXModelLoader(ModelLoader):
                                          self.load_path)
         return self.model
 
-    def partition(self, save_path, **kwargs):
+    def partition(self, save_path: str, **kwargs):
+        """
+        Builds the NeuronX model and additionally saves the compiled model.
+
+        :param save_path: Path to which to save the compiled model.
+
+        :return: model (NeuronXModelAdapter)
+        """
         tokenizer = kwargs.get("tokenizer")
         if self.config.load_split_model:
             raise ValueError(
@@ -283,7 +331,7 @@ class OptimumModelLoader(ModelLoader):
         "token-classification": "NeuronModelForTokenClassification"
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.model = None
         self.compile_model = True
@@ -303,7 +351,12 @@ class OptimumModelLoader(ModelLoader):
                     f"{class_name} not found in optimum.neuron. Please check optimum neuron version."
                 )
 
-    def get_compiler_args(self):
+    def get_compiler_args(self) -> dict:
+        """
+        Configures some options related to compiler args if applicable
+
+        :return: compiler_args instance field
+        """
         if self.compile_model:
             self.compiler_args["export"] = True
             self.compiler_args[
@@ -311,27 +364,53 @@ class OptimumModelLoader(ModelLoader):
             self.compiler_args["auto_cast_type"] = self.config.amp
         return self.compiler_args
 
-    def get_model_args(self):
+    def get_model_args(self) -> dict:
+        """
+        Builds and returns a dict with properties relevant to the model
+
+        :return: input_shapes, containing batch_size and sequence_length properties of the model
+        """
         input_shapes = dict()
         if self.config.task in self.TASK_TO_MODEL_LOADER:
             input_shapes["batch_size"] = self.config.batch_size
             input_shapes["sequence_length"] = self.config.n_positions
         return input_shapes
 
-    def load_optimum_model(self, compiler_args, input_shapes):
+    def load_optimum_model(self, compiler_args: dict,
+                           input_shapes: dict) -> "NeuronDecoderModel":
+        """
+        Helper function to load the model
+
+        :param compiler_args: contains args needed for neuron compiler
+        :param input_shapes: contains batch_size and sequence_length properties of the model
+
+        :return: NeuronDecoderModel (generic Neuron model)
+        """
         logging.info(
             f"Start loading the model {self.config.model_id_or_path}...")
         return self._optimum_class.from_pretrained(
             self.config.model_id_or_path, **compiler_args, **input_shapes)
 
     def load_model(self):
+        """
+        Builds the NeuronX model.
+
+        :return: model (of type Union[NeuronBaseModel, NeuronDecoderModel])
+        """
         compiler_args = self.get_compiler_args()
         input_shapes = self.get_model_args()
         self.model = self.load_optimum_model(compiler_args=compiler_args,
                                              input_shapes=input_shapes)
         return self.model
 
-    def partition(self, save_path, **kwargs):
+    def partition(self, save_path: str, **kwargs):
+        """
+        Builds the NeuronX model and additionally saves the compiled model.
+
+        :param save_path: Path to which to save the compiled model.
+
+        :return: model (of type Union[NeuronBaseModel, NeuronDecoderModel])
+        """
         tokenizer = kwargs.get("tokenizer")
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
@@ -341,7 +420,11 @@ class OptimumModelLoader(ModelLoader):
             tokenizer.save_pretrained(save_path)
         return self.model
 
-    def _validate_neuron_config(self):
+    def _validate_neuron_config(self) -> None:
+        """
+        Detects if there are inconsistencies between the config of the model server
+        and the model config that is put into the model artifacts.
+        """
         errors = list()
         if self.config.batch_size != self.model_config.neuron["batch_size"]:
             errors.append(
@@ -369,7 +452,7 @@ class OptimumModelLoader(ModelLoader):
 class OptimumStableDiffusionLoader(ModelLoader):
     """Pipeline loader and compiler for HuggingFace neuron model schema StableDiffusion artifacts"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.pipeline = None
         self.compile_model = True
@@ -383,7 +466,12 @@ class OptimumStableDiffusionLoader(ModelLoader):
                 f"{class_name} not found in optimum.neuron. Please check optimum neuron version."
             )
 
-    def get_model_class(self):
+    def get_model_class(self) -> str:
+        """
+        Gets the type of NeuronStableDiffusion class based on information inside model files
+
+        :return: class name
+        """
         model_path = os.path.join(os.getcwd(), self.config.model_id_or_path)
         if os.path.isdir(model_path):
             file_path = os.path.join(model_path, "model_index.json")
@@ -399,14 +487,24 @@ class OptimumStableDiffusionLoader(ModelLoader):
                 return "NeuronStableDiffusionXLPipeline"
         return "NeuronStableDiffusionPipeline"
 
-    def get_compiler_args(self):
+    def get_compiler_args(self) -> dict:
+        """
+        Configures some options related to compiler args if applicable
+
+        :return: compiler_args instance field
+        """
         if self.compile_model:
             self.compiler_args["export"] = True
             self.compiler_args["auto_cast"] = "matmul"
             self.compiler_args["auto_cast_type"] = self.config.amp
         return self.compiler_args
 
-    def get_model_args(self):
+    def get_model_args(self) -> dict:
+        """
+        Builds and returns a dict with properties relevant to the model
+
+        :return: input_shapes, containing batch_size and sequence_length properties of the model
+        """
         input_shapes = dict()
         input_shapes["batch_size"] = int(self.config.batch_size)
         input_shapes["height"] = int(self.config.height)
@@ -415,7 +513,16 @@ class OptimumStableDiffusionLoader(ModelLoader):
             self.config.num_images_per_prompt)
         return input_shapes
 
-    def load_optimum_pipeline(self, compiler_args, input_shapes, **kwargs):
+    def load_optimum_pipeline(self, compiler_args: dict, input_shapes: dict,
+                              **kwargs):
+        """
+        Helper function for loading Optimum pipeline
+
+        :param compiler_args: Contains some options
+        :param input_shapes: contains some input properties of the model
+
+        :return: Union[NeuronStableDiffusionPipeline, NeuronStableDiffusionXLPipeline]
+        """
         logging.info(
             f"Start loading the model {self.config.model_id_or_path}...")
         return self._optimum_class.from_pretrained(
@@ -428,6 +535,11 @@ class OptimumStableDiffusionLoader(ModelLoader):
             **kwargs)
 
     def load_pipeline(self, **kwargs):
+        """
+        Gets relevant parameters and builds the stable diffusion pipeline.
+
+        :return: Union[NeuronStableDiffusionPipeline, NeuronStableDiffusionXLPipeline]
+        """
         compiler_args = self.get_compiler_args()
         input_shapes = self.get_model_args()
         self.pipeline = self.load_optimum_pipeline(compiler_args=compiler_args,
@@ -436,15 +548,28 @@ class OptimumStableDiffusionLoader(ModelLoader):
         return self.pipeline
 
     def load_model(self, **kwargs):
+        """
+        A wrapper for load_pipeline() to observe the same method signatures as superclass
+        """
         self.load_pipeline(**kwargs)
         return self.pipeline
 
-    def save_pipeline(self, save_path):
+    def save_pipeline(self, save_path: str):
+        """
+        Saves the model to a location provided by save_path
+
+        :param save_path: path to which to save the model
+        """
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
         self.pipeline.save_pretrained(save_path)
 
-    def partition(self, save_path, **kwargs):
+    def partition(self, save_path: str, **kwargs):
+        """
+        Loads and saves model
+
+        :param save_path: path to which to save the model
+        """
         self.load_pipeline(**kwargs)
         self.save_pipeline(save_path)
         return self.pipeline
