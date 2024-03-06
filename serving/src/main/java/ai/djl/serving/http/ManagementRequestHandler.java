@@ -27,7 +27,9 @@ import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.BadWorkflowException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowDefinition;
+import ai.djl.serving.workflow.WorkflowTemplates;
 import ai.djl.util.JsonUtils;
+import ai.djl.util.Pair;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -47,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /** A class handling inbound HTTP requests to the management API. */
 public class ManagementRequestHandler extends HttpRequestHandler {
@@ -258,8 +261,9 @@ public class ManagementRequestHandler extends HttpRequestHandler {
     private void handleRegisterWorkflow(
             final ChannelHandlerContext ctx, QueryStringDecoder decoder) {
         String workflowUrl = NettyUtils.getParameter(decoder, LoadModelRequest.URL, null);
-        if (workflowUrl == null) {
-            throw new BadRequestException("Parameter url is required.");
+        String workflowTemplate = NettyUtils.getParameter(decoder, LoadModelRequest.TEMPLATE, null);
+        if (workflowUrl == null && workflowTemplate == null) {
+            throw new BadRequestException("Either parameter url or template is required.");
         }
 
         boolean synchronous =
@@ -269,8 +273,20 @@ public class ManagementRequestHandler extends HttpRequestHandler {
         try {
             final ModelManager modelManager = ModelManager.getInstance();
 
-            URI uri = URI.create(workflowUrl);
-            Workflow workflow = WorkflowDefinition.parse(null, uri).toWorkflow();
+            Workflow workflow;
+            if (workflowTemplate != null) { // Workflow from template
+                Map<String, String> templateReplacements = // NOPMD
+                        decoder.parameters().entrySet().stream()
+                                .filter(e -> e.getValue().size() == 1)
+                                .map(e -> new Pair<>(e.getKey(), e.getValue().get(0)))
+                                .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+                workflow =
+                        WorkflowTemplates.template(workflowTemplate, templateReplacements)
+                                .toWorkflow();
+            } else { // Workflow from URL
+                URI uri = URI.create(workflowUrl);
+                workflow = WorkflowDefinition.parse(null, uri).toWorkflow();
+            }
             String workflowName = workflow.getName();
 
             CompletableFuture<Void> f =

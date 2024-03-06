@@ -31,10 +31,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -49,6 +51,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * This class is for parsing the JSON or YAML definition for a {@link Workflow}.
@@ -93,16 +96,21 @@ public class WorkflowDefinition {
     /**
      * Parses a new {@link WorkflowDefinition} from an input stream.
      *
-     * @param name the workflow name
+     * @param name the workflow name (null for no name)
      * @param uri the uri of the file
      * @return the parsed {@link WorkflowDefinition}
      * @throws IOException if read from uri failed
      */
     public static WorkflowDefinition parse(String name, URI uri) throws IOException {
+        return parse(name, uri, null);
+    }
+
+    static WorkflowDefinition parse(String name, URI uri, Map<String, String> templateReplacements)
+            throws IOException {
         String type = FilenameUtils.getFileExtension(Objects.requireNonNull(uri.toString()));
         try (InputStream is = uri.toURL().openStream();
                 Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-            WorkflowDefinition wd = parse(type, reader);
+            WorkflowDefinition wd = parse(type, reader, templateReplacements);
             if (name != null) {
                 wd.name = name;
             }
@@ -113,7 +121,26 @@ public class WorkflowDefinition {
         }
     }
 
-    private static WorkflowDefinition parse(String type, Reader input) {
+    private static WorkflowDefinition parse(
+            String type, Reader input, Map<String, String> templateReplacements) {
+        if (templateReplacements != null) {
+            String updatedInput =
+                    new BufferedReader(input)
+                            .lines()
+                            .map(
+                                    l -> {
+                                        for (Entry<String, String> replacement :
+                                                templateReplacements.entrySet()) {
+                                            l =
+                                                    l.replace(
+                                                            "$" + replacement.getKey(),
+                                                            replacement.getValue());
+                                        }
+                                        return l;
+                                    })
+                            .collect(Collectors.joining("\n"));
+            input = new StringReader(updatedInput);
+        }
         if ("yml".equalsIgnoreCase(type) || "yaml".equalsIgnoreCase(type)) {
             try {
                 ClassLoader cl = ClassLoaderUtils.getContextClassLoader();

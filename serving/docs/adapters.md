@@ -54,6 +54,7 @@ DEL  models/{modelName}/adapters/{adapterName} - Delete adapter
 
 The final option for working with adapters is through the [DJL Serving workflows system](workflows.md).
 You can use the adapter `WorkflowFunction` to create and call an adapted version of a model within the workflow.
+For the simple model + adapter case, you can also directly use the adapter [workflow template](workflow_templates.md).
 With our workflows, multiple workflows sharing models will be de-duplicated.
 So, the effect of having multiple adapters can be easily made with having one workflow for each adapter.
 This system can be used on [Amazon SageMaker Multi-Model Endpoints](https://docs.aws.amazon.com/sagemaker/latest/dg/multi-model-endpoints.html).
