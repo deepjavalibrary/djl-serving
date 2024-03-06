@@ -1,7 +1,7 @@
 # Instance Type Selection
 
 While there are many open source LLMs and architectures available, most models tend to fall within a few common parameter count sizes.
-The following table provides instance type recommendations for common model parameter counts using half-precision weights.
+The following table provides instance type recommendations for common model parameter counts using half-precision (fp16/fp32) weights.
 
 | Model Parameter Count | Instance Type    | Accelerators | Aggregate Accelerator Memory | Sample Models                              | Estimated Max Batch Size Range |
 |-----------------------|------------------|--------------|------------------------------|--------------------------------------------|--------------------------------|
@@ -13,13 +13,14 @@ The following table provides instance type recommendations for common model para
 | ~70 billion           | ml.p4d.24xlarge  | 8 x A100     | 320GB                        | Llama2-70b, CodeLlama-70b                  | 32-64                          |
 | ~180 billion          | ml.p4de.24xlarge | 8 x A100     | 640GB                        | Falcon-180b, Bloom-176B                    | 32-64                          |
 
-We recommend starting with the recommendations above.
+We recommend starting with the guidance above based on the model parameter count.
 The estimated batch size is a conservative estimate.
 You will likely be able to increase the batch size beyond the recommendation, but that is dependent on your model and expected max sequence lengths (prompt + generation tokens).
 
 For a more in-depth instance type sizing guide, you can follow the steps below.
 
 Selecting an instance is based on a few factors:
+
 * Model Size
 * Desired Accelerators (A10, A100, H100, AWS Inferentia etc)
     * We recommend using instances with at least A series gpus (g5/p4). The performance is much greater compared to older T series gpus
@@ -34,6 +35,7 @@ We will walk through a sizing example using the Llama2-13b model.
 We can establish a lower bound for the required memory based on the model size.
 The model size is determined by the number of parameters, and the data type.
 We can quickly estimate the model size in GB using the number of parameters and data type like this:
+
 * Half Precision data type (fp16, bf16): `Size in GB = Number of Parameters * 2 (bytes / param)`
 * Full Precision data type (fp32): `Size in GB = Number of Parameters * 4 (bytes / param)`
 * 8-bit Quantized data type (int8): `Size in GB = Number of Parameters * 1 (bytes / param)`
@@ -55,12 +57,14 @@ To estimate the size of the KV cache, we will use the following formula.
 `KV-Cache Size (bytes / token) = 2 * n_dtype * n_layers * n_hidden_size`
 
 Breaking down this formula:
+
 * 2 comes from the two matrices we need to cache: Key (K), and Value (V)
 * n_dtype represents the number of bytes per parameter, which is based on the data type (4 for fp32, 2 for fp16)
 * n_layers represents the number of transformer blocks in the model (usually `num_hidden_layers` in model's `config.json`)
 * n_hidden_size represents the dimension of the attention block (num_heads * d_head matrix) (usually `hidden_size` in model's `config.json`)
 
 For the Llama2-13b model, we get the kv-cache size per token as:
+
 * `2 * 2 * 5120 * 40 = 819,200 bytes/token = ~0.00082 GB / token`
 
 For a single max sequence (4096 tokens for the Llama2-13b model), we require `4096 token * 0.00082 GB / token = 3.36 GB`
@@ -78,14 +82,17 @@ Let's consider two instances types: ml.g5.12xlarge, and ml.g5.48xlarge
 
 On the ml.g5.12xlarge instance, we will have `96GB - 26GB = 66GB` available for batches of sequences at runtime.
 This would provide us enough memory for roughly 85,300 tokens at a time. This means we can have:
+
 * batch size of ~20 for maximum sequence length of 4096 tokens
 * batch size of ~40 for maximum sequence length of 2048 tokens
 * And so on
 
 On a ml.g5.48xlarge, we will have `192GB - 26GB = 166GB` available for batches of sequences at runtime
 This would provide us enough memory for roughly 202,400 tokens at runtime. This means we can have:
+
 * batch size of ~49 for maximum sequence length of 4096
 * batch size of ~98 for maximum sequence length of 2048
+* And so on
 
 This exercise demonstrates how to estimate the memory requirements of your model and use case in order to select an instance type.
 The calculations made are estimates, but should serve as a good starting point for testing. 

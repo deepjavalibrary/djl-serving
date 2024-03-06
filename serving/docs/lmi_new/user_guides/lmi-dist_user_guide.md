@@ -3,6 +3,7 @@
 ## Supported Model Architectures
 
 The model architecture that we test for lmi-dist (in CI):
+
 - Llama (un-quantized and with GPTQ)
 - Falcon
 - GPT-NeoX (un-quantized and with BitsAndBytes)
@@ -13,7 +14,8 @@ The model architecture that we test for lmi-dist (in CI):
 
 ### Complete Model Set
 
-Optimized models
+Optimized models:
+
 * falcon
 * gpt-neox
 * llama
@@ -34,7 +36,8 @@ Optimized models
 
 Currently, we allow customer to use `option.quantize=<quantization-type>` or `OPTION_QUANTIZE=<quantization-type>` to load a quantized model in `lmi-dist`.
 
-We support the following `<quantization-type>`
+We support the following `<quantization-type>`:
+
 * awq (LMI container versions >= 0.26.0)
 * [DEPRECATED] bitsandbytes (LMI container versions >= 0.24.0 and < 0.27.0)
 * [DEPRECATED] bitsandbytes8 (LMI container versions >= 0.25.0 and < 0.27.0)
@@ -44,6 +47,7 @@ When using pre-quantized models make sure to use the correct model artifacts e.g
 
 
 ## Model Artifact Structure
+
 `lmi-dist` expects the model to be [standard HuggingFace format](../deployment_guide/model-artifacts.md#huggingface-transformers-pretrained-format).
 
 ## Quick Start Configurations

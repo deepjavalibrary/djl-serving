@@ -10,6 +10,7 @@ LMI is shipping vLLM 0.2.7 with 0.26.0 containers,
 so technically we support all LLM that [vLLM 0.2.7 support](https://github.com/vllm-project/vllm/tree/v0.2.7?tab=readme-ov-file#about).
 
 The model architecture that we carefully tested for vLLM (in CI):
+
 - LLAMA
 - Falcon
 - Mistral
@@ -52,6 +53,7 @@ We will have GPTQ supported for vLLM in the upcoming version.
 Most of the vLLM model could fall under the following templates:
 
 ### serving.properties
+
 You can deploy with a serving.properties:
 
 ```

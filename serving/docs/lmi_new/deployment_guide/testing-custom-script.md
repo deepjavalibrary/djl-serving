@@ -1,6 +1,7 @@
 # Testing for custom script with LMI
 
 Currently, we offer a mechanism to run the LMI python handler in a standalone fashion. It support the following two use cases:
+
 - Testing with serving.properties/environment variables
 - Testing with custom model.py
 

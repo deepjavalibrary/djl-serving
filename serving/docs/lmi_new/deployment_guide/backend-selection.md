@@ -10,6 +10,7 @@ Each backend offers support for certain model architectures, and exhibits unique
 In order to achieve the best performance for your use-case, we recommend evaluating multiple backends to understand which one works best for you.
 
 This guide will focus on the important factors you should consider when selecting a backend:
+
 * Model Architecture Support
 * Traffic Pattern behavior with respect to input and output length variability
 * Cost to host 

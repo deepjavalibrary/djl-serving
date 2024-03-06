@@ -14,6 +14,7 @@ More detail on the options for model artifacts available for the LMI Transformer
 ## Supported Model architecture
 
 The model architectures that are tested daily for LMI Transformers-NeuronX (in CI):
+
 - LLAMA
 - Mistral
 - GPT-NeoX
@@ -44,6 +45,7 @@ Currently, we allow customer to use `option.quantize=static_int8` or `OPTION_QUA
 Most of the LMI Transformers-NeuronX models use the following template (quantization, and other advanced features will require additional configuration which is described [here](../../lmi/configurations_large_model_inference_containers.md#transformers-neuronx-doc)):
 
 ### Use serving.properties
+
 You can deploy with a serving.properties:
 
 ```
