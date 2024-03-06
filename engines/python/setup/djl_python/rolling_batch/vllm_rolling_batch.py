@@ -57,9 +57,9 @@ class VLLMRollingBatch(VllmRollingBatchBase):
             trust_remote_code=self.engine_config.trust_remote_code,
             load_format=self.engine_config.load_format,
             quantization=self.engine_config.quantize,
-            # draft_model=self.engine_config.speculative_draft_model,
-            # speculate_length=self.engine_config.speculative_length,
-            # draft_model_tp_size=self.engine_config.draft_model_tp_size,
+            draft_model=self.engine_config.speculative_draft_model,
+            speculate_length=self.engine_config.speculative_length,
+            draft_model_tp_size=self.engine_config.draft_model_tp_size,
             revision=self.engine_config.revision)
         self.engine = LLMEngine.from_engine_args(args)
 
