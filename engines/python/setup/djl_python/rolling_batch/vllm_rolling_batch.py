@@ -30,7 +30,7 @@ class VLLMRollingBatch(VllmRollingBatchBase):
     def __init__(self, model_id_or_path: str, properties: dict,
                  **kwargs) -> None:
         """
-        Initializes the VanillaVLLMRollingBatch.
+        Initializes the VLLMRollingBatch.
 
         :param model_id_or_path: Currently unused since there is a copy inside properties
         :param properties: other properties of the model, such as decoder strategy
