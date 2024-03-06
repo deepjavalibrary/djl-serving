@@ -23,10 +23,10 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str):
         from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
         return LmiDistRollingBatch
     elif rolling_batch_type == "vllm":
-        from djl_python.rolling_batch.vanilla_vllm_rolling_batch import VanillaVLLMRollingBatch
+        from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
         logging.warning(
             "vLLM rolling batcher is experimental, use with caution")
-        return VanillaVLLMRollingBatch
+        return VLLMRollingBatch
     raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
 

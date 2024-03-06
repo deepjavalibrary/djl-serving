@@ -59,7 +59,6 @@ class VllmRbProperties(Properties):
 
         return properties
 
-
     # TODO: Remove this once SageMaker resolved driver issue
     @root_validator(skip_on_failure=True)
     def set_eager_model_for_quantize(cls, properties):

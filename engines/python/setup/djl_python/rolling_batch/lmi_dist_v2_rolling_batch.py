@@ -17,11 +17,11 @@ from lmi_dist.api import Request
 from lmi_dist.init_engine import engine_from_args
 from vllm import EngineArgs, SamplingParams
 
-from djl_python.rolling_batch.vllm_rolling_batch import VllmRollingBatch, DTYPE_MAPPER
+from djl_python.rolling_batch.vllm_rolling_batch_base import VllmRollingBatchBase, DTYPE_MAPPER
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 
-class LmiDistRollingBatch(VllmRollingBatch):
+class LmiDistRollingBatch(VllmRollingBatchBase):
     """
     LmiDistRollingBatch connects handler to LmiDist backend engine. It receives new
     requests from the handler and sends them to the backend when space is available in the batch.
@@ -61,13 +61,15 @@ class LmiDistRollingBatch(VllmRollingBatch):
             revision=self.engine_config.revision)
         self.engine = engine_from_args(args)
 
-    def add_request(self, request_id: str, prompt: str, sampling_params: SamplingParams):
+    def add_request(self, request_id: str, prompt: str,
+                    sampling_params: SamplingParams):
         """
         Adds request to the engine
         """
-        lmi_dist_request = Request(id=request_id, prompt=prompt, sampling_params=sampling_params)
+        lmi_dist_request = Request(id=request_id,
+                                   prompt=prompt,
+                                   sampling_params=sampling_params)
         self.engine.add_request(lmi_dist_request)
-
 
     def translate_to_engine_params(self, parameters: dict):
         """
@@ -98,4 +100,5 @@ class LmiDistRollingBatch(VllmRollingBatch):
         """
         Currently not applicable for VLLM.
         """
-        raise NotImplementedError("Not implemented for lmidist_v2 rolling batcher")
+        raise NotImplementedError(
+            "Not implemented for lmidist_v2 rolling batcher")
