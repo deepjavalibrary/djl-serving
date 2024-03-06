@@ -62,7 +62,7 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
 
     :return: formatted output
     """
-    json_encoded_str = f"{{\"generated_text\": \"" if first_token else ""
+    json_encoded_str = f"{{\"generated_text\": \"{generated_tokens}" if first_token else ""
     json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
         if details:
@@ -123,6 +123,8 @@ class Request(object):
         self.generated_tokens = []
         if parameters.pop("details", False):
             self.token_cache = []
+        self.full_text_prefix = input_text if parameters.pop(
+            "return_full_text", False) else ""
         # spec_dec
         self.step_token_number = 0
 
@@ -155,9 +157,9 @@ class Request(object):
         self.step_token_number = len(
             next_token.id) if next_token.id[0] != -1 else -1
         details = {}
-        generated_text = None
+        generated_text = self.full_text_prefix
         if last_token:
-            generated_text = ''.join(self.generated_tokens)
+            generated_text = generated_text + ''.join(self.generated_tokens)
             if self.token_cache is not None:
                 details["finish_reason"] = finish_reason
                 details["tokens"] = self.token_cache

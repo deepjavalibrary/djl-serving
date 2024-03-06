@@ -54,6 +54,47 @@ class TestRollingBatch(unittest.TestCase):
             "generated_text": "Hello world"
         }
 
+    def test_return_full_text(self):
+        req = Request(0, "This is a wonderful day", {
+            "max_new_tokens": 256,
+            "return_full_text": True,
+        })
+
+        final_str = []
+        req.set_next_token(Token(244, "He", -0.334532), _json_output_formatter)
+        final_str.append(req.get_next_token())
+        req.set_next_token(Token(576, "llo", -0.123123),
+                           _json_output_formatter)
+        final_str.append(req.get_next_token())
+        req.set_next_token(Token(4558, " world", -0.567854),
+                           _json_output_formatter, True, 'length')
+        final_str.append(req.get_next_token())
+        final_json = json.loads(''.join(final_str))
+        print(final_json, end='')
+        assert final_json == {
+            "generated_text": "This is a wonderful dayHello world",
+        }
+
+        req = Request(0, "This is a wonderful day", {
+            "max_new_tokens": 256,
+            "return_full_text": True
+        })
+        req.set_next_token(Token(244, "He", -0.334532),
+                           _jsonlines_output_formatter)
+        req.set_next_token(Token(576, "llo", -0.123123),
+                           _jsonlines_output_formatter)
+        req.set_next_token(Token(4558, " world", -0.567854),
+                           _jsonlines_output_formatter, True, 'length')
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            "token": {
+                "id": [4558],
+                "text": " world",
+                "log_prob": -0.567854
+            },
+            "generated_text": "This is a wonderful dayHello world",
+        }
+
     def test_details(self):
         req = Request(0, "This is a wonderful day", {
             "max_new_tokens": 256,
