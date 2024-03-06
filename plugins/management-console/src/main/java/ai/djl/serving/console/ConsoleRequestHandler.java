@@ -41,8 +41,6 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.handler.codec.http.multipart.MixedAttribute;
 import io.netty.util.internal.StringUtil;
 
-import org.apache.commons.compress.utils.Charsets;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -146,7 +144,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
     }
 
     private void modifyConfig(ChannelHandlerContext ctx, FullHttpRequest req) {
-        String jsonStr = req.content().toString(Charsets.toCharset("UTF-8"));
+        String jsonStr = req.content().toString(StandardCharsets.UTF_8);
         JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
         String prop = json.get("prop").getAsString();
         ConfigManager configManager = ConfigManager.getInstance();
