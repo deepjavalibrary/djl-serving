@@ -15,7 +15,7 @@ from typing import Optional
 
 from pydantic.v1.class_validators import validator, root_validator
 
-from djl_python.properties_manager.properties import Properties
+from djl_python.properties_manager.properties import Properties, RollingBatchEnum
 
 
 class VllmQuantizeMethods(str, Enum):
@@ -45,12 +45,20 @@ class VllmRbProperties(Properties):
     draft_model_tp_size: int = 1
     record_acceptance_rate: Optional[bool] = False
 
-    @validator('engine')
-    def validate_engine(cls, engine):
-        if engine != "Python":
+    @root_validator(skip_on_failure=True)
+    def validate_engine(cls, properties):
+        engine = properties["engine"]
+        rolling_batch = properties["rolling_batch"]
+        if rolling_batch == RollingBatchEnum.vllm and engine != "Python":
             raise AssertionError(
                 f"Need python engine to start vLLM RollingBatcher")
-        return engine
+
+        if rolling_batch == RollingBatchEnum.lmidist_v2 and engine != "MPI":
+            raise AssertionError(
+                f"Need MPI engine to start lmidist_v2 RollingBatcher")
+
+        return properties
+
 
     # TODO: Remove this once SageMaker resolved driver issue
     @root_validator(skip_on_failure=True)

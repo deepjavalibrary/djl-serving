@@ -10,32 +10,31 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
 from collections import OrderedDict
 
-from lmi_dist.api import Request
-from lmi_dist.init_engine import engine_from_args
-from vllm import EngineArgs, SamplingParams
+from vllm import EngineArgs, LLMEngine, SamplingParams
+from vllm.utils import random_uuid
 
 from djl_python.rolling_batch.vllm_rolling_batch import VllmRollingBatch, DTYPE_MAPPER
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 
-class LmiDistRollingBatch(VllmRollingBatch):
+class VanillaVLLMRollingBatch(VllmRollingBatch):
     """
-    LmiDistRollingBatch connects handler to LmiDist backend engine. It receives new
-    requests from the handler and sends them to the backend when space is available in the batch.
+    VLLMRollingBatch connects the handler to the backend (VLLM inference). It receives new
+    requests from the handler and sends them to the backend when there is space available in the batch.
     It also gets any new tokens from the backend and sends them back to the handler.
     """
 
-    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
+    # TODO: Make properties is the only parameter, after refactoring all rolling batch handlers
+    def __init__(self, model_id_or_path: str, properties: dict,
+                 **kwargs) -> None:
         """
-        Initializes the LmiDistRollingBatch.
+        Initializes the VanillaVLLMRollingBatch.
 
-        :param model_id_or_path (str): Currently unused since there is a copy inside properties
-        :param properties (dict): other properties of the model, such as decoder strategy
+        :param model_id_or_path: Currently unused since there is a copy inside properties
+        :param properties: other properties of the model, such as decoder strategy
         """
-
         engine_config = VllmRbProperties(**properties)
         super().__init__(engine_config)
         self.request_cache = OrderedDict()
@@ -58,23 +57,24 @@ class LmiDistRollingBatch(VllmRollingBatch):
             trust_remote_code=self.engine_config.trust_remote_code,
             load_format=self.engine_config.load_format,
             quantization=self.engine_config.quantize,
+            # draft_model=self.engine_config.speculative_draft_model,
+            # speculate_length=self.engine_config.speculative_length,
+            # draft_model_tp_size=self.engine_config.draft_model_tp_size,
             revision=self.engine_config.revision)
-        self.engine = engine_from_args(args)
+        self.engine = LLMEngine.from_engine_args(args)
 
     def add_request(self, request_id: str, prompt: str, sampling_params: SamplingParams):
         """
         Adds request to the engine
         """
-        lmi_dist_request = Request(id=request_id, prompt=prompt, sampling_params=sampling_params)
-        self.engine.add_request(lmi_dist_request)
+        self.engine.add_request(request_id, prompt, sampling_params)
 
-
-    def translate_to_engine_params(self, parameters: dict):
+    def translate_to_engine_params(self, parameters: dict) -> dict:
         """
         Helper function to convert DJL Serving parameter names to parameter names
-        that lmidist_v2 recognizes.
+        that VLLM recognizes.
 
-        :param parameters (dict): Parameters pertaining to a specific request
+        :param parameters: Parameters pertaining to a specific request
 
         :return: The same parameters dict, but with VLLM style parameter names.
         """
@@ -92,10 +92,10 @@ class LmiDistRollingBatch(VllmRollingBatch):
         """
         Get request id that will be set to backend engine request
         """
-        return request.id
+        return random_uuid()
 
     def preprocess_requests(self, requests):
         """
         Currently not applicable for VLLM.
         """
-        raise NotImplementedError("Not implemented for lmidist_v2 rolling batcher")
+        raise NotImplementedError("Not implemented for vLLM rolling batcher")
