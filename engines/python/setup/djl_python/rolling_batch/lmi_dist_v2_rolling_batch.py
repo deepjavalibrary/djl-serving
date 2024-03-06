@@ -35,10 +35,8 @@ class LmiDistRollingBatch(VllmRollingBatchBase):
         :param model_id_or_path (str): Currently unused since there is a copy inside properties
         :param properties (dict): other properties of the model, such as decoder strategy
         """
-
         engine_config = VllmRbProperties(**properties)
         super().__init__(engine_config)
-        self.request_cache = OrderedDict()
         self.init_engine()
 
     def init_engine(self):
@@ -60,6 +58,14 @@ class LmiDistRollingBatch(VllmRollingBatchBase):
             quantization=self.engine_config.quantize,
             revision=self.engine_config.revision)
         self.engine = engine_from_args(args)
+
+    def reset(self) -> None:
+        """
+        Aborts all requests
+        """
+        self.engine().reset(self.request_cache.keys())
+        self.request_cache = OrderedDict()
+        super().reset()
 
     def add_request(self, request_id: str, prompt: str,
                     sampling_params: SamplingParams):

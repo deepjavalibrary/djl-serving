@@ -41,6 +41,7 @@ class VllmRollingBatchBase(RollingBatch):
 
     def __init__(self, engine_config: VllmRbProperties):
         self.engine_config = engine_config
+        self.request_cache = OrderedDict()
         super().__init__(waiting_steps=self.engine_config.waiting_steps,
                          output_formatter=self.engine_config.output_formatter)
 
@@ -51,14 +52,12 @@ class VllmRollingBatchBase(RollingBatch):
         """
         pass
 
+    @abstractmethod
     def reset(self) -> None:
         """
         Aborts all requests
         """
-        for key in self.request_cache.keys():
-            self.engine.abort_request(key)
-        self.request_cache = OrderedDict()
-        super().reset()
+        pass
 
     @stop_on_any_exception
     def inference(self, input_data: list[str], parameters: list[dict]) -> list:

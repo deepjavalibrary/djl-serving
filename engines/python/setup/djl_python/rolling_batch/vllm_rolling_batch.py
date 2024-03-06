@@ -37,7 +37,6 @@ class VLLMRollingBatch(VllmRollingBatchBase):
         """
         engine_config = VllmRbProperties(**properties)
         super().__init__(engine_config)
-        self.request_cache = OrderedDict()
         self.init_engine()
 
     def init_engine(self):
@@ -62,6 +61,15 @@ class VLLMRollingBatch(VllmRollingBatchBase):
             draft_model_tp_size=self.engine_config.draft_model_tp_size,
             revision=self.engine_config.revision)
         self.engine = LLMEngine.from_engine_args(args)
+
+    def reset(self) -> None:
+        """
+        Aborts all requests
+        """
+        for key in self.request_cache.keys():
+            self.engine.abort_request(key)
+        self.request_cache = OrderedDict()
+        super().reset()
 
     def add_request(self, request_id: str, prompt: str,
                     sampling_params: SamplingParams):
