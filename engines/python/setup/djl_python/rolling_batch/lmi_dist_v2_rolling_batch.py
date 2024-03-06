@@ -63,7 +63,7 @@ class LmiDistRollingBatch(VllmRollingBatchBase):
         """
         Aborts all requests
         """
-        self.engine().reset(self.request_cache.keys())
+        self.engine.reset(self.request_cache.keys())
         self.request_cache = OrderedDict()
         super().reset()
 
@@ -100,7 +100,7 @@ class LmiDistRollingBatch(VllmRollingBatchBase):
         """
         Get request id that will be set to backend engine request
         """
-        return request.id
+        return str(request.id)
 
     def preprocess_requests(self, requests):
         """
