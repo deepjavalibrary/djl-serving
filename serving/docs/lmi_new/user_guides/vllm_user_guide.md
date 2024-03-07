@@ -71,9 +71,8 @@ This is the standard no-code experience DJL-Serving provided.
 You can also deploy without even providing any artifacts to run with LMI through specifying everything in ENV:
 
 ```
-SERVING_LOAD_MODELS=test::Python=/opt/ml/model
-OPTION_MODEL_ID=<your model>
-OPTION_TENSOR_PARALLEL_DEGREE=max
+HF_MODEL_ID=<your model>
+TENSOR_PARALLEL_DEGREE=max
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 OPTION_ROLLING_BATCH=vllm
 ```

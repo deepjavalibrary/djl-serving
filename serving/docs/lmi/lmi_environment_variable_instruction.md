@@ -11,27 +11,22 @@ serving.properties
 ```
 engine=MPI
 option.model_id=tiiuae/falcon-40b
-option.task=text-generation
 option.entryPoint=djl_python.transformersneuronx
 option.trust_remote_code=true
 option.tensor_parallel_degree=4
 option.max_rolling_batch_size=32
-option.rolling_batch=lmi-dist
-option.dtype=fp16
+option.rolling_batch=auto
 ```
 
 The above serving.properties can be translated into all environment variable settings
 
 ```
-SERVING_LOAD_MODELS=test::MPI=/opt/ml/model
-OPTION_MODEL_ID=tiiuae/falcon-40b
-OPTION_TASK=text-generation
+HF_MODEL_ID=tiiuae/falcon-40b
+HF_TRUST_REMOTE_CODE=true
+TENSOR_PARALLEL_DEGREE=4
 OPTION_ENTRYPOINT=djl_python.transformersneuronx
-OPTION_TRUST_REMOTE_CODE=true
-OPTION_TENSOR_PARALLEL_DEGREE=4
 OPTION_MAX_ROLLING_BATCH_SIZE=32
-OPTION_ROLLING_BATCH=lmi-dist
-OPTION_DTYPE=FP16
+OPTION_ROLLING_BATCH=auto
 ```
 
 engine translate from
@@ -74,11 +69,9 @@ Assume this file is a standard HuggingFace saved model. Here are something you c
 ```
 from sagemaker import Model
 code_artifact = s3://my-training-repo/my_fine_tuned_llama.tar.gz
-env = {"SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
-       "OPTION_TASK": "text-generation",
-       "OPTION_TENSOR_PARALLEL_DEGREE": 4,
-       "OPTION_ROLLING_BATCH": "auto",
-       "OPTION_DTYPE": "FP16"}
+env = {"HF_TASK": "text-generation",
+       "TENSOR_PARALLEL_DEGREE": 4,
+       "OPTION_ROLLING_BATCH": "auto"}
 model = Model(image_uri=image_uri, model_data=code_artifact, role=role)
 ```
 

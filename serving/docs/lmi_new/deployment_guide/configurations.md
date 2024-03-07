@@ -147,27 +147,22 @@ For a full example, given the following `serving.properties` file:
 ```
 engine=MPI
 option.model_id=tiiuae/falcon-40b
-option.task=text-generation
 option.entryPoint=djl_python.transformersneuronx
 option.trust_remote_code=true
 option.tensor_parallel_degree=4
 option.max_rolling_batch_size=32
-option.rolling_batch=lmi-dist
-option.dtype=fp16
+option.rolling_batch=auto
 ```
 
 We can translate the configuration to environment variables like this:
 
 ```
-SERVING_LOAD_MODELS=test::MPI=/opt/ml/model
-OPTION_MODEL_ID=tiiuae/falcon-40b
-OPTION_TASK=text-generation
+HF_MODEL_ID=tiiuae/falcon-40b
 OPTION_ENTRYPOINT=djl_python.transformersneuronx
-OPTION_TRUST_REMOTE_CODE=true
-OPTION_TENSOR_PARALLEL_DEGREE=4
+HF_TRUST_REMOTE_CODE=true
+TENSOR_PARALLEL_DEGREE=4
 OPTION_MAX_ROLLING_BATCH_SIZE=32
-OPTION_ROLLING_BATCH=lmi-dist
-OPTION_DTYPE=FP16
+OPTION_ROLLING_BATCH=auto
 ```
 
 Next: [Deploying your endpoint](deploying-your-endpoint.md)

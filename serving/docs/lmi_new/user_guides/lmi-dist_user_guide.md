@@ -67,10 +67,9 @@ option.max_rolling_batch_prefill_tokens=4096
 ### environment variables
 
 ```
-SERVING_LOAD_MODELS=test::MPI=/opt/ml/model
-OPTION_TENSOR_PARALLEL_DEGREE=max
+HF_MODEL_ID=<your model id>
+TENSOR_PARALLEL_DEGREE=max
 OPTION_ROLLING_BATCH=lmi-dist
-OPTION_MODEL_ID=<your model id>
 OPTION_MAX_ROLLING_BATCH_PREFILL_TOKENS=4096
 ```
 

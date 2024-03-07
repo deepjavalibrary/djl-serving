@@ -65,10 +65,9 @@ This is the standard no-code experience DJL-Serving provided.
 You can also deploy without even providing any artifacts to run with LMI through specifying everything in ENV:
 
 ```
-SERVING_LOAD_MODELS=test::Python=/opt/ml/model
-OPTION_MODEL_ID=<your model>
+HF_MODEL_ID=<your model>
 OPTION_ENTRYPOINT=djl_python.transformers_neuronx
-OPTION_TENSOR_PARALLEL_DEGREE=4
+TENSOR_PARALLEL_DEGREE=4
 OPTION_MAX_ROLLING_BATCH_SIZE=8
 OPTION_ROLLING_BATCH=auto
 OPTION_MODEL_LOADING_TIMEOUT=1600
