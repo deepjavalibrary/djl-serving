@@ -86,15 +86,19 @@ class VLLMRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with VLLM style parameter names.
         """
-        parameters.pop('do_sample', None)
+        parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
         if "seed" in parameters.keys():
             parameters["seed"] = int(parameters["seed"])
-        if "max_new_tokens" in parameters.keys():
-            parameters["max_tokens"] = parameters.pop("max_new_tokens")
+        if not parameters.pop('do_sample', False):
+            # if temperature is zero, vLLM does greedy sampling
+            parameters['temperature'] = 0
         if "stop_sequences" in parameters.keys():
             parameters["stop"] = parameters.pop("stop_sequences")
         if "ignore_eos_token" in parameters.keys():
             parameters["ignore_eos"] = parameters.pop("ignore_eos")
+        if "num_beams" in parameters.keys():
+            parameters["best_of"] = parameters.pop("num_beams")
+            parameters["use_beam_search"] = True
         return parameters
 
     @stop_on_any_exception
