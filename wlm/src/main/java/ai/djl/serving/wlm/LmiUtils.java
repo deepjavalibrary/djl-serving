@@ -185,10 +185,6 @@ public final class LmiUtils {
     private static HuggingFaceModelConfig getHuggingFaceModelConfig(ModelInfo<?, ?> modelInfo)
             throws ModelException {
         String modelId = modelInfo.prop.getProperty("option.model_id");
-        if (modelId == null) {
-            // Deprecated but for backwards compatibility
-            modelId = modelInfo.prop.getProperty("option.s3url");
-        }
         try {
             URI modelConfigUri = generateHuggingFaceConfigUri(modelInfo, modelId);
             if (modelConfigUri == null) {
