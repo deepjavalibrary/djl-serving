@@ -301,7 +301,6 @@ class TNXModelLoader(ModelLoader):
         self.model_config.save_pretrained(save_path)
         self.model = self.load_hf_model()
         self.load_path = self.get_load_path()
-        save_pretrained_split(self.model, self.load_path)
         self.model = self.load_inf2_model_from_disk()
         shutil.copytree(self.load_path, self.split_model_path)
 
