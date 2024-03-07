@@ -111,11 +111,10 @@ option.max_rolling_batch_size=64
 ### environment variables
 
 ```
-SERVING_LOAD_MODELS=test::MPI=/opt/ml/model
+HF_MODEL_ID=<your model id>
 OPTION_ENTRYPOINT=djl_python.deepspeed
-OPTION_TENSOR_PARALLEL_DEGREE=max
+TENSOR_PARALLEL_DEGREE=max
 OPTION_ROLLING_BATCH=deepspeed
-OPTION_MODEL_ID=<your model id>
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
 

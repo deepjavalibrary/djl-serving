@@ -39,12 +39,11 @@ Users need to provide the model id of the model they want to deploy. Model id ca
 We also need to set `SERVING_LOAD_MODELS` environment variable which can be set as below. 
 
 ```
-SERVING_LOAD_MODELS=test::MPI=/opt/ml/model
-OPTION_MODEL_ID=<your model id>
+HF_MODEL_ID=<your model id>
 ```
 In addition to these required parameters, users may want to set these parameters according to their use case:
 
-* `OPTION_TENSOR_PARALLEL_DEGREE`: Determines number of gpus across model will be split into. By default, model will be split across all the gpus available in the instance. For some model architectures, this default behavior will not work. In such cases, users can set this parameter to a value that works for the specific model.
+* `TENSOR_PARALLEL_DEGREE`: Determines number of gpus across model will be split into. By default, model will be split across all the gpus available in the instance. For some model architectures, this default behavior will not work. In such cases, users can set this parameter to a value that works for the specific model.
 * `OPTION_MAX_INPUT_LEN`: Determines maximum input prompt length the model can process. Default is 1024. Users can decrease/increase this value if they know their application's precise limit.
 * `OPTION_MAX_OUTPUT_LEN`: Determines maximum output tokens expected from the model. Default is 512. Users can decrease/increase this value if they know their application's precise limit.
 
@@ -71,8 +70,7 @@ model = Model(
   image_uri=container_image_uri,
   role=iam_role,
   env={
-    "SERVING_LOAD_MODELS": "model_name::MPI=/opt/ml/model",
-    "OPTION_MODEL_ID": "TheBloke/Llama-2-13B-fp16",
+    "HF_MODEL_ID": "TheBloke/Llama-2-13B-fp16",
   }
 )
 

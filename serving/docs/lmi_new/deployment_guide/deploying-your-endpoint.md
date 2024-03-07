@@ -119,10 +119,9 @@ model = sagemaker.Model(
     role=iam_role,
     # specify all environment variable configs in this map
     env={
-        "SERVING_LOAD_MODELS": "test::Python=/opt/ml/model",
-        "OPTION_MODEL_ID": "<huggingface hub model id or s3 uri>",
+        "HF_MODEL_ID": "<huggingface hub model id or s3 uri>",
         "OPTION_ROLLING_BATCH": "vllm",
-        "OPTION_TENSOR_PARALLEL_DEGREE": "max",
+        "TENSOR_PARALLEL_DEGREE": "max",
     }
 )
 # deploy your model

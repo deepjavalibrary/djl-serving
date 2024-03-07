@@ -89,7 +89,7 @@ docker run --runtime=nvidia --gpus all --shm-size 12gb \
  763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-tensorrtllm0.7.1-cu122 python /opt/djl/partition/trt_llm_partition.py \
 --properties_dir $PWD \
 --trt_llm_model_repo /tmp/trtllm \
---tensor_parallel_degree $TENSOR_PARALLEL_DEGREE
+--tensor_parallel_degree $OPTION_TENSOR_PARALLEL_DEGREE
 ```
 
 Arguments passed to the model compilation and partition script:
