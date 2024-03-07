@@ -6,6 +6,15 @@ Some AWS API (e.g. aws sagemaker-runtime) arbitrary request body.
 It's hard to hand craft these body. This tools uses curl compatible
 command line options to help construct different type of request body.
 
+## Downloading awscurl
+
+You can download awscurl like this:
+
+```sh
+wget https://publish.djl.ai/awscurl/awscurl \
+&& chmod +x awscurl
+```
+
 ## Building From Source
 
 You can build it using gradle:
