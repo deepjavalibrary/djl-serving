@@ -138,7 +138,7 @@ docker run -t --rm --network=host \
 To upload the model to S3, run the command below. If you have moved the model or changed the above scripts you will want to update the command below to reflect your changes.
 
 ```bash
-aws s3 cp ~/parition-test s3://YOUR_S3_FOLDER_NAME/ --recursive
+aws s3 cp ~/partition-test s3://YOUR_S3_FOLDER_NAME/ --recursive
 ```
 
 Note: After uploading model artifacts to s3, you can just update the model_id(in `serving.properties`) to the newly created s3 url with compiled model artifacts and use the same `serving.properties` when deploying on SageMaker. Here, you can check the [tutorial](https://github.com/deepjavalibrary/djl-demo/blob/master/aws/sagemaker/large-model-inference/sample-llm/tnx_rollingbatch_deploy_llama_70b.ipynb) on how to run inference using LMI NeuronX DLC. Below snippet shows example updated model_id.
