@@ -39,6 +39,8 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class ModelInfoTest {
@@ -57,6 +59,7 @@ public class ModelInfoTest {
     public void afterSuite() {
         System.clearProperty("DJL_CACHE_DIR");
         System.clearProperty("ENGINE_CACHE_DIR");
+        System.clearProperty("SERVING_FEATURES");
     }
 
     @Test
@@ -247,24 +250,52 @@ public class ModelInfoTest {
 
     @Test
     public void testInferLMIEngine() throws IOException, ModelException {
+        // vllm/lmi-dist features enabled
+        System.setProperty("SERVING_FEATURES", "vllm,lmi-dist");
+        Map<String, String> modelToRollingBatch =
+                new HashMap<>() {
+                    {
+                        put("TheBloke/Llama-2-7B-fp16", "lmi-dist");
+                        put("openai-community/gpt2", "vllm");
+                        put("tiiuae/falcon-7b", "lmi-dist");
+                        put("mistralai/Mistral-7B-v0.1", "vllm");
+                    }
+                };
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("lmi_test_model");
-        Files.createDirectories(modelDir);
-
         Path prop = modelDir.resolve("serving.properties");
+        Files.createDirectories(modelDir);
+        for (Map.Entry<String, String> entry : modelToRollingBatch.entrySet()) {
+            try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
+                writer.write("option.model_id=" + entry.getKey());
+            }
+            ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
+            model.initialize();
+            String inferredRollingBatch = model.getProperties().getProperty("option.rolling_batch");
+            assertEquals(inferredRollingBatch, entry.getValue());
+            if ("lmi-dist".equals(inferredRollingBatch)) {
+                assertEquals(model.getProperties().getProperty("option.mpi_mode"), "true");
+            }
+        }
+
+        // no features enabled
+        System.clearProperty("SERVING_FEATURES");
         try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
-            writer.write("option.model_id=gpt2-xl");
+            writer.write("option.model_id=tiiuae/falcon-7b");
         }
         ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
-        assertEquals(model.getEngineName(), "Python");
-        assertEquals(model.prop.getProperty("option.model_id"), "gpt2-xl");
+        assertEquals(model.getProperties().getProperty("option.rolling_batch"), "auto");
+        assertEquals(model.getProperties().getProperty("option.mpi_mode"), null);
 
+        // invalid hf model case
         try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
             writer.write("option.model_id=invalid-model-id");
         }
         model = new ModelInfo<>("build/models/lmi_test_model");
         Assert.assertThrows(model::initialize);
+
+        // TODO: no good way to test trtllm now since it requires converting the model
     }
 
     @Test
