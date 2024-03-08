@@ -61,7 +61,8 @@ class PropertiesManager(object):
             model_files = glob.glob(os.path.join(model_dir, '.safetensors'))
             if not model_files:
                 raise ValueError(
-                    f'No .bin or .safetensors files found in the dir: {model_dir}')
+                    f'No .bin or .safetensors files found in the dir: {model_dir}'
+                )
         elif 'option.model_id' in self.properties:
             self.properties['model_dir'] = self.properties_dir
         elif 'option.s3url' in self.properties:
@@ -71,12 +72,14 @@ class PropertiesManager(object):
             self.properties.pop('option.s3url')
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
-            model_files = glob.glob(os.path.join(self.properties_dir, '*.safetensors'))
+            model_files = glob.glob(
+                os.path.join(self.properties_dir, '*.safetensors'))
             if model_files:
                 self.properties['model_dir'] = self.properties_dir
             else:
-                raise ValueError(f'No .bin or .safetensors files found in the dir: {self.properties_dir}'
-                                 '\nPlease specify the model_dir or model_id')
+                raise ValueError(
+                    f'No .bin or .safetensors files found in the dir: {self.properties_dir}'
+                    '\nPlease specify the model_dir or model_id')
 
     def validate_and_correct_checkpoints_json(self):
         """
