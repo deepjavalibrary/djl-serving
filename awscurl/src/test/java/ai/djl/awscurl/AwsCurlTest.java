@@ -374,8 +374,8 @@ public class AwsCurlTest {
         System.setProperty("TOKENIZER", "gpt2");
         TokenUtils.setTokenizer(); // reset tokenizer
         AsciiString contentType = AsciiString.cached("application/vnd.amazon.eventstream");
-        byte[] line1 = buildCoralEvent("{\"outputs\": [\"Hello\"]}");
-        byte[] line2 = buildCoralEvent("{\"outputs\": [\" world\"]}");
+        byte[] line1 = buildCoralEvent("{\"outputs\": [\"Hello\"]}\r\n");
+        byte[] line2 = buildCoralEvent("{\"outputs\": [\" world\"]}\r\n");
         byte[] content = new byte[line1.length + line2.length];
         System.arraycopy(line1, 0, content, 0, line1.length);
         System.arraycopy(line2, 0, content, line1.length, line2.length);
