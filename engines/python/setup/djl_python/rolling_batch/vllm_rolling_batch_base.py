@@ -14,9 +14,11 @@ from collections import OrderedDict
 import logging
 
 from abc import abstractmethod
+from transformers import PretrainedConfig
 from vllm import SamplingParams
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, Request, Token, stop_on_any_exception
+from djl_python.properties_manager.properties import RollingBatchEnum
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 FINISH_REASON_MAPPER = {
@@ -39,8 +41,9 @@ class VllmRollingBatchBase(RollingBatch):
     vllm and lmidist-v2
     """
 
-    def __init__(self, engine_config: VllmRbProperties):
+    def __init__(self, engine_config: VllmRbProperties, model_config: PretrainedConfig=None):
         self.engine_config = engine_config
+        self.model_type = getattr(model_config, "model_type", None)
         self.request_cache = OrderedDict()
         super().__init__(waiting_steps=self.engine_config.waiting_steps,
                          output_formatter=self.engine_config.output_formatter)
@@ -94,13 +97,17 @@ class VllmRollingBatchBase(RollingBatch):
             self.request_cache[req_id]["id"] = request_output.outputs[
                 0].token_ids[-1]
             self.request_cache[req_id]["text"] = request_output.outputs[0].text
-            # calculate log_prob of the token based on the diff between two cumulative log probs
-            self.request_cache[req_id]["log_prob"] = request_output.outputs[
-                0].cumulative_logprob - self.request_cache[req_id][
-                    "cumulative_logprob"]
-            self.request_cache[req_id][
-                "cumulative_logprob"] = request_output.outputs[
-                    0].cumulative_logprob
+            if self._is_t5_with_lmi_dist():
+                # rubikon engine sends logprob directly for t5
+                self.request_cache[req_id]["log_prob"] = request_output.outputs[0].logprobs
+            else:
+                # calculate log_prob of the token based on the diff between two cumulative log probs
+                self.request_cache[req_id]["log_prob"] = request_output.outputs[
+                    0].cumulative_logprob - self.request_cache[req_id][
+                        "cumulative_logprob"]
+                self.request_cache[req_id][
+                    "cumulative_logprob"] = request_output.outputs[
+                        0].cumulative_logprob
             self.request_cache[req_id][
                 "finish_reason"] = request_output.outputs[0].finish_reason
             if len(request_output.outputs) > 1:
@@ -121,7 +128,14 @@ class VllmRollingBatchBase(RollingBatch):
                 finished_id.append(key)
                 finish_reason = FINISH_REASON_MAPPER.get(
                     cache["finish_reason"], None)
-            text = cache["text"][cache["curr_length"]:]
+
+            if self._is_t5_with_lmi_dist():
+                # rubikon engine sends only current token in text field for t5
+                text = cache["text"]
+            else:
+                text = cache["text"][cache["curr_length"]:]
+                cache["curr_length"] = len(cache["text"])
+
             if len(text) > 0:
                 # token id is not determined since there could be multiple token comes at the same time
                 # only return the last one
@@ -131,7 +145,6 @@ class VllmRollingBatchBase(RollingBatch):
             else:
                 request.set_next_token("", self.output_formatter,
                                        cache["finished"], finish_reason)
-            cache["curr_length"] = len(cache["text"])
 
         # step 3: clean finished requests
         for key in finished_id:
@@ -180,3 +193,6 @@ class VllmRollingBatchBase(RollingBatch):
             record["prompt_size"] = len(request_output.prompt_token_ids)
             record["output_size"] = len(completion_output.token_ids)
             logging.info(f"Speculative Decoding {record}")
+
+    def _is_t5_with_lmi_dist(self):
+        return self.model_type == "t5" and self.engine_config.rolling_batch == RollingBatchEnum.lmidist_v2

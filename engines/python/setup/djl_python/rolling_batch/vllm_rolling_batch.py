@@ -36,7 +36,7 @@ class VLLMRollingBatch(VllmRollingBatchBase):
         :param properties: other properties of the model, such as decoder strategy
         """
         engine_config = VllmRbProperties(**properties)
-        super().__init__(engine_config)
+        super().__init__(engine_config, kwargs.get("model_config", None))
         self.init_engine()
 
     def init_engine(self):
