@@ -31,8 +31,8 @@ Example:
 To add a new template, begin by creating the template JSON file.
 This mostly matches the standard format of a [workflow](workflows.md).
 However, your template can indicate variable sections of the template to be replaced.
-This is done by prefixing the name to replace with a `$`.
-So, a parameter `param` would replace the value `$param` within the template.
+This is done by surrounding the name with curly braces.
+So, a parameter `param` would replace the value `{param}` within the template.
 This replacement is directly in place, so if your parameter is a string you will still have to surround it with quotation marks.
 
 Then, you must register your new workflow template.

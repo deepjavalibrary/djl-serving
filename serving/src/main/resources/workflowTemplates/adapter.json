@@ -1,18 +1,18 @@
 {
-  "name": "$adapter",
+  "name": "{adapter}",
   "version": "0.1",
   "models": {
-    "m": "$model"
+    "m": "{model}"
   },
   "configs": {
     "adapters": {
-      "$adapter": {
+      "{adapter}": {
         "model": "m",
-        "src": "$url"
+        "src": "{url}"
       }
     }
   },
   "workflow": {
-    "out": ["adapter", "$adapter", "in"]
+    "out": ["adapter", "{adapter}", "in"]
   }
 }

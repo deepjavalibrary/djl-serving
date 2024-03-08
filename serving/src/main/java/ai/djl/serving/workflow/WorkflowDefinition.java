@@ -102,12 +102,19 @@ public class WorkflowDefinition {
      * @throws IOException if read from uri failed
      */
     public static WorkflowDefinition parse(String name, URI uri) throws IOException {
-        return parse(name, uri, null);
+        return parse(name, uri, new ConcurrentHashMap<>());
     }
 
     static WorkflowDefinition parse(String name, URI uri, Map<String, String> templateReplacements)
             throws IOException {
         String type = FilenameUtils.getFileExtension(Objects.requireNonNull(uri.toString()));
+
+        // Default model_dir template replacement
+        if (templateReplacements == null) {
+            templateReplacements = new ConcurrentHashMap<>();
+        }
+        templateReplacements.put("model_dir", getWorkflowDir(uri.toString()));
+
         try (InputStream is = uri.toURL().openStream();
                 Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
             WorkflowDefinition wd = parse(type, reader, templateReplacements);
@@ -133,7 +140,7 @@ public class WorkflowDefinition {
                                                 templateReplacements.entrySet()) {
                                             l =
                                                     l.replace(
-                                                            "$" + replacement.getKey(),
+                                                            "{" + replacement.getKey() + "}",
                                                             replacement.getValue());
                                         }
                                         return l;
@@ -221,14 +228,12 @@ public class WorkflowDefinition {
      * @throws BadWorkflowException if the workflow could not be parsed successfully
      */
     public Workflow toWorkflow() throws BadWorkflowException {
-        int pos = baseUri.lastIndexOf('/');
-        String workflowDir = baseUri.substring(0, pos);
+        String workflowDir = getWorkflowDir(baseUri);
 
         if (models != null) {
             for (Entry<String, ModelInfo<Input, Output>> emd : models.entrySet()) {
                 ModelInfo<Input, Output> md = emd.getValue();
                 md.setId(emd.getKey());
-                md.postWorkflowParsing(workflowDir);
             }
         }
 
@@ -264,6 +269,11 @@ public class WorkflowDefinition {
         Map<String, WorkerPoolConfig<Input, Output>> wpcs = new ConcurrentHashMap<>(models);
         wpcs.putAll(models);
         return new Workflow(name, version, wpcs, expressions, configs, loadedFunctions);
+    }
+
+    private static String getWorkflowDir(String uri) {
+        int pos = uri.lastIndexOf('/');
+        return uri.substring(0, pos);
     }
 
     private static final class ModelDefinitionDeserializer
