@@ -36,7 +36,8 @@ ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.13.2
 ARG auto_gptq_version=0.4.2
-ARG datasets_version=2.17.1
+ARG datasets_version=2.14.7
+ARG huggingface_hub_version=0.17.3
 
 EXPOSE 8080
 
@@ -81,7 +82,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
 
 RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu118 \
     ${deepspeed_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
-    transformers==${transformers_version} zstandard datasets==${datasets_version} \
+    transformers==${transformers_version} zstandard datasets==${datasets_version} huggingface-hub==${huggingface_hub_version} \
     mpi4py sentencepiece einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow \
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
