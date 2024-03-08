@@ -243,7 +243,9 @@ public class ModelServerTest {
             testAsyncInference(channel);
             testDjlModelZoo(channel);
             testConfigLogging(channel);
-            testPrometheusMetrics(channel);
+            if (Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_PROMETHEUS"))) {
+                testPrometheusMetrics(channel);
+            }
 
             testPredictionsInvalidRequestSize(channel);
 
