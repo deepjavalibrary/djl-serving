@@ -41,7 +41,9 @@ class VllmRollingBatchBase(RollingBatch):
     vllm and lmidist-v2
     """
 
-    def __init__(self, engine_config: VllmRbProperties, model_config: PretrainedConfig=None):
+    def __init__(self,
+                 engine_config: VllmRbProperties,
+                 model_config: PretrainedConfig = None):
         self.engine_config = engine_config
         self.model_type = getattr(model_config, "model_type", None)
         self.request_cache = OrderedDict()
@@ -99,12 +101,14 @@ class VllmRollingBatchBase(RollingBatch):
             self.request_cache[req_id]["text"] = request_output.outputs[0].text
             if self._is_t5_with_lmi_dist():
                 # rubikon engine sends logprob directly for t5
-                self.request_cache[req_id]["log_prob"] = request_output.outputs[0].logprobs
+                self.request_cache[req_id][
+                    "log_prob"] = request_output.outputs[0].logprobs
             else:
                 # calculate log_prob of the token based on the diff between two cumulative log probs
-                self.request_cache[req_id]["log_prob"] = request_output.outputs[
-                    0].cumulative_logprob - self.request_cache[req_id][
-                        "cumulative_logprob"]
+                self.request_cache[req_id][
+                    "log_prob"] = request_output.outputs[
+                        0].cumulative_logprob - self.request_cache[req_id][
+                            "cumulative_logprob"]
                 self.request_cache[req_id][
                     "cumulative_logprob"] = request_output.outputs[
                         0].cumulative_logprob
