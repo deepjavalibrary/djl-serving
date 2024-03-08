@@ -50,7 +50,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -194,10 +193,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             }
         }
         if (modelName == null) {
-            Set<String> startModels = ModelManager.getInstance().getStartupWorkflows();
-            if (startModels.size() == 1) {
-                modelName = startModels.iterator().next();
-            }
+            modelName = ModelManager.getInstance().getSingleStartupWorkflow().orElse(null);
             if (modelName == null) {
                 throw new BadRequestException("Parameter model_name is required.");
             }

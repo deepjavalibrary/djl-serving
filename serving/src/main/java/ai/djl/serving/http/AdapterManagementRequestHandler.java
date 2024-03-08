@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 public class AdapterManagementRequestHandler extends HttpRequestHandler {
 
     static final Pattern ADAPTERS_PATTERN = Pattern.compile("^/models/[^/^?]+/adapters([/?].*)?");
+    static final Pattern ADAPTERS_SINGLE_PATTERN = Pattern.compile("^/adapters([/?].*)?");
 
     /** {@inheritDoc} */
     @Override
@@ -43,7 +44,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         if (super.acceptInboundMessage(msg)) {
             FullHttpRequest req = (FullHttpRequest) msg;
             String uri = req.uri();
-            return ADAPTERS_PATTERN.matcher(uri).matches();
+            return ADAPTERS_PATTERN.matcher(uri).matches()
+                    || ADAPTERS_SINGLE_PATTERN.matcher(uri).matches();
         }
         return false;
     }
@@ -57,27 +59,63 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String[] segments)
             throws ModelException {
         HttpMethod method = req.method();
-        String modelName = segments[2];
 
-        if (segments.length < 5) {
+        if (segments.length < 4) {
+            // API /adapters/*
+            String modelName =
+                    ModelManager.getInstance()
+                            .getSingleStartupWorkflow()
+                            .orElseThrow(
+                                    () ->
+                                            new BadRequestException(
+                                                    "The adapter must be prefixed with a model"
+                                                        + " unless there is only a single startup"
+                                                        + " model used."));
+            if (segments.length < 3) {
+                if (HttpMethod.GET.equals(method)) {
+                    handleListAdapters(ctx, modelName, decoder);
+                    return;
+                } else if (HttpMethod.POST.equals(method)) {
+                    handleRegisterAdapter(ctx, modelName, decoder);
+                    return;
+                } else {
+                    throw new MethodNotAllowedException();
+                }
+            }
+
+            String adapterName = segments[2];
             if (HttpMethod.GET.equals(method)) {
-                handleListAdapters(ctx, modelName, decoder);
-                return;
-            } else if (HttpMethod.POST.equals(method)) {
-                handleRegisterAdapter(ctx, modelName, decoder);
-                return;
+                handleDescribeAdapter(ctx, modelName, adapterName);
+            } else if (HttpMethod.DELETE.equals(method)) {
+                handleUnregisterAdapter(ctx, modelName, adapterName);
             } else {
                 throw new MethodNotAllowedException();
             }
-        }
 
-        String adapterName = segments[4];
-        if (HttpMethod.GET.equals(method)) {
-            handleDescribeAdapter(ctx, modelName, adapterName);
-        } else if (HttpMethod.DELETE.equals(method)) {
-            handleUnregisterAdapter(ctx, modelName, adapterName);
         } else {
-            throw new MethodNotAllowedException();
+            // API /models/{modelName}/adapters/*
+
+            String modelName = segments[2];
+            if (segments.length < 5) {
+                if (HttpMethod.GET.equals(method)) {
+                    handleListAdapters(ctx, modelName, decoder);
+                    return;
+                } else if (HttpMethod.POST.equals(method)) {
+                    handleRegisterAdapter(ctx, modelName, decoder);
+                    return;
+                } else {
+                    throw new MethodNotAllowedException();
+                }
+            }
+
+            String adapterName = segments[4];
+            if (HttpMethod.GET.equals(method)) {
+                handleDescribeAdapter(ctx, modelName, adapterName);
+            } else if (HttpMethod.DELETE.equals(method)) {
+                handleUnregisterAdapter(ctx, modelName, adapterName);
+            } else {
+                throw new MethodNotAllowedException();
+            }
         }
     }
 

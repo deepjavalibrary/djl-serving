@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -312,6 +313,22 @@ public final class ModelManager {
      */
     public Set<String> getStartupWorkflows() {
         return startupWorkflows;
+    }
+
+    /**
+     * Returns the single startup workflow.
+     *
+     * <p>Returns only if there was exactly 1 startup workflow passed in. Used with integration of
+     * SageMaker SME and single model services.
+     *
+     * @return the workflow name
+     */
+    public Optional<String> getSingleStartupWorkflow() {
+        Set<String> startModels = getStartupWorkflows();
+        if (startModels.size() == 1) {
+            return Optional.ofNullable(startModels.iterator().next());
+        }
+        return Optional.empty();
     }
 
     /**
