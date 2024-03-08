@@ -40,6 +40,8 @@ import org.apache.http.message.BasicStatusLine;
 import org.apache.http.ssl.SSLContextBuilder;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -54,6 +56,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.HostnameVerifier;
@@ -215,6 +218,7 @@ final class HttpClient {
             throws IOException {
         byte[] buf = new byte[12];
         byte[] payload = new byte[512];
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         while (true) {
             if (is.readNBytes(buf, 0, buf.length) == 0) {
                 break;
@@ -234,12 +238,19 @@ final class HttpClient {
             if (payloadLength == 0) {
                 break;
             }
-            String line =
-                    new String(payload, headerLength, payloadLength, StandardCharsets.UTF_8).trim();
+            bos.write(payload, headerLength, payloadLength);
+        }
+        bos.close();
+
+        byte[] bytes = bos.toByteArray();
+        Scanner scanner = new Scanner(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8);
+        while (scanner.hasNext()) {
+            String line = scanner.nextLine();
             if (JsonUtils.processJsonLine(list, ps, line, names)) {
                 throw new IOException("Response contains error");
             }
         }
+        scanner.close();
     }
 
     private static void addHeaders(HttpUriRequest req, Map<String, String> headers, boolean dump) {
