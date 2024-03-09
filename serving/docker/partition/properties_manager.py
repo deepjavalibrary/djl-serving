@@ -58,17 +58,23 @@ class PropertiesManager(object):
         if 'model_dir' in self.properties:
             model_dir = self.properties['model_dir']
             model_files = glob.glob(os.path.join(model_dir, '*.bin'))
+            model_files = glob.glob(os.path.join(model_dir, '.safetensors'))
             if not model_files:
                 raise ValueError(
-                    f'No .bin files found in the dir: {model_dir}')
+                    f'No .bin or .safetensors files found in the dir: {model_dir}'
+                )
         elif 'option.model_id' in self.properties:
             self.properties['model_dir'] = self.properties_dir
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
+            model_files = glob.glob(
+                os.path.join(self.properties_dir, '*.safetensors'))
             if model_files:
                 self.properties['model_dir'] = self.properties_dir
             else:
-                raise ValueError('Please specify the model_dir or model_id')
+                raise ValueError(
+                    f'No .bin or .safetensors files found in the dir: {self.properties_dir}'
+                    '\nPlease specify the model_dir or model_id')
 
     def validate_and_correct_checkpoints_json(self):
         """
