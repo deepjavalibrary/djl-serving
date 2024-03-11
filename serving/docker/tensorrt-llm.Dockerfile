@@ -121,3 +121,5 @@ LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL trtllm-version=$trtllm_version
 LABEL cuda-version=$cuda_version
+# To use the 535 CUDA driver
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2

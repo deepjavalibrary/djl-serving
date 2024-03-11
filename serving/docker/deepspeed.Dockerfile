@@ -121,3 +121,5 @@ LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL deepspeed-version=$deepspeed_version
 LABEL cuda-version=$cuda_version
+# To use the 535 CUDA driver, CUDA 12.1 can work on this one too
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
