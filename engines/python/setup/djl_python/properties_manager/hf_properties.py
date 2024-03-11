@@ -91,7 +91,6 @@ class HuggingFaceProperties(Properties):
     @root_validator(skip_on_failure=True)
     def construct_kwargs(cls, properties):
         kwargs = properties['kwargs']
-
         kwargs['trust_remote_code'] = properties['trust_remote_code']
         if properties['low_cpu_mem_usage']:
             kwargs["low_cpu_mem_usage"] = properties['low_cpu_mem_usage']
@@ -138,8 +137,10 @@ class HuggingFaceProperties(Properties):
 
         # TODO remove this after refactor of all handlers
         # device map is not required for lmi dist and vllm
-        if properties['rolling_batch'] == RollingBatchEnum.lmidist or \
-                properties['rolling_batch'] == RollingBatchEnum.vllm:
+        if properties['rolling_batch'] in {
+                RollingBatchEnum.lmidist, RollingBatchEnum.vllm,
+                RollingBatchEnum.lmidist_v2
+        }:
             return properties
 
         if properties[

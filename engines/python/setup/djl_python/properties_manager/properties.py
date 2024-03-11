@@ -19,6 +19,8 @@ from pydantic.v1 import BaseModel, root_validator, validator, Field
 class RollingBatchEnum(str, Enum):
     vllm = "vllm"
     lmidist = "lmi-dist"
+    ## this is temporary and will replace lmidist after testing
+    lmidist_v2 = "lmi-dist-v2"
     scheduler = "scheduler"
     auto = "auto"
     disable = "disable"
