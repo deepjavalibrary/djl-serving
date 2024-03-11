@@ -57,6 +57,7 @@ When providing inputs following the input schema as a string, the output's gener
     'top_p' : float (default= 1.0),
     'max_new_tokens' : integer (default = 30),
     'details' : boolean (default = false, details only available for rolling batch),
+    'return_full_text': boolean (default = false),
 ```
 
 Note: For TensorRTLLM handler, it also has all the common parameters, but it uses different default values. Kindly check below to know the TensorRT LLM default values. 
