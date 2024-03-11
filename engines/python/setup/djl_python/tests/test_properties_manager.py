@@ -460,14 +460,6 @@ class TestConfigManager(unittest.TestCase):
                 VllmRbProperties(**properties)
             properties['quantize'] = 'awq'
 
-        # TODO remove this once the SageMaker driver issue addressed
-        def test_eager_model_with_quantize(properties):
-            properties['quantize'] = 'awq'
-            properties.pop('enforce_eager')
-            self.assertTrue("enforce_eager" not in properties)
-            vllm_props = VllmRbProperties(**properties)
-            self.assertTrue(vllm_props.enforce_eager)
-
         def test_enforce_eager(properties):
             properties.pop('enforce_eager')
             properties.pop('quantize')
@@ -489,7 +481,6 @@ class TestConfigManager(unittest.TestCase):
         }
         test_vllm_valid(properties.copy())
         test_invalid_quantization_method(properties.copy())
-        test_eager_model_with_quantize(properties.copy())
         test_enforce_eager(properties.copy())
 
     def test_sd_inf2_properties(self):
