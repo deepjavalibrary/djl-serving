@@ -18,21 +18,22 @@ from pydantic.v1.class_validators import validator, root_validator
 from djl_python.properties_manager.properties import Properties
 
 
-class VllmQuantizeMethods(str, Enum):
+class LmiDistV2QuantizeMethods(str, Enum):
     awq = 'awq'
     gptq = 'gptq'
     squeezellm = 'squeezellm'
 
 
-class VllmRbProperties(Properties):
+class LmiDistV2RbProperties(Properties):
     engine: Optional[str] = None
     dtype: Optional[str] = "auto"
     load_format: Optional[str] = "auto"
-    quantize: Optional[VllmQuantizeMethods] = None
+    quantize: Optional[LmiDistV2QuantizeMethods] = None
     tensor_parallel_degree: Optional[int] = None
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
+    # TODO: change Enforce eager to False once SageMaker driver issue resolved
     enforce_eager: Optional[bool] = False
     # TODO: this default may change with different vLLM versions
     # TODO: try to get good default from vLLM to prevent revisiting
@@ -46,7 +47,7 @@ class VllmRbProperties(Properties):
 
     @validator('engine')
     def validate_engine(cls, engine):
-        if engine != "Python":
+        if engine != "MPI":
             raise AssertionError(
-                f"Need python engine to start vLLM RollingBatcher")
+                f"Need MPI engine to start lmidist_v2 RollingBatcher")
         return engine

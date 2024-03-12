@@ -10,16 +10,19 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import logging
 from collections import OrderedDict
 
 from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
-
-from djl_python.rolling_batch.vllm_rolling_batch_base import VllmRollingBatchBase, DTYPE_MAPPER
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
+from djl_python.rolling_batch.rolling_batch_vllm_utils import (
+    get_speculative_decoding_metrics_record, update_request_cache_with_output,
+    supports_speculative_decoding, DTYPE_MAPPER, FINISH_REASON_MAPPER)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 
-class VLLMRollingBatch(VllmRollingBatchBase):
+class VLLMRollingBatch(RollingBatch):
     """
     VLLMRollingBatch connects the handler to the backend (VLLM inference). It receives new
     requests from the handler and sends them to the backend when there is space available in the batch.
@@ -35,32 +38,35 @@ class VLLMRollingBatch(VllmRollingBatchBase):
         :param model_id_or_path: Currently unused since there is a copy inside properties
         :param properties: other properties of the model, such as decoder strategy
         """
-        engine_config = VllmRbProperties(**properties)
-        super().__init__(engine_config, kwargs.get("model_config", None))
-        self.init_engine()
-
-    def init_engine(self):
-        """
-        Initializes vllm engine
-        """
+        self.vllm_configs = VllmRbProperties(**properties)
+        super().__init__(waiting_steps=self.vllm_configs.waiting_steps,
+                         output_formatter=self.vllm_configs.output_formatter)
+        self.supports_speculative_decoding = supports_speculative_decoding()
+        engine_kwargs = {}
+        if supports_speculative_decoding():
+            engine_kwargs[
+                "draft_model"] = self.vllm_configs.speculative_draft_model
+            engine_kwargs[
+                "speculate_length"] = self.vllm_configs.speculative_length
+            engine_kwargs[
+                "draft_model_tp_size"] = self.vllm_configs.draft_model_tp_size
         args = EngineArgs(
-            model=self.engine_config.model_id_or_path,
-            tensor_parallel_size=self.engine_config.tensor_parallel_degree,
-            dtype=DTYPE_MAPPER[self.engine_config.dtype],
+            model=self.vllm_configs.model_id_or_path,
+            tensor_parallel_size=self.vllm_configs.tensor_parallel_degree,
+            dtype=DTYPE_MAPPER[self.vllm_configs.dtype],
             seed=0,
-            max_model_len=self.engine_config.max_model_len,
-            enforce_eager=self.engine_config.enforce_eager,
-            gpu_memory_utilization=self.engine_config.gpu_memory_utilization,
-            max_num_batched_tokens=self.engine_config.
+            max_model_len=self.vllm_configs.max_model_len,
+            enforce_eager=self.vllm_configs.enforce_eager,
+            gpu_memory_utilization=self.vllm_configs.gpu_memory_utilization,
+            max_num_batched_tokens=self.vllm_configs.
             max_rolling_batch_prefill_tokens,
-            trust_remote_code=self.engine_config.trust_remote_code,
-            load_format=self.engine_config.load_format,
-            quantization=self.engine_config.quantize,
-            draft_model=self.engine_config.speculative_draft_model,
-            speculate_length=self.engine_config.speculative_length,
-            draft_model_tp_size=self.engine_config.draft_model_tp_size,
-            revision=self.engine_config.revision)
+            trust_remote_code=self.vllm_configs.trust_remote_code,
+            load_format=self.vllm_configs.load_format,
+            quantization=self.vllm_configs.quantize,
+            revision=self.vllm_configs.revision,
+            **engine_kwargs)
         self.engine = LLMEngine.from_engine_args(args)
+        self.request_cache = OrderedDict()
 
     def reset(self) -> None:
         """
@@ -71,14 +77,7 @@ class VLLMRollingBatch(VllmRollingBatchBase):
         self.request_cache = OrderedDict()
         super().reset()
 
-    def add_request(self, request_id: str, prompt: str,
-                    sampling_params: SamplingParams):
-        """
-        Adds request to the engine
-        """
-        self.engine.add_request(request_id, prompt, sampling_params)
-
-    def translate_to_engine_params(self, parameters: dict) -> dict:
+    def translate_vllm_params(self, parameters: dict) -> dict:
         """
         Helper function to convert DJL Serving parameter names to parameter names
         that VLLM recognizes.
@@ -87,8 +86,9 @@ class VLLMRollingBatch(VllmRollingBatchBase):
 
         :return: The same parameters dict, but with VLLM style parameter names.
         """
-        parameters.pop('seed', None)
         parameters.pop('do_sample', None)
+        if "seed" in parameters.keys():
+            parameters["seed"] = int(parameters["seed"])
         if "max_new_tokens" in parameters.keys():
             parameters["max_tokens"] = parameters.pop("max_new_tokens")
         if "stop_sequences" in parameters.keys():
@@ -97,11 +97,78 @@ class VLLMRollingBatch(VllmRollingBatchBase):
             parameters["ignore_eos"] = parameters.pop("ignore_eos")
         return parameters
 
-    def get_request_id(self, request):
+    @stop_on_any_exception
+    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
         """
-        Get request id that will be set to backend engine request
+        Adds new requests and gets output tokens from the backend.
+
+        :param input_data: List of input prompts.
+        :param parameters: List of settings pertaining to each request.
+
+        :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
-        return random_uuid()
+        batch_size = len(input_data)
+        new_requests = self.get_new_requests(input_data, parameters,
+                                             batch_size)
+        # step 0: register new requests to engine
+        for request in new_requests:
+            request_id = random_uuid()
+            params = self.translate_vllm_params(request.parameters)
+            sampling_params = SamplingParams(**params)
+            self.engine.add_request(request_id, request.input_text,
+                                    sampling_params)
+            self.request_cache[request_id] = {
+                "curr_length": 0,
+                "text": "",
+                "cumulative_logprob": 0.0,
+                "log_prob": 0.0,
+                "finished": False,
+                "finish_reason": None
+            }
+        request_outputs = self.engine.step()
+
+        # step 1: put result to cache
+        for request_output in request_outputs:
+            self.request_cache = update_request_cache_with_output(
+                self.request_cache, request_output)
+            # Record SD metrics
+            completion_output = request_output.outputs[0]
+            if self.vllm_configs.record_acceptance_rate and request_output.finished and completion_output.acceptance_history:
+                if self.supports_speculative_decoding:
+                    record = get_speculative_decoding_metrics_record(
+                        completion_output, request_output)
+                    logging.info(f"Speculative Decoding {record}")
+                else:
+                    logging.warning(
+                        f"Speculative Decoding is not supported. Ignoring logging metrics"
+                    )
+
+        # step 2: send result back
+        finished_id = []
+        for (key, cache), request in zip(self.request_cache.items(),
+                                         self.active_requests):
+            finish_reason = None
+            if cache["finished"]:
+                finished_id.append(key)
+                finish_reason = FINISH_REASON_MAPPER.get(
+                    cache["finish_reason"], None)
+            text = cache["text"][cache["curr_length"]:]
+            if len(text) > 0:
+                # token id is not determined since there could be multiple token comes at the same time
+                # only return the last one
+                token = Token(cache['id'], text, cache["log_prob"])
+                request.set_next_token(token, self.output_formatter,
+                                       cache["finished"], finish_reason)
+            else:
+                request.set_next_token("", self.output_formatter,
+                                       cache["finished"], finish_reason)
+            cache["curr_length"] = len(cache["text"])
+
+        # step 3: clean finished requests
+        for key in finished_id:
+            self.request_cache.pop(key)
+
+        return self.postprocess_results()
 
     def preprocess_requests(self, requests):
         """
