@@ -141,14 +141,14 @@ class LmiDistRollingBatch(RollingBatch):
                 self.request_cache, request_output)
             # Record SD metrics
             completion_output = request_output.outputs[0]
-            if self.lmi_dist_config.record_acceptance_rate and request_output.finished and completion_output.acceptance_history:
-                if self.supports_speculative_decoding():
+            if self.lmi_dist_config.record_acceptance_rate and request_output.finished:
+                if self.supports_speculative_decoding and completion_output.acceptance_history:
                     record = get_speculative_decoding_metrics_record(
-                        completion_output, req_id, request_output)
+                        completion_output, request_output)
                     logging.info(f"Speculative Decoding {record}")
                 else:
                     logging.warning(
-                        f"Speculative Decoding is not supported. Ignoring logging metrics"
+                        f"Ignoring logging speculative decoding metrics"
                     )
 
         # step 2: send result back

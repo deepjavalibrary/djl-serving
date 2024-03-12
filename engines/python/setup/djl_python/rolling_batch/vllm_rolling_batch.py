@@ -133,14 +133,14 @@ class VLLMRollingBatch(RollingBatch):
                 self.request_cache, request_output)
             # Record SD metrics
             completion_output = request_output.outputs[0]
-            if self.vllm_configs.record_acceptance_rate and request_output.finished and completion_output.acceptance_history:
-                if self.supports_speculative_decoding:
+            if self.vllm_configs.record_acceptance_rate and request_output.finished:
+                if self.supports_speculative_decoding and completion_output.acceptance_history:
                     record = get_speculative_decoding_metrics_record(
                         completion_output, request_output)
                     logging.info(f"Speculative Decoding {record}")
                 else:
                     logging.warning(
-                        f"Speculative Decoding is not supported. Ignoring logging metrics"
+                        f"Ignoring logging speculative decoding metrics"
                     )
 
         # step 2: send result back
