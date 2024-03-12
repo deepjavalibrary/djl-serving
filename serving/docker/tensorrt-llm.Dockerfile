@@ -77,7 +77,7 @@ RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} ac
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
-RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} nvidia-ammo~=${ammo_version} janus==${janus_version} optimum==${optimum_version} diffusers==${diffusers_version} && \
+RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} nvidia-ammo~=${ammo_version} janus==${janus_version} && \
     pip install --no-deps ${trtllm_wheel} && \
     pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
     pip3 cache purge
