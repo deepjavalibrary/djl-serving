@@ -13,21 +13,23 @@ ARG version=12.2.2-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu122
 ARG python_version=3.10
-ARG TORCH_VERSION=2.1.0
+ARG TORCH_VERSION=2.1.2
 ARG djl_version=0.27.0~SNAPSHOT
-ARG transformers_version=4.36.2
-ARG accelerate_version=0.25.0
+ARG transformers_version=4.38.1
+ARG accelerate_version=0.27.0
 ARG tensorrtlibs_version=9.2.0.post12.dev5
 ARG trtllm_toolkit_version=nightly
-ARG trtllm_version=v0.7.1
+ARG trtllm_version=v0.8.0
 ARG cuda_python_version=12.2.0
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.7.1-cp310-cp310-linux_x86_64.whl"
+ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.8.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
 ARG pydantic_version=2.6.1
-ARG ammo_version=0.5.0
-ARG pynvml_verison=11.4.1
+ARG ammo_version=0.7.0
+ARG janus_version=1.0.0
+ARG pynvml_verison=11.5.0
+
 EXPOSE 8080
 
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
@@ -75,14 +77,9 @@ RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} ac
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
-RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} && \
+RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} nvidia-ammo~=${ammo_version} janus==${janus_version} optimum==${optimum_version} diffusers==${diffusers_version} && \
     pip install --no-deps ${trtllm_wheel} && \
     pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
-    # Download and install the AMMO package from the DevZone.
-    wget https://developer.nvidia.com/downloads/assets/cuda/files/nvidia-ammo/nvidia_ammo-${ammo_version}.tar.gz && \
-    tar -xzf nvidia_ammo-0.5.0.tar.gz && \
-    pip install --no-deps nvidia_ammo-${ammo_version}/nvidia_ammo-${ammo_version}-cp${pyver}-cp${pyver}-linux_x86_64.whl && \
-    rm -rf nvidia_ammo-* && \
     pip3 cache purge
 
 # download dependencies
@@ -115,7 +112,7 @@ RUN apt-get update && apt-get install -y cuda-compat-12-2 && apt-get clean -y &&
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.tensorrtllm="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-26-0.tensorrtllm="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.tensorrtllm="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
