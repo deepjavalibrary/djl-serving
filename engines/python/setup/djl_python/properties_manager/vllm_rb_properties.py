@@ -33,8 +33,7 @@ class VllmRbProperties(Properties):
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
-    # TODO: change Enforce eager to False once SageMaker driver issue resolved
-    enforce_eager: Optional[bool] = None
+    enforce_eager: Optional[bool] = False
     # TODO: this default may change with different vLLM versions
     # TODO: try to get good default from vLLM to prevent revisiting
     # TODO: last time check: vllm 0.3.1
@@ -57,14 +56,4 @@ class VllmRbProperties(Properties):
             raise AssertionError(
                 f"Need MPI engine to start lmidist_v2 RollingBatcher")
 
-        return properties
-
-    # TODO: Remove this once SageMaker resolved driver issue
-    @root_validator(skip_on_failure=True)
-    def set_eager_model_for_quantize(cls, properties):
-        if "quantize" in properties and properties["quantize"] == "awq":
-            if properties["enforce_eager"] is None:
-                properties["enforce_eager"] = True
-        if properties["enforce_eager"] is None:
-            properties["enforce_eager"] = False
         return properties
