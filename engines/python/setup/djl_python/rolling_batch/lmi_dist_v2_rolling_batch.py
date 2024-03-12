@@ -148,8 +148,7 @@ class LmiDistRollingBatch(RollingBatch):
                     logging.info(f"Speculative Decoding {record}")
                 else:
                     logging.warning(
-                        f"Ignoring logging speculative decoding metrics"
-                    )
+                        f"Ignoring logging speculative decoding metrics")
 
         # step 2: send result back
         finished_id = []
