@@ -1,15 +1,12 @@
-name: Inferentia2 integration tests
+name: Integration tests - LLM inf2
 
 on:
+  workflow_call:
   workflow_dispatch:
-    inputs:
-      djl-version:
-        description: 'The released version of DJL'
-        required: false
-        default: ''
-  schedule:
-    - cron: '0 15 * * *'
 
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   create-runners:
@@ -55,25 +52,35 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy pillow
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 temp
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DJLSERVING_TEMP_REPO
+          docker pull $DJLSERVING_DOCKER
           mkdir logs
           ./download_models.sh pytorch-inf2
       - name: Test Pytorch model
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-1 \
           serve -m test::PyTorch:nc0=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test Python mode
         working-directory: tests/integration
         run: |
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-1 \
           serve -m test::Python:nc0=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
@@ -82,7 +89,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx gpt2
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-1 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx gpt2
@@ -93,7 +100,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx gpt2-quantize
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-1 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx gpt2-quantize
@@ -104,7 +111,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx opt-1.3b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-6 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-6 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx opt-1.3b
@@ -115,7 +122,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx gpt-j-6b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-6 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-6 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx gpt-j-6b
@@ -126,7 +133,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx pythia-2.8b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx pythia-2.8b
@@ -137,7 +144,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx bloom-7b1
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx bloom-7b1
@@ -151,7 +158,7 @@ jobs:
           # To test the requirements.txt download.
           echo "dummy_test" >> $PWD/models/test/requirements.txt
 
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-1 \
           partition --model-dir /opt/ml/input/data/training/ --skip-copy | tee partition_output.log
 
           # checking if neff files are generated.
@@ -170,7 +177,7 @@ jobs:
           # To test the requirements.txt download.
           echo "dummy_test" >> $PWD/models/test/requirements.txt
 
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-1 \
           partition --model-dir /opt/ml/input/data/training/ --skip-copy | tee partition_output.log
 
           # checking if neff files are generated.
@@ -210,12 +217,22 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy pillow
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 temp
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DJLSERVING_TEMP_REPO
+          docker pull $DJLSERVING_DOCKER
           mkdir logs
           ./download_models.sh pytorch-inf2
       - name: Test transformers-neuronx open-llama-7b with handler
@@ -223,7 +240,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx open-llama-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx open-llama-7b
@@ -234,7 +251,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx opt-1.3b-streaming
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-6 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-6 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx opt-1.3b-streaming
@@ -245,7 +262,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx stable-diffusion-1.5-neuron
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py neuron-stable-diffusion stable-diffusion-1.5-neuron
@@ -256,7 +273,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx stable-diffusion-2.1-neuron
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py neuron-stable-diffusion stable-diffusion-2.1-neuron
@@ -267,7 +284,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx stable-diffusion-xl-neuron
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py neuron-stable-diffusion stable-diffusion-xl-neuron
@@ -278,7 +295,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx llama-7b-split
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx llama-7b-split
@@ -289,7 +306,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx mistral-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx mistral-7b
@@ -329,12 +346,22 @@ jobs:
           python-version: '3.10.x'
       - name: Install pip dependencies
         run: pip3 install requests numpy pillow
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 temp
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $DJLSERVING_TEMP_REPO
+          docker pull $DJLSERVING_DOCKER
           mkdir logs
           ./download_models.sh pytorch-inf2
       - name: Test transformers-neuronx llama-7b rolling batch
@@ -342,7 +369,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx llama-7b-rb
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx_rolling_batch llama-7b-rb
@@ -353,7 +380,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py transformers_neuronx mistral-7b-rb
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          ./launch_container.sh $DJLSERVING_DOCKER $PWD/models pytorch-inf2-2 \
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx_rolling_batch mistral-7b-rb

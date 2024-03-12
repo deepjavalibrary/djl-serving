@@ -61,11 +61,11 @@ jobs:
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          docker pull $DJLSERVING_DOCKER
       - name: Test gpt-neox-20b
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER \
             --profile profiles/gpt_neox_20b.json
       - name: Upload test logs
         if: always()
@@ -97,11 +97,11 @@ jobs:
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          docker pull $DJLSERVING_DOCKER
       - name: Test bloom-7b
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER \
           --profile profiles/bloom_7b1.json
       - name: Upload test logs
         if: always()
@@ -133,11 +133,11 @@ jobs:
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          docker pull $DJLSERVING_DOCKER
       - name: Test open-llama-13b
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER \
             --profile profiles/llama_13b.json
       - name: Upload test logs
         if: always()
@@ -169,11 +169,11 @@ jobs:
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          docker pull $DJLSERVING_DOCKER
       - name: Test gpt-j-6b
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER \
             --profile profiles/gpt_j_6b.json
       - name: Upload test logs
         if: always()
@@ -205,11 +205,11 @@ jobs:
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+          docker pull $DJLSERVING_DOCKER
       - name: Test opt-30b
         working-directory: tests/integration
         run: |
-          python3 lmic_test_builder.py --docker_image deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          python3 lmic_test_builder.py --docker_image $DJLSERVING_DOCKER \
             --profile profiles/opt_30b.json
       - name: Upload test logs
         if: always()

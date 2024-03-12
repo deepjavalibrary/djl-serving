@@ -1,0 +1,65 @@
+name: Nightly
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'release/nightly, default is nightly'
+        required: true
+        default: 'nightly'
+      p4d:
+        description: 'include p4d tests'
+        type: boolean
+        default: true
+  schedule:
+    - cron: '0 13 * * *'
+
+jobs:
+  build:
+    uses: ./.github/workflows/docker_build.yml
+    secrets: inherit
+    with:
+      mode: ${{ github.events.inputs.mode }}
+  integration:
+    needs: [build]
+    if: always()
+    uses: ./.github/workflows/integration.yml
+    secrets: inherit
+  integration_llm:
+    needs: [build]
+    if: always()
+    uses: ./.github/workflows/integration_llm.yml
+    secrets: inherit
+  integration_llm_inf2:
+    needs: [build]
+    if: always()
+    uses: ./.github/workflows/integration_llm_inf2.yml
+    secrets: inherit
+  integration_llm_optimization:
+    needs: [build]
+    if: ${{ github.event.inputs.p4d != '' || github.event.inputs.p4d }}
+    uses: ./.github/workflows/integration_llm_optimization.yml
+    secrets: inherit
+  integration_rolling_batch:
+    needs: [build]
+    if: always()
+    uses: ./.github/workflows/integration_rolling_batch.yml
+    secrets: inherit
+  integration_llm_p4d:
+    needs: [build]
+    if: ${{ github.event.inputs.p4d != '' || github.event.inputs.p4d }}
+    uses: ./.github/workflows/integration_llm_p4d.yml
+    secrets: inherit
+  publish:
+    needs:
+      - integration
+      - integration_llm
+      - integration_llm_inf2
+      - integration_llm_optimization
+      - integration_rolling_batch
+      - integration_llm_p4d
+    uses: ./.github/workflows/docker_publish.yml
+    secrets: inherit
+    with:
+      mode: ${{ github.events.inputs.mode }}

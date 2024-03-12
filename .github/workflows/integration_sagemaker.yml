@@ -1,4 +1,4 @@
-name: SageMaker PythonSDK Integration Tests
+name: Integration tests - SageMaker PythonSDK
 
 on:
   workflow_dispatch:

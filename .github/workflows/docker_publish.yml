@@ -1,0 +1,102 @@
+name: Sync docker and ECR repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'release/nightly, default is nightly'
+        required: true
+        default: 'nightly'
+        options:
+          - release
+          - nightly
+  workflow_call:
+    inputs:
+      mode:
+        description: 'release/nightly, default is nightly'
+        type: string
+        required: true
+        default: 'nightly'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  create-aarch64-runner:
+    runs-on: [ self-hosted, scheduler ]
+    steps:
+      - name: Create new Graviton instance
+        id: create_aarch64
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_graviton $token djl-serving
+    outputs:
+      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
+
+  nightly-aarch64:
+    runs-on: [ self-hosted, aarch64 ]
+    timeout-minutes: 60
+    needs: create-aarch64-runner
+    steps:
+      - uses: actions/checkout@v3
+      - name: Clean docker env
+        working-directory: serving/docker
+        run: |
+          yes | docker system prune -a --volumes
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Pull and sync to docker hub
+        working-directory: serving/docker
+        run: |
+          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          [ -z "$version" ] && version="nightly"
+          repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
+          ./scripts/pull_and_retag.sh $version deepjavalibrary/djl-serving {{ github.event.inputs.mode }}
+      - name: Pull and sync to ECR
+        working-directory: serving/docker
+        run: |
+          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          [ -z "$version" ] && version="nightly"
+          repo="125045733377.dkr.ecr.us-east-1.amazonaws.com/djl-serving"
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
+          ./scripts/pull_and_retag.sh $version $repo {{ github.event.inputs.mode }}
+      - name: Retag image for release latest
+        if: ${{ github.event.inputs.mode == 'release' }}
+        working-directory: serving/docker
+        run: |
+          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
+          docker push deepjavalibrary/djl-serving:latest
+      - name: Clean docker env
+        working-directory: serving/docker
+        run: |
+          yes | docker system prune -a --volumes
+
+  stop-aarch64-runner:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [nightly-aarch64, create-aarch64-runner]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-aarch64-runner.outputs.aarch64_instance_id }}
+          ./stop_instance.sh $instance_id
