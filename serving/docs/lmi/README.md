@@ -108,7 +108,7 @@ We link to the specific model we tested with, but we expect same model from a di
 
 ### Deployment Guide
 
-We have put together a comprehensive [deployment guide](deployment_guide) that takes you through the steps needed to deploy a model using LMI containers on SageMaker.
+We have put together a comprehensive [deployment guide](deployment_guide/README.md) that takes you through the steps needed to deploy a model using LMI containers on SageMaker.
 The document covers the phases from storing your model artifacts through benchmarking your SageMaker endpoint.
 
 ## Supported LMI Inference Libraries
@@ -125,7 +125,7 @@ You can learn more about their integration with LMI from the respective user gui
 LMI provides access to multiple libraries to enable users to find the best stack for their model and use-case. 
 Each inference framework provides a unique set of features and optimizations that can be tuned for your model and use case.
 With LMIs built-in inference handlers and unified configuration, experimenting with different stacks is as simple as changing a few configurations.
-Refer to the stack specific user guides, and the [LMI deployment guide](deployment_guide) to learn more.
+Refer to the stack specific user guides, and the [LMI deployment guide](deployment_guide/README.md) to learn more.
 An overview of the different LMI components is provided in the [deployment guide](deployment_guide/README.md#components-of-lmi)
 
 The following table shows which SageMaker DLC (deep learning container) to use for each backend.

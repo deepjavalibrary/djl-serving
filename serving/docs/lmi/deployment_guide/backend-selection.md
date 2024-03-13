@@ -35,7 +35,7 @@ The most important factor when selecting a backend is to use a backend that supp
 Some architectures are only supported by a few backends. For example, T5 models are only supported by lmi-dist and TensorRT-LLM.
 Llama2 models are supported by all backends.
 
-You can find out model architecture support by referencing the backend [user guides](../user_guides).
+You can find out model architecture support by referencing the backend [user guides](../user_guides/README.md).
 
 ## Factor 2: Use-Case and Traffic Patterns
 
@@ -84,7 +84,7 @@ The lower memory footprint can enable deployments to smaller instances.
 Each inference backend offers support for different quantization methods.
 Across LMI, we offer GPTQ, AWQ, SmoothQuant, and Int8 quantization.
 Quantization does lead to lower quality, but the quality degradation is usually acceptable and a better option than switching to a smaller model.
-Refer to the backend [user guides](../user_guides) to learn about the quantization methods available in each backend.
+Refer to the backend [user guides](../user_guides/README.md) to learn about the quantization methods available in each backend.
 
 Another option is to switch from GPU based instances to AWS Inferentia2 instances using Transformers NeuronX.
 These instances are typically cheaper than the equivalent G5/P4 instances, but Transformers NeuronX has less model architecture support than other backends.
