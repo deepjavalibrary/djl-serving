@@ -146,6 +146,9 @@ outputs = predictor.predict({
 })
 ```
 
+Depending on which backend you are deploying with, you will have access to different generation parameters.
+To learn more about the API schema (Request/Response structure), please see [this document](../user_guides/lmi_input_output_schema.md).
+
 Next: [Benchmark your endpoint](benchmarking-your-endpoint.md)
 
 Previous: [Container Configurations](configurations.md)

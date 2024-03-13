@@ -280,7 +280,7 @@ option.tensor_parallel_degree=2
 
 Artifacts need to be in the following structure:
 
-Mount sould be to `/opt/ml/model/`
+Mount should be to `/opt/ml/model/`
 ```
 ├── serving.properties
 └── tensorrt_llm

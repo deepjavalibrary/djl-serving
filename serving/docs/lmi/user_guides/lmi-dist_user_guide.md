@@ -33,7 +33,8 @@ Optimized models:
 
 *Note: PEFT is also supported for optimized models*
 
-`lmi-dist` can also run other models which are supported by huggingface transformers but not listed above, although **without** the optimizations and `gptq`, `awq` quantization support. `transformers` library support can be found for [CausalLM](https://github.com/huggingface/transformers/blob/v4.34.0/src/transformers/models/auto/modeling_auto.py#L381) and [Seq2Seq](https://github.com/huggingface/transformers/blob/v4.34.0/src/transformers/models/auto/modeling_auto.py#L652) models.
+`lmi-dist` can also run other models which are supported by huggingface transformers but not listed above, although **without** the optimizations and `gptq`, `awq` quantization support. 
+`transformers` library support can be found for [CausalLM](https://github.com/huggingface/transformers/blob/v4.34.0/src/transformers/models/auto/modeling_auto.py#L381) and [Seq2Seq](https://github.com/huggingface/transformers/blob/v4.34.0/src/transformers/models/auto/modeling_auto.py#L652) models.
 
 ## Quick Start Configurations
 
@@ -48,7 +49,6 @@ option.rolling_batch=lmi-dist
 option.model_id=<your model id>
 # Adjust the following based on model size and instance type
 option.max_rolling_batch_size=64
-option.max_rolling_batch_prefill_tokens=4096
 ```
 
 You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
@@ -61,7 +61,6 @@ TENSOR_PARALLEL_DEGREE=max
 OPTION_ROLLING_BATCH=lmi-dist
 # Adjust the following based on model size and instance type
 OPTION_MAX_ROLLING_BATCH_SIZE=64
-OPTION_MAX_ROLLING_BATCH_PREFILL_TOKENS=4096
 ```
 
 You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.

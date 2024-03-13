@@ -95,7 +95,7 @@ There are two classes of configurations provided by LMI:
 * Engine/Backend level configurations. These configurations have a `option.` prefix (e.g. `option.model_id`)
 
 Since LMI is built using the DJLServing model server, all DJLServing configurations are available in LMI.
-You can find a list of these configurations [here](https://docs.djl.ai/docs/serving/serving/docs/configurations_model.html#python-model-configuration).
+You can find a list of these configurations [here](../../configurations_model.md#python-model-configuration).
 
 The following list of configurations is intended to highlight the relevant configurations for LMI: 
 
