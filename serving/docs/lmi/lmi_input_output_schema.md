@@ -71,7 +71,6 @@ Apart from these common parameters, there are other parameters that are specific
 ```
 DeepSpeedRollingBatchParameters : {
     'typical_p' : float (default= 1.0), 
-    'seed' : integer (default = 0),
     'stop_sequences' : list (default = None),
     'truncate' : integer (default = None),
 }
