@@ -777,6 +777,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
         if (batchSize <= 0) {
             batchSize = intValue(prop, "batch_size", wlmc.getBatchSize());
+            batchSize = intValue(prop, "max_dynamic_batch_size", batchSize);
         }
         if (maxBatchDelayMillis <= 0) {
             maxBatchDelayMillis = intValue(prop, "max_batch_delay", wlmc.getMaxBatchDelayMillis());
