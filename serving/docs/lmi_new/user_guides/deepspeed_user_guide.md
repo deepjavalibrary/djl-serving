@@ -95,7 +95,7 @@ Auto Tensor-Parallelism:
 
 ## Quick Start Configurations
 
-You can leverage DeepSpeed with LMI using the following starter configurations:
+You can leverage `deepspeed` with LMI using the following starter configurations:
 
 ### serving.properties
 
@@ -105,8 +105,11 @@ option.entryPoint=djl_python.deepspeed
 option.tensor_parallel_degree=max
 option.rolling_batch=deepspeed
 option.model_id=<your model id>
+# Adjust the following based on model size and instance type
 option.max_rolling_batch_size=64
 ```
+
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
 
 ### environment variables
 
@@ -115,10 +118,11 @@ HF_MODEL_ID=<your model id>
 OPTION_ENTRYPOINT=djl_python.deepspeed
 TENSOR_PARALLEL_DEGREE=max
 OPTION_ROLLING_BATCH=deepspeed
+# Adjust the following based on model size and instance type
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
 
-You can use the [SageMaker deployment template](../README.md#using-the-sagemaker-python-sdk-to-deploy-your-first-model-with-lmi) to deploy the model with environment variables.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
 
 ## Quantization Support
 

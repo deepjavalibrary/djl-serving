@@ -7,8 +7,6 @@ TRT-LLM LMI supports two options for model artifacts
 1. [Standard HuggingFace model format](../deployment_guide/model-artifacts.md#huggingface-transformers-pretrained-format): In this case, TRT-LLM LMI will build TRT-LLM engines from HuggingFace model and package them with HuggingFace model config files during model load time.
 2. [Custom TRT-LLM LMI model format](../deployment_guide/model-artifacts.md#tensorrt-llmtrt-llm-lmi-model-format): In this case, artifacts are directly loaded without the need to model compilation resulting in faster load times.
 
-
-
 ## Supported Model Architectures
 
 The below model architectures are supported for JIT model compiltation and tested in our CI.
@@ -28,73 +26,44 @@ TRT-LLM LMI v8 0.26.0 containers come with [TRT-LLM 0.7.1](https://github.com/NV
 
 We will add more model support in the future versions in our CI. Please feel free to [file an issue](https://github.com/deepjavalibrary/djl-serving/issues/new/choose) if you are looking for a specific model support.
 
+## Quick Start Configurations
 
-## SageMaker Deployment Tutorial
-Users need to provide the model id of the model they want to deploy. Model id can be provided using `OPTION_MODEL_ID` environment variable which can take one of the following values:
+You can leverage `tensorrtllm` with LMI using the following starter configurations:
 
-* Hugging Face model id
-* s3 uri of Hugging Face model stored in s3
-* s3 uri of pre-compiled TRT-LLM LMI model artifacts
-
-We also need to set `SERVING_LOAD_MODELS` environment variable which can be set as below. 
+### serving.properties
 
 ```
+engine=MPI
+option.tensor_parallel_degree=max
+option.rolling_batch=trtllm
+option.model_id=<your model id>
+# Adjust the following based on model size and instance type
+option.max_rolling_batch_size=64
+option.max_input_len=1024
+option.max_output_len=512
+```
+
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
+
+### environment variables
+
+````
 HF_MODEL_ID=<your model id>
-```
-In addition to these required parameters, users may want to set these parameters according to their use case:
+TENSOR_PARALLEL_DEGREE=max
+OPTION_ROLLING_BATCH=trtllm
+# Adjust the following based on model size and instance type
+OPTION_MAX_ROLLING_BATCH_SIZE=64
+OPTION_MAX_INPUT_LEN=1024
+OPTION_MAX_OUTPUT_LEN=512
+````
 
-* `TENSOR_PARALLEL_DEGREE`: Determines number of gpus across model will be split into. By default, model will be split across all the gpus available in the instance. For some model architectures, this default behavior will not work. In such cases, users can set this parameter to a value that works for the specific model.
-* `OPTION_MAX_INPUT_LEN`: Determines maximum input prompt length the model can process. Default is 1024. Users can decrease/increase this value if they know their application's precise limit.
-* `OPTION_MAX_OUTPUT_LEN`: Determines maximum output tokens expected from the model. Default is 512. Users can decrease/increase this value if they know their application's precise limit.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
 
-We also support customizing additional parameters to boost performance as per specific use case. Please refer to `Common` and `TensorRT-LLM` sections in this [doc](../../lmi/configurations_large_model_inference_containers.md) for advanced configuration
+## Quantization Support
 
-In this tutorial, we will use [SageMaker Python SDK](https://github.com/aws/sagemaker-python-sdk) to deploy the model on SageMaker. The below code can be run in SageMaker environment to deploy llama2-13b on g5.12xlarge instance. 
-
-```
-import sagemaker
-from sagemaker import image_uris, Model, Predictor
-from sagemaker.serializers import JSONSerializer
-from sagemaker.deserializers import JSONDeserializer
-
-# Setup role and sagemaker session
-iam_role = sagemaker.get_execution_role()
-sagemaker_session = sagemaker.session.Session()
-region = sagemaker_session._region_name
-
-# Fetch the uri of the TRT-LLM LMI container
-container_image_uri = image_uris.retrieve(framework="djl-tensorrtllm", version="0.26.0", region=region)
-
-# Create the SageMaker Model object. In this example we'll use vLLM as our inference backend
-model = Model(
-  image_uri=container_image_uri,
-  role=iam_role,
-  env={
-    "HF_MODEL_ID": "TheBloke/Llama-2-13B-fp16",
-  }
-)
-
-# Deploy your model to a SageMaker Endpoint and create a Predictor to make inference requests
-endpoint_name = sagemaker.utils.name_from_base("llama-13b-trtllm-endpoint")
-model.deploy(instance_type="ml.g5.12xlarge", initial_instance_count=1, endpoint_name=endpoint_name)
-predictor = Predictor(
-  endpoint_name=endpoint_name,
-  sagemaker_session=sagemaker_session,
-  serializer=JSONSerializer(),
-  deserializer=JSONDeserializer(),
-)
-
-
-# Make an inference request against the llama2-13b endpoint
-outputs = predictor.predict({
-  "inputs": "The diamondback terrapin was the first reptile to be",
-  "parameters": {
-    "do_sample": True,
-    "max_new_tokens": 256,
-  }
-})
-print(outputs)
-```
+We support two methods of quantization when using TensorRT-LLM with LMI: SmoothQuant, and AWQ.
+You can enable these quantization strategies using `option.quantize=<smoothquant|awq>` in serving.properties, or `OPTION_QUANTIZE=<smoothquant|awq>` environment variable.
+More details about additional (optional) quantization configurations are available in the advanced configuration table below.
 
 
 ##  Advanced TensorRT-LLM Configurations
