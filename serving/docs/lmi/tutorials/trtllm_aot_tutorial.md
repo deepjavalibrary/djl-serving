@@ -2,7 +2,9 @@
 
 ## Overview
 
-With LMI TensorRT-LLM container, you can run on the fly compilation of different LLM architecture models and then load the model and run inference. However, for larger models like Falcon 40B and Llama-2 70B models, compilation of models takes approximately 7 minutes and more. So, we recommend users to perform ahead-of-time compilation for these larger models and other model architectures to avoid this compilation overhead.
+With LMI TensorRT-LLM container, you can run on the fly compilation of different LLM architecture models and then load the model and run inference. 
+However, for larger models like Falcon 40B and Llama-2 70B models, compilation of models takes approximately 7 minutes and more. 
+So, we recommend users to perform ahead-of-time compilation for these larger models and other model architectures to avoid this compilation overhead.
 
 The goal of this document is for the user to be able to:
 
@@ -44,7 +46,7 @@ docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-te
 
 ### Step 3: Set the environment variables:
 
-These below configurations helps you configure the inference optimizations parameters. You can check all the configurations of TensorRT-LLM LMI handler  [in our docs](https://docs.djl.ai/docs/serving/serving/docs/lmi/configurations_large_model_inference_containers.html#tensorrt-llm). 
+These below configurations helps you configure the inference optimizations parameters. You can check all the configurations of TensorRT-LLM LMI handler  [in our docs](../user_guides/trt_llm_user_guide.md#advanced-tensorrt-llm-configurations). 
 
 ```
 OPTION_MODEL_ID={{s3url}}
@@ -76,7 +78,9 @@ In the next step we will map `$MODEL_REPO_DIR` to a volume inside container and 
 
 ### Step 5: Run the ahead of time compilation
 
-Run the container and run the model partitioning script. Remember to map all the environment variables you set in step 2 to inside the container by adding `-e YOUR_OPTION_NAME=$YOUR_OPTION_NAME` to the docker run command. In the below example, the model artifacts will be saved to `$MODEL_REPO_DIR` created in the above step. (Also, if you are using `serving.properties` file to set the options, there’s no need to pass `OPTION_*` environment variables in the below command.)
+Run the container and run the model partitioning script. 
+Remember to map all the environment variables you set in step 2 to inside the container by adding `-e YOUR_OPTION_NAME=$YOUR_OPTION_NAME` to the docker run command. 
+In the below example, the model artifacts will be saved to `$MODEL_REPO_DIR` created in the above step. (Also, if you are using `serving.properties` file to set the options, there’s no need to pass `OPTION_*` environment variables in the below command.)
 
 ```
 docker run --runtime=nvidia --gpus all --shm-size 12gb \

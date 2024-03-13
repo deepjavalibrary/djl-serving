@@ -48,7 +48,7 @@ docker pull 763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.26.0-ne
 
 ### Step 3: Set the environment variables:
 
-These below configurations helps you configure the inference optimizations parameters. You can check all the configurations of LMI NeuronX handler [in our docs](https://docs.djl.ai/docs/serving/serving/docs/lmi/configurations_large_model_inference_containers.html#transformers-neuronx-doc).
+These below configurations helps you configure the inference optimizations parameters. You can check all the configurations of LMI NeuronX handler [in our docs](../user_guides/tnx_user_guide.md#advanced-transformers-neuronx-configurations).
 You will save these as a `serving.properties` text file that will define the models compilation configuration.
 
 ___serving.properties___
@@ -141,7 +141,8 @@ To upload the model to S3, run the command below. If you have moved the model or
 aws s3 cp ~/partition-test s3://YOUR_S3_FOLDER_NAME/ --recursive
 ```
 
-Note: After uploading model artifacts to s3, you can just update the model_id(in `serving.properties`) to the newly created s3 url with compiled model artifacts and use the same `serving.properties` when deploying on SageMaker. Here, you can check the [tutorial](https://github.com/deepjavalibrary/djl-demo/blob/master/aws/sagemaker/large-model-inference/sample-llm/tnx_rollingbatch_deploy_llama_70b.ipynb) on how to run inference using LMI NeuronX DLC. Below snippet shows example updated model_id.
+Note: After uploading model artifacts to s3, you can just update the model_id(in `serving.properties`) to the newly created s3 url with compiled model artifacts and use the same `serving.properties` when deploying on SageMaker. 
+Here, you can check the [tutorial](https://github.com/deepjavalibrary/djl-demo/blob/master/aws/sagemaker/large-model-inference/sample-llm/tnx_rollingbatch_deploy_llama_70b.ipynb) on how to run inference using LMI NeuronX DLC. Below snippet shows example updated model_id.
 
 ___serving.properties___
 ````

@@ -40,7 +40,7 @@ We will add more model support for the future versions to have them tested. Plea
 
 ## Quick Start Configurations
 
-Most of the LMI Transformers-NeuronX models use the following template (quantization, and other advanced features will require additional configuration which is described [here](../../lmi/configurations_large_model_inference_containers.md#transformers-neuronx-doc)):
+Most of the LMI Transformers-NeuronX models use the following template:
 
 ### serving.properties
 
