@@ -51,6 +51,8 @@ When providing inputs following the input schema as a string, the output's gener
 
 ### Common rolling batch input parameters
 ```
+    'do_sample' : boolean (default = False),
+    'seed' : integer (default = ramdom value),
     'temperature' : float (default= 1.0),
     'repetition_penalty': float (default= 1.0),
     'top_k' : integer (default = 0), 
@@ -68,9 +70,7 @@ Apart from these common parameters, there are other parameters that are specific
 
 ```
 DeepSpeedRollingBatchParameters : {
-    'typical_p' : float (default= 1.0),
-    'do_sample' : boolean (default = False), 
-    'seed' : integer (default = 0),
+    'typical_p' : float (default= 1.0), 
     'stop_sequences' : list (default = None),
     'truncate' : integer (default = None),
 }
@@ -83,8 +83,6 @@ DeepSpeedRollingBatchParameters : {
 ```
 LmiDistRollingBatchParameters : {
     'typical_p' : float (default= 1.0),
-    'do_sample' : boolean (default = false), 
-    'seed' : integer (default = 0),
     'stop_sequences' : list (default = None),
     'truncate' : integer (default = None),
     'ignore_eos_token' : boolean (default = false)
@@ -98,11 +96,13 @@ LmiDistRollingBatchParameters : {
 ```
 vLLMRollingBatchParameters : {
     'stop_sequences' : list,
-    'best_of' : int (default = None),
+    'temperature' : float (default= 0),
+    'top_k' : integer (default = -1)
+    
     'min_p': float (default = 0.0),
     'presence_penalty': float (default = 0.0),
     'frequency_penalty' : float (default = 0.0),
-    'use_beam_search': boolean (default = false),
+    'num_beams': integer (default = 1), (set this greater than 1 to enable beam search)
     'stop_token_ids': list (default = None),
     'include_stop_str_in_output' : boolean (default = false),
     'ignore_eos_token' : boolean (default = false),
@@ -124,7 +124,6 @@ TensorRTLLMRollingBatchParameters : {
     'max_new_tokens' : integer (default = 128),
     'top_k' : integer (default = 5), 
     'top_p' : float (default= 0.85),
-    'seed' : integer (default = None),
     'details' : boolean (default = false),
     'stop' : boolean, 
     'presence_penalty': float,
