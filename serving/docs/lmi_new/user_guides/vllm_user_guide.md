@@ -48,36 +48,34 @@ Currently, we allow customer to use `option.quantize=awq` or `OPTION_QUANTIZE=aw
 
 We will have GPTQ supported for vLLM in the upcoming version.
 
-## Deployment tutorial
+## Quick Start Configurations 
 
-Most of the vLLM model could fall under the following templates:
+You can leverage `vllm` with LMI using the following starter configurations:
 
 ### serving.properties
-
-You can deploy with a serving.properties:
 
 ```
 engine=Python
 option.tensor_parallel_degree=max
 option.model_id=<your model>
-option.max_rolling_batch_size=64
 option.rolling_batch=vllm
+# Adjust the following based on model size and instance type
+option.max_rolling_batch_size=64
 ```
 
-This is the standard no-code experience DJL-Serving provided.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
 
-### All environment variables
-
-You can also deploy without even providing any artifacts to run with LMI through specifying everything in ENV:
+### environment variables 
 
 ```
 HF_MODEL_ID=<your model>
 TENSOR_PARALLEL_DEGREE=max
-OPTION_MAX_ROLLING_BATCH_SIZE=64
 OPTION_ROLLING_BATCH=vllm
+# Adjust the following based on model size and instance type
+OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```
 
-You can use [SageMaker deployment template](../README.md#using-the-sagemaker-python-sdk-to-deploy-your-first-model-with-lmi) to deploy the model with environment variables.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
 
 ### Advanced vLLM Configurations
 
