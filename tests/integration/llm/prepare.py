@@ -668,6 +668,7 @@ vllm_model_list = {
         "option.model_id": "TheBloke/Llama-2-13B-fp16",
         "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.record_acceptance_rate": True,
+        "option.gpu_memory_utilization": "0.8",
         "option.tensor_parallel_degree": "max",
         "option.output_formatter": "jsonlines"
     }
