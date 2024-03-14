@@ -28,9 +28,6 @@ The below model architectures have been carefully tested with LMI's DeepSpeed in
 
 ### Complete Model Set
 
-<details>
-  <summary>Expand this section to see the full set of model architectures supported by DeepSpeed.</summary>
-
 Kernel Injection:
 
 * GPT2
@@ -91,7 +88,6 @@ Auto Tensor-Parallelism:
 * xglm
 * xlm_roberta
 * yoso
-</details>
 
 ## Quick Start Configurations
 

@@ -22,7 +22,7 @@ Configurations specified in the `serving.properties` files will override configu
 
 Both configuration mechanisms offer access to the same set of configurations.
 
-If you know which backend you are going to use, you can find a set of starter configurations in the corresponding [user guide](../user_guides).
+If you know which backend you are going to use, you can find a set of starter configurations in the corresponding [user guide](../user_guides/README.md).
 We recommend using the quick start configurations as a starting point if you have decided on a particular backend.
 The only change required to the starter configurations is specifying `option.model_id` to point to your model artifacts.
 
@@ -119,7 +119,7 @@ The following list of configurations is intended to highlight the relevant confi
 ## Backend Specific Configurations
 
 Each backend provides access to additional configurations.
-You can find these configurations in the respective [user guides](../user_guides).
+You can find these configurations in the respective [user guides](../user_guides/README.md).
 
 ## Environment Variable Configurations
 
