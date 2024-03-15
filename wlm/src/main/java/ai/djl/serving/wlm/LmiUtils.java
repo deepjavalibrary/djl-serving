@@ -35,7 +35,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
@@ -45,67 +44,42 @@ public final class LmiUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(LmiUtils.class);
 
-    private static final List<String> DEEPSPEED_MODELS =
-            List.of(
-                    "bert",
-                    "bloom",
-                    "gpt_neo",
-                    "gpt_neox",
-                    "gpt2",
-                    "gptj",
-                    "opt",
-                    "roberta",
-                    "xlm-roberta");
-
     private LmiUtils() {}
 
     static String inferLmiEngine(ModelInfo<?, ?> modelInfo) throws ModelException {
-        // MMS/Torchserve
-        if (Files.isDirectory(modelInfo.modelDir.resolve("MAR-INF"))) {
-            logger.info("Found legacy torchserve model, use Python engine.");
-            return "Python";
-        }
-
-        Properties prop = modelInfo.prop;
+        Properties prop = modelInfo.getProperties();
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
         if (modelConfig == null) {
-            String engineName = isTrtLLM(modelInfo) ? "MPI" : "Python";
+            String engineName = isTrtLLM(prop) ? "MPI" : "Python";
             logger.info("No config.json found, use {} engine.", engineName);
             return engineName;
         }
-        String features = Utils.getenv("SERVING_FEATURES");
-        String modelType = modelConfig.getModelType();
-        String engineName;
-        if ("stable-diffusion".equals(modelType)) {
-            // TODO: Move this from hardcoded to deduced in PyModel
-            prop.setProperty("option.entryPoint", "djl_python.stable-diffusion");
-            engineName = "DeepSpeed";
-        } else if (isDeepSpeedRecommended(modelType)) {
-            engineName = "DeepSpeed";
-        } else if (features != null && features.contains("trtllm")) {
-            engineName = "MPI";
-        } else {
-            engineName = "Python";
-        }
-        logger.info("Detected engine: {}, modelType: {}", engineName, modelType);
-        return engineName;
+        LmiConfigRecommender.configure(prop, modelConfig);
+        logger.info(
+                "Detected engine: {}, rolling_batch: {}, tensor_paralell_degre {}, for modelType:"
+                        + " {}",
+                prop.getProperty("engine"),
+                prop.getProperty("option.rolling_batch"),
+                prop.getProperty("option.tensor_parallel_degree"),
+                modelConfig.getModelType());
+        return prop.getProperty("engine");
     }
 
-    static boolean isTrtLLM(ModelInfo<?, ?> info) {
-        String rollingBatch = info.prop.getProperty("option.rolling_batch");
+    static boolean isTrtLLM(Properties properties) {
+        String rollingBatch = properties.getProperty("option.rolling_batch");
         if ("trtllm".equals(rollingBatch)) {
             return true;
         }
         if (rollingBatch == null || "auto".equals(rollingBatch)) {
             // FIXME: find a better way to set default rolling batch for trtllm
-            String features = Utils.getenv("SERVING_FEATURES");
+            String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
             return features != null && features.contains("trtllm");
         }
         return false;
     }
 
     static boolean needConvert(ModelInfo<?, ?> info) {
-        return isTrtLLM(info);
+        return isTrtLLM(info.getProperties());
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
@@ -196,36 +170,6 @@ public final class LmiUtils {
         } catch (IOException | JsonSyntaxException e) {
             throw new ModelNotFoundException("Invalid huggingface model id: " + modelId, e);
         }
-    }
-
-    private static boolean isDeepSpeedRecommended(String modelType) {
-        return isPythonDependencyInstalled("/usr/local/bin/deepspeed", "deepspeed")
-                && DEEPSPEED_MODELS.contains(modelType);
-    }
-
-    private static boolean isPythonDependencyInstalled(
-            String dependencyPath, String dependencyName) {
-        Path expectedPath = Paths.get(dependencyPath);
-        if (Files.exists(expectedPath)) {
-            return true;
-        }
-        String[] cmd = {"pip", "list", "|", "grep", dependencyName};
-        try {
-            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = exec.getInputStream()) {
-                logOutput = Utils.toString(is);
-            }
-            int exitCode = exec.waitFor();
-            if (exitCode == 0 && logOutput.contains(dependencyName)) {
-                return true;
-            } else {
-                logger.warn("Did not find {} installed in python environment", dependencyName);
-            }
-        } catch (IOException | InterruptedException e) {
-            logger.warn("pip check for {} failed", dependencyName, e);
-        }
-        return false;
     }
 
     private static Path buildTrtLlmArtifacts(Path modelDir, String modelId, String tpDegree)

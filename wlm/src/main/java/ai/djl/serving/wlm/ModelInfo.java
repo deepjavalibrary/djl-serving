@@ -667,7 +667,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         }
 
-        if (isPythonModel(prefix)) {
+        if (isTorchServeModel()) {
+            return "Python";
+        } else if (isPythonModel(prefix)) {
             return LmiUtils.inferLmiEngine(this);
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
                 || Files.isRegularFile(modelDir.resolve("model.pt"))) {
@@ -709,9 +711,16 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
     }
 
+    private boolean isTorchServeModel() {
+        if (Files.isDirectory(modelDir.resolve("MAR-INF"))) {
+            logger.info("Found legacy torchserve model, use Python engine.");
+            return true;
+        }
+        return false;
+    }
+
     private boolean isPythonModel(String prefix) {
-        return Files.isDirectory(modelDir.resolve("MAR-INF"))
-                || Files.isRegularFile(modelDir.resolve("model.py"))
+        return Files.isRegularFile(modelDir.resolve("model.py"))
                 || Files.isRegularFile(modelDir.resolve(prefix + ".py"))
                 || prop.getProperty("option.model_id") != null
                 || Files.isRegularFile(modelDir.resolve("config.json"));
@@ -741,6 +750,18 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     logger.warn(uid + ": Failed read serving.properties file", e);
                 }
             }
+            // load default settings from env
+            for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                if (key.startsWith("OPTION_") && value != null && !value.isEmpty()) {
+                    key = key.substring(7).toLowerCase(Locale.ROOT);
+                    if ("entrypoint".equals(key)) {
+                        key = "entryPoint";
+                    }
+                    prop.putIfAbsent("option." + key, value);
+                }
+            }
             configPerModelSettings();
             eventManager.onModelConfigured(this);
         }
@@ -766,19 +787,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
         if (engineName == null) {
             engineName = inferEngine();
-        }
-
-        // load default settings from env
-        for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            if (key.startsWith("OPTION_") && value != null && !value.isEmpty()) {
-                key = key.substring(7).toLowerCase(Locale.ROOT);
-                if ("entrypoint".equals(key)) {
-                    key = "entryPoint";
-                }
-                prop.putIfAbsent("option." + key, value);
-            }
         }
 
         StringBuilder sb = new StringBuilder();
