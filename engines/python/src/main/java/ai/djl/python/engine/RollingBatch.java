@@ -347,7 +347,7 @@ class RollingBatch implements Runnable {
                 if (error != null) {
                     map.put("error", error);
                 }
-                byte[] buffer = JsonUtils.GSON_PRETTY.toJson(map).getBytes(StandardCharsets.UTF_8);
+                byte[] buffer = JsonUtils.GSON.toJson(map).getBytes(StandardCharsets.UTF_8);
                 data.appendContent(buffer, true);
             } else {
                 if (last && metrics != null) {
