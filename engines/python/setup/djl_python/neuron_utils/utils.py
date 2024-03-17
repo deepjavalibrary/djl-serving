@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 
 import torch
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, Dict
 from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
 from optimum.exporters.neuron.model_configs import *
 from optimum.exporters.tasks import TasksManager
@@ -46,6 +46,62 @@ def task_from_config(config) -> str:
 def get_exporter(config, task):
     return TasksManager.get_exporter_config_constructor(
         model_type=config.model_type, exporter="neuron", task=task)()
+
+
+def parse_input_to_default_schema(input_map, tokenizer, config):
+    input_keys = input_map.keys()
+    if "model" in input_keys and "messages" in input_keys:
+        return apply_chat_completion_template(input_map, tokenizer, config)
+
+
+def parse_input_as_chat_completion(input_map, tokenizer, config):
+    _inputs = input_map["inputs"]
+    input_map["messages"] = _inputs
+    if isinstance(_inputs, list) and not isinstance(_inputs[0], str):
+        new_input_map = dict({"inputs": list()})
+        if "parameters" in input_map.keys():
+            new_input_map["parameters"] = input_map.get("parameters")
+        intermediate_map = apply_chat_completion_template(
+            input_map, tokenizer, config)
+        new_input_map["inputs"] = intermediate_map.pop("inputs")
+        return new_input_map
+    else:
+        return input_map
+
+
+def apply_chat_completion_template(input_map: Dict, tokenizer, config):
+    new_input_map = dict({"inputs": list(), "parameters": dict()})
+    if hasattr(tokenizer, "apply_chat_template"):
+        _messages = input_map.get("messages", input_map)
+        chat_template_kwargs = dict(tokenize=False)
+        if "add_generation_prompt" in input_map.keys():
+            chat_template_kwargs["add_generation_prompt"] = True
+        new_input_map["inputs"].append(
+            tokenizer.apply_chat_template(_messages, **chat_template_kwargs))
+    else:
+        raise AttributeError(
+            f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
+            f"please ensure that your tokenizer supports chat templates.")
+    if "temperature" in input_map:
+        new_input_map["parameters"] = dict(
+            new_input_map["parameters"],
+            **{"temperature": input_map.get("temperature")})
+    if "top_p" in input_map:
+        new_input_map["parameters"] = dict(new_input_map["parameters"],
+                                           **{"top_p": input_map.get("top_p")})
+    if "logprobs" in input_map:
+        new_input_map["parameters"] = dict(
+            new_input_map["parameters"],
+            **{"details": input_map.get("logprobs")})
+    if "max_tokens" in input_map:
+        new_input_map["parameters"] = dict(
+            new_input_map["parameters"],
+            **{"max_new_tokens": input_map.get("max_tokens")})
+    else:
+        new_input_map["parameters"] = dict(
+            new_input_map["parameters"],
+            **{"max_new_tokens": config.n_positions})
+    return new_input_map
 
 
 class NeuronXModelAdapter(OptimumModelForCausalLM):

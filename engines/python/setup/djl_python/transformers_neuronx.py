@@ -23,7 +23,7 @@ from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
 from djl_python.properties_manager.properties import StreamingEnum
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
-from djl_python.neuron_utils.utils import task_from_config
+from djl_python.neuron_utils.utils import task_from_config, parse_input_to_default_schema, parse_input_as_chat_completion
 
 model = None
 
@@ -131,6 +131,11 @@ class TransformersNeuronXService(object):
             try:
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
+                if "inputs" not in input_map.keys():
+                    input_map = parse_input_to_default_schema(
+                        input_map, self.tokenizer, self.config)
+                input_map = parse_input_as_chat_completion(
+                    input_map, self.tokenizer, self.config)
                 _inputs = input_map.pop("inputs", input_map)
                 if first or self.rolling_batch:
                     parameters.append(input_map.pop("parameters", {}))
