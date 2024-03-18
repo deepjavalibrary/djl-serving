@@ -86,3 +86,7 @@ curl "http://localhost:8080/models/adaptecho/adapters?limit=2&next_page_token=0"
   ]
 }
 ```
+
+### Advanced
+
+For the single model use case, the `/models/{model_name}` API prefix can be omitted resulting in queries such as `GET /adapters`.

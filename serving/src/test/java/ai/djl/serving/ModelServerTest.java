@@ -250,15 +250,15 @@ public class ModelServerTest {
             testPredictionsInvalidRequestSize(channel);
 
             // adapter API
-            testAdapterRegister(channel);
+            testAdapterRegister(channel, true, true);
             testAdapterNoPredictRegister();
             testAdapterPredict(channel);
             testAdapterDirPredict(channel);
             testAdapterInvoke(channel);
-            testAdapterList(channel);
-            testAdapterDescribe(channel);
+            testAdapterList(channel, true);
+            testAdapterDescribe(channel, true);
             testAdapterScale(channel);
-            testAdapterUnregister(channel);
+            testAdapterUnregister(channel, true);
 
             // plugin tests
             testStaticHtmlRequest();
@@ -322,6 +322,29 @@ public class ModelServerTest {
             testAdapterWorkflowPredict(channel, "adapter1", "a1");
             testAdapterWorkflowPredict(channel, "adapter2", "a2");
             testRegisterAdapterWorkflowTemplate(channel);
+
+            channel.close().sync();
+
+            ConfigManagerTest.testSsl();
+        } finally {
+            server.stop();
+        }
+    }
+
+    @Test
+    public void testAdapterSME()
+            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
+                    InterruptedException, ReflectiveOperationException {
+        ModelServer server = initTestServer("src/test/resources/smeAdapt.config.properties");
+        try {
+            assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+
+            testAdapterRegister(channel, false, false);
+            testAdapterPredict(channel);
+            testAdapterList(channel, false);
+            testAdapterDescribe(channel, false);
+            testAdapterUnregister(channel, false);
 
             channel.close().sync();
 
@@ -830,17 +853,22 @@ public class ModelServerTest {
         channel2.close().sync();
     }
 
-    private void testAdapterRegister(Channel channel) throws InterruptedException {
+    private void testAdapterRegister(Channel channel, boolean registerModel, boolean modelPrefix)
+            throws InterruptedException {
         logTestFunction();
-        String url = URLEncoder.encode("file:src/test/resources/adaptecho", StandardCharsets.UTF_8);
-        url = "/models?model_name=adaptecho&url=" + url;
-        request(channel, HttpMethod.POST, url);
-        assertHttpOk();
+        String url;
+        if (registerModel) {
+            url = URLEncoder.encode("file:src/test/resources/adaptecho", StandardCharsets.UTF_8);
+            url = "/models?model_name=adaptecho&url=" + url;
+            request(channel, HttpMethod.POST, url);
+            assertHttpOk();
+        }
 
         // Test Missing Adapter before registering
         testAdapterMissing();
 
-        url = "/models/adaptecho/adapters?name=" + "adaptable" + "&src=" + "src";
+        String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
+        url = strModelPrefix + "/adapters?name=" + "adaptable" + "&src=" + "src";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
     }
@@ -955,17 +983,22 @@ public class ModelServerTest {
         assertEquals(result, "adaptabletestInvokeAdapter");
     }
 
-    private void testAdapterList(Channel channel) throws InterruptedException {
+    private void testAdapterList(Channel channel, boolean modelPrefix) throws InterruptedException {
         logTestFunction();
-        request(channel, HttpMethod.GET, "/models/adaptecho/adapters");
+        String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
+        String url = strModelPrefix + "/adapters";
+        request(channel, HttpMethod.GET, url);
 
         ListAdaptersResponse resp = JsonUtils.GSON.fromJson(result, ListAdaptersResponse.class);
         assertTrue(resp.getAdapters().stream().anyMatch(a -> "adaptable".equals(a.getName())));
     }
 
-    private void testAdapterDescribe(Channel channel) throws InterruptedException {
+    private void testAdapterDescribe(Channel channel, boolean modelPrefix)
+            throws InterruptedException {
         logTestFunction();
-        request(channel, HttpMethod.GET, "/models/adaptecho/adapters/adaptable");
+        String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
+        String url = strModelPrefix + "/adapters/adaptable";
+        request(channel, HttpMethod.GET, url);
 
         DescribeAdapterResponse resp =
                 JsonUtils.GSON.fromJson(result, DescribeAdapterResponse.class);
@@ -988,9 +1021,12 @@ public class ModelServerTest {
         testAdapterPredict(channel);
     }
 
-    private void testAdapterUnregister(Channel channel) throws InterruptedException {
+    private void testAdapterUnregister(Channel channel, boolean modelPrefix)
+            throws InterruptedException {
         logTestFunction();
-        request(channel, HttpMethod.DELETE, "/models/adaptecho/adapters/adaptable");
+        String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
+        String url = strModelPrefix + "/adapters/adaptable";
+        request(channel, HttpMethod.DELETE, url);
         assertHttpOk();
     }
 
