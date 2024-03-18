@@ -16,7 +16,6 @@ This is an extension of the [Management API](management_api.md) and can be acces
 ### Register an adapter
 
 `POST /models/{modelName}/adapters`
-`POST /adapters` (only for single model use case)
 
 * name - The adapter name.
 * src - The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
@@ -32,7 +31,6 @@ curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=..."
 ### Describe adapter
 
 `GET /models/{model_name}/adapters/{adapter_name}`
-`GET /adapters/{adapter_name}` (only for single model use case)
 
 Use the Describe Adapter API to get the status of an adapter:
 
@@ -50,7 +48,6 @@ curl http://localhost:8080/models/adaptecho/adapters/a1
 ### Unregister an adapter
 
 `DELETE /models/{model_name}/adapters/{adapter_name}`
-`DELETE /adapters/{adapter_name}` (only for single model use case)
 
 Use the Unregister Adapter API to free up system resources:
 
@@ -65,7 +62,6 @@ curl -X DELETE http://localhost:8080/models/adaptecho/adapters/a1
 ### List adapters
 
 `GET /models/{model_name}/adapters`
-`GET /adapters` (only for single model use case)
 
 * limit - (optional) the maximum number of items to return. It is passed as a query parameter. The default value is `100`.
 * next_page_token - (optional) queries for next page. It is passed as a query parameter. This value is return by a previous API call.
@@ -90,3 +86,7 @@ curl "http://localhost:8080/models/adaptecho/adapters?limit=2&next_page_token=0"
   ]
 }
 ```
+
+### Advanced
+
+For the single model use case, the `/models/{model_name}` API prefix can be omitted resulting in queries such as `GET /adapters`.
