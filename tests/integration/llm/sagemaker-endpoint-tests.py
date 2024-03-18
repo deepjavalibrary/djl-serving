@@ -89,16 +89,6 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
     }
 }
 
-HUGGING_FACE_NO_CODE_CONFIGS = {
-    "gpt-neo-2-7-b": {
-        "env": {
-            "HF_MODEL_ID": "EleutherAI/gpt-neo-2.7B",
-            "TENSOR_PARALLEL_DEGREE": "1",
-        },
-        "framework": "deepspeed"
-    }
-}
-
 MME_CONFIGS = {
     "deepspeed-mme": {
         "models": [{
@@ -295,49 +285,6 @@ def mme_test(name, image_type, run_benchmark):
             predictor.delete_endpoint()
 
 
-def no_code_endpoint_test(name, image_type):
-    config = HUGGING_FACE_NO_CODE_CONFIGS.get(name)
-    data = config.get("payload", DEFAULT_PAYLOAD)
-    framework = config.get("framework")
-    session = get_sagemaker_session(
-        default_bucket_prefix=get_name_for_resource("no-code-tests"))
-    model = None
-    predictor = None
-    if image_type == "nightly":
-        image_uri = NIGHTLY_IMAGES[framework]
-    elif image_type == "candidate":
-        image_uri = CANDIDATE_IMAGES[framework]
-    else:
-        image_uri = sagemaker.image_uris.retrieve(framework="djl-" + framework,
-                                                  version=RELEASE_VERSION,
-                                                  region=REGION)
-    try:
-        model = HuggingFaceModel(
-            role=ROLE,
-            env=config.get("env"),
-            sagemaker_session=session,
-            image_uri=image_uri,
-            name=get_name_for_resource(name),
-        )
-
-        predictor = model.deploy(instance_type=DEFAULT_INSTANCE_TYPE,
-                                 initial_instance_count=1,
-                                 endpoint_name=get_name_for_resource(name),
-                                 serializer=config.get("serializer", None),
-                                 deserializer=config.get("deserializer", None))
-        outputs = predictor.predict(data=data)
-        print(outputs)
-    except Exception as e:
-        print(f"Encountered error for creating model {name}. Exception: {e}")
-        raise e
-    finally:
-        delete_s3_test_artifacts(session)
-        if predictor:
-            predictor.delete_endpoint()
-        if model:
-            model.delete_model()
-
-
 def single_model_endpoint_test(name, image_type, run_benchmark):
     config = SINGLE_MODEL_ENDPOINT_CONFIGS.get(name)
     data = config.get("payload", DEFAULT_PAYLOAD)
@@ -397,9 +344,6 @@ if __name__ == "__main__":
     image_type = args.image_type
     if test_case == "djl":
         single_model_endpoint_test(model_name, image_type, args.run_benchmark)
-    elif test_case == "no_code":
-        # skipping running benchmark for this for now, as we are not testing new models here.
-        no_code_endpoint_test(model_name, image_type)
     elif test_case == "djl_mme":
         mme_test(model_name, image_type, args.run_benchmark)
     else:

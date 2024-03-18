@@ -116,24 +116,6 @@ hf_model_spec = {
         "worker": 1,
         "stream_output": True,
     },
-    "no-code/nomic-ai/gpt4all-j": {
-        "max_memory_per_gpu": [10.0, 12.0],
-        "batch_size": [1, 4],
-        "seq_length": [16, 32],
-        "worker": 1,
-    },
-    "no-code/databricks/dolly-v2-7b": {
-        "max_memory_per_gpu": [10.0, 12.0],
-        "batch_size": [1, 4],
-        "seq_length": [16, 32],
-        "worker": 2,
-    },
-    "no-code/google/flan-t5-xl": {
-        "max_memory_per_gpu": [7.0, 7.0],
-        "batch_size": [1, 4],
-        "seq_length": [16, 32],
-        "worker": 2,
-    },
     "gpt4all-lora": {
         "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
