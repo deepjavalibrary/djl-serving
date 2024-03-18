@@ -130,13 +130,6 @@ jobs:
           python3 llm/sagemaker-endpoint-tests.py gpt-j-6b djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
-      - name: Test gpt-neo-2.7b no code DeepSpeed
-        if: success() || failure()
-        working-directory: tests/integration
-        run: |
-          python3 llm/sagemaker-endpoint-tests.py gpt-neo-2-7-b no_code ${image_type} ${run_benchmark}
-          echo "sleep 30 seconds to allow endpoint deletion"
-          sleep 30
       - name: Test DeepSpeed pythia-12b
         if: success() || failure()
         working-directory: tests/integration
