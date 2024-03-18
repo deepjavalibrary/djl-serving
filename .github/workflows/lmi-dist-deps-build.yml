@@ -60,25 +60,6 @@ jobs:
           cd flash-attention-v2
           pip wheel . --no-deps
           cp flash_attn-*.whl ../build_artifacts
-      - name: Build FlashAttn V1
-        run: |
-          . ./venv/bin/activate
-          git clone codecommit::us-east-1://flash-attention-v1
-          cd flash-attention-v1
-          pip wheel . --no-deps
-          cd csrc/layer_norm && pip wheel . --no-deps
-          cd ../rotary && pip wheel . --no-deps
-          cd ../../
-          cp flash_attn*.whl ../build_artifacts
-          cp csrc/layer_norm/*.whl ../build_artifacts
-          cp csrc/rotary/*.whl ../build_artifacts
-      - name: Build vllm 0.1.1
-        run: |
-          . ./venv/bin/activate
-          git clone codecommit::us-east-1://lmi_vllm
-          cd lmi_vllm
-          pip wheel . --no-deps
-          cp lmi_vllm-*.whl ../build_artifacts
       - name: Build awq kernels
         run: |
           . ./venv/bin/activate
@@ -87,10 +68,10 @@ jobs:
           cd llm-awq/awq/kernels && git checkout 8baf5dd9c3bfe8bdc5987f52ae4dffde7471346f
           pip wheel . --no-deps
           cp awq*.whl ../../../build_artifacts
-      - name: Build vllm 0.3.2 speculative decoding
+      - name: Build vllm 0.3.3 speculative decoding
         run: |
           . ./venv/bin/activate
-          git clone https://github.com/ymwangg/vllm -b specdec_v0.3.2
+          git clone https://github.com/ymwangg/vllm -b specdec_v0.3.3
           cd vllm
           export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
           export VLLM_INSTALL_PUNICA_KERNELS=1
@@ -118,11 +99,7 @@ jobs:
             name: build-artifacts
       - name: upload to S3
         run: |
-          aws s3 cp flash_attn_1*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt212/
           aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt212/
-          aws s3 cp dropout_layer_norm*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt212/
-          aws s3 cp rotary_emb*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt212/
-          aws s3 cp lmi_vllm*.whl s3://djl-ai-staging/publish/lmi_vllm/cu121-pt212/
           aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu121-pt212/
           aws s3 cp awq*.whl s3://djl-ai-staging/publish/awq/cu121-pt212/
 
