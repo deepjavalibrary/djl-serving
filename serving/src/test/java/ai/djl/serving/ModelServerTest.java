@@ -319,7 +319,7 @@ public class ModelServerTest {
             assertTrue(server.isRunning());
             Channel channel = initTestChannel();
 
-            testAdapterWorkflowPredict(channel, "adapter1", "a1");
+            testAdapterWorkflowPredict(channel, "adapter1", "a1weo");
             testAdapterWorkflowPredict(channel, "adapter2", "a2");
             testRegisterAdapterWorkflowTemplate(channel);
 
@@ -868,7 +868,7 @@ public class ModelServerTest {
         testAdapterMissing();
 
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
-        url = strModelPrefix + "/adapters?name=" + "adaptable" + "&src=" + "src";
+        url = strModelPrefix + "/adapters?name=adaptable&src=src&echooption=opt";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
     }
@@ -926,7 +926,7 @@ public class ModelServerTest {
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
         request(channel, req);
         assertHttpOk();
-        assertEquals(result, "adaptabletestPredictAdapter");
+        assertEquals(result, "adaptableopttestPredictAdapter");
     }
 
     private void testAdapterDirPredict(Channel channel) throws InterruptedException {
@@ -942,7 +942,7 @@ public class ModelServerTest {
         assertEquals(result, "myBuiltinAdaptertestPredictBuiltinAdapter");
     }
 
-    private void testAdapterWorkflowPredict(Channel channel, String workflow, String adapter)
+    private void testAdapterWorkflowPredict(Channel channel, String workflow, String prefix)
             throws InterruptedException {
         logTestFunction();
         String url = "/predictions/" + workflow;
@@ -953,7 +953,7 @@ public class ModelServerTest {
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
         request(channel, req);
         assertHttpOk();
-        assertEquals(result, adapter + "testAWP");
+        assertEquals(result, prefix + "testAWP");
     }
 
     private void testRegisterAdapterWorkflowTemplate(Channel channel) throws InterruptedException {
@@ -980,7 +980,7 @@ public class ModelServerTest {
         request(channel, req);
 
         assertHttpOk();
-        assertEquals(result, "adaptabletestInvokeAdapter");
+        assertEquals(result, "adaptableopttestInvokeAdapter");
     }
 
     private void testAdapterList(Channel channel, boolean modelPrefix) throws InterruptedException {

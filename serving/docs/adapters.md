@@ -58,6 +58,7 @@ For the simple model + adapter case, you can also directly use the adapter [work
 With our workflows, multiple workflows sharing models will be de-duplicated.
 So, the effect of having multiple adapters can be easily made with having one workflow for each adapter.
 This system can be used on [Amazon SageMaker Multi-Model Endpoints](https://docs.aws.amazon.com/sagemaker/latest/dg/multi-model-endpoints.html).
+More details can be found on the [AdapterWorkflowFunction docs](https://javadoc.io/doc/ai.djl.serving/serving/latest/ai/djl/serving/workflow/function/AdapterWorkflowFunction.html).
 
 ```
 workflow.json:
@@ -165,6 +166,7 @@ These can then take the adapters and save the src, pre-download it, cache it in 
 def register_adapter(inputs: Input):
   name = inputs.get_properties()["name"]
   src = inputs.get_properties()["src"]
+  options = inputs.get_content()
   # Do adapter registration tasks
   return Output().add("Successfully registered adapter")
 

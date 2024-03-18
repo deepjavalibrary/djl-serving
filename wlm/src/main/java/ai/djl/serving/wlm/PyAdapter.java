@@ -17,6 +17,8 @@ import ai.djl.modality.Input;
 import ai.djl.modality.Output;
 import ai.djl.translate.TranslateException;
 
+import java.util.Map;
+
 /** An overload of {@link Adapter} for the python engine. */
 public class PyAdapter extends Adapter {
 
@@ -25,9 +27,10 @@ public class PyAdapter extends Adapter {
      *
      * @param name the adapter name
      * @param src the adapter src
+     * @param options additional adapter options
      */
-    protected PyAdapter(String name, String src) {
-        super(name, src);
+    protected PyAdapter(String name, String src, Map<String, String> options) {
+        super(name, src, options);
     }
 
     @SuppressWarnings("unchecked")
@@ -38,6 +41,9 @@ public class PyAdapter extends Adapter {
         input.addProperty("handler", "register_adapter");
         input.addProperty("name", name);
         input.addProperty("src", src);
+        for (Map.Entry<String, String> entry : options.entrySet()) {
+            input.add(entry.getKey(), entry.getValue());
+        }
         try {
             p.predict(input);
         } catch (TranslateException e) {
