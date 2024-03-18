@@ -579,6 +579,85 @@ deepspeed_rolling_batch_model_spec = {
     },
 }
 
+no_code_rolling_batch_spec = {
+    "llama-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+    },
+    "llama-13b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16",
+    },
+    "gemma-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "mistral-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mistral-7B-v0.1",
+    },
+    "gpt-neox": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "EleutherAI/gpt-neox-20b",
+    },
+    "phi-2": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "microsoft/phi-2",
+    },
+    "baichuan-13b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "baichuan-inc/Baichuan2-13B-Base",
+    },
+    "qwen-1.5-14b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "Qwen/Qwen1.5-14B",
+    },
+    "starcoder": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama-70b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-70B-fp16",
+    },
+    "codellama": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "codellama/CodeLlama-34b-hf",
+    },
+    "mixtral-8x7b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mixtral-8x7B-v0.1",
+    },
+    "falcon-40b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "tiiuae/falcon-40b",
+    }
+}
+
 
 def check_worker_number(desired):
     model_name = get_model_name()
@@ -823,7 +902,7 @@ def test_handler_rolling_batch(model, model_spec):
                 f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
             )
             req["parameters"]["max_new_tokens"] = seq_length
-            awscurl_run(req, spec["tokenizer"], batch_size)
+            awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
 def test_handler(model, model_spec):
@@ -1052,6 +1131,9 @@ if __name__ == "__main__":
     elif args.handler == "deepspeed_rolling_batch":
         test_handler_rolling_batch(args.model,
                                    deepspeed_rolling_batch_model_spec)
+    elif args.handler == "no_code":
+        test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
+
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
