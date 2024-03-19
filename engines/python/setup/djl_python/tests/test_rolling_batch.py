@@ -114,6 +114,8 @@ class TestRollingBatch(unittest.TestCase):
         assert final_json == {
             "generated_text": "Hello world",
             "details": {
+                'input_text':
+                'This is a wonderful day',
                 "finish_reason":
                 "length",
                 "generated_tokens":
@@ -153,6 +155,7 @@ class TestRollingBatch(unittest.TestCase):
             },
             "generated_text": "Hello world",
             "details": {
+                'input_text': 'This is a wonderful day',
                 "finish_reason": "length",
                 "generated_tokens": 3,
             }
@@ -180,6 +183,9 @@ class TestRollingBatch(unittest.TestCase):
                 pass
 
             def inference(self, input_data, parameters):
+                pass
+
+            def get_tokenizer(self):
                 pass
 
         rb = CustomRB(output_formatter=custom_fmt)
@@ -211,6 +217,89 @@ class TestRollingBatch(unittest.TestCase):
             'token_text': ' world',
             'finish_reason': 'length',
             "request_id": 132
+        }
+
+    def test_custom_fmt_with_detailed_data_retrival(self):
+
+        def custom_fmt(token: Token, first_token: bool, last_token: bool,
+                       details: dict, generated_tokens: str):
+            result = details
+            return json.dumps(result) + "\n"
+
+        class CustomRB(RollingBatch):
+
+            def preprocess_requests(self, requests):
+                pass
+
+            def postprocess_results(self):
+                pass
+
+            def inference(self, input_data, parameters):
+                pass
+
+            def get_tokenizer(self):
+                pass
+
+        rb = CustomRB(output_formatter=custom_fmt)
+
+        req = Request(132, "This is a wonderful day", {
+            "max_new_tokens": 256,
+            "details": True
+        })
+        req.set_next_token(Token(244, "He", -0.334532), rb.output_formatter)
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            'finish_reason': None,
+            'generated_tokens': 1,
+            'input_text': 'This is a wonderful day',
+            'tokens': [{
+                'id': [244],
+                'log_prob': -0.334532,
+                'text': 'He'
+            }]
+        }
+        req.set_next_token(Token(576, "llo", -0.123123), rb.output_formatter)
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            'finish_reason':
+            None,
+            'generated_tokens':
+            2,
+            'input_text':
+            'This is a wonderful day',
+            'tokens': [{
+                'id': [244],
+                'log_prob': -0.334532,
+                'text': 'He'
+            }, {
+                'id': [576],
+                'log_prob': -0.123123,
+                'text': 'llo'
+            }]
+        }
+        req.set_next_token(Token(4558, " world", -0.567854),
+                           rb.output_formatter, True, 'length')
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            'finish_reason':
+            'length',
+            'generated_tokens':
+            3,
+            'input_text':
+            'This is a wonderful day',
+            'tokens': [{
+                'id': [244],
+                'log_prob': -0.334532,
+                'text': 'He'
+            }, {
+                'id': [576],
+                'log_prob': -0.123123,
+                'text': 'llo'
+            }, {
+                'id': [4558],
+                'log_prob': -0.567854,
+                'text': ' world'
+            }]
         }
 
 

@@ -75,6 +75,9 @@ class VLLMRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
 
+    def get_tokenizer(self):
+        return self.engine.tokenizer.tokenizer
+
     def reset(self) -> None:
         """
         Aborts all requests

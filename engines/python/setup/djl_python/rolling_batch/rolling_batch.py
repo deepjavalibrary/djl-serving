@@ -90,6 +90,7 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
             final_dict["details"] = {
                 "finish_reason": details.get("finish_reason", None),
                 "generated_tokens": details.get("generated_tokens", None),
+                "input_text": details.get("input_text", None)
             }
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
@@ -163,13 +164,15 @@ class Request(object):
         self.step_token_number = len(
             next_token.id) if next_token.id[0] != -1 else -1
         details = {}
+        # making detailed information captured for each token generation
+        if self.token_cache is not None:
+            details["finish_reason"] = finish_reason
+            details["tokens"] = self.token_cache
+            details["generated_tokens"] = len(self.token_cache)
+            details["input_text"] = self.input_text
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
-            if self.token_cache is not None:
-                details["finish_reason"] = finish_reason
-                details["tokens"] = self.token_cache
-                details["generated_tokens"] = len(self.token_cache)
         if output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now
@@ -271,6 +274,12 @@ class RollingBatch(ABC):
         self.pending_requests = []
         self.active_requests = []
         self.req_id_counter = 0
+
+    def get_tokenizer(self):
+        """
+        :return: the tokenizer used for inference
+        """
+        raise RuntimeError("get_tokenizer function not supported")
 
     @abstractmethod
     def inference(self, input_data, parameters, adapters=None):

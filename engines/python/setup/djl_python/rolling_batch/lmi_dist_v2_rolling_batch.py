@@ -85,6 +85,9 @@ class LmiDistRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
         super().reset()
 
+    def get_tokenizer(self):
+        return self.engine.preprocessor.tokenizer
+
     def translate_lmi_dist_params(self, parameters: dict):
         """
         Helper function to convert DJL Serving parameter names to parameter names
