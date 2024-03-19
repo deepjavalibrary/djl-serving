@@ -94,9 +94,6 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str, is_mpi: bool,
         from djl_python.rolling_batch.scheduler_rolling_batch import SchedulerRollingBatch
         return SchedulerRollingBatch
     elif rolling_batch_type == "lmi-dist":
-        from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
-        return LmiDistRollingBatch
-    elif rolling_batch_type == "lmi-dist-v2":
         from djl_python.rolling_batch.lmi_dist_v2_rolling_batch import LmiDistRollingBatch
         return LmiDistRollingBatch
     elif rolling_batch_type == "vllm":

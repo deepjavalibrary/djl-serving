@@ -23,6 +23,8 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     supports_speculative_decoding, DTYPE_MAPPER, FINISH_REASON_MAPPER)
 from djl_python.properties_manager.lmi_dist_v2_rb_properties import LmiDistV2RbProperties
 
+_WARMUP_PREFILL_TOKENS = 4096
+
 
 class LmiDistRollingBatch(RollingBatch):
     """
@@ -51,7 +53,7 @@ class LmiDistRollingBatch(RollingBatch):
                 "speculate_length"] = self.vllm_configs.speculative_length
             engine_kwargs[
                 "draft_model_tp_size"] = self.vllm_configs.draft_model_tp_size
-        args = EngineArgs(
+        engine_args = EngineArgs(
             model=self.lmi_dist_config.model_id_or_path,
             tensor_parallel_size=self.lmi_dist_config.tensor_parallel_degree,
             dtype=DTYPE_MAPPER[self.lmi_dist_config.dtype],
@@ -66,7 +68,11 @@ class LmiDistRollingBatch(RollingBatch):
             quantization=self.lmi_dist_config.quantize,
             revision=self.lmi_dist_config.revision,
             **engine_kwargs)
-        self.engine = engine_from_args(args)
+
+        kwargs = {}
+        if self.lmi_dist_config.max_rolling_batch_prefill_tokens is None:
+            kwargs["warmup_prefill_tokens"] = _WARMUP_PREFILL_TOKENS
+        self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
         self.model_type = getattr(kwargs.get("model_config", None),
                                   "model_type", None)
