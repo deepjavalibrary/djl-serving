@@ -31,7 +31,7 @@ ARG datasets_version=2.17.1
 ARG deepspeed_version=nightly
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
 # LMI-Dist Deps
-ARG vllm_wheel="https://publish.djl.ai/vllm/cu121-pt212/vllm-0.3.2-cp310-cp310-linux_x86_64.whl"
+ARG vllm_wheel="https://publish.djl.ai/vllm/cu121-pt212/vllm-0.3.3-cp310-cp310-linux_x86_64.whl"
 ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp310-cp310-linux_x86_64.whl"
 ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp310-cp310-linux_x86_64.whl"
 ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp310-cp310-linux_x86_64.whl"
