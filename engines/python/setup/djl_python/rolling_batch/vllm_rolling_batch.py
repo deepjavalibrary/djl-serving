@@ -134,8 +134,10 @@ class VLLMRollingBatch(RollingBatch):
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
         batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters, adapters,
-                                             batch_size)
+        new_requests = self.get_new_requests(input_data,
+                                             parameters,
+                                             batch_size,
+                                             adapters=adapters)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()

@@ -116,7 +116,7 @@ class Request(object):
         :param id: request id
         :param input_text: request's input text
         :param parameters: list of parameters
-        :param adapter: list of parameters
+        :param adapter: list of adapters
         """
         self.id = id
         self.input_text = input_text
@@ -285,15 +285,18 @@ class RollingBatch(ABC):
         """
         pass
 
-    def get_new_requests(self, input_data: list[str], parameters: list[dict],
-                         adapters, batch_size: int) -> list[Request]:
+    def get_new_requests(self,
+                         input_data: list[str],
+                         parameters: list[dict],
+                         batch_size: int,
+                         adapters=None) -> list[Request]:
         """
         Adds requests to the batch when there is availability
 
         :param input_data (list[str]): List of input prompts.
         :param parameters (list[str]): List of settings pertaining to each request.
-        :param adapters: List of adapters inputs for each request in a batch
         :param batch_size (int): Maximum number of requests in a batch
+        :param adapters: List of adapters inputs for each request in a batch
 
         :return: list of current active requests (including those that have just been added)
         """
