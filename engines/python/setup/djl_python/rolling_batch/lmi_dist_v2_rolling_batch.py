@@ -13,9 +13,9 @@
 import logging
 from collections import OrderedDict
 
-from lmi_dist.api import Request
+from lmi_dist.api import Request, RequestParams
 from lmi_dist.init_engine import engine_from_args
-from vllm import EngineArgs, SamplingParams
+from vllm import EngineArgs
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
@@ -97,42 +97,51 @@ class LmiDistRollingBatch(RollingBatch):
 
         :return: The same parameters dict, but with lmi-dist style parameter names.
         """
-        do_sample = parameters.pop('do_sample', False)
-        if do_sample and "temperature" not in parameters.keys():
-            parameters["temperature"] = 1.0
+        parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
+        # If `do_sample` is not provided, force temperature=0.0, i.e. greedy
+        # else set to user-provided value or default to 1.0
+        if not parameters.pop('do_sample', False):
+            parameters['temperature'] = 0.0
         else:
-            parameters["temperature"] = 0.0
+            parameters['temperature'] = parameters.get('temperature', 1.0)
         if "seed" in parameters.keys():
             parameters["seed"] = int(parameters["seed"])
-        if "max_new_tokens" in parameters.keys():
-            parameters["max_tokens"] = parameters.pop("max_new_tokens")
         if "stop_sequences" in parameters.keys():
             parameters["stop"] = parameters.pop("stop_sequences")
         if "ignore_eos_token" in parameters.keys():
             parameters["ignore_eos"] = parameters.pop("ignore_eos")
+        if "num_beams" in parameters.keys():
+            parameters["best_of"] = parameters.pop("num_beams")
+            parameters["use_beam_search"] = True
         return parameters
 
     @stop_on_any_exception
-    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
+    def inference(self,
+                  input_data: list[str],
+                  parameters: list[dict],
+                  adapters=None) -> list:
         """
         Adds new requests and gets output tokens from the backend.
 
         :param input_data: List of input prompts.
         :param parameters: List of settings pertaining to each request.
+        :param adapters: List of adapters inputs for each request in a batch
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
         batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(input_data,
+                                             parameters,
+                                             batch_size,
+                                             adapters=adapters)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = str(request.id)
             params = self.translate_lmi_dist_params(request.parameters)
-            sampling_params = SamplingParams(**params)
+            request_params = RequestParams(**params)
             lmi_dist_request = Request(id=request_id,
                                        prompt=request.input_text,
-                                       sampling_params=sampling_params)
+                                       params=request_params)
             self.engine.add_request(lmi_dist_request)
             self.request_cache[request_id] = {
                 "curr_length": 0,
