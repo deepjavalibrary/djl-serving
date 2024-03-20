@@ -19,6 +19,7 @@ This is an extension of the [Management API](management_api.md) and can be acces
 
 * name - The adapter name.
 * src - The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
+* All additional arguments will be treated as additional model-specific options and will be passed to the model during adapter registration
 
 ```bash
 curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=..."

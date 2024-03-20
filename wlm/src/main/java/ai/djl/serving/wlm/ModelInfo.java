@@ -51,6 +51,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -282,7 +283,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                                 Adapter.newInstance(
                                                         this,
                                                         adapterName,
-                                                        adapterDir.toAbsolutePath().toString());
+                                                        adapterDir.toAbsolutePath().toString(),
+                                                        Collections.emptyMap());
                                         registerAdapter(adapter);
                                         long d = (System.nanoTime() - start) / 1000;
                                         Metric me =

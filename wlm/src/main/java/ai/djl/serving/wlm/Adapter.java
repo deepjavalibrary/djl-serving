@@ -18,6 +18,7 @@ import ai.djl.serving.wlm.util.WorkerJob;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -27,16 +28,19 @@ public abstract class Adapter {
 
     protected String name;
     protected String src;
+    protected Map<String, String> options;
 
     /**
      * Constructs an {@link Adapter}.
      *
      * @param name the adapter name
      * @param src the adapter source
+     * @param options additional adapter options
      */
-    protected Adapter(String name, String src) {
+    protected Adapter(String name, String src, Map<String, String> options) {
         this.name = name;
         this.src = src;
+        this.options = options;
     }
 
     /**
@@ -48,9 +52,11 @@ public abstract class Adapter {
      * @param wpc the worker pool config for the new adapter
      * @param name the adapter name
      * @param src the adapter source
+     * @param options additional adapter options
      * @return the new adapter
      */
-    public static Adapter newInstance(WorkerPoolConfig<?, ?> wpc, String name, String src) {
+    public static Adapter newInstance(
+            WorkerPoolConfig<?, ?> wpc, String name, String src, Map<String, String> options) {
         if (!(wpc instanceof ModelInfo)) {
             String modelName = wpc.getId();
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
@@ -69,7 +75,7 @@ public abstract class Adapter {
         ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wpc;
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
-            return new PyAdapter(name, src);
+            return new PyAdapter(name, src, options);
         } else {
             throw new IllegalArgumentException(
                     "Adapters are only currently supported for Python models");

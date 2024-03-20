@@ -30,6 +30,8 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /** A class handling inbound HTTP requests to the management API for adapters. */
@@ -154,7 +156,15 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         if (wp == null) {
             throw new BadRequestException("The model " + modelName + " was not found");
         }
-        Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src);
+
+        Map<String, String> options = new ConcurrentHashMap<>();
+        for (Map.Entry<String, List<String>> entry : decoder.parameters().entrySet()) {
+            if (entry.getValue().size() == 1) {
+                options.put(entry.getKey(), entry.getValue().get(0));
+            }
+        }
+
+        Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, options);
         adapter.register(wp);
 
         String msg = "Adapter " + adapterName + " registered";

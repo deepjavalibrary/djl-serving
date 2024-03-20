@@ -27,7 +27,7 @@ adapters = dict()
 def register_adapter(inputs: Input):
     global adapters
     name = inputs.get_properties()["name"]
-    adapters[name] = True
+    adapters[name] = inputs
     return Output().add("Successfully registered adapter")
 
 
@@ -51,13 +51,17 @@ def handle(inputs: Input):
     for i, input in enumerate(inputs.get_batches()):
         data = input.get_as_string()
         if input.contains_key("adapter"):
-            adapter = input.get_as_string("adapter")
-            if adapter in adapters:
+            adapter_name = input.get_as_string("adapter")
+            if adapter_name in adapters:
+                adapter = adapters[adapter_name]
+                option = ""
+                if adapter.contains_key("echooption"):
+                    option = adapter.get_as_string("echooption")
                 # Registered adapter
-                out = adapter + data
+                out = adapter_name + option + data
             else:
                 # Dynamic adapter
-                out = "dyn" + adapter + data
+                out = "dyn" + adapter_name + data
         else:
             out = data
         outputs.add(out, key="data", batch_index=i)

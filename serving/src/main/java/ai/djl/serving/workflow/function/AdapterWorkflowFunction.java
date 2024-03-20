@@ -32,12 +32,13 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>To use this workflow function, you must pre-specify the adapted functions in the configs. In
  * the configs, create an object "adapters" with keys as reference names and values as objects. The
- * adapter reference objects should have three properties:
+ * adapter reference objects should have the following properties:
  *
  * <ul>
  *   <li>model - the model name
  *   <li>name - the adapter name
  *   <li>url - the adapter url
+ *   <li>options (optional) - an object containing additional string options
  * </ul>
  *
  * <p>To call this workflow function, it requires two arguments. The first is the adapter config
@@ -69,8 +70,18 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 String adapterName = entry.getKey();
                 String src = (String) config.get("src");
 
+                Map<String, String> options = new ConcurrentHashMap<>();
+                if (config.containsKey("options") && config.get("options") instanceof Map) {
+                    for (Map.Entry<String, Object> option :
+                            ((Map<String, Object>) config.get("options")).entrySet()) {
+                        if (option.getValue() instanceof String) {
+                            options.put(option.getKey(), (String) option.getValue());
+                        }
+                    }
+                }
+
                 WorkerPool<?, ?> wp = wlm.getWorkerPoolById(modelName);
-                Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src);
+                Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, options);
                 adapters.put(adapterName, new AdapterReference(modelName, adapter));
             }
         }
