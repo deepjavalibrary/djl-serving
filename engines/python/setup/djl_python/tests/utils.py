@@ -14,6 +14,8 @@
 import sys
 from types import FunctionType
 
+WILDCARD_CLASS_MOCKS = ["optimum.exporters.neuron.model_configs"]
+
 
 def parameters(params_list, naming=None):
     """
@@ -76,4 +78,9 @@ def mock_import_modules(modules):
             def __getattr__(cls, name):
                 return MagicMock()
 
-        sys.modules.update((mock_module, Mock()) for mock_module in modules)
+        for mock_module in modules:
+            mock = Mock()
+            mock.__name__ = mock_module
+            if mock.__name__ in WILDCARD_CLASS_MOCKS:
+                mock.__all__ = "none"
+            sys.modules[mock_module] = mock

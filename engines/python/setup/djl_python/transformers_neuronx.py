@@ -26,7 +26,8 @@ from djl_python.neuron_utils.utils import task_from_config
 
 model = None
 
-OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama"}
+OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama", "mistral"}
+OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS = {"llama", "mistral"}
 
 
 class TransformersNeuronXService(object):
@@ -49,11 +50,18 @@ class TransformersNeuronXService(object):
                 for arch in self.model_config.architectures):
             # Limit optimum model loading to implemented models listed in the constant above
             use_tnx = self.model_config.model_type not in OPTIMUM_CAUSALLM_MODEL_TYPES
+            # Optimum only compiles for rolling batch for models that support it
+            use_tnx = use_tnx or (
+                self.model_config.model_type
+                in OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS
+                and self.config.rolling_batch == "disable")
         # Limit optimum model loading from using non hf schema models or using non-implemented neuron configs
-        use_tnx = use_tnx or self.config.load_split_model or self.config.load_in_8bit or (
-            self.config.rolling_batch != "disable")
+        use_tnx = use_tnx or self.config.load_split_model or self.config.load_in_8bit
         if use_tnx:
+            logging.info("Loading model using TNXModelLoader")
             self._model_loader_class = TNXModelLoader
+        else:
+            logging.info("Loading model using OptimumModelLoader")
 
     def set_configs(self, properties):
         self.config = TransformerNeuronXProperties(**properties)

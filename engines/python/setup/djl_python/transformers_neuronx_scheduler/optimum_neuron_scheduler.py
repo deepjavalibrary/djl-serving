@@ -106,7 +106,6 @@ class Slot:
         self._generation_config.do_sample = param.get("do_sample", False)
         self._generation_config.repetition_penalty = param.get(
             "repetition_penalty", 1.0)
-        # TODO: seed, watermark
         self._generation_config.max_new_tokens = param.get(
             "max_new_tokens", 30)
         # TODO: stop_sequences, ignore_eos_token

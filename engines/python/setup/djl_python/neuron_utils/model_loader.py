@@ -182,12 +182,13 @@ class TNXModelLoader(ModelLoader):
             "neuron": {
                 "auto_cast_type": self.config.amp,
                 "batch_size": self.config.batch_size,
+                "checkpoint_id": None,
+                "checkpoint_revision": None,
                 "compiler_type": "neuronx-cc",
                 "compiler_version": self.get_neuronxcc_version(),
                 "num_cores": self.config.tensor_parallel_degree,
                 "sequence_length": self.config.n_positions,
-                "task": "text-generation"
-            }
+            },
         }
         self.model_config.update(neuron_config)
 
@@ -315,7 +316,7 @@ class TNXModelLoader(ModelLoader):
             tokenizer.save_pretrained(save_path)
 
         self.model = NeuronXModelAdapter(self.model, self.model_config,
-                                         self.load_path)
+                                         save_path)
         return self.model
 
 
@@ -333,22 +334,19 @@ class OptimumModelLoader(ModelLoader):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.model = None
+        self.load_path = None
         self.compile_model = True
         self.compiler_args = kwargs.get("compiler_args", dict())
         if "neuron" in self.model_config.to_dict():
             self._validate_neuron_config()
             self.compile_model = False
         class_name = self.TASK_TO_MODEL_LOADER[self.config.task]
-        if class_name == "NeuronModelForCausalLM":
-            """Apply model adapter to expose the neuron model sample method"""
-            self._optimum_class = NeuronXModelAdapter
-        else:
-            module = importlib.import_module(f"optimum.neuron")
-            self._optimum_class = getattr(module, class_name, None)
-            if self._optimum_class is None:
-                raise ImportError(
-                    f"{class_name} not found in optimum.neuron. Please check optimum neuron version."
-                )
+        module = importlib.import_module(f"optimum.neuron")
+        self._optimum_class = getattr(module, class_name, None)
+        if self._optimum_class is None:
+            raise ImportError(
+                f"{class_name} not found in optimum.neuron. Please check optimum neuron version."
+            )
 
     def get_compiler_args(self) -> dict:
         """
@@ -361,6 +359,7 @@ class OptimumModelLoader(ModelLoader):
             self.compiler_args[
                 "num_cores"] = self.config.tensor_parallel_degree
             self.compiler_args["auto_cast_type"] = self.config.amp
+            self.compiler_args["task"] = self.config.task
         return self.compiler_args
 
     def get_model_args(self) -> dict:
@@ -375,8 +374,12 @@ class OptimumModelLoader(ModelLoader):
             input_shapes["sequence_length"] = self.config.n_positions
         return input_shapes
 
+    def set_generation_config(self):
+        if hasattr(self.model.generation_config, "max_length"):
+            self.model.generation_config.max_length = self.config.n_positions
+
     def load_optimum_model(self, compiler_args: dict,
-                           input_shapes: dict) -> "NeuronDecoderModel":
+                           input_shapes: dict) -> NeuronXModelAdapter:
         """
         Helper function to load the model
 
@@ -400,6 +403,14 @@ class OptimumModelLoader(ModelLoader):
         input_shapes = self.get_model_args()
         self.model = self.load_optimum_model(compiler_args=compiler_args,
                                              input_shapes=input_shapes)
+        if self.compile_model:
+            self.model_config = self.model.config
+        self.set_generation_config()
+        self.model = NeuronXModelAdapter(
+            self.model.model,
+            self.model_config,
+            self.get_load_path(),
+            generation_config=self.model.generation_config)
         return self.model
 
     def partition(self, save_path: str, **kwargs):
@@ -413,10 +424,20 @@ class OptimumModelLoader(ModelLoader):
         tokenizer = kwargs.get("tokenizer")
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
-        self.model = self.load_model()
+        compiler_args = self.get_compiler_args()
+        input_shapes = self.get_model_args()
+        self.model = self.load_optimum_model(compiler_args=compiler_args,
+                                             input_shapes=input_shapes)
+        if self.compile_model:
+            self.model_config = self.model.config
         self.model.save_pretrained(save_path)
         if tokenizer:
             tokenizer.save_pretrained(save_path)
+        self.model = NeuronXModelAdapter(
+            self.model.model,
+            self.model_config,
+            self.get_load_path(),
+            generation_config=self.model.generation_config)
         return self.model
 
     def _validate_neuron_config(self) -> None:

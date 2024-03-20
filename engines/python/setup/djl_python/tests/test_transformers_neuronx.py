@@ -20,7 +20,11 @@ MOCK_MODULES = [
     "torch_neuronx", "neuronxcc", "transformers_neuronx",
     "transformers_neuronx.config", "transformers_neuronx.module",
     "transformers_neuronx.gpt2", "transformers_neuronx.gpt2.model", "optimum",
-    "optimum.neuron", "diffusers", "diffusers.models",
+    "optimum.neuron", "optimum.neuron.utils", "optimum.neuron.generation",
+    "optimum.neuron.utils.version_utils", "optimum.exporters",
+    "optimum.exporters.neuron", "optimum.exporters.neuron.model_configs",
+    "djl_python.transformers_neuronx_scheduler.optimum_modeling",
+    "optimum.exporters.tasks", "diffusers", "diffusers.models",
     "diffusers.models.unet_2d_condition",
     "diffusers.models.attention_processor"
 ]
@@ -178,7 +182,8 @@ class TestTransformerNeuronXService(unittest.TestCase):
     @parameters([{
         "rolling_batch": "auto",
         "task": "text-generation",
-        "max_rolling_batch_size": 4
+        "max_rolling_batch_size": 4,
+        "load_split_model": True
     }])
     def test_initialize(self, params):
         # Setup
