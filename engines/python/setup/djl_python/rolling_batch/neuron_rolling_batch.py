@@ -39,6 +39,9 @@ class NeuronRollingBatch(RollingBatch):
         self.scheduler.clear()
         super().reset()
 
+    def get_tokenizer(self):
+        return self.scheduler.tokenizer
+
     @stop_on_any_exception
     def inference(self,
                   input_data: list[str],

@@ -38,6 +38,9 @@ class TRTLLMRollingBatch(RollingBatch):
             model_id_or_path, **kwargs)
         self.request_cache = {}
 
+    def get_tokenizer(self):
+        return self.model.tokenizer
+
     def reset(self) -> None:
         """
         Stops all current requests and resets state of rolling batch portion of handler
