@@ -1,0 +1,265 @@
+name: LMI No-Code tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        default: ''
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new G5.12xl instance
+        id: create_gpu_g512_1
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+      - name: Create new G5.12xl instance
+        id: create_gpu_g512_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+      - name: Create new P4d instance
+        id: create_gpu_p4d
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_lmic_p4d $token djl-serving
+    outputs:
+      g512_instance_id_1: ${{ steps.create_gpu_g512_1.outputs.action_g5_instance_id }}
+      g512_instance_id_2: ${{ steps.create_gpu_g512_2.outputs.action_g5_instance_id }}
+      p4d_instance_id: ${{ steps.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
+
+  p4d-no-code-tests:
+    runs-on: [self-hosted, p4d]
+    timeout-minutes: 120
+    needs: create-runners
+    strategy:
+      # Limit to 1 so we don't steal a p4d from another test that may be running
+      max-parallel: 1
+      matrix:
+        container: [deepspeed]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy
+      - name: Install s5cmd
+        working-directory: serving/docker
+        run: sudo scripts/install_s5cmd.sh x64
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.container }} ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: serving/docker
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Llama70b lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-70b-hf/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code llama-70b
+          docker rm -f $(docker ps -aq)
+      - name: CodeLlama lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=codellama/CodeLlama-34b-hf" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code codellama
+          docker rm -f $(docker ps -aq)
+      - name: Mixtral-8x7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/mixtral-8x7b/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code mixtral-8x7b
+          docker rm -f $(docker ps -aq)
+      - name: Falcon-40b lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/falcon-40b/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code falcon-40b 
+          docker rm -f $(docker ps -aq) 
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: no-code-p4d-${{ matrix.container }}-logs
+          path: tests/integration/logs/
+
+  g512-no-code-tests:
+    runs-on: [self-hosted, g5]
+    timeout-minutes: 120
+    needs: create-runners
+    strategy:
+      matrix:
+        container: [deepspeed]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy
+      - name: Install s5cmd
+        working-directory: serving/docker
+        run: sudo scripts/install_s5cmd.sh x64
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.container }} ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: serving/docker
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Llama7b lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-7b-hf/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code llama-7b
+          docker rm -f $(docker ps -aq)
+      - name: Llama13b lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-13b-hf/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code llama-13b
+          docker rm -f $(docker ps -aq)
+      - name: Gemma-7b lmi container
+        if: ${{ matrix.container }} == "deepspeed"
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/gemma-7b/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code gemma-7b
+          docker rm -f $(docker ps -aq)
+      - name: Mistral-7b lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/mistral-7b/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code mistral-7b
+          docker rm -f $(docker ps -aq)
+      - name: GPTNeox lmi container
+        if: ${{ matrix.container }} == "deepspeed"
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/gpt-neox-20b/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code gpt-neox
+          docker rm -f $(docker ps -aq)
+      - name: Phi2 lmi container
+        if: ${{ matrix.container }} == "deepspeed"
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=microsoft/phi-2" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code phi-2
+          docker rm -f $(docker ps -aq)
+      - name: Baichun lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/baichuan2-13b/\nHF_TRUST_REMOTE_CODE=true" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code baichuan-13b
+          docker rm -f $(docker ps -aq)
+      - name: Qwen-1.5 lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=Qwen/Qwen1.5-14B" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code qwen-1.5-14b
+          docker rm -f $(docker ps -aq)
+      - name: Starcoder lmi container
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/bigcode-starcoder/" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py no_code starcoder
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: no-code-g512-${{ matrix.container }}-logs
+          path: tests/integration/logs/
+          
+
+  stop-runners:
+    if: always()
+    runs-on: [self-hosted, scheduler]
+    needs: [create-runners, g512-no-code-tests, p4d-no-code-tests]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.g512_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.g512_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.p4d_instance_id }}
+          ./stop_instance.sh $instance_id
