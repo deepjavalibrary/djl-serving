@@ -134,6 +134,7 @@ class HuggingFaceService(object):
         self.model_config = None
         self.peft_config = None
         self.stopping_criteria_list = None
+        self.adapter_registry = {}
         self.adapters = None
         self.hf_configs = None
 
@@ -209,6 +210,7 @@ class HuggingFaceService(object):
         input_size = []
         parameters = []
         adapters = []
+        found_adapters = False
         errors = {}
         batch = inputs.get_batches()
         for i, item in enumerate(batch):
@@ -242,9 +244,12 @@ class HuggingFaceService(object):
             if not isinstance(adapters_per_item, list):
                 adapters_per_item = [adapters_per_item]
 
-            if not adapters_per_item:
+            if adapters_per_item:
+                found_adapters = True
+            else:
                 ## inference with just base model.
                 adapters_per_item = [""] * len(_inputs)
+
             adapters.extend(adapters_per_item)
             if len(_inputs) != len(adapters_per_item):
                 logging.warning(
@@ -252,7 +257,8 @@ class HuggingFaceService(object):
                 errors[
                     i] = "Number of adapters is not equal to the number of inputs"
 
-        self.adapters = adapters
+        self.adapters = adapters if found_adapters else None
+
         return input_data, input_size, parameters, errors, batch
 
     def inference(self, inputs):
@@ -275,7 +281,14 @@ class HuggingFaceService(object):
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             if inputs.get_property("reset_rollingbatch"):
                 self.rolling_batch.reset()
-            result = self.rolling_batch.inference(input_data, parameters)
+            adapter_data = None
+            if self.adapters is not None:
+                adapter_data = [
+                    self.adapter_registry.get(a) for a in self.adapters
+                ]
+            result = self.rolling_batch.inference(input_data,
+                                                  parameters,
+                                                  adapters=adapter_data)
             idx = 0
             for i in range(len(batch)):
                 err = errors.get(i)
@@ -318,6 +331,9 @@ class HuggingFaceService(object):
             )
 
         if isinstance(self.model, PeftModelForCausalLM):
+            if self.adapters is None:
+                # Inference with only base model
+                self.adapters = [""] * len(input_data)
             parameters[0]["adapters"] = self.adapters
 
         prediction = self.hf_pipeline(input_data, **parameters[0])
@@ -566,17 +582,21 @@ def register_adapter(inputs: Input):
             f"Only local LoRA models are supported. {adapter_path} is not a valid path"
         )
     logging.info(f"Registering adapter {adapter_name} from {adapter_path}")
-    if isinstance(_service.model, PeftModel):
-        _service.model.load_adapter(adapter_path, adapter_name)
-    else:
-        _service.model = PeftModel.from_pretrained(_service.model,
-                                                   adapter_path, adapter_name)
+    _service.adapter_registry[adapter_name] = inputs
+    if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
+        if isinstance(_service.model, PeftModel):
+            _service.model.load_adapter(adapter_path, adapter_name)
+        else:
+            _service.model = PeftModel.from_pretrained(_service.model,
+                                                       adapter_path,
+                                                       adapter_name)
 
-    if isinstance(_service.hf_pipeline, Pipeline):
-        _service.hf_pipeline.model = _service.model
+        if isinstance(_service.hf_pipeline, Pipeline):
+            _service.hf_pipeline.model = _service.model
 
-    if isinstance(_service.hf_pipeline_unwrapped, Pipeline):
-        _service.hf_pipeline_unwrapped.model = _service.model
+        if isinstance(_service.hf_pipeline_unwrapped, Pipeline):
+            _service.hf_pipeline_unwrapped.model = _service.model
+    return Output()
 
 
 def unregister_adapter(inputs: Input):
@@ -585,7 +605,10 @@ def unregister_adapter(inputs: Input):
     """
     adapter_name = inputs.get_property("name")
     logging.info(f"Unregistering adapter {adapter_name}")
-    _service.model.base_model.delete_adapter(adapter_name)
+    del _service.adapter_registry[adapter_name]
+    if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
+        _service.model.base_model.delete_adapter(adapter_name)
+    return Output()
 
 
 def handle(inputs: Input):

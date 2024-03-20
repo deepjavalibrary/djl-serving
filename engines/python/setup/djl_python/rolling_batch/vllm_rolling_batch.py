@@ -11,10 +11,11 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
+from vllm.lora.request import LoRARequest
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
@@ -63,10 +64,16 @@ class VLLMRollingBatch(RollingBatch):
             trust_remote_code=self.vllm_configs.trust_remote_code,
             load_format=self.vllm_configs.load_format,
             quantization=self.vllm_configs.quantize,
+            enable_lora=self.vllm_configs.enable_lora,
+            max_loras=self.vllm_configs.max_loras,
+            max_lora_rank=self.vllm_configs.max_lora_rank,
+            lora_extra_vocab_size=self.vllm_configs.lora_extra_vocab_size,
+            max_cpu_loras=self.vllm_configs.max_cpu_loras,
             revision=self.vllm_configs.revision,
             **engine_kwargs)
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
+        self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
 
     def reset(self) -> None:
         """
@@ -101,26 +108,44 @@ class VLLMRollingBatch(RollingBatch):
             parameters["use_beam_search"] = True
         return parameters
 
+    def vllm_request_params(self, request):
+        result = dict()
+        adapter = request.adapter
+        if adapter is not None:
+            adapter_name = adapter.get_property("name")
+            adapter_path = adapter.get_property("src")
+            adapter_id = self.lora_ids[adapter_name]
+            result["lora_request"] = LoRARequest(adapter_name, adapter_id,
+                                                 adapter_path)
+        return result
+
     @stop_on_any_exception
-    def inference(self, input_data: list[str], parameters: list[dict]) -> list:
+    def inference(self,
+                  input_data: list[str],
+                  parameters: list[dict],
+                  adapters=None) -> list:
         """
         Adds new requests and gets output tokens from the backend.
 
         :param input_data: List of input prompts.
         :param parameters: List of settings pertaining to each request.
+        :param adapters: List of adapters inputs for each request in a batch
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
         batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(input_data,
+                                             parameters,
+                                             batch_size,
+                                             adapters=adapters)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()
             params = self.translate_vllm_params(request.parameters)
             sampling_params = SamplingParams(**params)
+            request_params = self.vllm_request_params(request)
             self.engine.add_request(request_id, request.input_text,
-                                    sampling_params)
+                                    sampling_params, **request_params)
             self.request_cache[request_id] = {
                 "curr_length": 0,
                 "text": "",

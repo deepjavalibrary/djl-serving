@@ -53,7 +53,7 @@ class FakeRollingBatch(RollingBatch):
         super().reset()
 
     @stop_on_any_exception
-    def inference(self, input_data, parameters):
+    def inference(self, input_data, parameters, adapters=None):
         batch_size = len(input_data)
         new_requests = self.get_new_requests(input_data, parameters,
                                              batch_size)
