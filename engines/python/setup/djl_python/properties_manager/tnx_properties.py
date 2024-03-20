@@ -45,6 +45,11 @@ class TnXGQAMethods(str, Enum):
     all_gather_heads = 'all-gather-heads'
 
 
+class TnXModelLoaders(str, Enum):
+    tnx = "tnx"
+    optimum = "optimum"
+
+
 TNX_SUPPORTED_ROLLING_BATCH_TYPES = ['auto']
 
 
@@ -65,6 +70,7 @@ class TransformerNeuronXProperties(Properties):
     task: Optional[str] = None
     save_mp_checkpoint_path: Optional[str] = None
     group_query_attention: Optional[str] = None
+    model_loader: Optional[TnXModelLoaders] = None
 
     @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
