@@ -1,5 +1,6 @@
 configure([
         project(':engines:python'),
+        project(':prometheus'),
         project(':serving'),
         project(':wlm')]) {
     apply plugin: "maven-publish"
