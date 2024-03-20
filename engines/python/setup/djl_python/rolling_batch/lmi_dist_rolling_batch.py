@@ -41,9 +41,7 @@ class LmiDistRollingBatch(RollingBatch):
 
         self.lmi_dist_configs = LmiDistRbProperties(**properties)
 
-        super().__init__(
-            waiting_steps=self.lmi_dist_configs.waiting_steps,
-            output_formatter=self.lmi_dist_configs.output_formatter)
+        super().__init__(waiting_steps=self.lmi_dist_configs.waiting_steps)
         self.batch_cls = None
         self._init_model(self.lmi_dist_configs.model_id_or_path,
                          self.lmi_dist_configs.draft_model_id)
@@ -201,13 +199,10 @@ class LmiDistRollingBatch(RollingBatch):
                 token = Token(token_id, generation.token_text_no_special,
                               log_prob, generation.token_is_special)
                 request.set_next_token(token,
-                                       self.output_formatter,
                                        last_token=is_last_token,
                                        finish_reason=finish_reason)
             else:
-                request.set_next_token("",
-                                       self.output_formatter,
-                                       last_token=False)
+                request.set_next_token("", last_token=False)
 
         # filter the requests that are stopped.
         if self.cache and batch.batch_id in self.cache:

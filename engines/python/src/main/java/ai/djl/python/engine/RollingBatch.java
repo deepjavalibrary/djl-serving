@@ -65,7 +65,6 @@ class RollingBatch implements Runnable {
     private PyProcess process;
     private int maxRollingBatchSize;
     private int timeout;
-    private String contentType;
     private boolean stop;
     private List<Request> list;
     private Thread currentThread;
@@ -81,12 +80,6 @@ class RollingBatch implements Runnable {
         this.timeout = timeout;
         this.dimension = new Dimension("Model", model.getProperty("metric_dimension", "model"));
         maxRollingBatchSize = model.intProperty("max_rolling_batch_size", 32);
-        String outputFormatter = model.getProperty("output_formatter");
-        if (outputFormatter == null || "json".equals(outputFormatter)) {
-            contentType = "application/json";
-        } else if ("jsonlines".equals(outputFormatter)) {
-            contentType = "application/jsonlines";
-        }
         // TODO: find a way to support custom output_formatter
         list = new ArrayList<>(3);
         lock = new ReentrantLock(true);
@@ -168,6 +161,7 @@ class RollingBatch implements Runnable {
                 PairList<String, BytesSupplier> content = output.getContent();
                 // TODO: optimize for conditional killing
                 int code = output.getCode();
+                Map<String, String> prop = output.getProperties();
                 if (code != 200 || content.size() != size) {
                     if (code != 200) {
                         logger.warn("Batch inference failed: {}", output.getMessage());
@@ -192,7 +186,8 @@ class RollingBatch implements Runnable {
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
                     byte[] resp = content.get(i).getValue().getAsBytes();
-                    status.addResponse(resp);
+                    String contentType = prop.get("batch" + i + "-content-type");
+                    status.addResponse(resp, contentType);
                 }
                 if (list.removeIf(status -> status.last) || list.size() < maxRollingBatchSize) {
                     canAdd.signal();
@@ -220,7 +215,7 @@ class RollingBatch implements Runnable {
                 }
             }
             String seed = String.valueOf(RandomUtils.nextInt());
-            Request req = new Request(input, seed, contentType, metrics, dimension);
+            Request req = new Request(input, seed, metrics, dimension);
             list.add(req);
             canRead.signal();
             return req.output;
@@ -250,18 +245,10 @@ class RollingBatch implements Runnable {
         int count;
         long creationTime;
 
-        Request(
-                Input input,
-                String seed,
-                String contentType,
-                Metrics metrics,
-                Dimension dimension) {
+        Request(Input input, String seed, Metrics metrics, Dimension dimension) {
             this.input = input;
             data = new ChunkedBytesSupplier();
             output = new Output();
-            if (contentType != null) {
-                output.addProperty("Content-Type", contentType);
-            }
             output.add(data);
             this.seed = seed;
             this.metrics = metrics;
@@ -297,7 +284,10 @@ class RollingBatch implements Runnable {
             return seed;
         }
 
-        void addResponse(byte[] json) {
+        void addResponse(byte[] json, String contentType) {
+            if (contentType != null) {
+                output.addProperty("Content-Type", contentType);
+            }
             ++count;
             if (json[0] == '{') {
                 // TODO: backward compatible for 0.23.0 release in case user

@@ -82,6 +82,16 @@ class TRTLLMService(object):
                 # set server provided seed if seed is not part of request
                 if item.contains_key("seed"):
                     _param["seed"] = item.get_as_string(key="seed")
+
+                if not "output_formatter" in _param:
+                    _param["output_formatter"] = self.trt_configs.get(
+                        "output_formatter")
+
+                if _param["output_formatter"] == "json":
+                    _param["content_type"] = "application/json"
+                elif _param["output_formatter"] == "jsonlines":
+                    _param["content_type"] = "application/jsonlines"
+
             for _ in range(input_size[i]):
                 parameters.append(_param)
 
@@ -126,9 +136,8 @@ class TRTLLMService(object):
                             batch_index=i)
                 idx += 1
 
-        content_type = self.rolling_batch.get_content_type()
-        if content_type:
-            outputs.add_property("content-type", content_type)
+            outputs.add_property(f"batch{i}-content-type",
+                                 parameters[i].get("content_type"))
         return outputs
 
 

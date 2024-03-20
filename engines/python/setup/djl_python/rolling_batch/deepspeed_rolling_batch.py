@@ -138,13 +138,10 @@ class DeepSpeedRollingBatch(RollingBatch):
                     generation.token_logprob.item(),
                     generation.token_is_special)
                 request.set_next_token(token,
-                                       self.output_formatter,
                                        last_token=is_last_token,
                                        finish_reason=finish_reason)
             else:
-                request.set_next_token("",
-                                       self.output_formatter,
-                                       last_token=False)
+                request.set_next_token("", last_token=False)
 
     def preprocess_requests(self, requests, **kwargs):
         preprocessed_requests = []

@@ -130,6 +130,16 @@ class TransformersNeuronXService(object):
                         raise ValueError(
                             "In order to enable dynamic batching, all input batches must have the same parameters"
                         )
+
+                if not "output_formatter" in param:
+                    param["output_formatter"] = self.properties.get(
+                        "output_formatter")
+
+                if param["output_formatter"] == "json":
+                    param["content_type"] = "application/json"
+                elif param["output_formatter"] == "jsonlines":
+                    param["content_type"] = "application/jsonlines"
+
                 if isinstance(_inputs, list):
                     input_data.extend(_inputs)
                     input_size.append(len(_inputs))
@@ -162,9 +172,8 @@ class TransformersNeuronXService(object):
                     outputs.add(result[idx], key="data", batch_index=i)
                     idx += 1
 
-            content_type = self.rolling_batch.get_content_type()
-            if content_type:
-                outputs.add_property("content-type", content_type)
+                outputs.add_property(f"batch{i}-content-type",
+                                     parameters[i].get("content_type"))
             return outputs
 
         parameters = parameters[0]
