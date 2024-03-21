@@ -87,11 +87,6 @@ class TRTLLMService(object):
                     _param["output_formatter"] = self.trt_configs.get(
                         "output_formatter")
 
-                if _param["output_formatter"] == "json":
-                    _param["content_type"] = "application/json"
-                elif _param["output_formatter"] == "jsonlines":
-                    _param["content_type"] = "application/jsonlines"
-
             for _ in range(input_size[i]):
                 parameters.append(_param)
 
@@ -136,8 +131,14 @@ class TRTLLMService(object):
                             batch_index=i)
                 idx += 1
 
-            outputs.add_property(f"batch{i}-content-type",
-                                 parameters[i].get("content_type"))
+            formatter = parameters[i].get("output_formatter")
+            if formatter == "json":
+                outputs.add_property(f"batch_{i}_Content-Type",
+                                     "application/json")
+            elif formatter == "jsonlines":
+                outputs.add_property(f"batch_{i}_Content-Type",
+                                     "application/jsonlines")
+
         return outputs
 
 

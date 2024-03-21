@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -182,12 +183,28 @@ class RollingBatch implements Runnable {
                     canAdd.signal();
                     continue;
                 }
+                Iterator<Map.Entry<String, String>> it = prop.entrySet().iterator();
+                Map<Integer, Map<String, String>> map = new ConcurrentHashMap<>();
+                while (it.hasNext()) {
+                    Map.Entry<String, String> entry = it.next();
+                    String key = entry.getKey();
+                    if (key.startsWith("batch_")) {
+                        it.remove();
+                        int pos = key.indexOf('_', 7);
+                        if (pos > 0) {
+                            int index = Integer.parseInt(key.substring(6, pos - 6));
+                            Map<String, String> p =
+                                    map.computeIfAbsent(index, i -> new ConcurrentHashMap<>());
+                            p.put(key.substring(pos + 1), entry.getValue());
+                        }
+                    }
+                }
 
                 for (int i = 0; i < size; ++i) {
                     Request status = list.get(i);
                     byte[] resp = content.get(i).getValue().getAsBytes();
-                    String contentType = prop.get("batch" + i + "-content-type");
-                    status.addResponse(resp, contentType);
+                    Map<String, String> properties = map.get(i);
+                    status.addResponse(resp, properties);
                 }
                 if (list.removeIf(status -> status.last) || list.size() < maxRollingBatchSize) {
                     canAdd.signal();
@@ -284,9 +301,9 @@ class RollingBatch implements Runnable {
             return seed;
         }
 
-        void addResponse(byte[] json, String contentType) {
-            if (contentType != null) {
-                output.addProperty("Content-Type", contentType);
+        void addResponse(byte[] json, Map<String, String> properties) {
+            if (properties != null) {
+                output.getProperties().putAll(properties);
             }
             ++count;
             if (json[0] == '{') {

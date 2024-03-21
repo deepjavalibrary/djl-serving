@@ -135,11 +135,6 @@ class TransformersNeuronXService(object):
                     param["output_formatter"] = self.properties.get(
                         "output_formatter")
 
-                if param["output_formatter"] == "json":
-                    param["content_type"] = "application/json"
-                elif param["output_formatter"] == "jsonlines":
-                    param["content_type"] = "application/jsonlines"
-
                 if isinstance(_inputs, list):
                     input_data.extend(_inputs)
                     input_size.append(len(_inputs))
@@ -172,8 +167,14 @@ class TransformersNeuronXService(object):
                     outputs.add(result[idx], key="data", batch_index=i)
                     idx += 1
 
-                outputs.add_property(f"batch{i}-content-type",
-                                     parameters[i].get("content_type"))
+                formatter = parameters[i].get("output_formatter")
+                if formatter == "json":
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         "application/json")
+                elif formatter == "jsonlines":
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         "application/jsonlines")
+
             return outputs
 
         parameters = parameters[0]

@@ -396,11 +396,6 @@ class DeepSpeedService(object):
                     _param["output_formatter"] = self.properties.get(
                         "output_formatter")
 
-                if _param["output_formatter"] == "json":
-                    _param["content_type"] = "application/json"
-                elif _param["output_formatter"] == "jsonlines":
-                    _param["content_type"] = "application/jsonlines"
-
                 if not isinstance(_inputs, list):
                     _inputs = [_inputs]
                 input_data.extend(_inputs)
@@ -450,8 +445,14 @@ class DeepSpeedService(object):
                                 batch_index=i)
                     idx += 1
 
-                outputs.add_property(f"batch{i}-content-type",
-                                     parameters[i].get("content_type"))
+                formatter = parameters[i].get("output_formatter")
+                if formatter == "json":
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         "application/json")
+                elif formatter == "jsonlines":
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         "application/jsonlines")
+
             return outputs
         if is_streaming_enabled(self.properties.enable_streaming):
             if len(batch) > 1:
