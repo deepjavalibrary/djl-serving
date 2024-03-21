@@ -111,6 +111,8 @@ class LmiDistRollingBatch(RollingBatch):
         if "num_beams" in parameters.keys():
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
+        if "output_formatter" in parameters.keys():
+            parameters.pop("output_formatter")
         return parameters
 
     @stop_on_any_exception

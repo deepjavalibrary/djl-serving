@@ -108,6 +108,8 @@ class VLLMRollingBatch(RollingBatch):
         if "num_beams" in parameters.keys():
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
+        if "output_formatter" in parameters.keys():
+            parameters.pop("output_formatter")
         return parameters
 
     def vllm_request_params(self, request):
