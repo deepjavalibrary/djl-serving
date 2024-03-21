@@ -20,8 +20,6 @@
 # }
 
 import logging
-import os
-import json
 import torch
 from transformers import (AutoConfig, PretrainedConfig, AutoTokenizer,
                           AutoModelForCausalLM, AutoModelForSeq2SeqLM,
@@ -37,6 +35,7 @@ from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
 from typing import Optional
 from peft import PeftConfig, PeftModel
+from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.properties import StreamingEnum, is_streaming_enabled, is_rolling_batch_enabled
@@ -94,11 +93,6 @@ TASK_TO_MODEL = {
     "text2text-generation": AutoModelForSeq2SeqLM
 }
 
-OUTPUT_FORMATTER_TO_CONTENT_TYPE = {
-    "json": "application/json",
-    "jsonlines": "application/jsonlines",
-}
-
 
 class DeepSpeedService(object):
 
@@ -134,8 +128,6 @@ class DeepSpeedService(object):
                 "max_seq_len": int(properties.get("max_tokens", 1024)),
                 "tokenizer": self.tokenizer
             }
-            if "output_formatter" in properties:
-                kwargs["output_formatter"] = properties.get("output_formatter")
             self.rolling_batch = DeepSpeedRollingBatch(self.model, properties,
                                                        **kwargs)
         else:
@@ -398,8 +390,8 @@ class DeepSpeedService(object):
                         _param["seed"] = item.get_as_string(key="seed")
 
                 if not "output_formatter" in _param:
-                    _param["output_formatter"] = self.properties.get(
-                        "output_formatter")
+                    _param[
+                        "output_formatter"] = self.properties.output_formatter
 
                 if not isinstance(_inputs, list):
                     _inputs = [_inputs]
@@ -451,10 +443,11 @@ class DeepSpeedService(object):
                     idx += 1
 
                 formatter = parameters[i].get("output_formatter")
-                if formatter in OUTPUT_FORMATTER_TO_CONTENT_TYPE:
-                    outputs.add_property(
-                        f"batch_{i}_Content-Type",
-                        OUTPUT_FORMATTER_TO_CONTENT_TYPE[formatter])
+                content_type = get_content_type_from_output_formatter(
+                    formatter)
+                if content_type is not None:
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         content_type)
 
             return outputs
         if is_streaming_enabled(self.properties.enable_streaming):

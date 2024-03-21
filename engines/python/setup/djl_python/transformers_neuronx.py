@@ -16,6 +16,7 @@ import logging
 from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
 from djl_python import Input, Output
 from djl_python.encode_decode import decode, encode
+from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
@@ -27,11 +28,6 @@ from djl_python.neuron_utils.utils import task_from_config
 model = None
 
 OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama"}
-
-OUTPUT_FORMATTER_TO_CONTENT_TYPE = {
-    "json": "application/json",
-    "jsonlines": "application/jsonlines",
-}
 
 
 class TransformersNeuronXService(object):
@@ -65,9 +61,6 @@ class TransformersNeuronXService(object):
         if self.config.rolling_batch != "disable":
             """batch_size needs to match max_rolling_batch_size for precompiled neuron models running rolling batch"""
             self.config.batch_size = self.config.max_rolling_batch_size
-            if "output_formatter" in properties:
-                self.rolling_batch_config["output_formatter"] = properties.get(
-                    "output_formatter")
 
         self.model_config = AutoConfig.from_pretrained(
             self.config.model_id_or_path, revision=self.config.revision)
@@ -137,8 +130,8 @@ class TransformersNeuronXService(object):
                         )
 
                 if not "output_formatter" in param:
-                    param["output_formatter"] = self.properties.get(
-                        "output_formatter")
+                    param[
+                        "output_formatter"] = self.properties.output_formatter
 
                 if isinstance(_inputs, list):
                     input_data.extend(_inputs)
@@ -173,10 +166,11 @@ class TransformersNeuronXService(object):
                     idx += 1
 
                 formatter = parameters[i].get("output_formatter")
-                if formatter in OUTPUT_FORMATTER_TO_CONTENT_TYPE:
-                    outputs.add_property(
-                        f"batch_{i}_Content-Type",
-                        OUTPUT_FORMATTER_TO_CONTENT_TYPE[formatter])
+                content_type = get_content_type_from_output_formatter(
+                    formatter)
+                if content_type is not None:
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         content_type)
 
             return outputs
 

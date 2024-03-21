@@ -27,6 +27,7 @@ from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
+from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
@@ -69,11 +70,6 @@ PEFT_MODEL_TASK_TO_CLS = {
     "CAUSAL_LM": AutoModelForCausalLM,
     "TOKEN_CLS": AutoModelForTokenClassification,
     "QUESTION_ANS": AutoModelForQuestionAnswering,
-}
-
-OUTPUT_FORMATTER_TO_CONTENT_TYPE = {
-    "json": "application/json",
-    "jsonlines": "application/jsonlines",
 }
 
 
@@ -242,8 +238,7 @@ class HuggingFaceService(object):
                 if item.contains_key("seed"):
                     _param["seed"] = item.get_as_string(key="seed")
             if not "output_formatter" in _param:
-                _param["output_formatter"] = self.hf_configs.kwargs.get(
-                    "output_formatter")
+                _param["output_formatter"] = self.hf_configs.output_formatter
 
             for _ in range(input_size[i]):
                 parameters.append(_param)
@@ -313,10 +308,11 @@ class HuggingFaceService(object):
                     idx += 1
 
                 formatter = parameters[i].get("output_formatter")
-                if formatter in OUTPUT_FORMATTER_TO_CONTENT_TYPE:
-                    outputs.add_property(
-                        f"batch_{i}_Content-Type",
-                        OUTPUT_FORMATTER_TO_CONTENT_TYPE[formatter])
+                content_type = get_content_type_from_output_formatter(
+                    formatter)
+                if content_type is not None:
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         content_type)
 
             return outputs
         elif is_streaming_enabled(self.hf_configs.enable_streaming):

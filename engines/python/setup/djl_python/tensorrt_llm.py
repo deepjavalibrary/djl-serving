@@ -16,13 +16,9 @@ import logging
 from djl_python.encode_decode import decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
+from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
-
-OUTPUT_FORMATTER_TO_CONTENT_TYPE = {
-    "json": "application/json",
-    "jsonlines": "application/jsonlines",
-}
 
 
 class TRTLLMService(object):
@@ -89,8 +85,8 @@ class TRTLLMService(object):
                     _param["seed"] = item.get_as_string(key="seed")
 
                 if not "output_formatter" in _param:
-                    _param["output_formatter"] = self.trt_configs.get(
-                        "output_formatter")
+                    _param[
+                        "output_formatter"] = self.trt_configs.output_formatter
 
             for _ in range(input_size[i]):
                 parameters.append(_param)
@@ -137,10 +133,9 @@ class TRTLLMService(object):
                 idx += 1
 
             formatter = parameters[i].get("output_formatter")
-            if formatter in OUTPUT_FORMATTER_TO_CONTENT_TYPE:
-                outputs.add_property(
-                    f"batch_{i}_Content-Type",
-                    OUTPUT_FORMATTER_TO_CONTENT_TYPE[formatter])
+            content_type = get_content_type_from_output_formatter(formatter)
+            if content_type is not None:
+                outputs.add_property(f"batch_{i}_Content-Type", content_type)
 
         return outputs
 

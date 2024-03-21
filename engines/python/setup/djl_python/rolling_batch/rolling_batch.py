@@ -96,6 +96,15 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
     return json_encoded_str
 
 
+def get_content_type_from_output_formatter(output_formatter: Union[str,
+                                                                   Callable]):
+    if output_formatter == "json":
+        return "application/json"
+    elif output_formatter == "jsonlines":
+        return "application/jsonlines"
+    return None
+
+
 class Request(object):
     """
     This class represents each request that comes to the handler.
@@ -381,16 +390,3 @@ class RollingBatch(ABC):
             self.req_id_counter = 0
 
         return results
-
-    def get_content_type(self) -> Optional[str]:
-        """
-        Returns information that can be added to the metadata in an Output object
-
-        :return Optional[str]: format of output if applicable (None if user provided output formatter)
-        """
-        # TODO: find a way to return content-type for custom output formatter
-        if self.output_formatter == _jsonlines_output_formatter:
-            return "application/jsonlines"
-        elif self.output_formatter == _json_output_formatter:
-            return "application/json"
-        return None
