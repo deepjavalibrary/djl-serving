@@ -588,12 +588,25 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
     },
-    "gpt-neox-20b-bitsandbytes": {
-        "option.model_id": "s3://djl-llm/gpt-neox-20b",
+    "speculative-llama-13b": {
+        "option.model_id": "TheBloke/Llama-2-13B-fp16",
+        "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.gpu_memory_utilization": "0.8",
+        "option.tensor_parallel_degree": "max",
+    },
+    "starcoder2-7b": {
+        "option.model_id": "s3://djl-llm/bigcode-starcoder2",
         "option.task": "text-generation",
-        "option.tensor_parallel_degree": 4,
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
-        "option.quantize": "bitsandbytes"
+    },
+    "gemma-7b": {
+        "option.model_id": "s3://djl-llm/gemma-7b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
     },
     "llama2-13b-gptq": {
         "option.model_id": "TheBloke/Llama-2-13B-chat-GPTQ",
@@ -620,7 +633,18 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 2,
         "option.max_rolling_batch_size": 4,
         "option.quantize": "awq"
-    }
+    },
+    "llama-7b-unmerged-lora": {
+        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
+        "option.tensor_parallel_degree": 1,
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
+        "adapter_names": ["english-alpaca", "portugese-alpaca"],
+        "option.gpu_memory_utilization": "0.8",
+    },
 }
 
 vllm_model_list = {
@@ -664,14 +688,6 @@ vllm_model_list = {
         "option.max_rolling_batch_size": 32,
         "option.output_formatter": "jsonlines"
     },
-    "speculative-llama-13b": {
-        "option.model_id": "TheBloke/Llama-2-13B-fp16",
-        "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
-        "option.record_acceptance_rate": True,
-        "option.gpu_memory_utilization": "0.8",
-        "option.tensor_parallel_degree": "max",
-        "option.output_formatter": "jsonlines"
-    },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
         "option.tensor_parallel_degree": 1,
@@ -681,7 +697,23 @@ vllm_model_list = {
         "option.enable_lora": "true",
         "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
         "adapter_names": ["english-alpaca", "portugese-alpaca"],
-    }
+        "option.gpu_memory_utilization": "0.8",
+    },
+    "starcoder2-7b": {
+        "option.model_id": "s3://djl-llm/bigcode-starcoder2",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
+    },
+    "gemma-7b": {
+        "option.model_id": "s3://djl-llm/gemma-7b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
+        "option.max_model_len": 3480,
+    },
 }
 
 unmerged_lora_correctness_list = {

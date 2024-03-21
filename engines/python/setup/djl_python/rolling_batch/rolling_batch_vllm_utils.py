@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import logging
 from collections import OrderedDict
-from vllm import EngineArgs
+from lmi_dist.arg_utils import VllmEngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput
 
 DTYPE_MAPPER = {
@@ -68,4 +68,4 @@ def get_speculative_decoding_metrics_record(
 
 
 def supports_speculative_decoding() -> bool:
-    return "draft_model" in EngineArgs.__annotations__
+    return "draft_model" in VllmEngineArgs.__annotations__

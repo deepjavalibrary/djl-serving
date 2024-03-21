@@ -38,11 +38,6 @@ class VllmRbProperties(Properties):
     # TODO: try to get good default from vLLM to prevent revisiting
     # TODO: last time check: vllm 0.3.1
     gpu_memory_utilization: Optional[float] = 0.9
-    # TODO: speculative decoding changes
-    speculative_draft_model: Optional[str] = None
-    speculative_length: int = 5
-    draft_model_tp_size: int = 1
-    record_acceptance_rate: Optional[bool] = False
     enable_lora: Optional[bool] = False
     max_loras: Optional[int] = 4
     max_lora_rank: Optional[int] = 16
