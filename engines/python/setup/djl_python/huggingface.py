@@ -71,6 +71,11 @@ PEFT_MODEL_TASK_TO_CLS = {
     "QUESTION_ANS": AutoModelForQuestionAnswering,
 }
 
+OUTPUT_FORMATTER_TO_CONTENT_TYPE = {
+    "json": "application/json",
+    "jsonlines": "application/jsonlines",
+}
+
 
 def enable_flash():
     if torch.cuda.is_available():
@@ -308,12 +313,10 @@ class HuggingFaceService(object):
                     idx += 1
 
                 formatter = parameters[i].get("output_formatter")
-                if formatter == "json":
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         "application/json")
-                elif formatter == "jsonlines":
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         "application/jsonlines")
+                if formatter in OUTPUT_FORMATTER_TO_CONTENT_TYPE:
+                    outputs.add_property(
+                        f"batch_{i}_Content-Type",
+                        OUTPUT_FORMATTER_TO_CONTENT_TYPE[formatter])
 
             return outputs
         elif is_streaming_enabled(self.hf_configs.enable_streaming):

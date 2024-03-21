@@ -19,6 +19,11 @@ from djl_python.outputs import Output
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 
+OUTPUT_FORMATTER_TO_CONTENT_TYPE = {
+    "json": "application/json",
+    "jsonlines": "application/jsonlines",
+}
+
 
 class TRTLLMService(object):
     """
@@ -132,12 +137,10 @@ class TRTLLMService(object):
                 idx += 1
 
             formatter = parameters[i].get("output_formatter")
-            if formatter == "json":
-                outputs.add_property(f"batch_{i}_Content-Type",
-                                     "application/json")
-            elif formatter == "jsonlines":
-                outputs.add_property(f"batch_{i}_Content-Type",
-                                     "application/jsonlines")
+            if formatter in OUTPUT_FORMATTER_TO_CONTENT_TYPE:
+                outputs.add_property(
+                    f"batch_{i}_Content-Type",
+                    OUTPUT_FORMATTER_TO_CONTENT_TYPE[formatter])
 
         return outputs
 

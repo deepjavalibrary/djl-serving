@@ -28,6 +28,11 @@ model = None
 
 OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama"}
 
+OUTPUT_FORMATTER_TO_CONTENT_TYPE = {
+    "json": "application/json",
+    "jsonlines": "application/jsonlines",
+}
+
 
 class TransformersNeuronXService(object):
 
@@ -168,12 +173,10 @@ class TransformersNeuronXService(object):
                     idx += 1
 
                 formatter = parameters[i].get("output_formatter")
-                if formatter == "json":
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         "application/json")
-                elif formatter == "jsonlines":
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         "application/jsonlines")
+                if formatter in OUTPUT_FORMATTER_TO_CONTENT_TYPE:
+                    outputs.add_property(
+                        f"batch_{i}_Content-Type",
+                        OUTPUT_FORMATTER_TO_CONTENT_TYPE[formatter])
 
             return outputs
 
