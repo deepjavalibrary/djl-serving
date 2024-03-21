@@ -45,6 +45,13 @@ class TransformersNeuronXService(object):
         self._model_loader_class = OptimumModelLoader
 
     def set_model_loader_class(self):
+        if self.config.model_loader == "optimum":
+            return
+
+        if self.config.model_loader == "tnx":
+            self._model_loader_class = TNXModelLoader
+            return
+
         use_tnx = False
         if self.model_config.architectures is not None and any(
                 "CausalLM" in arch

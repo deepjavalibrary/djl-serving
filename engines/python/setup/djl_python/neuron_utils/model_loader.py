@@ -199,7 +199,7 @@ class TNXModelLoader(ModelLoader):
             self.config.model_id_or_path,
             trust_remote_code=self.config.trust_remote_code,
             revision=self.config.revision,
-            low_cpu_mem_usage=True)
+            low_cpu_mem_usage=self.config.low_cpu_mem_usage)
 
     def load_inf2_model_from_disk(self) -> "PreTrainedModel":
         if not self.config.load_split_model:
@@ -216,6 +216,10 @@ class TNXModelLoader(ModelLoader):
                                     **model_kwargs)
         model.load_state_dict_low_memory(self.model.state_dict())
         return model
+
+    def save_split_model(self):
+        logging.info(f"Saving INF2 model to {self.split_model_path} ...")
+        save_pretrained_split(self.model, self.split_model_path)
 
     def set_load_path(self) -> None:
         """
@@ -302,8 +306,8 @@ class TNXModelLoader(ModelLoader):
         self.model_config.save_pretrained(save_path)
         self.model = self.load_hf_model()
         self.load_path = self.get_load_path()
-        self.model = self.load_inf2_model_from_disk()
-        shutil.copytree(self.load_path, self.split_model_path)
+        self.save_split_model()
+        self.model = self.load_inf2_model_from_memory()
 
         # Neuron compiler serialization workaround
         path = os.getcwd()

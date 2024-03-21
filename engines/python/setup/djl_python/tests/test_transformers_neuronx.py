@@ -183,7 +183,7 @@ class TestTransformerNeuronXService(unittest.TestCase):
         "rolling_batch": "auto",
         "task": "text-generation",
         "max_rolling_batch_size": 4,
-        "load_split_model": True
+        "model_loader": "tnx"
     }])
     def test_initialize(self, params):
         # Setup
