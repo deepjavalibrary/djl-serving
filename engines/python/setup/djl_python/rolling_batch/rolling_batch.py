@@ -96,6 +96,15 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
     return json_encoded_str
 
 
+def get_content_type_from_output_formatter(output_formatter: Union[str,
+                                                                   Callable]):
+    if output_formatter == "json":
+        return "application/json"
+    elif output_formatter == "jsonlines":
+        return "application/jsonlines"
+    return None
+
+
 class Request(object):
     """
     This class represents each request that comes to the handler.
@@ -106,11 +115,14 @@ class Request(object):
 
     """
 
-    def __init__(self,
-                 id: int,
-                 input_text: str,
-                 parameters: dict,
-                 adapter=None):
+    def __init__(
+        self,
+        id: int,
+        input_text: str,
+        parameters: dict,
+        adapter=None,
+        output_formatter: Callable = None,
+    ):
         """
         Initialize a request
 
@@ -118,6 +130,8 @@ class Request(object):
         :param input_text: request's input text
         :param parameters: list of parameters
         :param adapter: list of adapters
+        :param output_formatter: output formatter function (for example,
+            _json_output_formatter, _jsonlines_output_formatter, or user provided function
         """
         self.id = id
         self.input_text = input_text
@@ -135,20 +149,34 @@ class Request(object):
         # spec_dec
         self.step_token_number = 0
 
+        # output formatter
+        if output_formatter is not None:
+            self.output_formatter = output_formatter
+        else:
+            formatter = parameters.get("output_formatter", None)
+            if not formatter or "json" == formatter:
+                self.output_formatter = _json_output_formatter
+            elif "jsonlines" == formatter:
+                self.output_formatter = _jsonlines_output_formatter
+            elif "none" == formatter:
+                self.output_formatter = None
+            elif callable(formatter):
+                self.output_formatter = formatter
+            else:
+                # TODO: allows to load custom formatter from a module
+                logging.warning(f"Unsupported formatter: {formatter}")
+
     def __repr__(self):
         return f"<Request id: {self.id} Input {self.input_text} Parameters {self.parameters} Finished {self.last_token}>"
 
     def set_next_token(self,
                        next_token: Union[Token, str],
-                       output_formatter: Callable,
                        last_token: bool = False,
                        finish_reason: str = None):
         """
         Sets the newly generated token.
 
         :param next_token: next token to be set.
-        :param output_formatter: output formatter function (for example,
-            _json_output_formatter, _jsonlines_output_formatter, or user provided function
         :param last_token: whether this token is the last of the sequence.
         :param finish_reason: what reason made the generation ends. Current options:
             length: end because max_output_token size reached
@@ -173,13 +201,16 @@ class Request(object):
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
-        if output_formatter is None:
+            if self.token_cache is not None:
+                details["finish_reason"] = finish_reason
+                details["tokens"] = self.token_cache
+                details["generated_tokens"] = len(self.token_cache)
+        if self.output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now
-            self.next_token_str = output_formatter(next_token,
-                                                   self.first_token,
-                                                   last_token, details,
-                                                   generated_text)
+            self.next_token_str = self.output_formatter(
+                next_token, self.first_token, last_token, details,
+                generated_text)
         self.last_token = last_token
         self.first_token = False
 
@@ -253,22 +284,8 @@ class RollingBatch(ABC):
         self.pending_requests: List[Request] = []
         self.active_requests: List[Request] = []
         self.req_id_counter = 0
-        self.output_formatter = None
         self.waiting_steps = kwargs.get("waiting_steps", None)
         self.current_step = 0
-        formatter = kwargs.get("output_formatter", None)
-
-        if not formatter or "json" == formatter:
-            self.output_formatter = _json_output_formatter
-        elif "jsonlines" == formatter:
-            self.output_formatter = _jsonlines_output_formatter
-        elif "none" == formatter:
-            pass
-        elif callable(formatter):
-            self.output_formatter = formatter
-        else:
-            # TODO: allows to load custom formatter from a module
-            logging.warning(f"Unsupported formatter: {formatter}")
 
     def reset(self):
         self.pending_requests = []
@@ -373,16 +390,3 @@ class RollingBatch(ABC):
             self.req_id_counter = 0
 
         return results
-
-    def get_content_type(self) -> Optional[str]:
-        """
-        Returns information that can be added to the metadata in an Output object
-
-        :return Optional[str]: format of output if applicable (None if user provided output formatter)
-        """
-        # TODO: find a way to return content-type for custom output formatter
-        if self.output_formatter == _jsonlines_output_formatter:
-            return "application/jsonlines"
-        elif self.output_formatter == _json_output_formatter:
-            return "application/json"
-        return None

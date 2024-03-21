@@ -61,9 +61,7 @@ class SchedulerRollingBatch(RollingBatch):
         """
 
         self.scheduler_configs = SchedulerRbProperties(**properties)
-        super().__init__(
-            waiting_steps=self.scheduler_configs.waiting_steps,
-            output_formatter=self.scheduler_configs.output_formatter)
+        super().__init__(waiting_steps=self.scheduler_configs.waiting_steps)
         self._init_model_and_tokenizer()
         self._init_scheduler()
 
@@ -253,7 +251,6 @@ class SchedulerRollingBatch(RollingBatch):
                 request_ids, generated_tokens, self.active_requests):
             is_last_token = (request_id in exit_req_ids)
             request.set_next_token(''.join(generated_token),
-                                   self.output_formatter,
                                    last_token=is_last_token)
 
     def _get_input_ids(self, input_texts: list) -> torch.Tensor:

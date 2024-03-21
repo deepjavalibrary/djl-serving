@@ -27,6 +27,7 @@ from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
+from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
@@ -236,6 +237,9 @@ class HuggingFaceService(object):
                 # set server provided seed if seed is not part of request
                 if item.contains_key("seed"):
                     _param["seed"] = item.get_as_string(key="seed")
+            if not "output_formatter" in _param:
+                _param["output_formatter"] = self.hf_configs.output_formatter
+
             for _ in range(input_size[i]):
                 parameters.append(_param)
 
@@ -303,9 +307,13 @@ class HuggingFaceService(object):
                                 batch_index=i)
                     idx += 1
 
-            content_type = self.rolling_batch.get_content_type()
-            if content_type:
-                outputs.add_property("content-type", content_type)
+                formatter = parameters[i].get("output_formatter")
+                content_type = get_content_type_from_output_formatter(
+                    formatter)
+                if content_type is not None:
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         content_type)
+
             return outputs
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
             if len(batch) > 1:

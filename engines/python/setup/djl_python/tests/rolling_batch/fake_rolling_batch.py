@@ -86,7 +86,7 @@ class FakeRollingBatch(RollingBatch):
             token_id = self.tokens[cache["cur_pos"]]
             token_txt = " " + self.tokenizer.decode(token_id)
             request.set_next_token(Token(token_id, token_txt),
-                                   self.output_formatter, cache["finished"])
+                                   cache["finished"])
 
         return self.postprocess_results()
 

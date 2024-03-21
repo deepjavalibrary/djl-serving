@@ -94,13 +94,10 @@ class NeuronRollingBatch(RollingBatch):
                     if generation.token_is_special else generation.token_text,
                     log_prob, generation.token_is_special)
                 request.set_next_token(token,
-                                       self.output_formatter,
                                        last_token=is_last_token,
                                        finish_reason=finish_reason)
             else:
-                request.set_next_token("",
-                                       self.output_formatter,
-                                       last_token=False)
+                request.set_next_token("", last_token=False)
                 req_ids.append(request.id)
 
         # filter the requests that are stopped.

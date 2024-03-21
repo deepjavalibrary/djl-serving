@@ -120,12 +120,11 @@ class TRTLLMRollingBatch(RollingBatch):
             if generation.finished:
                 finish_reason = "eos_token" if generation.seq_length < self.request_cache[
                     request.id]["out_length"] else "length"
-                request.set_next_token(token, self.output_formatter,
-                                       generation.finished, finish_reason)
+                request.set_next_token(token, generation.finished,
+                                       finish_reason)
                 self.request_cache.pop(request.id)
             else:
-                request.set_next_token(token, self.output_formatter,
-                                       generation.finished)
+                request.set_next_token(token, generation.finished)
 
         return self.postprocess_results()
 

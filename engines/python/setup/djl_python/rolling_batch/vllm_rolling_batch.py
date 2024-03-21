@@ -40,8 +40,7 @@ class VLLMRollingBatch(RollingBatch):
         :param properties: other properties of the model, such as decoder strategy
         """
         self.vllm_configs = VllmRbProperties(**properties)
-        super().__init__(waiting_steps=self.vllm_configs.waiting_steps,
-                         output_formatter=self.vllm_configs.output_formatter)
+        super().__init__(waiting_steps=self.vllm_configs.waiting_steps)
         self.supports_speculative_decoding = supports_speculative_decoding()
         engine_kwargs = {}
         if supports_speculative_decoding():
@@ -188,11 +187,9 @@ class VLLMRollingBatch(RollingBatch):
                 # token id is not determined since there could be multiple token comes at the same time
                 # only return the last one
                 token = Token(cache['id'], text, cache["log_prob"])
-                request.set_next_token(token, self.output_formatter,
-                                       cache["finished"], finish_reason)
+                request.set_next_token(token, cache["finished"], finish_reason)
             else:
-                request.set_next_token("", self.output_formatter,
-                                       cache["finished"], finish_reason)
+                request.set_next_token("", cache["finished"], finish_reason)
             cache["curr_length"] = len(cache["text"])
 
         # step 3: clean finished requests
