@@ -31,12 +31,8 @@ ARG datasets_version=2.17.1
 ARG deepspeed_version=nightly
 ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
 # LMI-Dist Deps
-ARG vllm_wheel="https://publish.djl.ai/vllm/cu121-pt212/vllm-0.3.3-cp310-cp310-linux_x86_64.whl"
-ARG flash_attn_wheel="https://publish.djl.ai/flash_attn/flash_attn_1-1.0.9-cp310-cp310-linux_x86_64.whl"
-ARG dropout_layer_norm_wheel="https://publish.djl.ai/flash_attn/dropout_layer_norm-0.1-cp310-cp310-linux_x86_64.whl"
-ARG rotary_emb_wheel="https://publish.djl.ai/flash_attn/rotary_emb-0.1-cp310-cp310-linux_x86_64.whl"
+ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.3.3/vllm-0.3.3-cp310-cp310-manylinux1_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/flash_attn-2.3.0-cp310-cp310-linux_x86_64.whl"
-ARG lmi_vllm_wheel="https://publish.djl.ai/lmi_vllm/lmi_vllm-0.1.1-cp310-cp310-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG awq_wheel="https://publish.djl.ai/awq/awq_inference_engine-0.0.0-cp310-cp310-linux_x86_64.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
@@ -98,8 +94,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
     pip3 cache purge
 
-RUN pip3 install ${flash_attn_wheel} ${dropout_layer_norm_wheel} ${rotary_emb_wheel} && \
-    pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${awq_wheel} ${lmi_vllm_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \
+RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${awq_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \
     pip3 cache purge
 
 # Add CUDA-Compat
