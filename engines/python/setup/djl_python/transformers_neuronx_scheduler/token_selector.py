@@ -13,7 +13,7 @@
 # The below code is heavily inspired from Optimum Neuron under the following link:
 # https://github.com/huggingface/optimum-neuron/blob/974f34336bb36b1b64890c191c558a1575372be7/optimum/neuron/generation/token_selector.py
 import logging
-from typing import Optional
+from typing import Optional, Union, List
 import torch
 from transformers.generation import (
     GenerationConfig,
@@ -63,7 +63,7 @@ class TokenSelector:
         mode: GenerationMode,
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
-        eos_token_id: int,
+        eos_token_id: Union[List[int], int],
         pad_token_id: int,
         logits_warper: Optional[LogitsProcessorList] = None,
     ):
@@ -139,9 +139,9 @@ class TokenSelector:
         # The generation requires special tokens
         eos_token_id = generation_config.eos_token_id
         # This is not supposed to happen for any of the models we support
-        assert eos_token_id is not None and not isinstance(eos_token_id, list)
         if generation_config.pad_token_id is None:
-            generation_config.pad_token_id = eos_token_id
+            generation_config.pad_token_id = eos_token_id if isinstance(
+                eos_token_id, int) else eos_token_id[0]
 
         generation_mode = model._get_generation_mode(generation_config, None)
         if generation_mode not in [
