@@ -190,6 +190,15 @@ class Slot:
     def trim_cache_id(self):
         self._cache_id = self._cache_id.max()
 
+    def is_slot_eos_token(self, token) -> bool:
+        if hasattr(self._generation_config, "eos_token_id"):
+            if isinstance(self._generation_config.eos_token_id, int):
+                return token == self._generation_config.eos_token_id
+            else:
+                return token in self._generation_config.eos_token_id
+        else:
+            return False
+
     @property
     def stopped(self) -> bool:
         return self._selector.stopping_criteria(self._tokens, None)
@@ -381,7 +390,9 @@ class NeuronGenerator:
             slot.append(next_token, next_token_text)
             generated_text = None
             finish_reason = None
-            if next_token == self.tokenizer.eos_token_id:
+            if slot.is_slot_eos_token(next_token):
+                finish_reason = FinishReason.FINISH_REASON_EOS_TOKEN
+            elif next_token == self.tokenizer.eos_token_id:
                 finish_reason = FinishReason.FINISH_REASON_EOS_TOKEN
             elif slot.stopped:
                 finish_reason = FinishReason.FINISH_REASON_LENGTH
@@ -403,7 +414,8 @@ class NeuronGenerator:
                     token_id=next_token,
                     token_logprob=next_log_prob,
                     token_text=next_token_text,
-                    token_is_special=(next_token in [self.special_tokens]),
+                    token_is_special=(next_token in [self.special_tokens])
+                    or (finish_reason == FinishReason.FINISH_REASON_EOS_TOKEN),
                     generated_text=generated_text,
                 ))
         return generations
