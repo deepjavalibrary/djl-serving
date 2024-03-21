@@ -14,7 +14,7 @@ dependencies {
     testImplementation("org.testng:testng:${testng_version}") {
         exclude group: "junit", module: "junit"
     }
-    testImplementation "com.amazonaws:DynamoDBLocal:1.21.1"
+    testImplementation "com.amazonaws:DynamoDBLocal:2.3.0"
     testImplementation "cloud.localstack:localstack-utils:0.2.15"
 
     exclusion project(":serving")
