@@ -192,7 +192,7 @@ class RollingBatch implements Runnable {
                         it.remove();
                         int pos = key.indexOf('_', 7);
                         if (pos > 0) {
-                            int index = Integer.parseInt(key.substring(6, pos - 6));
+                            int index = Integer.parseInt(key.substring(6, pos));
                             Map<String, String> p =
                                     map.computeIfAbsent(index, i -> new ConcurrentHashMap<>());
                             p.put(key.substring(pos + 1), entry.getValue());
