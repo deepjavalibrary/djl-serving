@@ -56,7 +56,7 @@ jobs:
         run: |
           . ./venv/bin/activate
           export FLASH_ATTENTION_FORCE_BUILD=TRUE
-          git clone https://github.com/Dao-AILab/flash-attention.git flash-attention-v2 -b v2.3.0
+          git clone https://github.com/Dao-AILab/flash-attention.git flash-attention-v2 -b v2.5.2
           cd flash-attention-v2
           pip wheel . --no-deps
           cp flash_attn-*.whl ../build_artifacts
