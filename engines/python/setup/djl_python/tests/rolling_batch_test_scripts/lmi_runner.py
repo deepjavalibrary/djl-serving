@@ -10,7 +10,7 @@ new_path = os.path.normpath(os.path.join(script_directory, relative_path))
 sys.path.append(new_path)
 from djl_python.tests.rolling_batch_test_scripts.generator import Generator, print_rank0
 
-from benchmark_utils import timeit, parse_input, PeakMemory
+from benchmark_utils import PeakMemory
 
 
 class RunnerLmi:
@@ -22,7 +22,6 @@ class RunnerLmi:
         from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 
         rolling_batch = LmiDistRollingBatch(model_id, properties)
-        rolling_batch.output_formatter = None
 
         self.gen = Generator(rolling_batch=rolling_batch)
         self.param = param

@@ -60,7 +60,6 @@ properties["model_id"] = model_id
 properties["draft_model_id"] = draft_model_id
 properties["device"] = device
 rolling_batch = LmiDistRollingBatch(model_id, properties)
-rolling_batch.output_formatter = None
 
 gen = Generator(rolling_batch=rolling_batch)
 
