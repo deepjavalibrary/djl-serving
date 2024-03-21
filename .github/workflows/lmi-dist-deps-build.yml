@@ -56,18 +56,10 @@ jobs:
         run: |
           . ./venv/bin/activate
           export FLASH_ATTENTION_FORCE_BUILD=TRUE
-          git clone https://github.com/Dao-AILab/flash-attention.git flash-attention-v2 -b v2.5.2
+          git clone https://github.com/Dao-AILab/flash-attention.git flash-attention-v2 -b v2.5.6
           cd flash-attention-v2
           pip wheel . --no-deps
           cp flash_attn-*.whl ../build_artifacts
-      - name: Build awq kernels
-        run: |
-          . ./venv/bin/activate
-          git clone https://github.com/mit-han-lab/llm-awq
-          # TODO: change commit to actual tag later
-          cd llm-awq/awq/kernels && git checkout 8baf5dd9c3bfe8bdc5987f52ae4dffde7471346f
-          pip wheel . --no-deps
-          cp awq*.whl ../../../build_artifacts
       - name: Build vllm 0.3.3 speculative decoding
         run: |
           . ./venv/bin/activate
@@ -101,7 +93,6 @@ jobs:
         run: |
           aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt212/
           aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu121-pt212/
-          aws s3 cp awq*.whl s3://djl-ai-staging/publish/awq/cu121-pt212/
 
   stop-runners-p4d:
     if: always()
