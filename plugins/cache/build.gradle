@@ -18,6 +18,7 @@ dependencies {
     testImplementation "cloud.localstack:localstack-utils:0.2.15"
 
     exclusion project(":serving")
+    exclusion "com.google.code.gson:gson"
 }
 
 jar {
