@@ -109,7 +109,7 @@ class LmiDistRollingBatch(RollingBatch):
         if "stop_sequences" in parameters.keys():
             parameters["stop"] = parameters.pop("stop_sequences")
         if "ignore_eos_token" in parameters.keys():
-            parameters["ignore_eos"] = parameters.pop("ignore_eos")
+            parameters["ignore_eos"] = parameters.pop("ignore_eos_token")
         if "num_beams" in parameters.keys():
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True

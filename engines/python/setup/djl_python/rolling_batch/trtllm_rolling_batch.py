@@ -10,7 +10,6 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import logging
 import tensorrt_llm_toolkit
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 
@@ -61,7 +60,7 @@ class TRTLLMRollingBatch(RollingBatch):
         """
         if "request_output_len" not in parameters.keys():
             parameters["request_output_len"] = parameters.pop(
-                "max_new_tokens", 128)
+                "max_new_tokens", 30)
         if "top_k" in parameters.keys():
             parameters["runtime_top_k"] = parameters.pop("top_k")
         if "top_p" in parameters.keys():
