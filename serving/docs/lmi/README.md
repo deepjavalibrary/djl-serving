@@ -88,20 +88,20 @@ outputs = predictor.predict({
 ### Sample Notebooks
 The following table provides notebooks that demonstrate how to deploy popular open source LLMs using LMI containers on SageMaker.
 If this is your first time using LMI, or you want a starting point for deploying a specific model, we recommend following the notebooks below.
+All the below samples are hosted in the [SageMaker Generative AI Hosting Examples Repository](https://github.com/aws-samples/sagemaker-genai-hosting-examples).
+That repository will be continuously updated with examples.
 
-| Model                                                              | Instance Type      | Sample Notebook |
-|--------------------------------------------------------------------|--------------------|-----------------|
-| [Llama-2-7b](https://huggingface.co/meta-llama/Llama-2-7b-hf)      | `ml.g5.2xlarge`    | [notebook]()    |
-| [Llama-2-13b](https://huggingface.co/meta-llama/Llama-2-13b-hf)    | `ml.g5.12xlarge`   | [notebook]()    |
-| [Llama-2-70b](https://huggingface.co/meta-llama/Llama-2-70b-hf)    | `ml.p4d.24xlarge`  | [notebook]()    |
-| [Llama-2-70b-AWQ](https://huggingface.co/TheBloke/Llama-2-70B-AWQ) | `ml.g5.12xlarge`   | [notebook]()    |
-| [Mistral-7b](https://huggingface.co/mistralai/Mistral-7B-v0.1)     | `ml.g5.2xlarge`    | [notebook]()    |
-| [Mixtral-8x7b](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1) | `ml.p4d.24xlarge`  | [notebook]()    |
-| [Flan-T5-XXL](https://huggingface.co/google/flan-t5-xxl)           | `ml.g5.12xlarge`   | [notebook]()    |
-| [CodeLlama-34b](https://huggingface.co/codellama/CodeLlama-34b-hf) | `ml.g5.48xlarge`   | [notebook]()    |
-| [Falcon-7b](https://huggingface.co/tiiuae/falcon-7b)               | `ml.g5.2xlarge`    | [notebook]()    |
-| [Falcon-40b](https://huggingface.co/tiiuae/falcon-40b)             | `ml.g5.48xlarge`   | [notebook]()    |
-| [Falcon-180b](https://huggingface.co/tiiuae/falcon-180b)           | `ml.p4de.24xlarge` | [notebook]()    |            
+| Model                                                              | Instance Type     | Sample Notebook                                                                                                                                 |
+|--------------------------------------------------------------------|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Llama-2-7b](https://huggingface.co/meta-llama/Llama-2-7b-hf)      | `ml.g5.2xlarge`   | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Llama2/Llama2-7b/LMI/llama2-7b.ipynb)                      |
+| [Llama-2-13b](https://huggingface.co/meta-llama/Llama-2-13b-hf)    | `ml.g5.12xlarge`  | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Llama2/Llama2-13b/LMI/llama2-13b.ipynb)                    |
+| [Llama-2-70b](https://huggingface.co/meta-llama/Llama-2-70b-hf)    | `ml.p4d.24xlarge` | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Llama2/Llama2-70b/LMI/llama2-70b.ipynb)                    |
+| [Mistral-7b](https://huggingface.co/mistralai/Mistral-7B-v0.1)     | `ml.g5.2xlarge`   | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Mistral/Mistral-7b/LMI/mistral-lmi-sme-dept.ipynb)         |
+| [Mixtral-8x7b](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1) | `ml.p4d.24xlarge` | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Mixtral/Mixtral-8x7b/LMI/mixtral-8x7b-trtllm-deploy.ipynb) |
+| [Flan-T5-XXL](https://huggingface.co/google/flan-t5-xxl)           | `ml.g5.12xlarge`  | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/FlanT5/LMI/flant5-xxl.ipynb)                               |
+| [CodeLlama-13b](https://huggingface.co/codellama/CodeLlama-34b-hf) | `ml.g5.48xlarge`  | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/CodeLlama/CodeLlama-13b/LMI/codellama-13b.ipynb)           |
+| [Falcon-7b](https://huggingface.co/tiiuae/falcon-7b)               | `ml.g5.2xlarge`   | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Falcon/Falcon-7B/LMI/falcon-7b-trt-llm.ipynb)              |
+| [Falcon-40b](https://huggingface.co/tiiuae/falcon-40b)             | `ml.g5.48xlarge`  | [notebook](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Falcon/Falcon-40B/LMI/falcon-40b-trt-llm.ipynb)            |
 
 **Note: Some models in the table above are available from multiple providers. 
 We link to the specific model we tested with, but we expect same model from a different provider (or a fine-tuned variant) to work.**
