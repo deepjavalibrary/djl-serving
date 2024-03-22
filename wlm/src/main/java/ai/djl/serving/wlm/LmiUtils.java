@@ -110,7 +110,16 @@ public final class LmiUtils {
         }
     }
 
-    private static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId)
+    /**
+     * Returns the Huggingface config.json file URI.
+     *
+     * @param modelInfo the model object
+     * @param modelId the model id
+     * @return the Huggingface config.json file URI
+     * @throws ModelException if the model not found
+     * @throws IOException if failed read from huggingface hub
+     */
+    public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId)
             throws ModelException, IOException {
         URI configUri = null;
         Path modelDir = modelInfo.modelDir;
