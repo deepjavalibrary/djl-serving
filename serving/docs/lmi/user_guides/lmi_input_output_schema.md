@@ -60,6 +60,7 @@ When providing inputs following the input schema as a string, the output's gener
     'max_new_tokens' : integer (default = 30),
     'details' : boolean (default = false, details only available for rolling batch),
     'return_full_text': boolean (default = false),
+    'stop_sequences' : list[str] (default = None),
 ```
 
 Note: For TensorRTLLM handler, it also has all the common parameters, but it uses different default values. Kindly check below to know the TensorRT LLM default values. 
@@ -71,32 +72,29 @@ Apart from these common parameters, there are other parameters that are specific
 ```
 DeepSpeedRollingBatchParameters : {
     'typical_p' : float (default= 1.0), 
-    'stop_sequences' : list (default = None),
     'truncate' : integer (default = None),
 }
 ```
 
-
+Decoding method supported in DeepSpeed: Greedy (Default) and Sampling.
 
 ### LMI Dist rolling batch input parameters schema
 
 ```
 LmiDistRollingBatchParameters : {
     'typical_p' : float (default= 1.0),
-    'stop_sequences' : list (default = None),
     'truncate' : integer (default = None),
     'ignore_eos_token' : boolean (default = false)
 }
 ```
 
+Decoding method supported in LmiDist : Greedy (Default) and Sampling.
 
 
 ### vLLM rolling batch input parameters schema
 
 ```
 vLLMRollingBatchParameters : {
-    'stop_sequences' : list,
-    'temperature' : float (default= 0),
     'top_k' : integer (default = -1)
     
     'min_p': float (default = 0.0),
@@ -113,25 +111,31 @@ vLLMRollingBatchParameters : {
 }
 ```
 
+Decoding method supported in vLLM : Greedy (Default), Sampling and Beam search.
+
 ### TensorRTLLM rolling batch input parameters schema
 
 For TensorRTLLM handler, it also has all the common parameters, but it uses different default values. 
 
 ```
 TensorRTLLMRollingBatchParameters : {
-    'temperature' : float (default= 0.8),
-    'repetition_penalty' : float (default = None),
-    'max_new_tokens' : integer (default = 128),
-    'top_k' : integer (default = 5), 
-    'top_p' : float (default= 0.85),
-    'details' : boolean (default = false),
+    # Common parameters with different default values
+    'temperature' : float (default = 0.8 when greedy, 1.0 when do_sample=True),
+    'top_k' : integer (default = 0 when greedy, 5 when do_sample=True), 
+    'top_p' : float (default= 0 when greedy, 0.85 when do_sample=True),
+    
+    # parameters specific to TensorRT-LLM
+    'min_length' : integer (default = 1)
+    'bad_sequences' : list[str] (default = None), 
     'stop' : boolean, 
     'presence_penalty': float,
     'length_penalty' : float, 
-    'stop_words_list' : list, 
-    'bad_words_list' : list, 
-    'min_length' : integer
 }
 ```
+
+Decoding method supported in TensorRT-LLM : Greedy (Default) and Sampling.
+
+NOTE: TensorRT-LLM C++ runtime, does not have the option `do_sample`. If top_k and top_p are 0, TensorRT-LLM automatically recognizes it as greedy. 
+So in order to do sampling, we set top_k, top_p and temperature values to a certain values. You can change these parameters for your use-case and pass them at runtime.
 
 For those without default values, they remain optional. If these parameters are not provided, they will be ignored.
