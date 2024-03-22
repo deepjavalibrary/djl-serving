@@ -76,7 +76,7 @@ DeepSpeedRollingBatchParameters : {
 }
 ```
 
-Decoding method supported in DeepSpeed: Greed (Default) and Sampling.
+Decoding method supported in DeepSpeed: Greedy (Default) and Sampling.
 
 ### LMI Dist rolling batch input parameters schema
 
