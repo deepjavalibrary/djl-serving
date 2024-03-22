@@ -144,9 +144,9 @@ class TransformersNeuronXService(object):
                             "In order to enable dynamic batching, all input batches must have the same parameters"
                         )
 
-                if not "output_formatter" in param:
-                    param[
-                        "output_formatter"] = self.properties.output_formatter
+                    if not "output_formatter" in param:
+                        param[
+                            "output_formatter"] = self.config.output_formatter
 
                 if isinstance(_inputs, list):
                     input_data.extend(_inputs)
