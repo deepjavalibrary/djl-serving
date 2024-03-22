@@ -164,6 +164,48 @@ class TestRollingBatch(unittest.TestCase):
             }
         }
 
+    def test_details_jsonlines(self):
+        req = Request(0,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 256,
+                          "details": True
+                      },
+                      output_formatter=_jsonlines_output_formatter)
+        req.set_next_token(Token(244, "He", -0.334532))
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            "token": {
+                "id": [244],
+                "text": "He",
+                "log_prob": -0.334532
+            }
+        }
+        req.set_next_token(Token(576, "llo", -0.123123))
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            "token": {
+                "id": [576],
+                "text": "llo",
+                "log_prob": -0.123123
+            }
+        }
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            "token": {
+                "id": [4558],
+                "text": " world",
+                "log_prob": -0.567854
+            },
+            'details': {
+                'finish_reason': 'length',
+                'generated_tokens': 3,
+                'input_text': 'This is a wonderful day'
+            },
+            "generated_text": "Hello world"
+        }
+
     def test_custom_fmt(self):
 
         def custom_fmt(token: Token, first_token: bool, last_token: bool,
@@ -263,7 +305,10 @@ class TestRollingBatch(unittest.TestCase):
                 'id': [244],
                 'log_prob': -0.334532,
                 'text': 'He'
-            }]
+            }],
+            "parameters": {
+                "max_new_tokens": 256
+            }
         }
         req.set_next_token(Token(576, "llo", -0.123123))
         print(req.get_next_token(), end='')
@@ -274,15 +319,21 @@ class TestRollingBatch(unittest.TestCase):
             2,
             'input_text':
             'This is a wonderful day',
-            'tokens': [{
-                'id': [244],
-                'log_prob': -0.334532,
-                'text': 'He'
-            }, {
-                'id': [576],
-                'log_prob': -0.123123,
-                'text': 'llo'
-            }]
+            'tokens': [
+                {
+                    'id': [244],
+                    'log_prob': -0.334532,
+                    'text': 'He'
+                },
+                {
+                    'id': [576],
+                    'log_prob': -0.123123,
+                    'text': 'llo'
+                },
+            ],
+            "parameters": {
+                "max_new_tokens": 256
+            }
         }
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
         print(req.get_next_token(), end='')
@@ -305,7 +356,10 @@ class TestRollingBatch(unittest.TestCase):
                 'id': [4558],
                 'log_prob': -0.567854,
                 'text': ' world'
-            }]
+            }],
+            "parameters": {
+                "max_new_tokens": 256
+            }
         }
 
 
