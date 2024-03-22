@@ -56,7 +56,7 @@ class Token(object):
 
 
 def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
-                           details: dict, generated_tokens: str):
+                           details: dict, generated_tokens: str, id: int):
     """
     json output formatter
 
@@ -82,7 +82,7 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
 
 def _jsonlines_output_formatter(token: Token, first_token: bool,
                                 last_token: bool, details: dict,
-                                generated_tokens: str):
+                                generated_tokens: str, id: int):
     """
     jsonlines output formatter
 
@@ -102,11 +102,88 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
     return json_encoded_str
 
 
+def _json_chat_output_formatter(token: Token, first_token: bool,
+                                last_token: bool, details: dict,
+                                generated_tokens: str, id: int):
+    """
+    json output formatter for chat completions API
+
+    :return: formatted output
+    """
+    choice1 = {
+        "index": 0,
+        "message": {
+            "role": "assistant",
+            "content": generated_tokens
+        }
+    }
+    response1 = {
+        "id": f"chatcmpl-{id}",
+        "object": "chat.completion",
+        "choices": [choice1]  # Currently only support 1 choice
+    }
+    json_encoded_str = f"{json.dumps(response1, ensure_ascii=False)[:-6]}" if first_token else ""
+    json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
+    if last_token:
+        choice2 = {
+            "logprobs": {
+                "content": [{
+                    "logprob": token.log_prob,
+                    "token": token.text
+                }]
+            },
+            "finish_reason": details.get("finish_reason", None)
+        }
+        prompt_tokens = int(details.get("prompt_tokens", 0))
+        completion_tokens = int(details.get("generated_tokens", 0))
+        response2 = {
+            "choices": [choice2],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens
+            }
+        }
+        json_encoded_str = f"{json_encoded_str}\"}}, {json.dumps(response2, ensure_ascii=False)[14:]}"
+    return json_encoded_str
+
+
+def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
+                                     last_token: bool, details: dict,
+                                     generated_tokens: str, id: int):
+    """
+    jsonlines output formatter for chat completions API
+
+    :return: formatted output
+    """
+    choice = {
+        "index": 0,
+        "delta": {
+            "role": "assistant",
+            "content": generated_tokens
+        },
+        "logprobs": {
+            "content": [{
+                "logprob": token.log_prob,
+                "token": token.text
+            }]
+        },
+        "finish_reason": details.get("finish_reason", None)
+    }
+    response = {
+        "id": f"chatcmpl-{id}",
+        "object": "chat.completion.chunk",
+        "choices": [choice]  # Currently only support 1 choice
+    }
+    json_encoded_str = json.dumps(response, ensure_ascii=False) + "\n"
+    return json_encoded_str
+
+
 def get_content_type_from_output_formatter(output_formatter: Union[str,
                                                                    Callable]):
-    if output_formatter == "json":
+    if output_formatter == "json" or output_formatter == "chat_json":
         return "application/json"
-    elif output_formatter == "jsonlines":
+    elif output_formatter == "jsonlines" or output_formatter == "chat_jsonlines":
         return "application/jsonlines"
     return None
 
@@ -144,6 +221,8 @@ class Request(object):
         id: int,
         input_text: str,
         parameters: dict,
+        details: bool = False,
+        input_ids: list = [],
         adapter=None,
         output_formatter: Callable = None,
     ):
@@ -153,6 +232,8 @@ class Request(object):
         :param id: request id
         :param input_text: request's input text
         :param parameters: list of parameters
+        :param details: whether to include details
+        :param input_ids: request's input ids
         :param adapter: list of adapters
         :param output_formatter: output formatter function (for example,
             _json_output_formatter, _jsonlines_output_formatter, or user provided function
@@ -160,13 +241,15 @@ class Request(object):
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
+        self.details = details
         self.adapter = adapter
+        self.input_ids = input_ids
         self.next_token_str = None
         self.first_token = True
         self.last_token = False
         self.token_cache = None
         self.generated_tokens = []
-        if parameters.pop("details", False):
+        if self.details:
             self.token_cache = []
         self.full_text_prefix = input_text if parameters.pop(
             "return_full_text", False) else ""
@@ -204,23 +287,28 @@ class Request(object):
         self.generated_tokens.append(next_token.text)
         self.step_token_number = len(
             next_token.id) if next_token.id[0] != -1 else -1
-        details = {}
+        details_dict = {}
         # making detailed information captured for each token generation
-        if self.token_cache is not None:
-            details["finish_reason"] = finish_reason
-            details["tokens"] = self.token_cache
-            details["generated_tokens"] = len(self.token_cache)
-            details["input_text"] = self.input_text
-            details["parameters"] = self.parameters
+        if self.details:
+            details_dict["finish_reason"] = finish_reason
+            details_dict["tokens"] = self.token_cache
+            details_dict["generated_tokens"] = len(self.token_cache)
+            details_dict["input_text"] = self.input_text
+            details_dict["parameters"] = self.parameters
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
+            if self.details:
+                details_dict["finish_reason"] = finish_reason
+                details_dict["tokens"] = self.token_cache
+                details_dict["generated_tokens"] = len(self.token_cache)
+                details_dict["prompt_tokens"] = len(self.input_ids)
         if self.output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now
             self.next_token_str = self.output_formatter(
-                next_token, self.first_token, last_token, details,
-                generated_text)
+                next_token, self.first_token, last_token, details_dict,
+                generated_text, self.id)
         self.last_token = last_token
         self.first_token = False
 
@@ -343,9 +431,13 @@ class RollingBatch(ABC):
                 params = parameters[i] if i < len(parameters) else {}
                 adapter = adapters[i] if adapters is not None and i < len(
                     parameters) else None
+                details = params.pop("details", False)
                 request = Request(self.req_id_counter,
                                   data,
                                   params,
+                                  details,
+                                  input_ids=self.get_tokenizer().encode(data)
+                                  if details else None,
                                   adapter=adapter)
                 self.pending_requests.append(request)
                 self.req_id_counter += 1

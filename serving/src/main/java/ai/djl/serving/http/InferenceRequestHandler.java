@@ -66,7 +66,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final Metric WLM_ERROR = new Metric("WlmError", 1);
     private static final Metric SERVER_ERROR = new Metric("ServerError", 1);
     private static final Pattern PATTERN =
-            Pattern.compile("/(ping|invocations|predictions)([/?].*)?|/models/.+/invoke");
+            Pattern.compile(
+                    "/(ping|invocations|predictions|v1/chat/completions)([/?].*)?|/models/.+/invoke");
 
     private static final String X_SYNCHRONOUS = "x-synchronous";
     private static final String X_STARTING_TOKEN = "x-starting-token";
@@ -137,6 +138,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 break;
             case "predictions":
                 handlePredictions(ctx, req, decoder, segments);
+                break;
+            case "v1":
+                if ("chat".equals(segments[2]) && "completions".equals(segments[3])) {
+                    handleInvocations(ctx, req, decoder, null);
+                }
                 break;
             default:
                 throw new AssertionError("Invalid request uri: " + req.uri());
