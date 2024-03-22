@@ -13,7 +13,8 @@ if [ -z "$PYTORCH_JNI" ]; then
     openjdk-17-jdk-headless \
     curl \
     jq \
-    unzip
+    unzip \
+    vim
 
   # install DJLServing
   if [ ! -f djl-serving_all.deb ]; then

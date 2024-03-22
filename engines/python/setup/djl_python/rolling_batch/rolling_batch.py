@@ -66,7 +66,13 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
     json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
         if details:
-            details_str = f"\"details\": {json.dumps(details, ensure_ascii=False)}"
+            final_dict = {
+                "finish_reason": details.get("finish_reason", None),
+                "generated_tokens": details.get("generated_tokens", None),
+                "input_text": details.get("input_text", None),
+                "tokens": details.get("tokens", None)
+            }
+            details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
             json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
         else:
             json_encoded_str = f"{json_encoded_str}\"}}"
@@ -198,13 +204,10 @@ class Request(object):
             details["tokens"] = self.token_cache
             details["generated_tokens"] = len(self.token_cache)
             details["input_text"] = self.input_text
+            details["parameters"] = self.parameters
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
-            if self.token_cache is not None:
-                details["finish_reason"] = finish_reason
-                details["tokens"] = self.token_cache
-                details["generated_tokens"] = len(self.token_cache)
         if self.output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now
