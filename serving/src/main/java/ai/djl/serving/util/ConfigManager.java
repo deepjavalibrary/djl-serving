@@ -447,7 +447,10 @@ public final class ConfigManager {
                 .append("\nEnvironment variables:");
         for (Map.Entry<String, String> entry : System.getenv().entrySet()) {
             String key = entry.getKey();
-            if (key.startsWith("SERVING")
+            // Do not log HF_TOKEN value
+            if ("HF_TOKEN".equals(key)) {
+                sb.append("\n\t").append(key).append(": ***");
+            } else if (key.startsWith("SERVING")
                     || key.startsWith("PYTHON")
                     || key.startsWith("DJL_")
                     || key.startsWith("HF_")

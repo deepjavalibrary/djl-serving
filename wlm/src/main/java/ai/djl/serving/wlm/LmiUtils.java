@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -149,8 +150,12 @@ public final class LmiUtils {
                 return null;
             }
 
+            String hfToken = Utils.getenv("HF_TOKEN");
             configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
             HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
+            if (hfToken != null) {
+                configUrl.setRequestProperty("Authorization", "Bearer " + hfToken);
+            }
             // stable diffusion models have a different file name with the config... sometimes
             if (HttpURLConnection.HTTP_OK != configUrl.getResponseCode()) {
                 configUri =
@@ -173,7 +178,12 @@ public final class LmiUtils {
             if (modelConfigUri == null) {
                 return null;
             }
-            try (InputStream is = modelConfigUri.toURL().openStream()) {
+            URLConnection configConnection = modelConfigUri.toURL().openConnection();
+            if (Utils.getenv("HF_TOKEN") != null) {
+                configConnection.setRequestProperty(
+                        "Authorization", "Bearer " + Utils.getenv("HF_TOKEN"));
+            }
+            try (InputStream is = configConnection.getInputStream()) {
                 return JsonUtils.GSON.fromJson(Utils.toString(is), HuggingFaceModelConfig.class);
             }
         } catch (IOException | JsonSyntaxException e) {

@@ -259,6 +259,7 @@ public class ModelInfoTest {
                         put("openai-community/gpt2", "vllm");
                         put("tiiuae/falcon-7b", "lmi-dist");
                         put("mistralai/Mistral-7B-v0.1", "vllm");
+                        put("src/test/resources/local-hf-model", "vllm");
                     }
                 };
         Path modelStore = Paths.get("build/models");
