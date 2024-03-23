@@ -903,8 +903,10 @@ def test_handler_rolling_batch(model, model_spec):
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
     logging.info(f"req {req}")
-    res = send_json(req)
-    logging.info(f"res: {res.content}")
+    res = send_json(req).content.decode("utf-8")
+    logging.info(f"res: {res}")
+    if "error" in res and "code" in res and "424" in res:
+        raise RuntimeError(f"Inference failed!")
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
