@@ -54,5 +54,5 @@ class LmiDistRbProperties(Properties):
     def validate_engine(cls, engine):
         if engine != "MPI":
             raise AssertionError(
-                f"Need MPI engine to start lmidist_v2 RollingBatcher")
+                f"Need MPI engine to start lmi-dist RollingBatcher")
         return engine

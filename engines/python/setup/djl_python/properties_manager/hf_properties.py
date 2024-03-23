@@ -138,8 +138,8 @@ class HuggingFaceProperties(Properties):
         # TODO remove this after refactor of all handlers
         # device map is not required for lmi dist and vllm
         if properties['rolling_batch'] in {
-                RollingBatchEnum.lmidist, RollingBatchEnum.vllm,
-                RollingBatchEnum.lmidist_v2
+                RollingBatchEnum.lmidist,
+                RollingBatchEnum.vllm,
         }:
             return properties
 
