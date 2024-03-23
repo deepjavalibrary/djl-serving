@@ -442,7 +442,7 @@ class DeepSpeedService(object):
                                 batch_index=i)
                     idx += 1
 
-                formatter = parameters[i].get("output_formatter")
+                formatter = parameters.get("output_formatter")
                 content_type = get_content_type_from_output_formatter(
                     formatter)
                 if content_type is not None:
