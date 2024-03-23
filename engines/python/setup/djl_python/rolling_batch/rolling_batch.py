@@ -159,7 +159,7 @@ class Request(object):
         if output_formatter is not None:
             self.output_formatter = output_formatter
         else:
-            formatter = parameters.get("output_formatter", None)
+            formatter = parameters.pop("output_formatter", None)
             if not formatter or "json" == formatter:
                 self.output_formatter = _json_output_formatter
             elif "jsonlines" == formatter:
