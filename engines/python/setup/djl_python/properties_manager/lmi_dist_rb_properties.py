@@ -10,75 +10,44 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import logging
-import os
 from enum import Enum
 from typing import Optional
 
-import torch
-from pydantic.v1.class_validators import root_validator
+from pydantic.v1.class_validators import validator, root_validator
 
-from djl_python.properties_manager.hf_properties import get_torch_dtype_from_str
 from djl_python.properties_manager.properties import Properties
 
 
 class LmiDistQuantizeMethods(str, Enum):
-    # added for backward compatibility lmi-dist
-    bitsandbytes = 'bitsandbytes'
-    bitsandbytes8 = 'bitsandbytes8'
-    gptq = 'gptq'
     awq = 'awq'
+    gptq = 'gptq'
+    squeezellm = 'squeezellm'
 
 
 class LmiDistRbProperties(Properties):
     engine: Optional[str] = None
+    dtype: Optional[str] = "auto"
+    load_format: Optional[str] = "auto"
     quantize: Optional[LmiDistQuantizeMethods] = None
-    tensor_parallel_degree: Optional[int] = 1
-    max_rolling_batch_prefill_tokens: Optional[int] = 4096
-    device: Optional[int] = None
-    dtype: Optional[str] = None
-    torch_dtype: Optional[torch.dtype] = None
+    tensor_parallel_degree: Optional[int] = None
+    max_rolling_batch_prefill_tokens: Optional[int] = None
+    # Adjustable prefix model length for certain 32k or longer model
+    max_model_len: Optional[int] = None
+    # TODO: change Enforce eager to False once SageMaker driver issue resolved
+    enforce_eager: Optional[bool] = False
+    # TODO: this default may change with different vLLM versions
+    # TODO: try to get good default from vLLM to prevent revisiting
+    # TODO: last time check: vllm 0.3.1
+    gpu_memory_utilization: Optional[float] = 0.9
+    # TODO: speculative decoding changes
+    speculative_draft_model: Optional[str] = None
+    speculative_length: int = 5
+    draft_model_tp_size: int = 1
+    record_acceptance_rate: Optional[bool] = False
 
-    @root_validator(skip_on_failure=True)
-    def validate_mpi_mode(cls, properties):
-        if not properties.get("is_mpi") and int(
-                properties.get("tensor_parallel_degree", "1")) != 1:
-            raise ValueError(f"Need mpi_mode to start lmi-dist RollingBatcher."
-                             f"Try with engine=MPI in your serving.properties")
-        return properties
-
-    @root_validator(skip_on_failure=True)
-    def validate_quantize(cls, properties):
-        if properties.get('quantize') is None:
-            if properties.get('dtype') == "int8":
-                properties['quantize'] = LmiDistQuantizeMethods.bitsandbytes
-        else:
-            # parsing bitsandbytes8, so it can be directly passed to lmi dist model loader.
-            if properties.get(
-                    'quantize') == LmiDistQuantizeMethods.bitsandbytes8:
-                properties['quantize'] = LmiDistQuantizeMethods.bitsandbytes
-            if properties.get('dtype') is not None:
-                raise ValueError(
-                    f"Can't set both dtype: {properties['dtype']} and quantize: {properties['quantize']}"
-                )
-        return properties
-
-    @root_validator(skip_on_failure=True)
-    def set_device(cls, properties):
-        if properties.get('is_mpi'):
-            properties['device'] = int(os.getenv("LOCAL_RANK", 0))
-        return properties
-
-    @root_validator(skip_on_failure=True)
-    def construct_dtype(cls, properties):
-        if properties.get('dtype'):
-            properties["torch_dtype"] = get_torch_dtype_from_str(
-                properties['dtype'].lower())
-        elif properties.get('data_type'):
-            logging.warning('option.data_type is deprecated.'
-                            'Please use option.dtype')
-            properties["torch_dtype"] = get_torch_dtype_from_str(
-                properties['data_type'].lower())
-        else:
-            properties['torch_dtype'] = torch.float16
-        return properties
+    @validator('engine')
+    def validate_engine(cls, engine):
+        if engine != "MPI":
+            raise AssertionError(
+                f"Need MPI engine to start lmidist_v2 RollingBatcher")
+        return engine

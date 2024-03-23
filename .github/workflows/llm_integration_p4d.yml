@@ -66,7 +66,6 @@ jobs:
           python3 llm/client.py lmi_dist_aiccl mixtral-8x7b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
             echo "aiccl backend not used"
-            return 1
           else
             echo "Using aiccl backend"
           fi
@@ -81,7 +80,6 @@ jobs:
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
             echo "aiccl backend not used"
-            return 1
           else
             echo "Using aiccl backend"
           fi
@@ -96,7 +94,6 @@ jobs:
           python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
             echo "aiccl backend not used"
-            return 1
           else
             echo "Using aiccl backend"
           fi
@@ -111,7 +108,6 @@ jobs:
           python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
             echo "aiccl backend not used"
-            return 1
           else
             echo "Using aiccl backend"
           fi

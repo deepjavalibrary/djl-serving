@@ -18,8 +18,7 @@ from vllm.utils import random_uuid
 from vllm.lora.request import LoRARequest
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
-    get_speculative_decoding_metrics_record, update_request_cache_with_output,
-    supports_speculative_decoding, DTYPE_MAPPER, FINISH_REASON_MAPPER)
+    update_request_cache_with_output, DTYPE_MAPPER, FINISH_REASON_MAPPER)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 
@@ -41,15 +40,6 @@ class VLLMRollingBatch(RollingBatch):
         """
         self.vllm_configs = VllmRbProperties(**properties)
         super().__init__(waiting_steps=self.vllm_configs.waiting_steps)
-        self.supports_speculative_decoding = supports_speculative_decoding()
-        engine_kwargs = {}
-        if supports_speculative_decoding():
-            engine_kwargs[
-                "draft_model"] = self.vllm_configs.speculative_draft_model
-            engine_kwargs[
-                "speculate_length"] = self.vllm_configs.speculative_length
-            engine_kwargs[
-                "draft_model_tp_size"] = self.vllm_configs.draft_model_tp_size
         args = EngineArgs(
             model=self.vllm_configs.model_id_or_path,
             tensor_parallel_size=self.vllm_configs.tensor_parallel_degree,
@@ -68,8 +58,7 @@ class VLLMRollingBatch(RollingBatch):
             max_lora_rank=self.vllm_configs.max_lora_rank,
             lora_extra_vocab_size=self.vllm_configs.lora_extra_vocab_size,
             max_cpu_loras=self.vllm_configs.max_cpu_loras,
-            revision=self.vllm_configs.revision,
-            **engine_kwargs)
+            revision=self.vllm_configs.revision)
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
@@ -164,16 +153,6 @@ class VLLMRollingBatch(RollingBatch):
         for request_output in request_outputs:
             self.request_cache = update_request_cache_with_output(
                 self.request_cache, request_output)
-            # Record SD metrics
-            completion_output = request_output.outputs[0]
-            if self.vllm_configs.record_acceptance_rate and request_output.finished:
-                if self.supports_speculative_decoding and completion_output.acceptance_history:
-                    record = get_speculative_decoding_metrics_record(
-                        completion_output, request_output)
-                    logging.info(f"Speculative Decoding {record}")
-                else:
-                    logging.warning(
-                        f"Ignoring logging speculative decoding metrics")
 
         # step 2: send result back
         finished_id = []

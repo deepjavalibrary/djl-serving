@@ -344,11 +344,22 @@ lmi_dist_model_spec = {
         "seq_length": [256],
         "tokenizer": "bigcode/octocoder"
     },
-    "gpt-neox-20b-bitsandbytes": {
+    "speculative-llama-13b": {
         "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "starcoder2-7b": {
+        "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "EleutherAI/gpt-neox-20b"
+        "tokenizer": "bigcode/starcoder2-7b"
+    },
+    "gemma-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256]
     },
     "llama2-13b-gptq": {
         "max_memory_per_gpu": [23.0],
@@ -373,7 +384,15 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "mistralai/Mistral-7B-v0.1"
-    }
+    },
+    "llama-7b-unmerged-lora": {
+        "max_memory_per_gpu": [15.0, 15.0],
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
 }
 
 vllm_model_spec = {
@@ -413,12 +432,6 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
     },
-    "speculative-llama-13b": {
-        "max_memory_per_gpu": [23.0],
-        "batch_size": [1, 8],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [3],
@@ -426,7 +439,18 @@ vllm_model_spec = {
         "worker": 1,
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    }
+    },
+    "starcoder2-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "bigcode/starcoder2-7b"
+    },
+    "gemma-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256]
+    },
 }
 
 ds_smoothquant_model_spec = {

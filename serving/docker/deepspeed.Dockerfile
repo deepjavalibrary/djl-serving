@@ -20,8 +20,8 @@ ARG torch_vision_version=0.16.2
 ARG pydantic_version=2.6.1
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.38.1
-ARG accelerate_version=0.27.2
+ARG transformers_version=4.39.0
+ARG accelerate_version=0.28.0
 ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.15.0

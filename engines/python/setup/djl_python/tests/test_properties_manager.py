@@ -523,13 +523,9 @@ class TestConfigManager(unittest.TestCase):
             lmi_configs = LmiDistRbProperties(**min_properties)
             self.assertEqual(lmi_configs.model_id_or_path,
                              min_properties['model_id'])
-            self.assertEqual(lmi_configs.tensor_parallel_degree, 1)
-            self.assertEqual(lmi_configs.max_rolling_batch_size, 32)
-            self.assertEqual(lmi_configs.max_rolling_batch_prefill_tokens,
-                             4096)
-            self.assertEqual(lmi_configs.torch_dtype, torch.float16)
-            self.assertEqual(lmi_configs.device, 0)
-            self.assertIsNone(lmi_configs.dtype)
+            self.assertEqual(lmi_configs.load_format, 'auto')
+            self.assertEqual(lmi_configs.dtype, 'auto')
+            self.assertEqual(lmi_configs.gpu_memory_utilization, 0.9)
             self.assertTrue(lmi_configs.is_mpi)
 
         def test_with_most_properties():
@@ -555,8 +551,6 @@ class TestConfigManager(unittest.TestCase):
                 lmi_configs.max_rolling_batch_prefill_tokens,
                 int(properties['max_rolling_batch_prefill_tokens']))
             self.assertEqual(lmi_configs.dtype, 'fp32')
-            self.assertEqual(lmi_configs.torch_dtype, torch.float32)
-            self.assertEqual(lmi_configs.device, 0)
             self.assertTrue(lmi_configs.is_mpi)
             self.assertTrue(lmi_configs.trust_remote_code)
 
@@ -567,23 +561,15 @@ class TestConfigManager(unittest.TestCase):
 
         def test_quantization_with_dtype_error():
             # you cannot give both quantization method and dtype
-            properties = {'quantize': 'gptq', 'dtype': 'int8'}
+            properties = {'quantize': 'bitsandbytes', 'dtype': 'int8'}
             with self.assertRaises(ValueError):
                 LmiDistRbProperties(**properties, **min_properties)
 
-        def test_quantization_with_dtype():
-            properties = {'dtype': 'int8'}
-            lmi_configs = LmiDistRbProperties(**properties, **min_properties)
-            self.assertEqual(lmi_configs.dtype, properties['dtype'])
-            self.assertEqual(lmi_configs.torch_dtype, torch.int8)
-            self.assertEqual(lmi_configs.quantize.value,
-                             LmiDistQuantizeMethods.bitsandbytes.value)
-
-        def test_quantization_bitsandbytes8():
-            properties = {'quantize': 'bitsandbytes8'}
+        def test_quantization_squeezellm():
+            properties = {'quantize': 'squeezellm'}
             lmi_configs = LmiDistRbProperties(**properties, **min_properties)
             self.assertEqual(lmi_configs.quantize.value,
-                             LmiDistQuantizeMethods.bitsandbytes.value)
+                             LmiDistQuantizeMethods.squeezellm.value)
 
         min_properties = {
             'engine': 'MPI',
@@ -594,8 +580,7 @@ class TestConfigManager(unittest.TestCase):
         test_with_most_properties()
         test_invalid_quantization()
         test_quantization_with_dtype_error()
-        test_quantization_with_dtype()
-        test_quantization_bitsandbytes8()
+        test_quantization_squeezellm()
 
     def test_scheduler_properties(self):
         properties = {

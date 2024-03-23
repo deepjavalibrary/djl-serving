@@ -299,14 +299,32 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist octocoder
           docker rm -f $(docker ps -aq)
-      - name: Test gpt-neox-20b-bitsandbytes
+      - name: Test speculative-llama-13b
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py lmi_dist gpt-neox-20b-bitsandbytes
+          python3 llm/prepare.py lmi_dist speculative-llama-13b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
             serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py lmi_dist gpt-neox-20b-bitsandbytes
+          python3 llm/client.py lmi_dist speculative-llama-13b
+          docker rm -f $(docker ps -aq)
+      - name: Test starcoder2-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist starcoder2-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist starcoder2-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test gemma-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist gemma-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist gemma-7b
           docker rm -f $(docker ps -aq)
       - name: Test llama2-13b-gptq
         working-directory: tests/integration
@@ -426,14 +444,23 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm phi-2
           docker rm -f $(docker ps -aq)
-      - name: Test Speculative Decoding with LLAMA 13B model
+      - name: Test starcoder2-7b
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py vllm speculative-llama-13b
+          python3 llm/prepare.py vllm starcoder2-7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
             serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py vllm speculative-llama-13b
+          python3 llm/client.py vllm starcoder2-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test gemma-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm gemma-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm gemma-7b
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
