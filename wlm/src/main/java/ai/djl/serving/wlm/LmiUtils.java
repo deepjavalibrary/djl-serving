@@ -56,7 +56,7 @@ public final class LmiUtils {
         }
         LmiConfigRecommender.configure(prop, modelConfig);
         logger.info(
-                "Detected engine: {}, rolling_batch: {}, tensor_paralell_degre {}, for modelType:"
+                "Detected engine: {}, rolling_batch: {}, tensor_parallel_degree {}, for modelType:"
                         + " {}",
                 prop.getProperty("engine"),
                 prop.getProperty("option.rolling_batch"),
@@ -70,20 +70,20 @@ public final class LmiUtils {
         if ("trtllm".equals(rollingBatch)) {
             return true;
         }
+        String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         if (rollingBatch == null || "auto".equals(rollingBatch)) {
             // FIXME: find a better way to set default rolling batch for trtllm
-            String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
             return features != null && features.contains("trtllm");
         }
         return false;
     }
 
     static boolean needConvert(ModelInfo<?, ?> info) {
-        return isTrtLLM(info.getProperties());
+        Properties properties = info.getProperties();
+        return isTrtLLM(info.getProperties()) || properties.containsKey("need_convert");
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
-        info.prop.put("option.rolling_batch", "trtllm");
         Path trtRepo;
         String modelId = null;
         if (info.downloadDir != null) {
@@ -95,18 +95,25 @@ public final class LmiUtils {
                 trtRepo = Paths.get(modelId);
             }
         }
-        if (!isValidTrtLlmModelRepo(trtRepo)) {
-            if (modelId == null) {
-                modelId = trtRepo.toString();
-            }
-            String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
-            if (tpDegree == null) {
-                tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
-            }
-            if ("max".equals(tpDegree)) {
-                tpDegree = String.valueOf(CudaUtils.getGpuCount());
-            }
+
+        if (modelId == null) {
+            modelId = trtRepo.toString();
+        }
+        String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
+        if (tpDegree == null) {
+            tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
+        }
+        if ("max".equals(tpDegree)) {
+            tpDegree = String.valueOf(CudaUtils.getGpuCount());
+        }
+
+        if ("disable".equals(info.prop.getProperty("option.rolling_batch"))) {
             info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+        } else {
+            info.prop.put("option.rolling_batch", "trtllm");
+            if (!isValidTrtLlmModelRepo(trtRepo)) {
+                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+            }
         }
     }
 
