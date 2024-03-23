@@ -14,6 +14,9 @@ import logging
 from collections import OrderedDict
 from lmi_dist.arg_utils import VllmEngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput
+from vllm.lora.request import LoRARequest
+
+from djl_python.rolling_batch.rolling_batch import Request
 
 DTYPE_MAPPER = {
     "fp32": "float32",
@@ -69,3 +72,15 @@ def get_speculative_decoding_metrics_record(
 
 def supports_speculative_decoding() -> bool:
     return "draft_model" in VllmEngineArgs.__annotations__
+
+
+def get_lora_request_params(request: Request, lora_ids: dict) -> dict:
+    result = dict()
+    adapter = request.adapter
+    if adapter is not None:
+        adapter_name = adapter.get_property("name")
+        adapter_path = adapter.get_property("src")
+        adapter_id = lora_ids[adapter_name]
+        result["lora_request"] = LoRARequest(adapter_name, adapter_id,
+                                                adapter_path)
+    return result

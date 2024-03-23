@@ -11,16 +11,17 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
+from vllm.lora.request import LoRARequest
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
-    supports_speculative_decoding, DTYPE_MAPPER, FINISH_REASON_MAPPER)
+    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER, FINISH_REASON_MAPPER)
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
 _WARMUP_PREFILL_TOKENS = 4096
@@ -64,6 +65,11 @@ class LmiDistRollingBatch(RollingBatch):
             trust_remote_code=self.lmi_dist_config.trust_remote_code,
             load_format=self.lmi_dist_config.load_format,
             quantization=self.lmi_dist_config.quantize,
+            enable_lora=self.lmi_dist_config.enable_lora,
+            max_loras=self.lmi_dist_config.max_loras,
+            max_lora_rank=self.lmi_dist_config.max_lora_rank,
+            lora_extra_vocab_size=self.lmi_dist_config.lora_extra_vocab_size,
+            max_cpu_loras=self.lmi_dist_config.max_cpu_loras,
             revision=self.lmi_dist_config.revision,
             **engine_kwargs)
 
@@ -74,6 +80,7 @@ class LmiDistRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
         self.model_type = getattr(kwargs.get("model_config", None),
                                   "model_type", None)
+        self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
 
     def reset(self) -> None:
         """
@@ -89,7 +96,7 @@ class LmiDistRollingBatch(RollingBatch):
     def translate_lmi_dist_params(self, parameters: dict):
         """
         Helper function to convert DJL Serving parameter names to parameter names
-        that lmidist_v2 recognizes.
+        that lmi-dist recognizes.
 
         :param parameters (dict): Parameters pertaining to a specific request
 
@@ -139,9 +146,11 @@ class LmiDistRollingBatch(RollingBatch):
             request_id = str(request.id)
             params = self.translate_lmi_dist_params(request.parameters)
             request_params = RequestParams(**params)
+            lora_request_params = get_lora_request_params(request, self.lora_ids)
             lmi_dist_request = Request(id=request_id,
                                        prompt=request.input_text,
-                                       params=request_params)
+                                       params=request_params,
+                                       lora_request=lora_request_params["lora_request"] if lora_request_params else None)
             self.engine.add_request(lmi_dist_request)
             self.request_cache[request_id] = {
                 "curr_length": 0,
@@ -195,7 +204,7 @@ class LmiDistRollingBatch(RollingBatch):
 
     def preprocess_requests(self, requests):
         """
-        Currently not applicable for lmi-dist-v2.
+        Currently not applicable for lmi-dist.
         """
         raise NotImplementedError(
-            "Not implemented for lmidist_v2 rolling batcher")
+            "Not implemented for lmidist rolling batcher")

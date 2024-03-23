@@ -18,7 +18,7 @@ from vllm.utils import random_uuid
 from vllm.lora.request import LoRARequest
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
-    update_request_cache_with_output, DTYPE_MAPPER, FINISH_REASON_MAPPER)
+    update_request_cache_with_output, get_lora_request_params, DTYPE_MAPPER, FINISH_REASON_MAPPER)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 
@@ -101,17 +101,6 @@ class VLLMRollingBatch(RollingBatch):
             parameters.pop("output_formatter")
         return parameters
 
-    def vllm_request_params(self, request):
-        result = dict()
-        adapter = request.adapter
-        if adapter is not None:
-            adapter_name = adapter.get_property("name")
-            adapter_path = adapter.get_property("src")
-            adapter_id = self.lora_ids[adapter_name]
-            result["lora_request"] = LoRARequest(adapter_name, adapter_id,
-                                                 adapter_path)
-        return result
-
     @stop_on_any_exception
     def inference(self,
                   input_data: list[str],
@@ -136,7 +125,7 @@ class VLLMRollingBatch(RollingBatch):
             request_id = random_uuid()
             params = self.translate_vllm_params(request.parameters)
             sampling_params = SamplingParams(**params)
-            request_params = self.vllm_request_params(request)
+            request_params = get_lora_request_params(request, self.lora_ids)
             self.engine.add_request(request_id, request.input_text,
                                     sampling_params, **request_params)
             self.request_cache[request_id] = {
