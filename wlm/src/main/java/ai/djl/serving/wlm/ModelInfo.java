@@ -776,7 +776,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             queueSize = intValue(prop, "job_queue_size", wlmc.getJobQueueSize());
         }
         if (batchSize <= 0) {
-            batchSize = intValue(prop, "batch_size", wlmc.getBatchSize());
+            batchSize = intValue(prop, "max_dynamic_batch_size", wlmc.getBatchSize());
+            batchSize = intValue(prop, "batch_size", batchSize);
         }
         if (maxBatchDelayMillis <= 0) {
             maxBatchDelayMillis = intValue(prop, "max_batch_delay", wlmc.getMaxBatchDelayMillis());
@@ -796,6 +797,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             String key = entry.getKey().toString();
             if (!"job_queue_size".equals(key)
                     && !"batch_size".equals(key)
+                    && !"max_dynamic_batch_size".equals(key)
                     && !"max_idle_time".equals(key)
                     && !"max_batch_delay".equals(key)
                     && !"load_on_devices".equals(key)
@@ -810,7 +812,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         logger.info(
-                "{}: Apply per model settings:\n\tjob_queue_size: {}\n\tbatch_size: {}"
+                "{}: Apply per model settings:\n\tjob_queue_size: {}\n\tmax_dynamic_batch_size: {}"
                         + "\n\tmax_batch_delay: {}\n\tmax_idle_time: {}\n\tload_on_devices: {}"
                         + "\n\tengine: {}\n\tmpi_mode: {}\n\toption.entryPoint: {}{}",
                 uid,
