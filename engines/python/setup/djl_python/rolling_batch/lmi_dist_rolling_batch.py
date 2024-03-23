@@ -21,7 +21,8 @@ from vllm.lora.request import LoRARequest
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
-    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER, FINISH_REASON_MAPPER)
+    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER,
+    FINISH_REASON_MAPPER)
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
 _WARMUP_PREFILL_TOKENS = 4096
@@ -146,11 +147,14 @@ class LmiDistRollingBatch(RollingBatch):
             request_id = str(request.id)
             params = self.translate_lmi_dist_params(request.parameters)
             request_params = RequestParams(**params)
-            lora_request_params = get_lora_request_params(request, self.lora_ids)
-            lmi_dist_request = Request(id=request_id,
-                                       prompt=request.input_text,
-                                       params=request_params,
-                                       lora_request=lora_request_params["lora_request"] if lora_request_params else None)
+            lora_request_params = get_lora_request_params(
+                request, self.lora_ids)
+            lmi_dist_request = Request(
+                id=request_id,
+                prompt=request.input_text,
+                params=request_params,
+                lora_request=lora_request_params["lora_request"]
+                if lora_request_params else None)
             self.engine.add_request(lmi_dist_request)
             self.request_cache[request_id] = {
                 "curr_length": 0,

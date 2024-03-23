@@ -82,5 +82,5 @@ def get_lora_request_params(request: Request, lora_ids: dict) -> dict:
         adapter_path = adapter.get_property("src")
         adapter_id = lora_ids[adapter_name]
         result["lora_request"] = LoRARequest(adapter_name, adapter_id,
-                                                adapter_path)
+                                             adapter_path)
     return result

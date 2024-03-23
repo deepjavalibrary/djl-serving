@@ -50,7 +50,6 @@ class LmiDistRbProperties(Properties):
     lora_extra_vocab_size: Optional[int] = 256
     max_cpu_loras: Optional[int] = None
 
-
     @validator('engine')
     def validate_engine(cls, engine):
         if engine != "MPI":
