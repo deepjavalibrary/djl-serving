@@ -631,7 +631,7 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(chat_configs.n, 1)
             self.assertEqual(chat_configs.presence_penalty, 0)
             self.assertIsNone(chat_configs.seed)
-            self.assertIsNone(chat_configs.stop)
+            self.assertIsNone(chat_configs.stop_sequences)
             self.assertEqual(chat_configs.temperature, 1)
             self.assertEqual(chat_configs.top_p, 1)
             self.assertIsNone(chat_configs.user)
@@ -666,7 +666,7 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(chat_configs.presence_penalty,
                              float(properties['presence_penalty']))
             self.assertEqual(chat_configs.seed, int(properties['seed']))
-            self.assertEqual(chat_configs.stop, properties['stop'])
+            self.assertEqual(chat_configs.stop_sequences, properties['stop'])
             self.assertEqual(chat_configs.temperature,
                              int(properties['temperature']))
             self.assertEqual(chat_configs.top_p, int(properties['top_p']))

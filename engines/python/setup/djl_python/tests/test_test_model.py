@@ -81,3 +81,62 @@ class TestTestModel(unittest.TestCase):
 
         for key in envs.keys():
             os.environ[key] = ""
+
+    def test_all_code_chat(self):
+        model_id = "TheBloke/Llama-2-7B-Chat-fp16"
+        handler = TestHandler(huggingface)
+        inputs = [{
+            "inputs":
+            "<|system|>You are a helpful assistant.</s><|user|>What is deep learning?</s>",
+            "parameters": {
+                "max_new_tokens": 50
+            }
+        }, {
+            "inputs":
+            "<|system|>You are a friendly chatbot who always responds in the style of a pirate</s><|user|>How many helicopters can a human eat in one sitting?</s>",
+            "parameters": {
+                "max_new_tokens": 50
+            }
+        }]
+        serving_properties = {
+            "engine": "Python",
+            "rolling_batch": "auto",
+            "model_id": model_id
+        }
+        result = handler.inference_rolling_batch(
+            inputs, serving_properties=serving_properties)
+        self.assertEqual(len(result), len(inputs))
+
+    def test_with_env_chat(self):
+        envs = {
+            "OPTION_MODEL_ID": "TheBloke/Llama-2-7B-Chat-fp16",
+            "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
+            "OPTION_ROLLING_BATCH": "auto"
+        }
+        for key, value in envs.items():
+            os.environ[key] = value
+        handler = TestHandler(huggingface)
+        self.assertEqual(handler.serving_properties["model_id"],
+                         envs["OPTION_MODEL_ID"])
+        self.assertEqual(handler.serving_properties["rolling_batch"],
+                         envs["OPTION_ROLLING_BATCH"])
+        inputs = [{
+            "inputs":
+            "<|system|>You are a helpful assistant.</s><|user|>What is deep learning?</s>",
+            "parameters": {
+                "max_new_tokens": 50
+            }
+        }, {
+            "inputs":
+            "<|system|>You are a friendly chatbot who always responds in the style of a pirate</s><|user|>How many helicopters can a human eat in one sitting?</s>",
+            "parameters": {
+                "min_new_tokens": 51,
+                "max_new_tokens": 256
+            }
+        }]
+        result = handler.inference_rolling_batch(inputs)
+        self.assertEqual(len(result), len(inputs))
+        self.assertTrue(len(result[1]) > len(result[0]))
+
+        for key in envs.keys():
+            os.environ[key] = ""

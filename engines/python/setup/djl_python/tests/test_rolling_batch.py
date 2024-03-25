@@ -120,6 +120,7 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
+                      details=True,
                       output_formatter=_json_output_formatter)
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
@@ -161,6 +162,7 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
+                      details=True,
                       output_formatter=_jsonlines_output_formatter)
         req.set_next_token(Token(244, "He", -0.334532))
         req.set_next_token(Token(576, "llo", -0.123123))
@@ -187,6 +189,7 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
+                      details=True,
                       output_formatter=_jsonlines_output_formatter)
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -225,7 +228,7 @@ class TestRollingBatch(unittest.TestCase):
     def test_custom_fmt(self):
 
         def custom_fmt(token: Token, first_token: bool, last_token: bool,
-                       details: dict, generated_tokens: str):
+                       details: dict, generated_tokens: str, id: int):
             result = {
                 "token_id": token.id,
                 "token_text": token.text,
@@ -257,6 +260,7 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
+                      details=True,
                       output_formatter=custom_fmt)
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -284,7 +288,7 @@ class TestRollingBatch(unittest.TestCase):
     def test_custom_fmt_with_detailed_data_retrival(self):
 
         def custom_fmt(token: Token, first_token: bool, last_token: bool,
-                       details: dict, generated_tokens: str):
+                       details: dict, generated_tokens: str, id: int):
             result = details
             return json.dumps(result) + "\n"
 
@@ -310,6 +314,8 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
+                      details=True,
+                      input_ids=[101, 1188, 1110, 170, 7310, 1285, 102],
                       output_formatter=custom_fmt)
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -323,7 +329,8 @@ class TestRollingBatch(unittest.TestCase):
                 'text': 'He'
             }],
             "parameters": {
-                "max_new_tokens": 256
+                "max_new_tokens": 256,
+                "details": True
             }
         }
         req.set_next_token(Token(576, "llo", -0.123123))
@@ -338,17 +345,18 @@ class TestRollingBatch(unittest.TestCase):
             'tokens': [
                 {
                     'id': [244],
+                    'text': 'He',
                     'log_prob': -0.334532,
-                    'text': 'He'
                 },
                 {
                     'id': [576],
+                    'text': 'llo',
                     'log_prob': -0.123123,
-                    'text': 'llo'
                 },
             ],
             "parameters": {
-                "max_new_tokens": 256
+                "max_new_tokens": 256,
+                "details": True
             }
         }
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
@@ -362,20 +370,23 @@ class TestRollingBatch(unittest.TestCase):
             'This is a wonderful day',
             'tokens': [{
                 'id': [244],
+                'text': 'He',
                 'log_prob': -0.334532,
-                'text': 'He'
             }, {
                 'id': [576],
+                'text': 'llo',
                 'log_prob': -0.123123,
-                'text': 'llo'
             }, {
                 'id': [4558],
+                'text': ' world',
                 'log_prob': -0.567854,
-                'text': ' world'
             }],
             "parameters": {
-                "max_new_tokens": 256
-            }
+                "max_new_tokens": 256,
+                "details": True
+            },
+            "prompt_tokens":
+            7
         }
 
 

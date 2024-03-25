@@ -85,9 +85,8 @@ class TRTLLMService(object):
                 _param = chat_params.dict(exclude_unset=True,
                                           exclude={
                                               'messages', 'model',
-                                              'frequency_penalty',
-                                              'top_logprobs',
-                                              'presence_penalty', 'n', 'user'
+                                              'logit_bias', 'top_logprobs',
+                                              'n', 'user'
                                           })
                 _param["details"] = True
                 _param["output_formatter"] = "json_chat"

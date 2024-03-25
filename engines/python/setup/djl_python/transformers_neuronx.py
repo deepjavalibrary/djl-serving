@@ -146,7 +146,7 @@ class TransformersNeuronXService(object):
                                              exclude={
                                                  'messages', 'model',
                                                  'frequency_penalty',
-                                                 'top_logprobs',
+                                                 'logit_bias', 'top_logprobs',
                                                  'presence_penalty', 'n',
                                                  'user'
                                              })
@@ -157,7 +157,8 @@ class TransformersNeuronXService(object):
                     _inputs = input_map.pop("inputs", input_map)
                     param = input_map.pop("parameters", {})
                     if "output_formatter" not in param:
-                        param["output_formatter"] = self.config.output_formatter
+                        param[
+                            "output_formatter"] = self.config.output_formatter
                     param["stream"] = input_map.pop("stream", False)
                     if first or self.rolling_batch:
                         parameters.append(param)
@@ -165,7 +166,8 @@ class TransformersNeuronXService(object):
                     else:
                         if parameters[0] != param:
                             logging.warning(
-                                f"expected param: {parameters}, actual: {param}")
+                                f"expected param: {parameters}, actual: {param}"
+                            )
                             raise ValueError(
                                 "In order to enable dynamic batching, all input batches must have the same parameters"
                             )

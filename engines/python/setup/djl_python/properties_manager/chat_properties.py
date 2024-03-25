@@ -19,7 +19,7 @@ class ChatProperties(BaseModel):
     n: Optional[int] = 1  # Currently only support 1
     presence_penalty: Optional[float] = 0
     seed: Optional[int]
-    stop: Optional[Union[str, list]] = None
+    stop_sequences: Optional[Union[str, list]] = Field(alias="stop")
     temperature: Optional[int] = 1
     top_p: Optional[int] = 1
     user: Optional[str]

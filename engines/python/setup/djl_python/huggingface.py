@@ -241,8 +241,8 @@ class HuggingFaceService(object):
                 _param = chat_params.dict(exclude_unset=True,
                                           exclude={
                                               'messages', 'model',
-                                              'top_logprobs',
-                                              'presence_penalty', 'n', 'user'
+                                              'logit_bias', 'top_logprobs',
+                                              'n', 'user'
                                           })
                 if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
                     _param["details"] = True
