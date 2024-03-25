@@ -117,7 +117,7 @@ public final class LmiConfigRecommender {
                 || lmiProperties.containsKey("max_dynamic_batch_size")) {
             return;
         }
-
+        // TODO: Change it once TrtLLM supports T5 with inflight batching.
         if ("t5".equals(modelConfig.getModelType()) && isTrtLLMEnabled(features)) {
             modelInfo.batchSize = 32;
         }
