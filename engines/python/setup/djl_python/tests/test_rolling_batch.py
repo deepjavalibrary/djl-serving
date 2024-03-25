@@ -7,53 +7,69 @@ from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_
 class TestRollingBatch(unittest.TestCase):
 
     def test_json_fmt(self):
-        req = Request(0,
-                      "This is a wonderful day",
-                      parameters={"max_new_tokens": 256},
-                      output_formatter=_json_output_formatter)
-        req.set_next_token(Token(244, "He", -0.334532))
-        print(req.get_next_token(), end='')
-        assert req.get_next_token() == '{"generated_text": "He'
-        req.set_next_token(Token(576, "llo", -0.123123))
-        print(req.get_next_token(), end='')
-        assert req.get_next_token() == 'llo'
-        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
-        print(req.get_next_token(), end='')
-        assert req.get_next_token() == ' world"}'
+        req1 = Request(0,
+                       "This is a wonderful day",
+                       parameters={"max_new_tokens": 256},
+                       output_formatter=_json_output_formatter)
+        req2 = Request(1,
+                       "This is a wonderful day",
+                       parameters={
+                           "max_new_tokens": 256,
+                           "stream": False
+                       })
+        for req in [req1, req2]:
+            req.set_next_token(Token(244, "He", -0.334532))
+            print(req.get_next_token(), end='')
+            assert req.get_next_token() == '{"generated_text": "He'
+            req.set_next_token(Token(576, "llo", -0.123123))
+            print(req.get_next_token(), end='')
+            assert req.get_next_token() == 'llo'
+            req.set_next_token(Token(4558, " world", -0.567854), True,
+                               'length')
+            print(req.get_next_token(), end='')
+            assert req.get_next_token() == ' world"}'
 
     def test_jsonlines_fmt(self):
-        req = Request(0,
-                      "This is a wonderful day",
-                      parameters={"max_new_tokens": 256},
-                      output_formatter=_jsonlines_output_formatter)
-        req.set_next_token(Token(244, "He", -0.334532))
-        print(req.get_next_token(), end='')
-        assert json.loads(req.get_next_token()) == {
-            "token": {
-                "id": [244],
-                "text": "He",
-                "log_prob": -0.334532
+        req1 = Request(0,
+                       "This is a wonderful day",
+                       parameters={"max_new_tokens": 256},
+                       output_formatter=_jsonlines_output_formatter)
+        req2 = Request(1,
+                       "This is a wonderful day",
+                       parameters={
+                           "max_new_tokens": 256,
+                           "stream": True
+                       })
+        for req in [req1, req2]:
+            req.set_next_token(Token(244, "He", -0.334532))
+            print(req.get_next_token(), end='')
+            assert json.loads(req.get_next_token()) == {
+                "token": {
+                    "id": [244],
+                    "text": "He",
+                    "log_prob": -0.334532
+                }
             }
-        }
-        req.set_next_token(Token(576, "llo", -0.123123))
-        print(req.get_next_token(), end='')
-        assert json.loads(req.get_next_token()) == {
-            "token": {
-                "id": [576],
-                "text": "llo",
-                "log_prob": -0.123123
+            req.set_next_token(Token(576, "llo", -0.123123))
+            print(req.get_next_token(), end='')
+            assert json.loads(req.get_next_token()) == {
+                "token": {
+                    "id": [576],
+                    "text": "llo",
+                    "log_prob": -0.123123
+                }
             }
-        }
-        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
-        print(req.get_next_token(), end='')
-        assert json.loads(req.get_next_token()) == {
-            "token": {
-                "id": [4558],
-                "text": " world",
-                "log_prob": -0.567854
-            },
-            "generated_text": "Hello world"
-        }
+            req.set_next_token(Token(4558, " world", -0.567854), True,
+                               'length')
+            print(req.get_next_token(), end='')
+            assert json.loads(req.get_next_token()) == {
+                "token": {
+                    "id": [4558],
+                    "text": " world",
+                    "log_prob": -0.567854
+                },
+                "generated_text": "Hello world"
+            }
 
     def test_return_full_text(self):
         req = Request(0,
