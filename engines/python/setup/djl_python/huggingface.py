@@ -231,13 +231,14 @@ class HuggingFaceService(object):
             input_size.append(len(_inputs))
 
             _param = input_map.pop("parameters", {})
+            _param["stream"] = input_map.pop("stream", False)
             if "cached_prompt" in input_map:
                 _param["cached_prompt"] = input_map.pop("cached_prompt")
-            if not "seed" in _param:
+            if "seed" not in _param:
                 # set server provided seed if seed is not part of request
                 if item.contains_key("seed"):
                     _param["seed"] = item.get_as_string(key="seed")
-            if not "output_formatter" in _param:
+            if "output_formatter" not in _param:
                 _param["output_formatter"] = self.hf_configs.output_formatter
 
             for _ in range(input_size[i]):
@@ -251,7 +252,7 @@ class HuggingFaceService(object):
             if adapters_per_item:
                 found_adapters = True
             else:
-                ## inference with just base model.
+                # inference with just base model.
                 adapters_per_item = [""] * len(_inputs)
 
             adapters.extend(adapters_per_item)

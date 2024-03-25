@@ -132,21 +132,20 @@ class TransformersNeuronXService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
+                _param = input_map.pop("parameters", {})
+                if "output_formatter" not in _param:
+                    _param["output_formatter"] = self.config.output_formatter
+                _param["stream"] = input_map.pop("stream", False)
                 if first or self.rolling_batch:
-                    parameters.append(input_map.pop("parameters", {}))
+                    parameters.append(_param)
                     first = False
                 else:
-                    param = input_map.pop("parameters", {})
-                    if parameters[0] != param:
+                    if parameters[0] != _param:
                         logging.warning(
-                            f"expected param: {parameters}, actual: {param}")
+                            f"expected param: {parameters}, actual: {_param}")
                         raise ValueError(
                             "In order to enable dynamic batching, all input batches must have the same parameters"
                         )
-
-                    if not "output_formatter" in param:
-                        param[
-                            "output_formatter"] = self.config.output_formatter
 
                 if isinstance(_inputs, list):
                     input_data.extend(_inputs)

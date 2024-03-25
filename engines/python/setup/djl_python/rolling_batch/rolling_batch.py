@@ -111,6 +111,24 @@ def get_content_type_from_output_formatter(output_formatter: Union[str,
     return None
 
 
+def get_output_formatter(output_formatter: Union[str, Callable], stream: bool):
+    if callable(output_formatter):
+        return output_formatter
+    if output_formatter == "json":
+        return _json_output_formatter
+    if output_formatter == "jsonlines":
+        return _jsonlines_output_formatter
+    if output_formatter == "none":
+        return None
+    if output_formatter is not None:
+        # TODO: Support custom loading of user supplied output formatter
+        logging.warning(f"Unsupported output formatter: {output_formatter}")
+
+    if stream:
+        return _jsonlines_output_formatter
+    return _json_output_formatter
+
+
 class Request(object):
     """
     This class represents each request that comes to the handler.
@@ -156,21 +174,10 @@ class Request(object):
         self.step_token_number = 0
 
         # output formatter
-        if output_formatter is not None:
-            self.output_formatter = output_formatter
-        else:
-            formatter = parameters.pop("output_formatter", None)
-            if not formatter or "json" == formatter:
-                self.output_formatter = _json_output_formatter
-            elif "jsonlines" == formatter:
-                self.output_formatter = _jsonlines_output_formatter
-            elif "none" == formatter:
-                self.output_formatter = None
-            elif callable(formatter):
-                self.output_formatter = formatter
-            else:
-                # TODO: allows to load custom formatter from a module
-                logging.warning(f"Unsupported formatter: {formatter}")
+        output_formatter = output_formatter or parameters.pop(
+            "output_formatter", None)
+        stream = parameters.pop("stream", False)
+        self.output_formatter = get_output_formatter(output_formatter, stream)
 
     def __repr__(self):
         return f"<Request id: {self.id} Input {self.input_text} Parameters {self.parameters} Finished {self.last_token}>"
