@@ -15,12 +15,17 @@ package ai.djl.serving.wlm;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /** A utility class to auto configure LMI model properties. */
 public final class LmiConfigRecommender {
 
+    private static final Logger logger = LoggerFactory.getLogger(LmiConfigRecommender.class);
     private static final Map<String, String> MODEL_TO_ROLLING_BATCH =
             Map.ofEntries(
                     Map.entry("falcon", "lmi-dist"),
@@ -46,6 +51,9 @@ public final class LmiConfigRecommender {
                     Map.entry("qwen2", "vllm"),
                     Map.entry("stablelm", "vllm"));
 
+    private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =
+            Set.of("ForCausalLM", "LMHeadModel", "ForConditionalGeneration");
+
     private LmiConfigRecommender() {}
 
     static void configure(Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
@@ -60,6 +68,9 @@ public final class LmiConfigRecommender {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         if (!"auto".equals(rollingBatch)) {
             return;
+        } else if (!isTextGenerationModel(modelConfig)) {
+            // Non text-generation use-cases are not compatible with rolling batch
+            rollingBatch = "disable";
         } else if (isVLLMEnabled(features) && isLmiDistEnabled(features)) {
             rollingBatch = MODEL_TO_ROLLING_BATCH.getOrDefault(modelConfig.getModelType(), "auto");
         } else if (LmiUtils.isTrtLLM(lmiProperties)) {
@@ -98,5 +109,22 @@ public final class LmiConfigRecommender {
 
     private static boolean isLmiDistEnabled(String features) {
         return features != null && features.contains("lmi-dist");
+    }
+
+    private static boolean isTextGenerationModel(LmiUtils.HuggingFaceModelConfig modelConfig) {
+        for (String arch : modelConfig.getArchitectures()) {
+            boolean isTextGenerationModel =
+                    OPTIMIZED_TASK_ARCHITECTURES.stream().anyMatch(arch::endsWith);
+            if (isTextGenerationModel) {
+                return true;
+            }
+        }
+        logger.warn(
+                "The model task architecture {} is not supported for optimized inference. LMI will"
+                    + " attempt to load the model using HuggingFace Accelerate. Optimized inference"
+                    + " performance is only available for the following task architectures: {}",
+                modelConfig.getArchitectures(),
+                OPTIMIZED_TASK_ARCHITECTURES);
+        return false;
     }
 }

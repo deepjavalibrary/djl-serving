@@ -260,6 +260,8 @@ public class ModelInfoTest {
                         put("tiiuae/falcon-7b", "lmi-dist");
                         put("mistralai/Mistral-7B-v0.1", "vllm");
                         put("src/test/resources/local-hf-model", "vllm");
+                        put("HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable");
+                        put("THUDM/chatglm3-6b", "vllm");
                     }
                 };
         Path modelStore = Paths.get("build/models");
