@@ -25,6 +25,8 @@ from transformers import AutoConfig
 from djl_python.properties_manager.properties import is_rolling_batch_enabled
 
 
+PYTHON_BACKEND_SUPPORT_MODEL_TYPES = ["t5"]
+
 class TRTLLMService(object):
     """
     A TRTLLMService is an intermediary for the default TensorRT-LLM handler. Its functions are invoked to turn
@@ -102,7 +104,7 @@ class TRTLLMService(object):
         return input_data, input_size, parameters, errors, batch
 
     def _load_model(self, properties):
-        if self.model_config and self.model_config.model_type == "t5":
+        if self.model_config and self.model_config.model_type in PYTHON_BACKEND_SUPPORT_MODEL_TYPES:
             self.model = tensorrt_llm_toolkit.init_inference(self.trt_configs.model_id_or_path,
                                                              **properties,
                                                              use_python_backend=True)
@@ -113,7 +115,7 @@ class TRTLLMService(object):
                     f"Kindly enable it with auto or tensorrt values to option.rolling_batch"
                 )
             self.rolling_batch = TRTLLMRollingBatch(
-                self.trt_configs.model_id_or_path, None, properties, **properties)
+                self.trt_configs.model_id_or_path, properties, **properties)
 
     def _read_model_config(self):
         try:
@@ -121,7 +123,7 @@ class TRTLLMService(object):
                 self.trt_configs.model_id_or_path,
                 trust_remote_code=self.trt_configs.trust_remote_code)
         except OSError:
-            self.logger.warning(
+            logging.warning(
                 f"config.json not found for {self.trt_configs.model_id_or_path}."
             )
 
