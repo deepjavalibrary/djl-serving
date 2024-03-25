@@ -54,7 +54,7 @@ public final class LmiUtils {
             logger.info("No config.json found, use {} engine.", engineName);
             return engineName;
         }
-        LmiConfigRecommender.configure(prop, modelConfig);
+        LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
         logger.info(
                 "Detected engine: {}, rolling_batch: {}, tensor_parallel_degree {}, for modelType:"
                         + " {}",
@@ -108,6 +108,10 @@ public final class LmiUtils {
         }
 
         if ("disable".equals(info.prop.getProperty("option.rolling_batch"))) {
+            // Inflight batching support is not available for certain models like t5.
+            // Python backend models have different model repo format based than C++ backend.
+            // And whether it is valid or not is checked in tensorrt_llm_toolkit. So it is not
+            // necessary to check here.
             info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
         } else {
             info.prop.put("option.rolling_batch", "trtllm");

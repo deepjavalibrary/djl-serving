@@ -48,16 +48,21 @@ public final class LmiConfigRecommender {
 
     private LmiConfigRecommender() {}
 
-    static void configure(Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
+    static void configure(
+            ModelInfo<?, ?> modelInfo,
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig) {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         setRollingBatch(lmiProperties, modelConfig, features);
         setEngine(lmiProperties, modelConfig, features);
         setTensorParallelDegree(lmiProperties);
-        setDynamicBatch(lmiProperties, modelConfig, features);
+        setDynamicBatch(modelInfo, lmiProperties, modelConfig, features);
     }
 
     private static void setRollingBatch(
-            Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig, String features) {
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig,
+            String features) {
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
         if (!"auto".equals(rollingBatch)) {
             return;
@@ -69,9 +74,10 @@ public final class LmiConfigRecommender {
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }
 
-    private static void setEngine(Properties lmiProperties,
-                                  LmiUtils.HuggingFaceModelConfig modelConfig,
-                                  String features) {
+    private static void setEngine(
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig,
+            String features) {
         if (lmiProperties.containsKey("engine")) {
             return;
         }
@@ -82,7 +88,9 @@ public final class LmiConfigRecommender {
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
         // TODO: Change it once TrtLLM supports T5 with inflight batching.
-        if (isTrtLLMEnabled(features) && "disable".equals(rollingBatch) && "t5".equals(modelConfig.getModelType())) {
+        if (isTrtLLMEnabled(features)
+                && "disable".equals(rollingBatch)
+                && "t5".equals(modelConfig.getModelType())) {
             engine = "MPI";
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
@@ -100,15 +108,18 @@ public final class LmiConfigRecommender {
         lmiProperties.setProperty("option.tensor_parallel_degree", tpDegree);
     }
 
-    private static void setDynamicBatch(Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig, String features) {
-        if (lmiProperties.containsKey("batch_size")) {
+    private static void setDynamicBatch(
+            ModelInfo<?, ?> modelInfo,
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig,
+            String features) {
+        if (lmiProperties.containsKey("batch_size")
+                || lmiProperties.containsKey("max_dynamic_batch_size")) {
             return;
         }
 
         if ("t5".equals(modelConfig.getModelType()) && isTrtLLMEnabled(features)) {
-            lmiProperties.setProperty("batch_size", String.valueOf(32));
-            // To do runtime compilation for TensorRT-LLM T5 model.
-            lmiProperties.setProperty("needs_convert", String.valueOf(true));
+            modelInfo.batchSize = 32;
         }
     }
 
