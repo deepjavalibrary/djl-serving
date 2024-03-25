@@ -377,7 +377,7 @@ transformers_neuronx_aot_handler_list = {
 transformers_neuronx_handler_list = {
     "gpt2": {
         "option.model_id": "gpt2",
-        "batch_size": 4,
+        "max_dynamic_batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
         "option.dtype": "fp16",
