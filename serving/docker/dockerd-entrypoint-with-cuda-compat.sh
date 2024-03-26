@@ -32,6 +32,14 @@ else
     echo "Skip CUDA compat libs setup as package not found"
 fi
 
+if [ -n "$SM_NEO_EXECUTION_CONTEXT" ]; then
+  echo "SageMaker Neo execution context detected"
+  /usr/bin/python3 /opt/djl/partition/sm_neo_trt_llm_partition.py
+  exit_code=$?
+  echo "TensorRT-LLM compilation exited with code $exit_code"
+  exit $exit_code
+fi
+
 # Convert select SM/TGI Environment Variables to LMI Equivalents
 translateTGIToLMI "HF_MODEL_QUANTIZE" "OPTION_QUANTIZE"
 # We use HF_TRUST_REMOTE_CODE in our properties parsing
