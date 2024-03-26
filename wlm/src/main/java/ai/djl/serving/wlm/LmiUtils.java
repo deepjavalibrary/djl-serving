@@ -36,7 +36,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
@@ -270,14 +274,39 @@ public final class LmiUtils {
         @SerializedName("model_type")
         private String modelType;
 
+        @SerializedName("architectures")
+        private List<String> configArchitectures;
+
+        @SerializedName("auto_map")
+        private Map<String, String> autoMap;
+
         @SerializedName("_diffusers_version")
         private String diffusersVersion;
+
+        private Set<String> allArchitectures;
 
         public String getModelType() {
             if (modelType == null) {
                 return diffusersVersion == null ? null : "stable-diffusion";
             }
             return modelType;
+        }
+
+        public Set<String> getArchitectures() {
+            if (allArchitectures == null) {
+                determineAllArchitectures();
+            }
+            return allArchitectures;
+        }
+
+        private void determineAllArchitectures() {
+            allArchitectures = new HashSet<>();
+            if (configArchitectures != null) {
+                allArchitectures.addAll(configArchitectures);
+            }
+            if (autoMap != null) {
+                allArchitectures.addAll(autoMap.keySet());
+            }
         }
     }
 }
