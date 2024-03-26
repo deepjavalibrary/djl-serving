@@ -99,7 +99,7 @@ class Slot:
         self._generation_config = copy.deepcopy(generation_config)
         # Update generation config with token chooser parameters
         param = request.parameters
-        self._generation_config.temperature = param.get("temperature", 0.9)
+        self._generation_config.temperature = param.get("temperature", 1.0)
         self._generation_config.top_k = param.get("top_k", 0)
         self._generation_config.top_p = param.get("top_p", 1.0)
         self._generation_config.typical_p = param.get("typical_p", 1.0)

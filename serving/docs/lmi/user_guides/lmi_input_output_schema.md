@@ -130,6 +130,7 @@ TensorRTLLMRollingBatchParameters : {
     'stop' : boolean, 
     'presence_penalty': float,
     'length_penalty' : float, 
+    'frequency_penalty': float
 }
 ```
 
