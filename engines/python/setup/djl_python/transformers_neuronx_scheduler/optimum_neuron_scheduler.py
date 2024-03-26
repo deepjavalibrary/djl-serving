@@ -22,9 +22,11 @@ import logging
 from transformers import PreTrainedTokenizerBase
 from transformers.generation import GenerationConfig
 
-from djl_python.rolling_batch.rolling_batch import Request
+from djl_python.rolling_batch.rolling_batch import Request, filter_unused_generation_params
 from djl_python.transformers_neuronx_scheduler.token_selector import TokenSelector
 from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText, TokenDecoder
+
+NEURON_GENERATION_PARAMS = set(GenerationConfig().__dict__.keys())
 
 
 class Slot:
@@ -110,6 +112,8 @@ class Slot:
             "max_new_tokens", 30)
         # TODO: stop_sequences, ignore_eos_token
         self._token_decoder = TokenDecoder(tokenizer)
+        filter_unused_generation_params(param, NEURON_GENERATION_PARAMS,
+                                        "neuron")
 
     def reset(self, input_ids, attention_mask, selector, cache_id):
         """Reset the slot for the next generation.
