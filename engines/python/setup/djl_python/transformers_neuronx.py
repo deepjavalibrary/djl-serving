@@ -159,7 +159,6 @@ class TransformersNeuronXService(object):
                     if "output_formatter" not in param:
                         param[
                             "output_formatter"] = self.config.output_formatter
-                    param["stream"] = input_map.pop("stream", False)
                     if first or self.rolling_batch:
                         parameters.append(param)
                         first = False
@@ -189,6 +188,8 @@ class TransformersNeuronXService(object):
 
                 if not "output_formatter" in param:
                     param["output_formatter"] = self.config.output_formatter
+                if self.rolling_batch:
+                    param["stream"] = input_map.pop("stream", False)
 
                 for _ in range(input_size[i]):
                     parameters.append(param)

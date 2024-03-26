@@ -250,7 +250,11 @@ class HuggingFaceService(object):
             else:
                 _inputs = input_map.pop("inputs", input_map)
                 _param = input_map.pop("parameters", {})
+
+            # Per request streaming is only supported by rolling batch
+            if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
                 _param["stream"] = input_map.pop("stream", False)
+
             if not isinstance(_inputs, list):
                 _inputs = [_inputs]
             input_data.extend(_inputs)
