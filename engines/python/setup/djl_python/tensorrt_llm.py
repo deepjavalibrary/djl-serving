@@ -19,6 +19,7 @@ from djl_python.outputs import Output
 from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
+from djl_python.properties_manager.chat_properties import ChatProperties
 
 
 class TRTLLMService(object):
@@ -70,22 +71,41 @@ class TRTLLMService(object):
                 errors[i] = str(e)
                 continue
 
-            _inputs = input_map.pop("inputs", input_map)
+            if "messages" in input_map:
+                if not hasattr(self.rolling_batch.get_tokenizer(),
+                               "apply_chat_template"):
+                    raise AttributeError(
+                        f"Cannot provide chat completion for tokenizer: "
+                        f"{self.rolling_batch.get_tokenizer().__class__}, "
+                        f"please ensure that your tokenizer supports chat templates."
+                    )
+                chat_params = ChatProperties(**input_map)
+                _inputs = self.rolling_batch.get_tokenizer(
+                ).apply_chat_template(chat_params.messages, tokenize=False)
+                _param = chat_params.dict(exclude_unset=True,
+                                          exclude={
+                                              'messages', 'model',
+                                              'logit_bias', 'top_logprobs',
+                                              'n', 'user'
+                                          })
+                _param["details"] = True
+                _param["output_formatter"] = "json_chat"
+            else:
+                _inputs = input_map.pop("inputs", input_map)
+                _param = input_map.pop("parameters", {})
+                _param["stream"] = input_map.pop("stream", False)
             if not isinstance(_inputs, list):
                 _inputs = [_inputs]
             input_data.extend(_inputs)
             input_size.append(len(_inputs))
 
-            _param = input_map.pop("parameters", {})
-            _param["stream"] = input_map.pop("stream", False)
             if "cached_prompt" in input_map:
                 _param["cached_prompt"] = input_map.pop("cached_prompt")
             if "seed" not in _param:
                 # set server provided seed if seed is not part of request
                 if item.contains_key("seed"):
                     _param["seed"] = item.get_as_string(key="seed")
-
-            if "output_formatter" not in _param:
+            if not "output_formatter" in _param:
                 _param["output_formatter"] = self.trt_configs.output_formatter
 
             for _ in range(input_size[i]):

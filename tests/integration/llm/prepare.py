@@ -645,6 +645,12 @@ lmi_dist_model_list = {
         "adapter_names": ["english-alpaca", "portugese-alpaca"],
         "option.gpu_memory_utilization": "0.8",
     },
+    "llama2-7b-chat": {
+        "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
+    }
 }
 
 vllm_model_list = {
@@ -714,6 +720,13 @@ vllm_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.max_model_len": 3480,
     },
+    "llama2-7b-chat": {
+        "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+    }
 }
 
 unmerged_lora_correctness_list = {

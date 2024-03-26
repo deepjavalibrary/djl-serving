@@ -395,6 +395,15 @@ lmi_dist_model_spec = {
     },
 }
 
+lmi_dist_chat_model_spec = {
+    "llama2-7b-chat": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
+    }
+}
+
 vllm_model_spec = {
     "gpt-neox-20b": {
         "max_memory_per_gpu": [22.0],
@@ -451,6 +460,15 @@ vllm_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256]
     },
+}
+
+vllm_chat_model_spec = {
+    "llama2-7b-chat": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
+    }
 }
 
 ds_smoothquant_model_spec = {
@@ -826,6 +844,72 @@ def batch_generation(batch_size):
     return input_sentences[:batch_size]
 
 
+def batch_generation_chat(batch_size):
+    messages = [
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+        [{
+            "role": "system",
+            "content": "You are a helpful assistant."
+        }, {
+            "role": "user",
+            "content": "What is deep learning?"
+        }],
+    ]
+
+    if batch_size > len(messages):
+        # dynamically extend to support larger bs by repetition
+        messages *= math.ceil(batch_size / len(messages))
+    return messages[:batch_size]
+
+
 def t5_batch_generation(batch_size):
     input_sentences = [
         "translate English to German: The house is wonderful.",
@@ -938,6 +1022,34 @@ def test_handler_rolling_batch(model, model_spec):
                 f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
             )
             req["parameters"]["max_new_tokens"] = seq_length
+            awscurl_run(req, spec.get("tokenizer", None), batch_size)
+
+
+def test_handler_rolling_batch_chat(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    # dryrun phase
+    req = {"messages": batch_generation_chat(1)[0]}
+    seq_length = 100
+    params = {"max_tokens": seq_length}
+    req["parameters"] = params
+    if "adapters" in spec:
+        req["adapters"] = spec.get("adapters")[0]
+    logging.info(f"req {req}")
+    res = send_json(req)
+    logging.info(f"res: {res.content}")
+    # awscurl little benchmark phase
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            logging.info(
+                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+            )
+            req["parameters"]["max_tokens"] = seq_length
             awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
@@ -1154,6 +1266,10 @@ if __name__ == "__main__":
         test_handler_rolling_batch(args.model, lmi_dist_model_spec)
     elif args.handler == "vllm":
         test_handler_rolling_batch(args.model, vllm_model_spec)
+    elif args.handler == "lmi_dist_chat":
+        test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
+    elif args.handler == "vllm_chat":
+        test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
     elif args.handler == "performance":
         test_performance()
     elif args.handler == "unmerged_lora":

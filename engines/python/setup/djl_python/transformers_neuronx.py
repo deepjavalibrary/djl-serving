@@ -21,6 +21,7 @@ from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
+from djl_python.properties_manager.chat_properties import ChatProperties
 from djl_python.properties_manager.properties import StreamingEnum
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config
@@ -131,21 +132,53 @@ class TransformersNeuronXService(object):
             try:
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
-                _inputs = input_map.pop("inputs", input_map)
-                _param = input_map.pop("parameters", {})
-                if "output_formatter" not in _param:
-                    _param["output_formatter"] = self.config.output_formatter
-                _param["stream"] = input_map.pop("stream", False)
-                if first or self.rolling_batch:
-                    parameters.append(_param)
-                    first = False
-                else:
-                    if parameters[0] != _param:
-                        logging.warning(
-                            f"expected param: {parameters}, actual: {_param}")
-                        raise ValueError(
-                            "In order to enable dynamic batching, all input batches must have the same parameters"
+
+                if "messages" in input_map:
+                    if not hasattr(self.tokenizer, "apply_chat_template"):
+                        raise AttributeError(
+                            f"Cannot provide chat completion for tokenizer: {self.tokenizer.__class__}, "
+                            f"please ensure that your tokenizer supports chat templates."
                         )
+                    chat_params = ChatProperties(**input_map)
+                    _inputs = self.tokenizer.apply_chat_template(
+                        chat_params.messages, tokenize=False)
+                    param = chat_params.dict(exclude_unset=True,
+                                             exclude={
+                                                 'messages', 'model',
+                                                 'frequency_penalty',
+                                                 'logit_bias', 'top_logprobs',
+                                                 'presence_penalty', 'n',
+                                                 'user'
+                                             })
+                    if self.rolling_batch:
+                        param["details"] = True
+                        param["output_formatter"] = "json_chat"
+                else:
+                    _inputs = input_map.pop("inputs", input_map)
+                    param = input_map.pop("parameters", {})
+                    if "output_formatter" not in param:
+                        param[
+                            "output_formatter"] = self.config.output_formatter
+                    param["stream"] = input_map.pop("stream", False)
+                    if first or self.rolling_batch:
+                        parameters.append(param)
+                        first = False
+                    else:
+                        if parameters[0] != param:
+                            logging.warning(
+                                f"expected param: {parameters}, actual: {param}"
+                            )
+                            raise ValueError(
+                                "In order to enable dynamic batching, all input batches must have the same parameters"
+                            )
+
+                if first or self.rolling_batch:
+                    first = False
+                elif parameters[0] != param:
+                    raise ValueError(
+                        f"In order to enable dynamic batching, all input batches must have the "
+                        f"same parameters, expected param: {parameters[0]}, actual: {param}"
+                    )
 
                 if isinstance(_inputs, list):
                     input_data.extend(_inputs)
@@ -153,6 +186,12 @@ class TransformersNeuronXService(object):
                 else:
                     input_data.append(_inputs)
                     input_size.append(1)
+
+                if not "output_formatter" in param:
+                    param["output_formatter"] = self.config.output_formatter
+
+                for _ in range(input_size[i]):
+                    parameters.append(param)
             except Exception as e:  # pylint: disable=broad-except
                 logging.exception(f"Parse input failed: {i}")
                 errors[i] = str(e)

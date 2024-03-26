@@ -31,6 +31,7 @@ from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
+from djl_python.properties_manager.chat_properties import ChatProperties
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -152,11 +153,15 @@ class HuggingFaceService(object):
             self.rolling_batch = _rolling_batch_cls(
                 self.hf_configs.model_id_or_path, properties,
                 **self.hf_configs.kwargs)
+            self._init_tokenizer(self.hf_configs.model_id_or_path,
+                                 **self.hf_configs.kwargs)
             self.initialized = True
             return
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
-            self._init_model_and_tokenizer(self.hf_configs.model_id_or_path,
-                                           **self.hf_configs.kwargs)
+            self._init_tokenizer(self.hf_configs.model_id_or_path,
+                                 **self.hf_configs.kwargs)
+            self._init_model(self.hf_configs.model_id_or_path,
+                             **self.hf_configs.kwargs)
             self.initialized = True
             return
 
@@ -224,14 +229,33 @@ class HuggingFaceService(object):
                 errors[i] = str(e)
                 continue
 
-            _inputs = input_map.pop("inputs", input_map)
+            if "messages" in input_map:
+                if not hasattr(self.tokenizer, "apply_chat_template"):
+                    raise AttributeError(
+                        f"Cannot provide chat completion for tokenizer: {self.tokenizer.__class__}, "
+                        f"please ensure that your tokenizer supports chat templates."
+                    )
+                chat_params = ChatProperties(**input_map)
+                _inputs = self.tokenizer.apply_chat_template(
+                    chat_params.messages, tokenize=False)
+                _param = chat_params.dict(exclude_unset=True,
+                                          exclude={
+                                              'messages', 'model',
+                                              'logit_bias', 'top_logprobs',
+                                              'n', 'user'
+                                          })
+                if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
+                    _param["details"] = True
+                    _param["output_formatter"] = "json_chat"
+            else:
+                _inputs = input_map.pop("inputs", input_map)
+                _param = input_map.pop("parameters", {})
+                _param["stream"] = input_map.pop("stream", False)
             if not isinstance(_inputs, list):
                 _inputs = [_inputs]
             input_data.extend(_inputs)
             input_size.append(len(_inputs))
 
-            _param = input_map.pop("parameters", {})
-            _param["stream"] = input_map.pop("stream", False)
             if "cached_prompt" in input_map:
                 _param["cached_prompt"] = input_map.pop("cached_prompt")
             if "seed" not in _param:
@@ -420,7 +444,8 @@ class HuggingFaceService(object):
                                        **kwargs)
                 self.model = hf_pipeline.model
         else:
-            self._init_model_and_tokenizer(model_id_or_path, **kwargs)
+            self._init_tokenizer(model_id_or_path, **kwargs)
+            self._init_model(model_id_or_path, **kwargs)
             hf_pipeline = pipeline(task=task,
                                    model=self.model,
                                    tokenizer=self.tokenizer,
@@ -444,7 +469,7 @@ class HuggingFaceService(object):
 
         return hf_pipeline
 
-    def _init_model_and_tokenizer(self, model_id_or_path: str, **kwargs):
+    def _init_tokenizer(self, model_id_or_path: str, **kwargs):
         if self.peft_config is not None:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.peft_config.base_model_name_or_path, padding_size="left")
@@ -454,6 +479,8 @@ class HuggingFaceService(object):
                                                            revision=kwargs.get(
                                                                'revision',
                                                                None))
+
+    def _init_model(self, model_id_or_path: str, **kwargs):
         architectures = self.model_config.architectures
         if architectures and architectures[0].endswith(
                 "ForConditionalGeneration"):
