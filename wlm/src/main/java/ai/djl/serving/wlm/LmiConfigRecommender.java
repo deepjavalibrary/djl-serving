@@ -56,6 +56,10 @@ public final class LmiConfigRecommender {
 
     private static void setRollingBatch(
             Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
+        // If dynamic batch is enabled, we don't enable rolling batch.
+        if (Integer.parseInt(lmiProperties.getProperty("batch_size", "1")) > 1) {
+            return;
+        }
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         if (!"auto".equals(rollingBatch)) {
