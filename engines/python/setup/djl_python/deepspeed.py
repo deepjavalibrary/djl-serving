@@ -371,7 +371,6 @@ class DeepSpeedService(object):
                 input_map = decode(item, content_type)
                 _inputs = input_map.pop("inputs", input_map)
                 _param = input_map.pop("parameters", {})
-                _param["stream"] = input_map.pop("stream", False)
                 if not self.enable_rolling_batch:
                     if first:
                         parameters.append(_param)
@@ -384,6 +383,9 @@ class DeepSpeedService(object):
                             raise ValueError(
                                 "In order to enable dynamic batching, all input batches must have the same parameters"
                             )
+                else:
+                    # Per request streaming is only supported by rolling batch
+                    _param["stream"] = input_map.pop("stream", False)
 
                 if "seed" not in _param:
                     # set server provided seed if seed is not part of request
