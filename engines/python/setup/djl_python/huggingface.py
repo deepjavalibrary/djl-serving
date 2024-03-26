@@ -31,7 +31,7 @@ from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-from djl_python.properties_manager.chat_properties import ChatProperties
+from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -229,24 +229,11 @@ class HuggingFaceService(object):
                 errors[i] = str(e)
                 continue
 
-            if "messages" in input_map:
-                if not hasattr(self.tokenizer, "apply_chat_template"):
-                    raise AttributeError(
-                        f"Cannot provide chat completion for tokenizer: {self.tokenizer.__class__}, "
-                        f"please ensure that your tokenizer supports chat templates."
-                    )
-                chat_params = ChatProperties(**input_map)
-                _inputs = self.tokenizer.apply_chat_template(
-                    chat_params.messages, tokenize=False)
-                _param = chat_params.dict(exclude_unset=True,
-                                          exclude={
-                                              'messages', 'model',
-                                              'logit_bias', 'top_logprobs',
-                                              'n', 'user'
-                                          })
-                if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
-                    _param["details"] = True
-                    _param["output_formatter"] = "json_chat"
+            if is_chat_completions_request(input_map):
+                _inputs, _param = parse_chat_completions_request(
+                    input_map,
+                    is_rolling_batch_enabled(self.hf_configs.rolling_batch),
+                    self.tokenizer)
             else:
                 _inputs = input_map.pop("inputs", input_map)
                 _param = input_map.pop("parameters", {})

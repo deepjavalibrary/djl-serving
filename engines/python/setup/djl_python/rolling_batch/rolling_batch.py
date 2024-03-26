@@ -195,6 +195,10 @@ def get_output_formatter(output_formatter: Union[str, Callable], stream: bool):
         return _json_output_formatter
     if output_formatter == "jsonlines":
         return _jsonlines_output_formatter
+    if output_formatter == "json_chat":
+        return _json_chat_output_formatter
+    if output_formatter == "jsonlines_chat":
+        return _jsonlines_chat_output_formatter
     if output_formatter == "none":
         return None
     if output_formatter is not None:
