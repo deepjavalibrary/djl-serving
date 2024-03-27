@@ -2,24 +2,6 @@ import argparse
 import os
 import shutil
 
-parser = argparse.ArgumentParser(description='Build the LLM configs')
-parser.add_argument('handler', help='the handler used in the model')
-parser.add_argument('model', help='model that works with certain handler')
-parser.add_argument('--engine',
-                    required=False,
-                    type=str,
-                    choices=['deepspeed', 'huggingface'],
-                    help='The engine used for inference')
-parser.add_argument('--dtype',
-                    required=False,
-                    type=str,
-                    help='The model data type')
-parser.add_argument('--tensor_parallel',
-                    required=False,
-                    type=int,
-                    help='The model tensor parallel degree')
-args = parser.parse_args()
-
 ds_aot_list = {
     "gpt-neo-2.7b": {
         "option.model_id":
@@ -1172,6 +1154,24 @@ supported_handler = {
 }
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Build the LLM configs')
+    parser.add_argument('handler', help='the handler used in the model')
+    parser.add_argument('model', help='model that works with certain handler')
+    parser.add_argument('--engine',
+                        required=False,
+                        type=str,
+                        choices=['deepspeed', 'huggingface'],
+                        help='The engine used for inference')
+    parser.add_argument('--dtype',
+                        required=False,
+                        type=str,
+                        help='The model data type')
+    parser.add_argument('--tensor_parallel',
+                        required=False,
+                        type=int,
+                        help='The model tensor parallel degree')
+    args = parser.parse_args()
+
     if args.handler not in supported_handler:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler {list(supported_handler.keys())}"
