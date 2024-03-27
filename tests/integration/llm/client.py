@@ -528,12 +528,6 @@ trtllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
-    "llama2-7b": {
-        "max_memory_per_gpu": [22.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-7B-fp16"
-    },
     "falcon-7b": {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
