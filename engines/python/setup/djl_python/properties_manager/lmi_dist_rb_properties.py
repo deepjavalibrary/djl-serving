@@ -44,10 +44,15 @@ class LmiDistRbProperties(Properties):
     speculative_length: int = 5
     draft_model_tp_size: int = 1
     record_acceptance_rate: Optional[bool] = False
+    enable_lora: Optional[bool] = False
+    max_loras: Optional[int] = 4
+    max_lora_rank: Optional[int] = 16
+    lora_extra_vocab_size: Optional[int] = 256
+    max_cpu_loras: Optional[int] = None
 
     @validator('engine')
     def validate_engine(cls, engine):
         if engine != "MPI":
             raise AssertionError(
-                f"Need MPI engine to start lmidist_v2 RollingBatcher")
+                f"Need MPI engine to start lmi-dist RollingBatcher")
         return engine
