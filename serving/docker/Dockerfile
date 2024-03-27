@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04 AS base
-ARG djl_version=0.27.0~SNAPSHOT
+ARG djl_version=0.27.0
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
