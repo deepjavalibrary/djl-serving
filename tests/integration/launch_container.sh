@@ -118,8 +118,8 @@ if $is_llm; then
     total_retries=80
   fi
   if [[ "$platform" == *"trtllm"* ]]; then
-    total_retries = 100
-    echo "extra sleep of 5 min for trtllm compilation"
+    total_retries=100
+    echo "extra sleep of 10 min for trtllm compilation"
   fi
   if [[ "$platform" == *"trtllm-sq"* ]]; then
     echo "extra sleep of 15 min for smoothquant calibration"
