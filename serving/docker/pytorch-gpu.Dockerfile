@@ -13,7 +13,7 @@ ARG version=12.1.1-cudnn8-devel-ubuntu22.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.27.0~SNAPSHOT
+ARG djl_version=0.27.0
 ARG cuda_version=cu121
 ARG torch_version=2.1.1
 ARG torch_vision_version=0.16.1
