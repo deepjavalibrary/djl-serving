@@ -39,6 +39,7 @@ from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_
 
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.properties import StreamingEnum, is_streaming_enabled, is_rolling_batch_enabled
+from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
 
 SMOOTHQUANT_SUPPORTED_MODEL_TYPES = {
     "gpt2",
@@ -369,8 +370,12 @@ class DeepSpeedService(object):
             try:
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
-                _inputs = input_map.pop("inputs", input_map)
-                _param = input_map.pop("parameters", {})
+                if is_chat_completions_request(input_map):
+                    _inputs, _param = parse_chat_completions_request(
+                        input_map, self.enable_rolling_batch, self.tokenizer)
+                else:
+                    _inputs = input_map.pop("inputs", input_map)
+                    _param = input_map.pop("parameters", {})
                 if not self.enable_rolling_batch:
                     if first:
                         parameters.append(_param)

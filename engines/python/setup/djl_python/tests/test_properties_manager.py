@@ -10,7 +10,7 @@ from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
 from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
-from djl_python.properties_manager.chat_properties import ChatProperties
+from djl_python.chat_completions.chat_properties import ChatProperties
 
 import torch
 

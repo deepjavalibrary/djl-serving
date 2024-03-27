@@ -21,10 +21,10 @@ from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
-from djl_python.properties_manager.chat_properties import ChatProperties
 from djl_python.properties_manager.properties import StreamingEnum
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config
+from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
 
 model = None
 
@@ -133,26 +133,10 @@ class TransformersNeuronXService(object):
                 content_type = item.get_property("Content-Type")
                 input_map = decode(item, content_type)
 
-                if "messages" in input_map:
-                    if not hasattr(self.tokenizer, "apply_chat_template"):
-                        raise AttributeError(
-                            f"Cannot provide chat completion for tokenizer: {self.tokenizer.__class__}, "
-                            f"please ensure that your tokenizer supports chat templates."
-                        )
-                    chat_params = ChatProperties(**input_map)
-                    _inputs = self.tokenizer.apply_chat_template(
-                        chat_params.messages, tokenize=False)
-                    param = chat_params.dict(exclude_unset=True,
-                                             exclude={
-                                                 'messages', 'model',
-                                                 'frequency_penalty',
-                                                 'logit_bias', 'top_logprobs',
-                                                 'presence_penalty', 'n',
-                                                 'user'
-                                             })
-                    if self.rolling_batch:
-                        param["details"] = True
-                        param["output_formatter"] = "json_chat"
+                if is_chat_completions_request(input_map):
+                    _inputs, param = parse_chat_completions_request(
+                        input_map, self.rolling_batch is not None,
+                        self.tokenizer)
                 else:
                     _inputs = input_map.pop("inputs", input_map)
                     param = input_map.pop("parameters", {})
