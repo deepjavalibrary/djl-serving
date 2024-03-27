@@ -94,7 +94,6 @@ else
     --network="host" \
     ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
     -v ${PWD}/logs:/opt/djl/logs \
-    -v ~/.djl.ai/:/tmp/.djl.ai \
     -v ~/.aws:/home/djl/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     ${env_file} \

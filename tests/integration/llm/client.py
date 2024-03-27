@@ -550,13 +550,11 @@ trtllm_model_spec = {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "chatglm3-6b": {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mistral-7b": {
         "max_memory_per_gpu": [22.0],
