@@ -38,7 +38,8 @@ def update_kwargs_with_env_vars(kwargs):
     for key, value in env_vars.items():
         if key.startswith("OPTION_"):
             key = key.lower()
-            if key == "option_entrypoint":
+            key = "option." + key[7:]
+            if key == "option.entrypoint":
                 key = "option.entryPoint"
             kwargs.setdefault(key, value)
     return kwargs
