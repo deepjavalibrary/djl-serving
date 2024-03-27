@@ -56,3 +56,11 @@ class LmiDistRbProperties(Properties):
             raise AssertionError(
                 f"Need MPI engine to start lmi-dist RollingBatcher")
         return engine
+
+    @root_validator(skip_on_failure=True)
+    def validate_speculative_and_lora(cls, properties):
+        if properties["enable_lora"] and properties["speculative_draft_model"]:
+            raise AssertionError(
+                f"Cannot enable lora and speculative decoding at the same time"
+            )
+        return properties
