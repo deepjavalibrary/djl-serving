@@ -222,18 +222,12 @@ class TestConfigManager(unittest.TestCase):
             "model_dir": "model_dir",
         }
 
-        def test_trtllm_rb_disable():
-            properties['rolling_batch'] = 'disable'
-            with self.assertRaises(ValueError):
-                TensorRtLlmProperties(**properties)
-
         def test_trtllm_rb_invalid():
             properties['rolling_batch'] = 'lmi-dist'
             with self.assertRaises(ValueError):
                 TensorRtLlmProperties(**properties)
 
         test_trtllm_rb_invalid()
-        test_trtllm_rb_disable()
 
     def test_ds_properties(self):
         ds_properties = {

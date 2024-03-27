@@ -81,8 +81,9 @@ class Properties(BaseModel):
         batch_size = int(batch_size)
         if batch_size > 1:
             if not is_rolling_batch_enabled(
-                    values['rolling_batch']) and is_streaming_enabled(
-                        values['enable_streaming']):
+                    values.get('rolling_batch', RollingBatchEnum.disable)
+            ) and is_streaming_enabled(
+                    values.get('enable_streaming', StreamingEnum.false)):
                 raise ValueError(
                     "We cannot enable streaming for dynamic batching")
         return batch_size
