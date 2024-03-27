@@ -928,6 +928,7 @@ def write_model_artifacts(properties,
             os.makedirs(os.path.join(adapters_path, adapter_name),
                         exist_ok=True)
             snapshot_download(adapter_id,
+                              local_dir_use_symlinks=False,
                               local_dir=os.path.join(adapters_path,
                                                      adapter_name))
 
