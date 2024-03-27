@@ -760,6 +760,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     key = key.substring(7).toLowerCase(Locale.ROOT);
                     if ("entrypoint".equals(key)) {
                         key = "entryPoint";
+                    } else if ("engine".equals(key)) {
+                        prop.putIfAbsent("engine", value);
+                        continue;
                     }
                     prop.putIfAbsent("option." + key, value);
                 }
