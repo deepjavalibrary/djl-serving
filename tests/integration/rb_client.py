@@ -168,8 +168,10 @@ def test_concurrent_with_mul_reqs(model, test_spec, spec_name):
                 raise AssertionError(
                     "Did not produce the expected number of words")
 
+
 def run(raw_args):
-    parser = argparse.ArgumentParser(description="Build the rolling batch configs")
+    parser = argparse.ArgumentParser(
+        description="Build the rolling batch configs")
     parser.add_argument("test_spec", help="type of test that needs to be run")
     parser.add_argument("model", help="The name of model")
     global args
@@ -186,6 +188,7 @@ def run(raw_args):
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
+
 
 if __name__ == "__main__":
     run(sys.argv)

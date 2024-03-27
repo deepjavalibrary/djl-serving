@@ -14,6 +14,7 @@ from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 
+
 def get_model_name():
     endpoint = f"http://127.0.0.1:8080/models"
     res = requests.get(endpoint).json()
@@ -1150,6 +1151,7 @@ def run(raw_args):
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
+
 
 if __name__ == "__main__":
     run(sys.argv)
