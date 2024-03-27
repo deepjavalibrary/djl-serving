@@ -38,8 +38,7 @@ elif [[ "$platform" == *"inf2"* ]]; then # inf2: pytorch-inf2-24 24 will be the 
   if [[ $devices -gt 1 ]]; then
     is_llm=true
   fi
-  for ((i=0; i<$devices; i++))
-  do
+  for ((i = 0; i < $devices; i++)); do
     host_device+=" --device /dev/neuron${i}"
   done
 fi
@@ -112,17 +111,21 @@ set +x
 
 echo "Launching ${container_id}..."
 
-total=24
+total_retries=24
 if $is_llm; then
-  echo "extra sleep for 2 min on LLM models"
-  total=60
+  total_retries=60
   if [[ "$platform" == *"inf2"* ]]; then
-    total=80
+    total_retries=80
+  fi
+  if [[ "$platform" == *"trtllm"* ]]; then
+    total_retries = 100
+    echo "extra sleep of 5 min for trtllm compilation"
   fi
   if [[ "$platform" == *"trtllm-sq"* ]]; then
     echo "extra sleep of 15 min for smoothquant calibration"
-    total=120
+    total_retries=140
   fi
+  echo "extra sleep for 2 min on LLM models"
   sleep 120
 fi
 
@@ -139,7 +142,7 @@ while true; do
     echo "Docker container shut down"
     exit 1
   fi
-  if [[ "$retry" -ge "$total" ]]; then
+  if [[ "$retry" -ge "$total_retries" ]]; then
     echo "Max retry exceeded."
     exit 1
   fi

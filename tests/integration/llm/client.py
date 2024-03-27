@@ -550,13 +550,11 @@ trtllm_model_spec = {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "baichuan-inc/Baichuan2-7B-Base"
     },
     "chatglm3-6b": {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "THUDM/chatglm3-6b"
     },
     "mistral-7b": {
         "max_memory_per_gpu": [22.0],
