@@ -501,11 +501,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         downloadModel();
         loadServingProperties();
         downloadS3();
+        eventManager.onModelDownloaded(this, downloadDir);
+        downloadDraftModel();
+
         long duration = (System.nanoTime() - begin) / 1000;
         Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS, dimension);
         MODEL_METRIC.info("{}", metric);
-
-        eventManager.onModelDownloaded(this, downloadDir);
         if (LmiUtils.needConvert(this)) {
             eventManager.onModelConverting(this, "trtllm");
             begin = System.nanoTime();
@@ -1040,7 +1041,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             Files.createDirectories(parent);
             Path tmp = Files.createTempDirectory(parent, "tmp");
             try {
-                downloadS3(s3Url, tmp.toAbsolutePath().toString());
+                runS3cmd(s3Url, tmp.toAbsolutePath().toString());
                 Utils.moveQuietly(tmp, downloadModelDir);
                 logger.info("{}: Download completed! Files saved to {}", uid, downloadModelDir);
             } finally {
@@ -1052,12 +1053,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     void downloadS3() throws ModelException, IOException {
         String modelId = prop.getProperty("option.model_id");
-        String draftModelId = prop.getProperty("option.speculative_draft_model");
-        if (draftModelId != null && draftModelId.startsWith("s3://")) {
-            Path draftDownloadDir = downloadS3ToDownloadDir(draftModelId);
-            prop.setProperty(
-                    "option.speculative_draft_model", draftDownloadDir.toAbsolutePath().toString());
-        }
         if (modelId == null) {
             return;
         }
@@ -1071,7 +1066,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
     }
 
-    private void downloadS3(String src, String dest) throws ModelException {
+    private void runS3cmd(String src, String dest) throws ModelException {
         try {
             String[] commands;
             if (Files.exists(Paths.get("/opt/djl/bin/s5cmd"))) {
@@ -1104,6 +1099,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         } catch (IOException | InterruptedException e) {
             throw new ModelNotFoundException("Model failed to download from s3", e);
+        }
+    }
+
+    private void downloadDraftModel() throws ModelException, IOException {
+        String draftModelId = prop.getProperty("option.speculative_draft_model");
+        if (draftModelId != null && draftModelId.startsWith("s3://")) {
+            Path draftDownloadDir = downloadS3ToDownloadDir(draftModelId);
+            prop.setProperty(
+                    "option.speculative_draft_model", draftDownloadDir.toAbsolutePath().toString());
         }
     }
 
