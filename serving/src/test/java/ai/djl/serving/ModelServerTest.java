@@ -165,6 +165,7 @@ public class ModelServerTest {
         ZipUtils.zip(Paths.get("build/classes/java/test/"), dest, true);
         String engineCacheDir = Utils.getEngineCacheDir().toString();
         System.setProperty("DJL_CACHE_DIR", "build/cache");
+        System.setProperty("DJL_TEST_S3_NO_CREDENTIALS", "true");
         System.setProperty("ENGINE_CACHE_DIR", engineCacheDir);
     }
 
@@ -172,6 +173,7 @@ public class ModelServerTest {
     public void afterSuite() {
         System.clearProperty("DJL_CACHE_DIR");
         System.clearProperty("ENGINE_CACHE_DIR");
+        System.clearProperty("DJL_TEST_S3_NO_CREDENTIALS");
     }
 
     @AfterMethod
@@ -322,6 +324,26 @@ public class ModelServerTest {
             testAdapterWorkflowPredict(channel, "adapter1", "a1weo");
             testAdapterWorkflowPredict(channel, "adapter2", "a2");
             testRegisterAdapterWorkflowTemplate(channel);
+
+            channel.close().sync();
+
+            ConfigManagerTest.testSsl();
+        } finally {
+            server.stop();
+        }
+    }
+
+    @Test
+    public void testAdaptersInModelDir()
+            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
+                    InterruptedException, ReflectiveOperationException {
+        ModelServer server =
+                initTestServer("src/test/resources/adaptersInModelDir/config.properties");
+        try {
+            assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+
+            testAdapterPredict(channel, "modelProp", "a", "");
 
             channel.close().sync();
 
@@ -917,16 +939,23 @@ public class ModelServerTest {
     }
 
     private void testAdapterPredict(Channel channel) throws InterruptedException {
+        testAdapterPredict(channel, "adaptecho", "adaptable", "opt");
+    }
+
+    private void testAdapterPredict(
+            Channel channel, String model, String adapter, String adaptOption)
+            throws InterruptedException {
         logTestFunction();
-        String url = "/predictions/adaptecho?adapter=adaptable";
+        String url = "/predictions/" + model + "?adapter=" + adapter;
+        String payload = "testPredictAdapter";
         DefaultFullHttpRequest req =
                 new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, url);
-        req.content().writeBytes("testPredictAdapter".getBytes(StandardCharsets.UTF_8));
+        req.content().writeBytes(payload.getBytes(StandardCharsets.UTF_8));
         HttpUtil.setContentLength(req, req.content().readableBytes());
         req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN);
         request(channel, req);
         assertHttpOk();
-        assertEquals(result, "adaptableopttestPredictAdapter");
+        assertEquals(result, adapter + adaptOption + payload);
     }
 
     private void testAdapterDirPredict(Channel channel) throws InterruptedException {

@@ -1,0 +1,1 @@
+# Adapter B placeholder

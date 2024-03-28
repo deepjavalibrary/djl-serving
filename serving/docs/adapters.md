@@ -20,6 +20,7 @@ There are several options to choose between for managing your set of adapters.
 
 The easiest option is to use an adapters local directory.
 This is as easy as adding a directory of adapters alongside your model files.
+It can be inside either the same directory as the serving.properties or the directory of an s3 `model_id`.
 It should contain an overarching adapters directory with an artifact directory for each adapter to add.
 This works best for having a manageable set of adapters as they are all loaded on startup.
 It can be used in conjunction with services like [Amazon SageMaker Single Model Endpoint](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-single-model.html).
