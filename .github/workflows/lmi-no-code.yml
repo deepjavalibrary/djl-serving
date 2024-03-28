@@ -113,7 +113,20 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code falcon-40b 
-          docker rm -f $(docker ps -aq) 
+          docker rm -f $(docker ps -aq)
+      - name: DBRX lmi container
+        working-directory: tests/integration
+        if: ${{ matrix.container == 'deepspeed' }}
+        run: |
+          rm -rf models
+          echo -e "HF_MODEL_ID=s3://djl-llm/dbrx-instruct/" > docker_env
+          echo -e "HF_MODEL_TRUST_REMOTE_CODE=true" >> docker_env
+          echo -e "MODEL_LOADING_TIMEOUT=3600" >> docker_env
+          echo -e "OPTION_GPU_MEMORY_UTILIZATION=0.95" >> docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
+          serve
+          python3 llm/client.py no_code dbrx
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -210,7 +223,7 @@ jobs:
           serve
           python3 llm/client.py no_code phi-2
           docker rm -f $(docker ps -aq)
-      - name: Baichun lmi container
+      - name: Baichuan lmi container
         working-directory: tests/integration
         run: |
           rm -rf models

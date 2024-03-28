@@ -703,6 +703,11 @@ no_code_rolling_batch_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-40b",
+    },
+    "dbrx": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
     }
 }
 

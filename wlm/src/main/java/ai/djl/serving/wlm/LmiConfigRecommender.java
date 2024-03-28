@@ -49,7 +49,8 @@ public final class LmiConfigRecommender {
                     Map.entry("phi", "vllm"),
                     Map.entry("qwen", "vllm"),
                     Map.entry("qwen2", "vllm"),
-                    Map.entry("stablelm", "vllm"));
+                    Map.entry("stablelm", "vllm"),
+                    Map.entry("dbrx", "lmi-dist"));
 
     private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =
             Set.of("ForCausalLM", "LMHeadModel", "ForConditionalGeneration");
