@@ -55,13 +55,16 @@ def get_neo_env_vars():
         input_model_directory = os.environ["SM_NEO_INPUT_MODEL_DIR"]
         compiled_model_directory = os.environ["SM_NEO_COMPILED_MODEL_DIR"]
         compilation_error_file = os.environ["SM_NEO_COMPILATION_ERROR_FILE"]
+        neo_cache_dir = os.environ["SM_NEO_CACHE_DIR"]
         return (compiler_options, input_model_directory,
-                compiled_model_directory, compilation_error_file)
+                compiled_model_directory, compilation_error_file,
+                neo_cache_dir)
     except KeyError as exc:
         raise InputConfiguration(
             f"SageMaker Neo environment variable '{exc.args[0]}' expected but not found"
             f" \nRequired env vars are: 'COMPILER_OPTIONS', 'SM_NEO_INPUT_MODEL_DIR',"
-            f" 'SM_NEO_COMPILED_MODEL_DIR', 'SM_NEO_COMPILATION_ERROR_FILE'")
+            f" 'SM_NEO_COMPILED_MODEL_DIR', 'SM_NEO_COMPILATION_ERROR_FILE', 'SM_NEO_CACHE_DIR'"
+        )
 
 
 def get_neo_compiler_flags(compiler_options):
@@ -117,7 +120,7 @@ def main():
     compilation_error_file = None
     try:
         (compiler_options, input_model_directory, compiled_model_directory,
-         compilation_error_file) = get_neo_env_vars()
+         compilation_error_file, neo_cache_dir) = get_neo_env_vars()
 
         # Neo requires that serving.properties is in same dir as model files
         serving_properties = load_properties(input_model_directory)
@@ -156,6 +159,7 @@ def main():
 
         try:
             kwargs["trt_llm_model_repo"] = compiled_model_directory
+            kwargs["neo_cache_dir"] = neo_cache_dir
             create_model_repo(input_model_directory, **kwargs)
         except Exception as exc:
             raise CompilationFatalError(
