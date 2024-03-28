@@ -19,6 +19,11 @@ def is_chat_completions_request(inputs: map) -> bool:
 
 def parse_chat_completions_request(inputs: map, is_rolling_batch: bool,
                                    tokenizer):
+    if not is_rolling_batch:
+        raise ValueError(
+            "chat completions support is not currently available for dynamic batching. "
+            "You must enable rolling batch to use the chat completions format."
+        )
     if not hasattr(tokenizer, "apply_chat_template"):
         raise AttributeError(
             f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
@@ -31,9 +36,8 @@ def parse_chat_completions_request(inputs: map, is_rolling_batch: bool,
                                   'messages', 'model', 'logit_bias',
                                   'top_logprobs', 'n', 'user'
                               })
-    if is_rolling_batch:
-        _param["details"] = True
-        _param["output_formatter"] = "jsonlines_chat" if inputs.get(
-            "stream", False) else "json_chat"
+    _param["details"] = True
+    _param["output_formatter"] = "jsonlines_chat" if inputs.get(
+        "stream", False) else "json_chat"
 
     return _inputs, _param
