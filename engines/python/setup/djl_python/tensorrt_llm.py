@@ -11,8 +11,12 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import os
 import logging
 import tensorrt_llm_toolkit
+from tensorrt_llm_toolkit.utils import utils as toolkit_utils
+
+from transformers import AutoConfig
 
 from djl_python.encode_decode import encode, decode
 from djl_python.inputs import Input
@@ -31,6 +35,8 @@ class TRTLLMService(object):
     Inputs into Outputs and it is responsible for sending new requests to the rolling batcher, which
     calls TensorRT-LLM in the back-end.
     """
+
+    PYTHON_BACKEND_SUPPORTED_MODELS = {'t5'}
 
     def __init__(self):
         self.initialized = False
@@ -102,15 +108,35 @@ class TRTLLMService(object):
 
         return input_data, input_size, parameters, errors, batch
 
+    def _get_config(self, properties):
+        model_path = self.trt_configs.model_id_or_path
+        if not os.path.isfile(os.path.join(model_path, 'config.json')):
+            model_path = toolkit_utils.get_python_backend_engine_path(
+                model_path, properties)
+            if not os.path.isfile(os.path.join(model_path, 'config.json')):
+                raise ValueError(
+                    f"Could not find config.json in {self.trt_configs.model_id_or_path} or"
+                    f"{model_path} for TensorRT python backend")
+
+        return AutoConfig.from_pretrained(
+            model_path, trust_remote_code=self.trt_configs.trust_remote_code)
+
     def _load_model(self, properties):
         if self.is_rolling_batch_enabled:
             self.rolling_batch = TRTLLMRollingBatch(
                 self.trt_configs.model_id_or_path, properties, **properties)
         else:
-            self.model = tensorrt_llm_toolkit.init_inference(
-                self.trt_configs.model_id_or_path,
-                **properties,
-                use_python_backend=True)
+            model_config = self._get_config(properties)
+            if model_config.model_type in self.PYTHON_BACKEND_SUPPORTED_MODELS:
+                self.model = tensorrt_llm_toolkit.init_inference(
+                    self.trt_configs.model_id_or_path,
+                    **properties,
+                    use_python_backend=True)
+            else:
+                raise ValueError(
+                    f"You cannot disable rolling batch if its not any of these models"
+                    f" {self.PYTHON_BACKEND_SUPPORTED_MODELS}. Please enable it with auto or tensorrt "
+                    f"values to option.rolling_batch")
 
     def rolling_batch_inference(self, inputs: Input) -> Output:
         """
