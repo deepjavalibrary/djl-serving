@@ -135,7 +135,7 @@ class TRTLLMService(object):
             else:
                 raise ValueError(
                     f"You cannot disable rolling batch if its not any of these models"
-                    f" {self.PYTHON_BACKEND_SUPPORTED_MODELS}. Please enable it with auto or tensorrt "
+                    f" {self.PYTHON_BACKEND_SUPPORTED_MODELS}. Please enable it with auto or trtllm "
                     f"values to option.rolling_batch")
 
     def rolling_batch_inference(self, inputs: Input) -> Output:
