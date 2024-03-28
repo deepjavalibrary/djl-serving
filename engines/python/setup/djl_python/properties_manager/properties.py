@@ -48,8 +48,7 @@ class Properties(BaseModel):
     # Make the default to auto, after java front end changes and test cases are changed.
     rolling_batch: RollingBatchEnum = RollingBatchEnum.disable
     tensor_parallel_degree: int = 1
-    trust_remote_code: bool = os.environ.get("HF_TRUST_REMOTE_CODE",
-                                             "FALSE").lower() == 'true'
+    trust_remote_code: bool = False
     # TODO: disabling streaming, as it is not supported for all models of the frameworks. Will revisit this
     enable_streaming: StreamingEnum = StreamingEnum.false
     batch_size: int = 1

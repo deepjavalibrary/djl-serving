@@ -214,7 +214,7 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "HF_MODEL_ID=s3://djl-llm/baichuan2-13b/\nHF_TRUST_REMOTE_CODE=true" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/baichuan2-13b/\nHF_MODEL_TRUST_REMOTE_CODE=true" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
           python3 llm/client.py no_code baichuan-13b
