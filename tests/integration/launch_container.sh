@@ -23,7 +23,7 @@ fi
 is_llm=false
 if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
-elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"* ]]; then # Runs multi-gpu
+elif [[ "$platform" == *"deepspeed"* || "$platform" == *"trtllm"*  || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
   shm="12gb"
@@ -117,8 +117,8 @@ if $is_llm; then
   if [[ "$platform" == *"inf2"* ]]; then
     total_retries=80
   fi
-  if [[ "$platform" == *"trtllm"* ]]; then
-    total_retries=100
+  if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then
+    total_retries=150
     echo "extra sleep of 10 min for trtllm compilation"
   fi
   if [[ "$platform" == *"trtllm-sq"* ]]; then
