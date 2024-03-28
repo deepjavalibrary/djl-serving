@@ -597,6 +597,11 @@ trtllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
+    },
+    "flan-t5-xl": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "google/flan-t5-xl"
     }
 }
 
@@ -1085,6 +1090,8 @@ def test_handler(model, model_spec):
                 assert len(result) == batch_size
             if "max_memory_per_gpu" in spec:
                 validate_memory_usage(spec["max_memory_per_gpu"][i])
+            if "tokenizer" in spec:
+                awscurl_run(req, spec.get("tokenizer"), batch_size)
 
 
 def test_ds_raw_model(model, model_spec):
@@ -1278,6 +1285,8 @@ if __name__ == "__main__":
         test_handler_rolling_batch(args.model, lmi_dist_aiccl_model_spec)
     elif args.handler == "trtllm":
         test_handler_rolling_batch(args.model, trtllm_model_spec)
+    elif args.handler == "trtllm-python":
+        test_handler(args.model, trtllm_model_spec)
     elif args.handler == "deepspeed_rolling_batch":
         test_handler_rolling_batch(args.model,
                                    deepspeed_rolling_batch_model_spec)

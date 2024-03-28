@@ -10,11 +10,12 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum
+from djl_python.properties_manager.properties import Properties, RollingBatchEnum
 from pydantic.v1 import validator
 
 TRT_SUPPORTED_ROLLING_BATCH_TYPES = [
-    RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value
+    RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value,
+    RollingBatchEnum.disable.value
 ]
 
 
@@ -24,11 +25,6 @@ class TensorRtLlmProperties(Properties):
     def validate_rolling_batch(cls, rolling_batch: str) -> str:
         rolling_batch = rolling_batch.lower()
 
-        if rolling_batch == RollingBatchEnum.disable.value:
-            raise ValueError(
-                f"You cannot disable rolling batch for TensorRT LLM."
-                f"Kindly enable it with auto or tensorrt values to option.rolling_batch"
-            )
         if rolling_batch not in TRT_SUPPORTED_ROLLING_BATCH_TYPES:
             raise ValueError(
                 f"tensorrt llm only supports "
