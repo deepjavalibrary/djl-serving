@@ -210,6 +210,21 @@ def get_output_formatter(output_formatter: Union[str, Callable], stream: bool):
     return _json_output_formatter
 
 
+def filter_unused_generation_params(parameters: dict,
+                                    allowed_params: set,
+                                    backend: str,
+                                    remove_unused_params: bool = False):
+    unused_params = set(parameters.keys()) - allowed_params
+    if len(unused_params) > 0:
+        logging.warning(
+            f"The following parameters are not supported by {backend} with rolling batch: {unused_params}. The "
+            f"supported parameters are {allowed_params}")
+        if remove_unused_params:
+            for param in unused_params:
+                parameters.pop(param)
+    return parameters
+
+
 class Request(object):
     """
     This class represents each request that comes to the handler.

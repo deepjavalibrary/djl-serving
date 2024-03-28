@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER, filter_unused_generation_params
 from deepspeed.external.lmi_dist.utils.parameters import (
     NextTokenChooserParameters,
     StoppingCriteriaParameters,
@@ -19,6 +19,10 @@ from deepspeed.external.lmi_dist.utils.parameters import (
 from deepspeed.external.lmi_dist.utils.types import (Batch, Request)
 from deepspeed.inference.engine import InferenceEngine
 from deepspeed.inference.rolling_batch import DeepSpeedRollingBatchGeneration
+
+DEEPSPEED_GENERATION_PARAMETERS = set(
+    NextTokenChooserParameters().__dict__.keys()).union(
+        set(StoppingCriteriaParameters().__dict__.keys()))
 
 
 class DeepSpeedRollingBatch(RollingBatch):
@@ -158,12 +162,15 @@ class DeepSpeedRollingBatch(RollingBatch):
             stop_parameters = StoppingCriteriaParameters(
                 stop_sequences=param.get("stop_sequences", []),
                 max_new_tokens=param.get("max_new_tokens", 30))
+            truncate = param.get("truncate", None)
 
+            filter_unused_generation_params(param,
+                                            DEEPSPEED_GENERATION_PARAMETERS,
+                                            "deepspeed")
             request = Request(id=r.id,
                               inputs=r.input_text,
                               parameters=parameters,
                               stopping_parameters=stop_parameters)
-            truncate = param.get("truncate", None)
             if truncate is not None:
                 request.truncate = truncate
             preprocessed_requests.append(request)

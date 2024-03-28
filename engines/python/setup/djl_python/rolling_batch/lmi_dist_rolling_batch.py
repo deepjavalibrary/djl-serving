@@ -17,8 +17,9 @@ from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
 from vllm.lora.request import LoRARequest
+from vllm import SamplingParams
 
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
     supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER,
@@ -26,6 +27,8 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
 _WARMUP_PREFILL_TOKENS = 4096
+LMI_DIST_GENERATION_PARAMS = set(RequestParams().__dict__.keys()).union(
+    set(SamplingParams().__dict__.keys()))
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -119,6 +122,11 @@ class LmiDistRollingBatch(RollingBatch):
         if "num_beams" in parameters.keys():
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
+        parameters = filter_unused_generation_params(
+            parameters,
+            LMI_DIST_GENERATION_PARAMS,
+            "lmi-dist",
+            remove_unused_params=True)
         return parameters
 
     @stop_on_any_exception

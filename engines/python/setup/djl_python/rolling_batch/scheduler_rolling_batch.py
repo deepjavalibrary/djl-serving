@@ -15,7 +15,7 @@ from seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock, FalconBlock
 from seq_scheduler.search_config import SearchConfig
 from seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
 from collections import namedtuple, defaultdict
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
 import torch
@@ -29,6 +29,7 @@ MODEL_TYPE_2_BLOCK = {'bloom': BloomBlock, 'falcon': FalconBlock}
 FLASH_2_SUPPORTED_MODELS = {
     "LlamaForCausalLM", "RWForCausalLM", "FalconForCausalLM"
 }
+SCHEDULER_GENERATION_PARAMS = set(SearchConfig().__dict__.keys())
 
 
 def enable_flash() -> bool:
@@ -299,7 +300,7 @@ class SchedulerRollingBatch(RollingBatch):
         do_sample = str(
             parameters.get('do_sample',
                            self.search_config.sampling)).lower() == "true"
-        return SearchConfig(
+        config = SearchConfig(
             max_new_tokens=parameters.get('max_new_tokens',
                                           self.search_config.max_new_seqlen),
             top_k=parameters.get('top_k', self.search_config.topk),
@@ -313,6 +314,10 @@ class SchedulerRollingBatch(RollingBatch):
             use_lru_kv_cache=use_lru_kv_cache,
             pad_token_id=self.tokenizer.pad_token_id,
             eos_token_id=self.tokenizer.eos_token_id)
+        filter_unused_generation_params(parameters,
+                                        SCHEDULER_GENERATION_PARAMS,
+                                        "accelerate")
+        return config
 
 
 def _get_request_ids_tensor(request_ids: list[int]) -> torch.Tensor:
