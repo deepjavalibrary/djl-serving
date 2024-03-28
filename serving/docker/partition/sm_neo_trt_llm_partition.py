@@ -63,7 +63,8 @@ def get_neo_env_vars():
         raise InputConfiguration(
             f"SageMaker Neo environment variable '{exc.args[0]}' expected but not found"
             f" \nRequired env vars are: 'COMPILER_OPTIONS', 'SM_NEO_INPUT_MODEL_DIR',"
-            f" 'SM_NEO_COMPILED_MODEL_DIR', 'SM_NEO_COMPILATION_ERROR_FILE'")
+            f" 'SM_NEO_COMPILED_MODEL_DIR', 'SM_NEO_COMPILATION_ERROR_FILE', 'SM_NEO_CACHE_DIR'"
+        )
 
 
 def get_neo_compiler_flags(compiler_options):
@@ -158,7 +159,7 @@ def main():
 
         try:
             kwargs["trt_llm_model_repo"] = compiled_model_directory
-            kwargs["cache_root"] = neo_cache_dir
+            kwargs["neo_cache_dir"] = neo_cache_dir
             create_model_repo(input_model_directory, **kwargs)
         except Exception as exc:
             raise CompilationFatalError(
