@@ -78,7 +78,6 @@ public class PyModel extends BaseModel {
                     "Python engine does not support dynamic blocks");
         }
         String entryPoint = null;
-        boolean isTrtLlmBackend = false;
         if (options != null) {
             logger.debug("options in serving.properties for model: {}", modelName);
             for (Map.Entry<String, ?> entry : options.entrySet()) {
@@ -121,9 +120,6 @@ public class PyModel extends BaseModel {
                     case "entryPoint":
                         entryPoint = value;
                         break;
-                    case "rolling_batch":
-                        isTrtLlmBackend = "trtllm".equals(value);
-                        break;
                     case "parallel_loading":
                         parallelLoading = Boolean.parseBoolean(value);
                         break;
@@ -158,6 +154,7 @@ public class PyModel extends BaseModel {
             entryPoint = Utils.getenv("DJL_ENTRY_POINT");
             if (entryPoint == null) {
                 Path modelFile = findModelFile(prefix);
+                String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
                 // find default entryPoint
                 String engineName = manager.getEngine().getEngineName();
                 if (modelFile != null) {
@@ -167,7 +164,7 @@ public class PyModel extends BaseModel {
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";
-                } else if (isTrtLlmBackend) {
+                } else if ("trtllm".equals(features)) {
                     entryPoint = "djl_python.tensorrt_llm";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")) {
                     entryPoint = "djl_python.huggingface";

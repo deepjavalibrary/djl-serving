@@ -56,20 +56,27 @@ public final class LmiConfigRecommender {
 
     private LmiConfigRecommender() {}
 
-    static void configure(Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
-        setRollingBatch(lmiProperties, modelConfig);
-        setEngine(lmiProperties);
+    static void configure(
+            ModelInfo<?, ?> modelInfo,
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig) {
+        String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
+        setDynamicBatch(lmiProperties, modelConfig, modelInfo, features);
+        setRollingBatch(lmiProperties, modelConfig, features);
+        setEngine(lmiProperties, modelConfig, features);
         setTensorParallelDegree(lmiProperties);
     }
 
     private static void setRollingBatch(
-            Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig,
+            String features) {
         // If dynamic batch is enabled, we don't enable rolling batch.
         if (Integer.parseInt(lmiProperties.getProperty("batch_size", "1")) > 1) {
+            lmiProperties.setProperty("option.rolling_batch", "disable");
             return;
         }
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
-        String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         if (!"auto".equals(rollingBatch)) {
             return;
         } else if (!isTextGenerationModel(modelConfig)) {
@@ -77,19 +84,27 @@ public final class LmiConfigRecommender {
             rollingBatch = "disable";
         } else if (isVLLMEnabled(features) && isLmiDistEnabled(features)) {
             rollingBatch = MODEL_TO_ROLLING_BATCH.getOrDefault(modelConfig.getModelType(), "auto");
-        } else if (LmiUtils.isTrtLLM(lmiProperties)) {
+        } else if (LmiUtils.isTrtLLMRollingBatch(lmiProperties)) {
             rollingBatch = "trtllm";
         }
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }
 
-    private static void setEngine(Properties lmiProperties) {
+    private static void setEngine(
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig,
+            String features) {
         if (lmiProperties.containsKey("engine")) {
             return;
         }
         String engine = "Python";
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
         if ("lmi-dist".equals(rollingBatch) || "trtllm".equals(rollingBatch)) {
+            engine = "MPI";
+            lmiProperties.setProperty("option.mpi_mode", "true");
+        }
+        //  TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
+        if (isT5TrtLLM(modelConfig, features)) {
             engine = "MPI";
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
@@ -107,12 +122,41 @@ public final class LmiConfigRecommender {
         lmiProperties.setProperty("option.tensor_parallel_degree", tpDegree);
     }
 
+    private static void setDynamicBatch(
+            Properties lmiProperties,
+            LmiUtils.HuggingFaceModelConfig modelConfig,
+            ModelInfo<?, ?> modelInfo,
+            String features) {
+        // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
+        if (isT5TrtLLM(modelConfig, features)) {
+
+            // To do runtime compilation for TensorRT-LLM T5 model.
+            lmiProperties.setProperty("trtllm_python_backend", String.valueOf(true));
+            lmiProperties.setProperty("option.rolling_batch", "disable");
+
+            // We set batch_size only when customer did not provide it.
+            if (Integer.parseInt(lmiProperties.getProperty("batch_size", "0")) == 0) {
+                modelInfo.batchSize = 32;
+                lmiProperties.setProperty("batch_size", String.valueOf(32));
+            }
+        }
+    }
+
     private static boolean isVLLMEnabled(String features) {
         return features != null && features.contains("vllm");
     }
 
     private static boolean isLmiDistEnabled(String features) {
         return features != null && features.contains("lmi-dist");
+    }
+
+    private static boolean isTrtLLMEnabled(String features) {
+        return features != null && features.contains("trtllm");
+    }
+
+    private static boolean isT5TrtLLM(
+            LmiUtils.HuggingFaceModelConfig modelConfig, String features) {
+        return isTrtLLMEnabled(features) && "t5".equals(modelConfig.getModelType());
     }
 
     private static boolean isTextGenerationModel(LmiUtils.HuggingFaceModelConfig modelConfig) {

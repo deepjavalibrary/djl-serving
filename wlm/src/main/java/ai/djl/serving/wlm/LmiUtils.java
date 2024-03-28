@@ -55,13 +55,13 @@ public final class LmiUtils {
         Properties prop = modelInfo.getProperties();
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
         if (modelConfig == null) {
-            String engineName = isTrtLLM(prop) ? "MPI" : "Python";
+            String engineName = isTrtLLMRollingBatch(prop) ? "MPI" : "Python";
             logger.info("No config.json found, use {} engine.", engineName);
             return engineName;
         }
-        LmiConfigRecommender.configure(prop, modelConfig);
+        LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
         logger.info(
-                "Detected engine: {}, rolling_batch: {}, tensor_paralell_degre {}, for modelType:"
+                "Detected engine: {}, rolling_batch: {}, tensor_parallel_degree {}, for modelType:"
                         + " {}",
                 prop.getProperty("engine"),
                 prop.getProperty("option.rolling_batch"),
@@ -70,7 +70,7 @@ public final class LmiUtils {
         return prop.getProperty("engine");
     }
 
-    static boolean isTrtLLM(Properties properties) {
+    static boolean isTrtLLMRollingBatch(Properties properties) {
         String rollingBatch = properties.getProperty("option.rolling_batch");
         if ("trtllm".equals(rollingBatch)) {
             return true;
@@ -84,11 +84,12 @@ public final class LmiUtils {
     }
 
     static boolean needConvert(ModelInfo<?, ?> info) {
-        return isTrtLLM(info.getProperties());
+        Properties properties = info.getProperties();
+        return isTrtLLMRollingBatch(info.getProperties())
+                || properties.containsKey("trtllm_python_backend");
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
-        info.prop.put("option.rolling_batch", "trtllm");
         Path trtRepo;
         String modelId = null;
         if (info.downloadDir != null) {
@@ -100,18 +101,30 @@ public final class LmiUtils {
                 trtRepo = Paths.get(modelId);
             }
         }
-        if (!isValidTrtLlmModelRepo(trtRepo)) {
-            if (modelId == null) {
-                modelId = trtRepo.toString();
-            }
-            String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
-            if (tpDegree == null) {
-                tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
-            }
-            if ("max".equals(tpDegree)) {
-                tpDegree = String.valueOf(CudaUtils.getGpuCount());
-            }
+
+        if (modelId == null) {
+            modelId = trtRepo.toString();
+        }
+        String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
+        if (tpDegree == null) {
+            tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
+        }
+        if ("max".equals(tpDegree)) {
+            tpDegree = String.valueOf(CudaUtils.getGpuCount());
+        }
+
+        // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
+        if (info.prop.containsKey("trtllm_python_backend")) {
+            // Inflight batching support is not available for certain models like t5.
+            // Python backend models have different model repo format compared to C++ backend.
+            // And whether it is valid or not is checked in tensorrt_llm_toolkit. So it is not
+            // necessary to check here.
             info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+        } else {
+            info.prop.put("option.rolling_batch", "trtllm");
+            if (!isValidTrtLlmModelRepo(trtRepo)) {
+                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+            }
         }
     }
 
