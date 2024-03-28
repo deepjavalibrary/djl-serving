@@ -188,15 +188,6 @@ jobs:
           serve
           python3 llm/client.py huggingface llama-7b-unmerged-lora
           docker rm -f $(docker ps -aq)
-      - name: Test vllm unmerged lora - llama7b
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py vllm llama-7b-unmerged-lora
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
-          serve
-          python3 llm/client.py vllm llama-7b-unmerged-lora
-          docker rm -f $(docker ps -aq)
       - name: Test streaming bigscience/bloom-3b
         working-directory: tests/integration
         run: |

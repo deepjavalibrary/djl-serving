@@ -6,6 +6,7 @@ import re
 import os
 import math
 import json
+import shutil
 from random import randrange
 import numpy as np
 from datetime import datetime
@@ -393,6 +394,14 @@ lmi_dist_model_spec = {
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
+    "llama-7b-unmerged-lora-overflow": {
+        "max_memory_per_gpu": [15.0, 15.0],
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": [f"english-alpaca-{i}" for i in range(20)],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
 }
 
 lmi_dist_chat_model_spec = {
@@ -447,6 +456,14 @@ vllm_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama-7b-unmerged-lora-overflow": {
+        "max_memory_per_gpu": [15.0, 15.0],
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": [f"english-alpaca-{i}" for i in range(20)],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "starcoder2-7b": {
@@ -741,18 +758,29 @@ def find_awscurl():
         sp.call(command, shell=True)
 
 
-def awscurl_run(data, tokenizer, concurrency, num_run=5):
+def awscurl_run(data, tokenizer, concurrency, num_run=5, dataset=False):
     find_awscurl()
-    json_data = json.dumps(data)
     headers = "Content-type: application/json"
     endpoint = f"http://127.0.0.1:8080/invocations"
+    if dataset:
+        dataset_dir = os.path.join(os.path.curdir, "dataset")
+        os.mkdir(dataset_dir)
+        for i, d in enumerate(data):
+            with open(os.path.join(dataset_dir, f"prompt{i}.txt"), "w") as f:
+                f.write(json.dumps(d))
+        command_data = f"--dataset {dataset_dir}"
+    else:
+        json_data = json.dumps(data)
+        command_data = f"-d '{json_data}'"
     command = (f"./awscurl -c {concurrency} "
                f"-N {num_run} -X POST {endpoint} --connect-timeout 120 "
-               f"-H {headers} -d '{json_data}' -P -t")
+               f"-H {headers} {command_data} -P -t")
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     logging.info(f"Running command {command}")
     sp.call(command, shell=True)
+    if dataset:
+        shutil.rmtree(dataset_dir)
 
 
 def send_image_json(img_url, data):
@@ -1023,6 +1051,60 @@ def test_handler_rolling_batch(model, model_spec):
             awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
+def test_handler_adapters(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    # dryrun phase
+    reqs = []
+    for adapter in spec.get("adapters"):
+        req = {"inputs": batch_generation(1)[0]}
+        seq_length = 100
+        params = {
+            "do_sample": True,
+            "max_new_tokens": seq_length,
+            "details": True
+        }
+        req["parameters"] = params
+        req["adapters"] = adapter
+        reqs.append(req)
+    logging.info(f"reqs {reqs}")
+    for req in reqs:
+        res = send_json(req).content.decode("utf-8")
+        logging.info(f"res: {res}")
+        if "error" in res and "code" in res and "424" in res:
+            raise RuntimeError(f"Inference failed!")
+    # awscurl little benchmark phase
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            logging.info(
+                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+            )
+            for req in reqs:
+                req["parameters"]["max_new_tokens"] = seq_length
+            awscurl_run(reqs,
+                        spec.get("tokenizer", None),
+                        batch_size,
+                        dataset=True)
+    # Test removing and querying invalid/removed adapter
+    del_adapter = spec.get("adapters")[0]
+    res = requests.delete(
+        f"http://127.0.0.1:8080/models/test/adapters/{del_adapter}")
+    logging.info(f"del adapter {res}")
+    res = send_json(reqs[0]).content.decode("utf-8")
+    logging.info(f"call deleted adapter {res}")
+    if "error" not in res:
+        raise RuntimeError(f"Should not work with new adapters")
+    res = send_json(reqs[1]).content.decode("utf-8")
+    logging.info(f"call deleted adapter {res}")
+    if "error" in res:
+        raise RuntimeError(f"Deleting adapter breaking inference")
+
+
 def test_handler_rolling_batch_chat(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -1262,8 +1344,12 @@ if __name__ == "__main__":
                                           transformers_neuronx_aot_model_spec)
     elif args.handler == "lmi_dist":
         test_handler_rolling_batch(args.model, lmi_dist_model_spec)
+    elif args.handler == "lmi_dist_adapters":
+        test_handler_adapters(args.model, lmi_dist_model_spec)
     elif args.handler == "vllm":
         test_handler_rolling_batch(args.model, vllm_model_spec)
+    elif args.handler == "vllm_adapters":
+        test_handler_adapters(args.model, vllm_model_spec)
     elif args.handler == "lmi_dist_chat":
         test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
     elif args.handler == "vllm_chat":
