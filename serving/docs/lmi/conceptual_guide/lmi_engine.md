@@ -33,12 +33,9 @@ serving.properties
 engine=Python
 ```
 
-Environment variable
+Environment variable (no need to set)
 
-```
-SERVING_LOAD_MODELS=test::Python=/opt/ml/model
-```
-
+We use python mode as long as you specify `option.model_id`.
 
 ## MPI Engine operating in LMI (DJLServing)
 
@@ -67,6 +64,6 @@ engine=MPI
 Environment variable
 
 ```
-SERVING_LOAD_MODELS=test::MPI=/opt/ml/model
+OPTION_MPI_MODE=true
 ```
 
