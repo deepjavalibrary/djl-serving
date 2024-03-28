@@ -159,7 +159,7 @@ We can translate the configuration to environment variables like this:
 ```
 HF_MODEL_ID=tiiuae/falcon-40b
 OPTION_ENTRYPOINT=djl_python.transformersneuronx
-HF_TRUST_REMOTE_CODE=true
+HF_MODEL_TRUST_REMOTE_CODE=true
 TENSOR_PARALLEL_DEGREE=4
 OPTION_MAX_ROLLING_BATCH_SIZE=32
 OPTION_ROLLING_BATCH=auto
