@@ -313,7 +313,7 @@ class DeepSpeedService(object):
                 f"Peft Model detected. Instantiating base model {self.peft_config.base_model_name_or_path}"
             )
             base_model, self.tokenizer, state_dict_mmap = self.load_model(
-                self.peft_config.base_model_name_or_path, 'from_pretrained',
+                self.peft_config.base_model_name_or_path, 'pretrained',
                 self.properties.ds_config['replace_with_kernel_inject'],
                 **kwargs)
             lora_model = PeftModel.from_pretrained(
