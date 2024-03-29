@@ -184,3 +184,6 @@ class DeepSpeedRollingBatch(RollingBatch):
             return batch
         else:
             return None
+
+    def get_tokenizer(self):
+        return self.rolling_batch.tokenizer
