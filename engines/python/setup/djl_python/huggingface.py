@@ -298,11 +298,18 @@ class HuggingFaceService(object):
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             if inputs.get_property("reset_rollingbatch"):
                 self.rolling_batch.reset()
-            adapter_data = None
             if self.adapters is not None:
-                adapter_data = [
-                    self.adapter_registry.get(a) for a in self.adapters
-                ]
+                adapter_data = []
+                for i, a in enumerate(self.adapters):
+                    if a is None or a == "":
+                        adapter_data.append(None)
+                    elif a in self.adapter_registry:
+                        adapter_data.append(self.adapter_registry[a])
+                    else:
+                        adapter_data.append(None)
+                        errors[i] = f"Unknown or invalid adapter {a}"
+            else:
+                adapter_data = None
             result = self.rolling_batch.inference(input_data,
                                                   parameters,
                                                   adapters=adapter_data)

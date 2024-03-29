@@ -645,6 +645,18 @@ lmi_dist_model_list = {
         "adapter_names": ["english-alpaca", "portugese-alpaca"],
         "option.gpu_memory_utilization": "0.8",
     },
+    "llama-7b-unmerged-lora-overflow": {
+        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
+        "option.tensor_parallel_degree": 1,
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "option.max_cpu_loras": 8,
+        "adapter_ids": ["tloen/alpaca-lora-7b"] * 20,
+        "adapter_names": [f"english-alpaca-{i}" for i in range(20)],
+        "option.gpu_memory_utilization": "0.8",
+    },
     "llama2-7b-chat": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
         "option.task": "text-generation",
@@ -703,6 +715,18 @@ vllm_model_list = {
         "option.enable_lora": "true",
         "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
         "adapter_names": ["english-alpaca", "portugese-alpaca"],
+        "option.gpu_memory_utilization": "0.8",
+    },
+    "llama-7b-unmerged-lora-overflow": {
+        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
+        "option.tensor_parallel_degree": 1,
+        "option.task": "text-generation",
+        "option.dtype": "fp16",
+        "option.adapters": "adapters",
+        "option.enable_lora": "true",
+        "option.max_cpu_loras": 8,
+        "adapter_ids": ["tloen/alpaca-lora-7b"] * 20,
+        "adapter_names": [f"english-alpaca-{i}" for i in range(20)],
         "option.gpu_memory_utilization": "0.8",
     },
     "starcoder2-7b": {
@@ -929,13 +953,17 @@ def write_model_artifacts(properties,
         os.makedirs(adapters_path, exist_ok=True)
         ## install huggingface_hub in your workflow file to use this
         from huggingface_hub import snapshot_download
+        adapter_cache = {}
         for adapter_id, adapter_name in zip(adapter_ids, adapter_names):
-            os.makedirs(os.path.join(adapters_path, adapter_name),
-                        exist_ok=True)
-            snapshot_download(adapter_id,
-                              local_dir_use_symlinks=False,
-                              local_dir=os.path.join(adapters_path,
-                                                     adapter_name))
+            dir = os.path.join(adapters_path, adapter_name)
+            if adapter_id in adapter_cache:
+                shutil.copytree(adapter_cache[adapter_id], dir)
+            else:
+                os.makedirs(dir, exist_ok=True)
+                snapshot_download(adapter_id,
+                                  local_dir_use_symlinks=False,
+                                  local_dir=dir)
+                adapter_cache[adapter_id] = dir
 
 
 def build_hf_handler_model(model):

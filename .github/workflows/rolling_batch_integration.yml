@@ -260,7 +260,16 @@ jobs:
           python3 llm/prepare.py lmi_dist llama-7b-unmerged-lora
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
           serve
-          python3 llm/client.py lmi_dist llama-7b-unmerged-lora
+          python3 llm/client.py lmi_dist_adapters llama-7b-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test lmi-dist unmerged lora overflow - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama-7b-unmerged-lora-overflow
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py lmi_dist_adapters llama-7b-unmerged-lora-overflow
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
@@ -479,6 +488,24 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm gemma-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test vllm unmerged lora - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama-7b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py vllm_adapters llama-7b-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test vllm unmerged lora overflow - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama-7b-unmerged-lora-overflow
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          serve
+          python3 llm/client.py vllm_adapters llama-7b-unmerged-lora-overflow
           docker rm -f $(docker ps -aq)
       - name: Test llama2-7b-chat
         working-directory: tests/integration
