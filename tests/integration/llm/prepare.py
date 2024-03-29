@@ -871,6 +871,11 @@ trtllm_handler_list = {
         "option.use_custom_all_reduce": False,
         "option.max_rolling_batch_size": 32,
         "option.output_formatter": "jsonlines"
+    },
+    "flan-t5-xl": {
+        "option.model_id": "s3://djl-llm/flan-t5-xl/",
+        "option.rolling_batch": "disable",
+        "option.entryPoint": "djl_python.tensorrt_llm"
     }
 }
 
