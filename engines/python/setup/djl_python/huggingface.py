@@ -142,8 +142,7 @@ class HuggingFaceService(object):
 
     def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
-        self._read_model_config(self.hf_configs.model_id_or_path,
-                                self.hf_configs.revision)
+        self._read_model_config(self.hf_configs.model_id_or_path)
 
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             _rolling_batch_cls = get_rolling_batch_class_from_str(
@@ -153,13 +152,11 @@ class HuggingFaceService(object):
             self.rolling_batch = _rolling_batch_cls(
                 self.hf_configs.model_id_or_path, properties,
                 **self.hf_configs.kwargs)
-            self._init_tokenizer(self.hf_configs.model_id_or_path,
-                                 **self.hf_configs.kwargs)
+            self._init_tokenizer(self.hf_configs.model_id_or_path)
             self.initialized = True
             return
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
-            self._init_tokenizer(self.hf_configs.model_id_or_path,
-                                 **self.hf_configs.kwargs)
+            self._init_tokenizer(self.hf_configs.model_id_or_path)
             self._init_model(self.hf_configs.model_id_or_path,
                              **self.hf_configs.kwargs)
             self.initialized = True
@@ -408,7 +405,10 @@ class HuggingFaceService(object):
         if use_pipeline:
             if self.peft_config is not None:
                 self.tokenizer = AutoTokenizer.from_pretrained(
-                    self.peft_config.base_model_name_or_path)
+                    self.peft_config.base_model_name_or_path,
+                    trust_remote_code=self.hf_configs.trust_remote_code,
+                    revision=self.hf_configs.revision,
+                )
                 base_model = PEFT_MODEL_TASK_TO_CLS[
                     self.peft_config.task_type].from_pretrained(
                         self.peft_config.base_model_name_or_path, **kwargs)
@@ -427,7 +427,9 @@ class HuggingFaceService(object):
                                        device=self.hf_configs.device)
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(
-                    model_id_or_path, revision=kwargs.get('revision', None))
+                    model_id_or_path,
+                    revision=self.hf_configs.revision,
+                    trust_remote_code=self.hf_configs.trust_remote_code)
                 hf_pipeline = pipeline(task=task,
                                        tokenizer=self.tokenizer,
                                        model=model_id_or_path,
@@ -435,7 +437,7 @@ class HuggingFaceService(object):
                                        **kwargs)
                 self.model = hf_pipeline.model
         else:
-            self._init_tokenizer(model_id_or_path, **kwargs)
+            self._init_tokenizer(model_id_or_path)
             self._init_model(model_id_or_path, **kwargs)
             hf_pipeline = pipeline(task=task,
                                    model=self.model,
@@ -460,16 +462,14 @@ class HuggingFaceService(object):
 
         return hf_pipeline
 
-    def _init_tokenizer(self, model_id_or_path: str, **kwargs):
-        if self.peft_config is not None:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.peft_config.base_model_name_or_path, padding_size="left")
-        else:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
-                                                           padding_side="left",
-                                                           revision=kwargs.get(
-                                                               'revision',
-                                                               None))
+    def _init_tokenizer(self, model_id_or_path: str):
+        path_to_use = model_id_or_path if self.peft_config is None else self.peft_config.base_model_name_or_path
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            path_to_use,
+            padding_size="left",
+            trust_remote_code=self.hf_configs.trust_remote_code,
+            revision=self.hf_configs.revision,
+        )
 
     def _init_model(self, model_id_or_path: str, **kwargs):
         architectures = self.model_config.architectures
@@ -559,12 +559,12 @@ class HuggingFaceService(object):
             )
         return task
 
-    def _read_model_config(self, model_config_path: str, revision=None):
+    def _read_model_config(self, model_config_path: str):
         try:
             self.model_config = AutoConfig.from_pretrained(
                 model_config_path,
                 trust_remote_code=self.hf_configs.trust_remote_code,
-                revision=revision)
+                revision=self.hf_configs.revision)
         except OSError:
             logging.warning(
                 f"config.json not found for {model_config_path}. Attempting to load with peft"
@@ -572,7 +572,9 @@ class HuggingFaceService(object):
             self.peft_config = PeftConfig.from_pretrained(model_config_path)
             self.model_config = AutoConfig.from_pretrained(
                 self.peft_config.base_model_name_or_path,
-                trust_remote_code=self.hf_configs.trust_remote_code)
+                trust_remote_code=self.hf_configs.trust_remote_code,
+                revision=self.hf_configs.revision,
+            )
         except Exception as e:
             logging.error(
                 f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "

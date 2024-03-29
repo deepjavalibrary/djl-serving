@@ -79,7 +79,9 @@ class TransformersNeuronXService(object):
             self.config.batch_size = self.config.max_rolling_batch_size
 
         self.model_config = AutoConfig.from_pretrained(
-            self.config.model_id_or_path, revision=self.config.revision)
+            self.config.model_id_or_path,
+            revision=self.config.revision,
+            trust_remote_code=self.config.trust_remote_code)
 
         self.set_model_loader_class()
         if not self.config.task:

@@ -179,7 +179,11 @@ class SchedulerRollingBatch(RollingBatch):
                     **self.scheduler_configs.kwargs)
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.scheduler_configs.model_id_or_path, padding_side="left")
+            self.scheduler_configs.model_id_or_path,
+            padding_side="left",
+            trust_remote_code=self.scheduler_configs.trust_remote_code,
+            revision=self.scheduler_configs.revision,
+        )
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 

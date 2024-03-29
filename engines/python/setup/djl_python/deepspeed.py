@@ -171,7 +171,9 @@ class DeepSpeedService(object):
         try:
             self.model_config = AutoConfig.from_pretrained(
                 self.properties.model_id_or_path,
-                trust_remote_code=self.properties.trust_remote_code)
+                trust_remote_code=self.properties.trust_remote_code,
+                revision=self.properties.revision,
+            )
         except OSError:
             self.logger.warning(
                 f"config.json not found for {self.properties.model_id_or_path}. Attempting to load with peft"
@@ -180,7 +182,9 @@ class DeepSpeedService(object):
                 self.properties.model_id_or_path)
             self.model_config = AutoConfig.from_pretrained(
                 self.peft_config.base_model_name_or_path,
-                trust_remote_code=self.properties.trust_remote_code)
+                trust_remote_code=self.properties.trust_remote_code,
+                revision=self.properties.revision,
+            )
         except Exception as e:
             self.logger.error(
                 f"{self.properties.model_id_or_path} "
@@ -202,16 +206,37 @@ class DeepSpeedService(object):
     def get_model_pretrained(self,
                              model_id_or_path,
                              torch_dtype='auto',
+                             trust_remote_code=False,
+                             revision=None,
                              **kwargs):
-        tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id_or_path,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+        )
         model = TASK_TO_MODEL[self.properties.task].from_pretrained(
-            model_id_or_path, torch_dtype=torch_dtype, **kwargs)
+            model_id_or_path,
+            torch_dtype=torch_dtype,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+            **kwargs)
         return model, tokenizer
 
-    def get_model_from_config(self, model_id_or_path, **kwargs):
-        tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
+    def get_model_from_config(self,
+                              model_id_or_path,
+                              trust_remote_code=False,
+                              revision=None,
+                              **kwargs):
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id_or_path,
+            trust_remote_code=self.properties.trust_remote_code,
+            revision=self.properties.revision,
+        )
         model = TASK_TO_MODEL[self.properties.task].from_config(
-            self.model_config, **kwargs)
+            self.model_config,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+            **kwargs)
         return model, tokenizer
 
     def get_model(self, model_id_or_path, loading_method, **kwargs):
@@ -265,8 +290,9 @@ class DeepSpeedService(object):
         # Workaround on int8. fp16 fp32 bf16 init supported
         dtype = torch.float16 if self.properties.dtype == torch.int8 else self.properties.dtype
         kwargs = {"torch_dtype": dtype} if dtype else {}
-        if self.properties.revision:
-            kwargs['revision'] = self.properties.revision
+        kwargs['revision'] = self.properties.revision
+        kwargs['trust_remote_code'] = self.properties.trust_remote_code
+        kwargs['low_cpu_mem_usage'] = self.properties.low_cpu_mem_usage
         if self.model_config.model_type in OPTIMIZED_MODEL_TYPES:
             self.properties.ds_config["replace_with_kernel_inject"] = True
         else:
@@ -286,26 +312,20 @@ class DeepSpeedService(object):
             self.logger.info(
                 f"Peft Model detected. Instantiating base model {self.peft_config.base_model_name_or_path}"
             )
-            base_model = TASK_TO_MODEL[self.properties.task].from_pretrained(
-                self.peft_config.base_model_name_or_path,
-                low_cpu_mem_usage=self.properties.low_cpu_mem_usage,
-                trust_remote_code=self.properties.trust_remote_code,
+            base_model, self.tokenizer, state_dict_mmap = self.load_model(
+                self.peft_config.base_model_name_or_path, 'from_pretrained',
+                self.properties.ds_config['replace_with_kernel_inject'],
                 **kwargs)
             lora_model = PeftModel.from_pretrained(
                 base_model, self.properties.model_id_or_path)
             model = lora_model.merge_and_unload()
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.peft_config.base_model_name_or_path)
             self.logger.info(
                 f"Peft Model merged into base model for deepspeed compatibility"
             )
         else:
             model, self.tokenizer, state_dict_mmap = self.load_model(
-                self.properties.model_id_or_path,
-                'pretrained',
+                self.properties.model_id_or_path, 'pretrained',
                 self.properties.ds_config['replace_with_kernel_inject'],
-                low_cpu_mem_usage=self.properties.low_cpu_mem_usage,
-                trust_remote_code=self.properties.trust_remote_code,
                 **kwargs)
         if self.properties.dtype:
             self.properties.ds_config["dtype"] = self.properties.dtype
