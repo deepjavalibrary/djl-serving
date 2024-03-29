@@ -229,14 +229,11 @@ class DeepSpeedService(object):
                               **kwargs):
         tokenizer = AutoTokenizer.from_pretrained(
             model_id_or_path,
-            trust_remote_code=self.properties.trust_remote_code,
-            revision=self.properties.revision,
-        )
-        model = TASK_TO_MODEL[self.properties.task].from_config(
-            self.model_config,
             trust_remote_code=trust_remote_code,
             revision=revision,
-            **kwargs)
+        )
+        model = TASK_TO_MODEL[self.properties.task].from_config(
+            self.model_config)
         return model, tokenizer
 
     def get_model(self, model_id_or_path, loading_method, **kwargs):
