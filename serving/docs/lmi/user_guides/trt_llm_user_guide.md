@@ -22,8 +22,8 @@ The below model architectures are supported for JIT model compiltation and teste
 * Qwen (since LMI V8 0.26.0)
 * GPT2/SantaCoder (since LMI V8 0.26.0)
 
-TRT-LLM LMI v8 0.26.0 containers come with [TRT-LLM 0.7.1](https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v0.7.1). 
-For models that are not listed here and supported by [TRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/tree/v0.7.1?tab=readme-ov-file#models) with [tensorrtllm_backend](https://github.com/triton-inference-server/tensorrtllm_backend), you can use this [tutorial](../tutorials/trtllm_manual_convert_tutorial.md) instead to prepare model manually.
+TRT-LLM LMI v9 0.27.0 containers come with [TRT-LLM 0.8.0](https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v0.8.0). 
+For models that are not listed here and supported by [TRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/tree/v0.8.0?tab=readme-ov-file#models) with [tensorrtllm_backend](https://github.com/triton-inference-server/tensorrtllm_backend), you can use this [tutorial](../tutorials/trtllm_manual_convert_tutorial.md) instead to prepare model manually.
 
 We will add more model support in the future versions in our CI. Please feel free to [file an issue](https://github.com/deepjavalibrary/djl-serving/issues/new/choose) if you are looking for a specific model support.
 

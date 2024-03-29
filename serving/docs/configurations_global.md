@@ -178,7 +178,7 @@ export SERVING_JOB_QUEUE_SIZE=1000 # This will override JOB_QUEUE_SIZE in the co
 
 | Key               | Type    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 |-------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| MODEL_SERVER_HOME | env var | DJLServing home directory, default: Installation directory (e.g. /usr/local/Cellar/djl-serving/0.19.0/)                                                                                                                                                                                                                                                                                                                                                   |
+| MODEL_SERVER_HOME | env var | DJLServing home directory, default: Installation directory (e.g. /usr/local/Cellar/djl-serving/0.27.0/)                                                                                                                                                                                                                                                                                                                                                   |
 | DEFAULT_JVM_OPTS  | env var | default: `-Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml`<br>Override default JVM startup options and system properties.                                                                                                                                                                                                                                                                                                                           |
 | JAVA_OPTS         | env var | default: `-Xms1g -Xmx1g -XX:+ExitOnOutOfMemoryError`<br>Add extra JVM options.                                                                                                                                                                                                                                                                                                                                                                            |
 | SERVING_OPTS      | env var | default: N/A<br>Add serving related JVM options.<br>Some of DJL configuration can only be configured by JVM system properties, user has to set DEFAULT_JVM_OPTS environment variable to configure them.<br>- `-Dai.djl.pytorch.num_interop_threads=2`, this will override interop threads for PyTorch<br>- `-Dai.djl.pytorch.num_threads=2`, this will override OMP_NUM_THREADS for PyTorch<br>- `-Dai.djl.logging.level=debug` change DJL loggging level |
@@ -204,12 +204,12 @@ DJLServing provides a few built-in `log4j2-XXX.xml` files in DJLServing containe
 Use the following environment variable to print HTTP access log to console:
 
 ```
-export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/usr/local/djl-serving-0.23.0/conf/log4j2-access.xml
+export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/usr/local/djl-serving-0.27.0/conf/log4j2-access.xml
 ```
 
 Use the following environment variable to print both access log, server metrics and model metrics to console:
 
 ```
-export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/usr/local/djl-serving-0.23.0/conf/log4j2-console.xml
+export DEFAULT_JVM_OPTS="-Dlog4j.configurationFile=/usr/local/djl-serving-0.27.0/conf/log4j2-console.xml
 ```
 

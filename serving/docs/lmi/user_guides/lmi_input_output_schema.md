@@ -1,7 +1,7 @@
 # LMI handlers Input/Output schema
 
 
-Our deep learning LMI containers come with default handlers, each handler supporting different optimization engines such as DeepSpeed, lmi-dist, vLLM and TensorRT-LLM.  These handlers are designed to receive input in a specific format and sends output in a predefined format. This document provides the default schema for the input and output of our prediction/invocation API. Checkout [this page](https://docs.djl.ai/docs/serving/serving/docs/inference_api.html) to our know about our inference APIs offered by DJLServing. Please be aware that this schema is applicable to our latest release v0.26.0.
+Our deep learning LMI containers come with default handlers, each handler supporting different optimization engines such as DeepSpeed, lmi-dist, vLLM and TensorRT-LLM.  These handlers are designed to receive input in a specific format and sends output in a predefined format. This document provides the default schema for the input and output of our prediction/invocation API. Checkout [this page](https://docs.djl.ai/docs/serving/serving/docs/inference_api.html) to our know about our inference APIs offered by DJLServing. Please be aware that this schema is applicable to our latest release v0.27.0.
 
 If you wish to create your own pre-processing and post-processing for our handlers, an example can be found here. [here](https://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/rollingbatch_llama_7b_customized_preprocessing.html).
 

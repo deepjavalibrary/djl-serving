@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'version string like 0.18.0, default is nightly'
+        description: 'version string like 0.27.0, default is nightly'
         required: true
         default: 'nightly'
   schedule:

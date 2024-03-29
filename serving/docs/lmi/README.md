@@ -52,7 +52,7 @@ sagemaker_session = sagemaker.session.Session()
 region = sagemaker_session._region_name
 
 # Fetch the uri of the LMI DeepSpeed container that supports vLLM, LMI-Dist, and DeepSpeed backends
-container_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.26.0", region=region)
+container_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
 
 # Create the SageMaker Model object. In this example we'll use vLLM as our inference backend
 model = Model(
@@ -133,8 +133,8 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 
 | Backend                | SageMakerDLC    | Example URI                                                                              |
 |------------------------|-----------------|------------------------------------------------------------------------------------------|
-| `vLLM`                 | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-deepspeed0.12.6-cu121  |
-| `lmi-dist`             | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-deepspeed0.12.6-cu121  |
-| `deepspeed`            | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-deepspeed0.12.6-cu121  |
-| `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-tensorrtllm0.7.1-cu122 |
-| `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.26.0-neuronx-sdk2.16.0      |
+| `vLLM`                 | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
+| `lmi-dist`             | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
+| `deepspeed`            | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
+| `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-tensorrtllm0.8.0-cu122 |
+| `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-neuronx-sdk2.18.0      |

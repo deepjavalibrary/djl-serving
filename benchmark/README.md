@@ -52,7 +52,7 @@ For macOS, centOS or Amazon Linux 2
 You can download djl-bench zip file from [here](https://publish.djl.ai/djl-bench/0.27.0/benchmark-0.27.0.zip).
 
 ```
-curl -O https://publish.djl.ai/djl-bench/0.25.0/benchmark-0.25.0.zip
+curl -O https://publish.djl.ai/djl-bench/0.27.0/benchmark-0.27.0.zip
 unzip benchmark-0.27.0.zip
 rm benchmark-0.27.0.zip
 sudo ln -s $PWD/benchmark-0.27.0/bin/benchmark /usr/bin/djl-bench
