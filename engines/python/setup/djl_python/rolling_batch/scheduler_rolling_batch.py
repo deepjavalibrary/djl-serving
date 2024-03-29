@@ -319,6 +319,9 @@ class SchedulerRollingBatch(RollingBatch):
                                         "accelerate")
         return config
 
+    def get_tokenizer(self):
+        return self.tokenizer
+
 
 def _get_request_ids_tensor(request_ids: list[int]) -> torch.Tensor:
     """
