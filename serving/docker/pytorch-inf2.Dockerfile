@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
-ARG djl_version=0.28.0~SNAPSHOT
+ARG djl_version=0.27.0
 ARG torch_version=2.1.2
 ARG python_version=3.9
 ARG neuronsdk_version=2.18.0
