@@ -84,7 +84,21 @@ Decoding method supported in DeepSpeed: Greedy (Default) and Sampling.
 LmiDistRollingBatchParameters : {
     'typical_p' : float (default= 1.0),
     'truncate' : integer (default = None),
-    'ignore_eos_token' : boolean (default = false)
+    'ignore_eos_token' : boolean (default = false),
+    'top_k' : integer (default = -1),
+    'min_p': float (default = 0.0),
+    'presence_penalty': float (default = 0.0),
+    'frequency_penalty' : float (default = 0.0),
+    'num_beams': integer (default = 1), (set this greater than 1 to enable beam search)
+    'length_penalty' : float (default = 1.0),
+    'early_stopping' : boolean (default = false),
+    'stop_token_ids': list (default = None),
+    'include_stop_str_in_output' : boolean (default = false),
+    'ignore_eos_token' : boolean (default = false),
+    'logprobs' : int (default = None),
+    'prompt_logprobs' : int (default = None),
+    'skip_special_tokens': boolean (default = true),
+    'spaces_between_special_tokens': boolean (default = true),
 }
 ```
 
@@ -96,11 +110,12 @@ Decoding method supported in LmiDist : Greedy (Default) and Sampling.
 ```
 vLLMRollingBatchParameters : {
     'top_k' : integer (default = -1)
-    
     'min_p': float (default = 0.0),
     'presence_penalty': float (default = 0.0),
     'frequency_penalty' : float (default = 0.0),
     'num_beams': integer (default = 1), (set this greater than 1 to enable beam search)
+    'length_penalty' : float (default = 1.0),
+    'early_stopping' : boolean (default = false),
     'stop_token_ids': list (default = None),
     'include_stop_str_in_output' : boolean (default = false),
     'ignore_eos_token' : boolean (default = false),
