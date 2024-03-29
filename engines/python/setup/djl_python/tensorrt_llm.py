@@ -11,7 +11,6 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
@@ -52,7 +51,8 @@ class TRTLLMService(object):
         outputs = Output()
 
         input_data, input_size, parameters, errors, batch = parse_input(
-            inputs, self.rolling_batch.get_tokenizer(), self.trt_configs.output_formatter)
+            inputs, self.rolling_batch.get_tokenizer(),
+            self.trt_configs.output_formatter)
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
@@ -102,7 +102,7 @@ def handle(inputs: Input) -> Output:
     global _service
     if not _service.initialized:
         properties = inputs.get_properties()
-        if properties.get("rolling_batch") == "disable":
+        if properties.get("rolling_batch", "disable") == "disable":
             _service = TRTLLMPythonService()
         # stateful model
         _service.initialize(inputs.get_properties())

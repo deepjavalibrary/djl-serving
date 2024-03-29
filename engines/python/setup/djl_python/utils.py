@@ -4,7 +4,9 @@ from djl_python.encode_decode import encode, decode
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
 
 
-def parse_input(inputs: Input, tokenizer, output_formatter) -> tuple[list[str], list[int], list[dict], dict, list]:
+def parse_input(
+        inputs: Input, tokenizer, output_formatter
+) -> tuple[list[str], list[int], list[dict], dict, list]:
     """
     Preprocessing function that extracts information from Input objects.
 

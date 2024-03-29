@@ -51,12 +51,12 @@ def _get_generation_result_from_python_backend(generations, inputs_size):
                 log_prob = curr_cum_log_prob - cum_log_probs[i]
                 token_result = {
                     'id':
-                        _get_value_based_on_tensor(generation[i].token_id,
-                                                   index=0),
+                    _get_value_based_on_tensor(generation[i].token_id,
+                                               index=0),
                     'text':
-                        generation[i].token_text,
+                    generation[i].token_text,
                     'log_prob':
-                        log_prob if i < len(tokens_results) else curr_cum_log_prob,
+                    log_prob if i < len(tokens_results) else curr_cum_log_prob,
                 }
                 cum_log_probs[i] = curr_cum_log_prob
                 tokens_results[i].append(token_result)
@@ -100,7 +100,8 @@ class TRTLLMPythonService:
         """
         outputs = Output()
 
-        input_data, input_size, parameters, errors, batch = parse_input(inputs, None, self.trt_configs.output_formatter)
+        input_data, input_size, parameters, errors, batch = parse_input(
+            inputs, None, self.trt_configs.output_formatter)
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
@@ -120,7 +121,7 @@ class TRTLLMPythonService:
         for i, item in enumerate(batch):
             content_type, accept = _get_accept_and_content_type(item)
             batch_item = results[offset] if input_size[i] == 1 else results[
-                                                                    offset:offset + input_size[i]]
+                offset:offset + input_size[i]]
             encode(outputs,
                    batch_item,
                    accept,
@@ -159,7 +160,8 @@ class TRTLLMPythonService:
                           input_size: list[int], parameters: dict,
                           batch: list) -> Output:
         outputs = Output()
-        detokenized_python_response = self.model.generate(input_data, **parameters)
+        detokenized_python_response = self.model.generate(
+            input_data, **parameters)
         generations = detokenized_python_response.stream_batch_generation()
         results = _get_generation_result_from_python_backend(
             generations, input_size)
@@ -168,7 +170,7 @@ class TRTLLMPythonService:
             item = batch[i]
             accept, content_type = _get_accept_and_content_type(item)
             batch_item = results[offset] if input_size[i] == 1 else results[
-                                                                    offset:offset + input_size[i]]
+                offset:offset + input_size[i]]
             encode(outputs,
                    batch_item,
                    accept,
