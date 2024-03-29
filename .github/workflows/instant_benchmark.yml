@@ -23,7 +23,7 @@ on:
           - trn1.2xlarge
           - trn1.32xlarge
       container:
-        description: 'The container used to run benchmark (overrides the template). Should be a full docker path such as deepjavalibrary/djl-serving:0.26.0-deepspeed'
+        description: 'The container used to run benchmark (overrides the template). Should be a full docker path such as deepjavalibrary/djl-serving:0.27.0-deepspeed'
         required: false
         default: ''
       record:

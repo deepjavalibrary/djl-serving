@@ -6,8 +6,8 @@ vLLM expect the model to be [standard HuggingFace format](../deployment_guide/mo
 
 ## Supported Model architecture
 
-LMI is shipping vLLM 0.2.7 with 0.26.0 containers, 
-so technically we support all LLM that [vLLM 0.2.7 support](https://github.com/vllm-project/vllm/tree/v0.2.7?tab=readme-ov-file#about).
+LMI is shipping vLLM 0.3.3 with 0.27.0 containers, 
+so technically we support all LLM that [vLLM 0.3.3 support](https://github.com/vllm-project/vllm/tree/v0.3.3?tab=readme-ov-file#about).
 
 The model architecture that we carefully tested for vLLM (in CI):
 

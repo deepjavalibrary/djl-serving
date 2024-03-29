@@ -6,7 +6,7 @@ DeepSpeed expects the model to be in the [standard HuggingFace format](../deploy
 
 ## Supported Model Architectures
 
-The LMI 0.26.0 container currently ships [DeepSpeed 0.12.6](https://github.com/microsoft/DeepSpeed/tree/v0.12.6).
+The LMI 0.27.0 container currently ships [DeepSpeed 0.12.6](https://github.com/microsoft/DeepSpeed/tree/v0.12.6).
 DeepSpeed supports two modes for launching models: Kernel Injection, and Auto Tensor-Parallelism.
 Model architectures that support Kernel Injection are defined [here](https://github.com/microsoft/DeepSpeed/blob/v0.12.6/deepspeed/module_inject/replace_policy.py).
 These model architectures have been optimized for inference through custom CUDA Kernel implementations.
