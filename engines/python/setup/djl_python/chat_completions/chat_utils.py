@@ -29,15 +29,11 @@ def parse_chat_completions_request(inputs: map, is_rolling_batch: bool,
             f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
             f"please ensure that your tokenizer supports chat templates.")
     chat_params = ChatProperties(**inputs)
-    _inputs = tokenizer.apply_chat_template(chat_params.messages,
-                                            tokenize=False)
-    _param = chat_params.dict(exclude_unset=True,
-                              exclude={
-                                  'messages', 'model', 'logit_bias',
-                                  'top_logprobs', 'n', 'user'
-                              })
-    _param["details"] = True
-    _param["output_formatter"] = "jsonlines_chat" if inputs.get(
-        "stream", False) else "json_chat"
+    _param = chat_params.model_dump(by_alias=True, exclude_unset=True)
+    _messages = _param.pop("messages")
+    _inputs = tokenizer.apply_chat_template(_messages, tokenize=False)
+    _param["details"] = True  # Enable details for chat completions
+    _param[
+        "output_formatter"] = "jsonlines_chat" if chat_params.stream else "json_chat"
 
     return _inputs, _param

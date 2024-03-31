@@ -73,7 +73,8 @@ class TRTLLMRollingBatch(RollingBatch):
             parameters["temperature"] = parameters.get("temperature", 0.8)
         if "length_penalty" in parameters.keys():
             parameters['len_penalty'] = parameters.pop('length_penalty')
-        parameters["streaming"] = parameters.get("streaming", True)
+        parameters["streaming"] = parameters.pop(
+            "stream", parameters.get("streaming", True))
         return parameters
 
     @stop_on_any_exception
