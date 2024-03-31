@@ -617,32 +617,34 @@ class TestConfigManager(unittest.TestCase):
             chat_configs = ChatProperties(**properties)
             self.assertEqual(chat_configs.messages, properties["messages"])
             self.assertIsNone(chat_configs.model)
-            self.assertEqual(chat_configs.frequency_penalty, 0)
+            self.assertEqual(chat_configs.frequency_penalty, 0.0)
             self.assertIsNone(chat_configs.logit_bias)
             self.assertFalse(chat_configs.logprobs)
             self.assertIsNone(chat_configs.top_logprobs)
-            self.assertIsNone(chat_configs.max_new_tokens)
+            self.assertIsNone(chat_configs.max_tokens)
             self.assertEqual(chat_configs.n, 1)
-            self.assertEqual(chat_configs.presence_penalty, 0)
+            self.assertEqual(chat_configs.presence_penalty, 0.0)
             self.assertIsNone(chat_configs.seed)
-            self.assertIsNone(chat_configs.stop_sequences)
-            self.assertEqual(chat_configs.temperature, 1)
-            self.assertEqual(chat_configs.top_p, 1)
+            self.assertIsNone(chat_configs.stop)
+            self.assertFalse(chat_configs.stream)
+            self.assertEqual(chat_configs.temperature, 1.0)
+            self.assertEqual(chat_configs.top_p, 1.0)
             self.assertIsNone(chat_configs.user)
 
         def test_chat_all_configs():
             properties["model"] = "model"
-            properties["frequency_penalty"] = "1"
-            properties["logit_bias"] = {"2435": -100, "640": -100}
+            properties["frequency_penalty"] = "1.0"
+            properties["logit_bias"] = {"2435": -100.0, "640": -100.0}
             properties["logprobs"] = "false"
             properties["top_logprobs"] = "3"
             properties["max_tokens"] = "256"
             properties["n"] = "1"
-            properties["presence_penalty"] = "1"
+            properties["presence_penalty"] = "1.0"
             properties["seed"] = "123"
-            properties["stop"] = "stop"
-            properties["temperature"] = "1"
-            properties["top_p"] = "3"
+            properties["stop"] = ["stop"]
+            properties["stream"] = "true"
+            properties["temperature"] = "1.0"
+            properties["top_p"] = "3.0"
             properties["user"] = "user"
 
             chat_configs = ChatProperties(**properties)
@@ -652,18 +654,18 @@ class TestConfigManager(unittest.TestCase):
                              float(properties['frequency_penalty']))
             self.assertEqual(chat_configs.logit_bias, properties['logit_bias'])
             self.assertFalse(chat_configs.logprobs)
-            self.assertEqual(chat_configs.top_logprobs,
-                             int(properties['top_logprobs']))
-            self.assertEqual(chat_configs.max_new_tokens,
+            self.assertIsNone(chat_configs.top_logprobs)
+            self.assertEqual(chat_configs.max_tokens,
                              int(properties['max_tokens']))
             self.assertEqual(chat_configs.n, int(properties['n']))
             self.assertEqual(chat_configs.presence_penalty,
                              float(properties['presence_penalty']))
             self.assertEqual(chat_configs.seed, int(properties['seed']))
-            self.assertEqual(chat_configs.stop_sequences, properties['stop'])
+            self.assertEqual(chat_configs.stop, properties['stop'])
+            self.assertTrue(chat_configs.stream)
             self.assertEqual(chat_configs.temperature,
-                             int(properties['temperature']))
-            self.assertEqual(chat_configs.top_p, int(properties['top_p']))
+                             float(properties['temperature']))
+            self.assertEqual(chat_configs.top_p, float(properties['top_p']))
             self.assertEqual(chat_configs.user, properties['user'])
 
         def test_invalid_configs():
@@ -678,34 +680,44 @@ class TestConfigManager(unittest.TestCase):
                 ChatProperties(**test_properties)
 
             test_properties = dict(properties)
-            test_properties["frequency_penalty"] = "-3"
+            test_properties["frequency_penalty"] = "-3.0"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
-            test_properties["frequency_penalty"] = "3"
+            test_properties["frequency_penalty"] = "3.0"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
 
             test_properties = dict(properties)
+            test_properties["logit_bias"] = {"2435": -100.0, "640": 200.0}
+            with self.assertRaises(ValueError):
+                ChatProperties(**test_properties)
+            test_properties["logit_bias"] = {"2435": -200.0, "640": 100.0}
+            with self.assertRaises(ValueError):
+                ChatProperties(**test_properties)
+
+            test_properties = dict(properties)
+            test_properties["logprobs"] = "true"
             test_properties["top_logprobs"] = "-1"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
+            test_properties["logprobs"] = "true"
             test_properties["top_logprobs"] = "30"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
 
             test_properties = dict(properties)
-            test_properties["presence_penalty"] = "-3"
+            test_properties["presence_penalty"] = "-3.0"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
-            test_properties["presence_penalty"] = "3"
+            test_properties["presence_penalty"] = "3.0"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
 
             test_properties = dict(properties)
-            test_properties["temperature"] = "-1"
+            test_properties["temperature"] = "-1.0"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
-            test_properties["temperature"] = "3"
+            test_properties["temperature"] = "3.0"
             with self.assertRaises(ValueError):
                 ChatProperties(**test_properties)
 

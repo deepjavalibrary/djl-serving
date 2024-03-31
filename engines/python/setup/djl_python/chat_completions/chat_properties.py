@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 from typing import Optional, Union, List, Dict
 
-from pydantic.v1 import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, validator, root_validator
 
 
 class ChatProperties(BaseModel):
@@ -22,25 +22,28 @@ class ChatProperties(BaseModel):
     """
 
     messages: List[Dict[str, str]]
-    model: Optional[str]  # UNUSED
-    frequency_penalty: Optional[float] = 0
-    logit_bias: Optional[dict] = None
-    logprobs: Optional[bool] = False
-    top_logprobs: Optional[int]  # Currently only support 1
-    max_new_tokens: Optional[int] = Field(alias="max_tokens")
-    n: Optional[int] = 1  # Currently only support 1
-    presence_penalty: Optional[float] = 0
-    seed: Optional[int]
-    stop_sequences: Optional[Union[str, list]] = Field(alias="stop")
-    temperature: Optional[int] = 1
-    top_p: Optional[int] = 1
-    user: Optional[str]
+    model: Optional[str] = Field(default=None, exclude=True)  # Unused
+    frequency_penalty: Optional[float] = 0.0
+    logit_bias: Optional[Dict[str, float]] = Field(default=None, exclude=True)
+    logprobs: Optional[bool] = Field(default=False, exclude=True)
+    top_logprobs: Optional[int] = Field(default=None,
+                                        serialization_alias="logprobs")
+    max_tokens: Optional[int] = Field(default=None,
+                                      serialization_alias="max_new_tokens")
+    n: Optional[int] = Field(default=1, exclude=True)
+    presence_penalty: Optional[float] = 0.0
+    seed: Optional[int] = None
+    stop: Optional[Union[str, List[str]]] = None
+    stream: Optional[bool] = False
+    temperature: Optional[float] = 1.0
+    top_p: Optional[float] = 1.0
+    user: Optional[str] = Field(default=None, exclude=True)
 
     @validator('messages', pre=True)
     def validate_messages(
             cls, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
         if messages is None:
-            return messages
+            return None
 
         for message in messages:
             if not ("role" in message and "content" in message):
@@ -52,17 +55,31 @@ class ChatProperties(BaseModel):
     @validator('frequency_penalty', pre=True)
     def validate_frequency_penalty(cls, frequency_penalty: float) -> float:
         if frequency_penalty is None:
-            return frequency_penalty
+            return None
 
         frequency_penalty = float(frequency_penalty)
         if frequency_penalty < -2.0 or frequency_penalty > 2.0:
             raise ValueError("frequency_penalty must be between -2.0 and 2.0.")
         return frequency_penalty
 
-    @validator('top_logprobs', pre=True)
-    def validate_top_logprobs(cls, top_logprobs: float) -> float:
+    @validator('logit_bias', pre=True)
+    def validate_logit_bias(cls, logit_bias: Dict[str, float]):
+        if logit_bias is None:
+            return None
+
+        for token_id, bias in logit_bias.items():
+            if bias < -100.0 or bias > 100.0:
+                raise ValueError(
+                    "logit_bias value must be between -100 and 100.")
+        return logit_bias
+
+    @validator('top_logprobs')
+    def validate_top_logprobs(cls, top_logprobs: int, values):
         if top_logprobs is None:
-            return top_logprobs
+            return None
+
+        if not values.get('logprobs'):
+            return None
 
         top_logprobs = int(top_logprobs)
         if top_logprobs < 0 or top_logprobs > 20:
@@ -72,7 +89,7 @@ class ChatProperties(BaseModel):
     @validator('presence_penalty', pre=True)
     def validate_presence_penalty(cls, presence_penalty: float) -> float:
         if presence_penalty is None:
-            return presence_penalty
+            return None
 
         presence_penalty = float(presence_penalty)
         if presence_penalty < -2.0 or presence_penalty > 2.0:
@@ -82,9 +99,9 @@ class ChatProperties(BaseModel):
     @validator('temperature', pre=True)
     def validate_temperature(cls, temperature: float) -> float:
         if temperature is None:
-            return temperature
+            return None
 
         temperature = float(temperature)
-        if temperature < 0 or temperature > 2:
+        if temperature < 0.0 or temperature > 2.0:
             raise ValueError("temperature must be between 0 and 2.")
         return temperature
