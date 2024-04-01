@@ -131,27 +131,26 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
         logprobs = None
         parameters = details.get("parameters", {})
         if parameters.get("logprobs"):
-            logprobs = [
-                {
-                    "token":
-                    t.get("text"),
-                    "logprob":
-                    t.get("log_prob"),
-                    "bytes":
-                    (b := [ord(c)
-                           for c in t.get("text")] if t.get("text") else None),
-                    "top_logprobs":  # Currently only support 1 top_logprobs
-                    [{
-                        "token": t.get("text"),
-                        "logprob": t.get("log_prob"),
-                        "bytes": b
-                    }]
-                } for t in details.get("tokens", [])
-            ]
+            logprobs = {
+                "content": [{
+                        "token":
+                            t.get("text"),
+                        "logprob":
+                            t.get("log_prob"),
+                        "bytes":
+                            (b := [ord(c)
+                                   for c in t.get("text")] if t.get("text") else None),
+                        "top_logprobs":  # Currently only support 1 top_logprobs
+                            [{
+                                "token": t.get("text"),
+                                "logprob": t.get("log_prob"),
+                                "bytes": b
+                            }]
+                    } for t in details.get("tokens", [])
+                ]
+            }
         choice2 = {
-            "logprobs": {
-                "content": logprobs
-            },
+            "logprobs": logprobs,
             "finish_reason": details.get("finish_reason")
         }
         prompt_tokens = int(details.get("prompt_tokens", 0))
