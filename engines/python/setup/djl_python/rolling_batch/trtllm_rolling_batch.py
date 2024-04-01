@@ -73,6 +73,11 @@ class TRTLLMRollingBatch(RollingBatch):
             parameters["temperature"] = parameters.get("temperature", 0.8)
         if "length_penalty" in parameters.keys():
             parameters['len_penalty'] = parameters.pop('length_penalty')
+        # TODO: Remove this once presence_penalty is supported
+        if "presence_penalty" in parameters.keys(
+        ) and "repetition_penalty" not in parameters.keys():
+            parameters["repetition_penalty"] = float(
+                parameters.pop("presence_penalty")) + 2.0
         parameters["streaming"] = parameters.pop(
             "stream", parameters.get("streaming", True))
         return parameters

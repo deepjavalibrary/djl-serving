@@ -29,6 +29,14 @@ from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishRe
 NEURON_GENERATION_PARAMS = set(GenerationConfig().__dict__.keys())
 
 
+def translate_neuronx_params(parameters: dict) -> dict:
+    # TODO: Remove this once presence_penalty is supported
+    if "presence_penalty" in parameters.keys(
+    ) and "repetition_penalty" not in parameters.keys():
+        parameters["repetition_penalty"] = float(
+            parameters.pop("presence_penalty")) + 2.0
+
+
 class Slot:
     """Represents a slot in a static batch"""
 
@@ -100,7 +108,7 @@ class Slot:
         self._inputs = request.input_text
         self._generation_config = copy.deepcopy(generation_config)
         # Update generation config with token chooser parameters
-        param = request.parameters
+        param = translate_neuronx_params(request.parameters)
         self._generation_config.temperature = param.get("temperature", 1.0)
         self._generation_config.top_k = param.get("top_k", 0)
         self._generation_config.top_p = param.get("top_p", 1.0)
