@@ -272,30 +272,38 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
             if (models.isEmpty()) {
                 // Check for adapters on first load
-                if (Files.isDirectory(modelDir.resolve("adapters"))) {
-                    Files.list(modelDir.resolve("adapters"))
-                            .forEach(
-                                    adapterDir -> {
-                                        eventManager.onAdapterLoading(this, adapterDir);
-                                        long start = System.nanoTime();
-                                        String adapterName = adapterDir.getFileName().toString();
-                                        Adapter adapter =
-                                                Adapter.newInstance(
-                                                        this,
-                                                        adapterName,
-                                                        adapterDir.toAbsolutePath().toString(),
-                                                        Collections.emptyMap());
-                                        registerAdapter(adapter);
-                                        long d = (System.nanoTime() - start) / 1000;
-                                        Metric me =
-                                                new Metric(
-                                                        "LoadAdapter",
-                                                        d,
-                                                        Unit.MICROSECONDS,
-                                                        dimension);
-                                        MODEL_METRIC.info("{}", me);
-                                        eventManager.onAdapterLoaded(this, adapter);
-                                    });
+                List<Path> possibleAdapterDirs = new ArrayList<>(2);
+                possibleAdapterDirs.add(modelDir);
+                if (downloadDir != null && !modelDir.equals(downloadDir)) {
+                    possibleAdapterDirs.add(downloadDir);
+                }
+                for (Path parentDir : possibleAdapterDirs) {
+                    if (Files.isDirectory(parentDir.resolve("adapters"))) {
+                        Files.list(parentDir.resolve("adapters"))
+                                .forEach(
+                                        adapterDir -> {
+                                            eventManager.onAdapterLoading(this, adapterDir);
+                                            long start = System.nanoTime();
+                                            String adapterName =
+                                                    adapterDir.getFileName().toString();
+                                            Adapter adapter =
+                                                    Adapter.newInstance(
+                                                            this,
+                                                            adapterName,
+                                                            adapterDir.toAbsolutePath().toString(),
+                                                            Collections.emptyMap());
+                                            registerAdapter(adapter);
+                                            long d = (System.nanoTime() - start) / 1000;
+                                            Metric me =
+                                                    new Metric(
+                                                            "LoadAdapter",
+                                                            d,
+                                                            Unit.MICROSECONDS,
+                                                            dimension);
+                                            MODEL_METRIC.info("{}", me);
+                                            eventManager.onAdapterLoaded(this, adapter);
+                                        });
+                    }
                 }
             }
 
@@ -1083,7 +1091,13 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         };
             } else {
                 logger.info("s5cmd is not installed, using aws cli");
-                commands = new String[] {"aws", "s3", "sync", src, dest};
+                if (Boolean.parseBoolean(
+                        Utils.getEnvOrSystemProperty("DJL_TEST_S3_NO_CREDENTIALS"))) {
+                    logger.info("Skipping s3 credentials");
+                    commands = new String[] {"aws", "s3", "sync", "--no-sign-request", src, dest};
+                } else {
+                    commands = new String[] {"aws", "s3", "sync", src, dest};
+                }
             }
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
@@ -1092,7 +1106,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
             int exitCode = exec.waitFor();
             if (0 != exitCode || logOutput.startsWith("ERROR ")) {
-                logger.error(logOutput);
+                logger.error("Download error: {}", logOutput);
                 throw new EngineException("Download model failed.");
             } else {
                 logger.debug(logOutput);

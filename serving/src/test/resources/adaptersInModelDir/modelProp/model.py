@@ -1,0 +1,1 @@
+../../../../../../engines/python/src/test/resources/adaptecho/model.py
