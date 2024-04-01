@@ -25,7 +25,7 @@ Under python Engine mode, DJLServing will establish socket connection and talk t
 
 ### Enablement
 
-You can use the following ways to enable MPI Engine:
+You can use the following ways to enable Python Engine:
 
 serving.properties
 
@@ -43,7 +43,7 @@ We use python mode as long as you specify `option.model_id`.
 
 MPI in general means "Multi-Process-Interface". In LMI domain, you could also read as "Multi-Process-Inference".
 DJLServing internally will use `mpirun` to spin up multiple processes depends on the setup.
-The number of process for LLM applications following `tensor_parallel_degree x pipline_parallel_degree`. 
+The number of process for LLM applications following `tensor_parallel_degree`. 
 To operate in this model, DJLServing established multiple socket connects to each process for communication and health check.
 During each operation call (e.g inference), DJLServing will send the same request to each process. At response back time, 
 DJLServing will just receive 1 result from rank 0 of the total processes.
