@@ -333,7 +333,8 @@ public class ModelServerTest {
         }
     }
 
-    @Test
+    // Test disabled as unsigned s3 downloading fails on Github actions
+    @Test(enabled = false)
     public void testAdaptersInModelDir()
             throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
                     InterruptedException, ReflectiveOperationException {
