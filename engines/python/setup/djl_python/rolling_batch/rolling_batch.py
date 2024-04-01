@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import json
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import List, Union, List, Callable, Optional
 
@@ -110,6 +111,7 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
 
     :return: formatted output
     """
+    created = int(time.time())
     choice1 = {
         "index": 0,
         "message": {
@@ -120,19 +122,37 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
     response1 = {
         "id": f"chatcmpl-{id}",
         "object": "chat.completion",
+        "created": created,
         "choices": [choice1]  # Currently only support 1 choice
     }
-    json_encoded_str = f"{json.dumps(response1, ensure_ascii=False)[:-6]}" if first_token else ""
+    json_encoded_str = f"{json.dumps(response1, ensure_ascii=False)[:-5]}" if first_token else ""
     json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
+        logprobs = None
+        parameters = details.get("parameters", {})
+        if parameters.get("logprobs"):
+            logprobs = [
+                {
+                    "token":
+                    t.get("text"),
+                    "logprob":
+                    t.get("log_prob"),
+                    "bytes":
+                    (b := [ord(c)
+                           for c in t.get("text")] if t.get("text") else None),
+                    "top_logprobs":  # Currently only support 1 top_logprobs
+                    [{
+                        "token": t.get("text"),
+                        "logprob": t.get("log_prob"),
+                        "bytes": b
+                    }]
+                } for t in details.get("tokens", [])
+            ]
         choice2 = {
             "logprobs": {
-                "content": [{
-                    "logprob": token.log_prob,
-                    "token": token.text
-                }]
+                "content": logprobs
             },
-            "finish_reason": details.get("finish_reason", None)
+            "finish_reason": details.get("finish_reason")
         }
         prompt_tokens = int(details.get("prompt_tokens", 0))
         completion_tokens = int(details.get("generated_tokens", 0))
@@ -141,7 +161,7 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
             "usage": {
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
-                "total_tokens": prompt_tokens + completion_tokens
+                "total_tokens": (prompt_tokens + completion_tokens)
             }
         }
         json_encoded_str = f"{json_encoded_str}\"}}, {json.dumps(response2, ensure_ascii=False)[14:]}"
@@ -156,23 +176,36 @@ def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
 
     :return: formatted output
     """
+    created = int(time.time())
+    logprobs = None
+    parameters = details.get("parameters", {})
+    if parameters.get("logprobs"):
+        logprobs = {
+            "content":
+            [{
+                "token": token.text,
+                "logprob": token.log_prob,
+                "bytes": (b := [ord(c) for c in token.text] if token.text else None),
+                "top_logprobs":  # Currently only support 1 top_logprobs
+                [{
+                    "token": token.log_prob,
+                    "logprob": token.log_prob,
+                    "bytes": b
+                }]
+            }]
+        },
     choice = {
         "index": 0,
         "delta": {
-            "role": "assistant",
-            "content": generated_tokens
+            "content": token.text
         },
-        "logprobs": {
-            "content": [{
-                "logprob": token.log_prob,
-                "token": token.text
-            }]
-        },
-        "finish_reason": details.get("finish_reason", None)
+        "logprobs": logprobs,
+        "finish_reason": details.get("finish_reason")
     }
     response = {
         "id": f"chatcmpl-{id}",
         "object": "chat.completion.chunk",
+        "created": created,
         "choices": [choice]  # Currently only support 1 choice
     }
     json_encoded_str = json.dumps(response, ensure_ascii=False) + "\n"
@@ -314,14 +347,10 @@ class Request(object):
             details_dict["generated_tokens"] = len(self.token_cache)
             details_dict["input_text"] = self.input_text
             details_dict["parameters"] = self.parameters
+            details_dict["prompt_tokens"] = len(self.input_ids)
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
-            if self.details:
-                details_dict["finish_reason"] = finish_reason
-                details_dict["tokens"] = self.token_cache
-                details_dict["generated_tokens"] = len(self.token_cache)
-                details_dict["prompt_tokens"] = len(self.input_ids)
         if self.output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now

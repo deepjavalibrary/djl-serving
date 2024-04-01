@@ -331,7 +331,8 @@ class TestRollingBatch(unittest.TestCase):
             "parameters": {
                 "max_new_tokens": 256,
                 "details": True
-            }
+            },
+            "prompt_tokens": 7
         }
         req.set_next_token(Token(576, "llo", -0.123123))
         print(req.get_next_token(), end='')
@@ -357,7 +358,9 @@ class TestRollingBatch(unittest.TestCase):
             "parameters": {
                 "max_new_tokens": 256,
                 "details": True
-            }
+            },
+            "prompt_tokens":
+            7
         }
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
         print(req.get_next_token(), end='')
