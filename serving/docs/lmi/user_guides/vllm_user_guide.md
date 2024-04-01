@@ -85,11 +85,14 @@ Following that, you can configure the LoRA support through the additional settin
 
 ### Advanced vLLM Configurations
 
-Here are the advanced parameters that are available when using vLLM.
-Each advanced configuration is specified with a Configuration Type.
-`LMI` means the configuration is processed by LMI and translated into the appropriate backend configurations.
-`Pass Through` means the configuration is passed down directly to the library.
-If you encounter an issue with a `Pass Through` configuration, it is likely an issue with the underlying library and not LMI.
+The following table lists the advanced configurations that are available with the vLLM backend.
+There are two types of advanced configurations: `LMI`, and `Pass Through`.
+`LMI` configurations are processed by LMI and translated into configurations that DeepSpeed uses.
+`Pass Through` configurations are passed directly to the backend library. These are opaque configurations from the perspective of the model server and LMI.
+We recommend that you file an [issue](https://github.com/deepjavalibrary/djl-serving/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=) for any issues you encounter with configurations.
+For `LMI` configurations, if we determine an issue with the configuration, we will attempt to provide a workaround for the current released version, and attempt to fix the issue for the next release.
+For `Pass Through` configurations it is possible that our investigation reveals an issue with the backend library.
+In that situation, there is nothing LMI can do until the issue is fixed in the backend library.
 
 | Item	                                    | LMI Version | Configuration Type	 | Description	                                                                                                                                                                                                                                                                                                                                                                                         | Example value	         |
 |------------------------------------------|-------------|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------|
@@ -103,5 +106,5 @@ If you encounter an issue with a `Pass Through` configuration, it is likely an i
 | option.max_loras                         | \>= 0.27.0  | Pass Through	       | This config determines the maximum number of LoRA adapters that can be run at once. Allocates more GPU memory for those adapters.                                                                                                                                                                                                                                                                    | Default: `4`	          |
 | option.max_lora_rank                     | \>= 0.27.0  | Pass Through	       | This config determines the maximum rank allowed for a LoRA adapter. Setting a larger value will enable more adapters at a greater memory usage cost.                                                                                                                                                                                                                                                 | Default: `16`	         |
 | option.lora_extra_vocab_size             | \>= 0.27.0  | Pass Through	       | This config determines the maximum additional vocabulary that can be added through a LoRA adapter.                                                                                                                                                                                                                                                                                                   | Default: `256`	        |
-| option.max_cpu_loras                                | \>= 0.27.0  | Pass Through	       | This config determines the maximum number of LoRA adapters to cache in memory. All others will be evicted to disk.                                                                                                                                                                                                                                                                                   | Default: `None`	       |
+| option.max_cpu_loras                     | \>= 0.27.0  | Pass Through	       | This config determines the maximum number of LoRA adapters to cache in memory. All others will be evicted to disk.                                                                                                                                                                                                                                                                                   | Default: `None`	       |
 
