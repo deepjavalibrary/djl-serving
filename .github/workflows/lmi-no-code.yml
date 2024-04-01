@@ -53,6 +53,7 @@ jobs:
     strategy:
       # Limit to 1 so we don't steal a p4d from another test that may be running
       max-parallel: 1
+      fail-fast: false
       matrix:
         container: [tensorrt-llm, deepspeed]
     steps:
@@ -143,6 +144,7 @@ jobs:
     timeout-minutes: 240
     needs: create-runners
     strategy:
+      fail-fast: false
       matrix:
         container: [tensorrt-llm, deepspeed]
     steps:
