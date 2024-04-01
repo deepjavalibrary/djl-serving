@@ -27,9 +27,10 @@ def _get_generation_result_from_python_backend(generations, inputs_size):
     batch_size = sum(inputs_size)
     tokens_results = [[] for _ in range(batch_size)
                       ]  # list[list], [batch_size, generated_tokens_len]
-    prediction_results = [[] for _ in range(batch_size)
-                          ]  # list[list], [batch_size]
-    cum_log_probs = [0.0 for _ in range(batch_size)]  # list[int], [batch_size]
+    prediction_results = [{} for _ in range(batch_size)
+                          ]  # list[dict], [batch_size]
+    cum_log_probs = [0.0
+                     for _ in range(batch_size)]  # list[dict], [batch_size]
     for generation in generations:  # each token of whole batch
         for i in range(len(generation)):  # loop through each batch
             # generation will be none, when it is already finished for that input
@@ -44,7 +45,7 @@ def _get_generation_result_from_python_backend(generations, inputs_size):
                         "tokens": tokens_results[i]
                     }
                 }
-                prediction_results[i].append(result)
+                prediction_results[i] = result
             else:
                 curr_cum_log_prob = _get_value_based_on_tensor(
                     generation[i].cum_logprob)
