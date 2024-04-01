@@ -618,7 +618,8 @@ trtllm_model_spec = {
     "flan-t5-xl": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "google/flan-t5-xl"
+        "tokenizer": "google/flan-t5-xl",
+        "details": True
     }
 }
 
@@ -1160,6 +1161,8 @@ def test_handler(model, model_spec):
             if spec.get("adapters", []):
                 req["adapters"] = spec.get("adapters")
             params = {"max_new_tokens": seq_length}
+            if spec.get("details", False):
+                params["details"] = True
             req["parameters"] = params
             logging.info(f"req {req}")
             res = send_json(req)
