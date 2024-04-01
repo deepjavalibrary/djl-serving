@@ -19,8 +19,8 @@ In the next section, we will introduce a detailed breakdown on how we run those 
 ![python image](../imgs/python_mode.jpg)
 
 DJLServing could operate with Python with our Python Engine. In Python operating mode, we will spin up a python process
-from the system environment and allocate Accelerators(CPU/Neuron) for each processes through `CUDA_VISIBLE_DEVICES`. During auto-scaling mode,
-DJLServing could manage workers' Accelerators allocation and spin up process with different Accelerators (CPU/Neuron).
+from the system environment and allocate Accelerators(GPU/Neuron) for each processes through `CUDA_VISIBLE_DEVICES`. During auto-scaling mode,
+DJLServing could manage workers' Accelerators allocation and spin up process with different Accelerators (GPU/Neuron).
 Under python Engine mode, DJLServing will establish socket connection and talk to the python process.
 
 ### Enablement
