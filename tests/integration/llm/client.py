@@ -1126,7 +1126,7 @@ def test_handler_rolling_batch_chat(model, model_spec):
     # dryrun phase
     req = {"messages": batch_generation_chat(1)[0]}
     seq_length = 100
-    params = {"max_tokens": seq_length}
+    params = {"max_tokens": seq_length, "logprobs": True, "top_logprobs": 1}
     req["parameters"] = params
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
