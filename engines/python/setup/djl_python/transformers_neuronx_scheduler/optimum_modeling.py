@@ -69,6 +69,7 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
 
     def reset_generation(self) -> None:
         self.cur_len = 0
+        self.model.reset()
 
     def _save_pretrained(self, save_directory):
         """

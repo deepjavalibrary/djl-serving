@@ -10,16 +10,17 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import json
+
 import logging
 import os
 import re
-from typing import Optional, Union, List
+from typing import Optional, List
 
 from pydantic.v1 import validator, root_validator
 from enum import IntEnum, Enum
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum
+from djl_python.rolling_batch.neuron_rolling_batch import GenerationStrategy
 
 
 class OptimizeLevel(IntEnum):
@@ -57,6 +58,7 @@ class TransformerNeuronXProperties(Properties):
     """Transformer neuronx related configurations"""
     neuron_optimize_level: Optional[OptimizeLevel] = None
     enable_mixed_precision_accumulation: bool = False
+    enable_saturate_infinity: bool = False
     dtype: Dtype = Dtype.f16
     n_positions: int = 128
     unroll: Optional[str] = None
@@ -71,6 +73,8 @@ class TransformerNeuronXProperties(Properties):
     save_mp_checkpoint_path: Optional[str] = None
     group_query_attention: Optional[str] = None
     model_loader: Optional[TnXModelLoaders] = None
+    rolling_batch_strategy: Optional[GenerationStrategy] = None
+    fuse_qkv: Optional[bool] = False
 
     @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
@@ -85,6 +89,13 @@ class TransformerNeuronXProperties(Properties):
             os.environ["NEURON_CC_FLAGS"] = ""
         os.environ["NEURON_CC_FLAGS"] = os.environ[
             "NEURON_CC_FLAGS"] + f" --enable-mixed-precision-accumulation"
+
+    @validator('enable_saturate_infinity')
+    def set_saturate_infinity(cls, enablement):
+        if "NEURON_CC_FLAGS" not in os.environ:
+            os.environ["NEURON_CC_FLAGS"] = ""
+        os.environ["NEURON_CC_FLAGS"] = os.environ[
+            "NEURON_CC_FLAGS"] + f" --enable-saturate-infinity"
 
     @validator('context_length_estimate', pre=True)
     def parse_context_length(cls, context_length_estimate):
