@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.engine.EngineException;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -256,6 +257,34 @@ public final class LmiUtils {
             if (!success) {
                 Utils.deleteQuietly(trtLlmRepoDir);
             }
+        }
+    }
+
+    // TODO: migrate this to CUDAUtils in next version
+    static String getAWSGpuMachineType() {
+        String computeCapability = CudaUtils.getComputeCapability(0);
+        // Get gpu memory in GB sizes
+        double totalMemory =
+                CudaUtils.getGpuMemory(Device.gpu()).getMax() / 1024.0 / 1024.0 / 1024.0;
+        if ("7.5".equals(computeCapability)) {
+            return "g4";
+        } else if ("8.0".equals(computeCapability)) {
+            if (totalMemory > 45.0) {
+                return "p4de";
+            }
+            return "p4d";
+        } else if ("8.6".equals(computeCapability)) {
+            return "g5";
+        } else if ("8.9".equals(computeCapability)) {
+            if (totalMemory > 25.0) {
+                return "g6e";
+            }
+            return "g6";
+        } else if ("9.0".equals(computeCapability)) {
+            return "p5";
+        } else {
+            logger.warn("Could not identify GPU arch " + computeCapability);
+            return null;
         }
     }
 
