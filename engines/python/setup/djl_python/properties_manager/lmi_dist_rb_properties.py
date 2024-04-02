@@ -50,12 +50,12 @@ class LmiDistRbProperties(Properties):
     lora_extra_vocab_size: Optional[int] = 256
     max_cpu_loras: Optional[int] = None
 
-    @validator('engine')
-    def validate_engine(cls, engine):
-        if engine != "MPI":
+    @root_validator(skip_on_failure=True)
+    def validate_mpi(cls, properties):
+        if not properties["is_mpi"]:
             raise AssertionError(
                 f"Need MPI engine to start lmi-dist RollingBatcher")
-        return engine
+        return properties
 
     @root_validator(skip_on_failure=True)
     def validate_speculative_and_lora(cls, properties):
