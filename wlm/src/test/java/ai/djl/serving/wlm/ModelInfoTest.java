@@ -296,7 +296,9 @@ public class ModelInfoTest {
             writer.write("option.model_id=invalid-model-id");
         }
         model = new ModelInfo<>("build/models/lmi_test_model");
-        Assert.assertThrows(model::initialize);
+        model.initialize();
+        assertEquals(model.getEngineName(), "Python");
+        assertEquals(model.getProperties().getProperty("option.rolling_batch"), null);
 
         // TODO: no good way to test trtllm now since it requires converting the model
     }

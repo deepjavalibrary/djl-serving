@@ -52,14 +52,9 @@ public final class LmiUtils {
 
     private LmiUtils() {}
 
-    static String inferLmiEngine(ModelInfo<?, ?> modelInfo) throws ModelException {
+    static void configureLMIModel(ModelInfo<?, ?> modelInfo) throws ModelException {
         Properties prop = modelInfo.getProperties();
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
-        if (modelConfig == null) {
-            String engineName = isTrtLLMRollingBatch(prop) ? "MPI" : "Python";
-            logger.info("No config.json found, use {} engine.", engineName);
-            return engineName;
-        }
         LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
         logger.info(
                 "Detected engine: {}, rolling_batch: {}, tensor_parallel_degree {}, for modelType:"
@@ -68,7 +63,11 @@ public final class LmiUtils {
                 prop.getProperty("option.rolling_batch"),
                 prop.getProperty("option.tensor_parallel_degree"),
                 modelConfig.getModelType());
-        return prop.getProperty("engine");
+    }
+
+    static boolean isLMIModel(ModelInfo<?, ?> modelInfo) {
+        String modelId = modelInfo.getProperties().getProperty("option.model_id");
+        return null != generateHuggingFaceConfigUri(modelInfo, modelId);
     }
 
     static boolean isTrtLLMRollingBatch(Properties properties) {
@@ -140,17 +139,11 @@ public final class LmiUtils {
      * @param modelInfo the model object
      * @param modelId the model id
      * @return the Huggingface config.json file URI
-     * @throws ModelException if the model not found
-     * @throws IOException if failed read from huggingface hub
      */
-    public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId)
-            throws ModelException, IOException {
+    public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId) {
         URI configUri = null;
         Path modelDir = modelInfo.modelDir;
         if (modelId != null && modelId.startsWith("s3://")) {
-            // This is definitely suboptimal, but for the majority of cases we need to download this
-            // s3 model eventually, so it is not the worst thing to download it now.
-            modelInfo.downloadS3();
             Path downloadDir = modelInfo.downloadDir;
             if (Files.isRegularFile(downloadDir.resolve("config.json"))) {
                 configUri = downloadDir.resolve("config.json").toUri();
@@ -172,25 +165,35 @@ public final class LmiUtils {
                 }
                 return null;
             }
-
-            String hfToken = Utils.getenv("HF_TOKEN");
-            configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
-            HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
-            if (hfToken != null) {
-                configUrl.setRequestProperty("Authorization", "Bearer " + hfToken);
-            }
-            // stable diffusion models have a different file name with the config... sometimes
-            if (HttpURLConnection.HTTP_OK != configUrl.getResponseCode()) {
-                configUri =
-                        URI.create(
-                                "https://huggingface.co/" + modelId + "/raw/main/model_index.json");
-            }
+            configUri = getHuggingFaceHubConfigUri(modelId);
         } else if (Files.isRegularFile(modelDir.resolve("config.json"))) {
             configUri = modelDir.resolve("config.json").toUri();
         } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
             configUri = modelDir.resolve("model_index.json").toUri();
         }
         return configUri;
+    }
+
+    private static URI getHuggingFaceHubConfigUri(String modelId) {
+        String[] possibleConfigFiles = {"config.json", "model_index.json"};
+        String hubToken = Utils.getEnvOrSystemProperty("HF_TOKEN");
+        for (String configFile : possibleConfigFiles) {
+            try {
+                URI configUri =
+                        URI.create("https://huggingface.co/" + modelId + "/raw/main/" + configFile);
+                HttpURLConnection configUrl =
+                        (HttpURLConnection) configUri.toURL().openConnection();
+                if (hubToken != null) {
+                    configUrl.setRequestProperty("Authorization", "Bearer " + hubToken);
+                }
+                if (HttpURLConnection.HTTP_OK == configUrl.getResponseCode()) {
+                    return configUri;
+                }
+            } catch (IOException e) {
+                logger.warn("Hub config file {} does not exist for model {}.", configFile, modelId);
+            }
+        }
+        return null;
     }
 
     private static HuggingFaceModelConfig getHuggingFaceModelConfig(ModelInfo<?, ?> modelInfo)

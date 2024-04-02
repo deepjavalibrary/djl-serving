@@ -65,8 +65,9 @@ public final class LmiConfigRecommender {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         setDynamicBatch(lmiProperties, modelConfig, modelInfo, features);
         setRollingBatch(lmiProperties, modelConfig, features);
-        setEngine(lmiProperties, modelConfig, features);
+        setMPIMode(lmiProperties, modelConfig, features);
         setTensorParallelDegree(lmiProperties);
+        setRollingBatchSize(lmiProperties);
     }
 
     private static void setRollingBatch(
@@ -92,25 +93,18 @@ public final class LmiConfigRecommender {
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }
 
-    private static void setEngine(
+    private static void setMPIMode(
             Properties lmiProperties,
             LmiUtils.HuggingFaceModelConfig modelConfig,
             String features) {
-        if (lmiProperties.containsKey("engine")) {
-            return;
-        }
-        String engine = "Python";
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
         if ("lmi-dist".equals(rollingBatch) || "trtllm".equals(rollingBatch)) {
-            engine = "MPI";
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
         //  TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
         if (isT5TrtLLM(modelConfig, features)) {
-            engine = "MPI";
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
-        lmiProperties.setProperty("engine", engine);
     }
 
     private static void setTensorParallelDegree(Properties lmiProperties) {
@@ -144,7 +138,7 @@ public final class LmiConfigRecommender {
         }
     }
 
-    static void setRollingBatchSize(Properties lmiProperties) {
+    private static void setRollingBatchSize(Properties lmiProperties) {
         if (lmiProperties.containsKey("option.max_rolling_batch_size")) {
             return;
         }
@@ -153,12 +147,8 @@ public final class LmiConfigRecommender {
         if ("vllm".equals(rollingBatch) || "lmi-dist".equals(rollingBatch)) {
             rollingBatchSize = 256;
         }
-        if ("trtllm".equals(rollingBatch)
-                || ("auto".equals(rollingBatch)
-                        && isTrtLLMEnabled(Utils.getEnvOrSystemProperty("SERVING_FEATURES")))) {
-            if (lmiProperties.containsKey("option.max_num_tokens")) {
-                rollingBatchSize = 256;
-            }
+        if ("trtllm".equals(rollingBatch) && lmiProperties.containsKey("option.max_num_tokens")) {
+            rollingBatchSize = 256;
         }
         lmiProperties.setProperty(
                 "option.max_rolling_batch_size", String.valueOf(rollingBatchSize));
