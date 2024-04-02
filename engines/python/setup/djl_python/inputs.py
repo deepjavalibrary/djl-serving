@@ -62,7 +62,7 @@ def retrieve_short(conn):
 
 
 def retrieve_utf8(conn):
-    length = retrieve_short(conn)
+    length = retrieve_int(conn)
     if length < 0:
         return None
 

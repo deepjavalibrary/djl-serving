@@ -159,10 +159,10 @@ class Output(object):
     @staticmethod
     def write_utf8(msg, val):
         if val is None:
-            msg += struct.pack('>h', -1)
+            msg += struct.pack('>i', -1)
         else:
             buf = val.encode('utf-8')
-            msg += struct.pack('>h', len(buf))
+            msg += struct.pack('>i', len(buf))
             msg += buf
 
     def finalize(self, finalize_function, *args):
