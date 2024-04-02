@@ -52,7 +52,7 @@ public final class CodecUtils {
      * @return a string read from the buffer.
      */
     public static String readUtf8(ByteBuf in) {
-        int len = in.readShort();
+        int len = in.readInt();
         if (len < 0) {
             return null;
         }
@@ -69,10 +69,10 @@ public final class CodecUtils {
      */
     public static void writeUtf8(ByteBuf buf, String value) {
         if (value == null) {
-            buf.writeShort(-1);
+            buf.writeInt(-1);
         } else {
             byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-            buf.writeShort(bytes.length);
+            buf.writeInt(bytes.length);
             buf.writeBytes(bytes);
         }
     }

@@ -176,7 +176,7 @@ def retrieve_short(bytearr: bytearray, start_iter):
 
 
 def retrieve_utf8(bytearr: bytearray, start_iter):
-    length, start_iter = retrieve_short(bytearr, start_iter)
+    length, start_iter = retrieve_int(bytearr, start_iter)
     if length < 0:
         return None
     end_iter = start_iter + length
