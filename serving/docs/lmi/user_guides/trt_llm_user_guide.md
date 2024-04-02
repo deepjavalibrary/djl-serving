@@ -69,11 +69,14 @@ More details about additional (optional) quantization configurations are availab
 
 ##  Advanced TensorRT-LLM Configurations
 
-Here are the advanced parameters that are available when using TensorRT-LLM.
-Each advanced configuration is specified with a Configuration Type.
-`LMI` means the configuration is processed by LMI and translated into the appropriate backend configurations.
-`Pass Through` means the configuration is passed down directly to the library.
-If you encounter an issue with a `Pass Through` configuration, it is likely an issue with the underlying library and not LMI.
+The following table lists the advanced configurations that are available with the TensorRT-LLM backend.
+There are two types of advanced configurations: `LMI`, and `Pass Through`.
+`LMI` configurations are processed by LMI and translated into configurations that DeepSpeed uses.
+`Pass Through` configurations are passed directly to the backend library. These are opaque configurations from the perspective of the model server and LMI.
+We recommend that you file an [issue](https://github.com/deepjavalibrary/djl-serving/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=) for any issues you encounter with configurations.
+For `LMI` configurations, if we determine an issue with the configuration, we will attempt to provide a workaround for the current released version, and attempt to fix the issue for the next release.
+For `Pass Through` configurations it is possible that our investigation reveals an issue with the backend library.
+In that situation, there is nothing LMI can do until the issue is fixed in the backend library.
 
 | Item                                                          | LMI Version | Configuration Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Example value                                                                                                                                                               |
 |---------------------------------------------------------------|-------------|--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
