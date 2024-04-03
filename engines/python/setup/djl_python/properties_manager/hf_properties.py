@@ -99,8 +99,6 @@ class HuggingFaceProperties(Properties):
 
         # TODO remove this after refactor of all handlers
         if properties['rolling_batch'].value != RollingBatchEnum.disable.value:
-            if properties['output_formatter']:
-                kwargs["output_formatter"] = properties['output_formatter']
             if properties['waiting_steps']:
                 kwargs["waiting_steps"] = properties['waiting_steps']
 

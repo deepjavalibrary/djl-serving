@@ -127,7 +127,8 @@ class DeepSpeedService(object):
                 "max_batch_size":
                 int(properties.get("max_rolling_batch_size", 4)),
                 "max_seq_len": int(properties.get("max_tokens", 1024)),
-                "tokenizer": self.tokenizer
+                "tokenizer": self.tokenizer,
+                "output_formatter": self.properties.output_formatter,
             }
             self.rolling_batch = DeepSpeedRollingBatch(self.model, properties,
                                                        **kwargs)

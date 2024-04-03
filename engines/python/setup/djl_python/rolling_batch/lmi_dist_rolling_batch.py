@@ -46,7 +46,9 @@ class LmiDistRollingBatch(RollingBatch):
         :param properties (dict): other properties of the model, such as decoder strategy
         """
         self.lmi_dist_config = LmiDistRbProperties(**properties)
-        super().__init__(waiting_steps=self.lmi_dist_config.waiting_steps)
+        super().__init__(
+            waiting_steps=self.lmi_dist_config.waiting_steps,
+            output_formatter=self.lmi_dist_config.output_formatter)
         self.supports_speculative_decoding = supports_speculative_decoding()
         engine_kwargs = {}
         if self.supports_speculative_decoding:
