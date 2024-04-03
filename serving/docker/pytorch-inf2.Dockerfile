@@ -11,13 +11,13 @@
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:20.04
 ARG djl_version=0.27.0~SNAPSHOT
-ARG torch_version=1.13.1
+ARG torch_version=2.1.2
 ARG python_version=3.9
-ARG neuronsdk_version=2.17.0
-ARG torch_neuronx_version=1.13.1.1.13.1
-ARG transformers_neuronx_version=0.9.474
-ARG neuronx_distributed_version=0.6.0
-ARG neuronx_cc_version=2.12.68.0
+ARG neuronsdk_version=2.18.0
+ARG torch_neuronx_version=2.1.2.2.1.0
+ARG transformers_neuronx_version=0.10.0.21
+ARG neuronx_distributed_version=0.7.0
+ARG neuronx_cc_version=2.13.66.0
 ARG protobuf_version=3.19.6
 ARG transformers_version=4.36.2
 ARG accelerate_version=0.23.0
@@ -46,7 +46,7 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.9/dist-packages/torch/lib
 ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
-ENV PYTORCH_VERSION=1.13.1
+ENV PYTORCH_VERSION=2.1.2
 ENV JAVA_OPTS="-Xmx1g -Xms1g -Xss2m -XX:+ExitOnOutOfMemoryError"
 ENV NEURON_CC_FLAGS="--logfile /tmp/compile.log --temp-dir=/tmp"
 

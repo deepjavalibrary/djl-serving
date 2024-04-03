@@ -11,6 +11,7 @@ from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeur
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
 from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
 from djl_python.chat_completions.chat_properties import ChatProperties
+from djl_python.rolling_batch.neuron_rolling_batch import GenerationStrategy
 
 import torch
 
@@ -128,6 +129,9 @@ class TestConfigManager(unittest.TestCase):
             "neuron_optimize_level": 3,
             "enable_mixed_precision_accumulation": "true",
             "group_query_attention": "shard-over-heads",
+            "fuse_qkv": "true",
+            "enable_saturate_infinity": "true",
+            "rolling_batch_strategy": "continuous_batching"
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -148,8 +152,12 @@ class TestConfigManager(unittest.TestCase):
         neuron_cc = os.environ["NEURON_CC_FLAGS"]
         self.assertTrue("-O3" in neuron_cc)
         self.assertTrue("--enable-mixed-precision-accumulation" in neuron_cc)
+        self.assertTrue("--enable-saturate-infinity" in neuron_cc)
         self.assertTrue(tnx_configs.group_query_attention,
                         properties['group_query_attention'])
+        self.assertTrue(tnx_configs.fuse_qkv)
+        self.assertEqual(tnx_configs.rolling_batch_strategy,
+                         GenerationStrategy.continuous_batching)
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):

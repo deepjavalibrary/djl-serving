@@ -17,7 +17,7 @@ from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
 from djl_python import Input, Output
 from djl_python.encode_decode import decode, encode
 from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
-from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
+from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch, GenerationStrategy
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
@@ -47,10 +47,12 @@ class TransformersNeuronXService(object):
 
     def set_model_loader_class(self):
         if self.config.model_loader == "optimum":
+            logging.info("Loading model using OptimumModelLoader")
             return
 
         if self.config.model_loader == "tnx":
             self._model_loader_class = TNXModelLoader
+            logging.info("Loading model using TNXModelLoader")
             return
 
         use_tnx = False
@@ -83,6 +85,13 @@ class TransformersNeuronXService(object):
             revision=self.config.revision,
             trust_remote_code=self.config.trust_remote_code)
 
+        if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy is None:
+            if self.model_config.model_type in OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS:
+                self.config.rolling_batch_strategy = GenerationStrategy.continuous_batching
+            else:
+                self.config.rolling_batch_strategy = GenerationStrategy.naive_rolling_batch
+
+        logging.info(f"Model loading properties: {self.config}")
         self.set_model_loader_class()
         if not self.config.task:
             self.config.task = task_from_config(self.model_config)
@@ -102,7 +111,8 @@ class TransformersNeuronXService(object):
                 "output_formatter"] = self.config.output_formatter
             self.rolling_batch = NeuronRollingBatch(
                 self.model, self.tokenizer, self.config.batch_size,
-                self.config.n_positions, **self.rolling_batch_config)
+                self.config.n_positions, self.config.rolling_batch_strategy,
+                **self.rolling_batch_config)
 
     def set_model_loader(self):
         self.model_loader = self._model_loader_class(
@@ -252,14 +262,15 @@ class TransformersNeuronXService(object):
         encoded_inputs = self.tokenizer.batch_encode_plus(input_data,
                                                           return_tensors="pt",
                                                           padding=True)
-        use_sample = parameters.pop("use_sample", True)
+        use_sample = parameters.pop("use_sample", False)
         if use_sample:
-            sample_length = parameters.pop("max_new_tokens",
-                                           self.config.n_positions)
+            max_len = parameters.pop("max_length", self.config.n_positions)
+            sample_length = parameters.pop("max_new_tokens", max_len)
             output_tokens = self.model.neuron_sample(encoded_inputs.input_ids,
                                                      sample_length,
                                                      **parameters)
         else:
+            parameters.pop("output_formatter")
             output_tokens = self.model.generate(
                 input_ids=encoded_inputs.input_ids,
                 attention_mask=encoded_inputs.attention_mask,
