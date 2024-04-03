@@ -896,6 +896,12 @@ trtllm_handler_list = {
         "option.max_rolling_batch_size": 32,
         "option.output_formatter": "jsonlines"
     },
+    "flan-t5-xxl": {
+        "engine": "MPI",
+        "option.model_id": "s3://djl-llm/flan-t5-xxl-trtllm-compiled/",
+        "option.rolling_batch": "disable",
+        "option.entryPoint": "djl_python.tensorrt_llm"
+    },
     "flan-t5-xl": {
         "option.model_id": "s3://djl-llm/flan-t5-xl/"
     }
