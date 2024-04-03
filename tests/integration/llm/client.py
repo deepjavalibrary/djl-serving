@@ -1126,8 +1126,9 @@ def test_handler_rolling_batch_chat(model, model_spec):
     # dryrun phase
     req = {"messages": batch_generation_chat(1)[0]}
     seq_length = 100
-    params = {"max_tokens": seq_length, "logprobs": True, "top_logprobs": 1}
-    req["parameters"] = params
+    req["max_tokens"] = seq_length
+    req["logprobs"] = True
+    req["top_logprobs"] = 1
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
     logging.info(f"req {req}")
@@ -1139,7 +1140,7 @@ def test_handler_rolling_batch_chat(model, model_spec):
             logging.info(
                 f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
             )
-            req["parameters"]["max_tokens"] = seq_length
+            req["max_tokens"] = seq_length
             awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
