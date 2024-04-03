@@ -10,7 +10,7 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.utils import parse_input
+from djl_python.utils import parse_input_with_client_batch
 
 
 def _get_value_based_on_tensor(value, index=None):
@@ -84,7 +84,7 @@ class TRTLLMPythonService:
         self.model = None
         self.trt_configs = None
         self.initialized = False
-        self.parse_input = parse_input
+        self.parse_input = parse_input_with_client_batch
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
@@ -102,7 +102,7 @@ class TRTLLMPythonService:
         """
         outputs = Output()
 
-        input_data, input_size, parameters, errors, batch = self.parse_input(
+        input_data, input_size, parameters, errors, batch, is_client_side_batch = self.parse_input(
             inputs, None, self.trt_configs.output_formatter)
         if len(input_data) == 0:
             for i in range(len(batch)):
@@ -113,7 +113,7 @@ class TRTLLMPythonService:
         params = parameters[0]
         if params.get("details", False):
             return self._stream_inference(inputs, input_data, input_size,
-                                          params, batch)
+                                          params, batch, is_client_side_batch)
 
         detokenized_python_response = self.model.generate(input_data, **params)
         results = [{
@@ -122,8 +122,9 @@ class TRTLLMPythonService:
         offset = 0
         for i, item in enumerate(batch):
             content_type, accept = _get_accept_and_content_type(item)
-            batch_item = results[offset] if input_size[i] == 1 else results[
-                offset:offset + input_size[i]]
+            batch_item = results[offset:offset +
+                                 input_size[i]] if is_client_side_batch[
+                                     i] else results[offset]
             encode(outputs,
                    batch_item,
                    accept,
@@ -159,8 +160,8 @@ class TRTLLMPythonService:
 
     # TODO TrtLLM python backend: Change it once T5 bug is fixed.
     def _stream_inference(self, inputs: Input, input_data: list[str],
-                          input_size: list[int], parameters: dict,
-                          batch: list) -> Output:
+                          input_size: list[int], parameters: dict, batch: list,
+                          is_client_side_batch: list) -> Output:
         outputs = Output()
         detokenized_python_response = self.model.generate(
             input_data, **parameters)
@@ -171,8 +172,9 @@ class TRTLLMPythonService:
         for i, item in enumerate(batch):
             item = batch[i]
             accept, content_type = _get_accept_and_content_type(item)
-            batch_item = results[offset] if input_size[i] == 1 else results[
-                offset:offset + input_size[i]]
+            batch_item = results[offset:offset +
+                                 input_size[i]] if is_client_side_batch[
+                                     i] else results[offset]
             encode(outputs,
                    batch_item,
                    accept,
