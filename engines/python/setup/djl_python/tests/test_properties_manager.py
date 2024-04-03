@@ -401,7 +401,6 @@ class TestConfigManager(unittest.TestCase):
                 "device_map": 'cpu',
                 "load_in_8bit": True,
                 "waiting_steps": 12,
-                "output_formatter": "jsonlines",
                 "torch_dtype": torch.bfloat16
             })
 

@@ -31,6 +31,7 @@ class TRTLLMService(object):
         self.initialized = False
         self.trt_configs = None
         self.rolling_batch = None
+        self.parse_input = parse_input
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
@@ -50,7 +51,7 @@ class TRTLLMService(object):
         """
         outputs = Output()
 
-        input_data, input_size, parameters, errors, batch = parse_input(
+        input_data, input_size, parameters, errors, batch = self.parse_input(
             inputs, self.rolling_batch.get_tokenizer(),
             self.trt_configs.output_formatter)
         if len(input_data) == 0:

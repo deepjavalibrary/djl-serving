@@ -42,7 +42,8 @@ class VLLMRollingBatch(RollingBatch):
         :param properties: other properties of the model, such as decoder strategy
         """
         self.vllm_configs = VllmRbProperties(**properties)
-        super().__init__(waiting_steps=self.vllm_configs.waiting_steps)
+        super().__init__(waiting_steps=self.vllm_configs.waiting_steps,
+                         output_formatter=self.vllm_configs.output_formatter)
         args = EngineArgs(
             model=self.vllm_configs.model_id_or_path,
             tensor_parallel_size=self.vllm_configs.tensor_parallel_degree,

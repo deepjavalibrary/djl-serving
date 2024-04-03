@@ -236,7 +236,6 @@ def get_output_formatter(output_formatter: Union[str, Callable], stream: bool):
     if output_formatter is not None:
         # TODO: Support custom loading of user supplied output formatter
         logging.warning(f"Unsupported output formatter: {output_formatter}")
-
     if stream:
         return _jsonlines_output_formatter
     return _json_output_formatter
@@ -275,7 +274,7 @@ class Request(object):
         details: bool = False,
         input_ids: list = [],
         adapter=None,
-        output_formatter: Callable = None,
+        output_formatter: Union[str, Callable] = None,
     ):
         """
         Initialize a request
@@ -308,8 +307,6 @@ class Request(object):
         self.step_token_number = 0
 
         # output formatter
-        output_formatter = output_formatter or parameters.pop(
-            "output_formatter", None)
         stream = parameters.pop("stream", False)
         self.output_formatter = get_output_formatter(output_formatter, stream)
 
@@ -431,6 +428,7 @@ class RollingBatch(ABC):
         self.req_id_counter = 0
         self.waiting_steps = kwargs.get("waiting_steps", None)
         self.current_step = 0
+        self.default_output_formatter = kwargs.get("output_formatter", None)
 
     def reset(self):
         self.pending_requests = []
@@ -485,7 +483,10 @@ class RollingBatch(ABC):
                                   details,
                                   input_ids=self.get_tokenizer().encode(data)
                                   if details else None,
-                                  adapter=adapter)
+                                  adapter=adapter,
+                                  output_formatter=params.pop(
+                                      "output_formatter",
+                                      self.default_output_formatter))
                 self.pending_requests.append(request)
                 self.req_id_counter += 1
         # wait steps and not feeding new requests

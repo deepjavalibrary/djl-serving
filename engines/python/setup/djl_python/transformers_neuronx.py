@@ -98,6 +98,8 @@ class TransformersNeuronXService(object):
 
     def set_rolling_batch(self):
         if self.config.rolling_batch != "disable":
+            self.rolling_batch_config[
+                "output_formatter"] = self.config.output_formatter
             self.rolling_batch = NeuronRollingBatch(
                 self.model, self.tokenizer, self.config.batch_size,
                 self.config.n_positions, **self.rolling_batch_config)

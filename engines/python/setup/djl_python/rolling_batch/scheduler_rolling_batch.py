@@ -62,7 +62,9 @@ class SchedulerRollingBatch(RollingBatch):
         """
 
         self.scheduler_configs = SchedulerRbProperties(**properties)
-        super().__init__(waiting_steps=self.scheduler_configs.waiting_steps)
+        super().__init__(
+            waiting_steps=self.scheduler_configs.waiting_steps,
+            output_formatter=self.scheduler_configs.output_formatter)
         self._init_model_and_tokenizer()
         self._init_scheduler()
 
