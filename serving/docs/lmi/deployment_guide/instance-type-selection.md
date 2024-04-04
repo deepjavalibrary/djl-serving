@@ -1,7 +1,7 @@
 # Instance Type Selection
 
 While there are many open source LLMs and architectures available, most models tend to fall within a few common parameter count sizes.
-The following table provides instance type recommendations for common model parameter counts using half-precision (fp16/fp32) weights.
+The following table provides instance type recommendations for common model parameter counts using half-precision (fp16/bf16) weights.
 
 | Model Parameter Count | Instance Type    | Accelerators | Aggregate Accelerator Memory | Sample Models                              | Estimated Max Batch Size Range |
 |-----------------------|------------------|--------------|------------------------------|--------------------------------------------|--------------------------------|
@@ -22,7 +22,7 @@ For a more in-depth instance type sizing guide, you can follow the steps below.
 Selecting an instance is based on a few factors:
 
 * Model Size
-* Desired Accelerators (A10, A100, H100, AWS Inferentia etc)
+* Desired Accelerators (A10, A100, H100, AWS Inferentia etc.)
     * We recommend using instances with at least A series gpus (g5/p4). The performance is much greater compared to older T series gpus
     * You should select an instance that has sufficient aggregate memory (across all gpus) for both loading the model, and making requests at runtime
 * Desired Concurrency/Batch Size
@@ -38,7 +38,7 @@ We can quickly estimate the model size in GB using the number of parameters and 
 
 * Half Precision data type (fp16, bf16): `Size in GB = Number of Parameters * 2 (bytes / param)`
 * Full Precision data type (fp32): `Size in GB = Number of Parameters * 4 (bytes / param)`
-* 8-bit Quantized data type (int8): `Size in GB = Number of Parameters * 1 (bytes / param)`
+* 8-bit Quantized data type (int8, fp8): `Size in GB = Number of Parameters * 1 (bytes / param)`
 
 We recommend using a half precision data type as it requires less memory than full precision without losing accuracy for most cases.
 
@@ -59,9 +59,9 @@ To estimate the size of the KV cache, we will use the following formula.
 Breaking down this formula:
 
 * 2 comes from the two matrices we need to cache: Key (K), and Value (V)
-* n_dtype represents the number of bytes per parameter, which is based on the data type (4 for fp32, 2 for fp16)
-* n_layers represents the number of transformer blocks in the model (usually `num_hidden_layers` in model's `config.json`)
-* n_hidden_size represents the dimension of the attention block (num_heads * d_head matrix) (usually `hidden_size` in model's `config.json`)
+* `n_dtype` represents the number of bytes per parameter, which is based on the data type (4 for fp32, 2 for fp16, 1 for int8/fp8)
+* `n_layers` represents the number of transformer blocks in the model (usually `num_hidden_layers` in model's `config.json`)
+* `n_hidden_size` represents the dimension of the attention block (`num_heads` * `d_head` matrix) (usually `hidden_size` in model's `config.json`)
 
 For the Llama2-13b model, we get the kv-cache size per token as:
 
