@@ -146,6 +146,30 @@ git lfs install
 git clone https://huggingface.co/<namespace>/<model>
 ```
 
+Alternatively, you can use a download script to download from huggingface hub:
+
+___download.py___
+```python
+from huggingface_hub import snapshot_download
+from pathlib import Path
+
+# - This will download the model into the ./model directory where ever the script is running
+local_model_path = Path("./model")
+local_model_path.mkdir(exist_ok=True)
+model_name = "<namespace>/<model>"
+# Only download safetensors checkpoint files
+allow_patterns = ["*.json", "*.safetensors", "*.pt", "*.txt", "*.model", "*.tiktoken"]
+
+# - Leverage the snapshot library to download the model since the model is stored in repository using LFS
+snapshot_download(
+    repo_id=model_name,
+    local_dir=local_model_path,
+    local_dir_use_symlinks=False,
+    allow_patterns=allow_patterns,
+    token="YOUR_HF_TOKEN_VALUE",  # Optional: If you need a token to download your model
+)
+```
+
 With the model saved locally (either downloaded from the hub, or your own pretrained/fine-tuned model), upload it to S3:
 
 ```shell
