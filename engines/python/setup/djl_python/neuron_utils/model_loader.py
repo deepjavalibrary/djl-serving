@@ -18,17 +18,14 @@ import shutil
 import logging
 import tempfile
 import importlib
-from typing import Optional
 from abc import ABC, abstractmethod
 from transformers import AutoModelForCausalLM
 from transformers_neuronx import NeuronAutoModelForCausalLM
 from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig
-from djl_python.rolling_batch.neuron_rolling_batch import GenerationStrategy
+from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema
 from transformers_neuronx.module import save_pretrained_split
-from djl_python.neuron_utils.utils import NeuronXModelAdapter
+from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version
 from huggingface_hub import hf_hub_download
-
-_neuronxcc_version: Optional[str] = None
 
 
 class ModelLoader(ABC):
@@ -115,44 +112,29 @@ class TNXModelLoader(ModelLoader):
             )
         return neuronx_class
 
-    @staticmethod
-    def get_neuronxcc_version() -> str:
-        """
-        Gets version of NeuronX Compiler
-
-        :return: NeuronX compiler version
-        """
-        global _neuronxcc_version
-        if _neuronxcc_version is not None:
-            return _neuronxcc_version
-        try:
-            import neuronxcc
-        except ImportError:
-            raise ModuleNotFoundError(
-                "NeuronX Compiler python package is not installed.")
-        _neuronxcc_version = neuronxcc.__version__
-        return _neuronxcc_version
-
     def set_neuron_config(self) -> None:
         """
         Creates neuron config based on whether rolling batch, quantization, GQA is on
         """
         neuron_config = {}
-        if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy == GenerationStrategy.continuous_batching:
+        if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy == TnXGenerationStrategy.continuous_batching:
             neuron_config["continuous_batching"] = ContinuousBatchingConfig(
                 batch_size_for_shared_caches=self.config.max_rolling_batch_size
             )
-
         if self.config.load_in_8bit:
             neuron_config["quant"] = QuantizationConfig(
                 quant_dtype="s8", dequant_dtype=self.config.amp)
-
         if self.config.group_query_attention is not None:
             neuron_config[
                 "group_query_attention"] = self.config.group_query_attention
-
         if self.config.fuse_qkv:
             neuron_config["fuse_qkv"] = self.config.fuse_qkv
+        if self.config.on_device_embedding:
+            neuron_config[
+                "on_device_embedding"] = self.config.on_device_embedding
+        if self.config.collectives_layout:
+            neuron_config[
+                "collectives_layout"] = self.config.collectives_layout
 
         self.neuron_config = NeuronConfig(**neuron_config)
 
@@ -179,7 +161,7 @@ class TNXModelLoader(ModelLoader):
                 "context_length_estimate"] = self.config.context_length_estimate
 
         # Continuous batching requires positions and estimates as lists instead of int
-        if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy == GenerationStrategy.continuous_batching:
+        if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy == TnXGenerationStrategy.continuous_batching:
             model_kwargs["n_positions"] = [self.config.n_positions]
             if self.config.context_length_estimate is None:
                 model_kwargs["context_length_estimate"] = [
@@ -206,7 +188,7 @@ class TNXModelLoader(ModelLoader):
                 "checkpoint_id": None,
                 "checkpoint_revision": None,
                 "compiler_type": "neuronx-cc",
-                "compiler_version": self.get_neuronxcc_version(),
+                "compiler_version": get_neuronxcc_version(),
                 "num_cores": self.config.tensor_parallel_degree,
                 "sequence_length": self.config.n_positions,
             },
@@ -215,14 +197,16 @@ class TNXModelLoader(ModelLoader):
 
     def load_auto_model(self, model_path) -> "PreTrainedModel":
         logging.info(
-            f"Start loading the model {self.config.model_id_or_path}...")
+            f"Start loading the model {self.config.model_id_or_path} using NeuronAutoModel..."
+        )
         model_kwargs = self.get_model_specific_kwargs()
         return NeuronAutoModelForCausalLM.from_pretrained(
             model_path, neuron_config=self.neuron_config, **model_kwargs)
 
     def load_hf_model(self) -> "PreTrainedModel":
         logging.info(
-            f"Start loading the model {self.config.model_id_or_path}...")
+            f"Start loading the model {self.config.model_id_or_path} using HuggingFace..."
+        )
         return AutoModelForCausalLM.from_pretrained(
             self.config.model_id_or_path,
             trust_remote_code=self.config.trust_remote_code,
@@ -231,29 +215,31 @@ class TNXModelLoader(ModelLoader):
 
     def load_inf2_model_from_disk(self) -> "PreTrainedModel":
         if not self.config.load_split_model:
-            logging.info(f"Saving INF2 model to {self.load_path} ...")
+            logging.info(
+                f"Saving INF2 model to {self.load_path} as split model...")
             save_pretrained_split(self.model, self.load_path)
         model_kwargs = self.get_model_specific_kwargs()
         return self._neuronx_class.from_pretrained(
             self.load_path, neuron_config=self.neuron_config, **model_kwargs)
 
     def save_split_model(self):
-        logging.info(f"Saving INF2 model to {self.split_model_path} ...")
+        logging.info(
+            f"Saving INF2 model to {self.split_model_path} as split model...")
         save_pretrained_split(self.model, self.split_model_path)
 
     def set_model_format(self):
         model_path = os.path.join(os.getcwd(), self.config.model_id_or_path)
         if os.path.isdir(model_path):
-            safetensors_index = os.path.join(model_path,
-                                             "model.safetensors.index.json")
-            self.safetensors_format = os.path.isfile(safetensors_index)
+            self.safetensors_format = any(
+                filename.endswith(".safetensors")
+                for filename in os.listdir(model_path))
 
     def set_neuron_model(self) -> None:
         """
         Sets the path to which to load artifacts and loads the model - based on specified format
         """
-        if "neuron" in self.model_config.to_dict():
-            logging.info("Loading Optimum model")
+        if "neuron" in self.model_config.to_dict(
+        ) and not self.safetensors_format:
             self.config.load_split_model = True
             self.split_model_path = os.path.join(self.get_load_path(),
                                                  "checkpoint")
@@ -266,33 +252,53 @@ class TNXModelLoader(ModelLoader):
             self.model = self.load_inf2_model_from_disk()
         elif self.model_config.model_type == "gpt2" or not self.safetensors_format:
             # Cannot use automodel and not a split model use case
-            logging.info("Loading model from HuggingFace")
             self.model = self.load_hf_model()
             self.load_path = self.get_load_path()
             self.model = self.load_inf2_model_from_disk()
         else:
-            logging.info(
-                "Loading model from Neuron Auto Model, ensure that your model has safetensors"
-            )
             self.model = self.load_auto_model(self.config.model_id_or_path)
             self.load_path = self.get_load_path()
+            if "neuron" in self.model_config.to_dict():
+                self.compiled_graph_path = os.path.join(
+                    self.get_load_path(), "compiled")
 
-    def compile_model(self) -> None:
+        if self.config.compiled_graph_path is not None and self.compiled_graph_path is None:
+            self.compiled_graph_path = self.config.compiled_graph_path
+
+    def maybe_compile_model(self) -> None:
         """
-        Convert model to Neuron compiled format
+        Convert model to Neuron compiled format or load using compiled artifacts
         """
-        logging.info(f"LLM sharding and compiling Started ...")
+        logging.info(f"LLM sharding and compiling started...")
         start = time.time()
         # TODO: workaround on Neuron Compiler bug for SM
         path = os.getcwd()
         os.chdir("/tmp")
         if self.compiled_graph_path:
+            logging.info(
+                f"Loading precompiled graph from {self.compiled_graph_path} ..."
+            )
             self.model.load(self.compiled_graph_path)
         self.model.to_neuron()
         os.chdir(path)
         elapsed = time.time() - start
         logging.info(
             f"SysHealth: LLM sharding and compilation latency: {elapsed} secs")
+
+    def compile_and_save(self, save_path) -> None:
+        """
+        Convert model to Neuron compiled format and save
+        """
+        # Neuron compiler serialization workaround
+        path = os.getcwd()
+        os.chdir("/tmp")
+        self.model.to_neuron()
+        self.model.save(save_path)
+
+        with open(os.path.join(save_path, "VERSION"), "w+") as version_file:
+            version_file.write(f"{get_neuronxcc_version()}")
+
+        os.chdir(path)
 
     def load_model(self, **kwargs) -> NeuronXModelAdapter:
         """
@@ -302,28 +308,18 @@ class TNXModelLoader(ModelLoader):
         """
         self.set_model_format()
         self.set_neuron_model()
-        self.compile_model()
+        self.maybe_compile_model()
         self.update_model_config_to_neuron()
         self.model = NeuronXModelAdapter(self.model, self.model_config,
                                          self.load_path)
         return self.model
 
-    def legacy_partition(self, save_path: str, **kwargs):
+    def legacy_partition(self, save_path: str):
         """
         Splits the NeuronX model and additionally saves the compiled model.
 
         :param save_path: Path to which to save the compiled model.
-
-        :return: model (NeuronXModelAdapter)
         """
-        if self.config.load_split_model:
-            raise ValueError(
-                "Model partitioning does not support split model artifacts. Use normal model artifacts and rerun."
-            )
-        logging.info(f"Saving INF2 model to {save_path} ...")
-        if os.path.exists(save_path):
-            shutil.rmtree(save_path)
-        os.mkdir(save_path)
 
         self.split_model_path = os.path.join(save_path, "checkpoint")
         os.mkdir(self.split_model_path)
@@ -336,17 +332,24 @@ class TNXModelLoader(ModelLoader):
         self.save_split_model()
         self.config.load_split_model = True
         self.load_path = self.split_model_path
+
         self.model = self.load_inf2_model_from_disk()
+        self.compile_and_save(self.compiled_graph_path)
 
-        # Neuron compiler serialization workaround
-        path = os.getcwd()
-        os.chdir("/tmp")
-        self.model.to_neuron()
-        self.model.save(self.compiled_graph_path)
-        os.chdir(path)
+    def safetensors_partition(self, save_path: str):
+        """
+        Saves the model weights as safetensors, updates config to neuron, and adds compiled artifacts.
 
-        self.update_model_config_to_neuron()
-        self.model_config.save_pretrained(save_path)
+        :param save_path: Path to which to save the compiled model.
+        """
+        # TODO: Update with final schema
+        self.compiled_graph_path = os.path.join(save_path, "compiled")
+        os.mkdir(self.compiled_graph_path)
+
+        self.model = self.load_hf_model()
+        self.model.save_pretrained(save_path)
+        self.model = self.load_auto_model(self.config.model_id_or_path)
+        self.compile_and_save(self.compiled_graph_path)
 
     def partition(self, save_path: str, **kwargs):
         """
@@ -357,12 +360,37 @@ class TNXModelLoader(ModelLoader):
         :return: model (NeuronXModelAdapter)
         """
         tokenizer = kwargs.get("tokenizer")
+        model_schema = kwargs.get("model_schema")
 
-        # TODO: With safetensors support determine changes to the schema and determine new partition method
-        self.legacy_partition(save_path, **kwargs)
+        if self.config.load_split_model:
+            raise ValueError(
+                "Model partitioning does not support split model artifacts. Use normal model artifacts and rerun."
+            )
 
-        if tokenizer:
-            tokenizer.save_pretrained(save_path)
+        if os.path.exists(save_path):
+            shutil.rmtree(save_path)
+        os.mkdir(save_path)
+
+        if model_schema == TnXModelSchema.safetensors:
+            # Raise an error pending finalized schema for using safetensors
+            raise NotImplementedError(
+                "Safetensors compiled model schema is not available.")
+        elif model_schema == TnXModelSchema.compile_only:
+            logging.info("Compiling model artifacts only...")
+            self.model = self.load_auto_model(self.config.model_id_or_path)
+            self.compile_and_save(save_path)
+        else:
+            logging.info(
+                "Partitioning model to split model with compiled artifacts schema..."
+            )
+            self.legacy_partition(save_path)
+
+        self.update_model_config_to_neuron()
+
+        if model_schema != TnXModelSchema.compile_only:
+            self.model_config.save_pretrained(save_path)
+            if tokenizer:
+                tokenizer.save_pretrained(save_path)
 
         self.model = NeuronXModelAdapter(self.model, self.model_config,
                                          save_path)
@@ -470,6 +498,7 @@ class OptimumModelLoader(ModelLoader):
 
         :return: model (of type Union[NeuronBaseModel, NeuronDecoderModel])
         """
+        logging.info("Partitioning model to optimum model schema")
         tokenizer = kwargs.get("tokenizer")
         if not os.path.isdir(save_path):
             os.mkdir(save_path)

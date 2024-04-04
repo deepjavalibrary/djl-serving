@@ -32,6 +32,8 @@ ARCHITECTURES_2_TASK = {
     "ForFeatureExtraction": "feature-extraction"
 }
 
+_neuronxcc_version: Optional[str] = None
+
 
 def task_from_config(config) -> str:
     if config.architectures is None:
@@ -46,6 +48,24 @@ def task_from_config(config) -> str:
 def get_exporter(config, task):
     return TasksManager.get_exporter_config_constructor(
         model_type=config.model_type, exporter="neuron", task=task)()
+
+
+def get_neuronxcc_version() -> str:
+    """
+    Gets version of NeuronX Compiler
+
+    :return: NeuronX compiler version
+    """
+    global _neuronxcc_version
+    if _neuronxcc_version is not None:
+        return _neuronxcc_version
+    try:
+        import neuronxcc
+    except ImportError:
+        raise ModuleNotFoundError(
+            "NeuronX Compiler python package is not installed.")
+    _neuronxcc_version = neuronxcc.__version__
+    return _neuronxcc_version
 
 
 class NeuronXModelAdapter(OptimumModelForCausalLM):
