@@ -4,13 +4,13 @@ The following document provides a step-by-step guide for deploying LLMs using LM
 This is an in-depth guide that will cover all phases from model artifacts through benchmarking your endpoint.
 If this is your first time using LMI, we highly recommend you start with one of our [example notebooks](../README.md#sample-notebooks) to get familiar with LMI and SageMaker.
 
-Before starting this tutorial, you should have the HuggingFace ModelId (e.g. `TheBloke/Llama-2-13b-fp16`) of the model you aim to deploy.
+Before starting this tutorial, you should have the HuggingFace Model ID (e.g. `TheBloke/Llama-2-13b-fp16`) of the model you aim to deploy.
 If you have a custom model, it must be saved in the HuggingFace Transformers Pretrained format.
 You can read [this guide](model-artifacts.md) to verify your model is saved in the correct format for LMI.
 
 This guide is organized as follows:
 
-- [1. Instance Type Selection](instance-type-selection.md)
+- [1. Selecting an Instance Type](instance-type-selection.md)
   - Pick a SageMaker instance type based on your model size and expected runtime usage 
 - [2. Backend Selection](backend-selection.md)
   - Pick a backend (vLLM, TensorRT-LLM, DeepSpeed, LMI-Dist, Transformers NeuronX) and corresponding container
@@ -64,7 +64,7 @@ As the ecosystem grows and new libraries become available, LMI can integrate the
 
 The configuration provided to LMI specifies your entire setup. The configuration covers many aspects including:
 
-* Where your model artifacts are stored (HuggingFace ModelId, S3 URI)
+* Where your model artifacts are stored (HuggingFace Model ID, S3 URI)
 * Model Server Configurations like job/request queue size, auto-scaling behavior for model workers, which engine to use (either Python or MPI for LMI)
 * Engine/Backend Configurations like whether to use quantization, input sequence limits, continuous batching size, tensor parallel degree, and more depending on the specific backend you use
 
