@@ -1,13 +1,29 @@
-# Testing for custom script with LMI
+# Testing for custom script/entryPoint with LMI
 
-Currently, we offer a mechanism to run the LMI python handler in a standalone fashion. It support the following two use cases:
-
+If you are writing your own custom entryPoint and want to test it before you test it with model server in SageMaker, this tutorial could help with that. 
+Currently, we offer a mechanism to run the LMI python handler in a standalone fashion. It supports the following two use cases:
 - Testing with serving.properties/environment variables
+- Testing with default handlers and see how it produces the output for your input
 - Testing with custom model.py
 
-In this tutorial, we will try to create an entrypoint python file `hello_world.py` and demostrate how that could work with our testing APIs.
+In this guide, we provide two supplementary tutorials:
+1. we will try to test our default huggingface handler with rolling batch enabled to auto. 
+2. we will try to create an entrypoint python file `hello_world.py` and demonstrate how that could work with our testing APIs.
 
-## Install DJLServing Python module
+## Prerequisites
+
+### Step 1: Download and bash into the DLC container
+
+We generally recommend you to do your test based into your DLC container. This is because, lmi-dist needs GLIBC and torch, and you might need to test with the same version as used in the DLC, to avoid facing any problems. You might also need our wheels such as lmi_dist, vllm and tensorrt-llm that we ship into our DLC. 
+
+For example: 
+
+```
+docker run -it -p 8080:8080 --shm-size=12g --runtime=nvidia -v /home/ubuntu/test.py:/workplace/test.py \
+763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121 /bin/bash
+```
+
+### Step 2: Install DJLServing Python module
 
 You can simply do:
 
@@ -23,8 +39,8 @@ pip install git+https://github.com/deepjavalibrary/djl-serving.git#subdirectory=
 pip install git+https://github.com/deepjavalibrary/djl-serving.git@0.27.0-dlc#subdirectory=engines/python/setup
 ```
 
-## Running with default handler with rolling batch
-You can start a test with DJLServing offered default handlers. Let's create a file called `test.py`:
+## Tutorial 1: Running with default handler with rolling batch
+You can start a test with DJLServing offered default handlers. Here we are testing our djl_python.huggingface handler with rolling batch as `lmi-dist`. Let's create a file called `test.py`:
 
 ```python
 import os
@@ -32,10 +48,10 @@ from djl_python import huggingface
 from djl_python.test_model import TestHandler
 
 envs = {
-            "HF_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
+            "OPTION_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
             "OPTION_MPI_MODE": "true",
-            "OPTION_ROLLING_BATCH": "auto",
-            "TENSOR_PARALLEL_DEGREE": "max"
+            "OPTION_ROLLING_BATCH": "lmi-dist",
+            "OPTION_TENSOR_PARALLEL_DEGREE": 4
         }
 
 for key, value in envs.items():
@@ -56,6 +72,7 @@ inputs = [{
 }]
 
 result = handler.inference_rolling_batch(inputs)
+print(result)
 ```
 
 The model we are trying to run is a LLAMA-13B variant.
@@ -65,7 +82,9 @@ Assuming you are on a `g5.12xlarge` machine, you can run the following command t
 mpirun -N 4 --allow-run-as-root python3 test.py
 ```
 
-## Running with custom model script
+Note: Use the `mpirun` only when OPTION_MPI_MODE=true. Otherwise, run it as simple python script. 
+
+## Tutorial 2: Running with custom model script
 
 Let's create a file called `hello_world.py` and this will be the handler for us to use.
 
@@ -106,4 +125,4 @@ handler = TestHandler(hello_world, os.getcwd())
 handler.inference(create_json_request({"Hello": "world"}))
 ```
 
-Execute the above code will run the custom handler
+Execute the above code will run the custom handler. You can see the properties in your custom handler, that has the custom property `option.var` in your serving.properties.
