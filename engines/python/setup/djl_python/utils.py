@@ -2,11 +2,21 @@ import logging
 from djl_python.inputs import Input
 from djl_python.encode_decode import encode, decode
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
+from dataclasses import dataclass, field
 
 
-def parse_input_with_client_batch(
-    inputs: Input, tokenizer, output_formatter
-) -> tuple[list[str], list[int], list[dict], dict, list, list]:
+@dataclass
+class ParsedInput:
+    input_data: list[str]
+    input_size: list[int]
+    parameters: list[dict]
+    errors: dict
+    batch: list
+    is_client_side_batch: list = field(default_factory=lambda: [])
+
+
+def parse_input_with_client_batch(inputs: Input, tokenizer,
+                                  output_formatter) -> ParsedInput:
     """
     Preprocessing function that extracts information from Input objects.
 
@@ -14,20 +24,16 @@ def parse_input_with_client_batch(
     :param inputs :(Input) a batch of inputs, each corresponding to a new request
     :param tokenizer: the tokenizer used for inference
 
-    :return input_data (list[str]): a list of strings, each string being the prompt in a new request
-    :return input_size (list[int]): a list of ints being the size of each new request
-    :return parameters (list[dict]): parameters pertaining to each request
-    :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
-    :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
-    :return is_client_size_batch (list): list of boolean value representing whether the input is a client side batch
+    :return parsed_input: object of data class that contains all parsed input details
     """
+
     input_data = []
     input_size = []
     parameters = []
     errors = {}
     batch = inputs.get_batches()
     # only for dynamic batch
-    is_client_size_batch = [False for _ in range(len(batch))]
+    is_client_side_batch = [False for _ in range(len(batch))]
     for i, item in enumerate(batch):
         try:
             content_type = item.get_property("Content-Type")
@@ -48,7 +54,7 @@ def parse_input_with_client_batch(
         if not isinstance(_inputs, list):
             _inputs = [_inputs]
         else:
-            is_client_size_batch[i] = True
+            is_client_side_batch[i] = True
         input_data.extend(_inputs)
         input_size.append(len(_inputs))
 
@@ -64,7 +70,12 @@ def parse_input_with_client_batch(
         for _ in range(input_size[i]):
             parameters.append(_param)
 
-    return input_data, input_size, parameters, errors, batch, is_client_size_batch
+    return ParsedInput(input_data=input_data,
+                       input_size=input_size,
+                       parameters=parameters,
+                       errors=errors,
+                       batch=batch,
+                       is_client_side_batch=is_client_side_batch)
 
 
 def parse_input(
@@ -83,6 +94,6 @@ def parse_input(
     :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
     :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
     """
-    input_data, input_size, parameters, errors, batch, _ = parse_input_with_client_batch(
-        inputs, tokenizer, output_formatter)
-    return input_data, input_size, parameters, errors, batch
+    parsed_input = parse_input_with_client_batch(inputs, tokenizer,
+                                                 output_formatter)
+    return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
