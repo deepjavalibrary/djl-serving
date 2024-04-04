@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum
-from pydantic.v1 import validator
+from pydantic import field_validator
 
 TRT_SUPPORTED_ROLLING_BATCH_TYPES = [
     RollingBatchEnum.auto.value, RollingBatchEnum.trtllm.value,
@@ -21,7 +21,7 @@ TRT_SUPPORTED_ROLLING_BATCH_TYPES = [
 
 class TensorRtLlmProperties(Properties):
 
-    @validator('rolling_batch', pre=True)
+    @field_validator('rolling_batch', mode='before')
     def validate_rolling_batch(cls, rolling_batch: str) -> str:
         rolling_batch = rolling_batch.lower()
 

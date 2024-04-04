@@ -16,7 +16,7 @@ import os
 import re
 from typing import Optional, List
 
-from pydantic.v1 import validator, root_validator
+from pydantic import field_validator, model_validator, ValidationInfo
 from enum import IntEnum, Enum
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum
@@ -106,35 +106,35 @@ class TransformerNeuronXProperties(Properties):
     all_reduce_dtype: Optional[TnXDtypeName] = None
     cast_logits_dtype: Optional[TnXDtypeName] = None
 
-    @validator('neuron_optimize_level')
+    @field_validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
         if "NEURON_CC_FLAGS" not in os.environ:
             os.environ["NEURON_CC_FLAGS"] = ""
         os.environ[
             "NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + f" -O{level}"
 
-    @validator('enable_mixed_precision_accumulation')
+    @field_validator('enable_mixed_precision_accumulation')
     def set_mixed_precision_accumulation(cls, enablement):
         if "NEURON_CC_FLAGS" not in os.environ:
             os.environ["NEURON_CC_FLAGS"] = ""
         os.environ["NEURON_CC_FLAGS"] = os.environ[
             "NEURON_CC_FLAGS"] + f" --enable-mixed-precision-accumulation"
 
-    @validator('enable_saturate_infinity')
+    @field_validator('enable_saturate_infinity')
     def set_saturate_infinity(cls, enablement):
         if "NEURON_CC_FLAGS" not in os.environ:
             os.environ["NEURON_CC_FLAGS"] = ""
         os.environ["NEURON_CC_FLAGS"] = os.environ[
             "NEURON_CC_FLAGS"] + f" --enable-saturate-infinity"
 
-    @validator('context_length_estimate', pre=True)
+    @field_validator('context_length_estimate', mode='before')
     def parse_context_length(cls, context_length_estimate):
         return [
             int(context_length)
             for context_length in context_length_estimate.split(',')
         ]
 
-    @validator('rolling_batch', pre=True)
+    @field_validator('rolling_batch', mode='before')
     def validate_rolling_batch(cls, rolling_batch: str) -> str:
         if rolling_batch == RollingBatchEnum.disable.value:
             return rolling_batch
@@ -146,22 +146,23 @@ class TransformerNeuronXProperties(Properties):
             return 'auto'
         return rolling_batch
 
-    @validator('batch_size')
-    def validate_batch_size(cls, batch_size: int, values) -> int:
+    @field_validator('batch_size')
+    def validate_batch_size(cls, batch_size: int, info: ValidationInfo) -> int:
         """
         Transformer neuronx supports batch_size, and max_rolling_batch_size.
         The batch_size param is for dynamic batching, and max_rolling_batch_size is for rolling batch.
         We validate here that the values are compatible and set for both compilation and inference.
         """
         if batch_size > 1:
-            if values['rolling_batch'] != RollingBatchEnum.disable:
+            if 'rolling_batch' in info.data and info.data.get(
+                    'rolling_batch') != RollingBatchEnum.disable:
                 raise ValueError(
                     "Dynamic batching and rolling batch cannot be enabled at the same time, please "
                     "set either batch size or rolling batch with max_rolling_batch_size, but not both."
                 )
         return batch_size
 
-    @validator('compiled_graph_path')
+    @field_validator('compiled_graph_path')
     def validate_compiled_graph_path(cls, path: str) -> str:
         """Transformer neuronx accepts compiled graph paths as directories and s3 uri"""
         if not re.search("^s3:\/\/([^/]+)\/([\w\W]+)", path):
@@ -175,7 +176,7 @@ class TransformerNeuronXProperties(Properties):
         os.environ["NEURON_COMPILE_CACHE_URL"] = path
         return path
 
-    @validator('group_query_attention')
+    @field_validator('group_query_attention')
     def validate_gqa(cls, gqa: str) -> str:
         """
         Transformers neuronx supports GQA for Llama and Mistral model variants.
@@ -188,47 +189,38 @@ class TransformerNeuronXProperties(Properties):
                 f"{gqa} is not a valid value for group_query_attention. "
                 f"Supported values are: {[v.value for v in TnXGQAMethods]}")
 
-    @root_validator(skip_on_failure=True)
-    def set_amp_value(cls, properties):
-        properties['amp'] = properties['dtype'].name
-        return properties
+    @model_validator(mode='after')
+    def set_quantize(self):
+        if self.quantize and self.quantize.value == TnXQuantizeMethods.static_int8.value:
+            self.load_in_8bit = True
+        return self
 
-    @root_validator(skip_on_failure=True)
-    def set_quantize(cls, properties):
-        if properties['quantize'] and properties[
-                'quantize'].value == TnXQuantizeMethods.static_int8.value:
-            properties['load_in_8bit'] = True
-        return properties
+    @model_validator(mode='after')
+    def set_amp_value(self):
+        self.amp = self.dtype.name
+        return self
 
-    @root_validator(skip_on_failure=True)
-    def validate_schema_loader_combination(cls, properties):
-        if properties.get('model_loader') and properties[
-                'model_loader'].value == TnXModelLoaders.tnx.value:
-            if properties.get('partition_schema') and properties[
-                    'partition_schema'] == TnXModelSchema.optimum:
+    @model_validator(mode='after')
+    def validate_schema_loader_combination(self):
+        if self.model_loader and self.model_loader.value == TnXModelLoaders.tnx.value:
+            if self.partition_schema == TnXModelSchema.optimum:
                 raise ValueError(
                     f"Transformers NeuronX model loader does not support optimum cache partitioning. "
                     f"Supported values are: {[v.value for v in TnXModelSchema if v.value != TnXModelSchema.optimum]}"
                 )
-        if properties.get('model_loader') and properties[
-                'model_loader'].value == TnXModelLoaders.optimum.value:
-            if properties.get('partition_schema') and properties[
-                    'partition_schema'] != TnXModelSchema.optimum:
+        if self.model_loader and self.model_loader.value == TnXModelLoaders.optimum.value:
+            if self.partition_schema != TnXModelSchema.optimum:
                 raise ValueError(
                     f"Optimum model loader does not support non-optimum cache partitioning. "
                     f"Supported values are: {TnXModelSchema.optimum.value}")
 
-        if properties.get('partition_schema') and properties[
-                'partition_schema'] == TnXModelSchema.optimum and properties.get(
-                    'model_loader') is None:
-            properties['model_loader'] = TnXModelLoaders.optimum
-        if properties.get('partition_schema') and properties[
-                'partition_schema'] != TnXModelSchema.optimum and properties.get(
-                    'model_loader') is None:
-            properties['model_loader'] = TnXModelLoaders.tnx
-        return properties
+        if self.partition_schema == TnXModelSchema.optimum and self.model_loader is None:
+            self.model_loader = TnXModelLoaders.optimum
+        if self.partition_schema and self.partition_schema != TnXModelSchema.optimum and self.model_loader is None:
+            self.model_loader = TnXModelLoaders.tnx
+        return self
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def set_model_loader(cls, properties):
         if properties.get('model_loader') is None:
             if properties.get('fuse_qkv') is not None:

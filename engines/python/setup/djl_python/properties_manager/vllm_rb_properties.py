@@ -13,7 +13,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic.v1.class_validators import validator, root_validator
+from pydantic import field_validator
 
 from djl_python.properties_manager.properties import Properties
 
@@ -44,7 +44,7 @@ class VllmRbProperties(Properties):
     lora_extra_vocab_size: Optional[int] = 256
     max_cpu_loras: Optional[int] = None
 
-    @validator('engine')
+    @field_validator('engine')
     def validate_engine(cls, engine):
         if engine != "Python":
             raise AssertionError(

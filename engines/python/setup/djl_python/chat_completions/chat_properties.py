@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 from typing import Optional, Union, List, Dict
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 
 
 class ChatProperties(BaseModel):
@@ -39,7 +39,7 @@ class ChatProperties(BaseModel):
     top_p: Optional[float] = 1.0
     user: Optional[str] = Field(default=None, exclude=True)
 
-    @validator('messages', pre=True)
+    @field_validator('messages', mode='before')
     def validate_messages(
             cls, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
         if messages is None:
@@ -52,8 +52,9 @@ class ChatProperties(BaseModel):
                 )
         return messages
 
-    @validator('frequency_penalty', pre=True)
-    def validate_frequency_penalty(cls, frequency_penalty: float) -> float:
+    @field_validator('frequency_penalty', mode='before')
+    def validate_frequency_penalty(
+            cls, frequency_penalty: Optional[float]) -> Optional[float]:
         if frequency_penalty is None:
             return None
 
@@ -62,7 +63,7 @@ class ChatProperties(BaseModel):
             raise ValueError("frequency_penalty must be between -2.0 and 2.0.")
         return frequency_penalty
 
-    @validator('logit_bias', pre=True)
+    @field_validator('logit_bias', mode='before')
     def validate_logit_bias(cls, logit_bias: Dict[str, float]):
         if logit_bias is None:
             return None
@@ -73,12 +74,12 @@ class ChatProperties(BaseModel):
                     "logit_bias value must be between -100 and 100.")
         return logit_bias
 
-    @validator('top_logprobs')
-    def validate_top_logprobs(cls, top_logprobs: int, values):
+    @field_validator('top_logprobs')
+    def validate_top_logprobs(cls, top_logprobs: int, info: ValidationInfo):
         if top_logprobs is None:
             return None
 
-        if not values.get('logprobs'):
+        if not info.data.get('logprobs'):
             return None
 
         top_logprobs = int(top_logprobs)
@@ -86,8 +87,9 @@ class ChatProperties(BaseModel):
             raise ValueError("top_logprobs must be between 0 and 20.")
         return top_logprobs
 
-    @validator('presence_penalty', pre=True)
-    def validate_presence_penalty(cls, presence_penalty: float) -> float:
+    @field_validator('presence_penalty', mode='before')
+    def validate_presence_penalty(
+            cls, presence_penalty: Optional[float]) -> Optional[float]:
         if presence_penalty is None:
             return None
 
@@ -96,8 +98,9 @@ class ChatProperties(BaseModel):
             raise ValueError("presence_penalty must be between -2.0 and 2.0.")
         return presence_penalty
 
-    @validator('temperature', pre=True)
-    def validate_temperature(cls, temperature: float) -> float:
+    @field_validator('temperature', mode='before')
+    def validate_temperature(cls,
+                             temperature: Optional[float]) -> Optional[float]:
         if temperature is None:
             return None
 

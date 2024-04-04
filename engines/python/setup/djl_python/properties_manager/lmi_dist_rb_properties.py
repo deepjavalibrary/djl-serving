@@ -13,7 +13,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic.v1.class_validators import validator, root_validator
+from pydantic import model_validator
 
 from djl_python.properties_manager.properties import Properties
 
@@ -50,17 +50,17 @@ class LmiDistRbProperties(Properties):
     lora_extra_vocab_size: Optional[int] = 256
     max_cpu_loras: Optional[int] = None
 
-    @root_validator(skip_on_failure=True)
-    def validate_mpi(cls, properties):
-        if not properties["is_mpi"]:
+    @model_validator(mode='after')
+    def validate_mpi(self):
+        if not self.is_mpi:
             raise AssertionError(
                 f"Need MPI engine to start lmi-dist RollingBatcher")
-        return properties
+        return self
 
-    @root_validator(skip_on_failure=True)
-    def validate_speculative_and_lora(cls, properties):
-        if properties["enable_lora"] and properties["speculative_draft_model"]:
+    @model_validator(mode='after')
+    def validate_speculative_and_lora(self):
+        if self.enable_lora and self.speculative_draft_model:
             raise AssertionError(
                 f"Cannot enable lora and speculative decoding at the same time"
             )
-        return properties
+        return self
