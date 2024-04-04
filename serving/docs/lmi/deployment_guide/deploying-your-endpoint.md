@@ -9,7 +9,7 @@ You will need the following to deploy your model with LMI on SageMaker:
 * Container URI
 * Configuration File or Environment Variables
 
-## Configuration - serving.properties
+## Option 1: Configuration - serving.properties
 
 If your configuration is specified in a `serving.properties` file, we will need to upload this file to S3.
 If your model artifacts are also stored in S3, then you can either upload the `serving.properties` file under the same object prefix, or in a separate location.
@@ -91,7 +91,7 @@ outputs = predictor.predict({
 })
 ```
 
-## Configuration - environment variables
+## Option 2: Configuration - environment variables
 
 If you are using environment variables for configuration, you will need to pass those configurations to the SageMaker Model object.
 
@@ -148,6 +148,32 @@ outputs = predictor.predict({
 
 Depending on which backend you are deploying with, you will have access to different generation parameters.
 To learn more about the API schema (Request/Response structure), please see [this document](../user_guides/lmi_input_output_schema.md).
+
+# Deploying your model on a SageMaker Endpoint with boto3
+
+As an alternate to using the SageMaker python sdk, you could also use a sagemaker client from boto3. Currently, this provides with some additional options to configure your SageMaker endpoint.
+
+## Using ProductionVariants to customize the endpoint
+The following options may be added to the `ProductionVariants` field to support LLM deployment:
+
+1. VolumeSizeInGB: option to attach a larger EBS volume if necessary.
+2. ModelDataDownloadTimeoutInSeconds: some models, due to their large size, take longer to be downloaded from S3 and untarred. With this option, you can increase the timeout for such downloads.
+3. ContainerStartupHealthCheckTimeoutInSeconds: Since LLMs may take longer to be loaded and ready to serve, the default /ping timeout of 5 minutes may not be sufficient. With this option, you can increase the timeout for the health check.
+
+Follow this link for a step-by-step guide to create an endpoint with the above options: https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-hosting.html
+
+## Using ModelDataSource to deploy uncompressed model artifacts
+The following options may be added to the `ModelDataSource` field to support uncompressed artifacts from S3:
+```
+"ModelDataSource": {
+            "S3DataSource": {
+                "S3Uri": "s3://my-bucket/prefix/to/model/data/", 
+                "S3DataType": "S3Prefix",
+                "CompressionType": "None",
+            },
+```
+
+Follow this link for a detailed overview of this option: https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-uncompressed.html
 
 Next: [Benchmark your endpoint](benchmarking-your-endpoint.md)
 
