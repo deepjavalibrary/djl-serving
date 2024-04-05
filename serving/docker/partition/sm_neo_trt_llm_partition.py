@@ -11,75 +11,17 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import json
 import logging
-import os
 import sys
-import traceback
 
 from utils import load_properties
+from neo_utils import InputConfiguration, CompilationFatalError, write_error_to_file, get_neo_env_vars, get_neo_compiler_flags
 from tensorrt_llm_toolkit import create_model_repo
 
 # TODO: Merge the functionality of this file into trt_llm_partition.py
 # so all TRT-LLM partitioning is unified
 
 DJL_SERVING_OPTION_PREFIX = "option."
-
-
-class InputConfiguration(Exception):
-    """Raise when SageMaker Neo interface expectation is not met"""
-
-
-class CompilationFatalError(Exception):
-    """Raise for errors encountered during the TensorRT-LLM build process"""
-
-
-def write_error_to_file(error_message, error_file):
-    """
-    Write error messages to error file
-    """
-    try:
-        with open(error_file, "w", encoding="utf-8") as f:
-            json.dump({"error": repr(error_message)}, f)
-    except:
-        tb_exc = traceback.format_exc()
-        logging.error(f"Failed to write error file: {tb_exc}")
-
-
-def get_neo_env_vars():
-    """
-    Get environment variables required by the SageMaker Neo interface
-    """
-    try:
-        compiler_options = os.environ["COMPILER_OPTIONS"]
-        input_model_directory = os.environ["SM_NEO_INPUT_MODEL_DIR"]
-        compiled_model_directory = os.environ["SM_NEO_COMPILED_MODEL_DIR"]
-        compilation_error_file = os.environ["SM_NEO_COMPILATION_ERROR_FILE"]
-        neo_cache_dir = os.environ["SM_NEO_CACHE_DIR"]
-        return (compiler_options, input_model_directory,
-                compiled_model_directory, compilation_error_file,
-                neo_cache_dir)
-    except KeyError as exc:
-        raise InputConfiguration(
-            f"SageMaker Neo environment variable '{exc.args[0]}' expected but not found"
-            f" \nRequired env vars are: 'COMPILER_OPTIONS', 'SM_NEO_INPUT_MODEL_DIR',"
-            f" 'SM_NEO_COMPILED_MODEL_DIR', 'SM_NEO_COMPILATION_ERROR_FILE', 'SM_NEO_CACHE_DIR'"
-        )
-
-
-def get_neo_compiler_flags(compiler_options):
-    """
-    Get SageMaker Neo compiler_flags from the CompilerOptions field
-    """
-    try:
-        # CompilerOptions JSON will always be present, but compiler_flags key is optional
-        compiler_options = json.loads(compiler_options)
-        if not isinstance(compiler_options, dict):
-            raise ValueError("Parsed JSON is not a dictionary")
-        return compiler_options.get("compiler_flags")
-    except Exception as exc:
-        raise InputConfiguration(
-            f"Failed to parse SageMaker Neo CompilerOptions: {exc}")
 
 
 def verify_neo_compiler_flags(compiler_flags):
