@@ -134,7 +134,7 @@ class TestRollingBatch(unittest.TestCase):
         assert final_json == {
             "generated_text": "Hello world",
             "details": {
-                'input_text':
+                'inputs':
                 'This is a wonderful day',
                 "finish_reason":
                 "length",
@@ -176,7 +176,7 @@ class TestRollingBatch(unittest.TestCase):
             },
             "generated_text": "Hello world",
             "details": {
-                'input_text': 'This is a wonderful day',
+                'inputs': 'This is a wonderful day',
                 "finish_reason": "length",
                 "generated_tokens": 3,
             }
@@ -220,7 +220,7 @@ class TestRollingBatch(unittest.TestCase):
             'details': {
                 'finish_reason': 'length',
                 'generated_tokens': 3,
-                'input_text': 'This is a wonderful day'
+                'inputs': 'This is a wonderful day'
             },
             "generated_text": "Hello world"
         }
@@ -322,7 +322,7 @@ class TestRollingBatch(unittest.TestCase):
         assert json.loads(req.get_next_token()) == {
             'finish_reason': None,
             'generated_tokens': 1,
-            'input_text': 'This is a wonderful day',
+            'inputs': 'This is a wonderful day',
             'tokens': [{
                 'id': [244],
                 'log_prob': -0.334532,
@@ -341,7 +341,7 @@ class TestRollingBatch(unittest.TestCase):
             None,
             'generated_tokens':
             2,
-            'input_text':
+            'inputs':
             'This is a wonderful day',
             'tokens': [
                 {
@@ -369,7 +369,7 @@ class TestRollingBatch(unittest.TestCase):
             'length',
             'generated_tokens':
             3,
-            'input_text':
+            'inputs':
             'This is a wonderful day',
             'tokens': [{
                 'id': [244],

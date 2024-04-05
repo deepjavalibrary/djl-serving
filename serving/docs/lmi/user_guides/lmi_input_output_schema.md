@@ -54,7 +54,7 @@ Example response:
     "details": {
         "finish reason": "length",
         "generated_tokens": 8,
-        "input_text": "What is Deep Learning?",
+        "inputs": "What is Deep Learning?",
         "tokens": [<Token1>, <Token2>, ...]
     }
 }
@@ -79,7 +79,7 @@ Example response:
 {
     "token": {"id": [5972], "text": " field.", "log_prob": -0.6950479745864868}, 
     "generated_text": "Deep Learning is a really cool field.", 
-    "details": {"finish_reason": "length", "generated_tokens": 100, "input_text": "What is Deep Learning?"}
+    "details": {"finish_reason": "length", "generated_tokens": 100, "inputs": "What is Deep Learning?"}
 }
 ```
 
@@ -290,7 +290,7 @@ You must specify `details=true` in the input `parameters`.
 |--------------------|---------------------------|---------------------------------------------------------------------------------------------------|----------------------------------------|
 | `finish_reason`    | string enum               | the reason for concluding generation                                                              | `length`, `eos_token`, `stop_sequence` |
 | `generated_tokens` | number                    | the number of tokens generated                                                                    | 128                                    |
-| `input_text`       | string                    | the input/prompt used to start generation                                                         | "Deep Learning is"                     |
+| `inputs`           | string                    | the input/prompt used to start generation                                                         | "Deep Learning is"                     |
 | `tokens`           | array of [Tokens](#token) | An array of token objects, one for each token generated. Only returned in non-streaming use-cases | See the [Tokens](#token) documentation |
 
 Example:
@@ -298,7 +298,7 @@ Example:
 "details": {
    "finish_reason": "length",
    "generated_tokens": 128,
-   "input_text": "Deep Learning is"
+   "inputs": "Deep Learning is"
    "tokens": [<Token1>, <Token2>, ...]
 }
 ```
