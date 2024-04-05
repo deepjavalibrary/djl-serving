@@ -620,6 +620,11 @@ trtllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "google/flan-t5-xl",
         "details": True
+    },
+    "flan-t5-xxl": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "google/flan-t5-xxl"
     }
 }
 

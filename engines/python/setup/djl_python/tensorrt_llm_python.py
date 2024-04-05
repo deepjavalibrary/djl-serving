@@ -1,3 +1,4 @@
+import logging
 import os
 import torch
 
@@ -132,6 +133,13 @@ class TRTLLMPythonService:
             return outputs
 
         params = parameters[0]
+
+        if "output_formatter" in params:
+            # output formatter is not supported for TensorRT-LLM python backend.
+            params.pop("output_formatter")
+        if "stream" in params:
+            # TensorRT-LLM python backend handler does not support streaming yet.
+            params.pop("stream")
         if params.get("details", False):
             return self._stream_inference(inputs, input_data, input_size,
                                           params, batch)
