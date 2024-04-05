@@ -291,6 +291,7 @@ class Request(object):
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
+        self.original_params = parameters.copy()
         self.details = details
         self.adapter = adapter
         self.input_ids = input_ids
@@ -342,7 +343,7 @@ class Request(object):
             details_dict["tokens"] = self.token_cache
             details_dict["generated_tokens"] = len(self.token_cache)
             details_dict["input_text"] = self.input_text
-            details_dict["parameters"] = self.parameters
+            details_dict["parameters"] = self.original_params
             details_dict["prompt_tokens"] = len(self.input_ids)
         generated_text = self.full_text_prefix
         if last_token:
