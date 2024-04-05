@@ -1,73 +1,175 @@
-# LMI handlers Input/Output schema
+# LMI handlers Inference API Schema
 
+This document provides the default API schema for the inference endpoints (`/invocations`, `/predictions/<model_name>`) when using the built-in inference handlers in LMI containers.
+This schema is applicable to our latest release, v0.27.0.
 
-Our deep learning LMI containers come with default handlers, each handler supporting different optimization engines such as DeepSpeed, lmi-dist, vLLM and TensorRT-LLM.  These handlers are designed to receive input in a specific format and sends output in a predefined format. This document provides the default schema for the input and output of our prediction/invocation API. Checkout [this page](https://docs.djl.ai/docs/serving/serving/docs/inference_api.html) to our know about our inference APIs offered by DJLServing. Please be aware that this schema is applicable to our latest release v0.27.0.
+LMI provides two distinct schemas depending on what type of batching you use:
 
-If you wish to create your own pre-processing and post-processing for our handlers, an example can be found here. [here](https://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/rollingbatch_llama_7b_customized_preprocessing.html).
+* Rolling Batch/Continuous Batch Schema
+* Dynamic Batch/Static Batch Schema
 
+Both batching mechanisms support streaming, and the response format for streaming differs from the response format for non-streaming.
 
-## Input schema for our default rolling batch handlers
+## Rolling Batch/Continuous Batch Schema
 
+### Request Schema
+
+Request Body Fields:
+
+| Field Name   | Field Type                                    | Required | Possible Values                                                                                                                                     |
+|--------------|-----------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `inputs`     | string                                        | yes      | example: "What is Deep Learning"                                                                                                                    |
+| `parameters` | [GenerationParameters](#generationparameters) | no       | See the [GenerationParameters](#generationparameters) documentation. This is a dictionary containing parameters that control the decoding behavior. |
+| `stream`     | boolean                                       | no       | `true`, `false` (default)                                                                                                                           |
+
+Example request using curl
+```
+curl -X POST https://my.sample.endpoint.com/invocations \
+  - H 'Content-Type: application/json' \
+  - d '
+    {
+        "inputs" : "What is Deep Learning?", 
+        "parameters" : {
+            "do_sample": true,
+            "max_new_tokens": 256,
+            "details": true,
+        },
+        "stream": true, 
+    }'
+```
+
+### Response Schema
+
+When not using streaming (this is the default), the response is returned as application/json content-type:
+
+| Field Name       | Field Type          | Always Returned                           | Possible Values                                                                     | 
+|------------------|---------------------|-------------------------------------------|-------------------------------------------------------------------------------------|
+| `generated_text` | string              | yes                                       | The result of the model generation. Example: "Deep Learning is a really cool field" |
+| `details`        | [Details](#details) | no, only when `parameters.details = true` | See the [Details](#details) documentation                                           |
+
+Example response:
 ```
 {
-    'inputs' : string/list, 
-    'parameters' : {
-        DeepSpeedRollingBatchParameters/LmiDistRollingBatchParameters/vLLMRollingBatchParameters/TensorRTLLMRollingBatchParameters,
-    } 
+    "generated_text": "Deep Learning is a really cool field",
+    "details": {
+        "finish reason": "length",
+        "generated_tokens": 8,
+        "input_text": "What is Deep Learning?",
+        "tokens": [<Token1>, <Token2>, ...]
+    }
 }
 ```
 
-## Output schema for our default handlers
+When using streaming (i.e. `"stream": true`, or using `option.output_formatter=jsonlines`), the response is returned as application/jsonlines content-type.
+The response is returned token by token, and each "line" in the response is a [Token](#token) object.
+The final "line" in the response will also contain the additional fields `generated_text`, and `details`.
 
-#### When rolling batch is enabled
+| Field Name       | Field Type          | Always Returned                       | Possible Values                           |
+|------------------|---------------------|---------------------------------------|-------------------------------------------|
+| `token`          | [Token](#token)     | yes                                   | See the [Token](#token) documentation     |
+| `generated_text` | string              | no, only on the last generated "line" | "Deep Learning is a really cool field"    |
+| `details`        | [Details](#details) | no, only on the last generated "line" | See the [Details](#details) documentation |
+
+Example response:
 ```
-application/json & application/jsonlines
+{"token": {"id": [304], "text": "Deep ", "log_prob": -0.052432529628276825}}
+{"token": {"id": [11157], "text": " Learning", "log_prob": -1.2865009307861328}}
+{"token": {"id": [278], "text": " is", "log_prob": -0.007458459585905075}}
+... more tokens until the last one
+{
+    "token": {"id": [5972], "text": " field.", "log_prob": -0.6950479745864868}, 
+    "generated_text": "Deep Learning is a really cool field.", 
+    "details": {"finish_reason": "length", "generated_tokens": 100, "input_text": "What is Deep Learning?"}
+}
+```
 
-Output schema: {
-    'generated_text' : string,
-    'details': {
-        'finish_reason' : Enum: 'length'/'eos_token'/'stop_sequence',
-    },
-    'token' : [ 
-            Token: {
-                'id' : number,
-                'text' : string,
-                'log_prob': float,
-                'special_token' : boolean
+## Dynamic Batch/Static Batch Schema
+
+### Request Schema
+
+Request Body Fields:
+
+| Field Name   | Field Type                                    | Required | Possible Values                                                                                                                                     |
+|--------------|-----------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `inputs`     | string, array of strings                      | yes      | example: "What is Deep Learning", ["What is Deep Learning", "How many ways can I peel an orange"]                                                   |
+| `parameters` | [GenerationParameters](#generationparameters) | no       | See the [GenerationParameters](#generationparameters) documentation. This is a dictionary containing parameters that control the decoding behavior. |
+
+Example request using curl
+```
+curl -X POST https://my.sample.endpoint.com/invocations \
+  - H 'Content-Type: application/json' \
+  - d '
+    {
+        "inputs" : "What is Deep Learning?", 
+        "parameters" : {
+            "do_sample": true,
+            "max_new_tokens": 256,
         }
-   ]
+    }'
+```
+
+### Response Schema
+
+When not using streaming (this is the default), the response is returned as application/json content-type:
+
+| Field Name       | Field Type          | Always Returned                           | Possible Values                                                                     | 
+|------------------|---------------------|-------------------------------------------|-------------------------------------------------------------------------------------|
+| `generated_text` | string              | yes                                       | The result of the model generation. Example: "Deep Learning is a really cool field" |
+
+The response is a list of objects with one field each, `generated_text`. Each object in the output corresponds to the prompt with the same index in the input.
+
+Example response:
+```
+[
+  {
+    "generated_text": "Deep Learning is a really cool field"
+  }
+]
+```
+
+When using streaming (i.e. using `option.enable_streaming=true`), the response is returned as application/jsonlines content-type.
+The response is returned token by token. 
+
+| Field Name | Field Type | Always Returned                       | Possible Values                        |
+|------------|------------|---------------------------------------|----------------------------------------|
+| `outputs`  | string     | no, only on the last generated "line" | "Deep Learning is a really cool field" |
+
+Example response:
+```
+{"outputs": ["This"]}
+{"outputs": ["opportunity"]}
+{"outputs": ["is"]}
+...more outputs until the last one
+```
+
+## API Object Schemas
+
+The following sections describe each of the request or response objects in more detail.
+
+### GenerationParameters
+
+The following parameters are available with every rolling batch backend (vLLM, lmi-dist, deepspeed, tensorrt-llm, hf-accelerate)
+
+```
+"parameters": {
+  'do_sample' : boolean (default = False),
+  'seed' : integer (default = ramdom value),
+  'temperature' : float (default= 1.0),
+  'repetition_penalty': float (default= 1.0),
+  'top_k' : integer (default = 0), 
+  'top_p' : float (default= 1.0),
+  'max_new_tokens' : integer (default = 30),
+  'details' : boolean (default = false, details only available for rolling batch),
+  'return_full_text': boolean (default = false),
+  'stop_sequences' : list[str] (default = None)
 }
 ```
 
-In the output, details will be generated, only if `details=True` is sent in the input. 
+If you are not specifying a specific engine or rolling batch implementation, we recommend you stick to the parameters above.
 
-#### When rolling batch is disabled
-```
-Output schema: {
-    'generated_text' : string/list
-}
-```
-When providing inputs following the input schema as a string, the output's generated text will be a string. Alternatively, if the inputs are in the form of a list, the generated text will be returned as a list, with each result corresponding to the input items in the list.
+If you are deploying with a specific backend, additional parameters are available that are unique to the specific backend.
 
-### Common rolling batch input parameters
-```
-    'do_sample' : boolean (default = False),
-    'seed' : integer (default = ramdom value),
-    'temperature' : float (default= 1.0),
-    'repetition_penalty': float (default= 1.0),
-    'top_k' : integer (default = 0), 
-    'top_p' : float (default= 1.0),
-    'max_new_tokens' : integer (default = 30),
-    'details' : boolean (default = false, details only available for rolling batch),
-    'return_full_text': boolean (default = false),
-    'stop_sequences' : list[str] (default = None),
-```
-
-Note: For TensorRTLLM handler, it also has all the common parameters, but it uses different default values. Kindly check below to know the TensorRT LLM default values. 
-
-Apart from these common parameters, there are other parameters that are specific to each handler. 
-
-### DeepSpeed rolling batch input parameters schema
+#### Additional DeepSpeed Generation parameters 
 
 ```
 DeepSpeedRollingBatchParameters : {
@@ -76,9 +178,9 @@ DeepSpeedRollingBatchParameters : {
 }
 ```
 
-Decoding method supported in DeepSpeed: Greedy (Default) and Sampling.
+Decoding methods supported in DeepSpeed: Greedy (Default) and Sampling.
 
-### LMI Dist rolling batch input parameters schema
+#### Additional LMI Dist Generation parameters
 
 ```
 LmiDistRollingBatchParameters : {
@@ -102,10 +204,10 @@ LmiDistRollingBatchParameters : {
 }
 ```
 
-Decoding method supported in LmiDist : Greedy (Default) and Sampling.
+Decoding methods supported in LmiDist : Greedy (Default) and Sampling.
 
 
-### vLLM rolling batch input parameters schema
+#### Additional vLLM Generation Parameters
 
 ```
 vLLMRollingBatchParameters : {
@@ -126,11 +228,11 @@ vLLMRollingBatchParameters : {
 }
 ```
 
-Decoding method supported in vLLM : Greedy (Default), Sampling and Beam search.
+Decoding methods supported in vLLM : Greedy (Default), Sampling, and Beam search.
 
-### TensorRTLLM rolling batch input parameters schema
+#### Additional TensorRT-LLM Generation Parameters 
 
-For TensorRTLLM handler, it also has all the common parameters, but it uses different default values. 
+For TensorRTLLM handler, some of the common parameters have different default values. 
 
 ```
 TensorRTLLMRollingBatchParameters : {
@@ -151,7 +253,58 @@ TensorRTLLMRollingBatchParameters : {
 
 Decoding method supported in TensorRT-LLM : Greedy (Default) and Sampling.
 
-NOTE: TensorRT-LLM C++ runtime, does not have the option `do_sample`. If top_k and top_p are 0, TensorRT-LLM automatically recognizes it as greedy. 
+NOTE: TensorRT-LLM C++ runtime, does not have the option `do_sample`. If top_k and top_p are 0, TensorRT-LLM automatically recognizes it as greedy.
 So in order to do sampling, we set top_k, top_p and temperature values to a certain values. You can change these parameters for your use-case and pass them at runtime.
 
 For those without default values, they remain optional. If these parameters are not provided, they will be ignored.
+
+### Token
+
+The token object represents a single generated token.
+It contains the following fields:
+
+| Field Name | Type   | Description                                                        | Example |
+|------------|--------|--------------------------------------------------------------------|---------|
+| `id`       | number | The token id used for encoding/decoding text                       | 45      |
+| `text`     | string | the text representation of the toke                                | " of"   |
+| `log_prob` | number | the log probability of the token (closer to 0 means more probable) | -0.12   |
+
+Example:
+
+```
+{
+  "token": {
+    "id": [763], 
+    "text": " In", 
+    "log_prob": -3.977081060409546
+  }
+}
+```
+
+### Details
+
+Additional details relevant to the generation. This is only available when using continuous batching.
+You must specify `details=true` in the input `parameters`.
+
+| Field Name         | Type                      | Description                                                                                       | Example                                |
+|--------------------|---------------------------|---------------------------------------------------------------------------------------------------|----------------------------------------|
+| `finish_reason`    | string enum               | the reason for concluding generation                                                              | `length`, `eos_token`, `stop_sequence` |
+| `generated_tokens` | number                    | the number of tokens generated                                                                    | 128                                    |
+| `input_text`       | string                    | the input/prompt used to start generation                                                         | "Deep Learning is"                     |
+| `tokens`           | array of [Tokens](#token) | An array of token objects, one for each token generated. Only returned in non-streaming use-cases | See the [Tokens](#token) documentation |
+
+Example:
+```
+"details": {
+   "finish_reason": "length",
+   "generated_tokens": 128,
+   "input_text": "Deep Learning is"
+   "tokens": [<Token1>, <Token2>, ...]
+}
+```
+
+## Custom Pre and Post Processing
+
+If you wish to create your own pre-processing and post-processing for our handlers, an example can be found here. [here](https://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/rollingbatch_llama_7b_customized_preprocessing.html).
+
+This is not an officially supported use-case. The API signature, as well as implementation, is subject to change at any time.
