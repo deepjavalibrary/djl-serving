@@ -57,20 +57,20 @@ class Token(object):
 
 
 def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
-                           details: dict, generated_tokens: str, id: int):
+                           details: dict, generated_text: str, id: int):
     """
     json output formatter
 
     :return: formatted output
     """
-    json_encoded_str = f"{{\"generated_text\": \"{generated_tokens}" if first_token else ""
+    json_encoded_str = f"{{\"generated_text\": \"{generated_text}" if first_token else ""
     json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
         if details:
             final_dict = {
                 "finish_reason": details.get("finish_reason", None),
                 "generated_tokens": details.get("generated_tokens", None),
-                "input_text": details.get("input_text", None),
+                "inputs": details.get("inputs", None),
                 "tokens": details.get("tokens", None)
             }
             details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
@@ -83,7 +83,7 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
 
 def _jsonlines_output_formatter(token: Token, first_token: bool,
                                 last_token: bool, details: dict,
-                                generated_tokens: str, id: int):
+                                generated_text: str, id: int):
     """
     jsonlines output formatter
 
@@ -92,12 +92,12 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
     token_dict = token.as_dict()
     final_dict = {"token": token_dict}
     if last_token:
-        final_dict["generated_text"] = generated_tokens
+        final_dict["generated_text"] = generated_text
         if details:
             final_dict["details"] = {
                 "finish_reason": details.get("finish_reason", None),
                 "generated_tokens": details.get("generated_tokens", None),
-                "input_text": details.get("input_text", None)
+                "inputs": details.get("inputs", None)
             }
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
@@ -105,7 +105,7 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
 
 def _json_chat_output_formatter(token: Token, first_token: bool,
                                 last_token: bool, details: dict,
-                                generated_tokens: str, id: int):
+                                generated_text: str, id: int):
     """
     json output formatter for chat completions API
 
@@ -116,7 +116,7 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
         "index": 0,
         "message": {
             "role": "assistant",
-            "content": generated_tokens
+            "content": generated_text
         }
     }
     response1 = {
@@ -169,7 +169,7 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
 
 def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
                                      last_token: bool, details: dict,
-                                     generated_tokens: str, id: int):
+                                     generated_text: str, id: int):
     """
     jsonlines output formatter for chat completions API
 
@@ -342,7 +342,7 @@ class Request(object):
             details_dict["finish_reason"] = finish_reason
             details_dict["tokens"] = self.token_cache
             details_dict["generated_tokens"] = len(self.token_cache)
-            details_dict["input_text"] = self.input_text
+            details_dict["inputs"] = self.input_text
             details_dict["parameters"] = self.original_params
             details_dict["prompt_tokens"] = len(self.input_ids)
         generated_text = self.full_text_prefix
