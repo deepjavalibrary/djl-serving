@@ -111,7 +111,7 @@ TOKENIZER=<tokenizer_id> ./awscurl -c 10 -N 30 -X POST -n sagemaker https://runt
 ### Usage with SageMaker Streaming Response
 
 You can also use `awscurl` to invoke your endpoint with streaming responses. 
-This assumes that you have configured your deployment configuration with `option.output_formatter=jsonlines` so that LMI streams responses.
+This assumes that you have configured your deployment [configuration](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/deployment_guide/configurations.md#lmi-common-configurations) with `option.output_formatter=jsonlines` or you have passed 'stream': true as part of the payload(works only from 0.27.0) so that LMI streams responses.
 
 To benchmark your endpoint with streaming, you must call the `/invocations-response-stream` API.
 
