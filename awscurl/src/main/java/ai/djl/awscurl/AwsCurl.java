@@ -322,9 +322,13 @@ public final class AwsCurl {
                 }
             }
             if (!firstTokens.isEmpty()) {
+                Collections.sort(firstTokens);
                 long sum = firstTokens.stream().mapToLong(val -> val).sum();
                 int size = firstTokens.size();
                 ret.setTimeToFirstByte(sum / 1000000d / size);
+                ret.setP50TimeToFirstByte(firstTokens.get(size / 2) / 1000000d);
+                ret.setP90TimeToFirstByte(firstTokens.get(size * 9 / 10) / 1000000d);
+                ret.setP99TimeToFirstByte(firstTokens.get(size * 99 / 100) / 1000000d);
             }
             AwsCurl.logger.debug("Total request time: {} ms", totalTime / 1000000d);
             ret.print(config.isJsonOutput());

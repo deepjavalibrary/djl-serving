@@ -35,6 +35,9 @@ class Result {
     private Double p90Latency;
     private Double p99Latency;
     private Double timeToFirstByte;
+    private Double p50TimeToFirstByte;
+    private Double p90TimeToFirstByte;
+    private Double p99TimeToFirstByte;
 
     Result() {
         tokenizer = Utils.getEnvOrSystemProperty("TOKENIZER");
@@ -164,6 +167,30 @@ class Result {
         this.timeToFirstByte = round(timeToFirstByte);
     }
 
+    public Double getP50TimeToFirstByte() {
+        return p50TimeToFirstByte;
+    }
+
+    public void setP50TimeToFirstByte(double p50TimeToFirstByte) {
+        this.p50TimeToFirstByte = p50TimeToFirstByte;
+    }
+
+    public Double getP90TimeToFirstByte() {
+        return p90TimeToFirstByte;
+    }
+
+    public void setP90TimeToFirstByte(double p90TimeToFirstByte) {
+        this.p90TimeToFirstByte = p90TimeToFirstByte;
+    }
+
+    public Double getP99TimeToFirstByte() {
+        return p99TimeToFirstByte;
+    }
+
+    public void setP99TimeToFirstByte(double p99TimeToFirstByte) {
+        this.p99TimeToFirstByte = p99TimeToFirstByte;
+    }
+
     @SuppressWarnings("PMD.SystemPrintln")
     public void print(boolean json) {
         if (json) {
@@ -190,6 +217,9 @@ class Result {
             System.out.printf("%s/s: %.2f/s%n", n, getTokenThroughput());
         }
         System.out.printf("Time to first byte: %.2f ms.%n", getTimeToFirstByte());
+        System.out.printf("TTFB_P50: %.2f ms.%n", getP50TimeToFirstByte());
+        System.out.printf("TTFB_P90: %.2f ms.%n", getP90TimeToFirstByte());
+        System.out.printf("TTFB_P99: %.2f ms.%n", getP99TimeToFirstByte());
     }
 
     private static double round(double value) {
