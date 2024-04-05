@@ -311,7 +311,7 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.g512_instance_id_1 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.g512_instance_id_2 }}
-          cd /home/ubuntu/djl_benchmark_script/scripts
+          ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.g612_instance_id_1 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.g612_instance_id_2 }}
