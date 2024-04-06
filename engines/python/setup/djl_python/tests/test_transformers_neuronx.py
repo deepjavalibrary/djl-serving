@@ -30,10 +30,10 @@ MOCK_MODULES = [
 ]
 mock_import_modules(MOCK_MODULES)
 
-from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
+from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy
 from djl_python.transformers_neuronx import TransformersNeuronXService
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
-from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch, GenerationStrategy
+from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 
 
 @parameterized
@@ -106,7 +106,7 @@ class TestTransformerNeuronXService(unittest.TestCase):
             expected.task = "text-generation"
         if expected.rolling_batch != "disable":
             expected.batch_size = expected.max_rolling_batch_size
-            expected.rolling_batch_strategy = GenerationStrategy.naive_rolling_batch
+            expected.rolling_batch_strategy = TnXGenerationStrategy.naive_rolling_batch
         model_loader_classes = [
             TNXModelLoader.__class__.__name__,
             OptimumModelLoader.__class__.__name__

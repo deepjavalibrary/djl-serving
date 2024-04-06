@@ -2,7 +2,7 @@ import os
 import json
 import unittest
 from djl_python.properties_manager.properties import Properties
-from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
+from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema, TnXMemoryLayout
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
@@ -11,7 +11,6 @@ from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeur
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
 from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
 from djl_python.chat_completions.chat_properties import ChatProperties
-from djl_python.rolling_batch.neuron_rolling_batch import GenerationStrategy
 
 import torch
 
@@ -115,7 +114,6 @@ class TestConfigManager(unittest.TestCase):
                          str(properties['compiled_graph_path']))
 
     def test_tnx_all_configs(self):
-        # TODO: Replace with actual example of context_length_estimate
 
         properties = {
             "n_positions": "2048",
@@ -131,7 +129,10 @@ class TestConfigManager(unittest.TestCase):
             "group_query_attention": "shard-over-heads",
             "fuse_qkv": "true",
             "enable_saturate_infinity": "true",
-            "rolling_batch_strategy": "continuous_batching"
+            "rolling_batch_strategy": "continuous_batching",
+            "collectives_layout": "HSB",
+            "on_device_embedding": "true",
+            "partition_schema": "legacy"
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -157,7 +158,11 @@ class TestConfigManager(unittest.TestCase):
                         properties['group_query_attention'])
         self.assertTrue(tnx_configs.fuse_qkv)
         self.assertEqual(tnx_configs.rolling_batch_strategy,
-                         GenerationStrategy.continuous_batching)
+                         TnXGenerationStrategy.continuous_batching)
+        self.assertEqual(tnx_configs.collectives_layout,
+                         TnXMemoryLayout.LAYOUT_HSB)
+        self.assertTrue(tnx_configs.on_device_embedding)
+        self.assertEqual(tnx_configs.partition_schema, TnXModelSchema.legacy)
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):

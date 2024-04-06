@@ -17,10 +17,10 @@ from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
 from djl_python import Input, Output
 from djl_python.encode_decode import decode, encode
 from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
-from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch, GenerationStrategy
+from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
-from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
+from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy
 from djl_python.properties_manager.properties import StreamingEnum
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config
@@ -45,34 +45,36 @@ class TransformersNeuronXService(object):
         self.rolling_batch_config = dict()
         self._model_loader_class = OptimumModelLoader
 
-    def set_model_loader_class(self):
-        if self.config.model_loader == "optimum":
-            logging.info("Loading model using OptimumModelLoader")
-            return
-
-        if self.config.model_loader == "tnx":
-            self._model_loader_class = TNXModelLoader
-            logging.info("Loading model using TNXModelLoader")
-            return
-
-        use_tnx = False
+    def optimum_not_supported(self) -> bool:
+        support = False
         if self.model_config.architectures is not None and any(
                 "CausalLM" in arch
                 for arch in self.model_config.architectures):
             # Limit optimum model loading to implemented models listed in the constant above
-            use_tnx = self.model_config.model_type not in OPTIMUM_CAUSALLM_MODEL_TYPES
+            support = self.model_config.model_type not in OPTIMUM_CAUSALLM_MODEL_TYPES
             # Optimum only compiles for rolling batch for models that support it
-            use_tnx = use_tnx or (
+            support = support or (
                 self.model_config.model_type
                 in OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS
                 and self.config.rolling_batch == "disable")
+        return support
+
+    def set_model_loader_class(self):
+        if self.config.model_loader == "optimum":
+            logging.info("Loading model using OptimumModelLoader...")
+            return
+
+        if self.config.model_loader == "tnx":
+            self._model_loader_class = TNXModelLoader
+            logging.info("Loading model using TNXModelLoader...")
+            return
+
         # Limit optimum model loading from using non hf schema models or using non-implemented neuron configs
-        use_tnx = use_tnx or self.config.load_split_model or self.config.load_in_8bit
-        if use_tnx:
-            logging.info("Loading model using TNXModelLoader")
+        if self.optimum_not_supported():
+            logging.info("Loading model using TNXModelLoader...")
             self._model_loader_class = TNXModelLoader
         else:
-            logging.info("Loading model using OptimumModelLoader")
+            logging.info("Loading model using OptimumModelLoader...")
 
     def set_configs(self, properties):
         self.config = TransformerNeuronXProperties(**properties)
@@ -87,9 +89,9 @@ class TransformersNeuronXService(object):
 
         if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy is None:
             if self.model_config.model_type in OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS:
-                self.config.rolling_batch_strategy = GenerationStrategy.continuous_batching
+                self.config.rolling_batch_strategy = TnXGenerationStrategy.continuous_batching
             else:
-                self.config.rolling_batch_strategy = GenerationStrategy.naive_rolling_batch
+                self.config.rolling_batch_strategy = TnXGenerationStrategy.naive_rolling_batch
 
         logging.info(f"Model loading properties: {self.config}")
         self.set_model_loader_class()
@@ -131,7 +133,9 @@ class TransformersNeuronXService(object):
         self.set_tokenizer()
         self.set_model_loader()
         self.model = self.model_loader.partition(
-            self.config.save_mp_checkpoint_path, tokenizer=self.tokenizer)
+            self.config.save_mp_checkpoint_path,
+            tokenizer=self.tokenizer,
+            model_schema=self.config.partition_schema)
         self.set_rolling_batch()
         self.initialized = True
 

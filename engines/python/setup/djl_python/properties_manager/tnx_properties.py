@@ -20,7 +20,6 @@ from pydantic.v1 import validator, root_validator
 from enum import IntEnum, Enum
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum
-from djl_python.rolling_batch.neuron_rolling_batch import GenerationStrategy
 
 
 class OptimizeLevel(IntEnum):
@@ -51,6 +50,24 @@ class TnXModelLoaders(str, Enum):
     optimum = "optimum"
 
 
+class TnXModelSchema(str, Enum):
+    legacy = "legacy"
+    optimum = "optimum"
+    safetensors = "safetensors"
+    compile_only = "compile_only"
+
+
+class TnXGenerationStrategy(str, Enum):
+    continuous_batching = "continuous_batching"
+    naive_rolling_batch = "naive_rolling_batch"
+
+
+class TnXMemoryLayout(str, Enum):
+    LAYOUT_BSH = "BSH"
+    LAYOUT_HSB = "HSB"
+    LAYOUT_SBH = "SBH"
+
+
 TNX_SUPPORTED_ROLLING_BATCH_TYPES = ['auto']
 
 
@@ -73,8 +90,11 @@ class TransformerNeuronXProperties(Properties):
     save_mp_checkpoint_path: Optional[str] = None
     group_query_attention: Optional[str] = None
     model_loader: Optional[TnXModelLoaders] = None
-    rolling_batch_strategy: Optional[GenerationStrategy] = None
+    rolling_batch_strategy: Optional[TnXGenerationStrategy] = None
     fuse_qkv: Optional[bool] = False
+    on_device_embedding: Optional[bool] = False
+    collectives_layout: Optional[TnXMemoryLayout] = None
+    partition_schema: Optional[TnXModelSchema] = None
 
     @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
@@ -168,4 +188,53 @@ class TransformerNeuronXProperties(Properties):
         if properties['quantize'] and properties[
                 'quantize'].value == TnXQuantizeMethods.static_int8.value:
             properties['load_in_8bit'] = True
+        return properties
+
+    @root_validator(skip_on_failure=True)
+    def validate_schema_loader_combination(cls, properties):
+        if properties.get('model_loader') and properties[
+                'model_loader'].value == TnXModelLoaders.tnx.value:
+            if properties.get('partition_schema') and properties[
+                    'partition_schema'] == TnXModelSchema.optimum:
+                raise ValueError(
+                    f"Transformers NeuronX model loader does not support optimum cache partitioning. "
+                    f"Supported values are: {[v.value for v in TnXModelSchema if v.value != TnXModelSchema.optimum]}"
+                )
+        if properties.get('model_loader') and properties[
+                'model_loader'].value == TnXModelLoaders.optimum.value:
+            if properties.get('partition_schema') and properties[
+                    'partition_schema'] != TnXModelSchema.optimum:
+                raise ValueError(
+                    f"Optimum model loader does not support non-optimum cache partitioning. "
+                    f"Supported values are: {TnXModelSchema.optimum.value}")
+
+        if properties.get('partition_schema') and properties[
+                'partition_schema'] == TnXModelSchema.optimum and properties.get(
+                    'model_loader') is None:
+            properties['model_loader'] = TnXModelLoaders.optimum
+        if properties.get('partition_schema') and properties[
+                'partition_schema'] != TnXModelSchema.optimum and properties.get(
+                    'model_loader') is None:
+            properties['model_loader'] = TnXModelLoaders.tnx
+        return properties
+
+    @root_validator(pre=True)
+    def set_model_loader(cls, properties):
+        if properties.get('model_loader') is None:
+            if properties.get('fuse_qkv') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get('collectives_layout') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get('on_device_embedding') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get('load_in_8bit') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get('quantize') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get('load_split_model') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get('compiled_graph_path') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get('context_length_estimate') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
         return properties

@@ -11,14 +11,9 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import torch
-from enum import Enum
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NaiveRollingBatchNeuronGenerator, ContinuousBatchingNeuronGenerator
-
-
-class GenerationStrategy(str, Enum):
-    continuous_batching = "continuous_batching"
-    naive_rolling_batch = "naive_rolling_batch"
+from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy
 
 
 class NeuronRollingBatch(RollingBatch):
@@ -28,7 +23,7 @@ class NeuronRollingBatch(RollingBatch):
                  tokenizer,
                  batch_size: int,
                  n_positions: int,
-                 strategy: str = GenerationStrategy.continuous_batching,
+                 strategy: str = TnXGenerationStrategy.continuous_batching,
                  **kwargs) -> None:
         """
         Initializes the NeuronRollingBatch.
@@ -40,7 +35,7 @@ class NeuronRollingBatch(RollingBatch):
         """
         self.strategy = strategy
         self._scheduler_class = ContinuousBatchingNeuronGenerator
-        if self.strategy == GenerationStrategy.naive_rolling_batch:
+        if self.strategy == TnXGenerationStrategy.naive_rolling_batch:
             self._scheduler_class = NaiveRollingBatchNeuronGenerator
         super().__init__(**kwargs)
         self.scheduler = self._scheduler_class(model, tokenizer, batch_size,
