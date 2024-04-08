@@ -144,6 +144,26 @@ public final class LmiConfigRecommender {
         }
     }
 
+    static void setRollingBatchSize(Properties lmiProperties) {
+        if (lmiProperties.containsKey("option.max_rolling_batch_size")) {
+            return;
+        }
+        String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
+        int rollingBatchSize = 32;
+        if ("vllm".equals(rollingBatch) || "lmi-dist".equals(rollingBatch)) {
+            rollingBatchSize = 256;
+        }
+        if ("trtllm".equals(rollingBatch)
+                || ("auto".equals(rollingBatch)
+                        && isTrtLLMEnabled(Utils.getEnvOrSystemProperty("SERVING_FEATURES")))) {
+            if (lmiProperties.containsKey("option.max_num_tokens")) {
+                rollingBatchSize = 256;
+            }
+        }
+        lmiProperties.setProperty(
+                "option.max_rolling_batch_size", String.valueOf(rollingBatchSize));
+    }
+
     private static boolean isVLLMEnabled(String features) {
         return features != null && features.contains("vllm");
     }
