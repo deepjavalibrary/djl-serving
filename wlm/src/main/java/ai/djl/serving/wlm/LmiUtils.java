@@ -84,6 +84,11 @@ public final class LmiUtils {
         return false;
     }
 
+    static boolean isRollingBatchEnabled(Properties properties) {
+        String rollingBatch = properties.getProperty("option.rolling_batch");
+        return null != rollingBatch && !"disable".equals(rollingBatch);
+    }
+
     static boolean needConvert(ModelInfo<?, ?> info) {
         Properties properties = info.getProperties();
         return isTrtLLMRollingBatch(info.getProperties())

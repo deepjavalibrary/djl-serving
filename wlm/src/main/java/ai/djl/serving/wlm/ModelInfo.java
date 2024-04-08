@@ -806,6 +806,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         if (engineName == null) {
             engineName = inferEngine();
         }
+        // TODO: capture this in the LmiConfigRecommender.configure method once we refactor that to
+        // run always, not just when engine is missing
+        if (LmiUtils.isRollingBatchEnabled(this.getProperties())) {
+            LmiConfigRecommender.setRollingBatchSize(this.getProperties());
+        }
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<Object, Object> entry : prop.entrySet()) {
