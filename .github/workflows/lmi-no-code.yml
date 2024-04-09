@@ -75,7 +75,7 @@ jobs:
       max-parallel: 1
       fail-fast: false
       matrix:
-        container: [tensorrt-llm, deepspeed]
+        container: [deepspeed]
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -166,7 +166,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: [tensorrt-llm, deepspeed]
+        container: [deepspeed]
         machine: [g5, g6]
     steps:
       - uses: actions/checkout@v4
