@@ -27,7 +27,7 @@ EXCLUDE_PROPERTIES = [
 
 class PropertiesManager(object):
 
-    def __init__(self, args):
+    def __init__(self, args, **kwargs):
         self.entry_point_url = None
         self.properties_dir = args.properties_dir
         self.properties = load_properties(self.properties_dir)
@@ -43,6 +43,9 @@ class PropertiesManager(object):
         if args.tensor_parallel_degree:
             self.properties[
                 'option.tensor_parallel_degree'] = args.tensor_parallel_degree
+
+        if 'addl_properties' in kwargs:
+            self.properties |= kwargs['addl_properties']
 
         self.is_mpi_mode = is_engine_mpi_mode(self.properties.get('engine'))
 
