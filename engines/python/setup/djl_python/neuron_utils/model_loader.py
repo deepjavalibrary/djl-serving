@@ -367,9 +367,10 @@ class TNXModelLoader(ModelLoader):
                 "Model partitioning does not support split model artifacts. Use normal model artifacts and rerun."
             )
 
-        if os.path.exists(save_path):
-            shutil.rmtree(save_path)
-        os.mkdir(save_path)
+        if not os.path.ismount(save_path):
+            if os.path.exists(save_path):
+                shutil.rmtree(save_path)
+            os.mkdir(save_path)
 
         if model_schema == TnXModelSchema.safetensors:
             # Raise an error pending finalized schema for using safetensors
