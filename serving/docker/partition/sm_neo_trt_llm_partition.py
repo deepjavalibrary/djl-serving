@@ -15,7 +15,7 @@ import logging
 import sys
 
 from utils import load_properties
-from neo_utils import InputConfiguration, CompilationFatalError, write_error_to_file, get_neo_env_vars, get_neo_compiler_flags
+from sm_neo_utils import InputConfiguration, CompilationFatalError, write_error_to_file, get_neo_env_vars, get_neo_compiler_flags
 from tensorrt_llm_toolkit import create_model_repo
 
 # TODO: Merge the functionality of this file into trt_llm_partition.py
