@@ -2,9 +2,9 @@
 
 - [Overview - Large Model Inference (LMI) Containers](#overview---large-model-inference-lmi-containers)
 - [QuickStart](#quickstart)
-  - [Using the SageMaker Python SDK](#using-the-sagemaker-python-sdk-to-deploy-your-first-model-with-lmi)
   - [Sample Notebooks](#sample-notebooks)
-  - [Deployment Guide](#deployment-guide)
+  - [Starting Guide](#starting-guide)
+  - [Advanced Deployment Guide](#advanced-deployment-guide)
 - [Supported LMI Inference Libraries](#supported-lmi-inference-libraries)
 
 # Overview - Large Model Inference (LMI) Containers
@@ -33,57 +33,11 @@ You can learn more about the components of LMI [here](deployment_guide/README.md
 
 ## QuickStart
 
-### Using the SageMaker Python SDK to deploy your first model with LMI
+Our recommended progression for the LMI documentation is as follows:
 
-The [SageMaker Python SDK](https://github.com/aws/sagemaker-python-sdk) is our recommended way of deploying LLMs using LMI on SageMaker.
-
-Here is how you can deploy [TheBloke/Llama2-7b-fp16](https://huggingface.co/TheBloke/Llama-2-7B-fp16) model using LMI with the SDK:
-
-```python
-# Assumes SageMaker Python SDK is installed. For example: "pip install sagemaker"
-import sagemaker
-from sagemaker import image_uris, Model, Predictor
-from sagemaker.serializers import JSONSerializer
-from sagemaker.deserializers import JSONDeserializer
-
-# Setup role and sagemaker session
-iam_role = sagemaker.get_execution_role() 
-sagemaker_session = sagemaker.session.Session()
-region = sagemaker_session._region_name
-
-# Fetch the uri of the LMI DeepSpeed container that supports vLLM, LMI-Dist, and DeepSpeed backends
-container_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
-
-# Create the SageMaker Model object. In this example we'll use vLLM as our inference backend
-model = Model(
-  image_uri=container_image_uri,
-  role=iam_role,
-  env={
-    "HF_MODEL_ID": "TheBloke/Llama-2-7B-fp16",
-    "TENSOR_PARALLEL_DEGREE": "max",
-    "OPTION_ROLLING_BATCH": "vllm",
-  }
-)
-
-# Deploy your model to a SageMaker Endpoint and create a Predictor to make inference requests
-endpoint_name = sagemaker.utils.name_from_base("llama-7b-endpoint")
-model.deploy(instance_type="ml.g5.2xlarge", initial_instance_count=1, endpoint_name=endpoint_name)
-predictor = Predictor(
-  endpoint_name=endpoint_name,
-  sagemaker_session=sagemaker_session,
-  serializer=JSONSerializer(),
-  deserializer=JSONDeserializer(),
-)
-
-# Make an inference request against the llama2-7b endpoint
-outputs = predictor.predict({
-  "inputs": "The diamondback terrapin was the first reptile to be",
-  "parameters": {
-    "do_sample": True,
-    "max_new_tokens": 256,
-  }
-})
-```
+1. [Sample Notebooks](#sample-notebooks): We provide sample notebooks for popular models that can be run as-is. This is the quickest way to start deploying models with LMI.
+2. [Starting Guide](#starting-guide): The starter guide describes a simplified UX for configuring LMI containers. This UX is applicable across all LMI containers, and focuses on the most important configurations available for tuning performance.
+3. [Deployment Guide](#advanced-deployment-guide): The deployment guide is an advanced guide tailored for users that want to squeeze the most performance out of LMI. It is intended for users aiming to deploy LLMs in a production setting, using a specific backend.
 
 ### Sample Notebooks
 The following table provides notebooks that demonstrate how to deploy popular open source LLMs using LMI containers on SageMaker.
@@ -106,10 +60,16 @@ That repository will be continuously updated with examples.
 **Note: Some models in the table above are available from multiple providers. 
 We link to the specific model we tested with, but we expect same model from a different provider (or a fine-tuned variant) to work.**
 
-### Deployment Guide
+### Starting Guide
+
+The [starting guide](user_guides/starting-guide.md) is our recommended introduction for all users. 
+This guide provides a simplified UX through a reduced set of configurations that are applicable to all LMI containers starting from v0.27.0. 
+
+### Advanced Deployment Guide
 
 We have put together a comprehensive [deployment guide](deployment_guide/README.md) that takes you through the steps needed to deploy a model using LMI containers on SageMaker.
 The document covers the phases from storing your model artifacts through benchmarking your SageMaker endpoint.
+It is intended for users moving towards deploying LLMs in production settings.
 
 ## Supported LMI Inference Libraries
 
