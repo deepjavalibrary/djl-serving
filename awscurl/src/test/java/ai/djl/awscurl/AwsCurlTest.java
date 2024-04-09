@@ -311,6 +311,35 @@ public class AwsCurlTest {
     }
 
     @Test
+    public void testOpenAiJsonLines() {
+        System.setProperty("TOKENIZER", "gpt2");
+        TokenUtils.setTokenizer(); // reset tokenizer
+        AsciiString contentType = AsciiString.cached("application/jsonlines");
+        TestHttpHandler.setContent(
+                "{\"id\": \"0\", \"choices\": [{\"delta\": {\"content\": \" Hello\"}}]}\n"
+                    + "{\"id\": \"1\", \"choices\": [{\"delta\": {\"content\": \" World\"}}]}\n",
+                contentType);
+        String[] args = {
+            "http://localhost:18080/invocations",
+            "-H",
+            "Content-type: application/json",
+            "-d",
+            "{}",
+            "-c",
+            "1",
+            "-N",
+            "2",
+            "-P",
+            "-t",
+            "-j",
+            "choices/delta/content"
+        };
+        Result ret = AwsCurl.run(args);
+        Assert.assertEquals(ret.getTotalTokens(), 4);
+        Assert.assertNotNull(ret.getTokenThroughput());
+    }
+
+    @Test
     public void testServerSentEvent() {
         System.setProperty("TOKENIZER", "gpt2");
         System.setProperty("EXCLUDE_INPUT_TOKEN", "true");
