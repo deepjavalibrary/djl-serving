@@ -21,3 +21,4 @@ The available backends and their respective user guides are available below:
 * [vLLM](vllm_user_guide.md)
 * [TensorRT-LLM](trt_llm_user_guide.md)
 * [Transformers-NeuronX](tnx_user_guide.md)
+* [HuggingFace Accelerate](hf_accelerate.md)
