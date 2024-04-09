@@ -43,12 +43,12 @@ final class JsonUtils {
             JsonObject obj = element.getAsJsonObject();
             JsonElement e;
             if (names == null) {
-                e = find(obj, new String[] {"token", "text"});
+                e = find(obj, new String[] {"token", "text"}, 0);
                 if (e == null) {
                     e = obj.get("generated_text");
                 }
             } else {
-                e = find(obj, names);
+                e = find(obj, names, 0);
             }
             if (e != null) {
                 if (e.isJsonPrimitive()) {
@@ -87,13 +87,13 @@ final class JsonUtils {
             if (name == null) {
                 outputs = map.get("outputs");
                 if (outputs == null) {
-                    outputs = find(map, new String[] {"token", "text"});
+                    outputs = find(map, new String[] {"token", "text"}, 0);
                     if (outputs == null) {
                         outputs = map.get("generated_text");
                     }
                 }
             } else {
-                outputs = find(map, name);
+                outputs = find(map, name, 0);
             }
             if (outputs != null) {
                 if (outputs.isJsonArray()) {
@@ -129,15 +129,25 @@ final class JsonUtils {
         return hasError;
     }
 
-    static JsonElement find(JsonObject root, String[] names) {
-        JsonElement ret = null;
-        JsonObject obj = root;
-        for (String key : names) {
-            ret = obj.get(key);
-            if (ret != null && ret.isJsonObject()) {
-                obj = ret.getAsJsonObject();
+    static JsonElement find(JsonElement root, String[] names, int level) {
+        if (root != null && level <= names.length) {
+            if (root.isJsonObject()) {
+                JsonObject obj = root.getAsJsonObject();
+                JsonElement ret = obj.get(names[level]);
+                return find(ret, names, ++level);
+            } else if (root.isJsonArray()) {
+                JsonArray array = root.getAsJsonArray();
+                for (int i = 0; i < array.size(); ++i) {
+                    JsonElement element = array.get(i);
+                    JsonElement ret = find(element, names, level);
+                    if (ret != null) {
+                        return ret;
+                    }
+                }
+            } else if (level == names.length) {
+                return root;
             }
         }
-        return ret;
+        return null;
     }
 }
