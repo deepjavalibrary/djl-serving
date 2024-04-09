@@ -479,6 +479,18 @@ public class ModelServer {
                 return null;
             }
 
+            // workaround to prevent duplicate loading when HF_MODEL_ID points to a path we already
+            // loaded
+            // we use HF_MODEL_ID to load the model since we create serving.properties on the fly
+            String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
+            if (huggingFaceModelId != null && path.startsWith(huggingFaceModelId)) {
+                logger.debug(
+                        "HF_MODEL_ID points to the same path {}. Will load model via HF_MODEL_ID"
+                                + " handling",
+                        path);
+                return null;
+            }
+
             path = Utils.getNestedModelDir(path);
             String url = path.toUri().toURL().toString();
             String modelName = ModelInfo.inferModelNameFromUrl(url);
