@@ -256,12 +256,12 @@ public class ModelInfoTest {
                 new HashMap<>() {
                     {
                         put("TheBloke/Llama-2-7B-fp16", "lmi-dist");
-                        put("openai-community/gpt2", "vllm");
+                        put("openai-community/gpt2", "lmi-dist");
                         put("tiiuae/falcon-7b", "lmi-dist");
-                        put("mistralai/Mistral-7B-v0.1", "vllm");
-                        put("src/test/resources/local-hf-model", "vllm");
+                        put("mistralai/Mistral-7B-v0.1", "lmi-dist");
+                        put("src/test/resources/local-hf-model", "lmi-dist");
                         put("HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable");
-                        put("THUDM/chatglm3-6b", "vllm");
+                        put("THUDM/chatglm3-6b", "lmi-dist");
                     }
                 };
         Path modelStore = Paths.get("build/models");
