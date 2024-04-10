@@ -24,7 +24,7 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
 from djl_python.properties_manager.properties import StreamingEnum
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config
-from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
+from djl_python.utils import parse_input
 
 model = None
 
@@ -139,71 +139,9 @@ class TransformersNeuronXService(object):
         self.set_rolling_batch()
         self.initialized = True
 
-    def parse_input(self, inputs):
-        input_data = []
-        input_size = []
-        parameters = []
-        errors = {}
-        batch = inputs.get_batches()
-        first = True
-        for i, item in enumerate(batch):
-            try:
-                content_type = item.get_property("Content-Type")
-                input_map = decode(item, content_type)
-
-                if is_chat_completions_request(input_map):
-                    _inputs, param = parse_chat_completions_request(
-                        input_map, self.rolling_batch is not None,
-                        self.tokenizer)
-                else:
-                    _inputs = input_map.pop("inputs", input_map)
-                    param = input_map.pop("parameters", {})
-                    if "output_formatter" not in param:
-                        param[
-                            "output_formatter"] = self.config.output_formatter
-                    if first or self.rolling_batch:
-                        parameters.append(param)
-                        first = False
-                    else:
-                        if parameters[0] != param:
-                            logging.warning(
-                                f"expected param: {parameters}, actual: {param}"
-                            )
-                            raise ValueError(
-                                "In order to enable dynamic batching, all input batches must have the same parameters"
-                            )
-
-                if first or self.rolling_batch:
-                    first = False
-                elif parameters[0] != param:
-                    raise ValueError(
-                        f"In order to enable dynamic batching, all input batches must have the "
-                        f"same parameters, expected param: {parameters[0]}, actual: {param}"
-                    )
-
-                if isinstance(_inputs, list):
-                    input_data.extend(_inputs)
-                    input_size.append(len(_inputs))
-                else:
-                    input_data.append(_inputs)
-                    input_size.append(1)
-
-                if not "output_formatter" in param:
-                    param["output_formatter"] = self.config.output_formatter
-                if self.rolling_batch:
-                    param["stream"] = input_map.pop("stream", False)
-
-                for _ in range(input_size[i]):
-                    parameters.append(param)
-            except Exception as e:  # pylint: disable=broad-except
-                logging.exception(f"Parse input failed: {i}")
-                errors[i] = str(e)
-
-        return input_data, input_size, parameters, errors, batch
-
     def inference(self, inputs):
-        input_data, input_size, parameters, errors, batch = self.parse_input(
-            inputs)
+        input_data, input_size, parameters, errors, batch = parse_input(
+            inputs, self.tokenizer, self.config.output_formatter)
         outputs = Output()
 
         if self.rolling_batch:

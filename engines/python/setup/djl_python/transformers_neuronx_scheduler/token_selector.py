@@ -12,7 +12,8 @@
 # the specific language governing permissions and limitations under the License.
 # The below code is heavily inspired from Optimum Neuron under the following link:
 # https://github.com/huggingface/optimum-neuron/blob/974f34336bb36b1b64890c191c558a1575372be7/optimum/neuron/generation/token_selector.py
-import logging
+
+import copy
 from typing import Optional, Union, List
 import torch
 from transformers.generation import (
@@ -27,7 +28,7 @@ from transformers.generation import LogitsWarper
 
 
 class FastTopKLogitsWarper(LogitsWarper):
-    r"""Returns [batch_size, top_k] scores and indices instead of [batch_size, vocab_size] scores."""
+    """Returns [batch_size, top_k] scores and indices instead of [batch_size, vocab_size] scores."""
 
     def __init__(self, top_k: int):
         self.top_k = top_k
@@ -66,12 +67,15 @@ class TokenSelector:
         eos_token_id: Union[List[int], int],
         pad_token_id: int,
         logits_warper: Optional[LogitsProcessorList] = None,
+        seed: Optional[int] = 0,
     ):
         self.mode = mode
         self.logits_processor = logits_processor
         self.stopping_criteria = stopping_criteria
         self.eos_token_id = eos_token_id
         self.pad_token_id = pad_token_id
+        self.generator = torch.Generator()
+        self.generator.manual_seed(seed)
         self.logits_warper = logits_warper
         if self.mode == GenerationMode.SAMPLE:
             assert len(self.logits_warper) > 0
@@ -83,9 +87,15 @@ class TokenSelector:
                     last_warper.top_k)
 
     @classmethod
-    def create(cls, input_ids: torch.Tensor,
-               generation_config: GenerationConfig, model: GenerationMixin,
-               max_seq_length: int) -> "TokenSelector":
+    def create(
+        cls,
+        input_ids: torch.Tensor,
+        generation_config: GenerationConfig,
+        model: GenerationMixin,
+        max_seq_length: int,
+        stopping_criteria: Optional[StoppingCriteriaList] = None,
+        seed: Optional[int] = 0,
+    ) -> "TokenSelector":
         r"""Creates the `TokenSelector` for a specific generation configuration.
 
         Args:
@@ -97,10 +107,16 @@ class TokenSelector:
                 The model provides the internal helpers allowing to select the logits processors and stopping criterias.
             max_seq_length (`int`):
                 The maximum number of input + generated tokens for this model. It depends on the model compilation parameters.
+            stopping_criteria (`Optional[transformers.generation.StoppingCriteriaList], defaults to `None`):
+                Custom stopping criteria that complement the default stopping criteria built from arguments and a
+                generation config.
+            seed(`Optional[int]`):
+                The optional seed for sampling. Defaults to zero.
         Return:
             `torch.LongTensor`: A `torch.LongTensor` containing the selected tokens.
         """
         generation_config.validate()
+        generation_config = copy.deepcopy(generation_config)
 
         unsupported_generation_flags = [
             "output_attentions",
@@ -133,8 +149,10 @@ class TokenSelector:
             prefix_allowed_tokens_fn=None,
             logits_processor=LogitsProcessorList(),
         )
+        if stopping_criteria is None:
+            stopping_criteria = StoppingCriteriaList()
         stopping_criteria = model._get_stopping_criteria(
-            generation_config, stopping_criteria=StoppingCriteriaList())
+            generation_config, stopping_criteria=stopping_criteria)
 
         # The generation requires special tokens
         eos_token_id = generation_config.eos_token_id
@@ -153,14 +171,13 @@ class TokenSelector:
         if generation_mode == GenerationMode.SAMPLE:
             logits_warper = model._get_logits_warper(generation_config)
 
-        return cls(
-            mode=generation_mode,
-            logits_processor=logits_processor,
-            stopping_criteria=stopping_criteria,
-            logits_warper=logits_warper,
-            eos_token_id=eos_token_id,
-            pad_token_id=generation_config.pad_token_id,
-        )
+        return cls(mode=generation_mode,
+                   logits_processor=logits_processor,
+                   stopping_criteria=stopping_criteria,
+                   logits_warper=logits_warper,
+                   eos_token_id=eos_token_id,
+                   pad_token_id=generation_config.pad_token_id,
+                   seed=seed)
 
     def select(self, input_ids: torch.LongTensor,
                logits: torch.Tensor) -> (torch.LongTensor, torch.Tensor):
