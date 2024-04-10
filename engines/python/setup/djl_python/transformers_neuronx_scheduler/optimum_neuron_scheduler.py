@@ -240,8 +240,10 @@ class ContinuousBatchingNeuronGenerator(NeuronGenerator):
             slot_input_ids = input_ids[i:i + 1, :]
             # Padded input ids are also required to set logits processors and stopping criterion
             selector = TokenSelector.create(slot_input_ids,
-                                            slot.generation_config, self.model,
-                                            self.n_positions)
+                                            slot.generation_config,
+                                            self.model,
+                                            self.n_positions,
+                                            seed=slot.seed)
             slot_input_ids = slot_input_ids.squeeze().type(torch.int32)
             slot_attention_mask = attention_mask[i]
             slot_cache_ids = cache_ids[i]

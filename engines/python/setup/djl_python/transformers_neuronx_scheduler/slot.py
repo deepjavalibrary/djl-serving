@@ -18,7 +18,9 @@ from transformers.generation import GenerationConfig
 from djl_python.rolling_batch.rolling_batch import Request, filter_unused_generation_params
 from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText, TokenDecoder
 
-NEURON_GENERATION_PARAMS = set(GenerationConfig().__dict__.keys())
+GENERATION_PARAMS = list(GenerationConfig().__dict__.keys())
+TOKEN_SELECTION_PARAMS = ["seed"]
+NEURON_GENERATION_PARAMS = set(GENERATION_PARAMS + TOKEN_SELECTION_PARAMS)
 
 
 def translate_neuronx_params(parameters: dict) -> dict:
@@ -55,6 +57,7 @@ class Slot:
         self._next_token_text = ""
         self._cache_id = torch.zeros(1)
         self._token_decoder = None
+        self.seed = 0
 
     @property
     def id(self) -> int:
@@ -102,17 +105,20 @@ class Slot:
         self._generation_config = copy.deepcopy(generation_config)
         # Update generation config with token chooser parameters
         param = translate_neuronx_params(request.parameters)
-        self._generation_config.temperature = param.get("temperature", 0.9)
-        self._generation_config.top_k = param.get("top_k", 0)
-        self._generation_config.top_p = param.get("top_p", 1.0)
-        self._generation_config.typical_p = param.get("typical_p", 1.0)
         self._generation_config.do_sample = param.get("do_sample", False)
+        if self._generation_config.do_sample:
+            self._generation_config.temperature = param.get("temperature", 0.9)
+            self._generation_config.top_k = param.get("top_k", 0)
+            self._generation_config.top_p = param.get("top_p", 1.0)
+            self._generation_config.typical_p = param.get("typical_p", 1.0)
+
         self._generation_config.repetition_penalty = param.get(
             "repetition_penalty", 1.0)
         self._generation_config.max_new_tokens = param.get(
             "max_new_tokens", 30)
         # TODO: stop_sequences, ignore_eos_token
         self._token_decoder = TokenDecoder(tokenizer)
+        self.seed = int(param.get("seed", 0))
         filter_unused_generation_params(param, NEURON_GENERATION_PARAMS,
                                         "neuron")
 
