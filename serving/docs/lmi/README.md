@@ -121,6 +121,7 @@ You can learn more about their integration with LMI from the respective user gui
 * [LMI-Dist - User Guide](user_guides/lmi-dist_user_guide.md)
 * [TensorRT-LLM - User Guide](user_guides/trt_llm_user_guide.md)
 * [Transformers NeuronX - User Guide](user_guides/tnx_user_guide.md)
+* [HuggingFace Accelerate - User Guide](user_guides/hf_accelerate.md)
 
 LMI provides access to multiple libraries to enable users to find the best stack for their model and use-case. 
 Each inference framework provides a unique set of features and optimizations that can be tuned for your model and use case.
@@ -135,6 +136,7 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 |------------------------|-----------------|------------------------------------------------------------------------------------------|
 | `vLLM`                 | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
 | `lmi-dist`             | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
+| `hf-accelerate`        | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
 | `deepspeed`            | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
 | `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-tensorrtllm0.8.0-cu122 |
 | `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-neuronx-sdk2.18.0      |
