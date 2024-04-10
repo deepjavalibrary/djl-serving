@@ -173,6 +173,11 @@ The following options may be added to the `ModelDataSource` field to support unc
             },
 ```
 
+This mechanism is useful when deploying SageMaker endpoints with network isolation.
+Model artifacts will be downloaded by SageMaker and mounted to the container rather than being downloaded by the container at runtime.
+
+If you use this mechanism to deploy the container, you should set `option.model_id=/opt/ml/model` in serving.properties, or `OPTION_MODEL_ID=/opt/ml/model` in environment variables depending on which configuration style you are using.  
+
 Follow this link for a detailed overview of this option: https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-uncompressed.html
 
 Next: [Benchmark your endpoint](benchmarking-your-endpoint.md)

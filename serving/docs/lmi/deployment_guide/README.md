@@ -2,9 +2,11 @@
 
 The following document provides a step-by-step guide for deploying LLMs using LMI Containers on AWS SageMaker.
 This is an in-depth guide that will cover all phases from model artifacts through benchmarking your endpoint.
-If this is your first time using LMI, we highly recommend you start with one of our [example notebooks](../README.md#sample-notebooks) to get familiar with LMI and SageMaker.
+If you are new to LMI, we recommend starting with the [example notebooks](../README.md#sample-notebooks) and [starting guide](../user_guides/starting-guide.md).
 
-Before starting this tutorial, you should have the HuggingFace Model ID (e.g. `TheBloke/Llama-2-13b-fp16`) of the model you aim to deploy.
+Before starting this tutorial, you should have your model artifacts ready.
+If you are deploying a model directly from the HuggingFace Hub, you will need the model-id (e.g. `TheBloke/Llama-2-7B-fp16`).
+If you are deploying a model stored in S3, you will need the s3 uri pointing to your model artifacts (e.g. `s3://my-bucket/my-model/`).
 If you have a custom model, it must be saved in the HuggingFace Transformers Pretrained format.
 You can read [this guide](model-artifacts.md) to verify your model is saved in the correct format for LMI.
 
