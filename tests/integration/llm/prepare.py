@@ -1173,6 +1173,8 @@ def build_trtllm_handler_model(model):
             f"{model} is not one of the supporting handler {list(trtllm_handler_list.keys())}"
         )
     options = trtllm_handler_list[model]
+    # 30 minute waiting for conversion timeout
+    options["model_loading_timeout"] = "1800"
     write_model_artifacts(options)
 
 
