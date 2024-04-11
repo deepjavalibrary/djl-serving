@@ -54,6 +54,8 @@ LMI supports running the Python Engine in mpi mode (referred to as the MPI Engin
 
 Throughout the LMI documentation, we will use the term `backend` to refer to a combination of Engine and Inference Library (e.g. MPI Engine + LMI-Dist library).
 
+You can learn more about the Python and MPI engines in the [engine conceptual guide](../conceptual_guide/lmi_engine.md).
+
 ### Built-In Handlers
 LMI provides built-in inference handlers for all the supported backend.
 These handlers take care of parsing configurations, loading the model onto accelerators, applying optimizations, and executing inference.
