@@ -4,6 +4,7 @@ Starting with v0.27.0, the only required configuration for LMI containers is the
 LMI will apply optimizations and configurations based on the model architecture and available hardware, removing the need manually set them. 
 
 Based on the selected container, LMI will automatically:
+
 * select the best backend based on the model architecture 
 * enable continuous batching if supported for the model architecture to increase throughput
 * configure the engine and operation mode
