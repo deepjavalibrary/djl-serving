@@ -1,9 +1,16 @@
 # Chat Completions API Schema
 
 This document describes the API schema for the chat completions endpoints (`v1/chat/completions`) when using the built-in inference handlers in LMI containers.
-This schema is applicable to our latest release, v0.27.0.
+This schema is supported from v0.27.0 release and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
 
-Chat Completions API supports streaming, and the response format for streaming differs from the response format for non-streaming.
+On SageMaker, Chat Completions API schema is supported with the `/invocations` endpoint without additional configurations.
+If the request contains the "messages" field, LMI will treat the request as a chat completions style request, and respond
+back with the chat completions response style.
+
+This processing happens per request, meaning that you can support our [standard schema](lmi_input_output_schema.md),
+as well as chat completions schema in the same endpoint.
+
+Note: This is an experimental feature. The complete spec has not been implemented.
 
 ## Request Schema
 
@@ -28,6 +35,7 @@ Request Body Fields:
 | `user`              | string                       | no       | example: "test"                           |
 
 Example request using curl
+
 ```
 curl -X POST https://my.sample.endpoint.com/v1/chat/completions \
   -H "Content-type: application/json" \
@@ -86,9 +94,11 @@ Example response:
 }
 ```
 
-When using streaming (i.e. `"stream": true`, or using `option.output_formatter=jsonlines`), the response is returned token by token.
+Chat Completions API supports streaming, and the response format for streaming differs from the response format for non-streaming.
 
-The response is returned as application/jsonlines content-type:
+To use streaming, set `"stream": true`, or `option.output_formatter=jsonlines`).
+
+The response is returned token by token as application/jsonlines content-type:
 
 | Field Name  | Field Type                             | Always Returned | Possible Values                                        |
 |-------------|----------------------------------------|-----------------|--------------------------------------------------------|
@@ -242,11 +252,11 @@ Top log probability information for the choice.
 Usage statistics for the completion request.
 It contains the following fields:
 
-| Field Name          | Type | Description                                                        | Example |
-|---------------------|------|--------------------------------------------------------------------|---------|
-| `completion_tokens` | int  | The token id used for encoding/decoding text                       | 45      |
-| `prompt_tokens`     | int  | the text representation of the toke                                | " of"   |
-| `total_tokens`      | int  | the log probability of the token (closer to 0 means more probable) | -0.12   |
+| Field Name          | Type | Description                                                       | Example |
+|---------------------|------|-------------------------------------------------------------------|---------|
+| `completion_tokens` | int  | Number of tokens in the generated completion.                     | 33      |
+| `prompt_tokens`     | int  | Number of tokens in the prompt.                                   | 100     |
+| `total_tokens`      | int  | Total number of tokens used in the request (prompt + completion). | 133     |
 
 Example:
 
