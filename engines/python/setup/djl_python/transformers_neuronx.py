@@ -169,6 +169,9 @@ class TransformersNeuronXService(object):
             return outputs
 
         parameters = parameters[0]
+        # Remove rolling batch default parameters
+        parameters.pop("output_formatter", None)
+        parameters.pop("stream", None)
         model_kwargs = {}
 
         prompt_size = len(input_data)
@@ -212,7 +215,6 @@ class TransformersNeuronXService(object):
                                                      sample_length,
                                                      **parameters)
         else:
-            parameters.pop("output_formatter")
             output_tokens = self.model.generate(
                 input_ids=encoded_inputs.input_ids,
                 attention_mask=encoded_inputs.attention_mask,
