@@ -13,11 +13,11 @@ FROM ubuntu:20.04
 ARG djl_version=0.28.0~SNAPSHOT
 ARG torch_version=2.1.2
 ARG python_version=3.9
-ARG neuronsdk_version=2.18.0
+ARG neuronsdk_version=2.18.1
 ARG torch_neuronx_version=2.1.2.2.1.0
-ARG transformers_neuronx_version=0.10.0.21
+ARG transformers_neuronx_version=0.10.0.360
 ARG neuronx_distributed_version=0.7.0
-ARG neuronx_cc_version=2.13.66.0
+ARG neuronx_cc_version=2.13.68.0
 ARG protobuf_version=3.19.6
 ARG transformers_version=4.36.2
 ARG accelerate_version=0.23.0
