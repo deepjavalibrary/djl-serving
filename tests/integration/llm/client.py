@@ -1077,8 +1077,9 @@ def test_handler_adapters(model, model_spec):
         check_worker_number(spec["worker"])
     # dryrun phase
     reqs = []
-    for adapter in spec.get("adapters"):
-        req = {"inputs": batch_generation(1)[0]}
+    inputs = batch_generation(len(spec.get("adapters")))
+    for i, adapter in enumerate(spec.get("adapters")):
+        req = {"inputs": inputs[i]}
         seq_length = 100
         params = {
             "do_sample": True,
@@ -1116,7 +1117,7 @@ def test_handler_adapters(model, model_spec):
     if "error" not in res:
         raise RuntimeError(f"Should not work with new adapters")
     res = send_json(reqs[1]).content.decode("utf-8")
-    logging.info(f"call deleted adapter {res}")
+    logging.info(f"call valid adapter after deletion {res}")
     if "error" in res:
         raise RuntimeError(f"Deleting adapter breaking inference")
 
