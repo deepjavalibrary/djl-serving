@@ -636,7 +636,7 @@ lmi_dist_model_list = {
     },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
-        "option.tensor_parallel_degree": 1,
+        "option.tensor_parallel_degree": "max",
         "option.task": "text-generation",
         "option.dtype": "fp16",
         "option.adapters": "adapters",
@@ -708,7 +708,7 @@ vllm_model_list = {
     },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
-        "option.tensor_parallel_degree": 1,
+        "option.tensor_parallel_degree": "max",
         "option.task": "text-generation",
         "option.dtype": "fp16",
         "option.adapters": "adapters",
