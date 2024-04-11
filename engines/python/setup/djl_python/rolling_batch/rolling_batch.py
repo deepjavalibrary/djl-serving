@@ -176,6 +176,10 @@ def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
     :return: formatted output
     """
     created = int(time.time())
+    delta = {"content": token.text}
+    if first_token:
+        delta["role"] = "assistant"
+
     logprobs = None
     parameters = details.get("parameters", {})
     if parameters.get("logprobs"):
@@ -195,9 +199,7 @@ def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
         },
     choice = {
         "index": 0,
-        "delta": {
-            "content": token.text
-        },
+        "delta": delta,
         "logprobs": logprobs,
         "finish_reason": details.get("finish_reason")
     }
