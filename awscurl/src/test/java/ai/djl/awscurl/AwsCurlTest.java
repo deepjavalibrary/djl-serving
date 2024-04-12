@@ -366,6 +366,7 @@ public class AwsCurlTest {
         Result ret = AwsCurl.run(args);
         Assert.assertEquals(ret.getTotalTokens(), 6);
         Assert.assertNotNull(ret.getTokenThroughput());
+        System.clearProperty("EXCLUDE_INPUT_TOKEN");
     }
 
     @Test
@@ -384,7 +385,7 @@ public class AwsCurlTest {
             "-H",
             "Content-type: application/json",
             "-d",
-            "{\"inputs\":[\"Hello workd\"]}",
+            "{\"inputs\":[\"Hello world\"]}",
             "-c",
             "1",
             "-N",
@@ -424,6 +425,37 @@ public class AwsCurlTest {
         };
         Result ret = AwsCurl.run(args);
         Assert.assertEquals(ret.getTotalTokens(), 4);
+        Assert.assertNotNull(ret.getTokenThroughput());
+    }
+
+    @Test
+    public void testTgiCoralStream() {
+        System.setProperty("TOKENIZER", "gpt2");
+        TokenUtils.setTokenizer(); // reset tokenizer
+        AsciiString contentType = AsciiString.cached("application/vnd.amazon.eventstream");
+        byte[] line1 = buildCoralEvent("data: {\"token\": {}}\n\n");
+        byte[] line2 =
+                buildCoralEvent(
+                        "data: {\"token\": {}, \"generated_text\"=\"prompt Hello world.\"}");
+        byte[] content = new byte[line1.length + line2.length];
+        System.arraycopy(line1, 0, content, 0, line1.length);
+        System.arraycopy(line2, 0, content, line1.length, line2.length);
+
+        TestHttpHandler.setContent(content, contentType, "text/event-stream");
+        String[] args = {
+            "http://localhost:18080/invocations",
+            "-H",
+            "Content-type: application/json",
+            "-d",
+            "{}",
+            "-c",
+            "1",
+            "-N",
+            "2",
+            "-t"
+        };
+        Result ret = AwsCurl.run(args);
+        Assert.assertEquals(ret.getTotalTokens(), 10);
         Assert.assertNotNull(ret.getTokenThroughput());
     }
 
