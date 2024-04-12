@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 class TestHttpHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     static AsciiString contentType;
+    static String smContentType;
     static byte[] content;
 
     public static void setContent(String content, AsciiString contentType) {
@@ -40,8 +41,13 @@ class TestHttpHandler extends SimpleChannelInboundHandler<HttpObject> {
     }
 
     public static void setContent(byte[] content, AsciiString contentType) {
+        setContent(content, contentType, null);
+    }
+
+    public static void setContent(byte[] content, AsciiString contentType, String smContentType) {
         TestHttpHandler.content = content;
         TestHttpHandler.contentType = contentType;
+        TestHttpHandler.smContentType = smContentType;
     }
 
     @Override
@@ -62,6 +68,9 @@ class TestHttpHandler extends SimpleChannelInboundHandler<HttpObject> {
             response.headers()
                     .set(HttpHeaderNames.CONTENT_TYPE, contentType)
                     .setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
+            if (smContentType != null) {
+                response.headers().set("X-Amzn-SageMaker-Content-Type", smContentType);
+            }
 
             if (keepAlive) {
                 if (!req.protocolVersion().isKeepAliveDefault()) {
