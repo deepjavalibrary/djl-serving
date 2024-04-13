@@ -337,6 +337,27 @@ jobs:
           python3 llm/client.py transformers_neuronx_rolling_batch mixtral-8x7b-rb
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
+      - name: Test transformers-neuronx llama-2-13b-speculative-rb rolling batch
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx llama-speculative-rb
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-6 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx_rolling_batch llama-speculative-rb
+          docker rm -f $(docker ps -aq)
+          sudo rm -rf models
+      - name: Test transformers-neuronx llama-2-13b-speculative-rb compiled draft model rolling batch
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx llama-speculative-compiled-rb
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-6 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx_rolling_batch llama-speculative-compiled-rb
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration

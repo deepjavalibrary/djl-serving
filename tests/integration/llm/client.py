@@ -147,6 +147,16 @@ transformers_neuronx_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama-speculative-rb": {
+        "batch_size": [1],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama-speculative-compiled-rb": {
+        "batch_size": [1],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     }
 }
 

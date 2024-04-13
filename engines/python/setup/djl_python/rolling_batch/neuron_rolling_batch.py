@@ -10,7 +10,10 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+
 import torch
+import logging
+from typing import Optional, Any
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NaiveRollingBatchNeuronGenerator, ContinuousBatchingNeuronGenerator
 from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy
@@ -24,6 +27,8 @@ class NeuronRollingBatch(RollingBatch):
                  batch_size: int,
                  n_positions: int,
                  strategy: str = TnXGenerationStrategy.continuous_batching,
+                 draft_model: Optional[Any] = None,
+                 spec_length: Optional[int] = None,
                  **kwargs) -> None:
         """
         Initializes the NeuronRollingBatch.
@@ -35,11 +40,16 @@ class NeuronRollingBatch(RollingBatch):
         """
         self.strategy = strategy
         self._scheduler_class = ContinuousBatchingNeuronGenerator
-        if self.strategy == TnXGenerationStrategy.naive_rolling_batch:
+        if draft_model or self.strategy == TnXGenerationStrategy.naive_rolling_batch:
             self._scheduler_class = NaiveRollingBatchNeuronGenerator
+
         super().__init__(**kwargs)
-        self.scheduler = self._scheduler_class(model, tokenizer, batch_size,
-                                               n_positions)
+        self.scheduler = self._scheduler_class(model,
+                                               tokenizer,
+                                               batch_size,
+                                               n_positions,
+                                               draft_model=draft_model,
+                                               spec_length=spec_length)
 
     def reset(self) -> None:
         """
@@ -50,6 +60,41 @@ class NeuronRollingBatch(RollingBatch):
 
     def get_tokenizer(self):
         return self.scheduler.tokenizer
+
+    def parse_generation(self, generation, request, req_ids):
+        if generation:
+            is_last_token = False
+            finish_reason = None
+            if generation.generated_text is not None:
+                is_last_token = True
+                finish_reason = FINISH_REASON_MAPPER[int(
+                    generation.generated_text.finish_reason.value)]
+            if not is_last_token:
+                req_ids.append(request.id)
+
+            token_id = generation.token_id
+            log_prob = generation.token_logprob
+            if isinstance(token_id, torch.Tensor):
+                token_id = token_id.item()
+            if isinstance(log_prob, torch.Tensor):
+                log_prob = log_prob.item()
+
+            token = Token(
+                token_id,
+                "" if generation.token_is_special else generation.token_text,
+                log_prob, generation.token_is_special)
+            request.set_next_token(token,
+                                   last_token=is_last_token,
+                                   finish_reason=finish_reason)
+        else:
+            request.set_next_token("", last_token=False)
+            req_ids.append(request.id)
+
+    def append_speculated_generations(self, generation, request, req_ids):
+        speculated_generation = generation.speculated_generations.dequeue()
+        while speculated_generation is not None:
+            self.parse_generation(speculated_generation, request, req_ids)
+            speculated_generation = generation.speculated_generations.dequeue()
 
     @stop_on_any_exception
     def inference(self,
@@ -81,33 +126,10 @@ class NeuronRollingBatch(RollingBatch):
         req_ids = []
         for request in self.active_requests:
             generation = generation_dict.get(request.id, None)
-            if generation:
-                is_last_token = False
-                finish_reason = None
-                if generation.generated_text is not None:
-                    is_last_token = True
-                    finish_reason = FINISH_REASON_MAPPER[int(
-                        generation.generated_text.finish_reason.value)]
-                if not is_last_token:
-                    req_ids.append(request.id)
-
-                token_id = generation.token_id
-                log_prob = generation.token_logprob
-                if isinstance(token_id, torch.Tensor):
-                    token_id = token_id.item()
-                if isinstance(log_prob, torch.Tensor):
-                    log_prob = log_prob.item()
-
-                token = Token(
-                    token_id, ""
-                    if generation.token_is_special else generation.token_text,
-                    log_prob, generation.token_is_special)
-                request.set_next_token(token,
-                                       last_token=is_last_token,
-                                       finish_reason=finish_reason)
-            else:
-                request.set_next_token("", last_token=False)
-                req_ids.append(request.id)
+            self.parse_generation(generation, request, req_ids)
+            if hasattr(generation, "speculated_generations"):
+                self.append_speculated_generations(generation, request,
+                                                   req_ids)
 
         # filter the requests that are stopped.
         self.scheduler.filter(req_ids)
