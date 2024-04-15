@@ -75,12 +75,7 @@ public final class LmiUtils {
         if ("trtllm".equals(rollingBatch)) {
             return true;
         }
-        if (rollingBatch == null || "auto".equals(rollingBatch)) {
-            // FIXME: find a better way to set default rolling batch for trtllm
-            String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
-            return features != null && features.contains("trtllm");
-        }
-        return false;
+        return !"disable".equals(rollingBatch);
     }
 
     static boolean needConvert(ModelInfo<?, ?> info) {
