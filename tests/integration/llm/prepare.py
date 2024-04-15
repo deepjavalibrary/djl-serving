@@ -742,7 +742,7 @@ vllm_model_list = {
         "option.trust_remote_code": True,
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
-        "option.max_model_len": 3480,
+        "option.max_model_len": 3280,
     },
     "llama2-7b-chat": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
