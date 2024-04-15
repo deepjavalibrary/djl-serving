@@ -92,7 +92,7 @@ public final class WorkerThread<I, O> implements Runnable {
                         runJobs(req);
                         aggregator.sendResponse();
                     } catch (TranslateException e) {
-                        logger.warn("{}: Failed to predict", workerId, e);
+                        logger.warn(workerId + ": Failed to predict", e);
                         aggregator.sendError(e);
                     } finally {
                         state = WorkerState.WORKER_STARTED;

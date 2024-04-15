@@ -65,6 +65,7 @@ import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -331,14 +332,11 @@ public class ModelServer {
         String loadModels = configManager.getLoadModels();
         Path modelStore = configManager.getModelStore();
         if (loadModels == null || loadModels.isEmpty()) {
-            if (modelStore == null) {
-                return;
-            }
             loadModels = "ALL";
         }
 
         ModelManager modelManager = ModelManager.getInstance();
-        List<String> urls = new ArrayList<>();
+        Set<String> urls = new HashSet<>();
         if ("NONE".equalsIgnoreCase(loadModels)) {
             // to disable load all models from model store
             return;
@@ -479,18 +477,6 @@ public class ModelServer {
                 return null;
             }
 
-            // workaround to prevent duplicate loading when HF_MODEL_ID points to a path we already
-            // loaded
-            // we use HF_MODEL_ID to load the model since we create serving.properties on the fly
-            String huggingFaceModelId = Utils.getEnvOrSystemProperty("HF_MODEL_ID");
-            if (huggingFaceModelId != null && path.startsWith(huggingFaceModelId)) {
-                logger.debug(
-                        "HF_MODEL_ID points to the same path {}. Will load model via HF_MODEL_ID"
-                                + " handling",
-                        path);
-                return null;
-            }
-
             path = Utils.getNestedModelDir(path);
             String url = path.toUri().toURL().toString();
             String modelName = ModelInfo.inferModelNameFromUrl(url);
@@ -512,6 +498,16 @@ public class ModelServer {
     }
 
     private String createHuggingFaceModel(String modelId) throws IOException {
+        if (modelId.startsWith("djl://") || modelId.startsWith("s3://")) {
+            return modelId;
+        }
+        Path path = Paths.get(modelId);
+        if (Files.exists(path)) {
+            // modelId point to a local file
+            return modelId;
+        }
+
+        // TODO: Download the full model from HF
         String hash = Utils.hash(modelId);
         String downloadDir = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = downloadDir == null ? Utils.getCacheDir() : Paths.get(downloadDir);
@@ -533,7 +529,6 @@ public class ModelServer {
         }
         Files.createDirectories(huggingFaceModelDir);
         Path propertiesFile = huggingFaceModelDir.resolve("serving.properties");
-        Files.createFile(propertiesFile);
         try (BufferedWriter writer = Files.newBufferedWriter(propertiesFile)) {
             huggingFaceProperties.store(writer, null);
         }
