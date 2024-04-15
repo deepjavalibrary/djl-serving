@@ -750,7 +750,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         artifactName = artifact.getName();
     }
 
-    private void loadServingProperties() throws ModelException {
+    private void loadServingProperties() {
         if (prop == null) {
             Path file = modelDir.resolve("serving.properties");
             prop = new Properties();
@@ -804,9 +804,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         if (engineName == null) {
             engineName = inferEngine();
         }
-        if (LmiUtils.isLMIModel(this)) {
-            LmiUtils.configureLMIModel(this);
-        }
+        LmiUtils.configureLmiModel(this);
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<Object, Object> entry : prop.entrySet()) {

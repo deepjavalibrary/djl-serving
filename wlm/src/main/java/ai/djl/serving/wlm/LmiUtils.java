@@ -52,9 +52,14 @@ public final class LmiUtils {
 
     private LmiUtils() {}
 
-    static void configureLMIModel(ModelInfo<?, ?> modelInfo) throws ModelException {
-        Properties prop = modelInfo.getProperties();
+    static void configureLmiModel(ModelInfo<?, ?> modelInfo) throws ModelException {
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
+        if (modelConfig == null) {
+            // Not a LMI model
+            return;
+        }
+
+        Properties prop = modelInfo.getProperties();
         LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
         logger.info(
                 "Detected engine: {}, rolling_batch: {}, tensor_parallel_degree {}, for modelType:"
@@ -65,12 +70,7 @@ public final class LmiUtils {
                 modelConfig.getModelType());
     }
 
-    static boolean isLMIModel(ModelInfo<?, ?> modelInfo) {
-        String modelId = modelInfo.getProperties().getProperty("option.model_id");
-        return null != generateHuggingFaceConfigUri(modelInfo, modelId);
-    }
-
-    static boolean isTrtLLMRollingBatch(Properties properties) {
+    static boolean isTrtLlmRollingBatch(Properties properties) {
         String rollingBatch = properties.getProperty("option.rolling_batch");
         if ("trtllm".equals(rollingBatch)) {
             return true;
@@ -83,14 +83,9 @@ public final class LmiUtils {
         return false;
     }
 
-    static boolean isRollingBatchEnabled(Properties properties) {
-        String rollingBatch = properties.getProperty("option.rolling_batch");
-        return null != rollingBatch && !"disable".equals(rollingBatch);
-    }
-
     static boolean needConvert(ModelInfo<?, ?> info) {
         Properties properties = info.getProperties();
-        return isTrtLLMRollingBatch(info.getProperties())
+        return isTrtLlmRollingBatch(info.getProperties())
                 || properties.containsKey("trtllm_python_backend");
     }
 
@@ -141,15 +136,20 @@ public final class LmiUtils {
      * @return the Huggingface config.json file URI
      */
     public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId) {
-        URI configUri = null;
         Path modelDir = modelInfo.modelDir;
-        if (modelId != null && modelId.startsWith("s3://")) {
+        if (Files.isRegularFile(modelDir.resolve("config.json"))) {
+            return modelDir.resolve("config.json").toUri();
+        } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
+            return modelDir.resolve("model_index.json").toUri();
+        } else if (modelId != null && modelId.startsWith("s3://")) {
             Path downloadDir = modelInfo.downloadDir;
             if (Files.isRegularFile(downloadDir.resolve("config.json"))) {
-                configUri = downloadDir.resolve("config.json").toUri();
+                return downloadDir.resolve("config.json").toUri();
             } else if (Files.isRegularFile(downloadDir.resolve("model_index.json"))) {
-                configUri = downloadDir.resolve("model_index.json").toUri();
+                return downloadDir.resolve("model_index.json").toUri();
             }
+        } else if (modelId != null && modelId.startsWith("djl://")) {
+            return null;
         } else if (modelId != null) {
             modelInfo.prop.setProperty("option.model_id", modelId);
             Path dir = Paths.get(modelId);
@@ -165,13 +165,9 @@ public final class LmiUtils {
                 }
                 return null;
             }
-            configUri = getHuggingFaceHubConfigUri(modelId);
-        } else if (Files.isRegularFile(modelDir.resolve("config.json"))) {
-            configUri = modelDir.resolve("config.json").toUri();
-        } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
-            configUri = modelDir.resolve("model_index.json").toUri();
+            return getHuggingFaceHubConfigUri(modelId);
         }
-        return configUri;
+        return null;
     }
 
     private static URI getHuggingFaceHubConfigUri(String modelId) {
@@ -291,7 +287,7 @@ public final class LmiUtils {
         } else if ("9.0".equals(computeCapability)) {
             return "p5";
         } else {
-            logger.warn("Could not identify GPU arch " + computeCapability);
+            logger.warn("Could not identify GPU arch {}", computeCapability);
             return null;
         }
     }

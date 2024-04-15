@@ -65,7 +65,7 @@ public final class LmiConfigRecommender {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         setDynamicBatch(lmiProperties, modelConfig, modelInfo, features);
         setRollingBatch(lmiProperties, modelConfig, features);
-        setMPIMode(lmiProperties, modelConfig, features);
+        setMpiMode(lmiProperties, modelConfig, features);
         setTensorParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
     }
@@ -85,15 +85,15 @@ public final class LmiConfigRecommender {
         } else if (!isTextGenerationModel(modelConfig)) {
             // Non text-generation use-cases are not compatible with rolling batch
             rollingBatch = "disable";
-        } else if (isVLLMEnabled(features) && isLmiDistEnabled(features)) {
+        } else if (isVllmEnabled(features) && isLmiDistEnabled(features)) {
             rollingBatch = MODEL_TO_ROLLING_BATCH.getOrDefault(modelConfig.getModelType(), "auto");
-        } else if (LmiUtils.isTrtLLMRollingBatch(lmiProperties)) {
+        } else if (LmiUtils.isTrtLlmRollingBatch(lmiProperties)) {
             rollingBatch = "trtllm";
         }
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }
 
-    private static void setMPIMode(
+    private static void setMpiMode(
             Properties lmiProperties,
             LmiUtils.HuggingFaceModelConfig modelConfig,
             String features) {
@@ -102,7 +102,7 @@ public final class LmiConfigRecommender {
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
         //  TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
-        if (isT5TrtLLM(modelConfig, features)) {
+        if (isT5TrtLlm(modelConfig, features)) {
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
     }
@@ -124,8 +124,7 @@ public final class LmiConfigRecommender {
             ModelInfo<?, ?> modelInfo,
             String features) {
         // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
-        if (isT5TrtLLM(modelConfig, features)) {
-
+        if (isT5TrtLlm(modelConfig, features)) {
             // To do runtime compilation for TensorRT-LLM T5 model.
             lmiProperties.setProperty("trtllm_python_backend", String.valueOf(true));
             lmiProperties.setProperty("option.rolling_batch", "disable");
@@ -154,7 +153,7 @@ public final class LmiConfigRecommender {
                 "option.max_rolling_batch_size", String.valueOf(rollingBatchSize));
     }
 
-    private static boolean isVLLMEnabled(String features) {
+    private static boolean isVllmEnabled(String features) {
         return features != null && features.contains("vllm");
     }
 
@@ -162,13 +161,13 @@ public final class LmiConfigRecommender {
         return features != null && features.contains("lmi-dist");
     }
 
-    private static boolean isTrtLLMEnabled(String features) {
+    private static boolean isTrtLlmEnabled(String features) {
         return features != null && features.contains("trtllm");
     }
 
-    private static boolean isT5TrtLLM(
+    private static boolean isT5TrtLlm(
             LmiUtils.HuggingFaceModelConfig modelConfig, String features) {
-        return isTrtLLMEnabled(features) && "t5".equals(modelConfig.getModelType());
+        return isTrtLlmEnabled(features) && "t5".equals(modelConfig.getModelType());
     }
 
     private static boolean isTextGenerationModel(LmiUtils.HuggingFaceModelConfig modelConfig) {
