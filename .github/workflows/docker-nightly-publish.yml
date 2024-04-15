@@ -7,6 +7,10 @@ on:
         description: 'release/nightly/temp, default is nightly'
         required: true
         default: 'nightly'
+      skip_cache:
+        description: 'true/false, default is false'
+        required: true
+        default: 'false'
   schedule:
     - cron: '0 13 * * *'
 
@@ -47,7 +51,9 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 17
-      - uses: actions/cache@v4
+      - name: Cache check
+        if: ${{ github.event.inputs.skip_cache != 'true' }}
+        uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
