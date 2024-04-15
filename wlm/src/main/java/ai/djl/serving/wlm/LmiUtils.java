@@ -52,14 +52,14 @@ public final class LmiUtils {
 
     private LmiUtils() {}
 
-    static String inferLmiEngine(ModelInfo<?, ?> modelInfo) throws ModelException {
-        Properties prop = modelInfo.getProperties();
+    static void configureLmiModel(ModelInfo<?, ?> modelInfo) throws ModelException {
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
         if (modelConfig == null) {
-            String engineName = isTrtLLMRollingBatch(prop) ? "MPI" : "Python";
-            logger.info("No config.json found, use {} engine.", engineName);
-            return engineName;
+            // Not a LMI model
+            return;
         }
+
+        Properties prop = modelInfo.getProperties();
         LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
         logger.info(
                 "Detected engine: {}, rolling_batch: {}, tensor_parallel_degree {}, for modelType:"
@@ -68,10 +68,9 @@ public final class LmiUtils {
                 prop.getProperty("option.rolling_batch"),
                 prop.getProperty("option.tensor_parallel_degree"),
                 modelConfig.getModelType());
-        return prop.getProperty("engine");
     }
 
-    static boolean isTrtLLMRollingBatch(Properties properties) {
+    static boolean isTrtLlmRollingBatch(Properties properties) {
         String rollingBatch = properties.getProperty("option.rolling_batch");
         if ("trtllm".equals(rollingBatch)) {
             return true;
@@ -84,14 +83,9 @@ public final class LmiUtils {
         return false;
     }
 
-    static boolean isRollingBatchEnabled(Properties properties) {
-        String rollingBatch = properties.getProperty("option.rolling_batch");
-        return null != rollingBatch && !"disable".equals(rollingBatch);
-    }
-
     static boolean needConvert(ModelInfo<?, ?> info) {
         Properties properties = info.getProperties();
-        return isTrtLLMRollingBatch(info.getProperties())
+        return isTrtLlmRollingBatch(info.getProperties())
                 || properties.containsKey("trtllm_python_backend");
     }
 
@@ -140,23 +134,22 @@ public final class LmiUtils {
      * @param modelInfo the model object
      * @param modelId the model id
      * @return the Huggingface config.json file URI
-     * @throws ModelException if the model not found
-     * @throws IOException if failed read from huggingface hub
      */
-    public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId)
-            throws ModelException, IOException {
-        URI configUri = null;
+    public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId) {
         Path modelDir = modelInfo.modelDir;
-        if (modelId != null && modelId.startsWith("s3://")) {
-            // This is definitely suboptimal, but for the majority of cases we need to download this
-            // s3 model eventually, so it is not the worst thing to download it now.
-            modelInfo.downloadS3();
+        if (Files.isRegularFile(modelDir.resolve("config.json"))) {
+            return modelDir.resolve("config.json").toUri();
+        } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
+            return modelDir.resolve("model_index.json").toUri();
+        } else if (modelId != null && modelId.startsWith("s3://")) {
             Path downloadDir = modelInfo.downloadDir;
             if (Files.isRegularFile(downloadDir.resolve("config.json"))) {
-                configUri = downloadDir.resolve("config.json").toUri();
+                return downloadDir.resolve("config.json").toUri();
             } else if (Files.isRegularFile(downloadDir.resolve("model_index.json"))) {
-                configUri = downloadDir.resolve("model_index.json").toUri();
+                return downloadDir.resolve("model_index.json").toUri();
             }
+        } else if (modelId != null && modelId.startsWith("djl://")) {
+            return null;
         } else if (modelId != null) {
             modelInfo.prop.setProperty("option.model_id", modelId);
             Path dir = Paths.get(modelId);
@@ -172,25 +165,31 @@ public final class LmiUtils {
                 }
                 return null;
             }
-
-            String hfToken = Utils.getenv("HF_TOKEN");
-            configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
-            HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
-            if (hfToken != null) {
-                configUrl.setRequestProperty("Authorization", "Bearer " + hfToken);
-            }
-            // stable diffusion models have a different file name with the config... sometimes
-            if (HttpURLConnection.HTTP_OK != configUrl.getResponseCode()) {
-                configUri =
-                        URI.create(
-                                "https://huggingface.co/" + modelId + "/raw/main/model_index.json");
-            }
-        } else if (Files.isRegularFile(modelDir.resolve("config.json"))) {
-            configUri = modelDir.resolve("config.json").toUri();
-        } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
-            configUri = modelDir.resolve("model_index.json").toUri();
+            return getHuggingFaceHubConfigUri(modelId);
         }
-        return configUri;
+        return null;
+    }
+
+    private static URI getHuggingFaceHubConfigUri(String modelId) {
+        String[] possibleConfigFiles = {"config.json", "model_index.json"};
+        String hubToken = Utils.getEnvOrSystemProperty("HF_TOKEN");
+        for (String configFile : possibleConfigFiles) {
+            try {
+                URI configUri =
+                        URI.create("https://huggingface.co/" + modelId + "/raw/main/" + configFile);
+                HttpURLConnection configUrl =
+                        (HttpURLConnection) configUri.toURL().openConnection();
+                if (hubToken != null) {
+                    configUrl.setRequestProperty("Authorization", "Bearer " + hubToken);
+                }
+                if (HttpURLConnection.HTTP_OK == configUrl.getResponseCode()) {
+                    return configUri;
+                }
+            } catch (IOException e) {
+                logger.warn("Hub config file {} does not exist for model {}.", configFile, modelId);
+            }
+        }
+        return null;
     }
 
     private static HuggingFaceModelConfig getHuggingFaceModelConfig(ModelInfo<?, ?> modelInfo)
@@ -288,7 +287,7 @@ public final class LmiUtils {
         } else if ("9.0".equals(computeCapability)) {
             return "p5";
         } else {
-            logger.warn("Could not identify GPU arch " + computeCapability);
+            logger.warn("Could not identify GPU arch {}", computeCapability);
             return null;
         }
     }

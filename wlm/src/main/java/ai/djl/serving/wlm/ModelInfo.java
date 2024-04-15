@@ -510,6 +510,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         loadServingProperties();
         downloadS3();
         eventManager.onModelDownloaded(this, downloadDir);
+        configPerModelSettings();
         downloadDraftModel();
 
         long duration = (System.nanoTime() - begin) / 1000;
@@ -678,10 +679,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         }
 
-        if (isTorchServeModel()) {
+        if (isPythonModel(prefix)) {
             return "Python";
-        } else if (isPythonModel(prefix)) {
-            return LmiUtils.inferLmiEngine(this);
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
                 || Files.isRegularFile(modelDir.resolve("model.pt"))) {
             return "PyTorch";
@@ -734,7 +733,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         return Files.isRegularFile(modelDir.resolve("model.py"))
                 || Files.isRegularFile(modelDir.resolve(prefix + ".py"))
                 || prop.getProperty("option.model_id") != null
-                || Files.isRegularFile(modelDir.resolve("config.json"));
+                || Files.isRegularFile(modelDir.resolve("config.json"))
+                || isTorchServeModel();
     }
 
     private void downloadModel() throws ModelNotFoundException, IOException {
@@ -750,7 +750,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         artifactName = artifact.getName();
     }
 
-    private void loadServingProperties() throws ModelException {
+    private void loadServingProperties() {
         if (prop == null) {
             Path file = modelDir.resolve("serving.properties");
             prop = new Properties();
@@ -776,8 +776,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     prop.putIfAbsent("option." + key, value);
                 }
             }
-            configPerModelSettings();
-            eventManager.onModelConfigured(this);
         }
     }
 
@@ -806,11 +804,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         if (engineName == null) {
             engineName = inferEngine();
         }
-        // TODO: capture this in the LmiConfigRecommender.configure method once we refactor that to
-        // run always, not just when engine is missing
-        if (LmiUtils.isRollingBatchEnabled(this.getProperties())) {
-            LmiConfigRecommender.setRollingBatchSize(this.getProperties());
-        }
+        LmiUtils.configureLmiModel(this);
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<Object, Object> entry : prop.entrySet()) {
@@ -845,6 +839,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 prop.get("option.mpi_mode"),
                 prop.get("option.entryPoint"),
                 sb);
+        eventManager.onModelConfigured(this);
     }
 
     void checkAvailableMemory(Device device) throws IOException {
