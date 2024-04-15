@@ -31,6 +31,7 @@ import ai.djl.repository.MRL;
 import ai.djl.repository.Repository;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelNotFoundException;
+import ai.djl.repository.zoo.ModelZoo;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.EventManager;
 import ai.djl.serving.wlm.util.WlmConfigManager;
@@ -679,7 +680,14 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         }
 
-        if (isPythonModel(prefix)) {
+        String modelId = prop.getProperty("option.model_id");
+        if (modelId != null && modelId.startsWith("djl://")) {
+            Repository repo = Repository.newInstance("tmp", modelId);
+            MRL mrl = repo.getResources().get(0);
+            String groupId = mrl.getGroupId();
+            ModelZoo zoo = ModelZoo.getModelZoo(groupId);
+            return zoo.getSupportedEngines().iterator().next();
+        } else if (isPythonModel(prefix)) {
             return "Python";
         } else if (Files.isRegularFile(modelDir.resolve(prefix + ".pt"))
                 || Files.isRegularFile(modelDir.resolve("model.pt"))) {
@@ -715,7 +723,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     return Engine.getDefaultEngineName();
                 }
             } catch (IOException e) {
-                logger.warn(uid + ": Failed search parameter files in folder: {}", modelDir, e);
+                logger.warn(uid + ": Failed search parameter files in folder: " + modelDir, e);
             }
         }
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
@@ -737,7 +745,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 || isTorchServeModel();
     }
 
-    private void downloadModel() throws ModelNotFoundException, IOException {
+    private void downloadModel() throws ModelException, IOException {
+        if (modelUrl.startsWith("s3://")) {
+            modelDir = downloadS3ToDownloadDir(modelUrl);
+            modelUrl = modelDir.toUri().toURL().toString();
+            return;
+        }
         Repository repository = Repository.newInstance("modelStore", modelUrl);
         List<MRL> mrls = repository.getResources();
         if (mrls.isEmpty()) {

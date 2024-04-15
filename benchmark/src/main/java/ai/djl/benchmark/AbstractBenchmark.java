@@ -228,7 +228,7 @@ public abstract class AbstractBenchmark {
                 long delta = System.currentTimeMillis() - begin;
                 duration = duration.minus(Duration.ofMillis(delta));
                 if (!duration.isNegative()) {
-                    logger.info(duration.toMinutes() + " minutes left");
+                    logger.info("{} minutes left", duration.toMinutes());
                 }
             }
             return true;

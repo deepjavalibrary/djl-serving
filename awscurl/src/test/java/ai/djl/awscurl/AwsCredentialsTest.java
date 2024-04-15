@@ -99,6 +99,11 @@ public class AwsCredentialsTest {
 
     @Test
     public void testEnv() {
+        if (Utils.getenv("AWS_ACCESS_KEY_ID") != null) {
+            // Skip test if real credential is set
+            return;
+        }
+
         try {
             System.setProperty(AwsCredentials.ACCESS_KEY_SYSTEM_PROPERTY, "id");
             System.setProperty(AwsCredentials.SECRET_KEY_SYSTEM_PROPERTY, "key");

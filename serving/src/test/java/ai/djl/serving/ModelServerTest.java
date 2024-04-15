@@ -398,6 +398,51 @@ public class ModelServerTest {
         }
     }
 
+    @Test
+    public void testHfModelIdWithDjlUrl()
+            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
+                    InterruptedException {
+        Path modelStore = Paths.get("build/models");
+        Utils.deleteQuietly(modelStore);
+        Files.createDirectories(modelStore);
+        System.setProperty("HF_MODEL_ID", "djl://ai.djl.zoo/mlp/0.0.3/mlp");
+        System.setProperty("SERVING_LOAD_MODEL", "ALL");
+        ModelServer server = initTestServer("src/test/resources/emptyStore.config.properties");
+        try {
+            assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+            request(channel, HttpMethod.GET, "/models");
+
+            ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
+            Assert.assertNull(resp.getNextPageToken());
+            assertFalse(resp.getModels().isEmpty());
+        } finally {
+            server.stop();
+            System.clearProperty("HF_MODEL_ID");
+        }
+    }
+
+    @Test
+    public void testOptionModelId()
+            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
+                    InterruptedException {
+        Path modelStore = Paths.get("build/models");
+        Utils.deleteQuietly(modelStore);
+        Files.createDirectories(modelStore);
+        ModelServer server = initTestServer("src/test/resources/model_id.config.properties");
+        try {
+            assertTrue(server.isRunning());
+            Channel channel = initTestChannel();
+            request(channel, HttpMethod.GET, "/models");
+
+            ListModelsResponse resp = JsonUtils.GSON.fromJson(result, ListModelsResponse.class);
+            Assert.assertNull(resp.getNextPageToken());
+            assertFalse(resp.getModels().isEmpty());
+        } finally {
+            server.stop();
+        }
+    }
+
     private ModelServer initTestServer(String configFile)
             throws ParseException, ServerStartupException, GeneralSecurityException, IOException,
                     InterruptedException {

@@ -141,16 +141,20 @@ public final class LmiUtils {
             return modelDir.resolve("config.json").toUri();
         } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
             return modelDir.resolve("model_index.json").toUri();
-        } else if (modelId != null && modelId.startsWith("s3://")) {
+        }
+        if (modelId == null || modelId.startsWith("djl://")) {
+            // djl model should be covered by local file in modelDir case
+            return null;
+        } else if (modelId.startsWith("s3://")) {
+            // HF_MODEL_ID=s3:// should not reach here, this is OPTION_MODEL_ID case.
             Path downloadDir = modelInfo.downloadDir;
             if (Files.isRegularFile(downloadDir.resolve("config.json"))) {
                 return downloadDir.resolve("config.json").toUri();
             } else if (Files.isRegularFile(downloadDir.resolve("model_index.json"))) {
                 return downloadDir.resolve("model_index.json").toUri();
             }
-        } else if (modelId != null && modelId.startsWith("djl://")) {
             return null;
-        } else if (modelId != null) {
+        } else {
             modelInfo.prop.setProperty("option.model_id", modelId);
             Path dir = Paths.get(modelId);
             if (Files.isDirectory(dir)) {
@@ -167,7 +171,6 @@ public final class LmiUtils {
             }
             return getHuggingFaceHubConfigUri(modelId);
         }
-        return null;
     }
 
     private static URI getHuggingFaceHubConfigUri(String modelId) {
