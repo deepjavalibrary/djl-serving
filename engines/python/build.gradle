@@ -33,7 +33,7 @@ processResources {
         file("setup/djl_python/__init__.py").append("\n__version__ = '${djl_version}'\n")
     }
 
-    exclude "build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py", "djl_python/tests"
+    exclude "build", "*.egg-info", "__pycache__", "PyPiDescription.rst", "setup.py", "djl_python/tests", "*.pt"
     outputs.file file("${project.buildDir}/classes/java/main/native/lib/python.properties")
     doLast {
         // write properties
