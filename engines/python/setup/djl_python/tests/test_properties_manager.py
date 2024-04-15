@@ -2,7 +2,9 @@ import os
 import json
 import unittest
 from djl_python.properties_manager.properties import Properties
-from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema, TnXMemoryLayout
+from djl_python.properties_manager.tnx_properties import (
+    TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
+    TnXMemoryLayout, TnXDtypeName)
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
@@ -132,7 +134,11 @@ class TestConfigManager(unittest.TestCase):
             "rolling_batch_strategy": "continuous_batching",
             "collectives_layout": "HSB",
             "on_device_embedding": "true",
-            "partition_schema": "legacy"
+            "partition_schema": "legacy",
+            "attention_layout": "HSB",
+            "cache_layout": "SBH",
+            "all_reduce_dtype": "float32",
+            "cast_logits_dtype": "float32",
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -163,6 +169,11 @@ class TestConfigManager(unittest.TestCase):
                          TnXMemoryLayout.LAYOUT_HSB)
         self.assertTrue(tnx_configs.on_device_embedding)
         self.assertEqual(tnx_configs.partition_schema, TnXModelSchema.legacy)
+        self.assertEqual(tnx_configs.attention_layout,
+                         TnXMemoryLayout.LAYOUT_HSB)
+        self.assertEqual(tnx_configs.cache_layout, TnXMemoryLayout.LAYOUT_SBH)
+        self.assertEqual(tnx_configs.all_reduce_dtype, TnXDtypeName.float32)
+        self.assertEqual(tnx_configs.cast_logits_dtype, TnXDtypeName.float32)
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):
