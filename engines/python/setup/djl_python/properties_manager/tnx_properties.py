@@ -34,6 +34,12 @@ class Dtype(str, Enum):
     bf16 = 'bf16'
 
 
+class TnXDtypeName(str, Enum):
+    float32 = 'float32'
+    float16 = 'float16'
+    bfloat16 = 'bfloat16'
+
+
 class TnXQuantizeMethods(str, Enum):
     static_int8 = 'static_int8'
 
@@ -93,8 +99,12 @@ class TransformerNeuronXProperties(Properties):
     rolling_batch_strategy: Optional[TnXGenerationStrategy] = None
     fuse_qkv: Optional[bool] = False
     on_device_embedding: Optional[bool] = False
+    attention_layout: Optional[TnXMemoryLayout] = None
     collectives_layout: Optional[TnXMemoryLayout] = None
+    cache_layout: Optional[TnXMemoryLayout] = None
     partition_schema: Optional[TnXModelSchema] = None
+    all_reduce_dtype: Optional[TnXDtypeName] = None
+    cast_logits_dtype: Optional[TnXDtypeName] = None
 
     @validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
