@@ -135,6 +135,14 @@ class TNXModelLoader(ModelLoader):
         if self.config.collectives_layout:
             neuron_config[
                 "collectives_layout"] = self.config.collectives_layout
+        if self.config.attention_layout:
+            neuron_config["attention_layout"] = self.config.attention_layout
+        if self.config.cache_layout:
+            neuron_config["cache_layout"] = self.config.cache_layout
+        if self.config.all_reduce_dtype:
+            neuron_config["all_reduce_dtype"] = self.config.all_reduce_dtype
+        if self.config.cast_logits_dtype:
+            neuron_config["cast_logits_dtype"] = self.config.cast_logits_dtype
 
         self.neuron_config = NeuronConfig(**neuron_config)
 
