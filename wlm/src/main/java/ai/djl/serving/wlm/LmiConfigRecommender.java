@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.util.Ec2Utils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
@@ -80,15 +81,24 @@ public final class LmiConfigRecommender {
             return;
         }
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
+        String modelType = modelConfig.getModelType();
         if (!"auto".equals(rollingBatch)) {
             return;
         } else if (!isTextGenerationModel(modelConfig)) {
             // Non text-generation use-cases are not compatible with rolling batch
             rollingBatch = "disable";
-        } else if (isVllmEnabled(features) && isLmiDistEnabled(features)) {
-            rollingBatch = MODEL_TO_ROLLING_BATCH.getOrDefault(modelConfig.getModelType(), "auto");
-        } else if (LmiUtils.isTrtLlmRollingBatch(lmiProperties)) {
+        } else if (isLmiDistEnabled(features)
+                && "lmi-dist".equals(MODEL_TO_ROLLING_BATCH.get(modelType))) {
+            rollingBatch = "lmi-dist";
+        } else if (isVllmEnabled(features)
+                && "vllm".equals(MODEL_TO_ROLLING_BATCH.get(modelType))) {
+            rollingBatch = "vllm";
+        } else if (isTrtLlmEnabled(features)) {
             rollingBatch = "trtllm";
+        } else if (Ec2Utils.isSageMaker()) {
+            rollingBatch = "scheduler";
+        } else {
+            rollingBatch = "disable";
         }
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }
