@@ -13,6 +13,7 @@
 package ai.djl.serving.wlm;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 
 import ai.djl.Device;
 import ai.djl.ModelException;
@@ -39,7 +40,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -249,21 +249,18 @@ public class ModelInfoTest {
     }
 
     @Test
-    public void testInferLMIEngine() throws IOException, ModelException {
+    public void testInferLmiEngine() throws IOException, ModelException {
         // vllm/lmi-dist features enabled
         System.setProperty("SERVING_FEATURES", "vllm,lmi-dist");
         Map<String, String> modelToRollingBatch =
-                new HashMap<>() {
-                    {
-                        put("TheBloke/Llama-2-7B-fp16", "lmi-dist");
-                        put("openai-community/gpt2", "lmi-dist");
-                        put("tiiuae/falcon-7b", "lmi-dist");
-                        put("mistralai/Mistral-7B-v0.1", "lmi-dist");
-                        put("src/test/resources/local-hf-model", "lmi-dist");
-                        put("HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable");
-                        put("THUDM/chatglm3-6b", "lmi-dist");
-                    }
-                };
+                Map.of(
+                        "TheBloke/Llama-2-7B-fp16", "lmi-dist",
+                        "openai-community/gpt2", "lmi-dist",
+                        "tiiuae/falcon-7b", "lmi-dist",
+                        "mistralai/Mistral-7B-v0.1", "lmi-dist",
+                        "src/test/resources/local-hf-model", "lmi-dist",
+                        "HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable",
+                        "THUDM/chatglm3-6b", "lmi-dist");
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("lmi_test_model");
         Path prop = modelDir.resolve("serving.properties");
@@ -288,8 +285,8 @@ public class ModelInfoTest {
         }
         ModelInfo<Input, Output> model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
-        assertEquals(model.getProperties().getProperty("option.rolling_batch"), "auto");
-        assertEquals(model.getProperties().getProperty("option.mpi_mode"), null);
+        assertEquals(model.getProperties().getProperty("option.rolling_batch"), "disable");
+        assertNull(model.getProperties().getProperty("option.mpi_mode"));
 
         // invalid hf model case
         try (BufferedWriter writer = Files.newBufferedWriter(prop)) {
@@ -298,7 +295,7 @@ public class ModelInfoTest {
         model = new ModelInfo<>("build/models/lmi_test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "Python");
-        assertEquals(model.getProperties().getProperty("option.rolling_batch"), null);
+        assertNull(model.getProperties().getProperty("option.rolling_batch"));
 
         // TODO: no good way to test trtllm now since it requires converting the model
     }
