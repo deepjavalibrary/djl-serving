@@ -244,7 +244,7 @@ jobs:
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
-          name: trtllm-logs
+          name: vllm-logs
           path: tests/integration/logs/
 
   stop-runners-p4d:
