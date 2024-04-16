@@ -87,6 +87,8 @@ public final class LmiConfigRecommender {
         } else if (!isTextGenerationModel(modelConfig)) {
             // Non text-generation use-cases are not compatible with rolling batch
             rollingBatch = "disable";
+        } else if (isTnxEnabled(features)) {
+            rollingBatch = "tnx";
         } else if (isLmiDistEnabled(features)
                 && "lmi-dist".equals(MODEL_TO_ROLLING_BATCH.get(modelType))) {
             rollingBatch = "lmi-dist";
@@ -173,6 +175,10 @@ public final class LmiConfigRecommender {
 
     private static boolean isTrtLlmEnabled(String features) {
         return features != null && features.contains("trtllm");
+    }
+
+    private static boolean isTnxEnabled(String features) {
+        return features != null && features.contains("tnx");
     }
 
     private static boolean isT5TrtLlm(
