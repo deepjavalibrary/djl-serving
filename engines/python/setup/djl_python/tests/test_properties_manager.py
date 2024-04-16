@@ -148,17 +148,23 @@ class TestConfigManager(unittest.TestCase):
             "enable_saturate_infinity": "true",
             "rolling_batch_strategy": "continuous_batching",
             "collectives_layout": "HSB",
-            "on_device_embedding": "true",
             "partition_schema": "legacy",
             "attention_layout": "HSB",
             "cache_layout": "SBH",
             "all_reduce_dtype": "float32",
             "cast_logits_dtype": "float32",
+            "on_device_embedding_config": "./sample.json",
             "draft_model_compiled_path": "s3://test/bucket/folder",
             "speculative_draft_model": "draft_model_id",
             "speculative_length": 4,
             "draft_model_tp_size": 8,
         }
+
+        embedding_config = {"top_k": 25}
+
+        with open("sample.json", "w") as fp:
+            json.dump(embedding_config, fp)
+
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
         self.assertEqual(tnx_configs.n_positions, 2048)
@@ -186,7 +192,6 @@ class TestConfigManager(unittest.TestCase):
                          TnXGenerationStrategy.continuous_batching)
         self.assertEqual(tnx_configs.collectives_layout,
                          TnXMemoryLayout.LAYOUT_HSB)
-        self.assertTrue(tnx_configs.on_device_embedding)
         self.assertEqual(tnx_configs.partition_schema, TnXModelSchema.legacy)
         self.assertEqual(tnx_configs.draft_model_compiled_path,
                          properties['draft_model_compiled_path'])
@@ -196,6 +201,8 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(tnx_configs.all_reduce_dtype, TnXDtypeName.float32)
         self.assertEqual(tnx_configs.cast_logits_dtype, TnXDtypeName.float32)
         self.assertEqual(tnx_configs.model_loader, TnXModelLoaders.tnx)
+        self.assertDictEqual(tnx_configs.on_device_embedding_config,
+                             embedding_config)
         self.assertEqual(tnx_configs.speculative_draft_model,
                          properties['speculative_draft_model'])
         self.assertEqual(tnx_configs.speculative_length,
@@ -212,6 +219,7 @@ class TestConfigManager(unittest.TestCase):
             del properties['context_length_estimate']
 
         test_tnx_cle_int('256')
+        os.remove("sample.json")
 
     @parameters([{
         "compiled_graph_path": "https://random.url.address/"
