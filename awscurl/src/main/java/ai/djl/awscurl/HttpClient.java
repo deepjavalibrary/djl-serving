@@ -172,7 +172,7 @@ final class HttpClient {
                             ret = new BasicHttpResponse(status);
                         }
                     } else if ("text/event-stream".equals(contentType)) {
-                        handleServerSentEvent(is, requestTime, begin, names, tokens, request);
+                        handleServerSentEvent(is, requestTime, begin, names, tokens, request, ps);
                     } else if ("application/vnd.amazon.eventstream".equals(contentType)) {
                         Header header = resp.getFirstHeader("X-Amzn-SageMaker-Content-Type");
                         String realContentType = header == null ? null : header.getValue();
@@ -210,7 +210,8 @@ final class HttpClient {
             long begin,
             String[] names,
             AtomicInteger tokens,
-            SignableRequest request)
+            SignableRequest request,
+            OutputStream ps)
             throws IOException {
         List<String> list = new ArrayList<>();
         try (BufferedReader reader =
@@ -225,10 +226,14 @@ final class HttpClient {
                     requestTime[1] = System.nanoTime() - begin;
                 }
                 line = line.substring(5);
+                ps.write(line.getBytes(StandardCharsets.UTF_8));
+                ps.write(new byte[] {'\n'});
                 JsonElement element = JsonUtils.GSON.fromJson(line, JsonElement.class);
                 JsonUtils.getJsonList(element, list, names);
             }
-            updateTokenCount(list, tokens, request);
+            if (tokens != null) {
+                updateTokenCount(list, tokens, request);
+            }
         }
     }
 
@@ -271,7 +276,7 @@ final class HttpClient {
         byte[] bytes = bos.toByteArray();
         InputStream bis = new ByteArrayInputStream(bytes);
         if ("text/event-stream".equalsIgnoreCase(realContentType)) {
-            handleServerSentEvent(bis, requestTime, begin, names, tokens, request);
+            handleServerSentEvent(bis, requestTime, begin, names, tokens, request, ps);
             return;
         }
         List<StringBuilder> list = new ArrayList<>();
