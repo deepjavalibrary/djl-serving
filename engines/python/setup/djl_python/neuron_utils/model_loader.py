@@ -272,12 +272,15 @@ class TNXModelLoader(ModelLoader):
             f"Saving INF2 model to {self.split_model_path} as split model...")
         save_pretrained_split(self.model, self.split_model_path)
 
+    @staticmethod
+    def is_safetensors(path):
+        return any(
+            filename.endswith(".safetensors") for filename in os.listdir(path))
+
     def set_model_format(self):
         model_path = os.path.join(os.getcwd(), self.config.model_id_or_path)
         if os.path.isdir(model_path):
-            self.safetensors_format = any(
-                filename.endswith(".safetensors")
-                for filename in os.listdir(model_path))
+            self.safetensors_format = self.is_safetensors(model_path)
 
     def load_generation_config(self):
         if os.path.isfile(
@@ -304,17 +307,22 @@ class TNXModelLoader(ModelLoader):
         """
         if "neuron" in self.model_config.to_dict(
         ) and not self.safetensors_format:
-            self.config.load_split_model = True
             self.split_model_path = os.path.join(self.get_load_path(),
                                                  "checkpoint")
             self.compiled_graph_path = os.path.join(self.get_load_path(),
                                                     "compiled")
-            self.load_path = self.split_model_path
-            self.model = self.load_inf2_model_from_disk()
+            if self.is_safetensors(self.split_model_path):
+                self.model = self.load_auto_model(self.split_model_path)
+                self.load_path = self.get_load_path()
+            else:
+                # Load legacy split model optimum format
+                self.config.load_split_model = True
+                self.load_path = self.split_model_path
+                self.model = self.load_inf2_model_from_disk()
         elif self.config.load_split_model:
             self.load_path = self.config.model_id_or_path
             self.model = self.load_inf2_model_from_disk()
-        elif self.model_config.model_type == "gpt2" or not self.safetensors_format:
+        elif self.model_config.model_type == "gpt2":
             # Cannot use automodel and not a split model use case
             self.model = self.load_hf_model()
             self.load_path = self.get_load_path()
@@ -322,9 +330,6 @@ class TNXModelLoader(ModelLoader):
         else:
             self.model = self.load_auto_model(self.config.model_id_or_path)
             self.load_path = self.get_load_path()
-            if "neuron" in self.model_config.to_dict():
-                self.compiled_graph_path = os.path.join(
-                    self.get_load_path(), "compiled")
 
         if self.config.compiled_graph_path is not None and self.compiled_graph_path is None:
             self.compiled_graph_path = self.config.compiled_graph_path
@@ -427,12 +432,13 @@ class TNXModelLoader(ModelLoader):
 
         :param save_path: Path to which to save the compiled model.
         """
-        # TODO: Update with final schema
+        self.split_model_path = os.path.join(save_path, "checkpoint")
+        os.mkdir(self.split_model_path)
         self.compiled_graph_path = os.path.join(save_path, "compiled")
         os.mkdir(self.compiled_graph_path)
 
         self.model = self.load_hf_model()
-        self.model.save_pretrained(save_path)
+        self.model.save_pretrained(self.split_model_path)
         self.model = self.load_auto_model(self.config.model_id_or_path)
         self.compile_and_save(self.compiled_graph_path)
 
@@ -457,19 +463,18 @@ class TNXModelLoader(ModelLoader):
                 shutil.rmtree(save_path)
             os.mkdir(save_path)
 
-        if model_schema == TnXModelSchema.safetensors:
-            # Raise an error pending finalized schema for using safetensors
-            raise NotImplementedError(
-                "Safetensors compiled model schema is not available.")
+        if model_schema == TnXModelSchema.legacy:
+            logging.info(
+                "Partitioning model to split model with compiled artifacts schema..."
+            )
+            self.legacy_partition(save_path)
         elif model_schema == TnXModelSchema.compile_only:
             logging.info("Compiling model artifacts only...")
             self.model = self.load_auto_model(self.config.model_id_or_path)
             self.compile_and_save(save_path)
         else:
-            logging.info(
-                "Partitioning model to split model with compiled artifacts schema..."
-            )
-            self.legacy_partition(save_path)
+            logging.info("Compiling model to safetensors checkpoint ...")
+            self.safetensors_partition(save_path)
 
         self.update_model_config_to_neuron()
 
