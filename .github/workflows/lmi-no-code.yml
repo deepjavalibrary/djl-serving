@@ -296,7 +296,7 @@ jobs:
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
-          name: no-code-g512-${{ matrix.container }}-logs
+          name: no-code-${{ matrix.machine }}-${{ matrix.container }}-logs
           path: tests/integration/logs/
           
 
