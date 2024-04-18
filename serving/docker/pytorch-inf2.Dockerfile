@@ -25,6 +25,7 @@ ARG accelerate_version=0.23.0
 ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.20
+ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-nightly-py3-none-any.whl"
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -70,7 +71,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_djl_serving.sh $djl_version && \
     scripts/install_inferentia2.sh && \
-    pip install transformers==${transformers_version} accelerate==${accelerate_version} safetensors \
+    pip install transformers==${transformers_version} accelerate==${accelerate_version} safetensors ${vllm_wheel} \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece jinja2 \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
