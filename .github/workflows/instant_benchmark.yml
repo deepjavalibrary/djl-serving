@@ -37,16 +37,20 @@ on:
   workflow_call:
     inputs:
       running_template:
+        description: 'A json file that contains benchmark plans'
         required: true
         type: string
       instance:
+        description: 'Instance used for benchmark'
         required: true
         type: string
       container:
+        description: 'The container used to run benchmark (overrides the template). Should be a full docker path such as deepjavalibrary/djl-serving:0.27.0-deepspeed'
         required: false
         type: string
         default: ''
       record:
+        description: 'Whether to record the results'
         required: false
         type: string
         default: 'none'
