@@ -1,0 +1,16 @@
+[test_name]
+mistral
+[container]
+deepjavalibrary/djl-serving:0.27.0-deepspeed
+[vars]
+CONCURRENCY={1,16,32}
+[serving_properties]
+engine=Python
+option.rolling_batch=vllm
+option.model_id=mistralai/Mistral-7B-v0.1
+[aws_curl]
+TOKENIZER=mistralai/Mistral-7B-v0.1 ./awscurl -c $CONCURRENCY -N 10 \
+-X POST http://127.0.0.1:8080/invocations   \
+--connect-timeout 60   -H "Content-type: application/json"   \
+-d '{"inputs":"The new movie that got Oscar this year","parameters":{"max_new_tokens":256, "do_sample":true}}'   \
+-t -o /tmp/output.txt

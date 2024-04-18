@@ -34,6 +34,22 @@ on:
           - none
           - table
           - cloudwatch
+  workflow_call:
+    inputs:
+      running_template:
+        required: true
+        type: string
+      instance:
+        required: true
+        type: string
+      container:
+        required: false
+        type: string
+        default: ''
+      record:
+        required: false
+        type: string
+        default: 'none'
 
 permissions:
   id-token: write
