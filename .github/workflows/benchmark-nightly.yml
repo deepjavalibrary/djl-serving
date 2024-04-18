@@ -14,6 +14,6 @@ jobs:
     uses: ./.github/workflows/instant_benchmark.yml
     secrets: inherit
     with:
-      running_template: tests/benchmark/nightly/g5-2xl.txt
+      running_template: ./benchmark/nightly/g5-2xl.txt
       instance: g5.2xlarge
       record: cloudwatch
