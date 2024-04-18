@@ -13,8 +13,11 @@ from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeur
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
 from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
 from djl_python.chat_completions.chat_properties import ChatProperties
+from djl_python.tests.utils import parameterized, parameters
 
 import torch
+
+model_min_properties = {"model_id": "model_id", "model_dir": "model_dir"}
 
 min_common_properties = {
     "model_id": "model_id",
@@ -39,7 +42,21 @@ common_properties = {
     "spec_length": "0"
 }
 
+chat_messages_properties = {
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are a friendly chatbot"
+        },
+        {
+            "role": "user",
+            "content": "Which is bigger, the moon or the sun?"
+        },
+    ]
+}
 
+
+@parameterized
 class TestConfigManager(unittest.TestCase):
 
     def test_common_configs(self):
@@ -116,7 +133,6 @@ class TestConfigManager(unittest.TestCase):
                          str(properties['compiled_graph_path']))
 
     def test_tnx_all_configs(self):
-
         properties = {
             "n_positions": "2048",
             "load_split_model": "true",
@@ -185,73 +201,41 @@ class TestConfigManager(unittest.TestCase):
 
         test_tnx_cle_int('256')
 
-    def test_tnx_configs_error_case(self):
-        properties = {
-            "n_positions": "256",
-            "load_split_model": "true",
-            "quantize": "static_int8",
-        }
+    @parameters([{
+        "compiled_graph_path": "https://random.url.address/"
+    }, {
+        "compiled_graph_path": "not_a_directory"
+    }, {
+        "context_length_estimate": "invalid"
+    }, {
+        'group_query_attention': "invalid"
+    }, {
+        'rolling_batch': 'auto'
+    }])
+    def test_tnx_configs_error_case(self, params):
+        # To remove the duplicate properties
+        properties = {**common_properties, **params}
+        with self.assertRaises(ValueError):
+            TransformerNeuronXProperties(**properties)
 
-        def test_url_not_s3_uri(url):
-            properties['compiled_graph_path'] = url
-            with self.assertRaises(ValueError):
-                TransformerNeuronXProperties(**common_properties, **properties)
-            del properties['compiled_graph_path']
-
-        def test_non_existent_directory(directory):
-            properties['compiled_graph_path'] = directory
-            with self.assertRaises(ValueError):
-                TransformerNeuronXProperties(**common_properties, **properties)
-            del properties['compiled_graph_path']
-
-        def test_invalid_context_length(context_length_estimate):
-            properties['context_length_estimate'] = context_length_estimate
-            with self.assertRaises(ValueError):
-                TransformerNeuronXProperties(**common_properties, **properties)
-            del properties['context_length_estimate']
-
-        def test_invalid_batch_sizes_rolling_batch():
-            rb_properties = {
-                **common_properties,
-                **properties, 'rolling_batch': "auto"
-            }
-            with self.assertRaises(ValueError):
-                TransformerNeuronXProperties(**rb_properties)
-
-        def test_invalid_gqa_value(gqa):
-            properties["group_query_attention"] = gqa
-            with self.assertRaises(ValueError):
-                TransformerNeuronXProperties(**common_properties, **properties)
-
-        test_url_not_s3_uri("https://random.url.address/")
-        test_non_existent_directory("not_a_directory")
-        test_invalid_context_length("invalid")
-        test_invalid_batch_sizes_rolling_batch()
-        test_invalid_gqa_value("invalid")
-
-    def test_trtllm_configs(self):
-        properties = {
-            "model_id": "model_id",
-            "model_dir": "model_dir",
-            "rolling_batch": "auto",
-        }
-        trt_configs = TensorRtLlmProperties(**properties)
-        self.assertEqual(trt_configs.model_id_or_path, properties['model_id'])
-        self.assertEqual(trt_configs.rolling_batch.value,
-                         properties['rolling_batch'])
-
-    def test_trtllm_error_cases(self):
-        properties = {
-            "model_id": "model_id",
-            "model_dir": "model_dir",
-        }
-
-        def test_trtllm_rb_invalid():
-            properties['rolling_batch'] = 'lmi-dist'
+    @parameters([{
+        "rolling_batch": "auto",
+    }, {
+        "rolling_batch": "lmi-dist",
+        "is_error_case": True
+    }])
+    def test_trt_llm_configs(self, params):
+        is_error_case = params.pop("is_error_case", False)
+        properties = {**model_min_properties, **params}
+        if is_error_case:
             with self.assertRaises(ValueError):
                 TensorRtLlmProperties(**properties)
-
-        test_trtllm_rb_invalid()
+        else:
+            trt_configs = TensorRtLlmProperties(**properties)
+            self.assertEqual(trt_configs.model_id_or_path,
+                             properties['model_id'])
+            self.assertEqual(trt_configs.rolling_batch.value,
+                             properties['rolling_batch'])
 
     def test_ds_properties(self):
         ds_properties = {
@@ -346,31 +330,21 @@ class TestConfigManager(unittest.TestCase):
         test_ds_invalid_quant_method()
         test_deepspeed_configs_file()
 
-    def test_ds_error_properties(self):
-        ds_properties = {
-            "model_id": "model_id",
-            "model_dir": "model_dir",
-            "quantize": "smoothquant",
-        }
+    @parameters([{
+        "quantize": "smoothquant",
+        "dtype": "bf16"
+    }, {
+        "quantize": "smoothquant",
+        'smoothquant_alpha': 1.5
+    }, {
+        "quantize": "smoothquant",
+        'dtype': "invalid"
+    }])
+    def test_ds_error_properties(self, params):
+        ds_properties = {**model_min_properties, **params}
 
-        def test_ds_invalid_quant():
-            ds_properties['dtype'] = 'bf16'
-            with self.assertRaises(ValueError):
-                DeepSpeedProperties(**ds_properties)
-
-        def test_ds_invalid_sq_value():
-            ds_properties['smoothquant_alpha'] = 1.5
-            with self.assertRaises(ValueError):
-                DeepSpeedProperties(**ds_properties)
-
-        def test_ds_invalid_dtype():
-            ds_properties['dtype'] = 'invalid'
-            with self.assertRaises(ValueError):
-                DeepSpeedProperties(**ds_properties)
-
-        test_ds_invalid_quant()
-        test_ds_invalid_sq_value()
-        test_ds_invalid_dtype()
+        with self.assertRaises(ValueError):
+            DeepSpeedProperties(**ds_properties)
 
     def test_hf_configs(self):
         properties = {
@@ -438,14 +412,16 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(hf_configs.quantize.value,
                          HFQuantizeMethods.bitsandbytes.value)
 
-    def test_hf_error_case(self):
-        properties = {"model_id": "model_id", 'load_in_8bit': 'true'}
+    @parameters([{
+        "model_id": "model_id",
+        "quantize": HFQuantizeMethods.bitsandbytes4.value
+    }, {
+        "model_id": "model_id",
+        "load_in_8bit": "true"
+    }])
+    def test_hf_error_case(self, params):
         with self.assertRaises(ValueError):
-            HuggingFaceProperties(**properties)
-
-        properties = {"quantize": HFQuantizeMethods.bitsandbytes4.value}
-        with self.assertRaises(ValueError):
-            HuggingFaceProperties(**properties)
+            HuggingFaceProperties(**params)
 
     def test_vllm_properties(self):
         # test with valid vllm properties
@@ -519,21 +495,11 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(properties['save_mp_checkpoint_path'],
                          neuron_sd_config.save_mp_checkpoint_path)
 
-    def test_sd_inf2_properties_errors(self):
-        properties = {
-            'height': 128,
-            'width': 128,
-        }
-
-        def test_unsupported_dtype(dtype):
-            test_properties = {
-                **common_properties,
-                **properties, "dtype": dtype
-            }
-            with self.assertRaises(ValueError):
-                StableDiffusionNeuronXProperties(**test_properties)
-
-        test_unsupported_dtype("fp16")
+    @parameters([{'height': 128, 'width': 128, "dtype": 'fp16'}])
+    def test_sd_inf2_properties_errors(self, params):
+        test_properties = {**common_properties, **params}
+        with self.assertRaises(ValueError):
+            StableDiffusionNeuronXProperties(**test_properties)
 
     def test_lmi_dist_properties(self):
 
@@ -623,22 +589,11 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(scheduler_configs.multi_gpu, properties['multi_gpu'])
 
     def test_chat_configs(self):
-        properties = {
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a friendly chatbot"
-                },
-                {
-                    "role": "user",
-                    "content": "Which is bigger, the moon or the sun?"
-                },
-            ]
-        }
 
         def test_chat_min_configs():
-            chat_configs = ChatProperties(**properties)
-            self.assertEqual(chat_configs.messages, properties["messages"])
+            chat_configs = ChatProperties(**chat_messages_properties)
+            self.assertEqual(chat_configs.messages,
+                             chat_messages_properties["messages"])
             self.assertIsNone(chat_configs.model)
             self.assertEqual(chat_configs.frequency_penalty, 0.0)
             self.assertIsNone(chat_configs.logit_bias)
@@ -655,6 +610,7 @@ class TestConfigManager(unittest.TestCase):
             self.assertIsNone(chat_configs.user)
 
         def test_chat_all_configs():
+            properties = dict(chat_messages_properties)
             properties["model"] = "model"
             properties["frequency_penalty"] = "1.0"
             properties["logit_bias"] = {"2435": -100.0, "640": -100.0}
@@ -691,62 +647,47 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(chat_configs.top_p, float(properties['top_p']))
             self.assertEqual(chat_configs.user, properties['user'])
 
-        def test_invalid_configs():
-            test_properties = dict(properties)
-            test_properties["messages"] = [{
-                "role1":
-                "system",
-                "content":
-                "You are a friendly chatbot"
-            }]
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-
-            test_properties = dict(properties)
-            test_properties["frequency_penalty"] = "-3.0"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-            test_properties["frequency_penalty"] = "3.0"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-
-            test_properties = dict(properties)
-            test_properties["logit_bias"] = {"2435": -100.0, "640": 200.0}
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-            test_properties["logit_bias"] = {"2435": -200.0, "640": 100.0}
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-
-            test_properties = dict(properties)
-            test_properties["logprobs"] = "true"
-            test_properties["top_logprobs"] = "-1"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-            test_properties["logprobs"] = "true"
-            test_properties["top_logprobs"] = "30"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-
-            test_properties = dict(properties)
-            test_properties["presence_penalty"] = "-3.0"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-            test_properties["presence_penalty"] = "3.0"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-
-            test_properties = dict(properties)
-            test_properties["temperature"] = "-1.0"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-            test_properties["temperature"] = "3.0"
-            with self.assertRaises(ValueError):
-                ChatProperties(**test_properties)
-
         test_chat_min_configs()
         test_chat_all_configs()
-        test_invalid_configs()
+
+    @parameters([{
+        "messages": [{
+            "role1": "system",
+            "content": "You are a friendly chatbot"
+        }]
+    }, {
+        "frequency_penalty": "-3.0"
+    }, {
+        "frequency_penalty": "3.0"
+    }, {
+        "logit_bias": {
+            "2435": -100.0,
+            "640": 200.0
+        }
+    }, {
+        "logit_bias": {
+            "2435": -200.0,
+            "640": 100.0
+        }
+    }, {
+        "logprobs": "true",
+        "top_logprobs": "-1"
+    }, {
+        "logprobs": "true",
+        "top_logprobs": "30"
+    }, {
+        "presence_penalty": "-3.0"
+    }, {
+        "presence_penalty": "3.0"
+    }, {
+        "temperature": "-1.0"
+    }, {
+        "temperature": "3.0"
+    }])
+    def test_chat_invalid_configs(self, params):
+        test_properties = {**chat_messages_properties, **params}
+        with self.assertRaises(ValueError):
+            ChatProperties(**test_properties)
 
 
 if __name__ == '__main__':
