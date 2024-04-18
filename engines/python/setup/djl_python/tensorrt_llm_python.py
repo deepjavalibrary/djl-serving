@@ -11,7 +11,7 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.utils import parse_input_with_client_batch
+from djl_python.utils import parse_input_with_formatter, InputFormatConfigs
 
 
 def _get_value_based_on_tensor(value, index=None):
@@ -86,10 +86,15 @@ class TRTLLMPythonService:
         self.trt_configs = None
         self.initialized = False
         self.is_client_side_batch = []
+        self.input_formatter = None
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
         self._load_model(properties)
+        self.input_formatter = InputFormatConfigs(
+            is_rolling_batch=False,
+            is_adapters_supported=False,
+            output_formatter=self.trt_configs.output_formatter)
         self.initialized = True
         return
 
@@ -109,8 +114,8 @@ class TRTLLMPythonService:
         :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
         :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """
-        parsed_input = parse_input_with_client_batch(inputs, tokenizer,
-                                                     output_formatter)
+        parsed_input = parse_input_with_formatter(
+            inputs, input_format_configs=self.input_formatter)
         self.is_client_side_batch = parsed_input.is_client_side_batch
         return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
 
