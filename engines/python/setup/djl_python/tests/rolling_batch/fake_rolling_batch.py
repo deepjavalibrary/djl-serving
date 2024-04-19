@@ -19,11 +19,12 @@ from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exc
 class FakeRollingBatch(RollingBatch):
 
     # TODO: Make properties is the only parameter, after refactoring all rolling batch handlers
-    def __init__(self, model_id_or_path, properties, **kwargs):
+    def __init__(self, properties):
         """
         Initializes the FakeRollingBatch.
         """
-        super().__init__(**kwargs)
+        super().__init__(waiting_steps=properties.get("waiting_steps"),
+                         output_formatter=properties.get("output_formatter"))
         self.sample_text = (
             "DJL-Serving is a powerful and user-friendly deep learning model serving solution "
             "that enables developers to easily deploy and serve their trained deep learning models."
@@ -36,9 +37,10 @@ class FakeRollingBatch(RollingBatch):
             " or a developer, DJL-Serving simplifies the process of serving deep learning models,"
             " enabling you to focus on creating innovative applications with ease."
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path,
-                                                       padding_side="left",
-                                                       trust_remote_code=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            properties.get("model_id") or properties.get("model_dir"),
+            padding_side="left",
+            trust_remote_code=True)
         if not self.tokenizer.pad_token:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokens = self.tokenizer.encode(self.sample_text)
@@ -99,8 +101,8 @@ class FakeRollingBatch(RollingBatch):
 
 class FakeRollingBatchWithException(FakeRollingBatch):
 
-    def __init__(self, model_id_or_path, properties, **kwargs):
-        super().__init__(model_id_or_path, properties, **kwargs)
+    def __init__(self, properties):
+        super().__init__(properties)
         self.dead_counter = 0
         self.dead_trigger = random.randint(1, 50)
 

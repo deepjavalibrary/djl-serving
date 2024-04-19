@@ -33,12 +33,10 @@ class VLLMRollingBatch(RollingBatch):
     """
 
     # TODO: Make properties is the only parameter, after refactoring all rolling batch handlers
-    def __init__(self, model_id_or_path: str, properties: dict,
-                 **kwargs) -> None:
+    def __init__(self, properties: dict) -> None:
         """
         Initializes the VLLMRollingBatch.
 
-        :param model_id_or_path: Currently unused since there is a copy inside properties
         :param properties: other properties of the model, such as decoder strategy
         """
         self.vllm_configs = VllmRbProperties(**properties)

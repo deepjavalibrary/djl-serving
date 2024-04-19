@@ -11,9 +11,9 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-from seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock, FalconBlock
-from seq_scheduler.search_config import SearchConfig
-from seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
+from djl_python.seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock, FalconBlock
+from djl_python.seq_scheduler.search_config import SearchConfig
+from djl_python.seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
 from collections import namedtuple, defaultdict
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
@@ -51,14 +51,11 @@ class SchedulerRollingBatch(RollingBatch):
     and other experimental features.
     """
 
-    def __init__(self, model_id_or_path: str, properties: dict,
-                 **kwargs) -> None:
+    def __init__(self, properties: dict) -> None:
         """
         Initializes the rolling batch scheduler.
 
-        :param model_id_or_path (str): model id or path
         :param properties (dict): other properties of the model, such as decoder strategy
-        :param kwargs passed while loading the model
         """
 
         self.scheduler_configs = SchedulerRbProperties(**properties)
@@ -203,12 +200,9 @@ class SchedulerRollingBatch(RollingBatch):
             eos_token_id=self.tokenizer.eos_token,
             pad_token_id=self.tokenizer.pad_token)
         self.search_algorithm = self.scheduler_configs.decoding_strategy
-        self.scheduler = SeqBatchScheduler(
-            self.lm_block,
-            self.search_algorithm,
-            self.search_config,
-            max_sparsity=self.scheduler_configs.max_sparsity,
-            max_splits=self.scheduler_configs.max_splits)
+        self.scheduler = SeqBatchScheduler(self.lm_block,
+                                           self.search_algorithm,
+                                           self.search_config)
 
     def _prefill_and_decode(self, new_requests) -> None:
         """

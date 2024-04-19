@@ -16,6 +16,7 @@ import unittest
 from djl_python.test_model import TestHandler
 from djl_python import huggingface
 from .rolling_batch.fake_rolling_batch import FakeRollingBatch, FakeRollingBatchWithException
+from djl_python.rolling_batch import rolling_batch_service
 
 
 def override_rolling_batch(rolling_batch_type: str, is_mpi: bool,
@@ -32,7 +33,7 @@ class TestTestModel(unittest.TestCase):
 
     def test_all_code(self):
         model_id = "NousResearch/Nous-Hermes-Llama2-13b"
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        rolling_batch_service.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         inputs = [{
             "inputs": "The winner of oscar this year is",
@@ -65,7 +66,7 @@ class TestTestModel(unittest.TestCase):
         }
         for key, value in envs.items():
             os.environ[key] = value
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        rolling_batch_service.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         self.assertEqual(handler.serving_properties["model_id"],
                          envs["OPTION_MODEL_ID"])
@@ -95,7 +96,7 @@ class TestTestModel(unittest.TestCase):
 
     def test_all_code_chat(self):
         model_id = "TheBloke/Llama-2-7B-Chat-fp16"
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        rolling_batch_service.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         inputs = [{
             "inputs":
@@ -127,7 +128,7 @@ class TestTestModel(unittest.TestCase):
         }
         for key, value in envs.items():
             os.environ[key] = value
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        rolling_batch_service.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         self.assertEqual(handler.serving_properties["model_id"],
                          envs["OPTION_MODEL_ID"])
@@ -155,7 +156,7 @@ class TestTestModel(unittest.TestCase):
             os.environ[key] = ""
 
     def test_exception_handling(self):
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch_with_exception
+        rolling_batch_service.get_rolling_batch_class_from_str = override_rolling_batch_with_exception
         model_id = "NousResearch/Nous-Hermes-Llama2-13b"
         handler = TestHandler(huggingface)
         inputs = [{
@@ -202,3 +203,7 @@ class TestTestModel(unittest.TestCase):
         for _, value in result.items():
             final_dict = json.loads(value.splitlines()[-1])
             self.assertEqual(final_dict["details"]["finish_reason"], 'error')
+
+
+if __name__ == '__main__':
+    unittest.main()

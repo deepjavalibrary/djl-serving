@@ -38,11 +38,10 @@ class LmiDistRollingBatch(RollingBatch):
     It also gets any new tokens from the backend and sends them back to the handler.
     """
 
-    def __init__(self, model_id_or_path: str, properties: dict, **kwargs):
+    def __init__(self, properties: dict):
         """
         Initializes the LmiDistRollingBatch.
 
-        :param model_id_or_path (str): Currently unused since there is a copy inside properties
         :param properties (dict): other properties of the model, such as decoder strategy
         """
         self.lmi_dist_config = LmiDistRbProperties(**properties)
@@ -84,8 +83,6 @@ class LmiDistRollingBatch(RollingBatch):
             kwargs["warmup_prefill_tokens"] = _WARMUP_PREFILL_TOKENS
         self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
-        self.model_type = getattr(kwargs.get("model_config", None),
-                                  "model_type", None)
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
 
     def reset(self) -> None:
