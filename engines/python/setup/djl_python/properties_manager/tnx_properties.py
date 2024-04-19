@@ -55,6 +55,7 @@ class TnXGQAMethods(str, Enum):
 class TnXModelLoaders(str, Enum):
     tnx = "tnx"
     optimum = "optimum"
+    vllm = "vllm"
 
 
 class TnXModelSchema(str, Enum):
@@ -75,7 +76,10 @@ class TnXMemoryLayout(str, Enum):
     LAYOUT_SBH = "SBH"
 
 
-TNX_SUPPORTED_ROLLING_BATCH_TYPES = ['auto']
+TNX_SUPPORTED_ROLLING_BATCH_TYPES = [
+    RollingBatchEnum.auto.value, RollingBatchEnum.vllm.value,
+    RollingBatchEnum.lmidist.value, RollingBatchEnum.tnx.value
+]
 
 
 class TransformerNeuronXProperties(Properties):
@@ -238,26 +242,13 @@ class TransformerNeuronXProperties(Properties):
         return self
 
     @model_validator(mode='before')
-    def set_model_loader(cls, properties):
-        if properties.get('model_loader') is None:
-            if properties.get('fuse_qkv') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get('collectives_layout') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get('on_device_embedding') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get('load_in_8bit') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get('quantize') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get('load_split_model') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get('compiled_graph_path') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get('context_length_estimate') is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
-            elif properties.get("speculative_draft_model") is not None:
-                properties['model_loader'] = TnXModelLoaders.tnx
+    def validate_partition_model_loader(cls, properties):
+        if properties.get('save_mp_checkpoint_path'):
+            if properties.get('model_loader') == TnXModelLoaders.vllm.value:
+                raise ValueError(
+                    f"vLLM model loader does not support ahead of time compilation via the partition script. "
+                    f"Compiling and loading of compiled models for vLLM should use "
+                    f"the supported model loader: {TnXModelLoaders.tnx.value}")
         return properties
 
     @field_validator('on_device_embedding_config')

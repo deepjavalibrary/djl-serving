@@ -16,39 +16,18 @@ from transformers import AutoConfig, AutoTokenizer
 from unittest.mock import MagicMock, Mock, patch
 from djl_python.tests.utils import parameterized, parameters, mock_import_modules
 
-MOCK_MODULES = [
-    "torch_neuronx",
-    "neuronxcc",
-    "transformers_neuronx",
-    "transformers_neuronx.config",
-    "transformers_neuronx.module",
-    "transformers_neuronx.gpt2",
-    "transformers_neuronx.gpt2.model",
-    "transformers_neuronx.speculation",
-    "optimum",
-    "optimum.neuron",
-    "optimum.neuron.utils",
-    "optimum.neuron.generation",
-    "optimum.neuron.utils.version_utils",
-    "optimum.exporters",
-    "optimum.exporters.neuron",
-    "optimum.exporters.neuron.model_configs",
-    "djl_python.transformers_neuronx_scheduler.optimum_modeling",
-    "optimum.exporters.tasks",
-    "diffusers",
-    "diffusers.models",
-    "diffusers.models.unet_2d_condition",
-    "diffusers.models.attention_processor",
-    "djl_python.transformers_neuronx_scheduler.speculation",
-]
-mock_import_modules(MOCK_MODULES)
-from djl_python.transformers_neuronx import TransformersNeuronXService
-from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy
-from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
-from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
+try:
+    from djl_python.transformers_neuronx import TransformersNeuronXService
+    from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy
+    from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
+    from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
+    SKIP_TEST = False
+except ImportError:
+    SKIP_TEST = True
 
 
 @parameterized
+@unittest.skipIf(SKIP_TEST, "Neuron dependencies are not available")
 class TestTransformerNeuronXService(unittest.TestCase):
 
     def setUp(self):
@@ -86,7 +65,7 @@ class TestTransformerNeuronXService(unittest.TestCase):
 
     @staticmethod
     def patch_partition():
-        return patch.object(OptimumModelLoader,
+        return patch.object(TNXModelLoader,
                             "partition",
                             return_value="mock_model")
 

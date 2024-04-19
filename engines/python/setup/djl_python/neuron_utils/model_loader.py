@@ -124,6 +124,7 @@ class TNXModelLoader(ModelLoader):
         self.compiled_graph_path = None
         self.neuron_config = None
         self.generation_config = None
+        self.use_continuous_batching = self.can_use_continuous_batching()
         self.set_neuron_config()
 
         # Assume safetensors until model download
@@ -143,15 +144,26 @@ class TNXModelLoader(ModelLoader):
             )
         return neuronx_class
 
+    def can_use_continuous_batching(self) -> bool:
+        """
+        Set configuration for continuous batching, currently all vllm implementations are continuous batching
+        and batch size greater than 1 for tnx and lmi-dist support rolling batch.
+
+        :return: bool indicating if continuous batching can be used
+        """
+        use_continuous_batching = (self.config.rolling_batch != "disable"
+                                   and self.config.rolling_batch_strategy
+                                   == TnXGenerationStrategy.continuous_batching
+                                   and self.config.max_rolling_batch_size
+                                   > 1) or self.config.rolling_batch == "vllm"
+        return use_continuous_batching
+
     def set_neuron_config(self) -> None:
         """
         Creates neuron config based on whether rolling batch, quantization, GQA is on
         """
         neuron_config = {}
-        if (self.config.rolling_batch != "disable"
-                and self.config.rolling_batch_strategy
-                == TnXGenerationStrategy.continuous_batching
-                and self.config.max_rolling_batch_size > 1):
+        if self.use_continuous_batching:
             neuron_config["continuous_batching"] = ContinuousBatchingConfig(
                 batch_size_for_shared_caches=self.config.max_rolling_batch_size
             )
@@ -203,10 +215,7 @@ class TNXModelLoader(ModelLoader):
                 "context_length_estimate"] = self.config.context_length_estimate
 
         # Continuous batching requires positions and estimates as lists instead of int
-        if (self.config.rolling_batch != "disable"
-                and self.config.rolling_batch_strategy
-                == TnXGenerationStrategy.continuous_batching
-                and self.config.max_rolling_batch_size > 1):
+        if self.use_continuous_batching:
             model_kwargs["n_positions"] = [self.config.n_positions]
             if self.config.context_length_estimate is None:
                 model_kwargs["context_length_estimate"] = [

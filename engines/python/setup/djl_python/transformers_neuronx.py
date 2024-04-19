@@ -11,13 +11,13 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
-import json
 import copy
 import logging
 from transformers import AutoConfig, AutoTokenizer
 from djl_python import Input, Output
 from djl_python.encode_decode import encode
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
+from djl_python.rolling_batch.neuron_vllm_rolling_batch import NeuronVLLMRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, \
@@ -29,8 +29,9 @@ from djl_python.utils import InputFormatConfigs, parse_input_with_formatter
 
 model = None
 
-OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom"}
+OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama", "mistral"}
 OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS = {"llama", "mistral"}
+VLLM_CONTINUOUS_BATCHING_MODELS = {"llama"}
 
 
 class TransformersNeuronXService(object):
@@ -46,7 +47,7 @@ class TransformersNeuronXService(object):
         self.draft_model = None
         self.rolling_batch_config = dict()
         self.input_format_configs = None
-        self._model_loader_class = OptimumModelLoader
+        self._model_loader_class = TNXModelLoader
 
     def optimum_not_supported(self) -> bool:
         support = False
@@ -62,24 +63,35 @@ class TransformersNeuronXService(object):
                 and self.config.rolling_batch == "disable")
         return support
 
-    def set_model_loader_class(self):
-        if self.config.model_loader == "optimum":
-            logging.info("Loading model using OptimumModelLoader...")
-            return
+    def vllm_not_supported(self) -> bool:
+        # Current support on vLLM is only continuous batching llama models
+        if self.model_config.model_type not in VLLM_CONTINUOUS_BATCHING_MODELS and self.config.rolling_batch == "vllm":
+            return True
+        return False
 
+    def set_model_loader_class(self):
         if self.config.model_loader == "tnx":
             self._model_loader_class = TNXModelLoader
             logging.info("Loading model using TNXModelLoader...")
             return
 
-        # Limit optimum model loading from using non hf schema models or using non-implemented neuron configs
-        if self.optimum_not_supported():
-            logging.info("Loading model using TNXModelLoader...")
-            self._model_loader_class = TNXModelLoader
-        else:
+        if self.config.model_loader == "optimum":
+            if self.optimum_not_supported():
+                raise AttributeError(
+                    f"OptimumModelLoader does not support this config: {self.config}"
+                )
+            self._model_loader_class = OptimumModelLoader
             logging.info("Loading model using OptimumModelLoader...")
+            return
 
-    def set_configs(self, properties):
+        if self.config.model_loader == "vllm":
+            """vLLM does not need to set a model loader and instead defers model loading to the vLLM package"""
+            if self.vllm_not_supported():
+                raise AttributeError(
+                    f"VllmModelLoader does not support this config: {self.config}"
+                )
+
+    def set_configs(self, properties: dict):
         self.config = TransformerNeuronXProperties(**properties)
         if self.config.rolling_batch != "disable":
             """batch_size needs to match max_rolling_batch_size for precompiled neuron models running rolling batch"""
@@ -113,7 +125,12 @@ class TransformersNeuronXService(object):
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
     def set_rolling_batch(self):
-        if self.config.rolling_batch != "disable":
+        if self.config.rolling_batch == "vllm":
+            if self.model:
+                self.rolling_batch_config["preloaded_model"] = self.model
+            self.rolling_batch = NeuronVLLMRollingBatch(
+                self.config, **self.rolling_batch_config)
+        elif self.config.rolling_batch != "disable":
             if self.draft_model:
                 self.rolling_batch_config["draft_model"] = self.draft_model
                 self.rolling_batch_config[
@@ -127,7 +144,7 @@ class TransformersNeuronXService(object):
             config=self.config, model_config=self.model_config)
 
     @staticmethod
-    def set_draft_model_properties(properties):
+    def set_draft_model_properties(properties: dict) -> dict:
         draft_properties = copy.deepcopy(properties)
         # Optimum currently doesn't support speculative decoding
         draft_properties["model_loader"] = TnXModelLoaders.tnx
@@ -144,7 +161,7 @@ class TransformersNeuronXService(object):
             draft_properties["compiled_graph_path"] = draft_compiled
         return draft_properties
 
-    def pre_model_load(self, properties):
+    def pre_model_load(self, properties: dict):
         if properties.get("speculative_draft_model"):
             logging.info(
                 f"Loading draft model {properties.get('speculative_draft_model')} ..."
@@ -154,17 +171,26 @@ class TransformersNeuronXService(object):
             logging.info(
                 f"Loading target model {properties.get('model_id')} ...")
 
-    def initialize_draft_model(self, properties):
+    def load_model(self):
+        if self.config.rolling_batch == "vllm" and self.config.model_loader == "vllm":
+            """Model loading is being deferred to vLLMs model loader"""
+            return
+        elif self.config.rolling_batch == "vllm":
+            self.model = self.model_loader.load_unwrapped_model()
+        else:
+            self.model = self.model_loader.load_model()
+
+    def initialize_draft_model(self, properties: dict):
         self.set_configs(properties)
         self.set_model_loader()
         self.draft_model = self.model_loader.load_unwrapped_model()
 
-    def initialize(self, properties):
+    def initialize(self, properties: dict):
         self.pre_model_load(properties)
         self.set_configs(properties)
         self.set_tokenizer()
         self.set_model_loader()
-        self.model = self.model_loader.load_model()
+        self.load_model()
         self.set_rolling_batch()
         self.input_format_configs = InputFormatConfigs(
             is_rolling_batch=is_rolling_batch_enabled(
@@ -194,7 +220,7 @@ class TransformersNeuronXService(object):
             inputs, input_format_configs=self.input_format_configs)
         return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
 
-    def partition(self, properties):
+    def partition(self, properties: dict):
         self.pre_model_load(properties)
         self.set_configs(properties)
         self.set_tokenizer()
@@ -206,7 +232,7 @@ class TransformersNeuronXService(object):
         self.set_rolling_batch()
         self.initialized = True
 
-    def inference(self, inputs):
+    def inference(self, inputs: Input) -> Output:
         input_data, input_size, parameters, errors, batch = self.parse_input(
             inputs, self.tokenizer, self.config.output_formatter)
         outputs = Output()

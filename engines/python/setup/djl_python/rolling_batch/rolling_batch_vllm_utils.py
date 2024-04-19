@@ -14,11 +14,9 @@ import logging
 from collections import OrderedDict
 from typing import Any
 
-from lmi_dist.arg_utils import VllmEngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput
 from vllm.lora.request import LoRARequest
 from djl_python.request_io import Token
-
 from djl_python.request import Request
 
 DTYPE_MAPPER = {
@@ -105,7 +103,12 @@ def get_speculative_decoding_metrics_record(
 
 
 def supports_speculative_decoding() -> bool:
-    return "draft_model" in VllmEngineArgs.__annotations__
+    try:
+        # Moved the import inside a try to support neuron vllm container w/o lmi-dist
+        from lmi_dist.arg_utils import VllmEngineArgs
+        return "draft_model" in VllmEngineArgs.__annotations__
+    except ImportError:
+        return False
 
 
 def get_lora_request_params(request: Request, lora_ids: dict) -> dict:
