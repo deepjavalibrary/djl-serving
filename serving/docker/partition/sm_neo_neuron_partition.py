@@ -45,6 +45,9 @@ class NeoNeuronPartitionService():
         self.COMPILER_CACHE_LOCATION: Final[str] = env[4]
 
     def update_neuron_cache_location(self):
+        logging.info(
+            f"Updating Neuron Persistent Cache directory to: {self.COMPILER_CACHE_LOCATION}"
+        )
         os.environ['NEURON_COMPILE_CACHE_URL'] = self.COMPILER_CACHE_LOCATION
 
     def initialize_partition_args_namespace(self):
@@ -64,7 +67,11 @@ class NeoNeuronPartitionService():
         self.args.tensor_parallel_degree = None
 
     def parse_neo_compiler_flags(self):
+        """
+        Parses the compiler_flags field of Neo CompilerOptions.
+        """
         if self.compiler_flags:
+            logging.debug(f"Compiler Flags: {self.compiler_flags}")
             if not isinstance(self.compiler_flags, dict):
                 raise InputConfiguration(
                     "Invalid compiler flags. Ensure that the input is a valid JSON dictionary."
@@ -104,6 +111,7 @@ class NeoNeuronPartitionService():
             's8': 'int8'
         }
 
+        logging.debug(f"tnx options dict: {options}")
         if "amp" in options:
             options["option.dtype"] = amp_dtype_map[options["amp"]]
             del options["amp"]
@@ -137,6 +145,9 @@ class NeoNeuronPartitionService():
         self.properties["option.model_loader"] = "tnx"
         self.properties |= NeoNeuronPartitionService.convert_tnx_options_to_djl_options(
             self.compiler_flags)
+        logging.debug(
+            f"Constructing PropertiesManager from TNX options\nargs:{self.args}\nprops:{self.properties}"
+        )
         self.properties_manager = PropertiesManager(
             self.args, addl_properties=self.properties)
 
@@ -160,6 +171,8 @@ class NeoNeuronPartitionService():
         }
 
         props = {}
+
+        logging.debug(f"optimum flags: {flags}")
 
         # Iterating through the attributes of the namespace
         for flag, value in vars(flags).items():
@@ -202,11 +215,20 @@ class NeoNeuronPartitionService():
         self.properties |= NeoNeuronPartitionService.convert_optimum_flags_to_djl_options(
             flags)
 
+        logging.debug(
+            f"Constructing PropertiesManager from optimum options\nargs:{self.args}\nprops:{self.properties}"
+        )
         self.properties_manager = PropertiesManager(
             self.args, addl_properties=self.properties)
 
     def construct_properties_manager_from_serving_properties(self):
+        """
+        Factory method used to construct a PropertiesManager from serving.properties
+        """
         self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
+        logging.debug(
+            f"Constructing PropertiesManager from serving.properties\nargs:{self.args}\nprops:{self.properties}"
+        )
         self.properties_manager = PropertiesManager(
             self.args, addl_properties=self.properties)
 
@@ -216,7 +238,13 @@ class NeoNeuronPartitionService():
         self.compiler_flags = get_neo_compiler_flags(self.NEO_COMPILER_OPTIONS)
         self.parse_neo_compiler_flags()
         if self.compiler_interface == "transformers-neuronx":
+            logging.info(
+                "Reading Neo CompilerOptions in transformers-neuronx format. serving.properties will be ignored"
+            )
             self.construct_properties_manager_from_tnx_options()
+            logging.info(
+                "Reading Neo CompilerOptions in optimum format. serving.properties will be ignored"
+            )
         elif self.compiler_interface == "optimum":
             self.construct_properties_manager_from_optimum_flags()
         elif self.compiler_interface:
