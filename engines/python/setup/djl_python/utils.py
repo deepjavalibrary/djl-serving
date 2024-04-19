@@ -1,6 +1,10 @@
 import logging
 from typing import Union, Callable, Any, List
 
+from peft import PeftConfig
+from transformers import AutoConfig, AutoTokenizer
+from typing import Union, Callable, Any, List
+
 from djl_python.inputs import Input
 from djl_python.encode_decode import decode
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
@@ -147,3 +151,41 @@ def _fetch_adapters_from_input(input_map: dict, inputs: Input):
         adapters_per_item = [adapters_per_item]
 
     return adapters_per_item
+
+
+def get_tokenizer(model_id_or_path: str, trust_remote_code: bool,
+                  revision: str, peft_config):
+    path_to_use = model_id_or_path if peft_config is None else peft_config.base_model_name_or_path
+    return AutoTokenizer.from_pretrained(
+        path_to_use,
+        padding_size="left",
+        trust_remote_code=trust_remote_code,
+        revision=revision,
+    )
+
+
+def read_model_config(model_config_path: str, trust_remote_code: bool,
+                      revision: str):
+    model_config = None
+    peft_config = None
+    try:
+        model_config = AutoConfig.from_pretrained(
+            model_config_path,
+            trust_remote_code=trust_remote_code,
+            revision=revision)
+    except OSError:
+        logging.warning(
+            f"config.json not found for {model_config_path}. Attempting to load with peft"
+        )
+        peft_config = PeftConfig.from_pretrained(model_config_path)
+        model_config = AutoConfig.from_pretrained(
+            peft_config.base_model_name_or_path,
+            trust_remote_code=trust_remote_code,
+            revision=revision,
+        )
+    except Exception as e:
+        logging.error(
+            f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
+            f"This is required for loading huggingface models")
+        raise e
+    return model_config, peft_config
