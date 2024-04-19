@@ -253,17 +253,14 @@ public class ModelInfoTest {
         // vllm/lmi-dist features enabled
         System.setProperty("SERVING_FEATURES", "vllm,lmi-dist");
         Map<String, String> modelToRollingBatch =
-                new HashMap<>() {
-                    {
-                        put("TheBloke/Llama-2-7B-fp16", "lmi-dist");
-                        put("openai-community/gpt2", "lmi-dist");
-                        put("tiiuae/falcon-7b", "lmi-dist");
-                        put("mistralai/Mistral-7B-v0.1", "lmi-dist");
-                        put("src/test/resources/local-hf-model", "lmi-dist");
-                        put("HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable");
-                        put("THUDM/chatglm3-6b", "lmi-dist");
-                    }
-                };
+                Map.of(
+                        "TheBloke/Llama-2-7B-fp16", "lmi-dist",
+                        "openai-community/gpt2", "lmi-dist",
+                        "tiiuae/falcon-7b", "lmi-dist",
+                        "NousResearch/Hermes-2-Pro-Mistral-7B", "lmi-dist",
+                        "src/test/resources/local-hf-model", "lmi-dist",
+                        "HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable",
+                        "THUDM/chatglm3-6b", "lmi-dist");
         Path modelStore = Paths.get("build/models");
         Path modelDir = modelStore.resolve("lmi_test_model");
         Path prop = modelDir.resolve("serving.properties");
