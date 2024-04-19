@@ -257,7 +257,7 @@ public class ModelInfoTest {
                         "TheBloke/Llama-2-7B-fp16", "lmi-dist",
                         "openai-community/gpt2", "lmi-dist",
                         "tiiuae/falcon-7b", "lmi-dist",
-                        "mistralai/Mistral-7B-v0.1", "lmi-dist",
+                        "NousResearch/Hermes-2-Pro-Mistral-7B", "lmi-dist",
                         "src/test/resources/local-hf-model", "lmi-dist",
                         "HuggingFaceH4/tiny-random-LlamaForSequenceClassification", "disable",
                         "THUDM/chatglm3-6b", "lmi-dist");
