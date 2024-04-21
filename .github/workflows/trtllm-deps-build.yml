@@ -19,7 +19,7 @@ on:
         description: 'Only do dry run upload'
         type: boolean
         required: true
-        default: false
+        default: true
       ci_test_branch:
         description: 'The test branch of CI'
         required: false
