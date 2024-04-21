@@ -32,8 +32,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -200,29 +203,30 @@ public class FolderScanPluginManager implements PluginManager {
     }
 
     private URL[] listPluginJars() throws IOException {
-        Path pluginsFolder = configManager.getPluginFolder();
-        if (pluginsFolder == null || !Files.isDirectory(pluginsFolder)) {
-            logger.info("plug-in folder not exists:{}", pluginsFolder);
-            return new URL[0];
-        }
-        logger.info("scanning in plug-in folder :{}", pluginsFolder);
+        List<Path> pluginsFolders = configManager.getPluginFolder();
+        List<URL> ret = new ArrayList<>();
+        for (Path dir : pluginsFolders) {
+            if (dir == null || !Files.isDirectory(dir)) {
+                logger.info("plug-in folder not exists:{}", dir);
+                continue;
+            }
+            logger.info("scanning in plug-in folder :{}", dir);
 
-        try (Stream<Path> stream = Files.walk(pluginsFolder, Integer.MAX_VALUE)) {
-            return stream.filter(file -> !Files.isDirectory(file))
-                    .filter(file -> file.getFileName() != null)
-                    .filter(file -> file.getFileName().toString().toLowerCase().endsWith(".jar"))
-                    .map(Path::toUri)
-                    .map(
-                            t -> {
-                                try {
-                                    return t.toURL();
-                                } catch (MalformedURLException e) {
-                                    logger.error(e.getMessage(), e);
+            try (Stream<Path> stream = Files.walk(dir)) {
+                stream.forEach(
+                        f -> {
+                            String name = f.toFile().getName().toLowerCase(Locale.ROOT);
+                            try {
+                                if (Files.isRegularFile(f) && name.endsWith(".jar")) {
+                                    ret.add(f.toUri().toURL());
                                 }
-                                return null;
-                            })
-                    .toArray(URL[]::new);
+                            } catch (MalformedURLException e) {
+                                logger.error("scan plugins folder failed", e);
+                            }
+                        });
+            }
         }
+        return ret.toArray(new URL[0]);
     }
 
     /**
