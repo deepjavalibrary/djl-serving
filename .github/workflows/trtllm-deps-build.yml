@@ -1,0 +1,110 @@
+name: TensorRT-LLM dependency build
+
+on:
+  workflow_dispatch:
+    inputs:
+      trtllm_branch:
+        description: 'The interal branch of trtllm'
+        required: true
+        default: 'lmi_v0.9.0'
+      release_tag:
+        description: 'The released tag version of trtllm'
+        required: true
+        default: 'v0.9.0'
+      python_version:
+        description: 'The python version of release'
+        required: false
+        default: '3.10'
+      dry_run:
+        description: 'Only do dry run upload'
+        type: boolean
+        required: true
+        default: false
+      ci_test_branch:
+        description: 'The test branch of CI'
+        required: false
+        default: 'ci'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new G5 instance
+        id: create_gpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+    outputs:
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
+
+  trtllm-deps-build:
+    runs-on: [ self-hosted, g5 ]
+    container:
+      image: nvidia/cuda:12.2.2-devel-ubuntu22.04
+      options: --gpus all --runtime=nvidia --shm-size 12g
+    timeout-minutes: 35
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python3
+        run: |
+          ./serving/docker/scripts/install_python.sh 3.10
+      - name: Install deps and clone repo
+        run: |
+          python3 -m pip install git-remote-codecommit
+          git clone codecommit::us-east-1://tensorrt_llm_backend -b ${{ inputs.ci_test_branch }}
+      - name: Build TRTLLM binary
+        working-directory: tensorrt_llm_backend
+        run: |
+          ./build_artifacts.sh ${{ inputs.trtllm_branch }} ${{ inputs.release_tag }} ${{ inputs.python_version }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: /tmp/binaries/tensorrtllm/
+
+  trtllm-deps-upload:
+    runs-on: [ self-hosted, g5 ]
+    needs: trtllm-deps-build
+    steps:
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install awscli
+      - name: Download built-artifacts
+        uses: actions/download-artifact@v3
+        with:
+            name: build-artifacts
+            path: tensorrtllm
+      - name: upload to S3 dryrun
+        if: ${{ inputs.dry_run}}
+        run: |
+          export S3_DIR="${{ inputs.release_tag }}_dryrun";
+          aws s3 sync tensorrtllm/  s3://djl-ai-staging/publish/tensorrt-llm/${S3_DIR}/
+            - name: upload to S3 dryrun
+      - name: upload to S3
+        if: inputs.dry_run != true
+        run: |
+          export S3_DIR="${{ inputs.release_tag }}";
+          aws s3 sync tensorrtllm/  s3://djl-ai-staging/publish/tensorrt-llm/${S3_DIR}/
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, trtllm-deps-build, trtllm-deps-upload ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          ./stop_instance.sh $instance_id
