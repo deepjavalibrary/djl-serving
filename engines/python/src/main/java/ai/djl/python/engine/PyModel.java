@@ -166,7 +166,8 @@ public class PyModel extends BaseModel {
                     entryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
                     entryPoint = "djl_python.tensorrt_llm";
-                } else if (pyEnv.getInitParameters().containsKey("model_id")) {
+                } else if (pyEnv.getInitParameters().containsKey("model_id")
+                        || Files.exists(modelPath.resolve("config.json"))) {
                     entryPoint = "djl_python.huggingface";
                 } else {
                     throw new FileNotFoundException(".py file not found in: " + modelPath);
