@@ -29,7 +29,6 @@ public class DependencyManagerTest {
         System.setProperty("MODEL_SERVER_HOME", "build/home");
         try {
             DependencyManager dm = DependencyManager.getInstance();
-            dm.installEngine("OnnxRuntime");
             dm.installEngine("XGBoost");
 
             dm.installDependency("ai.djl.pytorch:pytorch-jni:2.1.1-0.27.0");

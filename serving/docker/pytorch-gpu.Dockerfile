@@ -15,8 +15,9 @@ FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.28.0~SNAPSHOT
 ARG cuda_version=cu121
-ARG torch_version=2.1.1
-ARG torch_vision_version=0.16.1
+ARG torch_version=2.1.2
+ARG torch_vision_version=0.16.2
+ARG onnx_version=1.17.1
 ARG python_version=3.10
 
 RUN mkdir -p /opt/djl/conf && \
@@ -51,6 +52,8 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} pytorchgpu" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
+    rm -f /usr/local/djl-serving-*/lib/onnxruntime-$onnx_version.jar && \
+    curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     pip3 install numpy && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \

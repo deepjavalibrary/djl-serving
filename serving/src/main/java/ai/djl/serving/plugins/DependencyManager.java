@@ -19,7 +19,6 @@ import ai.djl.repository.zoo.ZooProvider;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.util.Utils;
-import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,15 +74,6 @@ public final class DependencyManager {
             case "MXNet":
                 installDependency("ai.djl.mxnet:mxnet-engine:" + djlVersion);
                 installDependency("ai.djl.mxnet:mxnet-model-zoo:" + djlVersion);
-                break;
-            case "OnnxRuntime":
-                installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
-                String ortVersion = getOrtVersion(djlVersion);
-                if (CudaUtils.hasCuda()) {
-                    installDependency("com.microsoft.onnxruntime:onnxruntime_gpu:" + ortVersion);
-                } else {
-                    installDependency("com.microsoft.onnxruntime:onnxruntime:" + ortVersion);
-                }
                 break;
             case "PaddlePaddle":
                 installDependency("ai.djl.paddlepaddle:paddlepaddle-engine:" + djlVersion);
