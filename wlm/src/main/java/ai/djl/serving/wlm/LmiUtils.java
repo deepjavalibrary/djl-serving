@@ -182,6 +182,8 @@ public final class LmiUtils {
                         URI.create("https://huggingface.co/" + modelId + "/raw/main/" + configFile);
                 HttpURLConnection configUrl =
                         (HttpURLConnection) configUri.toURL().openConnection();
+                // TODO FIXME: this hack is needed for now for our CI/testing
+                configUrl.setRequestProperty("User-Agent", "curl/7.8.6");
                 if (hubToken != null) {
                     configUrl.setRequestProperty("Authorization", "Bearer " + hubToken);
                 }
@@ -204,6 +206,8 @@ public final class LmiUtils {
                 return null;
             }
             URLConnection configConnection = modelConfigUri.toURL().openConnection();
+            // TODO FIXME: this hack is needed for now for our CI/testing
+            configConnection.setRequestProperty("User-Agent", "curl/7.8.6");
             if (Utils.getenv("HF_TOKEN") != null) {
                 configConnection.setRequestProperty(
                         "Authorization", "Bearer " + Utils.getenv("HF_TOKEN"));
