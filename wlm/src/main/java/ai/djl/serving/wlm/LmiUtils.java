@@ -176,6 +176,7 @@ public final class LmiUtils {
             String hfToken = Utils.getenv("HF_TOKEN");
             configUri = URI.create("https://huggingface.co/" + modelId + "/raw/main/config.json");
             HttpURLConnection configUrl = (HttpURLConnection) configUri.toURL().openConnection();
+            configUrl.setRequestProperty("User-Agent", "curl/7.8.6");
             if (hfToken != null) {
                 configUrl.setRequestProperty("Authorization", "Bearer " + hfToken);
             }
@@ -202,6 +203,7 @@ public final class LmiUtils {
                 return null;
             }
             URLConnection configConnection = modelConfigUri.toURL().openConnection();
+            configConnection.setRequestProperty("User-Agent", "curl/7.8.6");
             if (Utils.getenv("HF_TOKEN") != null) {
                 configConnection.setRequestProperty(
                         "Authorization", "Bearer " + Utils.getenv("HF_TOKEN"));
