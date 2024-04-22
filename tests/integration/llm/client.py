@@ -59,27 +59,6 @@ def get_model_name():
     return res["models"][0]["modelName"]
 
 
-ds_raw_model_spec = {
-    "gpt-j-6b": {
-        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "use_pipeline": True
-    },
-    "bloom-7b1": {
-        "max_memory_per_gpu": [7.0, 7.0, 8.0, 9.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "use_pipeline": False
-    },
-    "opt-30b": {
-        "max_memory_per_gpu": [16.0, 16.0, 16.0, 16.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "use_pipeline": False
-    }
-}
-
 hf_model_spec = {
     "gpt-neo-2.7b": {
         "max_memory_per_gpu": [8.0, 8.0, 9.0, 17.0],
@@ -132,64 +111,6 @@ hf_model_spec = {
     }
 }
 
-ds_model_spec = {
-    "gpt-j-6b": {
-        "max_memory_per_gpu": [9.0, 10.0, 11.0, 12.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "worker": 2
-    },
-    "bloom-7b1": {
-        "max_memory_per_gpu": [7.0, 8.0, 8.0, 9.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256]
-    },
-    "open-llama-7b": {
-        "max_memory_per_gpu": [8.0, 7.0, 7.0, 7.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256]
-    },
-    "opt-13b": {
-        "max_memory_per_gpu": [17.0, 18.0, 19.0, 22.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "worker": 2
-    },
-    "gpt-neo-1.3b": {
-        "max_memory_per_gpu": [4.0, 5.0],
-        "batch_size": [1, 4],
-        "seq_length": [16],
-        "worker": 1,
-        "stream_output": True,
-    },
-    "gpt4all-lora": {
-        "max_memory_per_gpu": [10.0, 12.0],
-        "batch_size": [1, 4],
-        "seq_length": [16, 32],
-        "worker": 1,
-    }
-}
-
-sd_model_spec = {
-    "stable-diffusion-v1-5": {
-        "max_memory_per_gpu": 8.0,
-        "size": [256, 512],
-        "num_inference_steps": [50, 100]
-    },
-    "stable-diffusion-2-1-base": {
-        "max_memory_per_gpu": 8.0,
-        "size": [256, 512],
-        "num_inference_steps": [50, 100],
-        "workers": 2
-    },
-    "stable-diffusion-2-depth": {
-        "max_memory_per_gpu": 8.0,
-        "size": [512],
-        "num_inference_steps": [50],
-        "depth": True
-    }
-}
-
 neuron_sd_model_spec = {
     "stable-diffusion-1.5-neuron": {
         "num_inference_steps": [50, 100]
@@ -199,27 +120,6 @@ neuron_sd_model_spec = {
     },
     "stable-diffusion-xl-neuron": {
         "num_inference_steps": [50, 100]
-    }
-}
-
-ds_aot_model_spec = {
-    "opt-6.7b": {
-        "max_memory_per_gpu": [12.0, 12.0, 12.0, 12.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "use_pipeline": True
-    },
-    "bloom-7b1": {
-        "max_memory_per_gpu": [12.0, 12.0, 12.0, 12.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "use_pipeline": False
-    },
-    "gpt-neo-2.7b": {
-        "max_memory_per_gpu": [12.0, 12.0, 12.0, 17.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-        "use_pipeline": True
     }
 }
 
@@ -488,29 +388,6 @@ vllm_chat_model_spec = {
     }
 }
 
-ds_smoothquant_model_spec = {
-    "gpt-j-6b": {
-        "max_memory_per_gpu": [6.0, 6.0, 6.0, 6.0],
-        "batch_size": [1, 2, 4, 8],
-        "seq_length": [64, 128, 256],
-    },
-    "gpt-neox-20b": {
-        "max_memory_per_gpu": [15.0, 15.0],
-        "batch_size": [1, 8],
-        "seq_length": [64, 128, 256],
-    },
-    "llama2-13b-dynamic-int8": {
-        "max_memory_per_gpu": [9.0, 9.0, 9.0],
-        "batch_size": [1, 2, 4],
-        "seq_length": [64, 128, 256],
-    },
-    "llama2-13b-smoothquant": {
-        "max_memory_per_gpu": [9.2, 9.2, 9.2],
-        "batch_size": [2, 4, 8],
-        "seq_length": [64, 128, 256],
-    },
-}
-
 lmi_dist_aiccl_model_spec = {
     "llama-2-70b-aiccl": {
         "max_memory_per_gpu": [40.0],
@@ -626,33 +503,6 @@ trtllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "google/flan-t5-xxl"
     }
-}
-
-deepspeed_rolling_batch_model_spec = {
-    "gpt-neox-20b": {
-        "max_memory_per_gpu": [25.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "EleutherAI/gpt-neox-20b"
-    },
-    "open-llama-7b": {
-        "max_memory_per_gpu": [25.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "openlm-research/open_llama_7b"
-    },
-    "gpt2": {
-        "max_memory_per_gpu": [25.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "gpt2"
-    },
-    "llama2-13b-smoothquant": {
-        "max_memory_per_gpu": [21.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
 }
 
 no_code_rolling_batch_spec = {
@@ -1229,46 +1079,6 @@ def test_performance():
     log_metrics(response_times)
 
 
-def test_sd_handler(model, model_spec):
-    from PIL import Image
-
-    if model not in model_spec:
-        raise ValueError(
-            f"{model} is not one of the supporting models {list(sd_model_spec.keys())}"
-        )
-    spec = sd_model_spec[model]
-    if "worker" in spec:
-        check_worker_number(spec["worker"])
-    for size in spec["size"]:
-        for step in spec["num_inference_steps"]:
-            if "depth" in spec:
-                req = {"prompt": "two tigers"}
-                params = {
-                    "negative_prompt": "bad, deformed, ugly, bad anotomy",
-                    "strength": 0.7
-                }
-                url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-                req["parameters"] = params
-                logging.info(f"req: {req}")
-                res = send_image_json(url, req)
-            else:
-                req = {"prompt": "A bird and cat flying through space"}
-                params = {
-                    "height": size,
-                    "width": size,
-                    "num_inference_steps": step
-                }
-                req["parameters"] = params
-                logging.info(f"req: {req}")
-                res = send_json(req)
-            try:
-                Image.open(BytesIO(res.content)).convert("RGB")
-            except Exception as e:
-                raise IOError("failed to deserialize image from response", e)
-            if "max_memory_per_gpu" in spec:
-                validate_memory_usage(spec["max_memory_per_gpu"])
-
-
 def test_neuron_sd_handler(model, model_spec):
     from PIL import Image
     if model not in model_spec:
@@ -1314,48 +1124,11 @@ def test_transformers_neuronx_handler(model, model_spec):
                 assert len(result) == batch_size
 
 
-def test_ds_smoothquant(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
-    spec = model_spec[args.model]
-    for i, batch_size in enumerate(spec["batch_size"]):
-        for seq_length in spec["seq_length"]:
-            req = {
-                "inputs": batch_generation(batch_size),
-                "batch_size": batch_size,
-                "text_length": seq_length
-            }
-            logging.info(f"req: {req}")
-            res = send_json(req)
-            res = res.json()
-            logging.info(f"res: {res}")
-            assert len(res) == batch_size
-            if "max_memory_per_gpu" in spec:
-                validate_memory_usage(spec["max_memory_per_gpu"][i])
-
-
-def test_unmerged_lora_correctness():
-    res = send_json({})
-    logging.info(f"res: {res.json()}")
-
-
 if __name__ == "__main__":
-    if args.handler == "deepspeed_raw":
-        test_ds_raw_model(args.model, ds_raw_model_spec)
-    elif args.handler == "huggingface":
+    if args.handler == "huggingface":
         test_handler(args.model, hf_model_spec)
-    elif args.handler == "deepspeed":
-        test_handler(args.model, ds_model_spec)
-    elif args.handler == "stable-diffusion":
-        test_sd_handler(args.model, sd_model_spec)
     elif args.handler == "neuron-stable-diffusion":
         test_neuron_sd_handler(args.model, neuron_sd_model_spec)
-    elif args.handler == "deepspeed_aot":
-        test_ds_raw_model(args.model, ds_aot_model_spec)
-    elif args.handler == "deepspeed_handler_aot":
-        test_handler(args.model, ds_aot_model_spec)
     elif args.handler == "transformers_neuronx":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_model_spec)
@@ -1378,19 +1151,12 @@ if __name__ == "__main__":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
     elif args.handler == "performance":
         test_performance()
-    elif args.handler == "unmerged_lora":
-        test_unmerged_lora_correctness()
-    elif args.handler == "deepspeed_smoothquant":
-        test_ds_smoothquant(args.model, ds_smoothquant_model_spec)
     elif args.handler == "lmi_dist_aiccl":
         test_handler_rolling_batch(args.model, lmi_dist_aiccl_model_spec)
     elif args.handler == "trtllm":
         test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "trtllm-python":
         test_handler(args.model, trtllm_model_spec)
-    elif args.handler == "deepspeed_rolling_batch":
-        test_handler_rolling_batch(args.model,
-                                   deepspeed_rolling_batch_model_spec)
     elif args.handler == "no_code":
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
 
