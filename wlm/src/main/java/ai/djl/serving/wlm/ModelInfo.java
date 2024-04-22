@@ -1130,11 +1130,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     private void downloadDraftModel() throws ModelException, IOException {
-        String draftModelId = prop.getProperty("option.speculative_draft_model");
+        String draftModelId = prop.getProperty("option.draft_model_id");
         if (draftModelId != null && draftModelId.startsWith("s3://")) {
             Path draftDownloadDir = downloadS3ToDownloadDir(draftModelId);
             prop.setProperty(
-                    "option.speculative_draft_model", draftDownloadDir.toAbsolutePath().toString());
+                    "option.draft_model_id", draftDownloadDir.toAbsolutePath().toString());
         }
     }
 
