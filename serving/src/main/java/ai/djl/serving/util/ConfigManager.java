@@ -40,6 +40,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
@@ -302,10 +303,21 @@ public final class ConfigManager {
     /**
      * return the folder where the model search for plugins.
      *
-     * @return the configured plugin folder or the default folder.
+     * @return the configured plugin folder or the default folder
+     * @throws IOException if failed to resolve plugin folder
      */
-    public Path getPluginFolder() {
-        return getPathProperty(PLUGIN_FOLDER, "plugins");
+    public List<Path> getPluginFolder() throws IOException {
+        List<Path> list = new ArrayList<>();
+        Path plugin = getPathProperty(PLUGIN_FOLDER, "plugins");
+        list.add(plugin);
+        String appHome = Utils.getenv("APP_HOME");
+        if (appHome != null) {
+            Path path = Paths.get(appHome, "plugins");
+            if (!Files.isSameFile(path, plugin)) {
+                list.add(path);
+            }
+        }
+        return list;
     }
 
     /**
