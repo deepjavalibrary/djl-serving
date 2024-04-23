@@ -15,8 +15,6 @@ HTTP endpoint. It can serve the following model types out of the box:
 
 You can install extra extensions to enable the following models:
 
-- PaddlePaddle model
-- TFLite model
 - XGBoost model
 - LightGBM model
 - Sentencepiece model

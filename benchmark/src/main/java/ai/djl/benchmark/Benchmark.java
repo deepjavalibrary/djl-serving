@@ -121,12 +121,6 @@ public final class Benchmark extends AbstractBenchmark {
                 System.setProperty("ai.djl.onnxruntime.num_threads", "1");
             }
         }
-        if (System.getProperty("ai.djl.tflite.disable_alternative") == null) {
-            System.setProperty("ai.djl.tflite.disable_alternative", "true");
-        }
-        if (System.getProperty("ai.djl.paddlepaddle.disable_alternative") == null) {
-            System.setProperty("ai.djl.paddlepaddle.disable_alternative", "true");
-        }
         if (System.getProperty("ai.djl.onnx.disable_alternative") == null) {
             System.setProperty("ai.djl.onnx.disable_alternative", "true");
         }

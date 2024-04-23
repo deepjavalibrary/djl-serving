@@ -176,18 +176,6 @@ public class ModelInfoTest {
         model.initialize();
         assertEquals(model.getEngineName(), "XGBoost");
 
-        Path paddle = modelDir.resolve("__model__");
-        Files.createFile(paddle);
-        model = new ModelInfo<>("build/models/test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "PaddlePaddle");
-
-        Path tflite = modelDir.resolve("test_model.tflite");
-        Files.createFile(tflite);
-        model = new ModelInfo<>("build/models/test_model");
-        model.initialize();
-        assertEquals(model.getEngineName(), "TFLite");
-
         Path tensorRt = modelDir.resolve("test_model.uff");
         Files.createFile(tensorRt);
         model = new ModelInfo<>("build/models/test_model");

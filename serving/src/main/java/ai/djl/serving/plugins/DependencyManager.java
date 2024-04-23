@@ -75,12 +75,6 @@ public final class DependencyManager {
                 installDependency("ai.djl.mxnet:mxnet-engine:" + djlVersion);
                 installDependency("ai.djl.mxnet:mxnet-model-zoo:" + djlVersion);
                 break;
-            case "PaddlePaddle":
-                installDependency("ai.djl.paddlepaddle:paddlepaddle-engine:" + djlVersion);
-                break;
-            case "TFLite":
-                installDependency("ai.djl.tflite:tflite-engine:" + djlVersion);
-                break;
             case "XGBoost":
                 installDependency("ai.djl.ml.xgboost:xgboost:" + djlVersion);
                 // TODO: Avoid hard code version

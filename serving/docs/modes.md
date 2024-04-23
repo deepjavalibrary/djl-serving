@@ -175,7 +175,6 @@ Next, you need to include a model file. DJL Serving supports model artifacts for
 - PyTorch (torchscript only)
 - TensorFlow
 - ONNX
-- PaddlePaddle
 
 You can also include any required artifacts in the model directory. For example, `ImageClassificationTranslator` may need a `synset.txt` file, you can put it in the same directory with your model file to define the labels.
 
@@ -443,7 +442,6 @@ DJL Serving supports model artifacts for the following engines:
 - PyTorch (torchscript only)
 - TensorFlow
 - ONNX
-- PaddlePaddle
 
 ### Packaging
 
