@@ -23,6 +23,7 @@ The goal of this document is for the user to be able to:
 - Mixtral (since LMI V8 0.26.0)
 - Qwen (since LMI V8 0.26.0)
 - GPT2/SantaCoder/StarCoder (since LMI V8 0.26.0)
+- Phi2 (since LMI V8 0.27.0)
 
 For model that are not listed here, you can use [this tutorial](trtllm_manual_convert_tutorial.md) instead to prepare model manually.
 
