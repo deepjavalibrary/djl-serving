@@ -34,6 +34,26 @@ on:
           - none
           - table
           - cloudwatch
+  workflow_call:
+    inputs:
+      running_template:
+        description: 'A json file that contains benchmark plans'
+        required: true
+        type: string
+      instance:
+        description: 'Instance used for benchmark'
+        required: true
+        type: string
+      container:
+        description: 'The container used to run benchmark (overrides the template). Should be a full docker path such as deepjavalibrary/djl-serving:0.27.0-deepspeed'
+        required: false
+        type: string
+        default: ''
+      record:
+        description: 'Whether to record the results'
+        required: false
+        type: string
+        default: 'none'
 
 permissions:
   id-token: write
@@ -51,12 +71,12 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_ib_${{ github.event.inputs.instance }} $token djl-serving
+          ./start_instance.sh action_ib_${{ inputs.instance }} $token djl-serving
     outputs:
       gpu_instance_id: ${{ steps.create_instance.outputs.action_ib_instance_id }}
 
   environment-setup:
-    runs-on: [ self-hosted, "${{ github.event.inputs.instance }}" ]
+    runs-on: [ self-hosted, "${{ inputs.instance }}" ]
     timeout-minutes: 15
     needs: [ create-runners ]
     steps:
@@ -82,14 +102,14 @@ jobs:
         working-directory: tests/integration
         id: generate_matrix
         run: |
-          python3 instant_benchmark.py --parse ${{ github.event.inputs.running_template }} \
-          --container "${{ github.event.inputs.container }}"
+          python3 instant_benchmark.py --parse ${{ inputs.running_template }} \
+          --container "${{ inputs.container }}"
     outputs:
       jobs: ${{ steps.generate_matrix.outputs.jobs }}
       template: ${{ steps.generate_matrix.outputs.template }}
 
   benchmark_run:
-    runs-on: [ self-hosted, "${{ github.event.inputs.instance }}" ]
+    runs-on: [ self-hosted, "${{ inputs.instance }}" ]
     timeout-minutes: 30
     needs: [ environment-setup ]
     strategy:
@@ -116,7 +136,7 @@ jobs:
         run: |
           echo "${{ needs.environment-setup.outputs.template }}" >> template.json
           python3 instant_benchmark.py --template template.json \
-          --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }}
+          --job ${{ matrix.job }} --instance ${{ inputs.instance }}
           
           bash instant_benchmark.sh
       - name: Configure AWS Credentials
@@ -125,12 +145,12 @@ jobs:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
       - name: Record benchmark job
-        if: ${{ github.event.inputs.record == 'table' || github.event.inputs.record == 'cloudwatch' }}
+        if: ${{ inputs.record == 'table' || inputs.record == 'cloudwatch' }}
         working-directory: tests/integration
         run: |
           python3 record_benchmark.py --template template.json \
-          --job ${{ matrix.job }} --instance ${{ github.event.inputs.instance }} \
-          --model models/test --record ${{ github.event.inputs.record }}
+          --job ${{ matrix.job }} --instance ${{ inputs.instance }} \
+          --model models/test --record ${{ inputs.record }}
       - name: Get serving logs
         if: always()
         working-directory: tests/integration

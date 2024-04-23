@@ -64,8 +64,10 @@ def record_table():
 
 
 def record_cloudwatch():
-    esc = lambda n: n.replace("/", "-").replace(".", "-").strip(' -')
-    metric_name = lambda n: f"lmi_{data['instance']}_{esc(data['image'])}_{esc(data['modelId'])}_{n}"
+    esc = lambda n: n.replace("/", "-").replace(".", "-").replace("=", "-"
+                                                                  ).strip(' -')
+    job_name = "" if "job" not in data else "_" + data["job"]
+    metric_name = lambda n: f"lmi_{data['instance']}_{esc(data['image'])}{esc(job_name)}_{esc(data['modelId'])}_{n}"
     metric_data = [
         {
             'MetricName': metric_name("throughput"),
@@ -139,12 +141,16 @@ def data_container():
         container = data["container"]
         if container.startswith("deepjavalibrary/djl-serving:"):
             container = container[len("deepjavalibrary/djl-serving:"):]
-            split = container.split("-", 1)
-            data["djlVersion"] = split[0]
-            if len(split) > 1:
-                data["image"] = split[1]
-            else:
-                data["image"] = "cpu"
+            if container[0] == "0":  # Release build
+                split = container.split("-", 1)
+                data["djlVersion"] = split[0]
+                if len(split) > 1:
+                    data["image"] = split[1]
+                else:
+                    data["image"] = "cpu"
+            else:  # Nightly build
+                data["djlNightly"] = "true"
+                data["image"] = container[:-len("-nightly")]
         if "text-generation-inference" in container:
             data["modelServer"] = "TGI"
             version = container.split(":")[1]
@@ -210,6 +216,7 @@ def data_from_template():
         with open(args.template, "r") as f:
             template = json.load(f)
             job_template = template[args.job]
+            data["job"] = args.job
             data["awscurl"] = bytes.fromhex(
                 job_template['awscurl']).decode("utf-8")
             if "container" not in data and "container" in job_template:

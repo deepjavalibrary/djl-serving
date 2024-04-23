@@ -1,0 +1,16 @@
+[test_name]
+mistral-vllm
+[container]
+deepjavalibrary/djl-serving:deepspeed-nightly
+[serving_properties]
+engine=Python
+option.rolling_batch=vllm
+option.model_id=NousResearch/Hermes-2-Pro-Mistral-7B
+option.tensor_parallel_degree=max
+option.max_model_len=8192
+[aws_curl]
+TOKENIZER=NousResearch/Hermes-2-Pro-Mistral-7B ./awscurl -c 32 -N 10 \
+-X POST http://127.0.0.1:8080/invocations   \
+--connect-timeout 60   -H "Content-type: application/json"   \
+-d '{"inputs":"The new movie that got Oscar this year","parameters":{"max_new_tokens":256, "do_sample":true}}'   \
+-t -o /tmp/output.txt

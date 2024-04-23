@@ -1,0 +1,18 @@
+name: Benchmark Nightly
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  g5-2xl:
+    uses: ./.github/workflows/instant_benchmark.yml
+    secrets: inherit
+    with:
+      running_template: ./benchmark/nightly/g5-2xl.txt
+      instance: g5.2xlarge
+      record: cloudwatch
