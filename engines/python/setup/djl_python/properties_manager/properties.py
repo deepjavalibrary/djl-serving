@@ -23,7 +23,6 @@ class RollingBatchEnum(str, Enum):
     auto = "auto"
     disable = "disable"
     trtllm = "trtllm"
-    deepspeed = "deepspeed"
 
 
 class StreamingEnum(str, Enum):

@@ -4,7 +4,7 @@ IMAGE_NAME=$1
 
 apt-get update
 
-if [[ "$IMAGE_NAME" == "deepspeed" ]] || \
+if [[ "$IMAGE_NAME" == "lmi" ]] || \
    [[ "$IMAGE_NAME" == "pytorch-gpu" ]]; then
   apt-get upgrade -y dpkg openssl curl libssl3
 elif [[ "$IMAGE_NAME" == "cpu" ]]; then

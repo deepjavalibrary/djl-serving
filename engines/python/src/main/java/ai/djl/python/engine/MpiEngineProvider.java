@@ -14,7 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.engine.EngineProvider;
 
-/** {@code DsEngineProvider} is the DeepSpeed implementation of {@link EngineProvider}. */
+/** {@code MpiEngineProvider} is the DeepSpeed implementation of {@link EngineProvider}. */
 public class MpiEngineProvider extends PyEngineProvider {
 
     /** Constructs a new {@code MpiEngineProvider} instance. */
@@ -32,15 +32,5 @@ public class MpiEngineProvider extends PyEngineProvider {
     @Override
     public int getEngineRank() {
         return PyEngine.RANK + 1;
-    }
-
-    /** {@code DsEngineProvider} is the alias of {@link MpiEngineProvider}. */
-    public static final class DsEngineProvider extends MpiEngineProvider {
-
-        /** {@inheritDoc} */
-        @Override
-        public String getEngineName() {
-            return "DeepSpeed";
-        }
     }
 }

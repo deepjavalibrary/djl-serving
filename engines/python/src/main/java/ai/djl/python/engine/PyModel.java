@@ -156,11 +156,8 @@ public class PyModel extends BaseModel {
                 Path modelFile = findModelFile(prefix);
                 String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
                 // find default entryPoint
-                String engineName = manager.getEngine().getEngineName();
                 if (modelFile != null) {
                     entryPoint = modelFile.toFile().getName();
-                } else if ("DeepSpeed".equals(engineName)) {
-                    entryPoint = "djl_python.deepspeed";
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";

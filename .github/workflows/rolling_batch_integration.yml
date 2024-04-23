@@ -66,7 +66,7 @@ jobs:
           chmod +x awscurl
           mkdir outputs
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -77,7 +77,7 @@ jobs:
           # Correctness test
           rm -rf models
           python3 llm/prepare.py rolling_batch_scheduler gpt2
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve -m test=file:/opt/ml/model/test/
           python3 rb_client.py correctness gpt2
           docker rm -f $(docker ps -aq)
@@ -86,7 +86,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py rolling_batch_scheduler bloom-560m
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve -m test=file:/opt/ml/model/test/
           python3 rb_client.py scheduler_single_gpu bloom-560m
           docker rm -f $(docker ps -aq)
@@ -137,7 +137,7 @@ jobs:
           chmod +x awscurl
           mkdir outputs
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -148,7 +148,7 @@ jobs:
           # Concurrent requests test
           rm -rf models
           python3 llm/prepare.py rolling_batch_scheduler gpt-j-6b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve -m test=file:/opt/ml/model/test/
           python3 rb_client.py scheduler_multi_gpu gpt-j-6b
           docker rm -f $(docker ps -aq)
@@ -195,7 +195,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy huggingface_hub
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker
         working-directory: tests/integration
         run: |
@@ -205,7 +205,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist gpt-neox-20b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist gpt-neox-20b
           docker rm -f $(docker ps -aq)
@@ -214,7 +214,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist falcon-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist falcon-7b
           docker rm -f $(docker ps -aq)
@@ -223,7 +223,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist open-llama-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist open-llama-7b
           docker rm -f $(docker ps -aq)
@@ -232,7 +232,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist flan-t5-xxl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist flan-t5-xxl
           docker rm -f $(docker ps -aq)
@@ -241,7 +241,7 @@ jobs:
         run: |
           rm -rf models
           echo -en "SERVING_LOAD_MODELS=test::MPI=/opt/ml/model\nOPTION_MAX_ROLLING_BATCH_SIZE=2\nOPTION_OUTPUT_FORMATTER=jsonlines\nOPTION_TENSOR_PARALLEL_DEGREE=1\nOPTION_MODEL_ID=gpt2\nOPTION_TASK=text-generation\nOPTION_ROLLING_BATCH=lmi-dist" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG nocode deepspeed
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG nocode lmi
           python3 llm/client.py lmi_dist gpt2
           docker rm -f $(docker ps -aq)
       - name: Test mpt-7b
@@ -249,7 +249,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist mpt-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist mpt-7b
           docker rm -f $(docker ps -aq)
@@ -258,7 +258,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist llama-7b-unmerged-lora
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_adapters llama-7b-unmerged-lora
           docker rm -f $(docker ps -aq)
@@ -267,7 +267,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist llama-7b-unmerged-lora-overflow
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_adapters llama-7b-unmerged-lora-overflow
           docker rm -f $(docker ps -aq)
@@ -303,7 +303,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker
         working-directory: tests/integration
         run: |
@@ -313,7 +313,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist octocoder
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist octocoder
           docker rm -f $(docker ps -aq)
@@ -322,7 +322,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist speculative-llama-13b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist speculative-llama-13b
           docker rm -f $(docker ps -aq)
@@ -331,7 +331,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist starcoder2-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist starcoder2-7b
           docker rm -f $(docker ps -aq)
@@ -340,7 +340,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist gemma-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist gemma-7b
           docker rm -f $(docker ps -aq)
@@ -349,7 +349,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist llama2-13b-gptq
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist llama2-13b-gptq
           docker rm -f $(docker ps -aq)
@@ -358,7 +358,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist mistral-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist mistral-7b
           docker rm -f $(docker ps -aq)
@@ -367,7 +367,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist llama2-7b-32k
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist llama2-7b-32k
           docker rm -f $(docker ps -aq)
@@ -376,7 +376,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist mistral-7b-128k-awq
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist mistral-7b-128k-awq
           docker rm -f $(docker ps -aq)
@@ -385,7 +385,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist llama2-7b-chat
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist_chat llama2-7b-chat
           docker rm -f $(docker ps -aq)
@@ -421,7 +421,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy huggingface_hub
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker
         working-directory: tests/integration
         run: |
@@ -431,7 +431,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm llama2-13b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm llama2-13b
           docker rm -f $(docker ps -aq)
@@ -440,7 +440,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm llama2-13b-awq
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm llama2-13b
           docker rm -f $(docker ps -aq)
@@ -449,7 +449,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm gpt-neox-20b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm gpt-neox-20b
           docker rm -f $(docker ps -aq)
@@ -458,7 +458,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm mistral-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm mistral-7b
           docker rm -f $(docker ps -aq)
@@ -467,7 +467,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm phi-2
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm phi-2
           docker rm -f $(docker ps -aq)
@@ -476,7 +476,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm starcoder2-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm starcoder2-7b
           docker rm -f $(docker ps -aq)
@@ -485,7 +485,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm gemma-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm gemma-7b
           docker rm -f $(docker ps -aq)
@@ -494,7 +494,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm llama-7b-unmerged-lora
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm_adapters llama-7b-unmerged-lora
           docker rm -f $(docker ps -aq)
@@ -503,7 +503,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm llama-7b-unmerged-lora-overflow
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm_adapters llama-7b-unmerged-lora-overflow
           docker rm -f $(docker ps -aq)
@@ -512,7 +512,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm llama2-7b-chat
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm_chat llama2-7b-chat
           docker rm -f $(docker ps -aq)

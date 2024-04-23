@@ -75,21 +75,10 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
-      - name: MME Test
-        working-directory: tests/integration
-        run: |
-          python3 llm/sagemaker-endpoint-tests.py deepspeed-mme djl_mme ${image_type} ${run_benchmark}
       - name: Test gpt2xl
         working-directory: tests/integration
         run: |
           python3 llm/sagemaker-endpoint-tests.py gpt2-xl djl ${image_type} ${run_benchmark}
-          echo "sleep 30 seconds to allow endpoint deletion"
-          sleep 30
-      - name: Test stable diffusion
-        if: success() || failure()
-        working-directory: tests/integration
-        run: |
-          python3 llm/sagemaker-endpoint-tests.py stable-diffusion-2-1-base djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test opt-1.3b
@@ -128,13 +117,6 @@ jobs:
         working-directory: tests/integration
         run: |
           python3 llm/sagemaker-endpoint-tests.py gpt-j-6b djl ${image_type} ${run_benchmark}
-          echo "sleep 30 seconds to allow endpoint deletion"
-          sleep 30
-      - name: Test DeepSpeed pythia-12b
-        if: success() || failure()
-        working-directory: tests/integration
-        run: |
-          python3 llm/sagemaker-endpoint-tests.py pythia-12b djl ${image_type} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
 

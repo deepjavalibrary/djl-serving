@@ -17,11 +17,11 @@ services:
       context: .
       dockerfile: aarch64.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}aarch64${NIGHTLY}"
-  deepspeed:
+  lmi:
     build:
       context: .
-      dockerfile: deepspeed.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}deepspeed${NIGHTLY}"
+      dockerfile: lmi.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}lmi{NIGHTLY}"
   pytorch-gpu:
     build:
       context: .

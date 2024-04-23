@@ -6,7 +6,6 @@ from djl_python.properties_manager.tnx_properties import (
     TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
     TnXMemoryLayout, TnXDtypeName)
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
-from djl_python.properties_manager.ds_properties import DeepSpeedProperties, DsQuantizeMethods
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
@@ -236,115 +235,6 @@ class TestConfigManager(unittest.TestCase):
                              properties['model_id'])
             self.assertEqual(trt_configs.rolling_batch.value,
                              properties['rolling_batch'])
-
-    def test_ds_properties(self):
-        ds_properties = {
-            'quantize': "dynamic_int8",
-            'max_tokens': "2048",
-            'task': 'fill-mask',
-            'low_cpu_mem_usage': "false",
-            'enable_cuda_graph': "True",
-            'triangular_masking': "false",
-            'checkpoint': 'ml/model',
-            'save_mp_checkpoint_path': '/opt/ml/model'
-        }
-
-        def test_ds_basic_configs():
-            ds_configs = DeepSpeedProperties(**ds_properties,
-                                             **common_properties)
-            self.assertEqual(ds_configs.quantize.value,
-                             DsQuantizeMethods.dynamicint8.value)
-            self.assertEqual(ds_configs.dtype, torch.float16)
-            self.assertEqual(ds_configs.max_tokens, 2048)
-            self.assertEqual(ds_configs.task, ds_properties['task'])
-            self.assertEqual(ds_configs.device, 0)
-            self.assertFalse(ds_configs.low_cpu_mem_usage)
-            self.assertTrue(ds_configs.enable_cuda_graph)
-            self.assertFalse(ds_configs.triangular_masking)
-
-            ds_config = {
-                'tensor_parallel': {
-                    'tp_size': 4
-                },
-                'enable_cuda_graph': True,
-                'triangular_masking': False,
-                'return_tuple': True,
-                'training_mp_size': 1,
-                'max_tokens': 2048,
-                'base_dir': 'model_id',
-                'checkpoint': 'model_id/ml/model',
-                'save_mp_checkpoint_path': '/opt/ml/model',
-                'dynamic_quant': {
-                    'enabled': True,
-                    'use_cutlass': False
-                }
-            }
-
-            self.assertDictEqual(ds_configs.ds_config, ds_config)
-
-        def test_deepspeed_configs_file():
-            ds_properties['deepspeed_config_path'] = './sample.json'
-            ds_config = {
-                'tensor_parallel': {
-                    'tp_size': 42
-                },
-                'save_mp_checkpoint_path': None,
-                'dynamic_quant': {
-                    'enabled': False,
-                    'use_cutlass': True
-                }
-            }
-            with open('sample.json', 'w') as fp:
-                json.dump(ds_config, fp)
-
-            ds_configs = DeepSpeedProperties(**ds_properties,
-                                             **common_properties)
-            self.assertDictEqual(ds_configs.ds_config, ds_config)
-            os.remove('sample.json')
-
-        def test_ds_smoothquant_configs():
-            ds_properties['quantize'] = 'smoothquant'
-            ds_configs = DeepSpeedProperties(**ds_properties,
-                                             **common_properties)
-            self.assertEqual(ds_configs.quantize.value,
-                             DsQuantizeMethods.smoothquant.value)
-            self.assertDictEqual(ds_configs.ds_config['dynamic_quant'], {
-                'enabled': True,
-                'use_cutlass': False
-            })
-            self.assertDictEqual(ds_configs.ds_config['smoothing'], {
-                'smooth': True,
-                'calibrate': True
-            })
-            self.assertDictEqual(ds_configs.ds_config['tensor_parallel'],
-                                 {'tp_size': 4})
-
-        def test_ds_invalid_quant_method():
-            ds_properties['quantize'] = 'invalid'
-            ds_configs = DeepSpeedProperties(**ds_properties,
-                                             **common_properties)
-            self.assertIsNone(ds_configs.quantize)
-
-        test_ds_basic_configs()
-        test_ds_smoothquant_configs()
-        test_ds_invalid_quant_method()
-        test_deepspeed_configs_file()
-
-    @parameters([{
-        "quantize": "smoothquant",
-        "dtype": "bf16"
-    }, {
-        "quantize": "smoothquant",
-        'smoothquant_alpha': 1.5
-    }, {
-        "quantize": "smoothquant",
-        'dtype': "invalid"
-    }])
-    def test_ds_error_properties(self, params):
-        ds_properties = {**model_min_properties, **params}
-
-        with self.assertRaises(ValueError):
-            DeepSpeedProperties(**ds_properties)
 
     def test_hf_configs(self):
         properties = {

@@ -828,7 +828,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         }
 
-        if ("DeepSpeed".equals(engineName) || "MPI".equals(engineName)) {
+        if ("MPI".equals(engineName)) {
             prop.put("option.mpi_mode", "true");
         }
 

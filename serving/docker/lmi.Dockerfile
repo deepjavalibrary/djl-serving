@@ -28,9 +28,6 @@ ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.15.0
 ARG auto_gptq_version=0.5.1
 ARG datasets_version=2.17.1
-# DeepSpeed Deps
-ARG deepspeed_version=nightly
-ARG deepspeed_wheel="https://publish.djl.ai/deepspeed/deepspeed-${deepspeed_version}-cp310-cp310-linux_x86_64.whl"
 # LMI-Dist Deps
 ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.3.3/vllm-0.3.3-cp310-cp310-manylinux1_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu121-pt212/flash_attn-2.5.6-cp310-cp310-linux_x86_64.whl"
@@ -87,14 +84,14 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     rm -f /usr/local/djl-serving-*/lib/onnxruntime-$onnx_version.jar && \
     curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} deepspeed" > /opt/djl/bin/telemetry && \
+    echo "${djl_version} lmi" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
-    ${deepspeed_wheel} ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
+    ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
@@ -108,7 +105,7 @@ RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} pydantic=
 RUN apt-get update && apt-get install -y cuda-compat-12-1 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN scripts/patch_oss_dlc.sh python && \
-    scripts/security_patch.sh deepspeed && \
+    scripts/security_patch.sh lmi && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
@@ -117,12 +114,11 @@ RUN scripts/patch_oss_dlc.sh python && \
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.deepspeed="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.deepspeed="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
-LABEL deepspeed-version=$deepspeed_version
 LABEL cuda-version=$cuda_version
 # To use the 535 CUDA driver, CUDA 12.1 can work on this one too
 LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
