@@ -57,12 +57,6 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 | ai.djl.mxnet.static_shape         | system prop         | CachedOp options, default: true                                                |
 | ai.djl.use_local_parameter_server | system prop         | Use java parameter server instead of MXNet native implemention, default: false |
 
-### PaddlePaddle
-
-| Key                                     | Type                | Description                                      |
-|-----------------------------------------|---------------------|--------------------------------------------------|
-| PADDLE_LIBRARY_PATH                     | env var/system prop | User provided custom PaddlePaddle native library |
-| ai.djl.paddlepaddle.disable_alternative | system prop         | Disable alternative engine                       |
 
 ### Huggingface tokenizers
 
