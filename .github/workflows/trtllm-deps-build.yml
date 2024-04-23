@@ -96,7 +96,6 @@ jobs:
         run: |
           export S3_DIR="${{ inputs.release_tag }}_dryrun";
           aws s3 sync tensorrtllm/  s3://djl-ai-staging/publish/tensorrt-llm/${S3_DIR}/
-            - name: upload to S3 dryrun
       - name: upload to S3
         if: inputs.dry_run != true
         run: |
