@@ -54,17 +54,22 @@ public final class LmiUtils {
 
     static void configureLmiModel(ModelInfo<?, ?> modelInfo) throws ModelException {
         HuggingFaceModelConfig modelConfig = getHuggingFaceModelConfig(modelInfo);
+        Properties prop = modelInfo.getProperties();
         if (modelConfig == null) {
-            // Not a LMI model
+            // Precompiled models may not have config, set mpi mode when trtllm
+            // TODO: Include TRT/Neuron compiled models in this configure flow
+            String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
+            if (features != null && features.contains("trtllm")) {
+                prop.setProperty("option.mpi_mode", "true");
+            }
             return;
         }
 
-        Properties prop = modelInfo.getProperties();
         LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
         logger.info(
-                "Detected engine: {}, rolling_batch: {}, tensor_parallel_degree {}, for modelType:"
-                        + " {}",
-                prop.getProperty("engine"),
+                "Detected mpi_mode: {}, rolling_batch: {}, tensor_parallel_degree {}, for"
+                    + " modelType: {}",
+                prop.getProperty("option.mpi_mode"),
                 prop.getProperty("option.rolling_batch"),
                 prop.getProperty("option.tensor_parallel_degree"),
                 modelConfig.getModelType());
