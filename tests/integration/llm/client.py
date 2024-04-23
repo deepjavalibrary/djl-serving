@@ -1182,9 +1182,11 @@ def test_handler(model, model_spec):
             else:
                 res = res.json()
                 logging.info(f"res {res}")
-
-                result = [item['generated_text'] for item in res]
-                assert len(result) == batch_size
+                if isinstance(res, list):
+                    result = [item['generated_text'] for item in res]
+                    assert len(result) == batch_size
+                elif isinstance(res, dict):
+                    assert 1 == batch_size
             if "max_memory_per_gpu" in spec:
                 validate_memory_usage(spec["max_memory_per_gpu"][i])
             if "tokenizer" in spec:
