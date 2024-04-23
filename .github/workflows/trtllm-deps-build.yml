@@ -50,13 +50,18 @@ jobs:
     container:
       image: nvidia/cuda:12.2.2-devel-ubuntu22.04
       options: --gpus all --runtime=nvidia --shm-size 12g
-    timeout-minutes: 35
+    timeout-minutes: 90
     needs: create-runners
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python3
         run: |
           ./serving/docker/scripts/install_python.sh 3.10
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
       - name: Install deps and clone repo
         run: |
           python3 -m pip install git-remote-codecommit
@@ -91,7 +96,6 @@ jobs:
         run: |
           export S3_DIR="${{ inputs.release_tag }}_dryrun";
           aws s3 sync tensorrtllm/  s3://djl-ai-staging/publish/tensorrt-llm/${S3_DIR}/
-            - name: upload to S3 dryrun
       - name: upload to S3
         if: inputs.dry_run != true
         run: |
