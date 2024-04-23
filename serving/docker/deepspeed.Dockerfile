@@ -17,6 +17,7 @@ ARG djl_version=0.28.0~SNAPSHOT
 ARG python_version=3.10
 ARG torch_version=2.1.2
 ARG torch_vision_version=0.16.2
+ARG onnx_version=1.17.1
 ARG pydantic_version=2.6.1
 # HF Deps
 ARG protobuf_version=3.20.3
@@ -51,6 +52,11 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
+ENV PYTORCH_PRECXX11=true
+ENV PYTORCH_VERSION=${torch_version}
+ENV PYTORCH_FLAVOR=cu121-precxx11
+
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV BITSANDBYTES_NOWELCOME=1
@@ -78,6 +84,8 @@ RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ && \
     scripts/install_djl_serving.sh $djl_version && \
+    rm -f /usr/local/djl-serving-*/lib/onnxruntime-$onnx_version.jar && \
+    curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} deepspeed" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh ${python_version} && \

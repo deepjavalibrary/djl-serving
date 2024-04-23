@@ -22,6 +22,7 @@ dependencies {
     runtimeOnly "ai.djl:model-zoo"
     runtimeOnly "ai.djl.tensorflow:tensorflow-model-zoo"
     runtimeOnly "ai.djl.pytorch:pytorch-model-zoo"
+    runtimeOnly "ai.djl.onnxruntime:onnxruntime-engine"
     runtimeOnly "ai.djl.huggingface:tokenizers"
     runtimeOnly "ai.djl.tensorrt:tensorrt"
     if (JavaVersion.current() >= JavaVersion.VERSION_15) {
