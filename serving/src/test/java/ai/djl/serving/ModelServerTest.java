@@ -152,7 +152,7 @@ public class ModelServerTest {
     @BeforeSuite
     public void beforeSuite() throws IOException {
         URL url = new URL("https://resources.djl.ai/images/0.png");
-        try (InputStream is = url.openStream()) {
+        try (InputStream is = Utils.openUrl(url)) {
             testImage = Utils.toByteArray(is);
         }
         Path modelStore = Paths.get("build/models");

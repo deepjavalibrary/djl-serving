@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -180,7 +179,7 @@ public class PyModel extends BaseModel {
                 logger.info("downloading entryPoint file: {}", entryPoint);
                 Files.createDirectories(dir);
                 Path tmp = Files.createTempFile(dir, "download", ".tmp");
-                try (InputStream is = new URL(entryPoint).openStream()) {
+                try (InputStream is = Utils.openUrl(entryPoint)) {
                     Files.copy(is, tmp, StandardCopyOption.REPLACE_EXISTING);
                     Utils.moveQuietly(tmp, modelFile);
                 } finally {

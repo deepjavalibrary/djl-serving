@@ -99,7 +99,7 @@ public class ModelInfoTest {
                 Predictor<Input, Output> predictor = model.newPredictor()) {
             Input input = new Input();
             URL url = new URL("https://resources.djl.ai/images/0.png");
-            try (InputStream is = url.openStream()) {
+            try (InputStream is = Utils.openUrl(url)) {
                 input.add(Utils.toByteArray(is));
             }
             predictor.predict(input);

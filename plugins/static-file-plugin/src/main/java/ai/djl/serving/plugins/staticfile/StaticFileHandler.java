@@ -16,6 +16,7 @@ import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.plugins.RequestHandler;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
+import ai.djl.util.Utils;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -80,7 +81,7 @@ public class StaticFileHandler implements RequestHandler<Void> {
 
         URL resource = mapToResource(uri);
         Objects.requireNonNull(resource);
-        try (InputStream is = resource.openStream()) {
+        try (InputStream is = Utils.openUrl(resource)) {
             ResourceInfo resourceInfo = getResourceInfo(resource);
             NettyUtils.sendFile(
                     ctx,
