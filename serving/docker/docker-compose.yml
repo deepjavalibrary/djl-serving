@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: lmi.Dockerfile
-    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}lmi{NIGHTLY}"
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}lmi${NIGHTLY}"
   pytorch-gpu:
     build:
       context: .
