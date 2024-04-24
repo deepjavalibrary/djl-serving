@@ -51,7 +51,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -61,7 +61,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl mixtral-8x7b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl mixtral-8x7b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -75,7 +75,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl llama-2-70b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -89,7 +89,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl codellama-34b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -103,7 +103,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py lmi_dist_aiccl falcon-40b-aiccl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
           if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
@@ -207,7 +207,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -217,7 +217,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm llama2-70b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm llama2-70b
           docker rm -f $(docker ps -aq)
@@ -226,7 +226,7 @@ jobs:
         run: |
           rm -rf models
           python3 llm/prepare.py vllm mixtral-8x7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models deepspeed \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm mixtral-8x7b
           docker rm -f $(docker ps -aq)

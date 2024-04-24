@@ -68,7 +68,7 @@ class StreamingUtils:
     SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM = (
         "T5ForConditionalGeneration", )
     SUPPORTED_MODEL_ARCH_SUFFIXES = SUPPORTED_MODEL_ARCH_SUFFIXES_CAUSAL_LM + SUPPORTED_MODEL_ARCH_SUFFIXES_SEQ_2_SEQ_LM
-    BUILTIN_ENGINES = {"DeepSpeed", "Accelerate", "transformers-neuronx"}
+    BUILTIN_ENGINES = {"Accelerate", "transformers-neuronx"}
 
     @staticmethod
     def use_hf_default_streamer(model, tokenizer, inputs, device, **kwargs):

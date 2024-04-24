@@ -45,7 +45,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
-public class DsEngineTest {
+public class MpiEngineTest {
 
     @BeforeClass
     public void setUp() {
@@ -75,7 +75,7 @@ public class DsEngineTest {
                         .optModelPath(Paths.get("src/test/resources/accumulate"))
                         .optTranslator(new NoopTranslator())
                         .optOption("model_loading_timeout", "1")
-                        .optEngine("DeepSpeed")
+                        .optEngine("MPI")
                         .build();
 
         Assert.assertThrows(EngineException.class, criteria::loadModel);
@@ -89,7 +89,7 @@ public class DsEngineTest {
                         .optModelPath(Paths.get("src/test/resources/accumulate"))
                         .optTranslator(new NoopTranslator())
                         .optOption("predict_timeout", "1")
-                        .optEngine("DeepSpeed")
+                        .optEngine("MPI")
                         .build();
 
         try (ZooModel<NDList, NDList> model = criteria.loadModel();
@@ -107,7 +107,7 @@ public class DsEngineTest {
                         .optModelPath(Paths.get("src/test/resources/accumulate"))
                         .optTranslator(new NoopTranslator())
                         .optOption("env", "TEST_ENV1=a,TEST_ENV2=b")
-                        .optEngine("DeepSpeed")
+                        .optEngine("MPI")
                         .build();
         try (ZooModel<NDList, NDList> model = criteria.loadModel();
                 Predictor<NDList, NDList> predictor = model.newPredictor()) {
@@ -128,7 +128,7 @@ public class DsEngineTest {
                         .setTypes(NDList.class, NDList.class)
                         .optModelPath(Paths.get("src/test/resources/echo"))
                         .optTranslator(new NoopTranslator())
-                        .optEngine("DeepSpeed")
+                        .optEngine("MPI")
                         .build();
         try (ZooModel<NDList, NDList> model = criteria.loadModel();
                 Predictor<NDList, NDList> predictor = model.newPredictor()) {
@@ -149,7 +149,7 @@ public class DsEngineTest {
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
                         .optModelPath(Paths.get("src/test/resources/resnet18"))
-                        .optEngine("DeepSpeed")
+                        .optEngine("MPI")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
@@ -173,7 +173,7 @@ public class DsEngineTest {
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
                         .optModelPath(Paths.get("src/test/resources/echo"))
-                        .optEngine("DeepSpeed")
+                        .optEngine("MPI")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
@@ -200,7 +200,7 @@ public class DsEngineTest {
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
                         .optModelPath(Paths.get("src/test/resources/echo"))
-                        .optEngine("DeepSpeed")
+                        .optEngine("MPI")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {

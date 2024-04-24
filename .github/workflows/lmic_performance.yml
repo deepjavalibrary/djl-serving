@@ -57,7 +57,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -93,7 +93,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -129,7 +129,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -165,7 +165,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |
@@ -201,7 +201,7 @@ jobs:
       - name: Install pip dependencies
         run: pip3 install requests numpy datetime
       - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
         working-directory: tests/integration
         run: |

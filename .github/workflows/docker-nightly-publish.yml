@@ -184,7 +184,7 @@ jobs:
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} aarch64
           docker compose push aarch64
 
-  nightly-deepspeed:
+  nightly-lmi:
     runs-on: [ self-hosted, cpu ]
     timeout-minutes: 60
     needs: create-runner
@@ -227,19 +227,19 @@ jobs:
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT deepspeed
-          docker compose push deepspeed
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
+          docker compose push lmi
       - name: Build and push temp image
         if: ${{ github.event.inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT deepspeed
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
-          tempTag="$repo:deepspeed-$GITHUB_SHA"
-          docker tag deepjavalibrary/djl-serving:deepspeed-nightly $tempTag
+          tempTag="$repo:lmi-$GITHUB_SHA"
+          docker tag deepjavalibrary/djl-serving:lmi-nightly $tempTag
           docker push $tempTag
       - name: Build and push release docker image
         if: ${{ github.event.inputs.mode == 'release' }}
@@ -248,13 +248,13 @@ jobs:
           DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
           export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} deepspeed
-          docker compose push deepspeed
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} lmi
+          docker compose push lmi
 
   stop-runner:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [nightly-aarch64, nightly-deepspeed, create-runner]
+    needs: [nightly-aarch64, nightly-lmi, create-runner]
     steps:
       - name: Stop all instances
         run: |

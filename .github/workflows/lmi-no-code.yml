@@ -75,7 +75,7 @@ jobs:
       max-parallel: 1
       fail-fast: false
       matrix:
-        container: [tensorrt-llm, deepspeed]
+        container: [tensorrt-llm, lmi]
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -137,7 +137,7 @@ jobs:
           docker rm -f $(docker ps -aq)
       - name: DBRX lmi container
         working-directory: tests/integration
-        if: ${{ matrix.container == 'deepspeed' }}
+        if: ${{ matrix.container == 'lmi' }}
         run: |
           rm -rf models
           echo -e "HF_MODEL_ID=s3://djl-llm/dbrx-instruct/" > docker_env
@@ -166,7 +166,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: [tensorrt-llm, deepspeed]
+        container: [tensorrt-llm, lmi]
         machine: [g5, g6]
     steps:
       - uses: actions/checkout@v4
@@ -210,7 +210,7 @@ jobs:
           python3 llm/client.py no_code llama-13b
           docker rm -f $(docker ps -aq)
       - name: Gemma-7b lmi container
-        if: ${{ matrix.container  == 'deepspeed' }}
+        if: ${{ matrix.container  == 'lmi' }}
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -229,7 +229,7 @@ jobs:
           python3 llm/client.py no_code mistral-7b
           docker rm -f $(docker ps -aq)
       - name: GPTNeox lmi container
-        if: ${{ matrix.container  == 'deepspeed' }}
+        if: ${{ matrix.container  == 'lmi' }}
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -258,7 +258,7 @@ jobs:
           docker rm -f $(docker ps -aq)
       - name: Qwen-1.5 lmi container
         working-directory: tests/integration
-        if: ${{ matrix.container == 'deepspeed' }}
+        if: ${{ matrix.container == 'lmi' }}
         run: |
           rm -rf models
           echo -en "HF_MODEL_ID=Qwen/Qwen1.5-14B" > docker_env
@@ -268,7 +268,7 @@ jobs:
           docker rm -f $(docker ps -aq)
       - name: Starcoder2 lmi container
         working-directory: tests/integration
-        if: ${{ matrix.container == 'deepspeed' }}
+        if: ${{ matrix.container == 'lmi' }}
         run: |
           rm -rf models
           echo -en "HF_MODEL_ID=s3://djl-llm/bigcode-starcoder2/" > docker_env
