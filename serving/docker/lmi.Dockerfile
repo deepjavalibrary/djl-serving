@@ -32,7 +32,7 @@ ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.3.3/vl
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu121-pt212/flash_attn-2.5.6-cp310-cp310-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
-ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
+ARG peft_version=0.10.0
 
 EXPOSE 8080
 
@@ -88,7 +88,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
-    ${seq_scheduler_wheel} ${peft_wheel} protobuf==${protobuf_version} \
+    ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \

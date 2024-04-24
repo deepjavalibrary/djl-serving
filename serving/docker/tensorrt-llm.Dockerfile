@@ -21,7 +21,7 @@ ARG tensorrtlibs_version=9.2.0.post12.dev5
 ARG trtllm_toolkit_version=nightly
 ARG trtllm_version=v0.8.0
 ARG cuda_python_version=12.2.0
-ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
+ARG peft_version=0.10.0
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
 ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.8.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
@@ -71,7 +71,7 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
 
 # Install PyTorch
 # Qwen needs transformers_stream_generator, tiktoken and einops
-RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} ${peft_wheel} sentencepiece \
+RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
     transformers_stream_generator einops tiktoken jinja2 graphviz blobfile && \
     pip3 cache purge
