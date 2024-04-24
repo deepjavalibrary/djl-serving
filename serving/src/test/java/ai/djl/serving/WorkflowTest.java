@@ -45,7 +45,7 @@ public class WorkflowTest {
         // Initialize zeroInput
         zeroInput = new Input();
         URL url = new URL("https://resources.djl.ai/images/0.png");
-        try (InputStream is = url.openStream()) {
+        try (InputStream is = Utils.openUrl(url)) {
             zeroInput.add(Utils.toByteArray(is));
         }
     }

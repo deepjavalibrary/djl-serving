@@ -22,6 +22,7 @@ import ai.djl.serving.workflow.WorkflowExpression.Item;
 import ai.djl.serving.workflow.function.WorkflowFunction;
 import ai.djl.util.ClassLoaderUtils;
 import ai.djl.util.JsonUtils;
+import ai.djl.util.Utils;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -115,7 +116,7 @@ public class WorkflowDefinition {
         }
         templateReplacements.put("model_dir", getWorkflowDir(uri.toString()));
 
-        try (InputStream is = uri.toURL().openStream();
+        try (InputStream is = Utils.openUrl(uri.toURL());
                 Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
             WorkflowDefinition wd = parse(type, reader, templateReplacements);
             if (name != null) {

@@ -14,6 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.Device;
 import ai.djl.ModelException;
+import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.util.JsonUtils;
@@ -30,9 +31,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
+import java.io.OutputStream;
 import java.net.URI;
-import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
@@ -68,7 +69,7 @@ public final class LmiUtils {
         LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
         logger.info(
                 "Detected mpi_mode: {}, rolling_batch: {}, tensor_parallel_degree {}, for"
-                    + " modelType: {}",
+                        + " modelType: {}",
                 prop.getProperty("option.mpi_mode"),
                 prop.getProperty("option.rolling_batch"),
                 prop.getProperty("option.tensor_parallel_degree"),
@@ -181,20 +182,17 @@ public final class LmiUtils {
     private static URI getHuggingFaceHubConfigUri(String modelId) {
         String[] possibleConfigFiles = {"config.json", "model_index.json"};
         String hubToken = Utils.getEnvOrSystemProperty("HF_TOKEN");
+        Map<String, String> headers = new ConcurrentHashMap<>();
+        headers.put("User-Agent", "DJL/" + Engine.getDjlVersion());
+        if (hubToken != null) {
+            headers.put("Authorization", "Bearer " + hubToken);
+        }
         for (String configFile : possibleConfigFiles) {
-            try {
-                URI configUri =
-                        URI.create("https://huggingface.co/" + modelId + "/raw/main/" + configFile);
-                HttpURLConnection configUrl =
-                        (HttpURLConnection) configUri.toURL().openConnection();
-                // TODO FIXME: this hack is needed for now for our CI/testing
-                configUrl.setRequestProperty("User-Agent", "curl/7.8.6");
-                if (hubToken != null) {
-                    configUrl.setRequestProperty("Authorization", "Bearer " + hubToken);
-                }
-                if (HttpURLConnection.HTTP_OK == configUrl.getResponseCode()) {
-                    return configUri;
-                }
+            URI configUri =
+                    URI.create("https://huggingface.co/" + modelId + "/raw/main/" + configFile);
+            try (InputStream is = Utils.openUrl(configUri.toURL(), headers)) {
+                is.transferTo(OutputStream.nullOutputStream());
+                return configUri;
             } catch (IOException e) {
                 logger.warn("Hub config file {} does not exist for model {}.", configFile, modelId);
             }
@@ -205,21 +203,19 @@ public final class LmiUtils {
     private static HuggingFaceModelConfig getHuggingFaceModelConfig(ModelInfo<?, ?> modelInfo)
             throws ModelException {
         String modelId = modelInfo.prop.getProperty("option.model_id");
-        try {
-            URI modelConfigUri = generateHuggingFaceConfigUri(modelInfo, modelId);
-            if (modelConfigUri == null) {
-                return null;
-            }
-            URLConnection configConnection = modelConfigUri.toURL().openConnection();
-            // TODO FIXME: this hack is needed for now for our CI/testing
-            configConnection.setRequestProperty("User-Agent", "curl/7.8.6");
-            if (Utils.getenv("HF_TOKEN") != null) {
-                configConnection.setRequestProperty(
-                        "Authorization", "Bearer " + Utils.getenv("HF_TOKEN"));
-            }
-            try (InputStream is = configConnection.getInputStream()) {
-                return JsonUtils.GSON.fromJson(Utils.toString(is), HuggingFaceModelConfig.class);
-            }
+        URI modelConfigUri = generateHuggingFaceConfigUri(modelInfo, modelId);
+        if (modelConfigUri == null) {
+            return null;
+        }
+        Map<String, String> headers = new ConcurrentHashMap<>();
+        headers.put("User-Agent", "DJL/" + Engine.getDjlVersion());
+        String hubToken = Utils.getEnvOrSystemProperty("HF_TOKEN");
+        if (hubToken != null) {
+            headers.put("Authorization", "Bearer " + hubToken);
+        }
+
+        try (InputStream is = Utils.openUrl(modelConfigUri.toURL(), headers)) {
+            return JsonUtils.GSON.fromJson(Utils.toString(is), HuggingFaceModelConfig.class);
         } catch (IOException | JsonSyntaxException e) {
             throw new ModelNotFoundException("Invalid huggingface model id: " + modelId, e);
         }

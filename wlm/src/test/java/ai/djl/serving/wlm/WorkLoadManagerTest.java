@@ -41,7 +41,7 @@ public class WorkLoadManagerTest {
         wlm.registerWorkerPool(modelInfo).initWorkers(null);
         Input input = new Input();
         URL url = new URL("https://resources.djl.ai/images/0.png");
-        try (InputStream is = url.openStream()) {
+        try (InputStream is = Utils.openUrl(url)) {
             input.add(Utils.toByteArray(is));
         }
         Output output = wlm.runJob(new Job<>(modelInfo, input)).join();

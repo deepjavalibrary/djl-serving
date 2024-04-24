@@ -12,6 +12,8 @@
  */
 package ai.djl.serving.plugins;
 
+import ai.djl.util.Utils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +58,7 @@ public class PropertyFilePluginMetaDataReader implements PluginMetaDataReader {
         this.url = url;
         properties = new Properties();
 
-        try (InputStream is = url.openConnection().getInputStream()) {
+        try (InputStream is = Utils.openUrl(url)) {
             properties.load(is);
         } catch (IOException e) {
             logger.error("io error while receiving plugin.definition file", e);
