@@ -23,7 +23,6 @@ ARG pydantic_version=2.6.1
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.39.0
 ARG accelerate_version=0.28.0
-ARG diffusers_version=0.16.0
 ARG bitsandbytes_version=0.41.1
 ARG optimum_version=1.15.0
 ARG auto_gptq_version=0.5.1
@@ -34,8 +33,6 @@ ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu121-pt212/flash_attn
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_wheel="https://publish.djl.ai/peft/peft-0.5.0alpha-py3-none-any.whl"
-ARG mmaploader_wheel="https://publish.djl.ai/mmaploader/mmaploader-nightly-py3-none-any.whl"
-ARG aiccl_wheel="https://publish.djl.ai/aiccl/aiccl-1.1%2Bcu121torch2.1-cp310-cp310-linux_x86_64.whl"
 
 EXPOSE 8080
 
@@ -91,11 +88,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
-    ${seq_scheduler_wheel} ${peft_wheel} ${mmaploader_wheel} ${aiccl_wheel} protobuf==${protobuf_version} \
+    ${seq_scheduler_wheel} ${peft_wheel} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
-    diffusers[torch]==${diffusers_version} opencv-contrib-python-headless safetensors scipy && \
+    opencv-contrib-python-headless safetensors scipy && \
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \
