@@ -4,7 +4,7 @@ import unittest
 from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import (
     TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
-    TnXMemoryLayout, TnXDtypeName)
+    TnXMemoryLayout, TnXDtypeName, TnXModelLoaders)
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties, HFQuantizeMethods
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
@@ -189,6 +189,7 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(tnx_configs.cache_layout, TnXMemoryLayout.LAYOUT_SBH)
         self.assertEqual(tnx_configs.all_reduce_dtype, TnXDtypeName.float32)
         self.assertEqual(tnx_configs.cast_logits_dtype, TnXDtypeName.float32)
+        self.assertEqual(tnx_configs.model_loader, TnXModelLoaders.tnx)
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):
@@ -210,6 +211,12 @@ class TestConfigManager(unittest.TestCase):
         'group_query_attention': "invalid"
     }, {
         'rolling_batch': 'auto'
+    }, {
+        'partition_schema': 'optimum',
+        'load_split_model': 'true'
+    }, {
+        'partition_schema': 'legacy',
+        'model_loader': 'optimum'
     }])
     def test_tnx_configs_error_case(self, params):
         # To remove the duplicate properties

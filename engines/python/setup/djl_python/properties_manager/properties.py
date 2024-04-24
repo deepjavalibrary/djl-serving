@@ -10,10 +10,11 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import logging
 import os
 from enum import Enum
-from typing import Optional, Union, Callable
-from pydantic.v1 import BaseModel, root_validator, validator, Field
+from typing import Optional, Union, Callable, Any
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field
 
 
 class RollingBatchEnum(str, Enum):
@@ -48,7 +49,6 @@ class Properties(BaseModel):
     rolling_batch: RollingBatchEnum = RollingBatchEnum.disable
     tensor_parallel_degree: int = 1
     trust_remote_code: bool = False
-    # TODO: disabling streaming, as it is not supported for all models of the frameworks. Will revisit this
     enable_streaming: StreamingEnum = StreamingEnum.false
     batch_size: int = 1
     max_rolling_batch_size: Optional[int] = 32
@@ -65,28 +65,31 @@ class Properties(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def calculate_is_mpi(cls, properties):
         properties['is_mpi'] = properties.get("mpi_mode") == "true"
         return properties
 
-    @validator('enable_streaming', pre=True)
+    @field_validator('enable_streaming', mode='before')
     def validate_enable_streaming(cls, enable_streaming: str) -> str:
+        logging.warning(
+            "streaming is deprecated. rolling batch supports streaming by default and "
+            "you can use stream input parameter.")
         return enable_streaming.lower()
 
-    @validator('batch_size', pre=True)
-    def validate_batch_size(cls, batch_size, values):
+    @field_validator('batch_size', mode='before')
+    def validate_batch_size(cls, batch_size: Any, info: ValidationInfo):
         batch_size = int(batch_size)
         if batch_size > 1:
             if not is_rolling_batch_enabled(
-                    values.get('rolling_batch', RollingBatchEnum.disable)
+                    info.data.get('rolling_batch', RollingBatchEnum.disable)
             ) and is_streaming_enabled(
-                    values.get('enable_streaming', StreamingEnum.false)):
+                    info.data.get('enable_streaming', StreamingEnum.false)):
                 raise ValueError(
-                    "We cannot enable streaming for dynamic batching")
+                    "We cannot enable streaming for dynamic batching. ")
         return batch_size
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def set_model_id_or_path(cls, properties: dict) -> dict:
         # model_id can point to huggingface model_id or local directory.
         # If option.model_id points to a s3 bucket, we download it and set model_id to the download directory.

@@ -1,11 +1,11 @@
 import logging
 import os
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
-from pydantic.v1 import validator, root_validator
+from pydantic import field_validator, model_validator
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum
 
@@ -53,129 +53,109 @@ class HuggingFaceProperties(Properties):
 
     device: Optional[str] = None
     kwargs: Optional[dict] = {}
+    data_type: Optional[str] = None
 
-    @validator('load_in_4bit')
+    @field_validator('load_in_4bit')
     def validate_load_in_4bit(cls, load_in_4bit):
         logging.warning('option.load_in_4bit is deprecated. '
                         'Kindly use option.quantize=bitsandbytes4 instead')
         return load_in_4bit
 
-    @validator('load_in_8bit')
+    @field_validator('load_in_8bit')
     def validate_load_in_8bit(cls, load_in_8bit):
         logging.warning('option.load_in_8bit is deprecated. '
                         'Kindly use option.quantize=bitsandbytes8 instead')
         return load_in_8bit
 
-    @root_validator(skip_on_failure=True)
-    def set_quantize_for_backward_compatibility(cls, properties):
-        if properties['load_in_4bit']:
-            properties['quantize'] = HFQuantizeMethods.bitsandbytes4
-        elif properties['load_in_8bit']:
-            properties['quantize'] = HFQuantizeMethods.bitsandbytes8
+    @model_validator(mode='after')
+    def set_quantize_for_backward_compatibility(self):
+        if self.load_in_4bit:
+            self.quantize = HFQuantizeMethods.bitsandbytes4
+        elif self.load_in_8bit:
+            self.quantize = HFQuantizeMethods.bitsandbytes8
 
         # TODO remove this after refactor of all handlers
         # parsing bitsandbytes8, so it can be directly passed to lmi dist model loader.
-        if properties['quantize'] == HFQuantizeMethods.bitsandbytes8 \
-                and properties['rolling_batch'] == RollingBatchEnum.lmidist:
-            properties['quantize'] = HFQuantizeMethods.bitsandbytes
-        return properties
+        if self.quantize == HFQuantizeMethods.bitsandbytes8 \
+                and self.rolling_batch == RollingBatchEnum.lmidist:
+            self.quantize = HFQuantizeMethods.bitsandbytes
+        return self
 
-    @root_validator(skip_on_failure=True)
-    def set_device(cls, properties):
-        if properties['device_id'] >= 0:
-            properties['device'] = f"cuda:{properties['device_id']}"
+    @model_validator(mode='after')
+    def set_device(self):
+        if self.device_id >= 0:
+            self.device = f"cuda:{self.device_id}"
         else:
-            properties['device'] = None
-        return properties
+            self.device = None
+        return self
 
-    @root_validator(skip_on_failure=True)
-    def construct_kwargs(cls, properties):
-        kwargs = properties['kwargs']
-        kwargs['trust_remote_code'] = properties['trust_remote_code']
-        if properties['low_cpu_mem_usage']:
-            kwargs["low_cpu_mem_usage"] = properties['low_cpu_mem_usage']
-        if properties['revision']:
-            kwargs["revision"] = properties['revision']
+    @model_validator(mode='after')
+    def construct_kwargs(self):
+        self.kwargs['trust_remote_code'] = self.trust_remote_code
+        if self.low_cpu_mem_usage:
+            self.kwargs["low_cpu_mem_usage"] = self.low_cpu_mem_usage
+        if self.revision:
+            self.kwargs["revision"] = self.revision
 
         # TODO remove this after refactor of all handlers
-        if properties['rolling_batch'].value != RollingBatchEnum.disable.value:
-            if properties['waiting_steps']:
-                kwargs["waiting_steps"] = properties['waiting_steps']
+        if self.rolling_batch.value != RollingBatchEnum.disable.value:
+            if self.waiting_steps:
+                self.kwargs["waiting_steps"] = self.waiting_steps
 
-        properties['kwargs'] = kwargs
-        return properties
+        return self
 
-    @root_validator(skip_on_failure=True)
-    def construct_kwargs_device_map(cls, properties):
+    @model_validator(mode='after')
+    def construct_kwargs_device_map(self):
         # https://huggingface.co/docs/accelerate/usage_guides/big_modeling#designing-a-device-map
-        kwargs = properties['kwargs']
-        if properties['device_map']:
-            kwargs["device_map"] = properties['device_map']
-            properties['device'] = None
-            logging.info(f"Using device map {properties['device_map']}")
-        elif properties[
-                'tensor_parallel_degree'] > 0 and torch.cuda.device_count(
-                ) > 0:
-            kwargs["device_map"] = "auto"
-            properties['device'] = None
+        if self.device_map:
+            self.kwargs["device_map"] = self.device_map
+            self.device = None
+            logging.info(f"Using device map {self.device_map}")
+        elif self.tensor_parallel_degree > 0 and torch.cuda.device_count() > 0:
+            self.kwargs["device_map"] = "auto"
+            self.device = None
             world_size = torch.cuda.device_count()
-            assert world_size == properties['tensor_parallel_degree'], \
-                f"TP degree ({properties['tensor_parallel_degree']}) doesn't match available GPUs ({world_size})"
+            assert world_size == self.tensor_parallel_degree, \
+                f"TP degree ({self.tensor_parallel_degree}) doesn't match available GPUs ({world_size})"
             logging.info(f"Using {world_size} gpus")
+        return self
 
-        properties['kwargs'] = kwargs
-        return properties
-
-    @root_validator(skip_on_failure=True)
-    def construct_kwargs_quantize(cls, properties):
-        kwargs = properties['kwargs']
-
-        if 'quantize' in properties and not properties['quantize']:
-            return properties
+    @model_validator(mode='after')
+    def construct_kwargs_quantize(self):
+        if not self.quantize:
+            return self
 
         # TODO remove this after refactor of all handlers
         # device map is not required for lmi dist and vllm
-        if properties['rolling_batch'] in {
+        if self.rolling_batch in {
                 RollingBatchEnum.lmidist,
                 RollingBatchEnum.vllm,
         }:
-            return properties
+            return self
 
-        if properties[
-                'quantize'].value == HFQuantizeMethods.bitsandbytes8.value:
-            if "device_map" not in kwargs:
+        if self.quantize.value == HFQuantizeMethods.bitsandbytes8.value:
+            if "device_map" not in self.kwargs:
                 raise ValueError(
                     "device_map should be set when load_in_8bit is set")
-            kwargs["load_in_8bit"] = True
-        if properties[
-                'quantize'].value == HFQuantizeMethods.bitsandbytes4.value:
-            if "device_map" not in kwargs:
+            self.kwargs["load_in_8bit"] = True
+        if self.quantize.value == HFQuantizeMethods.bitsandbytes4.value:
+            if "device_map" not in self.kwargs:
                 raise ValueError(
                     "device_map should set when load_in_4bit is set")
-            kwargs["load_in_4bit"] = True
+            self.kwargs["load_in_4bit"] = True
 
-        properties['kwargs'] = kwargs
-        return properties
+        return self
 
-    @root_validator(skip_on_failure=True)
-    def construct_kwargs_dtype(cls, properties):
-        kwargs = properties['kwargs']
+    @model_validator(mode='after')
+    def construct_kwargs_dtype(self):
+        if self.dtype:
+            self.kwargs["torch_dtype"] = get_torch_dtype_from_str(
+                self.dtype.lower())
+        return self
 
-        if properties.get('data_type'):
-            logging.warning('option.data_type is deprecated.'
-                            'Please use option.dtype')
-            kwargs["torch_dtype"] = get_torch_dtype_from_str(
-                properties['data_type'].lower())
-        if properties.get('dtype'):
-            kwargs["torch_dtype"] = get_torch_dtype_from_str(
-                properties['dtype'].lower())
-
-        properties['kwargs'] = kwargs
-        return properties
-
-    @root_validator(skip_on_failure=True)
-    def set_device_mpi(cls, properties):
-        if properties['rolling_batch'].value != RollingBatchEnum.disable.value:
-            if properties['is_mpi']:
-                properties['device'] = int(os.getenv("LOCAL_RANK", 0))
-        return properties
+    @model_validator(mode='after')
+    def set_device_mpi(self):
+        if self.rolling_batch.value != RollingBatchEnum.disable.value:
+            if self.is_mpi:
+                self.device = str(os.getenv("LOCAL_RANK", 0))
+        return self

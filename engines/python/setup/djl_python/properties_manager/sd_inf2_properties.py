@@ -15,7 +15,7 @@ import os
 import torch
 from enum import IntEnum
 from typing import Optional, Any
-from pydantic.v1 import validator, root_validator
+from pydantic import field_validator, model_validator
 from djl_python.properties_manager.properties import Properties
 
 
@@ -36,13 +36,13 @@ class StableDiffusionNeuronXProperties(Properties):
     use_auth_token: Optional[str] = None
     save_mp_checkpoint_path: Optional[str] = None
 
-    @validator('neuron_optimize_level')
+    @field_validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
         os.environ[
             "NEURON_CC_FLAGS"] = os.environ["NEURON_CC_FLAGS"] + f" -O{level}"
 
-    @root_validator(skip_on_failure=True)
-    def set_dtype(cls, properties):
+    @model_validator(mode='after')
+    def set_dtype(self):
 
         def get_torch_dtype_from_str(dtype: str):
             if dtype == "fp32":
@@ -53,7 +53,7 @@ class StableDiffusionNeuronXProperties(Properties):
                 f"Invalid data type: {dtype}, NeuronX Stable Diffusion only supports fp32, and bf16"
             )
 
-        properties['amp'] = properties.get('dtype', 'fp32')
-        properties['dtype'] = get_torch_dtype_from_str(
-            properties.get('dtype', 'fp32'))
-        return properties
+        self.amp = self.dtype if self.dtype else 'fp32'
+        self.dtype = get_torch_dtype_from_str(
+            self.dtype if self.dtype else 'fp32')
+        return self
