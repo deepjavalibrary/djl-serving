@@ -55,6 +55,7 @@ def get_neo_compiler_flags(compiler_options):
     try:
         # CompilerOptions JSON will always be present, but compiler_flags key is optional
         compiler_options = json.loads(compiler_options)
+        logging.info(f"Parsing CompilerOptions: {compiler_options}")
         if not isinstance(compiler_options, dict):
             raise ValueError("Parsed JSON is not a dictionary")
         return compiler_options.get("compiler_flags")
