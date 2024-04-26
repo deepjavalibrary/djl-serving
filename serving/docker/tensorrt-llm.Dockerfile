@@ -77,7 +77,7 @@ RUN apt-get update && apt-get install -y libcudnn8 libnccl-dev && \
 # Qwen needs transformers_stream_generator, tiktoken and einops
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
-    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile && \
+    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp && \
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
