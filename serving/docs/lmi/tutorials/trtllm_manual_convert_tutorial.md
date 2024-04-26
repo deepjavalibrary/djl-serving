@@ -254,7 +254,7 @@ Finally, you can use one of the following configuration to load your model on Sa
 
  ### 1. Environment variables:
 ```
-OPTION_MODEL_ID=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
+HF_MODEL_ID=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
 OPTION_TENSOR_PARALLEL_DEGREE=2
 OPTION_MAX_ROLLING_BATCH_SIZE=64
 ```

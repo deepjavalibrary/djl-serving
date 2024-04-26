@@ -50,7 +50,7 @@ docker pull 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-te
 These below configurations helps you configure the inference optimizations parameters. You can check all the configurations of TensorRT-LLM LMI handler  [in our docs](../user_guides/trt_llm_user_guide.md#advanced-tensorrt-llm-configurations). 
 
 ```
-OPTION_MODEL_ID={{s3url}}
+HF_MODEL_ID={{s3url}}
 OPTION_TENSOR_PARALLEL_DEGREE=8
 OPTION_MAX_ROLLING_BATCH_SIZE=128
 OPTION_DTYPE=fp16
@@ -87,7 +87,7 @@ In the below example, the model artifacts will be saved to `$MODEL_REPO_DIR` cre
 docker run --runtime=nvidia --gpus all --shm-size 12gb \
 -v $MODEL_REPO_DIR:/tmp/trtllm \
 -p 8080:8080 \
--e OPTION_MODEL_ID=$OPTION_MODEL_ID \
+-e HF_MODEL_ID=$HF_MODEL_ID \
 -e OPTION_TENSOR_PARALLEL_DEGREE=$OPTION_TENSOR_PARALLEL_DEGREE \
 -e OPTION_MAX_ROLLING_BATCH_SIZE=$OPTION_MAX_ROLLING_BATCH_SIZE \
 -e OPTION_DTYPE=$OPTION_DTYPE \
@@ -115,7 +115,7 @@ aws s3 cp $MODEL_REPO_DIR s3://YOUR_S3_FOLDER_NAME/ --recursive
 **Note:**  After uploading model artifacts to s3, you can just update the model_id(env var or in `serving.properties`) to the newly created s3 url with compiled model artifacts and use the same rest of the environment variables or `serving.properties`  when deploying on SageMaker. Here, you can check the [tutorial](https://github.com/deepjavalibrary/djl-demo/blob/master/aws/sagemaker/large-model-inference/sample-llm/trtllm_rollingbatch_deploy_llama_13b.ipynb) on how to run inference using TensorRT-LLM DLC.  Below snippet shows example updated model_id.
 
 ```
-OPTION_MODEL_ID=s3://YOUR_S3_FOLDER_NAME
+HF_MODEL_ID=s3://YOUR_S3_FOLDER_NAME
 OPTION_TENSOR_PARALLEL_DEGREE=8
 OPTION_MAX_ROLLING_BATCH_SIZE=128
 OPTION_DTYPE=fp16
