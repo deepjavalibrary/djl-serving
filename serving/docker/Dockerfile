@@ -34,7 +34,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 EXPOSE 8080
 
 WORKDIR /opt/djl
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto
 ENV TF_NUM_INTEROP_THREADS=1
 ENV TF_NUM_INTRAOP_THREADS=1
 ENV TF_CPP_MIN_LOG_LEVEL=1

@@ -10,11 +10,17 @@ if [ -z "$PYTORCH_JNI" ]; then
   apt-get update
   DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     fakeroot \
-    openjdk-17-jdk-headless \
+    wget \
+    gpg \
     curl \
     jq \
     unzip \
     vim
+  # add corretto https://docs.aws.amazon.com/corretto/latest/corretto-17-ug/generic-linux-install.html
+  wget --no-check-certificate -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg && \
+  echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
+  apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends  -y \
+  java-17-amazon-corretto-jdk
 
   # install DJLServing
   if [ ! -f djl-serving_all.deb ]; then

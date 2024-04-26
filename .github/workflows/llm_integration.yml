@@ -91,10 +91,10 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py huggingface open-llama-7b
+          python3 llm/prepare.py huggingface llama-2-7b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
-          python3 llm/client.py huggingface open-llama-7b
+          python3 llm/client.py huggingface llama-2-7b
           docker rm -f $(docker ps -aq)
       - name: Test GPTJ-6B
         working-directory: tests/integration

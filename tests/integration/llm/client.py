@@ -72,7 +72,7 @@ hf_model_spec = {
         "seq_length": [64, 128, 256],
         "worker": 2
     },
-    "open-llama-7b": {
+    "llama-2-7b": {
         "max_memory_per_gpu": [10.0, 7.0, 7.0, 17.0],
         "batch_size": [1, 2, 4, 8],
         "seq_length": [64, 128, 256]
