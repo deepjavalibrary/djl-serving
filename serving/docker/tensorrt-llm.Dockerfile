@@ -70,7 +70,7 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install latest CUDNN8
-RUN apt-get update && apt-get install -y libcudnn8 libnccl-dev && \
+RUN apt-get update && apt-get install -y libcudnn8 && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install PyTorch
