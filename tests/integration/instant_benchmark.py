@@ -231,8 +231,8 @@ def build_running_script(template, job, instance):
     container = job_template['container']
 
     bash_command = [
-        'set -euo pipefail',
-        'echo "Start Launching container..."', f"docker pull {container}",
+        'set -euo pipefail', 'echo "Start Launching container..."',
+        f"docker pull {container}",
         f"./launch_container.sh {container} $PWD/models {machine_translation(instance)}",
         job_template['awscurl'] + " | tee benchmark.log"
     ]
