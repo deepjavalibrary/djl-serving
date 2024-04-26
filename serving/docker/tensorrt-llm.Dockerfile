@@ -9,21 +9,21 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.2.2-cudnn8-devel-ubuntu22.04
+ARG version=12.2.2-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu122
 ARG python_version=3.10
-ARG TORCH_VERSION=2.1.2
+ARG TORCH_VERSION=2.2.1
 ARG djl_version=0.28.0~SNAPSHOT
-ARG transformers_version=4.38.1
-ARG accelerate_version=0.27.0
-ARG tensorrtlibs_version=9.2.0.post12.dev5
+ARG transformers_version=4.40.0
+ARG accelerate_version=0.29.3
+ARG tensorrtlibs_version=9.3.0.post12.dev1
 ARG trtllm_toolkit_version=nightly
-ARG trtllm_version=v0.8.0
+ARG trtllm_version=v0.9.0
 ARG cuda_python_version=12.2.0
 ARG peft_version=0.10.0
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.8.0-cp310-cp310-linux_x86_64.whl"
+ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.9.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
 ARG pydantic_version=2.6.1
 ARG ammo_version=0.7.0
@@ -69,11 +69,15 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
+# Install latest CUDNN8
+RUN apt-get update && apt-get install -y libcudnn8 libnccl-dev && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
 # Install PyTorch
 # Qwen needs transformers_stream_generator, tiktoken and einops
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
-    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile && \
+    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp && \
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
@@ -89,6 +93,7 @@ RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r23.11/libtritonserver.so && \
     curl -o  /lib/x86_64-linux-gnu/libboost_filesystem.so.1.80.0 https://publish.djl.ai/tritonserver/r23.11/libboost_filesystem.so.1.80.0 && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm.so && \
+    curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm_common.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm_common.so && \
     curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libnvinfer_plugin_tensorrt_llm.so.9 && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
@@ -112,7 +117,7 @@ RUN apt-get update && apt-get install -y cuda-compat-12-2 && apt-get clean -y &&
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.tensorrtllm="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.tensorrtllm="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.tensorrtllm="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
