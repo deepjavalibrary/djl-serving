@@ -33,8 +33,8 @@ hf_handler_list = {
         "option.device_map": "auto",
         "option.dtype": "fp16"
     },
-    "open-llama-7b": {
-        "option.model_id": "s3://djl-llm/open-llama-7b/",
+    "llama-2-7b": {
+        "option.model_id": "s3://djl-llm/llama-2-7b-hf/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.device_map": "auto",

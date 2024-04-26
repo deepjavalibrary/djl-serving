@@ -6,11 +6,14 @@ DJL_VERSION=$1
 PYTORCH_JNI=$2
 
 if [ -z "$PYTORCH_JNI" ]; then
+  # add corretto https://docs.aws.amazon.com/corretto/latest/corretto-17-ug/generic-linux-install.html
+  wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg && \
+  echo "deb [signed-by=/usr/share/keyrings/corretto-keyring.gpg] https://apt.corretto.aws stable main" | tee /etc/apt/sources.list.d/corretto.list
   # install Java
   apt-get update
   DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     fakeroot \
-    openjdk-17-jdk-headless \
+    java-17-amazon-corretto-jdk \
     curl \
     jq \
     unzip \
