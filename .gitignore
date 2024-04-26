@@ -32,6 +32,7 @@ node_modules/
 tests/integration/models/
 engines/python/setup/djl_python/tests/resources*
 
+tests/integration/awscurl
 #Python
 __pycache__
 *.egg-info/
