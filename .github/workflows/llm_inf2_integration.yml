@@ -74,7 +74,7 @@ jobs:
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
-          serve -m test::Python:nc0=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
+          serve -m test::Python:nc0=file:/opt/ml/model/resnet18_no_reqs_inf2_2_4.tar.gz
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test transformers-neuronx gpt2 with handler
