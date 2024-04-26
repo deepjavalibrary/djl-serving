@@ -216,7 +216,7 @@ def machine_translation(machine_name: str):
     if machine_name.startswith("inf2") or machine_name.startswith("trn1"):
         return f"pytorch-inf2-{translation[machine_name]}"
     else:
-        return "deepspeed"
+        return "lmi"
 
 
 def build_running_script(template, job, instance):
