@@ -71,6 +71,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private static final Pattern PATTERN = Pattern.compile("MemAvailable:\\s+(\\d+) kB");
+    private static final Pattern SNAKE_CASE = Pattern.compile("[A-Z_]+");
 
     private String engineName;
     private String loadOnDevices;
@@ -772,8 +773,14 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             for (Map.Entry<String, String> entry : Utils.getenv().entrySet()) {
                 String key = entry.getKey();
                 String value = entry.getValue();
-                if (key.startsWith("OPTION_") && value != null && !value.isEmpty()) {
-                    key = key.substring(7).toLowerCase(Locale.ROOT);
+                if (value == null || value.isEmpty()) {
+                    continue;
+                }
+                if (key.startsWith("OPTION_")) {
+                    key = key.substring(7);
+                    if (SNAKE_CASE.matcher(key).matches()) {
+                        key = key.toLowerCase(Locale.ROOT);
+                    }
                     if ("entrypoint".equals(key)) {
                         key = "entryPoint";
                     } else if ("engine".equals(key)) {
@@ -781,6 +788,12 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         continue;
                     }
                     prop.putIfAbsent("option." + key, value);
+                } else if (key.startsWith("ARGS_")) {
+                    key = key.substring(5);
+                    if (SNAKE_CASE.matcher(key).matches()) {
+                        key = key.toLowerCase(Locale.ROOT);
+                    }
+                    arguments.putIfAbsent(key, value);
                 }
             }
         }
