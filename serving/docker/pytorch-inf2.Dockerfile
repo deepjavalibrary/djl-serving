@@ -14,17 +14,17 @@ ARG djl_version=0.28.0~SNAPSHOT
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.9
-ARG neuronsdk_version=2.18.1
+ARG neuronsdk_version=2.18.2
 ARG torch_neuronx_version=2.1.2.2.1.0
 ARG transformers_neuronx_version=0.10.0.360
 ARG neuronx_distributed_version=0.7.0
-ARG neuronx_cc_version=2.13.68.0
+ARG neuronx_cc_version=2.13.72.0
 ARG protobuf_version=3.19.6
 ARG transformers_version=4.36.2
 ARG accelerate_version=0.23.0
 ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
-ARG optimum_neuron_version=0.0.20
+ARG optimum_neuron_version=0.0.21
 ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-nightly-py3-none-any.whl"
 EXPOSE 8080
 
@@ -75,7 +75,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece jinja2 \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
-    pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile && \
+    pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile \
     torchvision==${torchvision_version} && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \

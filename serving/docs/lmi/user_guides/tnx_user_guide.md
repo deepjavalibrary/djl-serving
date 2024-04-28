@@ -19,6 +19,7 @@ The model architectures that are tested daily for LMI Transformers-NeuronX (in C
 
 - LLAMA
 - Mistral
+- Mixtral
 - GPT-NeoX
 - GPT-J
 - Bloom
@@ -32,8 +33,9 @@ The model architectures that are tested daily for LMI Transformers-NeuronX (in C
 - GPT BigCode (`bigcode/starcoder`, `bigcode/gpt_bigcode-santacoder`, etc.)
 - GPT-J (`EleutherAI/gpt-j-6b`, `nomic-ai/gpt4all-j`, etc.)
 - GPT-NeoX (`EleutherAI/gpt-neox-20b`, `databricks/dolly-v2-12b`, `stabilityai/stablelm-tuned-alpha-7b`, etc.)
-- LLaMA & LLaMA-2 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `young-geng/koala`, `openlm-research/open_llama_13b`, etc.)
+- LLaMA, LLaMA-2, LLaMA-3 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `meta-llama/Meta-Llama-3-70B`, `openlm-research/open_llama_13b`, etc.)
 - Mistral (`mistralai/Mistral-7B-v0.1`, `mistralai/Mistral-7B-Instruct-v0.1`, etc.)
+- Mixtral (`mistralai/Mixtral-8x7B-Instruct-v0.1`)
 - OPT (`facebook/opt-66b`, `facebook/opt-iml-max-30b`, etc.)
 
 We will add more model support for the future versions to have them tested. Please feel free to [file us an issue](https://github.com/deepjavalibrary/djl-serving/issues/new/choose) for more model coverage in CI.
@@ -99,3 +101,7 @@ In that situation, there is nothing LMI can do until the issue is fixed in the b
 | option.group_query_attention               | >= 0.26.0   | Pass Through       | Enable K/V cache sharding for llama and mistral models types  based on various [strategies](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/libraries/transformers-neuronx/transformers-neuronx-developer-guide.html#grouped-query-attention-gqa-support-beta)                                                                                | `shard-over-heads`  Default: `None`                                                            |
 | option.enable_mixed_precision_accumulation | >= 0.26.0   | Pass Through       | Turn this on for LLAMA 70B model to achieve better accuracy.                                                                                                                                                                                                                                                                                          | `true` Default: `None`                                                                         |
 
+## Advanced Multi-Model Inference Considerations
+
+When using the LMI Transformers-NeuronX for multimodel inference endpoints you may need to limit the number of threads available to each model.
+Follow this [guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/libraries/transformers-neuronx/transformers-neuronx-developer-guide.html?highlight=omp_num#running-inference-with-multiple-models) when setting the correct number of threads to avoid race conditions. LMI Transformers-NeuronX in its standard configuration will set threads equal to two times the tensor parallel degree as the `OMP_NUM_THREADS` values. 
