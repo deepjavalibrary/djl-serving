@@ -14,7 +14,7 @@ import logging
 import os
 from enum import Enum
 from typing import Optional, Union, Callable, Any
-from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, Field
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, ConfigDict
 
 
 class RollingBatchEnum(str, Enum):
@@ -62,8 +62,9 @@ class Properties(BaseModel):
     draft_model_id: Optional[str] = None
     spec_length: Optional[int] = 0
 
-    class Config:
-        arbitrary_types_allowed = True
+    # model_config is for pydantic configurations for BaseModel.
+    model_config = ConfigDict(arbitrary_types_allowed=True,
+                              protected_namespaces=())
 
     @model_validator(mode='before')
     def calculate_is_mpi(cls, properties):
