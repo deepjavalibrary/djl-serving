@@ -1,6 +1,7 @@
 name: Benchmark Nightly
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 1 * * *'
 
@@ -15,4 +16,18 @@ jobs:
     with:
       running_template: ./benchmark/nightly/g5-2xl.txt
       instance: g5.2xlarge
+      record: cloudwatch
+  g5-12xl:
+    uses: ./.github/workflows/instant_benchmark.yml
+    secrets: inherit
+    with:
+      running_template: ./benchmark/nightly/g5-12xl.txt
+      instance: g5.12xlarge
+      record: cloudwatch
+  g5-48xl:
+    uses: ./.github/workflows/instant_benchmark.yml
+    secrets: inherit
+    with:
+      running_template: ./benchmark/nightly/g5-48xl.txt
+      instance: g5.48xlarge
       record: cloudwatch

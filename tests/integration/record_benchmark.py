@@ -66,8 +66,8 @@ def record_table():
 def record_cloudwatch():
     esc = lambda n: n.replace("/", "-").replace(".", "-").replace("=", "-"
                                                                   ).strip(' -')
-    job_name = "" if "job" not in data else "_" + data["job"]
-    metric_name = lambda n: f"lmi_{data['instance']}_{esc(data['image'])}{esc(job_name)}_{esc(data['modelId'])}_{n}"
+    job_name = data["modelId"] if "job" not in data else data["job"]
+    metric_name = lambda n: f"lmi_{data['instance']}_{esc(data['image'])}_{esc(job_name)}_{n}"
     metric_data = [
         {
             'MetricName': metric_name("throughput"),
