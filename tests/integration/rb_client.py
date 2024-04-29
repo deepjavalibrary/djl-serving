@@ -1,14 +1,10 @@
+import sys
 import argparse
 import json
 import subprocess as sp
 import logging
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description="Build the rolling batch configs")
-parser.add_argument("test_spec", help="type of test that needs to be run")
-parser.add_argument("model", help="The name of model")
-
-args = parser.parse_args()
 
 correctness = {
     "gpt2": {
@@ -173,7 +169,14 @@ def test_concurrent_with_mul_reqs(model, test_spec, spec_name):
                     "Did not produce the expected number of words")
 
 
-if __name__ == "__main__":
+def run(raw_args):
+    parser = argparse.ArgumentParser(
+        description="Build the rolling batch configs")
+    parser.add_argument("test_spec", help="type of test that needs to be run")
+    parser.add_argument("model", help="The name of model")
+    global args
+    args = parser.parse_args(args=raw_args)
+
     if args.test_spec == "correctness":
         test_concurrent_with_mul_reqs(args.model, correctness, "correctness")
     elif args.test_spec == "scheduler_single_gpu":
@@ -185,3 +188,7 @@ if __name__ == "__main__":
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
+
+
+if __name__ == "__main__":
+    run(sys.argv)

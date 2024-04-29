@@ -1,3 +1,4 @@
+import sys
 import requests
 import argparse
 import subprocess as sp
@@ -13,44 +14,6 @@ from datetime import datetime
 from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description="Build the LLM configs")
-parser.add_argument("handler", help="the handler used in the model")
-parser.add_argument("model", help="The name of model")
-parser.add_argument("--engine",
-                    required=False,
-                    type=str,
-                    choices=["deepspeed", "huggingface"],
-                    help="The engine used for inference")
-parser.add_argument("--dtype",
-                    required=False,
-                    type=str,
-                    help="The model data type")
-parser.add_argument("--tensor_parallel",
-                    required=False,
-                    type=int,
-                    help="The model tensor parallel degree")
-parser.add_argument("--batch_size",
-                    required=False,
-                    type=int,
-                    help="The batch size of inference requests")
-parser.add_argument("--in_tokens",
-                    required=False,
-                    type=int,
-                    help="The sequence length for input tokens")
-parser.add_argument("--out_tokens",
-                    required=False,
-                    type=int,
-                    help="The sequence length for output tokens")
-parser.add_argument("--count",
-                    required=False,
-                    type=int,
-                    help="Number of requests sent")
-parser.add_argument("--cpu_memory",
-                    required=False,
-                    default=0,
-                    type=int,
-                    help="CPU Memory footprint")
-args = parser.parse_args()
 
 
 def get_model_name():
@@ -1119,7 +1082,48 @@ def test_transformers_neuronx_handler(model, model_spec):
                 assert len(result) == batch_size
 
 
-if __name__ == "__main__":
+def run(raw_args):
+
+    parser = argparse.ArgumentParser(description="Build the LLM configs")
+    parser.add_argument("handler", help="the handler used in the model")
+    parser.add_argument("model", help="The name of model")
+    parser.add_argument("--engine",
+                        required=False,
+                        type=str,
+                        choices=["deepspeed", "huggingface"],
+                        help="The engine used for inference")
+    parser.add_argument("--dtype",
+                        required=False,
+                        type=str,
+                        help="The model data type")
+    parser.add_argument("--tensor_parallel",
+                        required=False,
+                        type=int,
+                        help="The model tensor parallel degree")
+    parser.add_argument("--batch_size",
+                        required=False,
+                        type=int,
+                        help="The batch size of inference requests")
+    parser.add_argument("--in_tokens",
+                        required=False,
+                        type=int,
+                        help="The sequence length for input tokens")
+    parser.add_argument("--out_tokens",
+                        required=False,
+                        type=int,
+                        help="The sequence length for output tokens")
+    parser.add_argument("--count",
+                        required=False,
+                        type=int,
+                        help="Number of requests sent")
+    parser.add_argument("--cpu_memory",
+                        required=False,
+                        default=0,
+                        type=int,
+                        help="CPU Memory footprint")
+    global args
+    args = parser.parse_args(args=raw_args)
+
     if args.handler == "huggingface":
         test_handler(args.model, hf_model_spec)
     elif args.handler == "neuron-stable-diffusion":
@@ -1158,3 +1162,7 @@ if __name__ == "__main__":
     else:
         raise ValueError(
             f"{args.handler} is not one of the supporting handler")
+
+
+if __name__ == "__main__":
+    run(sys.argv)
