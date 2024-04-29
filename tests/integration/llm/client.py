@@ -182,6 +182,11 @@ transformers_neuronx_model_spec = {
         "seq_length": [256],
         "tokenizer": "mistralai/Mistral-7B-v0.1"
     },
+    "mixtral-8x7b-rb": {
+        "batch_size": [4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
+    },
     "llama-7b-rb": {
         "batch_size": [1, 4],
         "seq_length": [256],
