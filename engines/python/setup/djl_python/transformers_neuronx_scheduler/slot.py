@@ -16,7 +16,7 @@ import torch
 from enum import Enum
 from transformers.generation import GenerationConfig
 from djl_python.rolling_batch.rolling_batch import Request, filter_unused_generation_params
-from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText, TokenDecoder
+from djl_python.transformers_neuronx_scheduler.utils import TokenDecoder
 
 GENERATION_PARAMS = list(GenerationConfig().__dict__.keys())
 TOKEN_SELECTION_PARAMS = ["seed"]
@@ -119,8 +119,10 @@ class Slot:
         # TODO: stop_sequences, ignore_eos_token
         self._token_decoder = TokenDecoder(tokenizer)
         self.seed = int(param.get("seed", 0))
-        filter_unused_generation_params(param, NEURON_GENERATION_PARAMS,
-                                        "neuron")
+        filter_unused_generation_params(param,
+                                        NEURON_GENERATION_PARAMS,
+                                        "neuron",
+                                        remove_unused_params=True)
 
     def reset(self, input_ids, attention_mask, selector, cache_id):
         """Reset the slot for the next generation.

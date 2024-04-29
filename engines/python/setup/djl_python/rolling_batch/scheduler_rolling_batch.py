@@ -322,7 +322,8 @@ class SchedulerRollingBatch(RollingBatch):
             eos_token_id=self.tokenizer.eos_token_id)
         filter_unused_generation_params(parameters,
                                         SCHEDULER_GENERATION_PARAMS,
-                                        "accelerate")
+                                        "accelerate",
+                                        remove_unused_params=True)
         return config
 
     def get_tokenizer(self):
