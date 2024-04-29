@@ -229,7 +229,6 @@ jobs:
           python3 llm/client.py no_code mistral-7b
           docker rm -f $(docker ps -aq)
       - name: GPTNeox lmi container
-        if: ${{ matrix.container  == 'lmi' }}
         working-directory: tests/integration
         run: |
           rm -rf models
