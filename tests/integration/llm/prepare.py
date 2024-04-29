@@ -157,15 +157,6 @@ transformers_neuronx_handler_list = {
         "option.dtype": "fp16",
         "option.model_loading_timeout": 900
     },
-    "open-llama-7b": {
-        "option.model_id": "s3://djl-llm/open-llama-7b/",
-        "batch_size": 4,
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 512,
-        "option.dtype": "fp16",
-        "option.neuron_optimize_level": 1,
-        "option.model_loading_timeout": 1200
-    },
     "bloom-7b1": {
         "option.model_id": "s3://djl-llm/bloom-7b1/",
         "batch_size": 4,
@@ -173,15 +164,6 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 256,
         "option.dtype": "fp16",
         "option.model_loading_timeout": 1200
-    },
-    "llama-7b-split": {
-        "option.model_id": "s3://djl-llm/llama-2-7b-split-inf2/split-model/",
-        "batch_size": 1,
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 512,
-        "option.model_loading_timeout": 2400,
-        "option.load_split_model": True,
-        "option.context_length_estimate": '256, 512, 1024'
     },
     "mistral-7b": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
@@ -249,6 +231,15 @@ transformers_neuronx_handler_list = {
         "option.max_rolling_batch_size": 4,
         "option.rolling_batch": 'auto',
         "option.model_loading_timeout": 2400,
+        "option.output_formatter": "jsonlines"
+    },
+    "mixtral-8x7b-rb": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b/",
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 1024,
+        "option.max_rolling_batch_size": 4,
+        "option.rolling_batch": 'auto',
+        "option.model_loading_timeout": 3600,
         "option.output_formatter": "jsonlines"
     }
 }
