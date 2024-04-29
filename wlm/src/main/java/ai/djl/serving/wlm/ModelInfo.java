@@ -507,51 +507,56 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
         eventManager.onModelDownloading(this);
         long begin = System.nanoTime();
+        try {
+            downloadModel();
+            loadServingProperties();
+            downloadS3();
+            eventManager.onModelDownloaded(this, downloadDir);
+            configPerModelSettings();
+            downloadDraftModel();
 
-        downloadModel();
-        loadServingProperties();
-        downloadS3();
-        eventManager.onModelDownloaded(this, downloadDir);
-        configPerModelSettings();
-        downloadDraftModel();
-
-        long duration = (System.nanoTime() - begin) / 1000;
-        Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS, dimension);
-        MODEL_METRIC.info("{}", metric);
-        if (LmiUtils.needConvert(this)) {
-            eventManager.onModelConverting(this, "trtllm");
-            begin = System.nanoTime();
-            LmiUtils.convertTrtLLM(this);
-            duration = (System.nanoTime() - begin) / 1000;
-            metric = new Metric("ConvertTrtllm", duration, Unit.MICROSECONDS, dimension);
+            long duration = (System.nanoTime() - begin) / 1000;
+            Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS, dimension);
             MODEL_METRIC.info("{}", metric);
-            eventManager.onModelConverted(this, "trtllm");
-        }
-        // override prop keys are not write to serving.properties,
-        // we have to explicitly set in Criteria
-        if (options == null) {
-            options = new ConcurrentHashMap<>();
-        }
-        if (arguments == null) {
-            arguments = new ConcurrentHashMap<>();
-            // apply maxWorkers env for MPI mode
-            String maxWorkers = Utils.getenv("SERVING_MAX_WORKERS");
-            String minWorkers = Utils.getenv("SERVING_MIN_WORKERS");
-            if (maxWorkers != null) {
-                arguments.putIfAbsent("maxWorkers", maxWorkers);
+            if (LmiUtils.needConvert(this)) {
+                eventManager.onModelConverting(this, "trtllm");
+                begin = System.nanoTime();
+                LmiUtils.convertTrtLLM(this);
+                duration = (System.nanoTime() - begin) / 1000;
+                metric = new Metric("ConvertTrtllm", duration, Unit.MICROSECONDS, dimension);
+                MODEL_METRIC.info("{}", metric);
+                eventManager.onModelConverted(this, "trtllm");
             }
-            if (minWorkers != null) {
-                arguments.putIfAbsent("minWorkers", minWorkers);
+            // override prop keys are not write to serving.properties,
+            // we have to explicitly set in Criteria
+            if (options == null) {
+                options = new ConcurrentHashMap<>();
+            }
+            if (arguments == null) {
+                arguments = new ConcurrentHashMap<>();
+                // apply maxWorkers env for MPI mode
+                String maxWorkers = Utils.getenv("SERVING_MAX_WORKERS");
+                String minWorkers = Utils.getenv("SERVING_MIN_WORKERS");
+                if (maxWorkers != null) {
+                    arguments.putIfAbsent("maxWorkers", maxWorkers);
+                }
+                if (minWorkers != null) {
+                    arguments.putIfAbsent("minWorkers", minWorkers);
+                }
+            }
+            for (String key : prop.stringPropertyNames()) {
+                if (key.startsWith("option.")) {
+                    options.put(key.substring(7), prop.getProperty(key));
+                } else {
+                    arguments.put(key, prop.getProperty(key));
+                }
+            }
+            initialize = true;
+        } finally {
+            if (!initialize) {
+                status = Status.FAILED;
             }
         }
-        for (String key : prop.stringPropertyNames()) {
-            if (key.startsWith("option.")) {
-                options.put(key.substring(7), prop.getProperty(key));
-            } else {
-                arguments.put(key, prop.getProperty(key));
-            }
-        }
-        initialize = true;
     }
 
     /**
