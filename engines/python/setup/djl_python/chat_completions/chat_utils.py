@@ -29,7 +29,7 @@ def parse_chat_completions_request(inputs: map, is_rolling_batch: bool,
             f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
             f"please ensure that your tokenizer supports chat templates.")
     chat_params = ChatProperties(**inputs)
-    _param = chat_params.model_dump(by_alias=True, exclude_none=True)
+    _param = chat_params.model_dump(by_alias=True, exclude_unset=True)
     _messages = _param.pop("messages")
     _inputs = tokenizer.apply_chat_template(_messages, tokenize=False)
     _param[
