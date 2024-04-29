@@ -101,13 +101,6 @@ hf_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
-    },
-    "llama-7b-unmerged-lora": {
-        "max_memory_per_gpu": [15.0, 15.0],
-        "batch_size": [3],
-        "seq_length": [16, 32],
-        "worker": 1,
-        "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
     }
 }
 

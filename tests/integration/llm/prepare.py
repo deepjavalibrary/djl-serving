@@ -67,15 +67,6 @@ hf_handler_list = {
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "fp16"
-    },
-    "llama-7b-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
-        "option.tensor_parallel_degree": 1,
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
-        "adapter_names": ["english-alpaca", "portugese-alpaca"],
     }
 }
 
