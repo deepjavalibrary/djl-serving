@@ -63,7 +63,7 @@ hf_handler_list = {
         "option.enable_streaming": True,
     },
     "gpt4all-lora": {
-        "option.model_id": "nomic-ai/gpt4all-lora",
+        "option.model_id": "s3://djl-llm/gpt4all-lora/",
         "option.tensor_parallel_degree": 4,
         "option.task": "text-generation",
         "option.dtype": "fp16"
