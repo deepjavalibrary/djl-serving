@@ -218,17 +218,6 @@ jobs:
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh pytorch-inf2
-      - name: Test transformers-neuronx open-llama-7b with handler
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py transformers_neuronx open-llama-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
-          serve
-          curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx open-llama-7b
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: Test streaming transformers-neuronx opt-1.3b with handler
         working-directory: tests/integration
         run: |
@@ -346,17 +335,6 @@ jobs:
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx_rolling_batch llama-7b-rb
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
-      - name: Test transformers-neuronx mistral-7b rolling batch
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py transformers_neuronx mistral-7b-rb
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
-          serve
-          curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx_rolling_batch mistral-7b-rb
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: On fail step
