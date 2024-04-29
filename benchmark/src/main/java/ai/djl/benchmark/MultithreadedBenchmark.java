@@ -43,7 +43,7 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
 
     /** {@inheritDoc} */
     @Override
-    public float[] predict(Arguments arguments, Metrics metrics, int iteration)
+    public String predict(Arguments arguments, Metrics metrics, int iteration)
             throws IOException, ModelException, TranslateException {
 
         MemoryTrainingListener.collectMemoryInfo(metrics); // Measure memory before loading model
@@ -64,10 +64,10 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
         AtomicInteger counter = new AtomicInteger(iteration);
         logger.info("Multithreading inference with {} threads.", numOfThreads);
 
-        List<ZooModel<Void, float[]>> models = new ArrayList<>(devices.length);
+        List<ZooModel<Void, String>> models = new ArrayList<>(devices.length);
         List<PredictorCallable> callables = new ArrayList<>(numOfThreads);
         for (Device device : devices) {
-            ZooModel<Void, float[]> model = loadModel(arguments, metrics, device);
+            ZooModel<Void, String> model = loadModel(arguments, metrics, device);
             models.add(model);
 
             for (int i = 0; i < numOfThreads / devices.length; ++i) {
@@ -75,7 +75,7 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
             }
         }
 
-        float[] result = null;
+        String result = null;
         ExecutorService executorService = Executors.newFixedThreadPool(numOfThreads);
 
         MemoryTrainingListener.collectMemoryInfo(metrics); // Measure memory before worker kickoff
@@ -95,7 +95,7 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
 
             metrics.addMetric("start", System.currentTimeMillis(), Unit.MILLISECONDS);
             try {
-                List<Future<float[]>> futures;
+                List<Future<String>> futures;
                 if (delay > 0) {
                     futures = new ArrayList<>();
                     for (PredictorCallable callable : callables) {
@@ -106,7 +106,7 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
                     futures = executorService.invokeAll(callables);
                 }
 
-                for (Future<float[]> future : futures) {
+                for (Future<String> future : futures) {
                     result = future.get();
                     if (result != null) {
                         ++successThreads;
@@ -126,20 +126,21 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
         models.forEach(ZooModel::close);
         if (successThreads != numOfThreads) {
             logger.error("Only {}/{} threads finished.", successThreads, numOfThreads);
-            return new float[0];
+            return "";
         }
 
         return result;
     }
 
+    /** {@inheritDoc} */
     @Override
     protected boolean benchmarkUsesThreads() {
         return true;
     }
 
-    private static class PredictorCallable implements Callable<float[]> {
+    private static class PredictorCallable implements Callable<String> {
 
-        private Predictor<Void, float[]> predictor;
+        private Predictor<Void, String> predictor;
 
         private Metrics metrics;
         private String workerId;
@@ -149,7 +150,7 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
         private int steps;
 
         public PredictorCallable(
-                ZooModel<Void, float[]> model,
+                ZooModel<Void, String> model,
                 Metrics metrics,
                 AtomicInteger counter,
                 int workerId,
@@ -170,8 +171,8 @@ public class MultithreadedBenchmark extends AbstractBenchmark {
 
         /** {@inheritDoc} */
         @Override
-        public float[] call() throws Exception {
-            float[] result = null;
+        public String call() throws Exception {
+            String result = null;
             int count = 0;
             int remaining;
             while ((remaining = counter.decrementAndGet()) > 0 || result == null) {
