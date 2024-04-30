@@ -135,7 +135,7 @@ public class Arguments {
         }
 
         String shape = cmd.getOptionValue("input-shapes");
-        inputShapes = NDListGenerator.parseShape(shape);
+        inputShapes = Shape.parseShapes(shape);
         inputData = cmd.getOptionValue("input-data");
     }
 
