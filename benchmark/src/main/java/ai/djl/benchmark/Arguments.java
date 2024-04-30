@@ -53,6 +53,7 @@ public class Arguments {
     private int neuronCores;
     private int delay;
     private PairList<DataType, Shape> inputShapes;
+    private String inputData;
 
     /**
      * Constructs a {@code Arguments} instance.
@@ -135,6 +136,7 @@ public class Arguments {
 
         String shape = cmd.getOptionValue("input-shapes");
         inputShapes = NDListGenerator.parseShape(shape);
+        inputData = cmd.getOptionValue("input-data");
     }
 
     static Options getOptions() {
@@ -186,14 +188,23 @@ public class Arguments {
                         .argName("ENGINE-NAME")
                         .desc("Choose an Engine for the benchmark.")
                         .build());
-        options.addOption(
+        OptionGroup inputGroup = new OptionGroup();
+        inputGroup.setRequired(true);
+        inputGroup.addOption(
                 Option.builder("s")
-                        .required()
                         .longOpt("input-shapes")
                         .hasArg()
                         .argName("INPUT-SHAPES")
                         .desc("Input data shapes for the model.")
                         .build());
+        inputGroup.addOption(
+                Option.builder("i")
+                        .longOpt("input-data")
+                        .hasArg()
+                        .argName("INPUT-DATA")
+                        .desc("Input data.")
+                        .build());
+        options.addOptionGroup(inputGroup);
         options.addOption(
                 Option.builder("d")
                         .longOpt("duration")
@@ -354,5 +365,9 @@ public class Arguments {
 
     PairList<DataType, Shape> getInputShapes() {
         return inputShapes;
+    }
+
+    String getInputData() {
+        return inputData;
     }
 }

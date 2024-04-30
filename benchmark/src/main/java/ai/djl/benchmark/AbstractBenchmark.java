@@ -13,11 +13,14 @@
 package ai.djl.benchmark;
 
 import ai.djl.Device;
+import ai.djl.Model;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.inference.Predictor;
 import ai.djl.metric.Metrics;
 import ai.djl.metric.Unit;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.ndarray.NDList;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.ndarray.types.Shape;
@@ -26,8 +29,11 @@ import ai.djl.repository.zoo.ZooModel;
 import ai.djl.training.listener.MemoryTrainingListener;
 import ai.djl.training.util.ProgressBar;
 import ai.djl.translate.NoBatchifyTranslator;
+import ai.djl.translate.ServingTranslatorFactory;
 import ai.djl.translate.TranslateException;
+import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorContext;
+import ai.djl.translate.TranslatorFactory;
 import ai.djl.util.Pair;
 import ai.djl.util.PairList;
 
@@ -39,8 +45,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.FloatBuffer;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
 
 /** Abstract benchmark class. */
 public abstract class AbstractBenchmark {
@@ -61,7 +71,7 @@ public abstract class AbstractBenchmark {
      * @throws TranslateException if error occurs when processing input or output
      * @throws ClassNotFoundException if input or output class cannot be loaded
      */
-    protected abstract float[] predict(Arguments arguments, Metrics metrics, int iteration)
+    protected abstract String predict(Arguments arguments, Metrics metrics, int iteration)
             throws IOException, ModelException, TranslateException, ClassNotFoundException;
 
     /**
@@ -122,24 +132,15 @@ public abstract class AbstractBenchmark {
             while (!duration.isNegative()) {
                 Metrics metrics = new Metrics(); // Reset Metrics for each test loop.
                 progressBar = new ProgressBar("Iteration", iteration);
-                float[] lastResult = predict(arguments, metrics, iteration);
-                if (lastResult.length == 0) {
+                String lastResult = predict(arguments, metrics, iteration);
+                if (lastResult.isEmpty()) {
                     return false;
                 }
 
                 long begin = metrics.getMetric("start").get(0).getValue().longValue();
                 long end = metrics.getMetric("end").get(0).getValue().longValue();
                 long totalTime = end - begin;
-
-                if (lastResult.length > 3) {
-                    logger.info(
-                            "Inference result: [{}, {}, {} ...]",
-                            lastResult[0],
-                            lastResult[1],
-                            lastResult[2]);
-                } else {
-                    logger.info("Inference result: {}", lastResult);
-                }
+                logger.info("Inference result: {}", lastResult);
 
                 String throughput = String.format("%.2f", iteration * 1000d / totalTime);
                 logger.info(
@@ -240,13 +241,13 @@ public abstract class AbstractBenchmark {
         return false;
     }
 
-    protected ZooModel<Void, float[]> loadModel(Arguments arguments, Metrics metrics, Device device)
+    protected ZooModel<Void, String> loadModel(Arguments arguments, Metrics metrics, Device device)
             throws ModelException, IOException {
         long begin = System.nanoTime();
 
-        Criteria<Void, float[]> criteria = loadModelCriteria(arguments, device);
+        Criteria<Void, String> criteria = loadModelCriteria(arguments, device);
 
-        ZooModel<Void, float[]> model = criteria.loadModel();
+        ZooModel<Void, String> model = criteria.loadModel();
         if (device == Device.cpu() || device == Device.gpu()) {
             long delta = (System.nanoTime() - begin) / 1000;
             logger.info(
@@ -258,19 +259,18 @@ public abstract class AbstractBenchmark {
         return model;
     }
 
-    protected Criteria<Void, float[]> loadModelCriteria(Arguments arguments, Device device) {
-        PairList<DataType, Shape> shapes = arguments.getInputShapes();
-        BenchmarkTranslator translator = new BenchmarkTranslator(shapes);
+    protected Criteria<Void, String> loadModelCriteria(Arguments arguments, Device device) {
+        TranslatorFactory factory = new BenchmarkTranslatorFactory(arguments);
 
         return Criteria.builder()
-                .setTypes(Void.class, float[].class)
+                .setTypes(Void.class, String.class)
                 .optModelUrls(arguments.getModelUrl())
                 .optModelName(arguments.getModelName())
                 .optEngine(arguments.getEngine())
                 .optOptions(arguments.getModelOptions())
                 .optArguments(arguments.getModelArguments())
                 .optDevice(device)
-                .optTranslator(translator)
+                .optTranslatorFactory(factory)
                 .optProgress(new ProgressBar())
                 .build();
     }
@@ -282,7 +282,7 @@ public abstract class AbstractBenchmark {
      */
     protected abstract boolean benchmarkUsesThreads();
 
-    static void warmup(Predictor<Void, float[]> predictor, long[] result, int warmup)
+    static void warmup(Predictor<Void, String> predictor, long[] result, int warmup)
             throws TranslateException {
         for (int i = 0; i < warmup; ++i) {
             long begin = System.nanoTime();
@@ -293,7 +293,40 @@ public abstract class AbstractBenchmark {
         }
     }
 
-    private static final class BenchmarkTranslator implements NoBatchifyTranslator<Void, float[]> {
+    private static final class BenchmarkTranslatorFactory implements TranslatorFactory {
+
+        private Arguments cli;
+
+        public BenchmarkTranslatorFactory(Arguments cli) {
+            this.cli = cli;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public Set<Pair<Type, Type>> getSupportedTypes() {
+            return Set.of(
+                    new Pair<>(Void.class, String.class), new Pair<>(Input.class, Output.class));
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        @SuppressWarnings("unchecked")
+        public <I, O> Translator<I, O> newInstance(
+                Class<I> in, Class<O> out, Model model, Map<String, ?> arguments)
+                throws TranslateException {
+            PairList<DataType, Shape> shapes = cli.getInputShapes();
+            if (!shapes.isEmpty()) {
+                return (Translator<I, O>) new BenchmarkTranslator(shapes);
+            }
+            ServingTranslatorFactory sf = new ServingTranslatorFactory();
+            Translator<Input, Output> translator =
+                    sf.newInstance(Input.class, Output.class, model, arguments);
+            return (Translator<I, O>)
+                    new ServingBenchmarkTranslator(translator, cli.getInputData());
+        }
+    }
+
+    private static final class BenchmarkTranslator implements NoBatchifyTranslator<Void, String> {
 
         private PairList<DataType, Shape> shapes;
 
@@ -315,10 +348,44 @@ public abstract class AbstractBenchmark {
 
         /** {@inheritDoc} */
         @Override
-        public float[] processOutput(TranslatorContext ctx, NDList list) {
+        public String processOutput(TranslatorContext ctx, NDList list) {
             FloatBuffer fb = list.get(0).toByteBuffer().asFloatBuffer();
             float[] ret = new float[fb.remaining()];
             fb.get(ret);
+            if (ret.length > 3) {
+                return "[" + ret[0] + ", " + ret[1] + ", " + ret[3] + ", ...]";
+            }
+            return Arrays.toString(ret);
+        }
+    }
+
+    private static final class ServingBenchmarkTranslator
+            implements NoBatchifyTranslator<Void, String> {
+
+        private Input input;
+        private Translator<Input, Output> translator;
+
+        public ServingBenchmarkTranslator(Translator<Input, Output> translator, String data) {
+            this.translator = translator;
+            this.input = new Input();
+            input.add(data);
+            input.addProperty("Content-Type", "application/json");
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public NDList processInput(TranslatorContext ctx, Void in) throws Exception {
+            return translator.processInput(ctx, input);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public String processOutput(TranslatorContext ctx, NDList list) throws Exception {
+            Output output = translator.processOutput(ctx, list);
+            String ret = output.getAsString(0).replace("\n", "");
+            if (ret.length() > 60) {
+                ret = ret.substring(0, 60) + " ...";
+            }
             return ret;
         }
     }

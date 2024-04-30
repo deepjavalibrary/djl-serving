@@ -37,7 +37,7 @@ public class WlmBenchmark extends AbstractBenchmark {
     /** {@inheritDoc} */
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public float[] predict(Arguments arguments, Metrics metrics, int iteration) {
+    public String predict(Arguments arguments, Metrics metrics, int iteration) {
         MemoryTrainingListener.collectMemoryInfo(metrics); // Measure memory before loading model
 
         Engine engine = Engine.getEngine(arguments.getEngine());
@@ -69,14 +69,14 @@ public class WlmBenchmark extends AbstractBenchmark {
 
         Device device = Device.fromName(devices[0], engine);
         WorkLoadManager wlm = new WorkLoadManager();
-        Criteria<Void, float[]> criteria = loadModelCriteria(arguments, device);
-        ModelInfo<Void, float[]> modelInfo =
+        Criteria<Void, String> criteria = loadModelCriteria(arguments, device);
+        ModelInfo<Void, String> modelInfo =
                 new ModelInfo<>("model", arguments.getModelUrl(), criteria);
 
         int workersPerDevice = numOfWorkers / devices.length;
         modelInfo.setMinWorkers(workersPerDevice);
         modelInfo.setMaxWorkers(workersPerDevice);
-        WorkerPool<Void, float[]> wp = wlm.registerWorkerPool(modelInfo);
+        WorkerPool<Void, String> wp = wlm.registerWorkerPool(modelInfo);
         for (String deviceName : devices) {
             wp.initWorkers(deviceName);
         }
@@ -85,7 +85,7 @@ public class WlmBenchmark extends AbstractBenchmark {
         MemoryTrainingListener.collectMemoryInfo(metrics);
 
         metrics.addMetric("start", System.currentTimeMillis(), Unit.MILLISECONDS);
-        CompletableFuture<float[]>[] results = new CompletableFuture[iteration];
+        CompletableFuture<String>[] results = new CompletableFuture[iteration];
         for (int i = 0; i < iteration; i++) {
             try {
                 results[i] = wlm.runJob(new Job<>(modelInfo, null));
@@ -103,12 +103,11 @@ public class WlmBenchmark extends AbstractBenchmark {
 
         metrics.addMetric("end", System.currentTimeMillis(), Unit.MILLISECONDS);
 
-        long successfulResults =
-                Arrays.stream(results).mapToInt(f -> f.join() != null ? 1 : 0).count();
+        long successfulResults = Arrays.stream(results).count();
 
         if (successfulResults != iteration) {
             logger.error("Only {}/{} results successfully finished.", successfulResults, iteration);
-            return new float[0];
+            return "";
         }
 
         return results[0].join();

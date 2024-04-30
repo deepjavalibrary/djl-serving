@@ -71,13 +71,13 @@ public final class Benchmark extends AbstractBenchmark {
 
     /** {@inheritDoc} */
     @Override
-    public float[] predict(Arguments arguments, Metrics metrics, int iteration)
+    public String predict(Arguments arguments, Metrics metrics, int iteration)
             throws IOException, ModelException, TranslateException {
         Device device = Engine.getEngine(arguments.getEngine()).defaultDevice();
-        try (ZooModel<Void, float[]> model = loadModel(arguments, metrics, device)) {
-            float[] predictResult = null;
+        try (ZooModel<Void, String> model = loadModel(arguments, metrics, device)) {
+            String predictResult = null;
 
-            try (Predictor<Void, float[]> predictor = model.newPredictor()) {
+            try (Predictor<Void, String> predictor = model.newPredictor()) {
                 long[] minMax = {Long.MAX_VALUE, 0};
                 int warmupIterations = arguments.getWarmup();
                 logger.info("Warmup with {} iteration ...", warmupIterations);
@@ -120,12 +120,6 @@ public final class Benchmark extends AbstractBenchmark {
             if (System.getProperty("ai.djl.onnxruntime.num_threads") == null) {
                 System.setProperty("ai.djl.onnxruntime.num_threads", "1");
             }
-        }
-        if (System.getProperty("ai.djl.onnx.disable_alternative") == null) {
-            System.setProperty("ai.djl.onnx.disable_alternative", "true");
-        }
-        if (System.getProperty("ai.djl.tensorrt.disable_alternative") == null) {
-            System.setProperty("ai.djl.tensorrt.disable_alternative", "true");
         }
     }
 }
