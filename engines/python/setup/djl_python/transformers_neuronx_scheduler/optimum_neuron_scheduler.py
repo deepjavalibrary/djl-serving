@@ -37,9 +37,6 @@ class NeuronGenerator(ABC):
                  trim_cache=False):
         self.model = model
         self.tokenizer = tokenizer
-        self.special_tokens = [
-            self.tokenizer.eos_token_id, self.tokenizer.pad_token_id
-        ]
         self.slots = [Slot(i) for i in range(batch_size)]
         self.batch_size = batch_size
         self.n_positions = n_positions
@@ -118,8 +115,6 @@ class NeuronGenerator(ABC):
             finish_reason = None
             if slot.is_slot_eos_token(next_token):
                 finish_reason = FinishReason.FINISH_REASON_EOS_TOKEN
-            elif next_token == self.tokenizer.eos_token_id:
-                finish_reason = FinishReason.FINISH_REASON_EOS_TOKEN
             elif slot.stopped:
                 finish_reason = FinishReason.FINISH_REASON_LENGTH
             if finish_reason is not None:
@@ -140,8 +135,7 @@ class NeuronGenerator(ABC):
                     token_id=next_token,
                     token_logprob=next_log_prob,
                     token_text=next_token_text,
-                    token_is_special=(next_token in [self.special_tokens])
-                    or (finish_reason == FinishReason.FINISH_REASON_EOS_TOKEN),
+                    token_is_special=(next_token in slot.special_tokens),
                     generated_text=generated_text,
                 ))
         return generations
