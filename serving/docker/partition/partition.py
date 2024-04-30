@@ -166,15 +166,26 @@ class PartitionService(object):
             entrypoint_dir = Path(self.properties['entryPoint']).parent
             shutil.rmtree(entrypoint_dir)
 
-    def run_partition(self):
+    def run_partition(self) -> str:
+        """
+        :return: the output of the partition command captured from stdout
+        """
         commands = get_partition_cmd(self.properties_manager.is_mpi_mode,
                                      self.properties)
         logging.info(f"cmd: {commands}")
         self.set_environmental_vars()
-        result = subprocess.run(commands)
-        logging.info(result)
-        if result.returncode == 0:
-            logging.info(f"Partitioning done.")
+        partition_stdout = ""
+        # Use Popen to capture stdout without delaying terminal output
+        with subprocess.Popen(commands,
+                              stdout=subprocess.PIPE,
+                              bufsize=1,
+                              universal_newlines=True) as proc:
+            for line in proc.stdout:
+                partition_stdout += line
+                print(line, end='')
+        logging.info(proc)
+        if proc.returncode == 0:
+            logging.info("Partitioning done.")
             self.properties_manager.validate_and_correct_checkpoints_json()
             self.properties_manager.generate_properties_file()
             if not self.properties_manager.skip_copy:
@@ -183,6 +194,7 @@ class PartitionService(object):
             self.load_the_generated_checkpoints()
             self.upload_checkpoints_to_s3()
             self.cleanup()
+            return partition_stdout
         else:
             raise Exception("Partitioning was not successful.")
 
