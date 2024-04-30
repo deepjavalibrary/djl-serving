@@ -23,7 +23,7 @@ from transformers import (
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from peft import PeftConfig, PeftModel, PeftModelForCausalLM
 
-from djl_python.encode_decode import encode, decode
+from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
@@ -31,7 +31,7 @@ from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
+from djl_python.utils import parse_input_with_formatter, InputFormatConfigs
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -139,6 +139,7 @@ class HuggingFaceService(object):
         self.adapter_registry = {}
         self.adapters = None
         self.hf_configs = None
+        self.input_format_configs = None
 
     def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -153,25 +154,29 @@ class HuggingFaceService(object):
                 self.hf_configs.model_id_or_path, properties,
                 **self.hf_configs.kwargs)
             self._init_tokenizer(self.hf_configs.model_id_or_path)
-            self.initialized = True
-            return
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
             self._init_tokenizer(self.hf_configs.model_id_or_path)
             self._init_model(self.hf_configs.model_id_or_path,
                              **self.hf_configs.kwargs)
-            self.initialized = True
-            return
+        else:
+            if not self.hf_configs.task:
+                self.hf_configs.task = self.infer_task_from_model_architecture(
+                )
 
-        if not self.hf_configs.task:
-            self.hf_configs.task = self.infer_task_from_model_architecture()
+            self.hf_pipeline = self.get_pipeline(
+                task=self.hf_configs.task,
+                model_id_or_path=self.hf_configs.model_id_or_path,
+                kwargs=self.hf_configs.kwargs)
 
-        self.hf_pipeline = self.get_pipeline(
-            task=self.hf_configs.task,
-            model_id_or_path=self.hf_configs.model_id_or_path,
-            kwargs=self.hf_configs.kwargs)
+            if "stop_sequence" in properties:
+                self.load_stopping_criteria_list(properties["stop_sequence"])
 
-        if "stop_sequence" in properties:
-            self.load_stopping_criteria_list(properties["stop_sequence"])
+        self.input_format_configs = InputFormatConfigs(
+            is_rolling_batch=is_rolling_batch_enabled(
+                self.hf_configs.rolling_batch),
+            is_adapters_supported=True,
+            output_formatter=self.hf_configs.output_formatter,
+            tokenizer=self.tokenizer)
         self.initialized = True
 
     @staticmethod
@@ -208,81 +213,33 @@ class HuggingFaceService(object):
 
         self.stopping_criteria_list = StoppingCriteriaList(stopwords)
 
-    def parse_input(self, inputs):
-        input_data = []
-        input_size = []
-        parameters = []
-        adapters = []
-        found_adapters = False
-        errors = {}
-        batch = inputs.get_batches()
-        for i, item in enumerate(batch):
-            try:
-                content_type = item.get_property("Content-Type")
-                input_map = decode(item, content_type)
-            except Exception as e:  # pylint: disable=broad-except
-                logging.warning(f"Parse input failed: {i}")
-                input_size.append(0)
-                errors[i] = str(e)
-                continue
+    def parse_input(
+        self, inputs: Input, tokenizer, output_formatter
+    ) -> tuple[list[str], list[int], list[dict], dict, list]:
+        """
+        Preprocessing function that extracts information from Input objects.
 
-            if is_chat_completions_request(input_map):
-                _inputs, _param = parse_chat_completions_request(
-                    input_map,
-                    is_rolling_batch_enabled(self.hf_configs.rolling_batch),
-                    self.tokenizer)
-            else:
-                _inputs = input_map.pop("inputs", input_map)
-                _param = input_map.pop("parameters", {})
+        :param output_formatter: output formatter for the request
+        :param inputs :(Input) a batch of inputs, each corresponding to a new request
+        :param tokenizer: the tokenizer used for inference
 
-            # Per request streaming is only supported by rolling batch
-            if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
-                _param["stream"] = input_map.pop("stream", False)
+        :return input_data (list[str]): a list of strings, each string being the prompt in a new request
+        :return input_size (list[int]): a list of ints being the size of each new request
+        :return parameters (list[dict]): parameters pertaining to each request
+        :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
+        :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
+        """
 
-            if not isinstance(_inputs, list):
-                _inputs = [_inputs]
-            input_data.extend(_inputs)
-            input_size.append(len(_inputs))
-
-            if "cached_prompt" in input_map:
-                _param["cached_prompt"] = input_map.pop("cached_prompt")
-            if "seed" not in _param:
-                # set server provided seed if seed is not part of request
-                if item.contains_key("seed"):
-                    _param["seed"] = item.get_as_string(key="seed")
-            if "output_formatter" not in _param:
-                _param["output_formatter"] = self.hf_configs.output_formatter
-
-            for _ in range(input_size[i]):
-                parameters.append(_param)
-
-            adapters_per_item = self._fetch_adapters_from_input(
-                input_map, item)
-            if not isinstance(adapters_per_item, list):
-                adapters_per_item = [adapters_per_item]
-
-            if adapters_per_item:
-                found_adapters = True
-            else:
-                # inference with just base model.
-                adapters_per_item = [""] * len(_inputs)
-
-            adapters.extend(adapters_per_item)
-            if len(_inputs) != len(adapters_per_item):
-                logging.warning(
-                    f"Number of adapters is not equal to the number of inputs")
-                errors[
-                    i] = "Number of adapters is not equal to the number of inputs"
-
-        self.adapters = adapters if found_adapters else None
-
-        return input_data, input_size, parameters, errors, batch
+        parsed_input = parse_input_with_formatter(inputs,
+                                                  self.input_format_configs)
+        self.adapters = parsed_input.adapters if parsed_input.found_adapters else None
+        return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
 
     def inference(self, inputs):
         outputs = Output()
 
         input_data, input_size, parameters, errors, batch = self.parse_input(
-            inputs)
+            inputs, self.tokenizer, self.hf_configs.output_formatter)
         if len(input_data) == 0:
             for i in range(len(batch)):
                 err = errors.get(i)
@@ -587,21 +544,6 @@ class HuggingFaceService(object):
                 f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
                 f"This is required for loading huggingface models")
             raise e
-
-    @staticmethod
-    def _fetch_adapters_from_input(input_map: dict, inputs: Input):
-        if "adapters" in input_map:
-            return input_map.pop("adapters", [])
-
-        # check content, possible in workflow approach
-        if inputs.contains_key("adapter"):
-            return inputs.get_as_string("adapter")
-
-        # check properties, possible from header
-        if "adapter" in inputs.get_properties():
-            return inputs.get_properties()["adapter"]
-
-        return []
 
 
 _service = HuggingFaceService()
