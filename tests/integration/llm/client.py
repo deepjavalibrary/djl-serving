@@ -176,12 +176,6 @@ lmi_dist_model_spec = {
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-7b"
     },
-    "open-llama-7b": {
-        "max_memory_per_gpu": [25.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
     "flan-t5-xxl": {
         "max_memory_per_gpu": [10.0],
         "batch_size": [1, 4],
