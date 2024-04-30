@@ -100,6 +100,32 @@ public class AwsCurlTest {
     }
 
     @Test
+    public void testSeed() {
+        TestHttpHandler.setContent("Hello world", HttpHeaderValues.TEXT_PLAIN);
+        String[] args = {"http://localhost:18080/invocations", "--seed", "5"};
+        Result ret = AwsCurl.run(args);
+        Assert.assertFalse(ret.hasError());
+
+        args = new String[] {"http://localhost:18080/invocations", "--seed", "x"};
+        ret = AwsCurl.run(args);
+        Assert.assertTrue(ret.hasError());
+    }
+
+    @Test
+    public void testDuration() {
+        TestHttpHandler.setContent("Hello world", HttpHeaderValues.TEXT_PLAIN);
+        String[] args = {
+            "http://localhost:18080/invocations", "--duration", "1", "-N", "9", "--delay", "1000"
+        };
+        Result ret = AwsCurl.run(args);
+        Assert.assertEquals(ret.getTotalRequests(), 1);
+
+        args = new String[] {"http://localhost:18080/invocations", "--duration", "x"};
+        ret = AwsCurl.run(args);
+        Assert.assertTrue(ret.hasError());
+    }
+
+    @Test
     public void testDataset() {
         TestHttpHandler.setContent("Hello world", HttpHeaderValues.TEXT_PLAIN);
         String[] args = {

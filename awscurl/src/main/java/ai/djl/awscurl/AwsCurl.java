@@ -200,6 +200,7 @@ public final class AwsCurl {
 
             ExecutorService executor = Executors.newFixedThreadPool(clients);
             ArrayList<Callable<Void>> tasks = new ArrayList<>(clients);
+            long stopTime = config.getStopTime();
             for (int i = 0; i < clients; ++i) {
                 final int clientId = i;
                 tasks.add(
@@ -210,7 +211,8 @@ public final class AwsCurl {
                             }
                             OutputStream os = config.getOutput(clientId);
                             long[] requestTime = {0L, -1L};
-                            while (totalReq.getAndDecrement() > 0) {
+                            while (totalReq.getAndDecrement() > 0
+                                    && System.currentTimeMillis() < stopTime) {
                                 SignableRequest request = new SignableRequest(serviceName, uri);
                                 request.setContent(config.getRequestBody());
                                 request.setHeaders(config.getRequestHeaders());
@@ -425,6 +427,7 @@ public final class AwsCurl {
         private List<byte[]> dataset;
         private String jq;
         private int delay;
+        private int duration;
         private boolean random;
         private String error;
         private AtomicInteger index;
@@ -511,6 +514,21 @@ public final class AwsCurl {
                     if (delay < 0) {
                         delay = 0;
                     }
+                }
+            }
+            String seed = cmd.getOptionValue("seed");
+            if (seed != null) {
+                try {
+                    RandomUtils.RANDOM.setSeed(Long.parseLong(seed));
+                } catch (NumberFormatException e) {
+                    error = "Invalid seed: " + seed;
+                }
+            }
+            if (cmd.hasOption("duration")) {
+                try {
+                    duration = Integer.parseInt(cmd.getOptionValue("duration"));
+                } catch (NumberFormatException e) {
+                    error = "Invalid duration: " + cmd.getOptionValue("duration");
                 }
             }
         }
@@ -716,6 +734,20 @@ public final class AwsCurl {
                                     "Delay in millis between each request (e.g. 10 or rand(100,"
                                             + " 200))")
                             .build());
+            options.addOption(
+                    Option.builder()
+                            .longOpt("seed")
+                            .hasArg()
+                            .argName("RANDOM-SEED")
+                            .desc("Random seed")
+                            .build());
+            options.addOption(
+                    Option.builder()
+                            .longOpt("duration")
+                            .hasArg()
+                            .argName("DURATION")
+                            .desc("Duration of the test in seconds")
+                            .build());
             return options;
         }
 
@@ -763,6 +795,13 @@ public final class AwsCurl {
 
         public int getNumberOfRequests() {
             return nRequests;
+        }
+
+        public long getStopTime() {
+            if (duration > 0) {
+                return System.currentTimeMillis() + duration * 1000L;
+            }
+            return Long.MAX_VALUE;
         }
 
         public int getClients() {
