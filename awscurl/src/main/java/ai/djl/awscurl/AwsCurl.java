@@ -731,7 +731,7 @@ public final class AwsCurl {
                             .hasArg()
                             .argName("DELAY")
                             .desc(
-                                    "Delay in millis between each request (e.g. 10 or rand(100,"
+                                    "Delay in millis for initial requests (e.g. 10 or rand(100,"
                                             + " 200))")
                             .build());
             options.addOption(
