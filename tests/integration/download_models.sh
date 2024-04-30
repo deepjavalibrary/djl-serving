@@ -24,6 +24,7 @@ aarch_models_urls=(
 
 inf2_models_urls=(
   "https://resources.djl.ai/test-models/pytorch/resnet18_inf2_2_4.tar.gz"
+  "https://resources.djl.ai/test-models/pytorch/resnet18_no_reqs_inf2_2_4.tar.gz"
 )
 
 download() {

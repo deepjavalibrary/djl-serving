@@ -186,6 +186,10 @@ class Connection {
             // TODO: re-map logic device once neuron fixed bug
             pyEnv.addEnv("NEURON_RT_VISIBLE_CORES", visibleCores);
             logger.info("Set NEURON_RT_VISIBLE_CORES={}", visibleCores);
+
+            String neuronThreads = getNeuronThreads(tensorParallelDegree);
+            pyEnv.addEnv("OMP_NUM_THREADS", neuronThreads);
+            logger.info("Set OMP_NUM_THREADS={}", neuronThreads);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         String[] args = new String[12];
@@ -229,6 +233,13 @@ class Connection {
             return deviceId + "-" + (deviceId + tensorParallelDegree - 1);
         }
         return String.valueOf(deviceId);
+    }
+
+    private static String getNeuronThreads(int tensorParallelDegree) {
+        if (tensorParallelDegree > 0) {
+            return String.valueOf(tensorParallelDegree * 2);
+        }
+        return String.valueOf(1);
     }
 
     void connect() throws InterruptedException {

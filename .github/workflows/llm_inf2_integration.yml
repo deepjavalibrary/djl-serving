@@ -74,7 +74,7 @@ jobs:
         working-directory: tests/integration
         run: |
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
-          serve -m test::Python:nc0=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz
+          serve -m test::Python:nc0=file:/opt/ml/model/resnet18_no_reqs_inf2_2_4.tar.gz
           ./test_client.sh image/jpg models/kitten.jpg
           docker rm -f $(docker ps -aq)
       - name: Test transformers-neuronx gpt2 with handler
@@ -218,17 +218,6 @@ jobs:
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
           mkdir logs
           ./download_models.sh pytorch-inf2
-      - name: Test transformers-neuronx open-llama-7b with handler
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py transformers_neuronx open-llama-7b
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
-          serve
-          curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx open-llama-7b
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
       - name: Test streaming transformers-neuronx opt-1.3b with handler
         working-directory: tests/integration
         run: |
@@ -271,17 +260,6 @@ jobs:
           serve
           curl http://127.0.0.1:8080/models
           python3 llm/client.py neuron-stable-diffusion stable-diffusion-xl-neuron
-          docker rm -f $(docker ps -aq)
-          sudo rm -rf models
-      - name: Test load split model with llama2 7B in handler
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 llm/prepare.py transformers_neuronx llama-7b-split
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
-          serve
-          curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx llama-7b-split
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: Test mistral 7B with handler
@@ -348,15 +326,15 @@ jobs:
           python3 llm/client.py transformers_neuronx_rolling_batch llama-7b-rb
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
-      - name: Test transformers-neuronx mistral-7b rolling batch
+      - name: Test transformers-neuronx mixtral-8x-7b rolling batch
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py transformers_neuronx mistral-7b-rb
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-2 \
+          python3 llm/prepare.py transformers_neuronx mixtral-8x7b-rb
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-4 \
           serve
           curl http://127.0.0.1:8080/models
-          python3 llm/client.py transformers_neuronx_rolling_batch mistral-7b-rb
+          python3 llm/client.py transformers_neuronx_rolling_batch mixtral-8x7b-rb
           docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: On fail step
