@@ -459,6 +459,9 @@ public class ModelServer {
                                     });
             if (configManager.waitModelLoading()) {
                 f.join();
+                if (stopped.get()) {
+                    throw new BadWorkflowException("Model server is stopped.");
+                }
             }
             startupModels.add(modelName);
         }
