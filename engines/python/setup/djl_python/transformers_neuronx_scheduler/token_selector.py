@@ -170,6 +170,8 @@ class TokenSelector:
         logits_warper = None
         if generation_mode == GenerationMode.SAMPLE:
             logits_warper = model._get_logits_warper(generation_config)
+            if len(logits_warper) == 0:
+                generation_mode = GenerationMode.GREEDY_SEARCH
 
         return cls(mode=generation_mode,
                    logits_processor=logits_processor,
@@ -192,7 +194,8 @@ class TokenSelector:
         Return:
             `torch.LongTensor`: A `torch.LongTensor` containing the selected tokens.
         """
-        scores = self.logits_processor(input_ids, logits)
+        # Cast to int64 for Repetition Penalty logit processor support
+        scores = self.logits_processor(input_ids.to(torch.int64), logits)
         logprobs = torch.log_softmax(scores, -1)
         if self.mode == GenerationMode.SAMPLE:
             next_ids = self._sample(scores)
