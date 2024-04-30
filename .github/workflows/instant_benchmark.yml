@@ -90,9 +90,7 @@ jobs:
           yes | docker system prune -a --volumes
       - name: install deps
         run: |
-          sudo apt-get update
-          sudo apt-get install awscli -y
-          pip3 install boto3
+          pip3 install boto3 awscli
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -123,13 +121,11 @@ jobs:
           python-version: '3.10.x'
       - name: install deps
         run: |
-          sudo apt-get update
-          sudo apt-get install awscli -y
-          pip3 install boto3
+          pip3 install boto3 awscli
       - name: Setup awscurl
         working-directory: tests/integration
         run: |
-          wget https://github.com/frankfliu/junkyard/releases/download/v0.3.1/awscurl
+          wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
       - name: Run benchmark job
         working-directory: tests/integration
