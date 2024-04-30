@@ -14,12 +14,13 @@
 import copy
 import torch
 from enum import Enum
+from typing import Optional, Any, List
 from transformers.generation import GenerationConfig
 from djl_python.rolling_batch.rolling_batch import Request, filter_unused_generation_params
-from djl_python.transformers_neuronx_scheduler.utils import TokenDecoder
+from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText, TokenDecoder
 
 GENERATION_PARAMS = list(GenerationConfig().__dict__.keys())
-TOKEN_SELECTION_PARAMS = ["seed"]
+TOKEN_SELECTION_PARAMS = ["seed", "ignore_eos", "stop_token_ids"]
 NEURON_GENERATION_PARAMS = set(GENERATION_PARAMS + TOKEN_SELECTION_PARAMS)
 
 
@@ -57,6 +58,9 @@ class Slot:
         self._next_token_text = ""
         self._cache_id = torch.zeros(1)
         self._token_decoder = None
+        self._token_acceptor = None
+        self._special_tokens = []
+        self._ignore_eos_id = False
         self.seed = 0
 
     @property
@@ -87,8 +91,32 @@ class Slot:
     def decoder(self) -> TokenDecoder:
         return self._token_decoder
 
-    def assign(self, request: Request, generation_config: GenerationConfig,
-               tokenizer):
+    @property
+    def acceptor(self) -> Optional[Any]:
+        return self._token_acceptor
+
+    @property
+    def special_tokens(self) -> List[int]:
+        return self._special_tokens
+
+    def build_eos_token_ids(self, params) -> List[int]:
+        if isinstance(self._generation_config.eos_token_id, int):
+            eos_token_ids = [self._generation_config.eos_token_id]
+        else:
+            eos_token_ids = [*self._generation_config.eos_token_id]
+
+        stop_token_ids = params.get("stop_token_ids")
+        if isinstance(stop_token_ids, int):
+            eos_token_ids.append(stop_token_ids)
+        elif stop_token_ids:
+            eos_token_ids = eos_token_ids + stop_token_ids
+        return eos_token_ids
+
+    def assign(self,
+               request: Request,
+               generation_config: GenerationConfig,
+               tokenizer,
+               token_acceptor=None):
         """Assign a request to a slot.
 
         Args:
@@ -105,20 +133,23 @@ class Slot:
         self._generation_config = copy.deepcopy(generation_config)
         # Update generation config with token chooser parameters
         param = translate_neuronx_params(request.parameters)
+        self.seed = 0
         self._generation_config.do_sample = param.get("do_sample", False)
         if self._generation_config.do_sample:
             self._generation_config.temperature = param.get("temperature", 0.9)
             self._generation_config.top_k = param.get("top_k", 0)
             self._generation_config.top_p = param.get("top_p", 1.0)
             self._generation_config.typical_p = param.get("typical_p", 1.0)
+            self.seed = int(param.get("seed", 0))
 
         self._generation_config.repetition_penalty = param.get(
             "repetition_penalty", 1.0)
         self._generation_config.max_new_tokens = param.get(
             "max_new_tokens", 30)
-        # TODO: stop_sequences, ignore_eos_token
+        self._generation_config.eos_token_id = self.build_eos_token_ids(param)
         self._token_decoder = TokenDecoder(tokenizer)
-        self.seed = int(param.get("seed", 0))
+        self._token_acceptor = token_acceptor
+        self._ignore_eos_id = param.pop("ignore_eos", False)
         filter_unused_generation_params(param,
                                         NEURON_GENERATION_PARAMS,
                                         "neuron",
@@ -204,6 +235,8 @@ class Slot:
         self._cache_id = self._cache_id.max()
 
     def is_slot_eos_token(self, token) -> bool:
+        if self._ignore_eos_id:
+            return False
         if hasattr(self._generation_config, "eos_token_id"):
             if isinstance(self._generation_config.eos_token_id, int):
                 return token == self._generation_config.eos_token_id
