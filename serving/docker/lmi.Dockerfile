@@ -28,7 +28,7 @@ ARG optimum_version=1.15.0
 ARG auto_gptq_version=0.5.1
 ARG datasets_version=2.17.1
 # LMI-Dist Deps
-ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.3.3/vllm-0.3.3-cp310-cp310-manylinux1_x86_64.whl"
+ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.4.0/vllm-0.4.0-cp310-cp310-manylinux1_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu121-pt212/flash_attn-2.5.6-cp310-cp310-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
