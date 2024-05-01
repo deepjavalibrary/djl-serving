@@ -151,15 +151,17 @@ keystore_type=PKCS12
 ## Environment variables
 
 User can set environment variables to change DJL Serving behavior, following is a list of
-variables that user can be set for DJL Serving:
+system environment variables that user can be set for DJL Serving:
 
-* JAVA_HOME
-* JAVA_OPTS
-* SERVING_OPTS
-* MODEL_SERVER_HOME
+| Key               | Type    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|-------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| JAVA_HOME         | env var | JDK home path                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| MODEL_SERVER_HOME | env var | DJLServing home directory, default: Installation directory (e.g. /usr/local/Cellar/djl-serving/0.27.0/)                                                                                                                                                                                                                                                                                                                                                   |
+| DEFAULT_JVM_OPTS  | env var | default: `-Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml`<br>Override default JVM startup options and system properties.                                                                                                                                                                                                                                                                                                                           |
+| JAVA_OPTS         | env var | default: `-Xms1g -Xmx1g -XX:+ExitOnOutOfMemoryError`<br>Add extra JVM options.                                                                                                                                                                                                                                                                                                                                                                            |
+| SERVING_OPTS      | env var | default: N/A<br>Add serving related JVM options.<br>Some of DJL configuration can only be configured by JVM system properties, user has to set DEFAULT_JVM_OPTS environment variable to configure them.<br>- `-Dai.djl.pytorch.num_interop_threads=2`, this will override interop threads for PyTorch<br>- `-Dai.djl.pytorch.num_threads=2`, this will override OMP_NUM_THREADS for PyTorch<br>- `-Dai.djl.logging.level=debug` change DJL loggging level |
 
-**Note:** environment variable has higher priority that command line or config.properties.
-It will override other property values.
+**Note:** Above system environment variable has higher priority than the default value in the container.
 
 ### Global Model Server settings
 
@@ -170,19 +172,23 @@ Most of the model server specific configuration can be configured in `conf/confi
 You can find the configuration keys here:
 [ConfigManager.java](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/src/main/java/ai/djl/serving/util/ConfigManager.java#L52-L79)
 
-Each configuration key can also be override by environment variable with `SERVING_` prefix, for example:
+Each configuration key can also be overridden by environment variable with `SERVING_` prefix, for example:
 
 ```
 export SERVING_JOB_QUEUE_SIZE=1000 # This will override JOB_QUEUE_SIZE in the config
 ```
 
-| Key               | Type    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|-------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| MODEL_SERVER_HOME | env var | DJLServing home directory, default: Installation directory (e.g. /usr/local/Cellar/djl-serving/0.27.0/)                                                                                                                                                                                                                                                                                                                                                   |
-| DEFAULT_JVM_OPTS  | env var | default: `-Dlog4j.configurationFile=${APP_HOME}/conf/log4j2.xml`<br>Override default JVM startup options and system properties.                                                                                                                                                                                                                                                                                                                           |
-| JAVA_OPTS         | env var | default: `-Xms1g -Xmx1g -XX:+ExitOnOutOfMemoryError`<br>Add extra JVM options.                                                                                                                                                                                                                                                                                                                                                                            |
-| SERVING_OPTS      | env var | default: N/A<br>Add serving related JVM options.<br>Some of DJL configuration can only be configured by JVM system properties, user has to set DEFAULT_JVM_OPTS environment variable to configure them.<br>- `-Dai.djl.pytorch.num_interop_threads=2`, this will override interop threads for PyTorch<br>- `-Dai.djl.pytorch.num_threads=2`, this will override OMP_NUM_THREADS for PyTorch<br>- `-Dai.djl.logging.level=debug` change DJL loggging level |
+Similar to system environment variable, global environment variable has higher priority than config.properties.
 
+### Per model settings
+
+There two type of model settings, `options` and `arguments`. options are used at model loading time,
+arguments are used by `Translator` for pre/post processing.
+
+You can provide extra settings with environment variable, prefix with `OPTION_` for options and `ARGS_`
+for arguments. See: [model configurations](configurations_model.md) for more details.
+
+**Note:** per model environment will NOT override values in `serving.properties`.
 
 ## Appendix
 

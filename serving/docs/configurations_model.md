@@ -77,7 +77,7 @@ option.max_rolling_batch_size=64
 option.max_output_size=67108864
 ```
 
-Most of the options can also be overriden by an environment variable with the `OPTION_` prefix and all caps.
+Most of the options can also be overridden by an environment variable with the `OPTION_` prefix.
 For example:
 
 ```
