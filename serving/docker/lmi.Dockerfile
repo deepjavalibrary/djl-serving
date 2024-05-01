@@ -15,20 +15,20 @@ ARG cuda_version=cu121
 ARG djl_version=0.28.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
-ARG torch_version=2.1.2
-ARG torch_vision_version=0.16.2
+ARG torch_version=2.2.1
+ARG torch_vision_version=0.17.1
 ARG onnx_version=1.17.1
 ARG pydantic_version=2.6.1
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.39.0
-ARG accelerate_version=0.28.0
-ARG bitsandbytes_version=0.41.1
-ARG optimum_version=1.15.0
-ARG auto_gptq_version=0.5.1
-ARG datasets_version=2.17.1
+ARG transformers_version=4.40.0
+ARG accelerate_version=0.29.3
+ARG bitsandbytes_version=0.43.1
+ARG optimum_version=1.19.1
+ARG auto_gptq_version=0.7.1
+ARG datasets_version=2.19.0
 # LMI-Dist Deps
-ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.3.3/vllm-0.3.3-cp310-cp310-manylinux1_x86_64.whl"
+ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.4.0/vllm-0.4.0-cp310-cp310-manylinux1_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu121-pt212/flash_attn-2.5.6-cp310-cp310-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
