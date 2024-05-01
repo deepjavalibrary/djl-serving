@@ -61,3 +61,25 @@ def get_neo_compiler_flags(compiler_options):
     except Exception as exc:
         raise InputConfiguration(
             f"Failed to parse SageMaker Neo CompilerOptions: {exc}")
+
+
+def load_jumpstart_metadata(path: str) -> dict:
+    """
+    Loads the JumpStart metadata files __model_info__.json, __script_info__.json files to a
+    dictionary if they exist.
+    """
+    js_metadata = {}
+    model_info_path = os.path.join(path, "__model_info__.json")
+    script_info_path = os.path.join(path, "__script_info__.json")
+
+    if os.path.exists(model_info_path):
+        logging.info("JumpStart __model_info__.json found")
+        with open(model_info_path) as file:
+            js_metadata["model_info"] = json.load(file)
+
+    if os.path.exists(script_info_path):
+        logging.info("JumpStart __script_info__.json found")
+        with open(script_info_path) as file:
+            js_metadata["script_info"] = json.load(file)
+
+    return js_metadata
