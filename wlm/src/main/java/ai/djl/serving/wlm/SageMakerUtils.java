@@ -89,7 +89,7 @@ public final class SageMakerUtils {
             prop.setProperty("option.modelName", metaDataMap.get(MODEL).toString());
             return "PyTorch";
         } else {
-            logger.error("Invalid model type: " + metaDataMap.get(MODEL_TYPE));
+            logger.error("Invalid model type: {}", metaDataMap.get(MODEL_TYPE));
             throw new ModelException(
                     String.format(
                             "Model type %s is not supported in SageMaker model format yet",

@@ -125,7 +125,7 @@ public class ModelServer {
                     try {
                         dm.installDependency(dep);
                     } catch (Throwable t) {
-                        logger.error("Failed to install dependency: " + dep, t);
+                        logger.error("Failed to install dependency: {}", dep, t);
                         System.exit(1); // NOPMD
                     }
                 }

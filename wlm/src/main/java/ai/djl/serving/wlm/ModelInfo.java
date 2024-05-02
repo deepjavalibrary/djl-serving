@@ -719,7 +719,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     return Engine.getDefaultEngineName();
                 }
             } catch (IOException e) {
-                logger.warn(uid + ": Failed search parameter files in folder: " + modelDir, e);
+                logger.warn("{}: Failed search parameter files in folder: {}", uid, modelDir, e);
             }
         }
         throw new ModelNotFoundException("Failed to detect engine of the model: " + modelDir);
@@ -767,7 +767,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 try (InputStream is = Files.newInputStream(file)) {
                     prop.load(is);
                 } catch (IOException e) {
-                    logger.warn(uid + ": Failed read serving.properties file", e);
+                    logger.warn("{}: Failed read serving.properties file", uid, e);
                 }
             }
             // load default settings from env
@@ -1033,7 +1033,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
             return 0;
         } catch (IOException e) {
-            logger.warn("Failed to get size of: " + path, e);
+            logger.warn("Failed to get size of: {}", path, e);
         }
         return 0L;
     }
@@ -1050,7 +1050,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 }
                 logger.warn("{}: Failed to read free memory from /proc/meminfo", uid);
             } catch (IOException e) {
-                logger.warn(uid + ": Failed open /proc/meminfo file", e);
+                logger.warn("{}: Failed open /proc/meminfo file", uid, e);
             }
         }
         return Integer.MAX_VALUE * 1024L;
