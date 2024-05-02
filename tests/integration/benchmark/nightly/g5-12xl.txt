@@ -10,7 +10,7 @@ option.rolling_batch=$ENGINE
 option.model_id=s3://djl-llm/llama-2-7b-hf/
 option.tensor_parallel_degree=max
 [aws_curl]
-TOKENIZER=TOKENIZER=TheBloke/Llama-2-7B-fp16 ./awscurl -c 32 -N 10 \
+TOKENIZER=TheBloke/Llama-2-7B-fp16 ./awscurl -c 32 -N 10 \
 -X POST http://127.0.0.1:8080/invocations   \
 --connect-timeout 60   -H "Content-type: application/json"   \
 -d '{"inputs":"The new movie that got Oscar this year","parameters":{"max_new_tokens":256, "do_sample":true}}'   \
@@ -27,7 +27,7 @@ option.rolling_batch=$ENGINE
 option.model_id=s3://djl-llm/llama-3-8b-hf/
 option.tensor_parallel_degree=max
 [aws_curl]
-TOKENIZER=TOKENIZER=TheBloke/Llama-2-13B-fp16 ./awscurl -c 32 -N 10 \
+TOKENIZER=TheBloke/Llama-2-13B-fp16 ./awscurl -c 32 -N 10 \
 -X POST http://127.0.0.1:8080/invocations   \
 --connect-timeout 60   -H "Content-type: application/json"   \
 -d '{"inputs":"The new movie that got Oscar this year","parameters":{"max_new_tokens":256, "do_sample":true}}'   \
