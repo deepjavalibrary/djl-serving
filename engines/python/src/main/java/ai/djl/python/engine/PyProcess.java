@@ -281,7 +281,7 @@ class PyProcess {
                     }
                 }
             } catch (Exception e) {
-                logger.error("Couldn't create scanner - " + getName(), e);
+                logger.error("Couldn't create scanner - {}", getName(), e);
             } finally {
                 logger.info("ReaderThread({}) stopped - {}", processId, getName());
                 lifeCycle.setStarted(false, processId);
