@@ -187,8 +187,13 @@ public class ModelServerTest {
     }
 
     public static void main(String[] args)
-            throws ReflectiveOperationException, ServerStartupException, GeneralSecurityException,
-                    ErrorDataEncoderException, IOException, ParseException, InterruptedException {
+            throws ReflectiveOperationException,
+                    ServerStartupException,
+                    GeneralSecurityException,
+                    ErrorDataEncoderException,
+                    IOException,
+                    ParseException,
+                    InterruptedException {
         ModelServerTest t = new ModelServerTest();
         t.beforeSuite();
         t.test();
@@ -198,9 +203,13 @@ public class ModelServerTest {
 
     @Test
     public void test()
-            throws InterruptedException, HttpPostRequestEncoder.ErrorDataEncoderException,
-                    IOException, ParseException, GeneralSecurityException,
-                    ReflectiveOperationException, ServerStartupException {
+            throws InterruptedException,
+                    HttpPostRequestEncoder.ErrorDataEncoderException,
+                    IOException,
+                    ParseException,
+                    GeneralSecurityException,
+                    ReflectiveOperationException,
+                    ServerStartupException {
         ModelServer server = initTestServer("src/test/resources/config.properties");
         try {
             EventManager.getInstance().addListener(new Listener());
@@ -293,8 +302,12 @@ public class ModelServerTest {
 
     @Test
     public void testWorkflows()
-            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
-                    InterruptedException, ReflectiveOperationException {
+            throws ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
+                    IOException,
+                    InterruptedException,
+                    ReflectiveOperationException {
         ModelServer server = initTestServer("src/test/resources/workflow.config.properties");
         try {
             assertTrue(server.isRunning());
@@ -313,8 +326,12 @@ public class ModelServerTest {
 
     @Test
     public void testAdapterWorkflows()
-            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
-                    InterruptedException, ReflectiveOperationException {
+            throws ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
+                    IOException,
+                    InterruptedException,
+                    ReflectiveOperationException {
         ModelServer server =
                 initTestServer("src/test/resources/adapterWorkflows/config.properties");
         try {
@@ -336,8 +353,12 @@ public class ModelServerTest {
     // Test disabled as unsigned s3 downloading fails on Github actions
     @Test(enabled = false)
     public void testAdaptersInModelDir()
-            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
-                    InterruptedException, ReflectiveOperationException {
+            throws ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
+                    IOException,
+                    InterruptedException,
+                    ReflectiveOperationException {
         ModelServer server =
                 initTestServer("src/test/resources/adaptersInModelDir/config.properties");
         try {
@@ -356,8 +377,12 @@ public class ModelServerTest {
 
     @Test
     public void testAdapterSME()
-            throws ServerStartupException, GeneralSecurityException, ParseException, IOException,
-                    InterruptedException, ReflectiveOperationException {
+            throws ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
+                    IOException,
+                    InterruptedException,
+                    ReflectiveOperationException {
         ModelServer server = initTestServer("src/test/resources/smeAdapt.config.properties");
         try {
             assertTrue(server.isRunning());
@@ -379,7 +404,10 @@ public class ModelServerTest {
 
     @Test
     public void testInitEmptyModelStore()
-            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
+            throws IOException,
+                    ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
                     InterruptedException {
         Path modelStore = Paths.get("build/models");
         Utils.deleteQuietly(modelStore);
@@ -400,7 +428,10 @@ public class ModelServerTest {
 
     @Test
     public void testHfModelIdWithDjlUrl()
-            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
+            throws IOException,
+                    ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
                     InterruptedException {
         Path modelStore = Paths.get("build/models");
         Utils.deleteQuietly(modelStore);
@@ -424,7 +455,10 @@ public class ModelServerTest {
 
     @Test
     public void testOptionModelId()
-            throws IOException, ServerStartupException, GeneralSecurityException, ParseException,
+            throws IOException,
+                    ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException,
                     InterruptedException {
         Path modelStore = Paths.get("build/models");
         Utils.deleteQuietly(modelStore);
@@ -444,7 +478,10 @@ public class ModelServerTest {
     }
 
     private ModelServer initTestServer(String configFile)
-            throws ParseException, ServerStartupException, GeneralSecurityException, IOException,
+            throws ParseException,
+                    ServerStartupException,
+                    GeneralSecurityException,
+                    IOException,
                     InterruptedException {
         String[] args = {"-f", configFile};
         Arguments arguments = ConfigManagerTest.parseArguments(args);
@@ -542,7 +579,8 @@ public class ModelServerTest {
     }
 
     private void testInvocationsMultipart(Channel channel)
-            throws InterruptedException, HttpPostRequestEncoder.ErrorDataEncoderException,
+            throws InterruptedException,
+                    HttpPostRequestEncoder.ErrorDataEncoderException,
                     IOException {
         reset();
         DefaultFullHttpRequest req =

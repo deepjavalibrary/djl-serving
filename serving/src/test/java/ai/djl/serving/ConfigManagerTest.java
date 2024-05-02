@@ -42,7 +42,9 @@ public final class ConfigManagerTest {
     private ConfigManagerTest() {}
 
     public static void testSsl()
-            throws IOException, GeneralSecurityException, ParseException,
+            throws IOException,
+                    GeneralSecurityException,
+                    ParseException,
                     ReflectiveOperationException {
         ConfigManager.init(parseArguments(new String[0]));
         ConfigManager config = ConfigManager.getInstance();

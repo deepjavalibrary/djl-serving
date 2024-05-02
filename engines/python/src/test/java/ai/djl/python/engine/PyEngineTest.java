@@ -188,7 +188,10 @@ public class PyEngineTest {
 
     @Test
     public void testStreamEcho()
-            throws TranslateException, IOException, ModelException, InterruptedException,
+            throws TranslateException,
+                    IOException,
+                    ModelException,
+                    InterruptedException,
                     ExecutionException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()

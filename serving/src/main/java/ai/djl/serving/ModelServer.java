@@ -164,7 +164,9 @@ public class ModelServer {
      * @throws ServerStartupException if failed to startup server
      */
     public void startAndWait()
-            throws InterruptedException, IOException, GeneralSecurityException,
+            throws InterruptedException,
+                    IOException,
+                    GeneralSecurityException,
                     ServerStartupException {
         try {
             logger.info("Starting model server ...");
@@ -186,7 +188,9 @@ public class ModelServer {
      * @throws ServerStartupException if failed to startup server
      */
     public List<ChannelFuture> start()
-            throws InterruptedException, IOException, GeneralSecurityException,
+            throws InterruptedException,
+                    IOException,
+                    GeneralSecurityException,
                     ServerStartupException {
         long begin = System.nanoTime();
         stopped.set(false);
