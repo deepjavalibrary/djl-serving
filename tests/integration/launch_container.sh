@@ -11,6 +11,11 @@ model_path=$2   #required
 platform=$3     #required
 args=${@:4}     #optional
 
+is_sm_neo_context=false
+if [ $4 == "sm_neo_context" ]; then
+  is_sm_neo_context=true
+fi
+
 is_partition=false
 if [[ $4 == "partition" ]] || [[ $4 == "train" ]]; then
   is_partition=true
@@ -87,7 +92,26 @@ mkdir logs
 set -x
 # start the docker container
 
-if $is_partition; then
+if $is_sm_neo_context; then
+  docker run \
+    -t \
+    --rm \
+    --network="none" \
+    ${model_path:+-v ${model_path}/uncompiled:/opt/ml/model/input} \
+    ${model_path:+-v ${model_path}/compiled:/opt/ml/model/compiled} \
+    ${model_path:+-v ${model_path}/errors.json:/opt/ml/compilation/errors/errors.json} \
+    ${model_path:+-v ${model_path}/cache:/opt/ml/compilation/cache} \
+    -v ${PWD}/logs:/opt/djl/logs \
+    -v ~/.aws:/root/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${env_file} \
+    ${runtime:+--runtime="${runtime}"} \
+    ${shm:+--shm-size="${shm}"} \
+    ${host_device:+ ${host_device}} \
+    "${docker_image}"
+
+  exit $?
+elif $is_partition; then
   docker run \
     -t \
     --rm \

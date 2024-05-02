@@ -1,5 +1,6 @@
 import argparse
 import os
+import subprocess
 import shutil
 
 hf_handler_list = {
@@ -967,6 +968,20 @@ correctness_model_list = {
     }
 }
 
+trtllm_neo_list {
+    "llama2-13b": {
+        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+    },
+    "falcon-7b": {
+        "option.model_id": "s3://djl-llm/falcon-7b/",
+        "option.tensor_parallel_degree": 1,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+    }
+}
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -1000,6 +1015,20 @@ def write_model_artifacts(properties,
                                   local_dir_use_symlinks=False,
                                   local_dir=dir)
                 adapter_cache[adapter_id] = dir
+
+def create_neo_input_model(properties):
+    model_path = "models/uncompiled"
+    if os.path.exists(model_path):
+        shutil.rmtree(model_path)
+    os.makedirs(model_path, exist_ok=True)
+    with open(os.path.join(model_path, "serving.properties"), "w") as f:
+        for key, value in properties.items():
+            if key != "option.model_id":
+                f.write(f"{key}={value}\n")
+    # Download the model checkpoint from S3 to local path
+    model_s3_uri = properties.get("option.model_id")
+    cmd = f"aws s3 sync {model_s3_uri} {model_path}"
+    subprocess.check_call(cmd, shell=True, env=os.environ)
 
 
 def build_hf_handler_model(model):
@@ -1134,6 +1163,16 @@ def build_trtllm_handler_model(model):
     options["model_loading_timeout"] = "1800"
     write_model_artifacts(options)
 
+def build_trtllm_neo_model(model):
+    if model not in trtllm_neo_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(trtllm_neo_list.keys())}"
+        )
+    options = trtllm_neo_list[model]
+    # 30 minute waiting for conversion timeout
+    options["model_loading_timeout"] = "1800"
+    # Download model to local in addition to generating serving.properties
+    create_neo_input_model(options)
 
 def build_correctness_model(model):
     if model not in correctness_model_list:
@@ -1155,6 +1194,7 @@ supported_handler = {
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
     'trtllm': build_trtllm_handler_model,
+    'trtllm_neo_aot': build_trtllm_neo_model,
     'correctness': build_correctness_model,
 }
 
