@@ -197,7 +197,7 @@ class Result {
     }
 
     @SuppressWarnings("PMD.SystemPrintln")
-    public void print(boolean json, String path) {
+    public void print(boolean json, String path) throws IOException {
         if (json) {
             if (path == null) {
                 System.out.println(JsonUtils.GSON_PRETTY.toJson(this));
@@ -205,8 +205,6 @@ class Result {
                 Path filePath = Paths.get(path);
                 try (Writer fbw = Files.newBufferedWriter(filePath)) {
                     fbw.write(JsonUtils.GSON_PRETTY.toJson(this));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
                 }
             }
             return;
