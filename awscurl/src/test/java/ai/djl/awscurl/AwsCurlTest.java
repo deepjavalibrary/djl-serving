@@ -84,6 +84,32 @@ public class AwsCurlTest {
     }
 
     @Test
+    public void testBenchmarkResultSavedToJson() throws IOException {
+        Path out = Paths.get("build/output");
+        Utils.deleteQuietly(out);
+        Files.createDirectories(out);
+        TestHttpHandler.setContent(
+                "{\"generated_text\": \"Hello world\"}", HttpHeaderValues.APPLICATION_JSON);
+        String[] args = {
+            "http://localhost:18080/invocations",
+            "-H",
+            "Content-type: application/json",
+            "-d",
+            "{}",
+            "-c",
+            "1",
+            "-N",
+            "2",
+            "-t",
+            "--json-path",
+            "build/output/result.json"
+        };
+        Result ret = AwsCurl.run(args);
+        Assert.assertFalse(ret.hasError());
+        Assert.assertTrue(Files.exists(out.resolve("result.json")));
+    }
+
+    @Test
     public void testDelay() {
         TestHttpHandler.setContent("Hello world", HttpHeaderValues.TEXT_PLAIN);
         String[] args = {"http://localhost:18080/invocations", "--delay", "5"};

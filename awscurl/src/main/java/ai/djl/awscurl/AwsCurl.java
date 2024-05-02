@@ -337,7 +337,7 @@ public final class AwsCurl {
                 ret.setP99TimeToFirstByte(firstTokens.get(size * 99 / 100) / 1000000d);
             }
             AwsCurl.logger.debug("Total request time: {} ms", totalTime / 1000000d);
-            ret.print(config.isJsonOutput());
+            ret.print(config.isJsonOutput(), config.getJsonOutputPath());
         } catch (IOException | InterruptedException e) {
             System.err.println(e.getMessage());
         } catch (ParseException e) {
@@ -422,6 +422,7 @@ public final class AwsCurl {
         private boolean include;
         private boolean insecure;
         private boolean jsonOutput;
+        private String jsonOutputPath;
         private String output;
         private String uploadFile;
         private boolean verbose;
@@ -477,6 +478,10 @@ public final class AwsCurl {
             include = cmd.hasOption("include");
             insecure = cmd.hasOption("insecure");
             jsonOutput = cmd.hasOption("json-output");
+            jsonOutputPath = cmd.getOptionValue("json-path");
+            if (jsonOutputPath != null) {
+                jsonOutput = true;
+            }
             output = cmd.getOptionValue("output");
             uploadFile = cmd.getOptionValue("upload-file");
             verbose = cmd.hasOption("verbose");
@@ -767,6 +772,13 @@ public final class AwsCurl {
                             .build());
             options.addOption(
                     Option.builder()
+                            .longOpt("json-path")
+                            .hasArg()
+                            .argName("JSON_PATH")
+                            .desc("Save the output json to a file")
+                            .build());
+            options.addOption(
+                    Option.builder()
                             .longOpt("delay")
                             .hasArg()
                             .argName("DELAY")
@@ -805,6 +817,10 @@ public final class AwsCurl {
 
         public int getConnectTimeout() {
             return connectTimeout;
+        }
+
+        public String getJsonOutputPath() {
+            return jsonOutputPath;
         }
 
         public boolean isInclude() {
