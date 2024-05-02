@@ -14,8 +14,13 @@ package ai.djl.awscurl;
 
 import ai.djl.util.Utils;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 class Result {
 
@@ -192,9 +197,18 @@ class Result {
     }
 
     @SuppressWarnings("PMD.SystemPrintln")
-    public void print(boolean json) {
+    public void print(boolean json, String path) {
         if (json) {
-            System.out.println(JsonUtils.GSON_PRETTY.toJson(this));
+            if (path == null) {
+                System.out.println(JsonUtils.GSON_PRETTY.toJson(this));
+            } else {
+                Path filePath = Paths.get(path);
+                try (Writer fbw = Files.newBufferedWriter(filePath)) {
+                    fbw.write(JsonUtils.GSON_PRETTY.toJson(this));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
             return;
         }
 
