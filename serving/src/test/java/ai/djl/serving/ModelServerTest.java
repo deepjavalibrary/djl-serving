@@ -443,6 +443,19 @@ public class ModelServerTest {
         }
     }
 
+    @Test
+    public void testServerInitFailure() throws ParseException {
+        String[] args = {"-m", "s3://djl-llm/gpt-invalid"}; // model download failure
+        Arguments arguments = ConfigManagerTest.parseArguments(args);
+        assertFalse(arguments.hasHelp());
+
+        ConfigManager.init(arguments);
+        configManager = ConfigManager.getInstance();
+
+        ModelServer server = new ModelServer(configManager);
+        Assert.assertThrows(ServerStartupException.class, server::start);
+    }
+
     private ModelServer initTestServer(String configFile)
             throws ParseException, ServerStartupException, GeneralSecurityException, IOException,
                     InterruptedException {
