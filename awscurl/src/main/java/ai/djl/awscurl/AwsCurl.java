@@ -16,6 +16,10 @@ import ai.djl.repository.FilenameUtils;
 import ai.djl.util.RandomUtils;
 import ai.djl.util.Utils;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -425,6 +429,7 @@ public final class AwsCurl {
         private int clients;
         private boolean countTokens;
         private List<byte[]> dataset;
+        private JsonObject extraParameters;
         private String jq;
         private int delay;
         private int duration;
@@ -447,8 +452,17 @@ public final class AwsCurl {
             } catch (NumberFormatException e) {
                 error = "Invalid connect-timeout: " + cmd.getOptionValue("connect-timeout");
             }
+            headers = cmd.getOptionValues("header");
             String dataDirectory = cmd.getOptionValue("dataset");
             if (dataDirectory != null) {
+                String val = cmd.getOptionValue("extra-parameters");
+                if (val != null) {
+                    try {
+                        extraParameters = JsonUtils.GSON.fromJson(val, JsonObject.class);
+                    } catch (JsonParseException e) {
+                        error = "extra-parameters must be a JsonObject";
+                    }
+                }
                 loadDataset(dataDirectory);
             }
             data = cmd.getOptionValues("data");
@@ -460,7 +474,6 @@ public final class AwsCurl {
                 requestMethod = cmd.getOptionValue("request");
             }
             forceGet = cmd.hasOption("get");
-            headers = cmd.getOptionValues("header");
             include = cmd.hasOption("include");
             insecure = cmd.hasOption("insecure");
             jsonOutput = cmd.hasOption("json-output");
@@ -539,6 +552,7 @@ public final class AwsCurl {
                 error = "dataset directory not found: " + dir;
                 return;
             }
+            setContentType();
             if (Files.isDirectory(path)) {
                 System.out.println("Loading dataset from directory: " + path);
                 try (Stream<Path> stream = Files.list(path)) {
@@ -546,11 +560,11 @@ public final class AwsCurl {
                             p -> {
                                 try {
                                     if (Files.isRegularFile(p) && !Files.isHidden(p)) {
-                                        byte[] buf = Files.readAllBytes(p);
-                                        if (buf.length == 0) {
+                                        String buf = Files.readString(p);
+                                        if (buf.isBlank()) {
                                             System.out.println("empty dataset file: " + p);
                                         }
-                                        dataset.add(buf);
+                                        addToDataSet(buf);
                                     }
                                 } catch (IOException e) {
                                     error = "Failed to read dataset file: " + p;
@@ -562,13 +576,32 @@ public final class AwsCurl {
                 try (BufferedReader reader = Files.newBufferedReader(path)) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        dataset.add(line.getBytes(StandardCharsets.UTF_8));
+                        addToDataSet(line);
                     }
                 }
             }
             if (dataset.isEmpty()) {
                 error = "Failed to read dataset from: " + dir;
             }
+        }
+
+        private void addToDataSet(String data) {
+            if ("application/json".equalsIgnoreCase(contentType) && extraParameters != null) {
+                JsonElement element = JsonUtils.GSON.fromJson(data, JsonElement.class);
+                if (element.isJsonObject()) {
+                    JsonObject obj = element.getAsJsonObject();
+                    JsonObject param = obj.getAsJsonObject("parameters");
+                    if (param == null) {
+                        obj.add("parameters", extraParameters);
+                    } else {
+                        for (Map.Entry<String, JsonElement> entry : extraParameters.entrySet()) {
+                            param.add(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    data = JsonUtils.GSON.toJson(obj);
+                }
+            }
+            dataset.add(data.getBytes(StandardCharsets.UTF_8));
         }
 
         static Options getOptions() {
@@ -607,6 +640,13 @@ public final class AwsCurl {
                             .hasArg()
                             .argName("DIRECTORY")
                             .desc("dataset directory")
+                            .build());
+            options.addOption(
+                    Option.builder()
+                            .longOpt("extra-parameters")
+                            .hasArg()
+                            .argName("extra-parameters")
+                            .desc("extra parameters for json dataset")
                             .build());
             options.addOption(
                     Option.builder("d")
@@ -907,15 +947,7 @@ public final class AwsCurl {
 
             if (uploadFile != null) {
                 requestMethod = requestMethod == null ? "PUT" : requestMethod;
-                if (headers != null) {
-                    for (String header : headers) {
-                        String[] pair = header.split(":", 2);
-                        String key = pair[0].trim();
-                        if ("content-type".equalsIgnoreCase(key)) {
-                            contentType = pair[1].trim();
-                        }
-                    }
-                }
+                setContentType();
                 if (contentType == null) {
                     contentType = getMimeType(uploadFile).toString();
                 }
@@ -923,6 +955,18 @@ public final class AwsCurl {
             }
 
             return null;
+        }
+
+        void setContentType() {
+            if (headers != null) {
+                for (String header : headers) {
+                    String[] pair = header.split(":", 2);
+                    String key = pair[0].trim();
+                    if ("content-type".equalsIgnoreCase(key)) {
+                        contentType = pair[1].trim();
+                    }
+                }
+            }
         }
 
         public String[] getJsonExpression() {

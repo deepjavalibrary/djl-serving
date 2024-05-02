@@ -1,1 +1,1 @@
-{"inputs":"write a program to add two numbers in python","parameters":{"max_new_tokens":256, "do_sample":true}}
+{"inputs":"write a program to add two numbers in python"}

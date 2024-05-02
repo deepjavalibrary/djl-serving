@@ -137,6 +137,32 @@ public class AwsCurlTest {
         args =
                 new String[] {
                     "http://localhost:18080/invocations",
+                    "-H",
+                    "Content-Type: application/json",
+                    "--dataset",
+                    "src/test/resources/prompts",
+                    "--extra-parameters",
+                    "{\"top_k\": 25}"
+                };
+        ret = AwsCurl.run(args);
+        Assert.assertFalse(ret.hasError());
+
+        args =
+                new String[] {
+                    "http://localhost:18080/invocations",
+                    "-H",
+                    "Content-Type: application/json",
+                    "--dataset",
+                    "src/test/resources/prompts",
+                    "--extra-parameters",
+                    "[25]"
+                };
+        ret = AwsCurl.run(args);
+        Assert.assertTrue(ret.hasError());
+
+        args =
+                new String[] {
+                    "http://localhost:18080/invocations",
                     "--dataset",
                     "src/test/resources/prompts/prompt1.txt"
                 };
