@@ -187,7 +187,8 @@ class TestRollingBatch(unittest.TestCase):
                       "This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
-                          "details": True
+                          "details": True,
+                          "decoder_input_details": True
                       },
                       details=True,
                       output_formatter=_jsonlines_output_formatter)
@@ -209,7 +210,22 @@ class TestRollingBatch(unittest.TestCase):
                 "log_prob": -0.123123
             }
         }
-        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        req.set_next_token(Token(4558, " world", -0.567854),
+                           True,
+                           'length',
+                           prompt_tokens_details=[
+                               Token(id=[123], text="This",
+                                     log_prob=None).as_dict(),
+                               Token(id=[456], text="is",
+                                     log_prob=0.456).as_dict(),
+                               Token(id=[789], text="a",
+                                     log_prob=0.789).as_dict(),
+                               Token(id=[124],
+                                     text="wonderful",
+                                     log_prob=0.124).as_dict(),
+                               Token(id=[356], text="day",
+                                     log_prob=0.356).as_dict()
+                           ])
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
@@ -218,9 +234,32 @@ class TestRollingBatch(unittest.TestCase):
                 "log_prob": -0.567854
             },
             'details': {
-                'finish_reason': 'length',
-                'generated_tokens': 3,
-                'inputs': 'This is a wonderful day'
+                'finish_reason':
+                'length',
+                'generated_tokens':
+                3,
+                'inputs':
+                'This is a wonderful day',
+                'prefill': [{
+                    'id': [123],
+                    'text': 'This'
+                }, {
+                    'id': [456],
+                    'log_prob': 0.456,
+                    'text': 'is'
+                }, {
+                    'id': [789],
+                    'log_prob': 0.789,
+                    'text': 'a'
+                }, {
+                    'id': [124],
+                    'log_prob': 0.124,
+                    'text': 'wonderful'
+                }, {
+                    'id': [356],
+                    'log_prob': 0.356,
+                    'text': 'day'
+                }],
             },
             "generated_text": "Hello world"
         }

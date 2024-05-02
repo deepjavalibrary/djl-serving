@@ -12,9 +12,12 @@
 # the specific language governing permissions and limitations under the License.
 import logging
 from collections import OrderedDict
+from typing import Any
+
 from lmi_dist.arg_utils import VllmEngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput
 from vllm.lora.request import LoRARequest
+from djl_python.rolling_batch.rolling_batch import Token
 
 from djl_python.rolling_batch.rolling_batch import Request
 
@@ -32,9 +35,9 @@ FINISH_REASON_MAPPER = {
 }
 
 
-def update_request_cache_with_output(
-        request_cache: OrderedDict,
-        request_output: RequestOutput) -> OrderedDict:
+def update_request_cache_with_output(request_cache: OrderedDict,
+                                     request_output: RequestOutput,
+                                     tokenizer: Any = None) -> OrderedDict:
     request_id = request_output.request_id
     request_cache[request_id]["id"] = request_output.outputs[0].token_ids[-1]
     request_cache[request_id]["text"] = request_output.outputs[0].text
@@ -50,6 +53,18 @@ def update_request_cache_with_output(
             f"Finding more than 1 output for single request {len(request_output.outputs)}"
             f"Beam search is not supported yet, use first output by default")
     request_cache[request_id]["finished"] = request_output.finished
+    if "prompt_tokens_details" not in request_cache[
+            request_id] and request_output.prompt_logprobs:
+        request_cache[request_id]["prompt_tokens_details"] = []
+        for index, prompt_token_id in enumerate(
+                request_output.prompt_token_ids):
+            prompt_token = Token(
+                id=prompt_token_id,
+                text=tokenizer.decode([prompt_token_id]),
+                log_prob=None if index == 0 else
+                request_output.prompt_logprobs[index][prompt_token_id])
+            request_cache[request_id]["prompt_tokens_details"].append(
+                prompt_token.as_dict())
     return request_cache
 
 

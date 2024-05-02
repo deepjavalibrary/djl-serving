@@ -71,8 +71,12 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
                 "finish_reason": details.get("finish_reason", None),
                 "generated_tokens": details.get("generated_tokens", None),
                 "inputs": details.get("inputs", None),
-                "tokens": details.get("tokens", None)
+                "tokens": details.get("tokens", None),
             }
+
+            if "prompt_tokens_details" in details:
+                final_dict["prefill"] = details.get("prompt_tokens_details")
+
             details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
             json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
         else:
@@ -97,8 +101,11 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
             final_dict["details"] = {
                 "finish_reason": details.get("finish_reason", None),
                 "generated_tokens": details.get("generated_tokens", None),
-                "inputs": details.get("inputs", None)
+                "inputs": details.get("inputs", None),
             }
+            if "prompt_tokens_details" in details:
+                final_dict["details"]["prefill"] = details.get(
+                    "prompt_tokens_details")
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 
@@ -302,6 +309,8 @@ class Request(object):
         self.last_token = False
         self.token_cache = None
         self.generated_tokens = []
+        self.decoder_input_details = parameters.get("decoder_input_details",
+                                                    False)
         if self.details:
             self.token_cache = []
         self.full_text_prefix = input_text if parameters.pop(
@@ -319,7 +328,8 @@ class Request(object):
     def set_next_token(self,
                        next_token: Union[Token, str],
                        last_token: bool = False,
-                       finish_reason: str = None):
+                       finish_reason: str = None,
+                       prompt_tokens_details: list[dict] = None):
         """
         Sets the newly generated token.
 
@@ -329,6 +339,7 @@ class Request(object):
             length: end because max_output_token size reached
             eos_token: End of sequence token found
             stop_sequence: Preset stop sequence token found
+        :param prompt_tokens_details: prompt tokens details when parameter decoder_input_details is true.
         """
         if isinstance(next_token, str):
             next_token = Token([-1], next_token)
@@ -350,6 +361,8 @@ class Request(object):
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
+            if self.decoder_input_details:
+                details_dict["prompt_tokens_details"] = prompt_tokens_details
         if self.output_formatter is None:
             self.next_token_str = next_token.text
         else:  # output only supports size one now

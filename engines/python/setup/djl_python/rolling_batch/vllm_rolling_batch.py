@@ -101,6 +101,8 @@ class VLLMRollingBatch(RollingBatch):
         if "num_beams" in parameters.keys():
             parameters["best_of"] = parameters.pop("num_beams")
             parameters["use_beam_search"] = True
+        if parameters.pop("decoder_input_details", False):
+            parameters["prompt_logprobs"] = 1
         parameters = filter_unused_generation_params(parameters,
                                                      VLLM_GENERATION_PARAMS,
                                                      "vllm",
@@ -147,25 +149,29 @@ class VLLMRollingBatch(RollingBatch):
         # step 1: put result to cache
         for request_output in request_outputs:
             self.request_cache = update_request_cache_with_output(
-                self.request_cache, request_output)
+                self.request_cache, request_output, self.get_tokenizer())
 
         # step 2: send result back
         finished_id = []
         for (key, cache), request in zip(self.request_cache.items(),
                                          self.active_requests):
             finish_reason = None
+            prompt_tokens_details = None
             if cache["finished"]:
                 finished_id.append(key)
                 finish_reason = FINISH_REASON_MAPPER.get(
                     cache["finish_reason"], None)
+                prompt_tokens_details = cache.get("prompt_tokens_details")
             text = cache["text"][cache["curr_length"]:]
             if len(text) > 0:
                 # token id is not determined since there could be multiple token comes at the same time
                 # only return the last one
                 token = Token(cache['id'], text, cache["log_prob"])
-                request.set_next_token(token, cache["finished"], finish_reason)
+                request.set_next_token(token, cache["finished"], finish_reason,
+                                       prompt_tokens_details)
             else:
-                request.set_next_token("", cache["finished"], finish_reason)
+                request.set_next_token("", cache["finished"], finish_reason,
+                                       prompt_tokens_details)
             cache["curr_length"] = len(cache["text"])
 
         # step 3: clean finished requests
