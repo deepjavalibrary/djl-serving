@@ -49,6 +49,7 @@ public class MutableClassLoader extends URLClassLoader {
      * @throws NullPointerException if {@code urls} is {@code null}.
      * @see SecurityManager#checkCreateClassLoader
      */
+    @SuppressWarnings("this-escape")
     public MutableClassLoader() {
         super(new URL[0]);
         String serverHome = ConfigManager.getModelServerHome();
