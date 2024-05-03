@@ -70,6 +70,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -200,7 +201,7 @@ public class ModelServer {
 
         try {
             initModelStore();
-        } catch (BadWorkflowException e) {
+        } catch (BadWorkflowException | CompletionException e) {
             throw new ServerStartupException(
                     "Failed to initialize startup models and workflows", e);
         }
@@ -438,27 +439,23 @@ public class ModelServer {
                                 -1);
                 workflow = new Workflow(modelInfo);
             }
-            CompletableFuture<Void> f =
-                    modelManager
-                            .registerWorkflow(workflow)
-                            .exceptionally(
-                                    t -> {
-                                        logger.error("Failed register workflow", t);
-                                        Dimension dim = new Dimension("Model", workflow.getName());
-                                        SERVER_METRIC.info(
-                                                "{}",
-                                                new Metric(
-                                                        "ModelLoadingError", 1, Unit.COUNT, dim));
-                                        // delay 3 seconds, allows REST API to send PING
-                                        // response (health check)
-                                        try {
-                                            Thread.sleep(3000);
-                                        } catch (InterruptedException ignore) {
-                                            // ignore
-                                        }
-                                        stop();
-                                        return null;
-                                    });
+            CompletableFuture<Void> f = modelManager.registerWorkflow(workflow);
+            f.exceptionally(
+                    t -> {
+                        logger.error("Failed register workflow", t);
+                        Dimension dim = new Dimension("Model", workflow.getName());
+                        SERVER_METRIC.info(
+                                "{}", new Metric("ModelLoadingError", 1, Unit.COUNT, dim));
+                        // delay 3 seconds, allows REST API to send PING
+                        // response (health check)
+                        try {
+                            Thread.sleep(3000);
+                        } catch (InterruptedException ignore) {
+                            // ignore
+                        }
+                        stop();
+                        return null;
+                    });
             if (configManager.waitModelLoading()) {
                 f.join();
             }
