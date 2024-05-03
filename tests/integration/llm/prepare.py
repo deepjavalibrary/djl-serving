@@ -265,7 +265,7 @@ rolling_batch_model_list = {
         "load_on_devices": 0
     },
     "llama2-7b-chat-gptq": {
-        "option.model_id": "TheBloke/Llama-2-7b-Chat-GPTQ",
+        "option.model_id": "s3://djl-llm/TheBloke-Llama-2-7b-Chat-GPTQ/",
         "engine": "Python",
         "option.max_rolling_batch_size": 4,
         "load_on_device": 0
@@ -335,7 +335,7 @@ lmi_dist_model_list = {
         "option.max_rolling_batch_size": 4,
     },
     "llama2-13b-gptq": {
-        "option.model_id": "TheBloke/Llama-2-13B-chat-GPTQ",
+        "option.model_id": "s3://djl-llm/TheBloke-Llama-2-13b-Chat-GPTQ/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
