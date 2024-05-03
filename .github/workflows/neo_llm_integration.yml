@@ -28,18 +28,8 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g5 $token djl-serving
-      - name: Create new G5 instance
-        id: create_gpu2
-        run: |
-          cd /home/ubuntu/djl_benchmark_script/scripts
-          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
-          --fail \
-          | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g5 $token djl-serving
     outputs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
-      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g5_instance_id }}
   
   trt-llm-neo-test:
     if: contains(fromJson('["", "trtllm"]'), github.event.inputs.run_test)
@@ -109,12 +99,10 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, hf-handler-test, trt-llm-handler-test,  trt-llm-handler-test-2]
+    needs: [ create-runners, trt-llm-neo-test ]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
-          ./stop_instance.sh $instance_id
-          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
           ./stop_instance.sh $instance_id
