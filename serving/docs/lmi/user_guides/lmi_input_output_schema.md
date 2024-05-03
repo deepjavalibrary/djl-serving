@@ -162,6 +162,7 @@ The following parameters are available with every rolling batch backend (vLLM, l
   'details' : boolean (default = false, details only available for rolling batch),
   'return_full_text': boolean (default = false),
   'stop_sequences' : list[str] (default = None)
+  'decoder_input_details' : boolean (default = false, only for vllm, lmi-dist)
 }
 ```
 
@@ -292,6 +293,8 @@ You must specify `details=true` in the input `parameters`.
 | `generated_tokens` | number                    | the number of tokens generated                                                                    | 128                                    |
 | `inputs`           | string                    | the input/prompt used to start generation                                                         | "Deep Learning is"                     |
 | `tokens`           | array of [Tokens](#token) | An array of token objects, one for each token generated. Only returned in non-streaming use-cases | See the [Tokens](#token) documentation |
+| `prefill`          | array of [Tokens](#token) | An array of token objects, one for each prompt token.                                             | See the [Tokens](#token) documentation |
+
 
 Example:
 ```
@@ -300,6 +303,7 @@ Example:
    "generated_tokens": 128,
    "inputs": "Deep Learning is"
    "tokens": [<Token1>, <Token2>, ...]
+   "prefill": [<PromptToken1>, <PromptToken2>, ...]
 }
 ```
 
