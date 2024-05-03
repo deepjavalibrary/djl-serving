@@ -31,7 +31,7 @@ jobs:
     outputs:
       p4d_instance_id: ${{ steps.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
 
-  lmi-dist-aiccl-test:
+  lmi-dist-test:
     if: contains(fromJson('["", "aiccl"]'), github.event.inputs.run_test)
     runs-on: [ self-hosted, p4d ]
     timeout-minutes: 120
@@ -56,7 +56,7 @@ jobs:
         working-directory: tests/integration
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Test Mixtral-8x7B with aiccl backend
+      - name: Test Mixtral-8x7B
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -64,13 +64,8 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl mixtral-8x7b-aiccl
-          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
-            echo "aiccl backend not used"
-          else
-            echo "Using aiccl backend"
-          fi
-          docker rm -f $(docker ps -aq)
-      - name: Test Llama-2-70B with aiccl backend
+          docker rm -f $(docker ps -aq) || systemctl restart docker
+      - name: Test Llama-2-70B
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -78,13 +73,8 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
-          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
-            echo "aiccl backend not used"
-          else
-            echo "Using aiccl backend"
-          fi
-          docker rm -f $(docker ps -aq)
-      - name: Test codellama/CodeLlama-34b-hf with aiccl backend
+          docker rm -f $(docker ps -aq) || systemctl restart docker
+      - name: Test codellama/CodeLlama-34b-hf
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -92,13 +82,8 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
-          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
-            echo "aiccl backend not used"
-          else
-            echo "Using aiccl backend"
-          fi
-          docker rm -f $(docker ps -aq)
-      - name: Test tiiuae/falcon-40b with aiccl backend
+          docker rm -f $(docker ps -aq) || systemctl restart docker
+      - name: Test tiiuae/falcon-40b
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -106,12 +91,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
-          if [ "$(docker logs $(docker ps -aq) 2>&1 | grep -c 'Starting torch distributed with aiccl backend')" -lt 8 ]; then
-            echo "aiccl backend not used"
-          else
-            echo "Using aiccl backend"
-          fi
-          docker rm -f $(docker ps -aq)
+          docker rm -f $(docker ps -aq) || systemctl restart docker
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -161,7 +141,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm llama2-70b
-          docker rm -f $(docker ps -aq)
+          docker rm -f $(docker ps -aq) || systemctl restart docker
       - name: Test mixtral-8x7b with with TP8
         working-directory: tests/integration
         run: |
@@ -170,7 +150,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm mixtral-8x7b
-          docker rm -f $(docker ps -aq)
+          docker rm -f $(docker ps -aq) || systemctl restart docker
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -220,7 +200,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm llama2-70b
-          docker rm -f $(docker ps -aq)
+          docker rm -f $(docker ps -aq) || systemctl restart docker
       - name: Test mixtral-8x7b with with TP8
         working-directory: tests/integration
         run: |
@@ -229,7 +209,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm mixtral-8x7b
-          docker rm -f $(docker ps -aq)
+          docker rm -f $(docker ps -aq) || systemctl restart docker
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -250,7 +230,7 @@ jobs:
   stop-runners-p4d:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners-p4d, lmi-dist-aiccl-test, trtllm-test, vllm-test ]
+    needs: [ create-runners-p4d, lmi-dist-test, trtllm-test, vllm-test ]
     steps:
       - name: Stop all instances
         run: |
