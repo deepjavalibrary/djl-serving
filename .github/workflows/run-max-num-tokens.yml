@@ -40,9 +40,13 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
-      - name: Download llama model
+      - name: Figure out
         run: |
-          aws s3 cp s3://djl-llm/llama-2-7b-hf/ /tmp/llama-2-7b-hf/ --recursive
+          pwd
+          pwd
+          pwd
+          ls .
+          ls ..
 
   stop-runners:
     if: always()
