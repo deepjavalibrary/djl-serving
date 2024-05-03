@@ -1,0 +1,56 @@
+name: Max-Num-Tokens Running
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new G5 instance
+        id: create_gpu
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
+    outputs:
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
+
+  run-max-num-tokens:
+    runs-on: [ self-hosted, g5 ]
+    container:
+      image: deepjavalibrary/djl-serving:tensorrt-llm-nightly
+      options: --gpus all --runtime=nvidia --shm-size 12g
+    timeout-minutes: 90
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python3
+        run: |
+          ./serving/docker/scripts/install_python.sh 3.10
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Download llama model
+        run: |
+          aws s3 cp s3://djl-llm/llama-2-7b-hf/ /tmp/llama-2-7b-hf/ --recursive
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, run-max-num-tokens ]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id }}
+          ./stop_instance.sh $instance_id
