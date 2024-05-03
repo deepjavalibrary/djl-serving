@@ -1,2 +1,13 @@
 # Global Owners
 * @zachgk @frankfliu @DeepJavaLibrary/djl-admin
+
+# TRT-LLM & Neuron Owners
+**/*tensorrt*   @DeepJavaLibrary/djl-trt-llm-owners
+**/*trt*        @DeepJavaLibrary/djl-trt-llm-owners
+serving/docker/dockerd-entrypoint-with-cuda-compat.sh   @DeepJavaLibrary/djl-trt-llm-owners
+
+**/*neuron*     @DeepJavaLibrary/djl-neuron-owners
+**/*tnx*        @DeepJavaLibrary/djl-neuron-owners
+serving/docker/dockerd-entrypoint.sh    @DeepJavaLibrary/djl-neuron-owners
+
+serving/docker/partition/*utils*    @DeepJavaLibrary/djl-trt-llm-owners @DeepJavaLibrary/djl-neuron-owners
