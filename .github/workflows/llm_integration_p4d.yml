@@ -73,7 +73,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
-          docker rm -f $(docker ps -aq) || systemctl restart docker
+          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
       - name: Test codellama/CodeLlama-34b-hf
         working-directory: tests/integration
         run: |
