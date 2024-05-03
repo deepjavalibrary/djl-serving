@@ -125,7 +125,9 @@ public final class LmiUtils {
             // Python backend models have different model repo format compared to C++ backend.
             // And whether it is valid or not is checked in tensorrt_llm_toolkit. So it is not
             // necessary to check here.
-            info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+            if (!isValidTrtLlmPythonModelRepo(trtRepo)) {
+                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+            }
         } else {
             info.prop.put("option.rolling_batch", "trtllm");
             if (!isValidTrtLlmModelRepo(trtRepo)) {
@@ -298,6 +300,29 @@ public final class LmiUtils {
             logger.warn("Could not identify GPU arch {}", computeCapability);
             return null;
         }
+    }
+
+    static boolean isValidTrtLlmPythonModelRepo(Path modelPath) throws IOException {
+        AtomicBoolean isValid = new AtomicBoolean();
+        try (Stream<Path> walk = Files.list(modelPath)) {
+            walk.filter(Files::isDirectory)
+                    .filter(
+                            p -> {
+                                String directoryName = p.getFileName().toString();
+                                return directoryName.contains("encoder")
+                                        || directoryName.contains("decoder");
+                            })
+                    .forEach(
+                            p -> {
+                                logger.info(String.valueOf(p));
+                                Path configFile = p.resolve("config.json");
+                                if (Files.isRegularFile(configFile)) {
+                                    logger.info("Found trtllm python model: {}", p);
+                                    isValid.set(true);
+                                }
+                            });
+        }
+        return isValid.get();
     }
 
     static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
