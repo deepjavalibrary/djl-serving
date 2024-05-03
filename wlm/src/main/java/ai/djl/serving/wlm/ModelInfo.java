@@ -838,7 +838,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                     && !"load_on_devices".equals(key)
                     && !"engine".equals(key)
                     && !"option.entryPoint".equals(key)) {
-                sb.append("\n\t").append(key).append(": ").append(entry.getValue());
+                sb.append("\n    ").append(key).append(": ").append(entry.getValue());
             }
         }
 
@@ -847,9 +847,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         logger.info(
-                "{}: Apply per model settings:\n\tjob_queue_size: {}\n\tmax_dynamic_batch_size: {}"
-                        + "\n\tmax_batch_delay: {}\n\tmax_idle_time: {}\n\tload_on_devices: {}"
-                        + "\n\tengine: {}\n\tmpi_mode: {}\n\toption.entryPoint: {}{}",
+                "{}: Apply per model settings:\n"
+                        + "    job_queue_size: {}\n"
+                        + "    max_dynamic_batch_size: {}\n"
+                        + "    max_batch_delay: {}\n"
+                        + "    max_idle_time: {}\n"
+                        + "    load_on_devices: {}\n"
+                        + "    engine: {}\n"
+                        + "    mpi_mode: {}\n"
+                        + "    option.entryPoint: {}{}",
                 uid,
                 queueSize,
                 batchSize,
