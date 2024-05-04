@@ -592,9 +592,14 @@ trtllm_handler_list = {
     },
     "flan-t5-xxl": {
         "engine": "MPI",
-        "option.model_id": "s3://djl-llm/flan-t5-xxl-trtllm-compiled/v0.8.0/",
+        "option.model_id": "s3://djl-llm/flan-t5-xxl-trtllm-compiled/v0.9.0/",
         "option.rolling_batch": "disable",
-        "option.entryPoint": "djl_python.tensorrt_llm"
+        "option.entryPoint": "djl_python.tensorrt_llm",
+        "batch_size": 32,
+        "option.max_input_len": 1024,
+        "option.max_output_len": 1024,
+        "option.dtype": "fp32",
+        "option.tensor_parallel_degree": 4
     },
     "flan-t5-xl": {
         "option.model_id": "s3://djl-llm/flan-t5-xl/"
