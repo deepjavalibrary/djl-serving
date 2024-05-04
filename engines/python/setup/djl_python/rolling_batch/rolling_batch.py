@@ -358,6 +358,9 @@ class Request(object):
             details_dict["inputs"] = self.input_text
             details_dict["parameters"] = self.original_params
             details_dict["prompt_tokens"] = len(self.input_ids)
+        # Special handling for error case
+        elif finish_reason == "error":
+            details_dict["finish_reason"] = finish_reason
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
@@ -407,19 +410,14 @@ def stop_on_any_exception(func):
             return func(self, *args, **kwargs)
         except Exception:
             logging.exception("Rolling batch inference error")
-            err = {
-                "data": "",
-                "last": True,
-                "step_token_num": 0,
-                "code": 424,
-                "error": ""
-            }
-            results = []
-            for i in range(
-                    len(self.active_requests) + len(self.pending_requests)):
-                results.append(err)
+            for request in self.active_requests:
+                token = Token([-1], "", -1, None)
+                request.set_next_token(token,
+                                       last_token=True,
+                                       finish_reason="error")
+            response = self.postprocess_results()
             self.reset()
-            return results
+            return response
 
     return try_catch_handling
 
