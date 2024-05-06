@@ -40,6 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
+          sudo systemctl restart docker
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
@@ -117,6 +118,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
+          sudo systemctl restart docker
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
@@ -176,6 +178,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
+          sudo systemctl restart docker
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
