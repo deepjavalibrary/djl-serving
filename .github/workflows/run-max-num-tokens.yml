@@ -3,6 +3,36 @@ name: Max-Num-Tokens Running
 
 on:
   workflow_dispatch:
+    inputs:
+      instance:
+        description: 'Instance for max-num-tokens calculation'
+        required: true
+        default: 'g5.12xlarge'
+        type: choice
+        options:
+          - g5.2xlarge
+          - g5.12xlarge
+          - g5.48xlarge
+          - g4dn.12xlarge
+          - g4dn.2xlarge
+          - p4d.24xlarge
+          - inf2.8xlarge
+          - inf2.24xlarge
+          - trn1.2xlarge
+          - trn1.32xlarge
+      model:
+        description: 'Model for max-num-tokens calculation'
+        required: true
+        default: 'llama-2-7b-hf'
+        type: choice
+        options:
+          - llama-2-7b-hf
+          - llama-2-13b-hf
+          - llama-2-70b-hf
+      tp:
+        description: 'TP for max-num-tokens calculation'
+        required: true
+        default: '1'
 
 permissions:
   id-token: write
