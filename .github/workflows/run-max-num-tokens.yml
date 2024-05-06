@@ -13,13 +13,7 @@ on:
           - g5.2xlarge
           - g5.12xlarge
           - g5.48xlarge
-          - g4dn.12xlarge
-          - g4dn.2xlarge
           - p4d.24xlarge
-          - inf2.8xlarge
-          - inf2.24xlarge
-          - trn1.2xlarge
-          - trn1.32xlarge
       model:
         description: 'Model for max-num-tokens calculation'
         required: true
