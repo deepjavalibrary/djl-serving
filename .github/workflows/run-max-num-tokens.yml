@@ -17,12 +17,12 @@ on:
       model:
         description: 'Model for max-num-tokens calculation'
         required: true
-        default: 'llama-2-7b-hf'
+        default: 'Llama 2 7B'
         type: choice
         options:
-          - llama-2-7b-hf
-          - llama-2-13b-hf
-          - llama-2-70b-hf
+          - Llama 2 7B
+          - Llama 2 13B
+          - Llama 2 70B
       tp:
         description: 'TP for max-num-tokens calculation'
         required: true
