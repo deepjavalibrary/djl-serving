@@ -842,6 +842,28 @@ def log_metrics(response_times):
         f.close()
 
 
+def response_checker(res, message):
+    if 'content-type' in res.headers.keys():
+        if 'application/json' == res.headers['content-type']:
+            output_json = json.loads(message)
+            if isinstance(output_json,
+                          dict) and "details" in output_json.keys():
+                if "error" == output_json["details"]["finish_reason"]:
+                    raise RuntimeError(f"Inference failed!")
+        elif 'application/jsonlines' == res.headers['content-type']:
+            json_lines = []
+            for item in message.splitlines():
+                json_lines.append(json.loads(item))
+            output_json = json_lines[-1]
+            if "details" in output_json.keys():
+                if "error" == output_json["details"]["finish_reason"]:
+                    raise RuntimeError(f"Inference failed!")
+        else:
+            logging.info(
+                f"Skipping content check given non-supported content type {res.headers['content-type']}"
+            )
+
+
 def test_handler_rolling_batch(model, model_spec):
     if model not in model_spec:
         raise ValueError(
@@ -858,10 +880,11 @@ def test_handler_rolling_batch(model, model_spec):
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
     logging.info(f"req {req}")
-    res = send_json(req).content.decode("utf-8")
-    logging.info(f"res: {res}")
-    if "error" in res and "code" in res and "424" in res:
-        raise RuntimeError(f"Inference failed!")
+    res = send_json(req)
+    message = res.content.decode("utf-8")
+    logging.info(f"res: {message}")
+    response_checker(res, message)
+
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
@@ -896,10 +919,10 @@ def test_handler_adapters(model, model_spec):
         reqs.append(req)
     logging.info(f"reqs {reqs}")
     for req in reqs:
-        res = send_json(req).content.decode("utf-8")
-        logging.info(f"res: {res}")
-        if "error" in res and "code" in res and "424" in res:
-            raise RuntimeError(f"Inference failed!")
+        res = send_json(req)
+        message = res.content.decode("utf-8")
+        logging.info(f"res: {message}")
+        response_checker(res, message)
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
@@ -1082,7 +1105,6 @@ def test_transformers_neuronx_handler(model, model_spec):
 
 
 def run(raw_args):
-
     parser = argparse.ArgumentParser(description="Build the LLM configs")
     parser.add_argument("handler", help="the handler used in the model")
     parser.add_argument("model", help="The name of model")
