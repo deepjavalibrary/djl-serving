@@ -33,17 +33,15 @@ jobs:
     needs: create-runners
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python3
-        run: |
-          ./serving/docker/scripts/install_python.sh 3.10
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
-      - name: Download llama model
+      - name: Get information on path
         run: |
-          aws s3 cp s3://djl-llm/llama-2-7b-hf/ /tmp/llama-2-7b-hf/ --recursive
+          pwd
+          ls
 
   stop-runners:
     if: always()
