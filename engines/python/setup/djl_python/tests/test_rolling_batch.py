@@ -1,7 +1,8 @@
 import json
 import unittest
-from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter, \
-    RollingBatch
+
+import djl_python.rolling_batch.rolling_batch
+from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter
 
 
 class TestRollingBatch(unittest.TestCase):
@@ -28,6 +29,32 @@ class TestRollingBatch(unittest.TestCase):
                                'length')
             print(req.get_next_token(), end='')
             assert req.get_next_token() == ' world"}'
+
+    def test_json_fmt_hf_compat(self):
+        djl_python.rolling_batch.rolling_batch.TGI_COMPAT = True
+
+        req = Request(0,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 256,
+                          "return_full_text": True,
+                      },
+                      output_formatter=_json_output_formatter)
+
+        final_str = []
+        req.set_next_token(Token(244, "He", -0.334532))
+        final_str.append(req.get_next_token())
+        req.set_next_token(Token(576, "llo", -0.123123))
+        final_str.append(req.get_next_token())
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        final_str.append(req.get_next_token())
+        final_json = json.loads(''.join(final_str))
+        print(final_json, end='')
+        assert final_json == [{
+            "generated_text":
+            "This is a wonderful dayHello world",
+        }]
+        djl_python.rolling_batch.rolling_batch.TGI_COMPAT = False
 
     def test_jsonlines_fmt(self):
         req1 = Request(0,
@@ -238,22 +265,6 @@ class TestRollingBatch(unittest.TestCase):
                 result["finish_reason"] = details["finish_reason"]
             return json.dumps(result) + "\n"
 
-        class CustomRB(RollingBatch):
-
-            def preprocess_requests(self, requests):
-                pass
-
-            def postprocess_results(self):
-                pass
-
-            def inference(self, input_data, parameters):
-                pass
-
-            def get_tokenizer(self):
-                pass
-
-        rb = CustomRB()
-
         req = Request(132,
                       "This is a wonderful day",
                       parameters={
@@ -291,22 +302,6 @@ class TestRollingBatch(unittest.TestCase):
                        details: dict, generated_tokens: str, id: int):
             result = details
             return json.dumps(result) + "\n"
-
-        class CustomRB(RollingBatch):
-
-            def preprocess_requests(self, requests):
-                pass
-
-            def postprocess_results(self):
-                pass
-
-            def inference(self, input_data, parameters):
-                pass
-
-            def get_tokenizer(self):
-                pass
-
-        rb = CustomRB()
 
         req = Request(132,
                       "This is a wonderful day",

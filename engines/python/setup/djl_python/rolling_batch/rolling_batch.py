@@ -12,11 +12,13 @@
 # the specific language governing permissions and limitations under the License.
 import json
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from typing import List, Union, List, Callable, Optional
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
+TGI_COMPAT = False
 
 
 class Token(object):
@@ -64,6 +66,8 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
     :return: formatted output
     """
     json_encoded_str = f"{{\"generated_text\": \"{generated_text}" if first_token else ""
+    if first_token and TGI_COMPAT:
+        json_encoded_str = f"[{json_encoded_str}"
     json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
         if details:
@@ -77,6 +81,8 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
             json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
         else:
             json_encoded_str = f"{json_encoded_str}\"}}"
+        if TGI_COMPAT:
+            json_encoded_str = f"{json_encoded_str}]"
 
     return json_encoded_str
 
@@ -133,20 +139,20 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
         if parameters.get("logprobs"):
             logprobs = {
                 "content": [{
-                        "token":
-                            t.get("text"),
-                        "logprob":
-                            t.get("log_prob"),
-                        "bytes":
-                            (b := [ord(c)
-                                   for c in t.get("text")] if t.get("text") else None),
-                        "top_logprobs":  # Currently only support 1 top_logprobs
-                            [{
-                                "token": t.get("text"),
-                                "logprob": t.get("log_prob"),
-                                "bytes": b
-                            }]
-                    } for t in details.get("tokens", [])
+                    "token":
+                        t.get("text"),
+                    "logprob":
+                        t.get("log_prob"),
+                    "bytes":
+                        (b := [ord(c)
+                               for c in t.get("text")] if t.get("text") else None),
+                    "top_logprobs":  # Currently only support 1 top_logprobs
+                        [{
+                            "token": t.get("text"),
+                            "logprob": t.get("log_prob"),
+                            "bytes": b
+                        }]
+                } for t in details.get("tokens", [])
                 ]
             }
         choice2 = {
@@ -185,17 +191,17 @@ def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
     if parameters.get("logprobs"):
         logprobs = {
             "content":
-            [{
-                "token": token.text,
-                "logprob": token.log_prob,
-                "bytes": (b := [ord(c) for c in token.text] if token.text else None),
-                "top_logprobs":  # Currently only support 1 top_logprobs
                 [{
-                    "token": token.log_prob,
+                    "token": token.text,
                     "logprob": token.log_prob,
-                    "bytes": b
+                    "bytes": (b := [ord(c) for c in token.text] if token.text else None),
+                    "top_logprobs":  # Currently only support 1 top_logprobs
+                        [{
+                            "token": token.log_prob,
+                            "logprob": token.log_prob,
+                            "bytes": b
+                        }]
                 }]
-            }]
         },
     choice = {
         "index": 0,
@@ -432,6 +438,11 @@ class RollingBatch(ABC):
         self.waiting_steps = kwargs.get("waiting_steps", None)
         self.current_step = 0
         self.default_output_formatter = kwargs.get("output_formatter", None)
+        # TODO: remove global context through refactoring
+        global TGI_COMPAT
+        # TODO: better handling to make it part of properties
+        TGI_COMPAT = os.environ.get("OPTION_TGI_COMPAT",
+                                    "false").lower() == 'true'
 
     def reset(self):
         self.pending_requests = []
