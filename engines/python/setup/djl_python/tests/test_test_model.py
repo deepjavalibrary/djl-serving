@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import json
 import os
 import unittest
 from djl_python.test_model import TestHandler
@@ -49,12 +50,15 @@ class TestTestModel(unittest.TestCase):
         result = handler.inference_rolling_batch(
             inputs, serving_properties=serving_properties)
         self.assertEqual(len(result), len(inputs))
+        self.assertTrue(json.loads(result[0]), dict)
+        self.assertTrue(json.loads(result[1]), dict)
 
     def test_with_env(self):
         envs = {
             "OPTION_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
             "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
-            "OPTION_ROLLING_BATCH": "auto"
+            "OPTION_ROLLING_BATCH": "auto",
+            "OPTION_TGI_COMPAT": "true"
         }
         for key, value in envs.items():
             os.environ[key] = value
@@ -78,6 +82,9 @@ class TestTestModel(unittest.TestCase):
         result = handler.inference_rolling_batch(inputs)
         self.assertEqual(len(result), len(inputs))
         self.assertTrue(len(result[1]) > len(result[0]))
+        # TGI compat tests
+        self.assertTrue(json.loads(result[0]), list)
+        self.assertTrue(json.loads(result[1]), list)
 
         for key in envs.keys():
             os.environ[key] = ""
