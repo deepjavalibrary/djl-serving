@@ -22,9 +22,10 @@ ARG trtllm_toolkit_version=nightly
 ARG trtllm_version=v0.9.0
 ARG cuda_python_version=12.2.0
 ARG peft_version=0.10.0
+ARG triton_version=r24.04
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
 ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.9.0-cp310-cp310-linux_x86_64.whl"
-ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolkit-23.11-py310-none-any.whl"
+ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/${triton_version}/tritontoolkit-24.4-py310-none-any.whl"
 ARG pydantic_version=2.6.1
 ARG ammo_version=0.7.0
 ARG janus_version=1.0.0
@@ -87,11 +88,9 @@ RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorr
     pip3 cache purge
 
 # download dependencies
-# install manual-build boost fs library required by tritonserver 23.11
 RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     mkdir -p /opt/tritonserver/lib && mkdir -p /opt/tritonserver/backends/tensorrtllm && \
-    curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/r23.11/libtritonserver.so && \
-    curl -o  /lib/x86_64-linux-gnu/libboost_filesystem.so.1.80.0 https://publish.djl.ai/tritonserver/r23.11/libboost_filesystem.so.1.80.0 && \
+    curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm_common.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm_common.so && \
     curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libnvinfer_plugin_tensorrt_llm.so.9 && \
