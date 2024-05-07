@@ -15,8 +15,8 @@ ARG cuda_version=cu121
 ARG djl_version=0.28.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
-ARG torch_version=2.2.1
-ARG torch_vision_version=0.17.1
+ARG torch_version=2.2.2
+ARG torch_vision_version=0.17.2
 ARG onnx_version=1.17.1
 ARG pydantic_version=2.6.1
 # HF Deps

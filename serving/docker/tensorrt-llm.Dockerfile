@@ -13,7 +13,7 @@ ARG version=12.2.2-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu122
 ARG python_version=3.10
-ARG TORCH_VERSION=2.2.1
+ARG TORCH_VERSION=2.2.2
 ARG djl_version=0.28.0~SNAPSHOT
 ARG transformers_version=4.40.0
 ARG accelerate_version=0.29.3
