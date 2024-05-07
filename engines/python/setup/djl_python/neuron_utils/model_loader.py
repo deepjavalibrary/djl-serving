@@ -48,7 +48,8 @@ class ModelLoader(ABC):
         default_cache_dir = "/var/tmp/neuron-compile-cache"
         if cache_dir:
             cache_dir = os.path.abspath(cache_dir)
-            if not os.access(cache_dir, os.W_OK):
+            if os.access(cache_dir,
+                         os.R_OK) and not os.access(cache_dir, os.W_OK):
                 logging.info(
                     f"Neuron cache directory is set to an unwriteable location: {cache_dir}"
                 )
