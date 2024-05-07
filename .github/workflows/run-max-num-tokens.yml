@@ -66,7 +66,7 @@ jobs:
       - name: Run Max-Num-Tokens script
         working-directory: tests/integration
         run: |
-          python3 llm/run_max_num_tokens.py ${{ inputs.model }} ${{ inputs.tp }}
+          python3 llm/run_max_num_tokens.py "${{ inputs.model }}" "${{ inputs.tp }}"
 
   stop-runners:
     if: always()
