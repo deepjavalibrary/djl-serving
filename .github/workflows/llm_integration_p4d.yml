@@ -40,7 +40,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
-          sudo systemctl restart docker
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
@@ -65,7 +64,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl mixtral-8x7b-aiccl
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq)
       - name: Test Llama-2-70B
         working-directory: tests/integration
         run: |
@@ -74,7 +73,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq)
       - name: Test codellama/CodeLlama-34b-hf
         working-directory: tests/integration
         run: |
@@ -83,7 +82,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq)
       - name: Test tiiuae/falcon-40b
         working-directory: tests/integration
         run: |
@@ -92,7 +91,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq)
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -118,7 +117,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
-          sudo systemctl restart docker
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
@@ -143,7 +141,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm llama2-70b
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq) 
       - name: Test mixtral-8x7b with with TP8
         working-directory: tests/integration
         run: |
@@ -152,7 +150,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm mixtral-8x7b
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq)
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -178,7 +176,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Clean env
         run: |
-          sudo systemctl restart docker
           yes | docker system prune -a --volumes
           sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
           echo "wait dpkg lock..."
@@ -203,7 +200,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm llama2-70b
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq)
       - name: Test mixtral-8x7b with with TP8
         working-directory: tests/integration
         run: |
@@ -212,7 +209,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm mixtral-8x7b
-          docker rm -f $(docker ps -aq) || sudo systemctl restart docker
+          docker rm -f $(docker ps -aq)
       - name: Remove models dir
         working-directory: tests/integration
         run: |
