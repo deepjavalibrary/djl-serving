@@ -48,6 +48,9 @@ class FakeRollingBatch(RollingBatch):
         self.tokens = self.tokens[:self.total_length]
         self.cache = OrderedDict()
 
+    def get_tokenizer(self):
+        return self.tokenizer
+
     def reset(self):
         self.cache = OrderedDict()
         super().reset()
@@ -92,3 +95,25 @@ class FakeRollingBatch(RollingBatch):
 
     def preprocess_requests(self, requests):
         raise NotImplementedError("Not implemented for vLLM rolling batcher")
+
+
+class FakeRollingBatchWithException(FakeRollingBatch):
+
+    def __init__(self, model_id_or_path, properties, **kwargs):
+        super().__init__(model_id_or_path, properties, **kwargs)
+        self.dead_counter = 0
+        self.dead_trigger = random.randint(1, 50)
+
+    def reset(self):
+        super().reset()
+        self.dead_counter = 0
+        self.dead_trigger = random.randint(1, 50)
+
+    @stop_on_any_exception
+    def inference(self, input_data, parameters, adapters=None):
+
+        if self.dead_counter < self.dead_trigger:
+            self.dead_counter += 1
+            return super().inference(input_data, parameters, adapters)
+        else:
+            raise RuntimeError("Death trigger triggered...")
