@@ -12,10 +12,16 @@ if __name__ == '__main__':
     parser.add_argument('i_model_id', help='Input - model id')
     parser.add_argument('i_tp_degree', help='Input - tp degree')
     args = parser.parse_args()
+
+    model_id = model_map[args.i_model_id]
+    try:
+        tensor_parallel_degree = int(args.i_tp_degree)
+    except:
+        print("[Run max num tokens] Error: Non-int TP degree provided")
     
     properties = {
-        "model_id": model_map[args.i_model_id],
-        "tensor_parallel_degree": args.i_tp_degree,
+        "model_id": model_id,
+        "tensor_parallel_degree": tensor_parallel_degree,
     }
     
     model, tp, max_tokens = max_token_finder(properties)
