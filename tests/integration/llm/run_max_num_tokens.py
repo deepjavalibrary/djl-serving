@@ -1,3 +1,4 @@
+import argparse
 from tensorrt_llm_toolkit.utils.utils import max_token_finder
 
 
