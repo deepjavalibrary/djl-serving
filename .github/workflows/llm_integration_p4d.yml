@@ -64,7 +64,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl mixtral-8x7b-aiccl
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Test Llama-2-70B
         working-directory: tests/integration
         run: |
@@ -73,7 +73,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl llama-2-70b-aiccl
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Test codellama/CodeLlama-34b-hf
         working-directory: tests/integration
         run: |
@@ -82,7 +82,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl codellama-34b-aiccl
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Test tiiuae/falcon-40b
         working-directory: tests/integration
         run: |
@@ -91,7 +91,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_aiccl falcon-40b-aiccl
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -101,7 +101,7 @@ jobs:
         working-directory: tests/integration
         run: |
           sudo rm -rf models
-          docker rm -f $(docker ps -aq) || true
+          ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -141,7 +141,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm llama2-70b
-          docker rm -f $(docker ps -aq) 
+          ./remove_container.sh
       - name: Test mixtral-8x7b with with TP8
         working-directory: tests/integration
         run: |
@@ -150,7 +150,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
           serve
           python3 llm/client.py trtllm mixtral-8x7b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -160,7 +160,7 @@ jobs:
         working-directory: tests/integration
         run: |
           sudo rm -rf models
-          docker rm -f $(docker ps -aq) || true
+          ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -200,7 +200,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm llama2-70b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Test mixtral-8x7b with with TP8
         working-directory: tests/integration
         run: |
@@ -209,7 +209,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm mixtral-8x7b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Remove models dir
         working-directory: tests/integration
         run: |
@@ -219,7 +219,7 @@ jobs:
         working-directory: tests/integration
         run: |
           sudo rm -rf models
-          docker rm -f $(docker ps -aq) || true
+          ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
