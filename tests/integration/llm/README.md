@@ -1,4 +1,6 @@
-# Add test models (DJL internal)
+# Helpful code
+
+## Add test models (DJL internal)
 
 For LLM container testing, we will download model from DJL's S3 bucket.
 To check in new models, follow the steps below:
@@ -12,7 +14,7 @@ local_model_path = Path("./model")
 local_model_path.mkdir(exist_ok=True)
 model_name = "facebook/opt-30b"
 # Only download pytorch checkpoint files
-allow_patterns = ["*.json", "*.pt", "*.bin", "*.txt", "*.model", "*.tiktoken"]
+allow_patterns = ["*.json", "*.pt", "*.safetensors", "*.txt", "*.model", "*.tiktoken"]
 
 # - Leverage the snapshot library to donload the model since the model is stored in repository using LFS
 snapshot_download(
@@ -27,3 +29,7 @@ After that, please store the model to:
 ```
 aws s3 sync model/ s3://djl-llm/opt-30b/
 ```
+
+## Add benchmark dataset
+
+You can modify the [dataset_prep.py](dataset_prep.py) script to add more dataset for serving benchmarks.
