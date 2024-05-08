@@ -18,6 +18,7 @@ import shutil
 import logging
 import tempfile
 import importlib
+import re
 from abc import ABC, abstractmethod
 from transformers import AutoModelForCausalLM
 from transformers_neuronx import NeuronAutoModelForCausalLM
@@ -47,20 +48,21 @@ class ModelLoader(ABC):
         cache_dir = os.environ.get("NEURON_COMPILE_CACHE_URL")
         default_cache_dir = "/var/tmp/neuron-compile-cache"
         if cache_dir:
-            cache_dir = os.path.abspath(cache_dir)
-            if os.access(cache_dir,
-                         os.R_OK) and not os.access(cache_dir, os.W_OK):
-                logging.info(
-                    f"Neuron cache directory is set to an unwriteable location: {cache_dir}"
-                )
-                start = time.perf_counter()
-                shutil.copytree(cache_dir, default_cache_dir)
-                os.environ["NEURON_COMPILE_CACHE_URL"] = default_cache_dir
-                duration = time.perf_counter() - start
-                logging.info(
-                    f"Copied neuron cache to the default location: {default_cache_dir}. "
-                    "Using this directory as the Neuron cache."
-                    f"\nCopying took: {duration} seconds")
+            if not re.search(r"^s3:\/\/([^/]+)\/([\w\W]+)", cache_dir):
+                cache_dir = os.path.abspath(cache_dir)
+                if os.access(cache_dir,
+                             os.R_OK) and not os.access(cache_dir, os.W_OK):
+                    logging.info(
+                        f"Neuron cache directory is set to an unwriteable location: {cache_dir}"
+                    )
+                    start = time.perf_counter()
+                    shutil.copytree(cache_dir, default_cache_dir)
+                    os.environ["NEURON_COMPILE_CACHE_URL"] = default_cache_dir
+                    duration = time.perf_counter() - start
+                    logging.info(
+                        f"Copied neuron cache to the default location: {default_cache_dir}. "
+                        "Using this directory as the Neuron cache."
+                        f"\nCopying took: {duration} seconds")
 
     def init_load_path(self) -> str:
         """
