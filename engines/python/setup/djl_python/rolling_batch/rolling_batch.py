@@ -310,7 +310,7 @@ class Request(object):
         self.details = details
         self.adapter = adapter
         self.input_ids = input_ids
-        self.next_token_str = None
+        self.next_token_str = ""
         self.first_token = True
         self.last_token = False
         self.token_cache = None
@@ -338,6 +338,7 @@ class Request(object):
                        prompt_tokens_details: list[dict] = None):
         """
         Sets the newly generated token.
+        If the function is called for multiple times, we will append tokens to the token string.
 
         :param next_token: next token to be set.
         :param last_token: whether this token is the last of the sequence.
@@ -373,9 +374,9 @@ class Request(object):
             if self.decoder_input_details:
                 details_dict["prompt_tokens_details"] = prompt_tokens_details
         if self.output_formatter is None:
-            self.next_token_str = next_token.text
+            self.next_token_str += next_token.text
         else:  # output only supports size one now
-            self.next_token_str = self.output_formatter(
+            self.next_token_str += self.output_formatter(
                 next_token, self.first_token, last_token, details_dict,
                 generated_text, self.id)
         self.last_token = last_token
@@ -388,6 +389,12 @@ class Request(object):
         :return: next_token
         """
         return self.next_token_str
+
+    def reset_next_token(self):
+        """
+        Reset the next token.
+        """
+        self.next_token_str = ""
 
     def get_step_token_number(self) -> int:
         """
@@ -549,6 +556,7 @@ class RollingBatch(ABC):
                 "last": req.is_last_token(),
                 "step_token_num": req.get_step_token_number()
             }
+            req.reset_next_token()
             results.append(res)
 
         # add empty tokens to pending requests
