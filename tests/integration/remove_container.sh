@@ -6,7 +6,7 @@ function fail {
 }
 
 function retry {
-  local n=1
+  local n=0
   local max=5
   local delay=5
   while true; do
