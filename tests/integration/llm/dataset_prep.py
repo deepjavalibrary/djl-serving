@@ -2,21 +2,46 @@ import urllib.request
 import json
 
 dataset_urls = {
-    "gsm8k": "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/gsm8k.jsonl",
-    "humaneval": "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/humaneval.jsonl",
-    "mbpp": "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/mbpp.jsonl",
-    "mtbench": "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/mt_bench.jsonl"
+    "gsm8k":
+    "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/gsm8k.jsonl",
+    "humaneval":
+    "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/humaneval.jsonl",
+    "mbpp":
+    "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/mbpp.jsonl",
+    "mtbench":
+    "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/mt_bench.jsonl"
 }
 
 parameters = {
-    "gsm8k": {"temperature": 0.0, "stop": ["Question:", "</s>", "<|im_end|>"], "max_num_tokens": 256},
-    "humaneval": {"temperature": 0.2,
-                  "stop": ["\nclass", "\ndef", "\n#", "\n@", "\nprint", "\nif", "\n```", "<file_sep>"],
-                  "max_num_tokens": 512},
-    "mbpp": {"temperature": 0.1,
-             "stop": ["\nclass", "\nassert", '\n"""', "\nprint", "\nif", "\n<|/", "\n```"],
-             "max_num_tokens": 512},
-    "mtbench": {"temperature": 1.0, "top_p": 0.8, "top_k": 40, "max_num_tokens": 512}
+    "gsm8k": {
+        "temperature": 0.0,
+        "stop": ["Question:", "</s>", "<|im_end|>"],
+        "max_num_tokens": 256
+    },
+    "humaneval": {
+        "temperature":
+        0.2,
+        "stop": [
+            "\nclass", "\ndef", "\n#", "\n@", "\nprint", "\nif", "\n```",
+            "<file_sep>"
+        ],
+        "max_num_tokens":
+        512
+    },
+    "mbpp": {
+        "temperature":
+        0.1,
+        "stop":
+        ["\nclass", "\nassert", '\n"""', "\nprint", "\nif", "\n<|/", "\n```"],
+        "max_num_tokens":
+        512
+    },
+    "mtbench": {
+        "temperature": 1.0,
+        "top_p": 0.8,
+        "top_k": 40,
+        "max_num_tokens": 512
+    }
 }
 
 
@@ -50,6 +75,7 @@ def build_djl_serving_request(dataset):
             line = json.loads(line.decode('utf-8'))
             request_line = parsing[dataset](line, parameters[dataset])
             f.writelines(f"{json.dumps(request_line)}\n")
+
 
 build_djl_serving_request("gsm8k")
 build_djl_serving_request("humaneval")
