@@ -8,7 +8,7 @@ on:
         required: false
         default: ''
       run_test:
-        description: 'Run only the tests you need [ hf, trtllm ]'
+        description: 'Run only the tests you need [ hf, trtllm, scheduler, lmi-dist, vllm ]'
         required: false
         default: ''
   schedule:
@@ -37,9 +37,19 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g5 $token djl-serving
+      - name: Create new G5 instance
+        id: create_gpu3
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_g5 $token djl-serving
     outputs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
       gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g5_instance_id }}
+      gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g5_instance_id }}
 
   hf-handler-test:
     if: contains(fromJson('["", "hf"]'), github.event.inputs.run_test)
@@ -354,10 +364,487 @@ jobs:
           name: trtllm-handler-quantization-logs
           path: tests/integration/logs/
 
+  scheduler-single-gpu-test:
+    if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          curl -OL https://github.com/frankfliu/junkyard/releases/download/v0.2.2/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gpt2
+        working-directory: tests/integration
+        run: |
+          # Correctness test
+          rm -rf models
+          python3 llm/prepare.py rolling_batch_scheduler gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve -m test=file:/opt/ml/model/test/
+          python3 rb_client.py correctness gpt2
+          docker rm -f $(docker ps -aq)
+      - name: Test bloom-560m
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py rolling_batch_scheduler bloom-560m
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve -m test=file:/opt/ml/model/test/
+          python3 rb_client.py scheduler_single_gpu bloom-560m
+          docker rm -f $(docker ps -aq)
+      - name: Print outputs
+        working-directory: tests/integration
+        run: for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf outputs
+          rm awscurl
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          rm -rf outputs && rm -rf models
+          rm awscurl
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: rb-single-gpu-logs
+          path: tests/integration/logs/
+
+  scheduler-multi-gpu-test:
+    if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          curl -OL https://github.com/frankfliu/junkyard/releases/download/v0.2.2/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gptj-6b
+        working-directory: tests/integration
+        run: |
+          # Concurrent requests test
+          rm -rf models
+          python3 llm/prepare.py rolling_batch_scheduler gpt-j-6b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve -m test=file:/opt/ml/model/test/
+          python3 rb_client.py scheduler_multi_gpu gpt-j-6b
+          docker rm -f $(docker ps -aq)
+      - name: Print outputs
+        working-directory: tests/integration
+        run: for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf models && rm -rf outputs
+          rm awscurl
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          rm -rf outputs && rm -rf models
+          rm awscurl
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: rb-multi-gpu-logs
+          path: tests/integration/logs/
+
+  lmi-dist-test-1:
+    if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy huggingface_hub
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+      - name: Download docker
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test gpt-neox-20b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist gpt-neox-20b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist gpt-neox-20b
+          docker rm -f $(docker ps -aq)
+      - name: Test falcon-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist falcon-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist falcon-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test flan-t5-xxl
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist flan-t5-xxl
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist flan-t5-xxl
+          docker rm -f $(docker ps -aq)
+      - name: Test gpt2
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "SERVING_LOAD_MODELS=test::MPI=/opt/ml/model\nOPTION_MAX_ROLLING_BATCH_SIZE=2\nOPTION_OUTPUT_FORMATTER=jsonlines\nOPTION_TENSOR_PARALLEL_DEGREE=1\nOPTION_MODEL_ID=gpt2\nOPTION_TASK=text-generation\nOPTION_ROLLING_BATCH=lmi-dist" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG nocode lmi
+          python3 llm/client.py lmi_dist gpt2
+          docker rm -f $(docker ps -aq)
+      - name: Test mpt-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mpt-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist mpt-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test lmi-dist unmerged lora - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama-7b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py lmi_dist_adapters llama-7b-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test lmi-dist unmerged lora overflow - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama-7b-unmerged-lora-overflow
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py lmi_dist_adapters llama-7b-unmerged-lora-overflow
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: lmi-dist-logs-1
+          path: tests/integration/logs/
+
+  lmi-dist-test-2:
+    if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+      - name: Download docker
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test octocoder
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist octocoder
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist octocoder
+          docker rm -f $(docker ps -aq)
+      - name: Test speculative-llama-13b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist speculative-llama-13b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist speculative-llama-13b
+          docker rm -f $(docker ps -aq)
+      - name: Test starcoder2-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist starcoder2-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist starcoder2-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test gemma-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist gemma-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist gemma-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-13b-gptq
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama2-13b-gptq
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist llama2-13b-gptq
+          docker rm -f $(docker ps -aq)
+      - name: Test Mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mistral-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist mistral-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-7b-32k
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama2-7b-32k
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist llama2-7b-32k
+          docker rm -f $(docker ps -aq)
+      - name: Test mistral-7b-128k-awq
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mistral-7b-128k-awq
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist mistral-7b-128k-awq
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-7b-chat
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama2-7b-chat
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist_chat llama2-7b-chat
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: lmi-dist-logs-2
+          path: tests/integration/logs/
+
+  vllm-test:
+    if: contains(fromJson('["", "vllm"]'), github.event.inputs.run_test)
+    runs-on: [ self-hosted, g5 ]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy huggingface_hub
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
+      - name: Download docker
+        working-directory: tests/integration
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Test llama2-13b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama2-13b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm llama2-13b
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-13b awq
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama2-13b-awq
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm llama2-13b
+          docker rm -f $(docker ps -aq)
+      - name: Test gpt-neox-20b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm gpt-neox-20b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm gpt-neox-20b
+          docker rm -f $(docker ps -aq)
+      - name: Test Mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm mistral-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm mistral-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test phi-2
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm phi-2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm phi-2
+          docker rm -f $(docker ps -aq)
+      - name: Test starcoder2-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm starcoder2-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm starcoder2-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test gemma-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm gemma-7b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm gemma-7b
+          docker rm -f $(docker ps -aq)
+      - name: Test vllm unmerged lora - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama-7b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py vllm_adapters llama-7b-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test vllm unmerged lora overflow - llama7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama-7b-unmerged-lora-overflow
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py vllm_adapters llama-7b-unmerged-lora-overflow
+          docker rm -f $(docker ps -aq)
+      - name: Test llama2-7b-chat
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama2-7b-chat
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py vllm_chat llama2-7b-chat
+          docker rm -f $(docker ps -aq)
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          docker rm -f $(docker ps -aq) || true
+          cat logs/serving.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: vllm-logs
+          path: tests/integration/logs/
+
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, hf-handler-test, trt-llm-handler-test,  trt-llm-handler-test-2]
+    needs: [ create-runners, hf-handler-test, trt-llm-handler-test,  trt-llm-handler-test-2, scheduler-single-gpu-test, scheduler-multi-gpu-test, lmi-dist-test-1, lmi-dist-test-2, vllm-test]
     steps:
       - name: Stop all instances
         run: |
@@ -365,4 +852,6 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
           ./stop_instance.sh $instance_id

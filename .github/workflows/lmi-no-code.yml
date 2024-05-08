@@ -107,7 +107,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code llama-70b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: CodeLlama lmi container
         working-directory: tests/integration
         run: |
@@ -116,7 +116,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code codellama
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Mixtral-8x7b
         working-directory: tests/integration
         run: |
@@ -125,7 +125,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code mixtral-8x7b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Falcon-40b lmi container
         working-directory: tests/integration
         run: |
@@ -134,7 +134,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code falcon-40b 
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: DBRX lmi container
         working-directory: tests/integration
         if: ${{ matrix.container == 'lmi' }}
@@ -147,11 +147,12 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code dbrx
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          ./remove_container.sh || true
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -199,7 +200,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code llama-7b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Llama13b lmi container
         working-directory: tests/integration
         run: |
@@ -208,7 +209,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code llama-13b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Gemma-7b lmi container
         if: ${{ matrix.container  == 'lmi' }}
         working-directory: tests/integration
@@ -218,7 +219,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code gemma-7b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Mistral-7b lmi container
         working-directory: tests/integration
         run: |
@@ -227,7 +228,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code mistral-7b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: GPTNeox lmi container
         working-directory: tests/integration
         run: |
@@ -236,7 +237,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code gpt-neox
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Phi2 lmi container
         working-directory: tests/integration
         run: |
@@ -245,7 +246,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code phi-2
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Baichuan lmi container
         working-directory: tests/integration
         run: |
@@ -254,7 +255,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code baichuan-13b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Qwen-1.5 lmi container
         working-directory: tests/integration
         if: ${{ matrix.container == 'lmi' }}
@@ -264,7 +265,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code qwen-1.5-14b
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: Starcoder2 lmi container
         working-directory: tests/integration
         if: ${{ matrix.container == 'lmi' }}
@@ -274,7 +275,7 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code starcoder
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: flan-t5-xl model with python backend
         working-directory: tests/integration
         if: ${{ matrix.container == 'tensorrt-llm' }}
@@ -286,7 +287,7 @@ jobs:
           serve
           python3 llm/client.py trtllm-python flan-t5-xl
           rm -rf docker_env
-          docker rm -f $(docker ps -aq)
+          ./remove_container.sh
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
