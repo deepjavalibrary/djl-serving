@@ -15,7 +15,7 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import List, Union, List, Callable, Optional
+from typing import Union, List, Callable
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 TGI_COMPAT = False
@@ -450,11 +450,8 @@ class RollingBatch(ABC):
         :param kwargs passed while loading the model
         """
 
-        self.pending_requests: List[Request] = []
         self.active_requests: List[Request] = []
         self.req_id_counter = 0
-        self.waiting_steps = kwargs.get("waiting_steps", None)
-        self.current_step = 0
         self.default_output_formatter = kwargs.get("output_formatter", None)
         # TODO: remove global context through refactoring
         global TGI_COMPAT
@@ -463,7 +460,6 @@ class RollingBatch(ABC):
                                     "false").lower() == 'true'
 
     def reset(self):
-        self.pending_requests = []
         self.active_requests = []
         self.req_id_counter = 0
 
@@ -501,7 +497,7 @@ class RollingBatch(ABC):
 
         :return: list of current active requests (including those that have just been added)
         """
-        total_req_len = len(self.active_requests) + len(self.pending_requests)
+        total_req_len = len(self.active_requests)
         if batch_size > total_req_len:
             for i in range(total_req_len, batch_size):
                 data = input_data[i]
@@ -519,19 +515,9 @@ class RollingBatch(ABC):
                                   output_formatter=params.pop(
                                       "output_formatter",
                                       self.default_output_formatter))
-                self.pending_requests.append(request)
+                self.active_requests.append(request)
                 self.req_id_counter += 1
-        # wait steps and not feeding new requests
-        if self.waiting_steps and self.current_step < self.waiting_steps:
-            self.current_step += 1
-            return []
-        # add all pending to active requests
-        active_pos = len(self.active_requests)
-        self.active_requests.extend(self.pending_requests)
-        # reset states
-        self.pending_requests = []
-        self.current_step = 0
-        return self.active_requests[active_pos:]
+        return self.active_requests[total_req_len:]
 
     @abstractmethod
     def preprocess_requests(self, requests: list[Request]):
@@ -559,17 +545,11 @@ class RollingBatch(ABC):
             req.reset_next_token()
             results.append(res)
 
-        # add empty tokens to pending requests
-        for i in range(len(self.active_requests),
-                       len(self.active_requests) + len(self.pending_requests)):
-            res = {"data": "", "last": False, "step_token_num": 0}
-            results.append(res)
-
         self.active_requests = [
             req for req in self.active_requests if not req.is_last_token()
         ]
 
-        if len(self.active_requests) + len(self.pending_requests) == 0:
+        if len(self.active_requests) == 0:
             self.req_id_counter = 0
 
         return results
