@@ -25,7 +25,6 @@ if __name__ == '__main__':
             model, tp, max_tokens = max_token_finder(properties)
             output = f"Summary:\nmodel: {model}\n tp: {tp}\n max_tokens: {max_tokens}"
             print(output)
-            # save files and then upload todo
             with open("max_num_token_results/" + str(log_id) + "_log.txt", "w") as log_file:
                 log_file.write(output)
             
