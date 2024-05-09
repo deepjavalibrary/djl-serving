@@ -5,7 +5,8 @@ on:
   workflow_dispatch:
     inputs:
       running_template:
-        description: 'A json file that contains model and tp pairs \n Example: {"s3://djl-llm/llama-2":[1, 4, 8], "s3://djl-llm/falcon":1}'
+        description: 'A json file that contains model and tp pairs.'
+        default: 'https://gist.githubusercontent.com/ydm-amazon/ea6d66d7b1164569eb7785bebbbea9b1/raw/29ac8058c8be195a739d037ec070e67e8697b87c/gistfile1.txt'
         required: true
       instance:
         description: 'Instance for max-num-tokens calculation'
