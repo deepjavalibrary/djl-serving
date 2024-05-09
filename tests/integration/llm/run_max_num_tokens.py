@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import urllib.request
 from tensorrt_llm_toolkit.utils.utils import max_token_finder
 
 if __name__ == '__main__':
@@ -10,9 +11,10 @@ if __name__ == '__main__':
     parser.add_argument('i_model_tp_json', help='Input - JSON containing model and tp pairs')
     args = parser.parse_args()
 
-    with open(args.i_model_tp_json, "r") as file:
-        model_tp_dict = json.load(file)
-
+    data = urllib.request.urlopen(args.i_model_tp_json)
+    json_str = [line.decode("utf-8").strip() for line in data][0]
+    model_tp_dict = json.loads(json_str)
+    
     log_id = 0
     for model_id, tp_list in model_tp_dict.items():
         if isinstance(tp_list, int):
