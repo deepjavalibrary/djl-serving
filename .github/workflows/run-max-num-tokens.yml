@@ -54,10 +54,14 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
-      - name: Run Max-Num-Tokens script
+      - name: Run dummy file creating script
         working-directory: tests/integration
         run: |
-          python3 llm/run_max_num_tokens.py "${{ inputs.running_template }}"
+          python3 llm/dummy_script.py
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          path: tests/integration/max_num_token_results/
 
   stop-runners:
     if: always()
