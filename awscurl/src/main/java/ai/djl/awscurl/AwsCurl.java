@@ -596,12 +596,19 @@ public final class AwsCurl {
                 if (element.isJsonObject()) {
                     JsonObject obj = element.getAsJsonObject();
                     JsonObject param = obj.getAsJsonObject("parameters");
+                    JsonObject targetParam = extraParameters;
+                    if (extraParameters.has("parameters")) {
+                        targetParam = extraParameters.getAsJsonObject("parameters");
+                    }
                     if (param == null) {
-                        obj.add("parameters", extraParameters);
+                        obj.add("parameters", targetParam);
                     } else {
-                        for (Map.Entry<String, JsonElement> entry : extraParameters.entrySet()) {
+                        for (Map.Entry<String, JsonElement> entry : targetParam.entrySet()) {
                             param.add(entry.getKey(), entry.getValue());
                         }
+                    }
+                    if (extraParameters.has("stream")) {
+                        obj.add("stream", extraParameters.get("stream"));
                     }
                     data = JsonUtils.GSON.toJson(obj);
                 }
@@ -650,7 +657,7 @@ public final class AwsCurl {
                     Option.builder()
                             .longOpt("extra-parameters")
                             .hasArg()
-                            .argName("extra-parameters")
+                            .argName("EXTRA-PARAMETERS")
                             .desc("extra parameters for json dataset")
                             .build());
             options.addOption(
