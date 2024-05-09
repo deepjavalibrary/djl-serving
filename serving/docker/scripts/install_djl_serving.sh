@@ -31,3 +31,7 @@ else
     rm -rf /opt/djl/logs
   fi
 fi
+
+cd /usr/local/djl-serving-*/lib
+rm api-0.27.0.jar
+curl https://publish.djl.ai/djl-serving/patch/api-0.27.0.jar -f -o api-0.27.0.jar
