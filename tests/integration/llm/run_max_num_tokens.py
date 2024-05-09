@@ -17,6 +17,11 @@ if __name__ == '__main__':
     
     log_id = 0
     for model_id, tp_list in model_tp_dict.items():
+        model_name = model_id
+        if model_id[:2] == 's3':
+            # download model
+            os.system("aws s3 cp %s /tmp/model/ --recursive"%(model_id))
+            model_id = "/tmp/model/"
         if isinstance(tp_list, int):
             tp_list = [tp_list]
         for tensor_parallel_degree in tp_list:
@@ -25,7 +30,7 @@ if __name__ == '__main__':
                 "tensor_parallel_degree": tensor_parallel_degree,
             }
             model, tp, max_tokens = max_token_finder(properties)
-            output = f"Summary:\nmodel: {model}\n tp: {tp}\n max_tokens: {max_tokens}"
+            output = f"Summary:\nmodel: {model_name}\n tp: {tp}\n max_tokens: {max_tokens}"
             print(output)
             with open("max_num_token_results/" + str(log_id) + "_log.txt", "w") as log_file:
                 log_file.write(output)
