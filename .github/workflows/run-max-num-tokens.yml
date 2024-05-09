@@ -4,6 +4,9 @@ name: Max-Num-Tokens Running
 on:
   workflow_dispatch:
     inputs:
+      running_template:
+        description: 'A json file that contains model and tp pairs \n Example: {"s3://djl-llm/llama-2":[1, 4, 8], "s3://djl-llm/falcon":1}'
+        required: true
       instance:
         description: 'Instance for max-num-tokens calculation'
         required: true
@@ -14,19 +17,6 @@ on:
           - g5.12xlarge
           - g5.48xlarge
           - p4d.24xlarge
-      model:
-        description: 'Model for max-num-tokens calculation'
-        required: true
-        default: 'Llama 2 7B'
-        type: choice
-        options:
-          - Llama 2 7B
-          - Llama 2 13B
-          - Llama 2 70B
-      tp:
-        description: 'TP for max-num-tokens calculation'
-        required: true
-        default: '1'
 
 permissions:
   id-token: write
@@ -66,7 +56,7 @@ jobs:
       - name: Run Max-Num-Tokens script
         working-directory: tests/integration
         run: |
-          python3 llm/run_max_num_tokens.py "${{ inputs.model }}" "${{ inputs.tp }}"
+          python3 llm/run_max_num_tokens.py "${{ inputs.running_template }}"
 
   stop-runners:
     if: always()
