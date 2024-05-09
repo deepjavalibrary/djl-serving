@@ -1,3 +1,4 @@
+import os
 if __name__ == '__main__':
     os.mkdir("max_num_token_results")
     with open("max_num_token_results/" + str(0) + "_log.txt", "w") as log_file:
