@@ -1,28 +1,23 @@
 import argparse
+import json
 from tensorrt_llm_toolkit.utils.utils import max_token_finder
-
-
-model_map = {"Llama 2 7B":"TheBloke/Llama-2-7B-fp16",
-             "Llama 2 13B":"TheBloke/Llama-2-13B-fp16",
-             "Llama 2 70B":"TheBloke/Llama-2-70B-fp16"}
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parse inputs to script')
-    parser.add_argument('i_model_id', help='Input - model id')
-    parser.add_argument('i_tp_degree', help='Input - tp degree')
+    parser.add_argument('i_model_tp_json', help='Input - JSON containing model and tp pairs')
     args = parser.parse_args()
 
-    model_id = model_map[args.i_model_id]
-    try:
-        tensor_parallel_degree = int(args.i_tp_degree)
-    except:
-        print("[Run max num tokens] Error: Non-int TP degree provided")
-    
-    properties = {
-        "model_id": model_id,
-        "tensor_parallel_degree": tensor_parallel_degree,
-    }
-    
-    model, tp, max_tokens = max_token_finder(properties)
-    print(f"Summary:\nmodel: {model}\n tp: {tp}\n max_tokens: {max_tokens}")
+    with open(args.i_model_tp_json, "r") as file:
+        model_tp_dict = json.load(file)
+
+    for model_id, tp_list in model_tp_dict.items():
+        if isinstance(tp_list, int):
+            tp_list = [tp_list]
+        for tensor_parallel_degree in tp_list:
+            properties = {
+                "model_id": model_id,
+                "tensor_parallel_degree": tensor_parallel_degree,
+            }
+            model, tp, max_tokens = max_token_finder(properties)
+            print(f"Summary:\nmodel: {model}\n tp: {tp}\n max_tokens: {max_tokens}")
+            # save files and then upload todo
