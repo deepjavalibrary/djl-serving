@@ -91,8 +91,7 @@ public final class LmiUtils {
 
     static boolean needConvert(ModelInfo<?, ?> info) {
         Properties properties = info.getProperties();
-        return isTrtLlmRollingBatch(info.getProperties())
-                || properties.containsKey("trtllm_python_backend");
+        return isTrtLlmRollingBatch(properties) || properties.containsKey("trtllm_python_backend");
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
@@ -132,6 +131,70 @@ public final class LmiUtils {
             info.prop.put("option.rolling_batch", "trtllm");
             if (!isValidTrtLlmModelRepo(trtRepo)) {
                 info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+            }
+        }
+    }
+
+    static void convertOnnx(ModelInfo<?, ?> info) throws IOException {
+        String prefix = info.prop.getProperty("option.modelName", "model");
+        if (Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
+                || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
+            return;
+        }
+
+        Path repo;
+        String modelId = null;
+        if (info.downloadDir != null) {
+            repo = info.downloadDir;
+        } else {
+            repo = info.modelDir;
+            modelId = info.prop.getProperty("option.model_id");
+            if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
+                repo = Paths.get(modelId);
+            }
+        }
+
+        if (modelId == null) {
+            modelId = repo.toString();
+        }
+        info.modelDir = exportOnnx(modelId, repo);
+    }
+
+    private static Path exportOnnx(String modelId, Path repoDir) throws IOException {
+        logger.info("Converting model to onnx artifacts");
+        String[] cmd = {
+            "python",
+            "/opt/djl/convert/huggingface_importer.py",
+            "--output-dir",
+            repoDir.toAbsolutePath().toString(),
+            "--output-format",
+            "OnnxRuntime",
+            "--model-name",
+            modelId
+        };
+        boolean success = false;
+        try {
+            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            try (BufferedReader reader =
+                    new BufferedReader(
+                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.debug("convert: {}", line);
+                }
+            }
+            int exitCode = exec.waitFor();
+            if (0 != exitCode) {
+                throw new EngineException("Model conversion process failed!");
+            }
+            success = true;
+            logger.info("Onnx artifacts built successfully");
+            return repoDir;
+        } catch (InterruptedException e) {
+            throw new IOException("Failed to build TensorRT-LLM artifacts", e);
+        } finally {
+            if (!success) {
+                Utils.deleteQuietly(repoDir);
             }
         }
     }

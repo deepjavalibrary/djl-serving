@@ -69,9 +69,11 @@ COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
     mkdir -p /opt/djl/partition && \
+    mkdir -p /opt/djl/convert && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
+COPY convert /opt/djl/convert
 
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
@@ -92,7 +94,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
-    opencv-contrib-python-headless safetensors scipy && \
+    opencv-contrib-python-headless safetensors scipy onnx onnxruntime sentence_transformers && \
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \
