@@ -28,7 +28,7 @@ from djl_python.utils import InputFormatConfigs, parse_input_with_formatter
 
 model = None
 
-OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom", "llama", "mistral"}
+OPTIMUM_CAUSALLM_MODEL_TYPES = {"gpt2", "opt", "bloom"}
 OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS = {"llama", "mistral"}
 
 
