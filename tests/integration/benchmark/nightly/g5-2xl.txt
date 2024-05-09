@@ -5,7 +5,6 @@ ENGINE={vllm,lmi-dist}
 [container]
 deepjavalibrary/djl-serving:lmi-nightly
 [serving_properties]
-engine=Python
 option.rolling_batch=$ENGINE
 option.model_id=NousResearch/Hermes-2-Pro-Mistral-7B
 option.tensor_parallel_degree=max
