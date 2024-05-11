@@ -163,8 +163,7 @@ public final class LmiUtils {
     private static Path exportOnnx(String modelId, Path repoDir) throws IOException {
         logger.info("Converting model to onnx artifacts");
         String[] cmd = {
-            "python",
-            "/opt/djl/convert/huggingface_importer.py",
+            "djl-converter",
             "--output-dir",
             repoDir.toAbsolutePath().toString(),
             "--output-format",

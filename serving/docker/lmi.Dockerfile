@@ -19,6 +19,7 @@ ARG torch_version=2.1.2
 ARG torch_vision_version=0.16.2
 ARG onnx_version=1.17.1
 ARG pydantic_version=2.6.1
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.40.0
@@ -69,11 +70,9 @@ COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/djl/deps && \
     mkdir -p /opt/djl/partition && \
-    mkdir -p /opt/djl/convert && \
     mkdir -p /opt/ml/model
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
-COPY convert /opt/djl/convert
 
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
@@ -94,7 +93,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
-    opencv-contrib-python-headless safetensors scipy onnx onnxruntime sentence_transformers && \
+    opencv-contrib-python-headless safetensors scipy onnxruntime ${djl_converter_wheel} && \
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \
