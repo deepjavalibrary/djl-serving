@@ -1,11 +1,13 @@
 # LMI running Engines
 
 In LMI, we offer two different running modes to operate the backend engine:
+
 - Distributed Environment (MPI): Used to operate on single machine multi-gpu or multiple machines multi-gpu use cases
 - Standard Python process (Python): Start a standalone python process to run the engine
 
 Depends on the engine architecture, settings and use case you are pursuing into, you can choose one of the options to run with LMI.
 Here we are providing the common Engine selection for different backends we offer:
+
 - TensorRT-LLM (MPI): Use multiple MPI processes to run the backends
 - LMI-Dist (MPI): Launching using multiple MPI processes to control for different GPUs
 - vLLM (Python): vLLM internally will use Ray to spin up multiple processes, so managed at vLLM layer

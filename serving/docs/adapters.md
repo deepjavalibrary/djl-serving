@@ -10,7 +10,19 @@ This can allow for multiple adapters used at the same system, and sometimes even
 With DJL Serving, it is possible to easily work with adapters.
 You can create models that accept adapters, use DJL Serving to manage your available adapters, and call models with adapters.
 
-For a concrete usage, see the [large model inference adapters example notebook](http://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/multi_lora_adapter_inference.html).
+For a concrete usage, there are several notebook examples:
+
+- [Basic Example](http://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/multi_lora_adapter_inference.html).
+- [Advanced Example](https://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/multi_lora_adapter_inference_advanced.html)
+- [Example with Environment Variable Configuration](https://github.com/aws-samples/sagemaker-genai-hosting-examples/blob/main/Llama2/Llama2-7b/LMI/llama2-7b-multi-lora-adapters-sagemaker.ipynb)
+
+### Backend Support
+
+There are several backends that support the use of adapters.
+Depending on the backend, additional configurations may be required to enable adapter support or available to configure it.
+More details can be found in the user guide.
+
+- [vLLM](https://docs.djl.ai/docs/serving/serving/docs/lmi/user_guides/lmi-dist_user_guide.html#adapter-support)
 
 ## Managing Adapters
 

@@ -78,11 +78,12 @@ OPTION_MAX_ROLLING_BATCH_SIZE=64
 
 You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
 
-### Adapter Support
+### LoRA Adapter Support
 
 vLLM has support for LoRA adapters using the [adapters API](../../adapters.md).
 In order to use the adapters, you must begin by enabling them by setting `option.enable_lora=true`.
 Following that, you can configure the LoRA support through the additional settings `option.max_loras`, `option.max_lora_rank`, `option.lora_extra_vocab_size`, and `option.max_cpu_loras`.
+If you run into OOM by enabling adapter support, reduce the `option.gpu_memory_utilization`.
 
 ### Advanced vLLM Configurations
 
