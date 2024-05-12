@@ -6,7 +6,7 @@ on:
     inputs:
       running_template:
         description: 'A json file that contains model and tp pairs (see default for example):'
-        default: 'https://gist.githubusercontent.com/ydm-amazon/ea6d66d7b1164569eb7785bebbbea9b1/raw/29ac8058c8be195a739d037ec070e67e8697b87c/gistfile1.txt'
+        default: 'https://gist.githubusercontent.com/ydm-amazon/0d264b365ba4fb3082ec58151c9b25c2/raw/119deb85a7de815770933b9a5dd1c1a2f2bdec24/gistfile1.txt'
         required: true
       instance:
         description: 'Instance for max-num-tokens calculation:'
