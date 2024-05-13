@@ -3,6 +3,7 @@ import json
 import os
 import urllib.request
 from tensorrt_llm_toolkit.utils.utils import max_token_finder
+from pathlib import Path
 
 if __name__ == '__main__':
     os.mkdir("max_num_token_results")
