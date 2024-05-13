@@ -55,7 +55,7 @@ class TestRollingBatch(unittest.TestCase):
             print(req.get_next_token(), end='')
             assert req.get_next_token() == ' world"}'
 
-    def test_json_fmt_hf_compat(self):
+    def test_fmt_hf_compat(self):
         djl_python.rolling_batch.rolling_batch.TGI_COMPAT = True
 
         req = Request(0,
@@ -64,6 +64,7 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "return_full_text": True,
                       },
+                      details=True,
                       output_formatter=_json_output_formatter)
 
         final_str = []
@@ -78,8 +79,28 @@ class TestRollingBatch(unittest.TestCase):
         final_json = json.loads(''.join(final_str))
         print(final_json, end='')
         assert final_json == [{
-            "generated_text":
-            "This is a wonderful dayHello world",
+            'generated_text': 'This is a wonderful dayHello world',
+            'details': {
+                'finish_reason':
+                'length',
+                'generated_tokens':
+                3,
+                'inputs':
+                'This is a wonderful day',
+                'tokens': [{
+                    'id': 244,
+                    'text': 'He',
+                    'log_prob': -0.334532
+                }, {
+                    'id': 576,
+                    'text': 'llo',
+                    'log_prob': -0.123123
+                }, {
+                    'id': 4558,
+                    'text': ' world',
+                    'log_prob': -0.567854
+                }]
+            }
         }]
         djl_python.rolling_batch.rolling_batch.TGI_COMPAT = False
 
