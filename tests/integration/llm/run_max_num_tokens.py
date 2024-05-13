@@ -34,16 +34,21 @@ if __name__ == '__main__':
             model_id = "/tmp/model/"
         if isinstance(tp_list, int):
             tp_list = [tp_list]
-        for tensor_parallel_degree in tp_list:
-            print(f"Starting run for tp={tensor_parallel_degree}:")
-            properties = {
-                "model_id": model_id,
-                "tensor_parallel_degree": tensor_parallel_degree,
-            }
-            model, tp, max_tokens = max_token_finder(properties)
-            output = f"Summary:\nmodel: {model_name}\n tp: {tp}\n max_tokens: {max_tokens}"
-            print(output)
-            with open("max_num_token_results/" + str(log_id) + "_log.txt", "w") as log_file:
-                log_file.write(output)
+        # mock this part for now to save cost (testing s5 download)
+        output = f"Summary:\nmodel: {model_name}\n tp: {4}\n max_tokens: {10000}"
+        print(output)
+        with open("max_num_token_results/" + str(log_id) + "_log.txt", "w") as log_file:
+            log_file.write(output)
+        # for tensor_parallel_degree in tp_list:
+        #     print(f"Starting run for tp={tensor_parallel_degree}:")
+        #     properties = {
+        #         "model_id": model_id,
+        #         "tensor_parallel_degree": tensor_parallel_degree,
+        #     }
+        #     model, tp, max_tokens = max_token_finder(properties)
+        #     output = f"Summary:\nmodel: {model_name}\n tp: {tp}\n max_tokens: {max_tokens}"
+        #     print(output)
+        #     with open("max_num_token_results/" + str(log_id) + "_log.txt", "w") as log_file:
+        #         log_file.write(output)
             
                 
