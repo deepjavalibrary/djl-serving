@@ -100,3 +100,10 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 | `deepspeed`            | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
 | `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-tensorrtllm0.8.0-cu122 |
 | `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-neuronx-sdk2.18.0      |
+
+## Advanced Features
+
+LMI contains also contain several advanced features that can be used for more complicated behaviors:
+
+- [Workflow Support](../workflows.md)
+- [Adapters Support](../adapters.md) (LoRA)
