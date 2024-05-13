@@ -27,7 +27,7 @@ class Token(object):
     """
 
     def __init__(self,
-                 id: List[int],
+                 id: Union[List[int], int],
                  text: str,
                  log_prob: float = None,
                  special_token: bool = None):
@@ -49,6 +49,8 @@ class Token(object):
         output = {}
         if self.id:
             output["id"] = self.id
+            if TGI_COMPAT:
+                output["id"] = self.id[0]
         if self.text:
             output["text"] = self.text
         if self.log_prob:
