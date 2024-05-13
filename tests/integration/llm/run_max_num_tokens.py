@@ -17,14 +17,25 @@ if __name__ == '__main__':
     
     log_id = 0
     for model_id, tp_list in model_tp_dict.items():
+        print(f"Starting run for model {model_id}:")
         model_name = model_id
         if model_id[:2] == 's3':
             # download model
-            os.system("aws s3 cp %s /tmp/model/ --recursive"%(model_id))
+            s3url = model_id
+            if Path("/opt/djl/bin/s5cmd").is_file():
+                if not s3url.endswith("*"):
+                    if s3url.endswith("/"):
+                        s3url = s3url + '*'
+                    else:
+                        s3url = s3url + '/*'
+                os.system(f"/opt/djl/bin/s5cmd --retry-count 1 sync {s3url} /tmp/model/")
+            else:
+                os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
             model_id = "/tmp/model/"
         if isinstance(tp_list, int):
             tp_list = [tp_list]
         for tensor_parallel_degree in tp_list:
+            print(f"Starting run for tp={tensor_parallel_degree}:")
             properties = {
                 "model_id": model_id,
                 "tensor_parallel_degree": tensor_parallel_degree,
