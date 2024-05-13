@@ -192,6 +192,19 @@ transformers_neuronx_aot_model_spec = {
     },
 }
 
+transformers_neuronx_neo_model_spec = {
+    "llama-2-13b": {
+        "workers": 1,
+        "seq_length": [1024],
+        "batch_size": [4]
+    },
+    "tinyllama": {
+        "workers": 1,
+        "seq_length": [1024],
+        "batch_size": [4]
+    }
+}
+
 lmi_dist_model_spec = {
     "gpt-neox-20b": {
         "max_memory_per_gpu": [25.0],
@@ -1536,6 +1549,9 @@ def run(raw_args):
     elif args.handler == "transformers_neuronx-aot":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_aot_model_spec)
+    elif args.handler == "transformers_neuronx-neo":
+        test_transformers_neuronx_handler(args.model,
+                                          transformers_neuronx_neo_model_spec)
     elif args.handler == "lmi_dist":
         test_handler_rolling_batch(args.model, lmi_dist_model_spec)
     elif args.handler == "lmi_dist_adapters":

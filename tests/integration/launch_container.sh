@@ -104,6 +104,12 @@ if $is_sm_neo_context; then
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    -e SM_NEO_EXECUTION_CONTEXT=1 \
+    -e SM_NEO_INPUT_MODEL_DIR=/opt/ml/model/input \
+    -e SM_NEO_COMPILED_MODEL_DIR=/opt/ml/model/compiled \
+    -e SM_NEO_COMPILATION_ERROR_FILE=/opt/ml/compilation/errors/errors.json \
+    -e SM_NEO_CACHE_DIR=/opt/ml/compilation/cache \
+    -e COMPILER_OPTIONS={} \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
