@@ -526,7 +526,16 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             metric = new Metric("ConvertTrtllm", duration, Unit.MICROSECONDS, dimension);
             MODEL_METRIC.info("{}", metric);
             eventManager.onModelConverted(this, "trtllm");
+        } else if ("OnnxRuntime".equals(getEngineName())) {
+            eventManager.onModelConverting(this, "onnx");
+            begin = System.nanoTime();
+            LmiUtils.convertOnnxModel(this);
+            duration = (System.nanoTime() - begin) / 1000;
+            metric = new Metric("ConvertOnnx", duration, Unit.MICROSECONDS, dimension);
+            MODEL_METRIC.info("{}", metric);
+            eventManager.onModelConverted(this, "onnx");
         }
+
         // override prop keys are not write to serving.properties,
         // we have to explicitly set in Criteria
         if (options == null) {

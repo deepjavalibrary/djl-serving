@@ -91,8 +91,7 @@ public final class LmiUtils {
 
     static boolean needConvert(ModelInfo<?, ?> info) {
         Properties properties = info.getProperties();
-        return isTrtLlmRollingBatch(info.getProperties())
-                || properties.containsKey("trtllm_python_backend");
+        return isTrtLlmRollingBatch(properties) || properties.containsKey("trtllm_python_backend");
     }
 
     static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
@@ -132,6 +131,82 @@ public final class LmiUtils {
             info.prop.put("option.rolling_batch", "trtllm");
             if (!isValidTrtLlmModelRepo(trtRepo)) {
                 info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+            }
+        }
+    }
+
+    static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
+        String prefix = info.prop.getProperty("option.modelName", "model");
+        if (Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
+                || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
+            return;
+        }
+
+        Path repo;
+        String modelId = null;
+        if (info.downloadDir != null) {
+            repo = info.downloadDir;
+        } else {
+            repo = info.modelDir;
+            modelId = info.prop.getProperty("option.model_id");
+            if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
+                repo = Paths.get(modelId);
+            }
+        }
+
+        if (modelId == null) {
+            modelId = repo.toString();
+        }
+        info.modelUrl = convertOnnx(modelId).toUri().toURL().toString();
+    }
+
+    private static Path convertOnnx(String modelId) throws IOException {
+        logger.info("Converting model to onnx artifacts");
+        String hash = Utils.hash(modelId);
+        String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
+        Path repoDir = parent.resolve("onnx").resolve(hash);
+        if (Files.exists(repoDir)) {
+            logger.info("Onnx artifacts already converted: {}", repoDir);
+            return repoDir;
+        }
+
+        String[] cmd = {
+            "djl-convert",
+            "--output-dir",
+            repoDir.toAbsolutePath().toString(),
+            "--output-format",
+            "OnnxRuntime",
+            "-m",
+            modelId,
+            "--optimize",
+            CudaUtils.hasCuda() ? "O4" : "O2",
+            "--device",
+            CudaUtils.hasCuda() ? "cuda" : "cpu"
+        };
+        boolean success = false;
+        try {
+            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            try (BufferedReader reader =
+                    new BufferedReader(
+                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.debug("convert: {}", line);
+                }
+            }
+            int exitCode = exec.waitFor();
+            if (0 != exitCode) {
+                throw new EngineException("Model conversion process failed!");
+            }
+            success = true;
+            logger.info("Onnx artifacts built successfully");
+            return repoDir;
+        } catch (InterruptedException e) {
+            throw new IOException("Failed to build TensorRT-LLM artifacts", e);
+        } finally {
+            if (!success) {
+                Utils.deleteQuietly(repoDir);
             }
         }
     }

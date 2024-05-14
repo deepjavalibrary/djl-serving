@@ -185,6 +185,8 @@ public class ModelInfoTest {
         Path onnx = modelDir.resolve("test_model.onnx");
         Files.createFile(onnx);
         model = new ModelInfo<>("build/models/test_model");
+        model.prop = new Properties();
+        model.prop.put("option.modelName", "test_model");
         model.initialize();
         assertEquals(model.getEngineName(), "OnnxRuntime");
 
