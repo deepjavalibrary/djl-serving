@@ -59,6 +59,7 @@ jobs:
         run: |
           python3 llm/run_max_num_tokens.py "${{ inputs.running_template }}"
       - name: Upload test logs
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           path: tests/integration/max_num_token_results/

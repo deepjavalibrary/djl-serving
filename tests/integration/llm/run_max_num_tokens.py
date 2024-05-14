@@ -17,9 +17,8 @@ if __name__ == '__main__':
     json_str = [line.decode("utf-8").strip() for line in data][0]
     model_tp_dict = json.loads(json_str)
 
-    log_id = 0
     for model_id, tp_list in model_tp_dict.items():
-        model_name = model_id
+        model_name = os.path.basename(os.path.normpath(model_id))
         print(f"Starting runs for model {model_name}:")
         if model_id[:2] == 's3':
             # download model
@@ -49,7 +48,6 @@ if __name__ == '__main__':
             model, tp, max_tokens = max_token_finder(properties)
             output = f"Summary:\nmodel: {model_name}\n tp: {tp}\n max_tokens: {max_tokens}"
             print(output)
-            with open("max_num_token_results/" + str(log_id) + "_log.txt",
+            with open(f"max_num_token_results/{model_name}_{tp}_log.txt",
                       "w") as log_file:
                 log_file.write(output)
-            log_id += 1
