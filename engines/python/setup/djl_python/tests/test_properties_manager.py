@@ -154,6 +154,10 @@ class TestConfigManager(unittest.TestCase):
             "cache_layout": "SBH",
             "all_reduce_dtype": "float32",
             "cast_logits_dtype": "float32",
+            "draft_model_compiled_path": "s3://test/bucket/folder",
+            "speculative_draft_model": "draft_model_id",
+            "speculative_length": 4,
+            "draft_model_tp_size": 8,
         }
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -175,8 +179,8 @@ class TestConfigManager(unittest.TestCase):
         self.assertTrue("-O3" in neuron_cc)
         self.assertTrue("--enable-mixed-precision-accumulation" in neuron_cc)
         self.assertTrue("--enable-saturate-infinity" in neuron_cc)
-        self.assertTrue(tnx_configs.group_query_attention,
-                        properties['group_query_attention'])
+        self.assertEqual(tnx_configs.group_query_attention,
+                         properties['group_query_attention'])
         self.assertTrue(tnx_configs.fuse_qkv)
         self.assertEqual(tnx_configs.rolling_batch_strategy,
                          TnXGenerationStrategy.continuous_batching)
@@ -184,12 +188,20 @@ class TestConfigManager(unittest.TestCase):
                          TnXMemoryLayout.LAYOUT_HSB)
         self.assertTrue(tnx_configs.on_device_embedding)
         self.assertEqual(tnx_configs.partition_schema, TnXModelSchema.legacy)
+        self.assertEqual(tnx_configs.draft_model_compiled_path,
+                         properties['draft_model_compiled_path'])
         self.assertEqual(tnx_configs.attention_layout,
                          TnXMemoryLayout.LAYOUT_HSB)
         self.assertEqual(tnx_configs.cache_layout, TnXMemoryLayout.LAYOUT_SBH)
         self.assertEqual(tnx_configs.all_reduce_dtype, TnXDtypeName.float32)
         self.assertEqual(tnx_configs.cast_logits_dtype, TnXDtypeName.float32)
         self.assertEqual(tnx_configs.model_loader, TnXModelLoaders.tnx)
+        self.assertEqual(tnx_configs.speculative_draft_model,
+                         properties['speculative_draft_model'])
+        self.assertEqual(tnx_configs.speculative_length,
+                         properties['speculative_length'])
+        self.assertEqual(tnx_configs.draft_model_tp_size,
+                         properties['draft_model_tp_size'])
 
         # tests context length estimate as integer
         def test_tnx_cle_int(context_length_estimate):

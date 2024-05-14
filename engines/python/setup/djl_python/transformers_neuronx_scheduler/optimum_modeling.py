@@ -23,6 +23,8 @@ from transformers.generation import GenerationMixin
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from transformers import PretrainedConfig
+from transformers_neuronx import bucket
+from transformers_neuronx.constants import LAYOUT_BSH, LAYOUT_HSB
 from optimum.neuron.generation import TokenSelector
 from optimum.neuron.utils.version_utils import check_compiler_compatibility, get_neuronxcc_version
 from optimum.modeling_base import OptimizedModel
@@ -92,6 +94,67 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
         if return_dict:
             return ModelOutput([("logits", out_logits)])
         return (out_logits, )
+
+    def _speculative_forward(self,
+                             input_ids,
+                             cache_ids=None,
+                             start_ids=None,
+                             speculation_length=None):
+        """The following is an accuracy correction for llama models, remove with 2.19.0 Neuron SDK"""
+        if self.model.neuron_config and self.model.neuron_config.continuous_batching:
+            inputs, *args = self.model._preprocess(input_ids,
+                                                   start_ids=start_ids,
+                                                   cache_ids=cache_ids)
+        else:
+            batch_size, *_ = input_ids.shape
+            if start_ids is None:
+                start_ids = torch.zeros(batch_size, dtype=torch.int32)
+            if cache_ids is None:
+                batch_size, context_length = input_ids.shape
+                cache_ids = torch.arange(context_length, dtype=torch.int32)
+                if self.model.neuron_config.use_2d_cache_ids:
+                    cache_ids = cache_ids.unsqueeze(0).expand(
+                        batch_size, context_length)
+
+            inputs, *args = input_ids, cache_ids, start_ids
+
+        batch_size, seq_len = input_ids.shape
+        if speculation_length is None:
+            model = self.model.decoder_lm_head
+        elif speculation_length not in self.model.decoder_lm_head_for_speculation.keys(
+        ):
+            # auto-infer speculation bucket, if needed
+            speculation_buckets = [
+                k for (k, batch_size
+                       ) in self.model.decoder_lm_head_for_speculation.keys()
+            ]
+            speculation_length = bucket.find(speculation_buckets, seq_len)
+            model = self.model.decoder_lm_head_for_speculation[
+                speculation_length, batch_size]
+            if input_ids.shape[-1] > speculation_length:
+                input_ids = input_ids[:, :speculation_length]
+        else:
+            model = self.model.decoder_lm_head_for_speculation[
+                speculation_length, batch_size]
+
+        if not self.model.neuron_config.on_device_embedding:
+            inputs = self.model.chkpt_model.model.embed_tokens(inputs)
+            if self.model.neuron_config.attention_layout == LAYOUT_HSB:
+                inputs = inputs.transpose(0, -1).contiguous()
+        with torch.inference_mode():
+            logits = model(inputs, *args)
+        logits = self.model._cast_logits(logits)
+        logits = logits[:self.model.config.vocab_size, -speculation_length:, :]
+        logits = logits.transpose(0, 1)
+        return logits
+
+    def speculative_forward(self, *args, **kwargs):
+        if hasattr(self.model, "speculative_forward"):
+            # Workaround until model.speculative_forward accuracy is fixed for llama
+            return self._speculative_forward(*args, **kwargs)
+        else:
+            raise NotImplementedError(
+                "Model does not support speculative forward")
 
     def prepare_inputs_for_generation(self,
                                       input_ids: torch.Tensor,

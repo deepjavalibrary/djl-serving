@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 
 class FinishReason(str, Enum):
@@ -29,8 +29,15 @@ class FinishReason(str, Enum):
 
 class Generation(object):
 
-    def __init__(self, request_id, prefill_tokens, token_id, token_logprob,
-                 token_text, token_is_special, generated_text) -> None:
+    def __init__(self,
+                 request_id,
+                 prefill_tokens,
+                 token_id,
+                 token_logprob,
+                 token_text,
+                 token_is_special,
+                 generated_text,
+                 speculated_generations=None) -> None:
         self.request_id = request_id
         self.prefill_tokens = prefill_tokens
         self.token_id = token_id
@@ -38,6 +45,7 @@ class Generation(object):
         self.token_text = token_text
         self.token_is_special = token_is_special
         self.generated_text = generated_text
+        self.speculated_generations = speculated_generations
 
 
 class GeneratedText(object):
@@ -82,3 +90,24 @@ class TokenDecoder:
     def decode(self, token_id: int):
         self.all_input_ids.append(token_id)
         return self._decode_token()
+
+
+class SpeculatedGenerationsQueue:
+
+    def __init__(self):
+        self._queue = list()
+
+    def enqueue(self, generation: Generation) -> None:
+        self._queue.append(generation)
+
+    def dequeue(self) -> Union[Generation, None]:
+        if len(self._queue) == 0:
+            return None
+        else:
+            return self._queue.pop(0)
+
+    def has_request_queue(self) -> bool:
+        return len(self._queue) != 0
+
+    def reset(self) -> None:
+        self._queue.clear()

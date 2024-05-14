@@ -112,11 +112,8 @@ class Slot:
             eos_token_ids = eos_token_ids + stop_token_ids
         return eos_token_ids
 
-    def assign(self,
-               request: Request,
-               generation_config: GenerationConfig,
-               tokenizer,
-               token_acceptor=None):
+    def assign(self, request: Request, generation_config: GenerationConfig,
+               tokenizer, acceptor):
         """Assign a request to a slot.
 
         Args:
@@ -126,6 +123,8 @@ class Slot:
                 The base generation config (might be modified by the request generation parameters).
             tokenizer:
                 The tokenizer used to decode token.
+            acceptor:
+                The speculative token acceptor available when speculative decoding
         """
         self._state = Slot.State.READY
         self._request_id = request.id
@@ -134,6 +133,7 @@ class Slot:
         # Update generation config with token chooser parameters
         param = translate_neuronx_params(request.parameters)
         self.seed = 0
+        self._token_acceptor = acceptor
         self._generation_config.do_sample = param.get("do_sample", False)
         if self._generation_config.do_sample:
             self._generation_config.temperature = param.get("temperature", 0.9)
@@ -148,7 +148,6 @@ class Slot:
             "max_new_tokens", 30)
         self._generation_config.eos_token_id = self.build_eos_token_ids(param)
         self._token_decoder = TokenDecoder(tokenizer)
-        self._token_acceptor = token_acceptor
         self._ignore_eos_id = param.pop("ignore_eos", False)
         filter_unused_generation_params(param,
                                         NEURON_GENERATION_PARAMS,
@@ -245,9 +244,16 @@ class Slot:
         else:
             return False
 
+    def accept_speculated_tokens(self, *args, **kwargs):
+        return self._token_acceptor(*args, **kwargs)
+
     @property
     def stopped(self) -> bool:
         return self._selector.stopping_criteria(self._tokens, None)
+
+    @property
+    def tokens(self) -> torch.LongTensor:
+        return self._tokens
 
     @property
     def generated_text(self) -> str:

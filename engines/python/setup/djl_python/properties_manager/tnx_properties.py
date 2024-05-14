@@ -80,25 +80,29 @@ TNX_SUPPORTED_ROLLING_BATCH_TYPES = ['auto']
 class TransformerNeuronXProperties(Properties):
     """Transformer neuronx related configurations"""
     neuron_optimize_level: Optional[OptimizeLevel] = None
-    enable_mixed_precision_accumulation: bool = False
-    enable_saturate_infinity: bool = False
+    enable_mixed_precision_accumulation: Optional[bool] = None
+    enable_saturate_infinity: Optional[bool] = None
     dtype: Dtype = Dtype.f16
     n_positions: int = 128
     unroll: Optional[str] = None
-    load_in_8bit: Optional[bool] = False
+    load_in_8bit: Optional[bool] = None
     low_cpu_mem_usage: bool = False
-    load_split_model: bool = False
+    load_split_model: Optional[bool] = None
     context_length_estimate: Optional[List[int]] = None
     amp: Optional[str] = None
     quantize: Optional[TnXQuantizeMethods] = None
     compiled_graph_path: Optional[str] = None
+    draft_model_compiled_path: Optional[str] = None
+    speculative_draft_model: Optional[str] = None
+    speculative_length: int = 5
+    draft_model_tp_size: Optional[int] = None
     task: Optional[str] = None
     save_mp_checkpoint_path: Optional[str] = None
     group_query_attention: Optional[str] = None
     model_loader: Optional[TnXModelLoaders] = None
     rolling_batch_strategy: Optional[TnXGenerationStrategy] = None
-    fuse_qkv: Optional[bool] = False
-    on_device_embedding: Optional[bool] = False
+    fuse_qkv: Optional[bool] = None
+    on_device_embedding: Optional[bool] = None
     attention_layout: Optional[TnXMemoryLayout] = None
     collectives_layout: Optional[TnXMemoryLayout] = None
     cache_layout: Optional[TnXMemoryLayout] = None
@@ -162,8 +166,8 @@ class TransformerNeuronXProperties(Properties):
                 )
         return batch_size
 
-    @field_validator('compiled_graph_path')
-    def validate_compiled_graph_path(cls, path: str) -> str:
+    @staticmethod
+    def compiled_path_validator(path: str) -> str:
         """Transformer neuronx accepts compiled graph paths as directories and s3 uri"""
         if not re.search("^s3:\/\/([^/]+)\/([\w\W]+)", path):
             if not os.path.isdir(path):
@@ -175,6 +179,18 @@ class TransformerNeuronXProperties(Properties):
                 path = os.path.join(os.getcwd(), path)
         os.environ["NEURON_COMPILE_CACHE_URL"] = path
         return path
+
+    @field_validator('compiled_graph_path')
+    def validate_compiled_graph_path(cls, path: str) -> str:
+        """Transformer neuronx accepts compiled graph paths as directories and s3 uri"""
+        os.environ["NEURON_COMPILE_CACHE_URL"] = cls.compiled_path_validator(
+            path)
+        return path
+
+    @field_validator('draft_model_compiled_path')
+    def validate_draft_compiled_graph_path(cls, path: str) -> str:
+        """Transformer neuronx accepts compiled graph paths as directories and s3 uri"""
+        return cls.compiled_path_validator(path)
 
     @field_validator('group_query_attention')
     def validate_gqa(cls, gqa: str) -> str:
@@ -238,5 +254,7 @@ class TransformerNeuronXProperties(Properties):
             elif properties.get('compiled_graph_path') is not None:
                 properties['model_loader'] = TnXModelLoaders.tnx
             elif properties.get('context_length_estimate') is not None:
+                properties['model_loader'] = TnXModelLoaders.tnx
+            elif properties.get("speculative_draft_model") is not None:
                 properties['model_loader'] = TnXModelLoaders.tnx
         return properties
