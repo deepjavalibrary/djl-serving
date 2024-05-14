@@ -211,7 +211,6 @@ jobs:
           python3 llm/client.py no_code llama-13b
           ./remove_container.sh
       - name: Gemma-7b lmi container
-        if: ${{ matrix.container  == 'lmi' }}
         working-directory: tests/integration
         run: |
           rm -rf models
