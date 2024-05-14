@@ -52,3 +52,4 @@ if __name__ == '__main__':
             with open("max_num_token_results/" + str(log_id) + "_log.txt",
                       "w") as log_file:
                 log_file.write(output)
+            log_id += 1
