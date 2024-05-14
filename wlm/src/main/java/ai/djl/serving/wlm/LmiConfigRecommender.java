@@ -27,6 +27,7 @@ import java.util.Set;
 public final class LmiConfigRecommender {
 
     private static final Logger logger = LoggerFactory.getLogger(LmiConfigRecommender.class);
+    // TODO: model list is up to date with vLLM 0.4.2
     private static final Map<String, String> MODEL_TO_ROLLING_BATCH =
             Map.ofEntries(
                     Map.entry("falcon", "lmi-dist"),
@@ -39,19 +40,25 @@ public final class LmiConfigRecommender {
                     Map.entry("baichuan", "lmi-dist"),
                     Map.entry("bloom", "lmi-dist"),
                     Map.entry("chatglm", "lmi-dist"),
+                    Map.entry("cohere", "lmi-dist"),
+                    Map.entry("dbrx", "lmi-dist"),
                     Map.entry("deci", "lmi-dist"),
                     Map.entry("gemma", "lmi-dist"),
                     Map.entry("gpt2", "lmi-dist"),
                     Map.entry("gptj", "lmi-dist"),
+                    Map.entry("internlm", "lmi-dist"),
                     Map.entry("internlm2", "lmi-dist"),
+                    Map.entry("jais", "lmi-dist"),
                     Map.entry("mistral", "lmi-dist"),
                     Map.entry("mixtral", "lmi-dist"),
                     Map.entry("opt", "lmi-dist"),
                     Map.entry("phi", "lmi-dist"),
+                    Map.entry("phi3", "lmi-dist"),
                     Map.entry("qwen", "lmi-dist"),
                     Map.entry("qwen2", "lmi-dist"),
+                    Map.entry("qwen2_moe", "lmi-dist"),
                     Map.entry("stablelm", "lmi-dist"),
-                    Map.entry("dbrx", "lmi-dist"),
+                    Map.entry("xverse", "lmi-dist"),
                     Map.entry("starcoder2", "lmi-dist"));
 
     private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =
