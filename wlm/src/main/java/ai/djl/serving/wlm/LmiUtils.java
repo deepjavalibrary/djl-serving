@@ -161,7 +161,7 @@ public final class LmiUtils {
     }
 
     private static Path convertOnnx(String modelId) throws IOException {
-        logger.debug("Converting model to onnx artifacts");
+        logger.info("Converting model to onnx artifacts");
         String hash = Utils.hash(modelId);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
