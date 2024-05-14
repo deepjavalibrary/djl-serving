@@ -529,7 +529,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         } else if ("OnnxRuntime".equals(getEngineName())) {
             eventManager.onModelConverting(this, "onnx");
             begin = System.nanoTime();
-            LmiUtils.convertOnnx(this);
+            LmiUtils.convertOnnxModel(this);
             duration = (System.nanoTime() - begin) / 1000;
             metric = new Metric("ConvertOnnx", duration, Unit.MICROSECONDS, dimension);
             MODEL_METRIC.info("{}", metric);

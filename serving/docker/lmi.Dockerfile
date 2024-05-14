@@ -93,7 +93,9 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
-    opencv-contrib-python-headless safetensors scipy onnxruntime ${djl_converter_wheel} && \
+    opencv-contrib-python-headless safetensors scipy \
+    onnxruntime-gpu==${onnx_version} --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ \
+    ${djl_converter_wheel} && \
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \

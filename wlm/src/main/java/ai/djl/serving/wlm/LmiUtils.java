@@ -135,7 +135,7 @@ public final class LmiUtils {
         }
     }
 
-    static void convertOnnx(ModelInfo<?, ?> info) throws IOException {
+    static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
         String prefix = info.prop.getProperty("option.modelName", "model");
         if (Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
                 || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
@@ -157,19 +157,32 @@ public final class LmiUtils {
         if (modelId == null) {
             modelId = repo.toString();
         }
-        info.modelDir = exportOnnx(modelId, repo);
+        info.modelUrl = convertOnnx(modelId).toUri().toURL().toString();
     }
 
-    private static Path exportOnnx(String modelId, Path repoDir) throws IOException {
-        logger.info("Converting model to onnx artifacts");
+    private static Path convertOnnx(String modelId) throws IOException {
+        logger.debug("Converting model to onnx artifacts");
+        String hash = Utils.hash(modelId);
+        String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
+        Path repoDir = parent.resolve("onnx").resolve(hash);
+        if (Files.exists(repoDir)) {
+            logger.info("Onnx artifacts already converted: {}", repoDir);
+            return repoDir;
+        }
+
         String[] cmd = {
-            "djl-converter",
+            "djl-convert",
             "--output-dir",
             repoDir.toAbsolutePath().toString(),
             "--output-format",
             "OnnxRuntime",
-            "--model-name",
-            modelId
+            "-m",
+            modelId,
+            "--optimize",
+            CudaUtils.hasCuda() ? "O4" : "O2",
+            "--device",
+            CudaUtils.hasCuda() ? "cuda" : "cpu"
         };
         boolean success = false;
         try {
