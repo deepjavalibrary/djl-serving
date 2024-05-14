@@ -136,7 +136,7 @@ transformers_neuronx_model_spec = {
     "mistral-7b-rb": {
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-2-Pro-Mistral-7B"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "mixtral-8x7b-rb": {
         "batch_size": [4],
@@ -227,7 +227,7 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-2-Pro-Mistral-7B"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "llama2-7b-32k": {
         "max_memory_per_gpu": [23.0],
@@ -239,7 +239,7 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-2-Pro-Mistral-7B"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],
@@ -285,7 +285,7 @@ vllm_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-2-Pro-Mistral-7B"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "phi-2": {
         "max_memory_per_gpu": [23.0],
@@ -409,7 +409,7 @@ trtllm_model_spec = {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-2-Pro-Mistral-7B"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "gpt-j-6b": {
         "max_memory_per_gpu": [22.0],
@@ -482,7 +482,7 @@ no_code_rolling_batch_spec = {
         "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Hermes-2-Pro-Mistral-7B",
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
     },
     "gpt-neox": {
         "max_memory_per_gpu": [25.0],
