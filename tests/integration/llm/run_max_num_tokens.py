@@ -14,7 +14,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data = urllib.request.urlopen(args.i_model_tp_json)
-    json_str = [line.decode("utf-8").strip() for line in data][0]
+    json_str = "".join([line.decode("utf-8").strip() for line in data])
     model_tp_dict = json.loads(json_str)
 
     for model_id, tp_list in model_tp_dict.items():
