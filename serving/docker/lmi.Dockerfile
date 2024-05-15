@@ -51,6 +51,8 @@ ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu121-precxx11
+ENV VLLM_NO_USAGE_STATS=1
+
 
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
