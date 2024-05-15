@@ -344,7 +344,8 @@ class TNXModelLoader(ModelLoader):
             )
             self.model.enable_speculative_decoder(
                 self.config.speculative_length)
-        if os.path.isdir(self.compiled_graph_path):
+        if self.compiled_graph_path and os.path.isdir(
+                self.compiled_graph_path):
             logging.info(
                 f"Loading precompiled graph from {self.compiled_graph_path} ..."
             )
