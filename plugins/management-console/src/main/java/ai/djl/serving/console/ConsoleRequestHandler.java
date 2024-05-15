@@ -298,7 +298,7 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
         String inferenceAddress =
                 configManager.getProperty("inference_address", "http://127.0.0.1:8080");
         String managementAddress =
-                configManager.getProperty("management_address", "http://127.0.0.1:8080");
+                configManager.getProperty("management_address", "http://127.0.0.1:8081");
         String origin = configManager.getProperty("cors_allowed_origin", "");
         String methods = configManager.getProperty("cors_allowed_methods", "");
         String headers = configManager.getProperty("cors_allowed_headers", "");

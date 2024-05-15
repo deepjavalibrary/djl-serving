@@ -180,7 +180,7 @@ public final class ConfigManager {
     public Connector getConnector(Connector.ConnectorType type) {
         String binding;
         if (type == Connector.ConnectorType.MANAGEMENT) {
-            binding = prop.getProperty(MANAGEMENT_ADDRESS, "http://127.0.0.1:8080");
+            binding = prop.getProperty(MANAGEMENT_ADDRESS, "http://127.0.0.1:8081");
         } else {
             binding = prop.getProperty(INFERENCE_ADDRESS, "http://127.0.0.1:8080");
         }
