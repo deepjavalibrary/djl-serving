@@ -461,7 +461,7 @@ public final class ConfigManager {
             String key = entry.getKey();
             // Do not log HF_TOKEN value
             if ("HF_TOKEN".equals(key)) {
-                sb.append("\n\t").append(key).append(": ***");
+                sb.append("\n    ").append(key).append(": ***");
             } else if (key.startsWith("SERVING")
                     || key.startsWith("PYTHON")
                     || key.startsWith("DJL_")
@@ -471,7 +471,7 @@ public final class ConfigManager {
                     || "TENSOR_PARALLEL_DEGREE".equals(key)
                     || "OMP_NUM_THREADS".equals(key)
                     || "CUDA_VISIBLE_DEVICES".equals(key)) {
-                sb.append("\n\t").append(key).append(": ").append(entry.getValue());
+                sb.append("\n    ").append(key).append(": ").append(entry.getValue());
             }
         }
         return sb.toString();
