@@ -143,7 +143,7 @@ jobs:
           echo -e "HF_MODEL_ID=s3://djl-llm/dbrx-instruct/" > docker_env
           echo -e "HF_MODEL_TRUST_REMOTE_CODE=true" >> docker_env
           echo -e "MODEL_LOADING_TIMEOUT=3600" >> docker_env
-          echo -e "OPTION_GPU_MEMORY_UTILIZATION=0.95" >> docker_env
+          echo -e "OPTION_GPU_MEMORY_UTILIZATION=0.85" >> docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code dbrx
