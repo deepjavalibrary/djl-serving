@@ -37,6 +37,11 @@ parser.add_argument("--model",
                     required=False,
                     type=str,
                     help="The path to the model input directory")
+parser.add_argument("--benchmark-vars",
+                    required=False,
+                    type=str,
+                    help="The benchmark variables used to differentiate in"
+                    " cloudwatch like [CONCURRENCY=2,DATASET=gsm8k]")
 parser.add_argument("--info",
                     required=False,
                     type=str,
@@ -44,57 +49,61 @@ parser.add_argument("--info",
                     help="A set of info in format of --info a=1 b=2 c=3")
 args = parser.parse_args()
 
-data = {}
+cloudwatch_report_schema = {
+    "totalTimeMills": 'Milliseconds',
+    "totalRequests": 'Count',
+    "failedRequests": 'Count',
+    "concurrentClients": 'Count',
+    "totalTokens": 'Count',
+    "tokenPerRequest": 'Count',
+    "averageLatency": 'Milliseconds',
+    "p50Latency": 'Milliseconds',
+    "p90Latency": 'Milliseconds',
+    "p99Latency": 'Milliseconds',
+    "timeToFirstByte": 'Milliseconds',
+    "p50TimeToFirstByte": 'Milliseconds',
+    "p90TimeToFirstByte": 'Milliseconds',
+    "p99TimeToFirstByte": 'Milliseconds',
+}
 
 
 class Benchmark:
 
-    def __init__(self, dyn_resource):
+    def __init__(self, dyn_resource, data: dict):
         self.dyn_resource = dyn_resource
         self.table = dyn_resource.Table("RubikonBenchmarks")
         self.table.load()
+        self.data = data
 
     def add_benchmark(self):
-        self.table.put_item(Item=data)
+        self.table.put_item(Item=self.data)
 
 
-def record_table():
+def record_table(data: dict):
     table = boto3.resource("dynamodb").Table("RubikonBenchmarks")
     table.put_item(Item=data)
 
 
-def record_cloudwatch():
+def record_cloudwatch(data: dict):
     esc = lambda n: n.replace("/", "-").replace(".", "-").replace("=", "-"
                                                                   ).strip(' -')
     job_name = data["modelId"] if "job" not in data else data["job"]
-    metric_name = lambda n: f"lmi_{data['instance']}_{esc(data['image'])}_{esc(job_name)}_{n}"
-    metric_data = [
-        {
-            'MetricName': metric_name("throughput"),
-            'Unit': 'Count/Second',
-            'Value': data['throughput']
-        },
-        {
-            'MetricName': metric_name("latency_p50"),
-            'Unit': 'Milliseconds',
-            'Value': data['P50']
-        },
-        {
-            'MetricName': metric_name("latency_p90"),
-            'Unit': 'Milliseconds',
-            'Value': data['P90']
-        },
-        {
-            'MetricName': metric_name("latency_p99"),
-            'Unit': 'Milliseconds',
-            'Value': data['P99']
-        },
-    ]
+    benchmark_vars = data["benchmark_vars"] if data["benchmark_vars"] else ""
+    metric_name = lambda n: (f"lmi_{data['instance']}_{esc(data['image'])}"
+                             f"_{esc(job_name)}_{esc(benchmark_vars)}_{n}")
+    metric_data = []
+    for metric, unit in cloudwatch_report_schema.items():
+        if metric in data.keys():
+            metric_data.append({
+                'MetricName': metric_name(metric),
+                'Unit': unit,
+                'Value': data[metric]
+            })
     cw = boto3.client('cloudwatch', region_name='us-east-1')
     cw.put_metric_data(Namespace="LMI_Benchmark", MetricData=metric_data)
 
 
-def data_basic():
+def data_basic(data: dict):
     data["modelServer"] = "DJLServing"
     data["service"] = "ec2"
     data["Timestamp"] = Decimal(time.time())
@@ -110,33 +119,39 @@ def data_basic():
             data[[split[0]]] = split[1]
 
 
-def data_from_client():
-    with open("benchmark.log", "r") as f:
-        for line in f.readlines():
-            line = line.strip()
-            if "Total time:" in line:
-                data["totalTime"] = Decimal(line.split(" ")[2])
-            if "error rate:" in line:
-                data["errorRate"] = Decimal(line.split(" ")[-1])
-            if "Concurrent clients:" in line:
-                data["concurrency"] = int(line.split(" ")[2])
-            if "Total requests:" in line:
-                data["requests"] = int(line.split(" ")[2])
-            if "TPS:" in line:
-                data["tps"] = Decimal(line.split(" ")[1].split("/")[0])
-            if "Average Latency:" in line:
-                data["avgLatency"] = Decimal(line.split(" ")[2])
-            if "P50:" in line:
-                data["P50"] = Decimal(line.split(" ")[1])
-            if "P90:" in line:
-                data["P90"] = Decimal(line.split(" ")[1])
-            if "P99:" in line:
-                data["P99"] = Decimal(line.split(" ")[1])
-            if "totalTime" in data and "requests" in data:
-                data["throughput"] = data["requests"] / data["totalTime"]
+def data_from_client(data: dict):
+    if os.path.exists("benchmark_result.json"):
+        with open("benchmark_result.json", "r") as f:
+            benchmark_metrics = json.load(f)
+            data.update(benchmark_metrics)
+            print(f"found awscurl metrics json: {benchmark_metrics}")
+    elif os.path.exists("benchmark.log"):
+        with open("benchmark.log", "r") as f:
+            for line in f.readlines():
+                line = line.strip()
+                if "Total time:" in line:
+                    data["totalTimeMills"] = Decimal(line.split(" ")[2])
+                if "error rate:" in line:
+                    data["errorRate"] = Decimal(line.split(" ")[-1])
+                if "Concurrent clients:" in line:
+                    data["concurrentClients"] = int(line.split(" ")[2])
+                if "Total requests:" in line:
+                    data["totalRequests"] = int(line.split(" ")[2])
+                if "TPS:" in line:
+                    data["tps"] = Decimal(line.split(" ")[1].split("/")[0])
+                if "Average Latency:" in line:
+                    data["averageLatency"] = Decimal(line.split(" ")[2])
+                if "P50:" in line:
+                    data["p50Latency"] = Decimal(line.split(" ")[1])
+                if "P90:" in line:
+                    data["p90Latency"] = Decimal(line.split(" ")[1])
+                if "P99:" in line:
+                    data["p99Latency"] = Decimal(line.split(" ")[1])
+    else:
+        print("There is no benchmark logs found!")
 
 
-def data_container():
+def data_container(data: dict):
     if "container" in data:
         container = data["container"]
         if container.startswith("deepjavalibrary/djl-serving:"):
@@ -158,7 +173,7 @@ def data_container():
                 data["tgiVersion"] = version
 
 
-def data_from_model_files():
+def data_from_model_files(data: dict):
     if args.model:
         propsPath = os.path.join(args.model, "serving.properties")
         if os.path.isfile(propsPath):
@@ -211,14 +226,15 @@ def data_from_model_files():
                     data["modelId"] = envs["MODEL_ID"]
 
 
-def data_from_template():
+def data_from_template(data: dict):
     if args.template:
         with open(args.template, "r") as f:
             template = json.load(f)
             job_template = template[args.job]
             data["job"] = args.job
+            data['benchmark_vars'] = args.benchmark_vars
             data["awscurl"] = bytes.fromhex(
-                job_template['awscurl']).decode("utf-8")
+                job_template['awscurl'][args.benchmark_vars]).decode("utf-8")
             if "container" not in data and "container" in job_template:
                 data["container"] = job_template["container"]
             if "info" in job_template:
@@ -231,19 +247,20 @@ def data_from_template():
 
 
 if __name__ == "__main__":
-    data_from_template()
-    data_basic()
-    data_container()
-    data_from_client()
-    data_from_model_files()
+    data = {}
+    data_from_template(data)
+    data_basic(data)
+    data_container(data)
+    data_from_client(data)
+    data_from_model_files(data)
 
     if "errorRate" not in data or data["errorRate"] == 100:
         print("Not recording failed benchmark")
         print(data)
     else:
         if args.record == "table":
-            record_table()
+            record_table(data)
         elif args.record == "cloudwatch":
-            record_cloudwatch()
+            record_cloudwatch(data)
         else:
             print(data)
