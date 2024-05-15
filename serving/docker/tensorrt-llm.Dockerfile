@@ -9,7 +9,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.2.2-devel-ubuntu22.04
+ARG version=12.2.2-cudnn8-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu122
 ARG python_version=3.10
@@ -70,15 +70,11 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install latest CUDNN8
-RUN apt-get update && apt-get install -y libcudnn8 && \
-    apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
 # Install PyTorch
 # Qwen needs transformers_stream_generator, tiktoken and einops
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
     mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
-    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp && \
+    transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp flax easydict && \
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
