@@ -69,11 +69,6 @@ on:
         required: false
         type: string
         default: 'djl-serving'
-      serving_branch:
-        description: 'The djl-serving branch to run'
-        required: false
-        type: string
-        default: 'master'
 
 permissions:
   id-token: write
@@ -107,7 +102,7 @@ jobs:
         if: ${{ inputs.repo != 'djl-serving' }}
         with:
           repository: deepjavalibrary/djl-serving
-          ref: ${{ inputs.serving_branch }}
+          ref: master
       - name: Setup for other repo
         uses: actions/checkout@v4
         if: ${{ inputs.repo != 'djl-serving' }}
@@ -153,7 +148,7 @@ jobs:
         if: ${{ inputs.repo != 'djl-serving' }}
         with:
           repository: deepjavalibrary/djl-serving
-          ref: ${{ inputs.serving_branch }}
+          ref: master
       - name: Setup for other repo
         uses: actions/checkout@v4
         if: ${{ inputs.repo != 'djl-serving' }}
