@@ -71,6 +71,8 @@ class TestTestModel(unittest.TestCase):
                          envs["OPTION_MODEL_ID"])
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
+        self.assertEqual(handler.serving_properties["tgi_compat"],
+                         envs["OPTION_TGI_COMPAT"])
         inputs = [{
             "inputs": "The winner of oscar this year is",
             "parameters": {
@@ -91,7 +93,7 @@ class TestTestModel(unittest.TestCase):
         self.assertTrue(json.loads(result[1]), list)
 
         for key in envs.keys():
-            os.environ[key] = ""
+            del os.environ[key]
 
     def test_all_code_chat(self):
         model_id = "TheBloke/Llama-2-7B-Chat-fp16"

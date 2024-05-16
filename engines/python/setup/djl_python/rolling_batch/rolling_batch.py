@@ -12,13 +12,13 @@
 # the specific language governing permissions and limitations under the License.
 import json
 import logging
-import os
 import time
 from abc import ABC, abstractmethod
 from typing import Union, List, Callable
 
+from djl_python.properties_manager.properties import Properties
+
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
-TGI_COMPAT = False
 
 
 class Token(object):
@@ -48,9 +48,7 @@ class Token(object):
     def as_dict(self):
         output = {}
         if self.id:
-            output["id"] = self.id
-            if TGI_COMPAT:
-                output["id"] = self.id[0]
+            output["id"] = self.id[0]
         if self.text:
             output["text"] = self.text
         if self.log_prob:
@@ -68,7 +66,8 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
     :return: formatted output
     """
     json_encoded_str = f"{{\"generated_text\": \"{generated_text}" if first_token else ""
-    if first_token and TGI_COMPAT:
+    tgi_compat = details.pop("tgi_compat", False)
+    if first_token and tgi_compat:
         json_encoded_str = f"[{json_encoded_str}"
     json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
@@ -87,7 +86,7 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
             json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
         else:
             json_encoded_str = f"{json_encoded_str}\"}}"
-        if TGI_COMPAT:
+        if tgi_compat:
             json_encoded_str = f"{json_encoded_str}]"
 
     return json_encoded_str
@@ -283,16 +282,15 @@ class Request(object):
 
     """
 
-    def __init__(
-        self,
-        id: int,
-        input_text: str,
-        parameters: dict,
-        details: bool = False,
-        input_ids: list = [],
-        adapter=None,
-        output_formatter: Union[str, Callable] = None,
-    ):
+    def __init__(self,
+                 id: int,
+                 input_text: str,
+                 parameters: dict,
+                 details: bool = False,
+                 input_ids: list = [],
+                 adapter=None,
+                 output_formatter: Union[str, Callable] = None,
+                 tgi_compat: bool = False):
         """
         Initialize a request
 
@@ -319,6 +317,7 @@ class Request(object):
         self.generated_tokens = []
         self.decoder_input_details = parameters.get("decoder_input_details",
                                                     False)
+        self.tgi_compat = tgi_compat
         if self.details:
             self.token_cache = []
         self.full_text_prefix = input_text if parameters.pop(
@@ -351,7 +350,7 @@ class Request(object):
         :param prompt_tokens_details: prompt tokens details when parameter decoder_input_details is true.
         """
         if isinstance(next_token, str):
-            next_token = Token([-1], next_token)
+            next_token = Token(-1, next_token)
         next_token.request_id = self.id
         if self.token_cache is not None:
             self.token_cache.append(next_token.as_dict())
@@ -370,6 +369,8 @@ class Request(object):
         # Special handling for error case
         elif finish_reason == "error":
             details_dict["finish_reason"] = finish_reason
+        if self.output_formatter == _json_output_formatter:
+            details_dict["tgi_compat"] = self.tgi_compat
         generated_text = self.full_text_prefix
         if last_token:
             generated_text = generated_text + ''.join(self.generated_tokens)
@@ -426,7 +427,7 @@ def stop_on_any_exception(func):
         except Exception:
             logging.exception("Rolling batch inference error")
             for request in self.active_requests:
-                token = Token([-1], "", -1, None)
+                token = Token(-1, "", -1, None)
                 request.set_next_token(token,
                                        last_token=True,
                                        finish_reason="error")
@@ -445,21 +446,16 @@ class RollingBatch(ABC):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, configs: Properties):
         """
         Initializes the rolling batch scheduler.
 
-        :param kwargs passed while loading the model
+        :param  passed while loading the model
         """
 
         self.active_requests: List[Request] = []
         self.req_id_counter = 0
-        self.default_output_formatter = kwargs.get("output_formatter", None)
-        # TODO: remove global context through refactoring
-        global TGI_COMPAT
-        # TODO: better handling to make it part of properties
-        TGI_COMPAT = os.environ.get("OPTION_TGI_COMPAT",
-                                    "false").lower() == 'true'
+        self.configs = configs
 
     def reset(self):
         self.active_requests = []
@@ -492,9 +488,9 @@ class RollingBatch(ABC):
         """
         Adds requests to the batch when there is availability
 
-        :param input_data (list[str]): List of input prompts.
-        :param parameters (list[str]): List of settings pertaining to each request.
-        :param batch_size (int): Maximum number of requests in a batch
+        :param input_data: (list[str]) List of input prompts.
+        :param parameters: (list[str]) List of settings pertaining to each request.
+        :param batch_size: (int) Maximum number of requests in a batch
         :param adapters: List of adapters inputs for each request in a batch
 
         :return: list of current active requests (including those that have just been added)
@@ -516,7 +512,8 @@ class RollingBatch(ABC):
                                   adapter=adapter,
                                   output_formatter=params.pop(
                                       "output_formatter",
-                                      self.default_output_formatter))
+                                      self.configs.output_formatter),
+                                  tgi_compat=self.configs.tgi_compat)
                 self.active_requests.append(request)
                 self.req_id_counter += 1
         return self.active_requests[total_req_len:]

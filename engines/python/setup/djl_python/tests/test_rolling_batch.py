@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 
 import djl_python.rolling_batch.rolling_batch
@@ -56,8 +57,6 @@ class TestRollingBatch(unittest.TestCase):
             assert req.get_next_token() == ' world"}'
 
     def test_fmt_hf_compat(self):
-        djl_python.rolling_batch.rolling_batch.TGI_COMPAT = True
-
         req = Request(0,
                       "This is a wonderful day",
                       parameters={
@@ -65,7 +64,8 @@ class TestRollingBatch(unittest.TestCase):
                           "return_full_text": True,
                       },
                       details=True,
-                      output_formatter=_json_output_formatter)
+                      output_formatter=_json_output_formatter,
+                      tgi_compat=True)
 
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
@@ -102,7 +102,6 @@ class TestRollingBatch(unittest.TestCase):
                 }]
             }
         }]
-        djl_python.rolling_batch.rolling_batch.TGI_COMPAT = False
 
     def test_jsonlines_fmt(self):
         req1 = Request(0,
@@ -120,7 +119,7 @@ class TestRollingBatch(unittest.TestCase):
             print(req.get_next_token(), end='')
             assert json.loads(req.get_next_token()) == {
                 "token": {
-                    "id": [244],
+                    "id": 244,
                     "text": "He",
                     "log_prob": -0.334532
                 }
@@ -130,7 +129,7 @@ class TestRollingBatch(unittest.TestCase):
             print(req.get_next_token(), end='')
             assert json.loads(req.get_next_token()) == {
                 "token": {
-                    "id": [576],
+                    "id": 576,
                     "text": "llo",
                     "log_prob": -0.123123
                 }
@@ -141,7 +140,7 @@ class TestRollingBatch(unittest.TestCase):
             print(req.get_next_token(), end='')
             assert json.loads(req.get_next_token()) == {
                 "token": {
-                    "id": [4558],
+                    "id": 4558,
                     "text": " world",
                     "log_prob": -0.567854
                 },
@@ -185,7 +184,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token().splitlines()[-1]) == {
             "token": {
-                "id": [4558],
+                "id": 4558,
                 "text": " world",
                 "log_prob": -0.567854
             },
@@ -222,15 +221,15 @@ class TestRollingBatch(unittest.TestCase):
                 "generated_tokens":
                 3,
                 "tokens": [{
-                    "id": [244],
+                    "id": 244,
                     "text": "He",
                     "log_prob": -0.334532
                 }, {
-                    "id": [576],
+                    "id": 576,
                     "text": "llo",
                     "log_prob": -0.123123
                 }, {
-                    "id": [4558],
+                    "id": 4558,
                     "text": " world",
                     "log_prob": -0.567854
                 }]
@@ -251,7 +250,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token().splitlines()[-1]) == {
             "token": {
-                "id": [4558],
+                "id": 4558,
                 "text": " world",
                 "log_prob": -0.567854
             },
@@ -277,7 +276,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
-                "id": [244],
+                "id": 244,
                 "text": "He",
                 "log_prob": -0.334532
             }
@@ -287,7 +286,7 @@ class TestRollingBatch(unittest.TestCase):
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
-                "id": [576],
+                "id": 576,
                 "text": "llo",
                 "log_prob": -0.123123
             }
@@ -297,22 +296,21 @@ class TestRollingBatch(unittest.TestCase):
                            True,
                            'length',
                            prompt_tokens_details=[
-                               Token(id=[123], text="This",
+                               Token(id=123, text="This",
                                      log_prob=None).as_dict(),
-                               Token(id=[456], text="is",
+                               Token(id=456, text="is",
                                      log_prob=0.456).as_dict(),
-                               Token(id=[789], text="a",
+                               Token(id=789, text="a",
                                      log_prob=0.789).as_dict(),
-                               Token(id=[124],
-                                     text="wonderful",
+                               Token(id=124, text="wonderful",
                                      log_prob=0.124).as_dict(),
-                               Token(id=[356], text="day",
+                               Token(id=356, text="day",
                                      log_prob=0.356).as_dict()
                            ])
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
             "token": {
-                "id": [4558],
+                "id": 4558,
                 "text": " world",
                 "log_prob": -0.567854
             },
@@ -324,22 +322,22 @@ class TestRollingBatch(unittest.TestCase):
                 'inputs':
                 'This is a wonderful day',
                 'prefill': [{
-                    'id': [123],
+                    'id': 123,
                     'text': 'This'
                 }, {
-                    'id': [456],
+                    'id': 456,
                     'log_prob': 0.456,
                     'text': 'is'
                 }, {
-                    'id': [789],
+                    'id': 789,
                     'log_prob': 0.789,
                     'text': 'a'
                 }, {
-                    'id': [124],
+                    'id': 124,
                     'log_prob': 0.124,
                     'text': 'wonderful'
                 }, {
-                    'id': [356],
+                    'id': 356,
                     'log_prob': 0.356,
                     'text': 'day'
                 }],
@@ -416,7 +414,7 @@ class TestRollingBatch(unittest.TestCase):
             'generated_tokens': 1,
             'inputs': 'This is a wonderful day',
             'tokens': [{
-                'id': [244],
+                'id': 244,
                 'log_prob': -0.334532,
                 'text': 'He'
             }],
@@ -438,12 +436,12 @@ class TestRollingBatch(unittest.TestCase):
             'This is a wonderful day',
             'tokens': [
                 {
-                    'id': [244],
+                    'id': 244,
                     'text': 'He',
                     'log_prob': -0.334532,
                 },
                 {
-                    'id': [576],
+                    'id': 576,
                     'text': 'llo',
                     'log_prob': -0.123123,
                 },
@@ -466,15 +464,15 @@ class TestRollingBatch(unittest.TestCase):
             'inputs':
             'This is a wonderful day',
             'tokens': [{
-                'id': [244],
+                'id': 244,
                 'text': 'He',
                 'log_prob': -0.334532,
             }, {
-                'id': [576],
+                'id': 576,
                 'text': 'llo',
                 'log_prob': -0.123123,
             }, {
-                'id': [4558],
+                'id': 4558,
                 'text': ' world',
                 'log_prob': -0.567854,
             }],
