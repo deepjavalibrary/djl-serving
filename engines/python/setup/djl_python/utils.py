@@ -148,5 +148,5 @@ def _fetch_adapters_from_input(input_map: dict, inputs: Input):
 
 def _validate_adapters(adapters_per_item, adapter_registry):
     for adapter_name in adapters_per_item:
-        if adapter_name not in adapter_registry and adapter_name != "":
+        if adapter_name and adapter_name not in adapter_registry:
             raise ValueError(f"Adapter {adapter_name} is not registered")
