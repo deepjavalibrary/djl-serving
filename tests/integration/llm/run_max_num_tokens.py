@@ -51,3 +51,5 @@ if __name__ == '__main__':
             with open(f"max_num_token_results/{model_name}_{tp}_log.txt",
                       "w") as log_file:
                 log_file.write(output)
+        os.system("rm -rf /tmp/model/")
+        
