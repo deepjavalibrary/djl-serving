@@ -188,7 +188,7 @@ def parse_raw_template(url, override_container):
             # each of the replicated deployment options
             for r in mul_results.values():
                 replicated_awscurl = multiply_template_with_vars(
-                    '', {'awscurl': cur_result['awscurl']}, benchmark_vars)
+                    '', {'awscurl': r['awscurl']}, benchmark_vars)
                 for option in replicated_awscurl.keys():
                     replicated_awscurl[option] = replicated_awscurl[option][
                         'awscurl'].encode().hex()
