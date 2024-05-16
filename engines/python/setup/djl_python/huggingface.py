@@ -231,7 +231,8 @@ class HuggingFaceService(object):
         """
 
         parsed_input = parse_input_with_formatter(inputs,
-                                                  self.input_format_configs)
+                                                  self.input_format_configs,
+                                                  self.adapter_registry)
         self.adapters = parsed_input.adapters if parsed_input.found_adapters else None
         return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
 
@@ -256,15 +257,10 @@ class HuggingFaceService(object):
             if inputs.get_property("reset_rollingbatch"):
                 self.rolling_batch.reset()
             if self.adapters is not None:
-                adapter_data = []
-                for i, a in enumerate(self.adapters):
-                    if a is None or a == "":
-                        adapter_data.append(None)
-                    elif a in self.adapter_registry:
-                        adapter_data.append(self.adapter_registry[a])
-                    else:
-                        adapter_data.append(None)
-                        errors[i] = f"Unknown or invalid adapter {a}"
+                adapter_data = [
+                    self.adapter_registry.get(adapter, None)
+                    for adapter in self.adapters
+                ]
             else:
                 adapter_data = None
             result = self.rolling_batch.inference(input_data,
