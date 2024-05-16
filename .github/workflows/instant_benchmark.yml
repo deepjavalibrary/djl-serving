@@ -103,6 +103,11 @@ jobs:
         with:
           repository: deepjavalibrary/djl-serving
           ref: master
+      - name: Setup for other repo
+        uses: actions/checkout@v4
+        if: ${{ inputs.repo != 'djl-serving' }}
+        with:
+          path: ${{ inputs.repo }}
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
@@ -144,6 +149,11 @@ jobs:
         with:
           repository: deepjavalibrary/djl-serving
           ref: master
+      - name: Setup for other repo
+        uses: actions/checkout@v4
+        if: ${{ inputs.repo != 'djl-serving' }}
+        with:
+          path: ${{ inputs.repo }}
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
