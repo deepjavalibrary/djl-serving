@@ -135,7 +135,7 @@ jobs:
 
   benchmark_run:
     runs-on: [ self-hosted, "${{ inputs.instance }}" ]
-    timeout-minutes: 30
+    timeout-minutes: 90
     needs: [ environment-setup ]
     strategy:
       matrix:
@@ -187,7 +187,7 @@ jobs:
           ./remove_container.sh || true
           cat logs/serving.log || true
       - name: Upload test artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ${{ matrix.job }}
