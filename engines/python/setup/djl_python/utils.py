@@ -56,8 +56,6 @@ def parse_input_with_formatter(inputs: Input,
             if input_format_configs.is_adapters_supported:
                 adapters_per_item, found_adapter_per_item = _parse_adapters(
                     _inputs, input_map, item, adapter_registry)
-                adapters.extend(adapters_per_item)
-                found_adapters = found_adapter_per_item or found_adapters
         except Exception as e:  # pylint: disable=broad-except
             logging.warning(f"Parse input failed: {i}")
             input_size.append(0)
@@ -66,6 +64,9 @@ def parse_input_with_formatter(inputs: Input,
 
         input_data.extend(_inputs)
         input_size.append(len(_inputs))
+
+        adapters.extend(adapters_per_item)
+        found_adapters = found_adapter_per_item or found_adapters
 
         for _ in range(input_size[i]):
             parameters.append(_param)
