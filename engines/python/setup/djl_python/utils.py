@@ -27,9 +27,9 @@ class InputFormatConfigs:
     tokenizer: Any = None
 
 
-def parse_input_with_formatter(
-        inputs: Input,
-        input_format_configs: InputFormatConfigs) -> ParsedInput:
+def parse_input_with_formatter(inputs: Input,
+                               input_format_configs: InputFormatConfigs,
+                               adapter_registry: dict) -> ParsedInput:
     """
     Preprocessing function that extracts information from Input objects.
     :param input_format_configs: format configurations for the input.
@@ -51,28 +51,24 @@ def parse_input_with_formatter(
         try:
             content_type = item.get_property("Content-Type")
             input_map = decode(item, content_type)
+            _inputs, _param, is_client_side_batch[i] = _parse_inputs_params(
+                input_map, item, input_format_configs)
+            if input_format_configs.is_adapters_supported:
+                adapters_per_item, found_adapter_per_item = _parse_adapters(
+                    _inputs, input_map, item, adapter_registry)
+                adapters.extend(adapters_per_item)
+                found_adapters = found_adapter_per_item or found_adapters
         except Exception as e:  # pylint: disable=broad-except
             logging.warning(f"Parse input failed: {i}")
             input_size.append(0)
             errors[i] = str(e)
             continue
 
-        _inputs, _param, is_client_side_batch[i] = _parse_inputs_params(
-            input_map, item, input_format_configs)
-
         input_data.extend(_inputs)
         input_size.append(len(_inputs))
 
         for _ in range(input_size[i]):
             parameters.append(_param)
-
-        if input_format_configs.is_adapters_supported:
-            adapters_per_item, found_adapter_per_item, error = _parse_adapters(
-                _inputs, input_map, item)
-            adapters.extend(adapters_per_item)
-            found_adapters = found_adapter_per_item or found_adapters
-            if error:
-                errors[i] = error
 
     return ParsedInput(input_data=input_data,
                        input_size=input_size,
@@ -113,21 +109,21 @@ def _parse_inputs_params(input_map, item, input_format_configs):
         return [_inputs], _param, False
 
 
-def _parse_adapters(_inputs, input_map, item) -> (List, bool, str):
+def _parse_adapters(_inputs, input_map, item,
+                    adapter_registry) -> (List, bool):
     adapters_per_item = _fetch_adapters_from_input(input_map, item)
-    error = None
     found_adapter_per_item = False
     if adapters_per_item:
+        _validate_adapters(adapters_per_item, adapter_registry)
         found_adapter_per_item = True
     else:
         # inference with just base model.
         adapters_per_item = [""] * len(_inputs)
 
     if len(_inputs) != len(adapters_per_item):
-        logging.warning(
+        raise ValueError(
             f"Number of adapters is not equal to the number of inputs")
-        error = "Number of adapters is not equal to the number of inputs"
-    return adapters_per_item, found_adapter_per_item, error
+    return adapters_per_item, found_adapter_per_item
 
 
 def _fetch_adapters_from_input(input_map: dict, inputs: Input):
@@ -147,3 +143,9 @@ def _fetch_adapters_from_input(input_map: dict, inputs: Input):
         adapters_per_item = [adapters_per_item]
 
     return adapters_per_item
+
+
+def _validate_adapters(adapters_per_item, adapter_registry):
+    for adapter_name in adapters_per_item:
+        if adapter_name not in adapter_registry:
+            raise ValueError(f"Adapter {adapter_name} is not registered")
