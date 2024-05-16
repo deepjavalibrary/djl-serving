@@ -82,15 +82,6 @@ class Sequence:
             return self.top_tokens[index]
         return None
 
-    def tokens_as_dict(self):
-        return [token.as_dict() for token in self.tokens]
-
-    def top_tokens_as_dict(self):
-        top_tokens = []
-        for top_token in self.top_tokens:
-            top_tokens.append([token.as_dict() for token in top_token])
-        return top_tokens
-
 
 @dataclass
 class RequestInput:
