@@ -135,7 +135,7 @@ jobs:
 
   benchmark_run:
     runs-on: [ self-hosted, "${{ inputs.instance }}" ]
-    timeout-minutes: 30
+    timeout-minutes: 90
     needs: [ environment-setup ]
     strategy:
       matrix:
