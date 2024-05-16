@@ -29,6 +29,10 @@ parser.add_argument("--instance",
                     required=False,
                     type=str,
                     help="The current instance name")
+parser.add_argument("--record",
+                    required=False,
+                    type=str,
+                    help="Place to record metrics")
 
 parser.add_argument("--job", required=False, type=str, help="The job string")
 args = parser.parse_args()
@@ -110,6 +114,7 @@ def parse_raw_template(url, override_container):
     commandline = []
     requirements = []
     vars = []
+    benchmark_vars = []
     info = None
     while iterator < len(lines):
         if '[test_name]' == lines[iterator]:
@@ -148,6 +153,12 @@ def parse_raw_template(url, override_container):
                     lines[iterator]):
                 vars.append(lines[iterator])
                 iterator += 1
+        elif '[benchmark_vars]' == lines[iterator]:
+            iterator += 1
+            while iterator < len(lines) and not is_square_bracket(
+                    lines[iterator]):
+                benchmark_vars.append(lines[iterator])
+                iterator += 1
         elif '[info]' == lines[iterator]:
             info = []
             iterator += 1
@@ -174,13 +185,20 @@ def parse_raw_template(url, override_container):
             if info is not None:
                 cur_result['info'] = info
             mul_results = multiply_template_with_vars(name, cur_result, vars)
+            # each of the replicated deployment options
             for r in mul_results.values():
-                r['awscurl'] = r['awscurl'].encode().hex()
+                replicated_awscurl = multiply_template_with_vars(
+                    '', {'awscurl': cur_result['awscurl']}, benchmark_vars)
+                for option in replicated_awscurl.keys():
+                    replicated_awscurl[option] = replicated_awscurl[option][
+                        'awscurl'].encode().hex()
+                r['awscurl'] = replicated_awscurl
             final_result.update(mul_results)
             name = ''
             container = None
             properties = []
             env = []
+            benchmark_vars = []
             commandline = []
             requirements = []
             vars = []
@@ -219,23 +237,35 @@ def machine_translation(machine_name: str):
         return "lmi"
 
 
-def build_running_script(template, job, instance):
+def build_running_script(template, job, instance, record):
     with open(template) as f:
         template = json.load(f)
     job_template = template[job]
-    job_template['awscurl'] = bytes.fromhex(
-        job_template['awscurl']).decode("utf-8")
+    for key in job_template['awscurl'].keys():
+        job_template['awscurl'][key] = bytes.fromhex(
+            job_template['awscurl'][key]).decode("utf-8")
     write_model_artifacts(job_template['properties'],
                           job_template['requirements'], job_template['env'])
-
     container = job_template['container']
 
+    benchmark_command = ['set -x']
+    record_benchmark = ('python3 record_benchmark.py --template template.json '
+                        f'--job {job} --instance {instance} '
+                        f'--model models/test --record {record}')
+
+    for key, value in job_template['awscurl'].items():
+        benchmark_command.append("rm -rf benchmark_result.json benchmark.log")
+        benchmark_command.append(value)
+        benchmark_command.append(record_benchmark +
+                                 f' --benchmark-vars "{key}"')
+
     bash_command = [
-        'set -euo pipefail', 'echo "Start Launching container..."',
+        'set -euo pipefail',
+        'echo "Start Launching container..."',
         f"docker pull {container}",
         f"./launch_container.sh {container} $PWD/models {machine_translation(instance)}",
-        job_template['awscurl'] + " | tee benchmark.log"
     ]
+    bash_command.extend(benchmark_command)
     with open("instant_benchmark.sh", "w") as f:
         f.write('\n'.join(bash_command))
 
@@ -249,7 +279,8 @@ if __name__ == "__main__":
         command = f"echo \"template={json.dumps(json.dumps(json.dumps(result)))}\" >> $GITHUB_OUTPUT"
         sp.call(command, shell=True)
     elif args.template and args.job and args.instance:
-        build_running_script(args.template, args.job, args.instance)
+        build_running_script(args.template, args.job, args.instance,
+                             args.record)
     else:
         parser.print_help()
         raise ValueError("args not supported")

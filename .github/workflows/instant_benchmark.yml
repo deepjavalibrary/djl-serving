@@ -15,9 +15,14 @@ on:
           - g5.2xlarge
           - g5.12xlarge
           - g5.48xlarge
+          - g6.2xlarge
+          - g6.12xlarge
+          - g6.48xlarge
           - g4dn.12xlarge
           - g4dn.2xlarge
           - p4d.24xlarge
+          - p4de.24xlarge
+          - p5.24xlarge
           - inf2.8xlarge
           - inf2.24xlarge
           - trn1.2xlarge
@@ -34,6 +39,11 @@ on:
           - none
           - table
           - cloudwatch
+      repo:
+        description: '[Do not change] The repo for runner registration'
+        required: false
+        type: string
+        default: 'djl-serving'
   workflow_call:
     inputs:
       running_template:
@@ -54,6 +64,11 @@ on:
         required: false
         type: string
         default: 'none'
+      repo:
+        description: 'The repo for runner registration'
+        required: false
+        type: string
+        default: 'djl-serving'
 
 permissions:
   id-token: write
@@ -68,10 +83,10 @@ jobs:
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
-          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          https://api.github.com/repos/deepjavalibrary/${{ inputs.repo }}/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_ib_${{ inputs.instance }} $token djl-serving
+          ./start_instance.sh action_ib_${{ inputs.instance }} $token ${{ inputs.repo }}
     outputs:
       gpu_instance_id: ${{ steps.create_instance.outputs.action_ib_instance_id }}
 
@@ -127,26 +142,20 @@ jobs:
         run: |
           wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
-      - name: Run benchmark job
-        working-directory: tests/integration
-        run: |
-          echo "${{ needs.environment-setup.outputs.template }}" >> template.json
-          python3 instant_benchmark.py --template template.json \
-          --job ${{ matrix.job }} --instance ${{ inputs.instance }}
-          
-          bash instant_benchmark.sh
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
-      - name: Record benchmark job
-        if: ${{ inputs.record == 'table' || inputs.record == 'cloudwatch' }}
+      - name: Run benchmark job
         working-directory: tests/integration
         run: |
-          python3 record_benchmark.py --template template.json \
+          echo "${{ needs.environment-setup.outputs.template }}" >> template.json
+          python3 instant_benchmark.py --template template.json \
           --job ${{ matrix.job }} --instance ${{ inputs.instance }} \
-          --model models/test --record ${{ inputs.record }}
+          --record ${{ inputs.record }}
+          
+          bash instant_benchmark.sh
       - name: Get serving logs
         if: always()
         working-directory: tests/integration
