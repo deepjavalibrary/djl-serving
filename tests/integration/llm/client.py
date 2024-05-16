@@ -141,7 +141,7 @@ transformers_neuronx_model_spec = {
     "mixtral-8x7b-rb": {
         "batch_size": [4],
         "seq_length": [256],
-        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "llama-7b-rb": {
         "batch_size": [1, 4],
@@ -313,7 +313,7 @@ vllm_model_spec = {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
-        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],
@@ -376,7 +376,7 @@ lmi_dist_aiccl_model_spec = {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
-        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
 }
 
@@ -455,7 +455,7 @@ trtllm_model_spec = {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
-        "tokenizer": "mistralai/Mixtral-8x7B-v0.1"
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "flan-t5-xl": {
         "batch_size": [1, 4],
@@ -539,7 +539,7 @@ no_code_rolling_batch_spec = {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "mistralai/Mixtral-8x7B-v0.1",
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",
     },
     "falcon-40b": {
         "max_memory_per_gpu": [40.0],

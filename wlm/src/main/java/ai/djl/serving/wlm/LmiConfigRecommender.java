@@ -158,7 +158,12 @@ public final class LmiConfigRecommender {
         if ("vllm".equals(rollingBatch) || "lmi-dist".equals(rollingBatch)) {
             rollingBatchSize = 256;
         }
-        if ("trtllm".equals(rollingBatch) && lmiProperties.containsKey("option.max_num_tokens")) {
+        if ("trtllm".equals(rollingBatch)) {
+            // https://github.com/NVIDIA/TensorRT-LLM/blob/v0.9.0/tensorrt_llm/_common.py#L208-L215
+            // TODO: setting better default per 0.9.0 guidance 1024 * 16 = 16384
+            if (!lmiProperties.containsKey("option.max_num_tokens")) {
+                lmiProperties.setProperty("option.max_num_tokens", "16384");
+            }
             rollingBatchSize = 256;
         }
         lmiProperties.setProperty(

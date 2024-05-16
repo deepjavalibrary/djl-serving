@@ -135,7 +135,7 @@ jobs:
 
   benchmark_run:
     runs-on: [ self-hosted, "${{ inputs.instance }}" ]
-    timeout-minutes: 90
+    timeout-minutes: 120
     needs: [ environment-setup ]
     strategy:
       matrix:
@@ -171,6 +171,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
+          role-duration-seconds: 7200 # 2 hour
       - name: Run benchmark job
         working-directory: tests/integration
         run: |
