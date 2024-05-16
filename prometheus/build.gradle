@@ -6,9 +6,7 @@ dependencies {
     implementation platform("ai.djl:bom:${project.version}")
     api "ai.djl:api"
 
-    implementation("io.prometheus:prometheus-metrics-core:${prometheus_version}") {
-        exclude group: "io.prometheus", module: "prometheus-metrics-tracer-initializer"
-    }
+    implementation("io.prometheus:prometheus-metrics-core:${prometheus_version}")
     implementation("io.prometheus:prometheus-metrics-exposition-formats:${prometheus_version}") {
         exclude group: "io.prometheus", module: "prometheus-metrics-shaded-protobuf"
     }
