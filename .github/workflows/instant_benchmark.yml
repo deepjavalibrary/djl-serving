@@ -96,6 +96,13 @@ jobs:
     needs: [ create-runners ]
     steps:
       - uses: actions/checkout@v4
+        if: ${{ inputs.repo == 'djl-serving' }}
+      - name: Setup DJLServing for other repo
+        uses: actions/checkout@v4
+        if: ${{ inputs.repo != 'djl-serving' }}
+        with:
+          repository: deepjavalibrary/djl-serving
+          ref: master
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
@@ -130,6 +137,13 @@ jobs:
         job: ${{ fromJSON(needs.environment-setup.outputs.jobs) }}
     steps:
       - uses: actions/checkout@v4
+        if: ${{ inputs.repo == 'djl-serving' }}
+      - name: Setup DJLServing for other repo
+        uses: actions/checkout@v4
+        if: ${{ inputs.repo != 'djl-serving' }}
+        with:
+          repository: deepjavalibrary/djl-serving
+          ref: master
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
