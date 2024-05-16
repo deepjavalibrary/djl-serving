@@ -29,7 +29,7 @@ class InputFormatConfigs:
 
 def parse_input_with_formatter(inputs: Input,
                                input_format_configs: InputFormatConfigs,
-                               adapter_registry: dict) -> ParsedInput:
+                               adapter_registry: dict = {}) -> ParsedInput:
     """
     Preprocessing function that extracts information from Input objects.
     :param input_format_configs: format configurations for the input.
@@ -147,5 +147,5 @@ def _fetch_adapters_from_input(input_map: dict, inputs: Input):
 
 def _validate_adapters(adapters_per_item, adapter_registry):
     for adapter_name in adapters_per_item:
-        if adapter_name not in adapter_registry:
+        if adapter_name not in adapter_registry and adapter_name != "":
             raise ValueError(f"Adapter {adapter_name} is not registered")
