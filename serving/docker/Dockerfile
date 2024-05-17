@@ -60,7 +60,7 @@ LABEL djl-version=$djl_version
 
 FROM base AS cpu-full
 
-ARG torch_version=2.1.1
+ARG torch_version=2.2.2
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
