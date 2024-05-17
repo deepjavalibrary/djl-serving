@@ -198,10 +198,20 @@ transformers_neuronx_neo_model_spec = {
         "seq_length": [1024],
         "batch_size": [4]
     },
-    "tinyllama": {
+    "mixtral-8x22b": {
+        "workers": 1,
+        "seq_length": [512],
+        "batch_size": [2]
+    },
+    "codellama-34b-rb": {
         "workers": 1,
         "seq_length": [1024],
         "batch_size": [4]
+    },
+    "mistral-7b-rb": {
+        "workers": 1,
+        "seq_length": [512],
+        "batch_size": [2]
     }
 }
 

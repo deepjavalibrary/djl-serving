@@ -986,20 +986,38 @@ trtllm_neo_list = {
 transformers_neuronx_neo_list = {
     "llama-2-13b": {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
-        "option.tensor_parallel_degree": 12,
+        "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
         "option.rolling_batch": "disable",
         "option.batch_size": 4,
         "option.dtype": "fp16",
+        "option.model_loading_timeout": 3600,
     },
-    "tinyllama": {
-        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
-        "option.tensor_parallel_degree": 12,
-        "option.n_positions": 1024,
+    "mixtral-8x22b": {
+        "option.model_id": "s3://djl-llm/mixtral-8x22b/",
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 512,
         "option.rolling_batch": "disable",
-        "option.batch_size": 4,
+        "option.batch_size": 2,
+        "option.model_loading_timeout": 3600,
+    },
+    "codellama-34b-rb": {
+        "option.model_id": "s3://djl-llm/codellama-34b/",
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 1024,
+        "option.rolling_batch": "auto",
+        "option.max_rolling_batch_size": 4,
+        "option.model_loading_timeout": 3600,
+    },
+    "mistral-7b-rb": {
+        "option.model_id": "s3://djl-llm/mistral-7b/",
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 512,
+        "option.rolling_batch": "auto",
+        "option.max_rolling_batch_size": 2,
         "option.dtype": "fp16",
-    }
+        "option.model_loading_timeout": 3600,
+    },
 }
 
 def write_model_artifacts(properties,
@@ -1053,11 +1071,17 @@ def create_neo_input_model(properties):
 
     # Download the model checkpoint from S3 to local path
     model_s3_uri = properties.get("option.model_id")
-    if shutil.which("s5cmd"):
-        cmd = f"s5cmd sync {model_s3_uri} {model_download_path}"
+    if os.path.isfile("/opt/djl/bin/s5cmd"):
+        if not model_s3_uri.endswith("*"):
+                if model_s3_uri.endswith("/"):
+                    model_s3_uri += '*'
+                else:
+                    model_s3_uri += '/*'
+
+        cmd = ["/opt/djl/bin/s5cmd", "sync", model_s3_uri, model_download_path]
     else:
-        cmd = f"aws s3 sync {model_s3_uri} {model_download_path}"
-    subprocess.check_call(cmd, shell=True, env=os.environ)
+        cmd = ["aws", "s3", "sync", model_s3_uri, model_download_path]
+    subprocess.check_call(cmd)
 
 
 def build_hf_handler_model(model):
