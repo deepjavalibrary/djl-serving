@@ -14,6 +14,9 @@ args=${@:4}     #optional
 is_sm_neo_context=false
 if [ $4 == "sm_neo_context" ]; then
   is_sm_neo_context=true
+  if [ $5 == "jumpstart_integration" ]; then
+      jumpstart_integration=true
+  fi
 fi
 
 is_partition=false
@@ -104,6 +107,7 @@ if $is_sm_neo_context; then
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${jumpstart_integration:+-e SM_CACHE_JUMPSTART_FORMAT=true} \
     -e SM_NEO_EXECUTION_CONTEXT=1 \
     -e SM_NEO_INPUT_MODEL_DIR=/opt/ml/model/input \
     -e SM_NEO_COMPILED_MODEL_DIR=/opt/ml/model/compiled \
