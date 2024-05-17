@@ -57,8 +57,7 @@ class Properties(BaseModel):
     output_formatter: Optional[Union[str, Callable]] = None
     waiting_steps: Optional[int] = None
     is_mpi: bool = False
-    tgi_compat: Optional[bool] = os.environ.get("OPTION_TGI_COMPAT",
-                                                "false").lower() == "true"
+    tgi_compat: Optional[bool] = False
 
     # Spec_dec
     draft_model_id: Optional[str] = None
