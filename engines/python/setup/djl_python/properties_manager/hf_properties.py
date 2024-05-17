@@ -156,6 +156,6 @@ class HuggingFaceProperties(Properties):
     @model_validator(mode='after')
     def set_device_mpi(self):
         if self.rolling_batch.value != RollingBatchEnum.disable.value:
-            if self.is_mpi:
+            if self.mpi_mode:
                 self.device = str(os.getenv("LOCAL_RANK", 0))
         return self
