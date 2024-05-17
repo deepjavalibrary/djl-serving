@@ -270,7 +270,7 @@ class TestConfigManager(unittest.TestCase):
         self.assertTrue(hf_configs.low_cpu_mem_usage)
         self.assertFalse(hf_configs.disable_flash_attn)
         self.assertIsNone(hf_configs.device_map)
-        self.assertTrue(hf_configs.is_mpi)
+        self.assertTrue(hf_configs.mpi_mode)
         self.assertDictEqual(hf_configs.kwargs, {
             'trust_remote_code': False,
             "low_cpu_mem_usage": True,
@@ -300,7 +300,7 @@ class TestConfigManager(unittest.TestCase):
         self.assertTrue(hf_configs.low_cpu_mem_usage)
         self.assertFalse(hf_configs.disable_flash_attn)
         self.assertEqual(hf_configs.device_map, properties['device_map'])
-        self.assertTrue(hf_configs.is_mpi)
+        self.assertTrue(hf_configs.mpi_mode)
         self.assertDictEqual(
             hf_configs.kwargs, {
                 'trust_remote_code': True,
@@ -419,7 +419,7 @@ class TestConfigManager(unittest.TestCase):
             self.assertEqual(lmi_configs.load_format, 'auto')
             self.assertEqual(lmi_configs.dtype, 'auto')
             self.assertEqual(lmi_configs.gpu_memory_utilization, 0.9)
-            self.assertTrue(lmi_configs.is_mpi)
+            self.assertTrue(lmi_configs.mpi_mode)
 
         def test_with_most_properties():
             properties = {
@@ -444,7 +444,7 @@ class TestConfigManager(unittest.TestCase):
                 lmi_configs.max_rolling_batch_prefill_tokens,
                 int(properties['max_rolling_batch_prefill_tokens']))
             self.assertEqual(lmi_configs.dtype, 'fp32')
-            self.assertTrue(lmi_configs.is_mpi)
+            self.assertTrue(lmi_configs.mpi_mode)
             self.assertTrue(lmi_configs.trust_remote_code)
 
         def test_invalid_quantization():

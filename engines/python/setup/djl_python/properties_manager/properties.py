@@ -56,7 +56,7 @@ class Properties(BaseModel):
     revision: Optional[str] = None
     output_formatter: Optional[Union[str, Callable]] = None
     waiting_steps: Optional[int] = None
-    is_mpi: bool = False
+    mpi_mode: bool = False
     tgi_compat: Optional[bool] = False
 
     # Spec_dec
@@ -66,11 +66,6 @@ class Properties(BaseModel):
     # model_config is for pydantic configurations for BaseModel.
     model_config = ConfigDict(arbitrary_types_allowed=True,
                               protected_namespaces=())
-
-    @model_validator(mode='before')
-    def calculate_is_mpi(cls, properties):
-        properties['is_mpi'] = properties.get("mpi_mode") == "true"
-        return properties
 
     @field_validator('enable_streaming', mode='before')
     def validate_enable_streaming(cls, enable_streaming: str) -> str:

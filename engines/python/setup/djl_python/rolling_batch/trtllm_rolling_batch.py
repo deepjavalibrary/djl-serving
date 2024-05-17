@@ -32,7 +32,7 @@ class TRTLLMRollingBatch(RollingBatch):
         :param properties: other properties of the model, such as decoder strategy
         """
         super().__init__(configs)
-        if configs.is_mpi:
+        if not configs.mpi_mode:
             raise AssertionError(
                 f"Need mpi_mode to start tensorrt llm RollingBatcher")
         self.model = tensorrt_llm_toolkit.init_inference(

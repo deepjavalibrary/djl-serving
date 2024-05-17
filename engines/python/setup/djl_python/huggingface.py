@@ -146,7 +146,7 @@ class HuggingFaceService(object):
 
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             _rolling_batch_cls = get_rolling_batch_class_from_str(
-                self.hf_configs.rolling_batch.value, self.hf_configs.is_mpi,
+                self.hf_configs.rolling_batch.value, self.hf_configs.mpi_mode,
                 self.model_config)
             self.hf_configs.kwargs["model_config"] = self.model_config
             self.rolling_batch = _rolling_batch_cls(

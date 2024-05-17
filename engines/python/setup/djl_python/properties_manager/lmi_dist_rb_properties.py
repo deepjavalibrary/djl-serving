@@ -52,7 +52,7 @@ class LmiDistRbProperties(Properties):
 
     @model_validator(mode='after')
     def validate_mpi(self):
-        if not self.is_mpi:
+        if not self.mpi_mode:
             raise AssertionError(
                 f"Need MPI engine to start lmi-dist RollingBatcher")
         return self
