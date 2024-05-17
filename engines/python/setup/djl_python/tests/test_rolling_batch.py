@@ -408,6 +408,7 @@ class TestRollingBatch(unittest.TestCase):
                 'This is a wonderful day',
                 'prefill': [{
                     'id': 123,
+                    'log_prob': None,
                     'text': 'This'
                 }, {
                     'id': 456,
