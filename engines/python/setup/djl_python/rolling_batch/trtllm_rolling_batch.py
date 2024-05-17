@@ -13,7 +13,8 @@
 import tensorrt_llm_toolkit
 
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
+from djl_python.request_io import Token
 
 
 class TRTLLMRollingBatch(RollingBatch):

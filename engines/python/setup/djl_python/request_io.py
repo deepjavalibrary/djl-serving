@@ -13,7 +13,42 @@
 from dataclasses import field, dataclass
 from typing import List, Optional, Callable, Any, Dict, Union
 
-from djl_python.rolling_batch.rolling_batch import Token
+
+class Token(object):
+    """
+    This class represents the token that comes to the output.
+    """
+
+    def __init__(self,
+                 id: int,
+                 text: str,
+                 log_prob: float = None,
+                 special_token: bool = None):
+        """
+        Initialize a Token
+
+        :param id: token id in tokenizer
+        :param text: the decoded text
+        :param log_prob: log probability for the token
+        :param special_token: if this token is special token
+        """
+        self.id = id
+        self.text = text
+        self.log_prob = log_prob
+        self.special_token = special_token
+        self.request_id = None
+
+    def as_dict(self):
+        output = {"id": self.id, "text": self.text, "log_prob": self.log_prob}
+        if self.special_token:
+            output["special_token"] = self.special_token
+        return output
+
+    def as_tgi_dict(self):
+        output = {"id": self.id, "text": self.text, "logprob": self.log_prob}
+        if self.special_token:
+            output["special"] = self.special_token
+        return output
 
 
 class Iterator:

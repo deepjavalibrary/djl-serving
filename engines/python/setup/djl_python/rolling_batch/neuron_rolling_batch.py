@@ -14,7 +14,8 @@
 import torch
 import logging
 from typing import Optional, Any
-from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
+from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, FINISH_REASON_MAPPER
+from djl_python.request_io import Token
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NaiveRollingBatchNeuronGenerator, ContinuousBatchingNeuronGenerator
 from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TransformerNeuronXProperties
 
