@@ -13,6 +13,8 @@
 import random
 from collections import OrderedDict
 from transformers import AutoTokenizer
+
+from djl_python.properties_manager.properties import Properties
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 
 
@@ -23,7 +25,8 @@ class FakeRollingBatch(RollingBatch):
         """
         Initializes the FakeRollingBatch.
         """
-        super().__init__(**kwargs)
+        configs = Properties(**properties)
+        super().__init__(configs)
         self.sample_text = (
             "DJL-Serving is a powerful and user-friendly deep learning model serving solution "
             "that enables developers to easily deploy and serve their trained deep learning models."

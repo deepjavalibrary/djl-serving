@@ -37,7 +37,7 @@ class TRTLLMService(object):
         self.trt_configs = TensorRtLlmProperties(**properties)
 
         self.rolling_batch = TRTLLMRollingBatch(
-            self.trt_configs.model_id_or_path, properties, **properties)
+            self.trt_configs.model_id_or_path, properties, self.trt_configs)
         self.input_format_configs = InputFormatConfigs(
             is_rolling_batch=True,
             is_adapters_supported=False,

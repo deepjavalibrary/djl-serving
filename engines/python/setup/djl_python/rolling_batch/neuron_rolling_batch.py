@@ -16,7 +16,7 @@ import logging
 from typing import Optional, Any
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token, FINISH_REASON_MAPPER
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NaiveRollingBatchNeuronGenerator, ContinuousBatchingNeuronGenerator
-from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy
+from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TransformerNeuronXProperties
 
 
 class NeuronRollingBatch(RollingBatch):
@@ -24,12 +24,10 @@ class NeuronRollingBatch(RollingBatch):
     def __init__(self,
                  model,
                  tokenizer,
-                 batch_size: int,
-                 n_positions: int,
                  strategy: str = TnXGenerationStrategy.continuous_batching,
+                 tnx_config: TransformerNeuronXProperties = None,
                  draft_model: Optional[Any] = None,
-                 spec_length: Optional[int] = None,
-                 **kwargs) -> None:
+                 spec_length: Optional[int] = None) -> None:
         """
         Initializes the NeuronRollingBatch.
 
@@ -43,11 +41,11 @@ class NeuronRollingBatch(RollingBatch):
         if draft_model or self.strategy == TnXGenerationStrategy.naive_rolling_batch:
             self._scheduler_class = NaiveRollingBatchNeuronGenerator
 
-        super().__init__(**kwargs)
+        super().__init__(tnx_config)
         self.scheduler = self._scheduler_class(model,
                                                tokenizer,
-                                               batch_size,
-                                               n_positions,
+                                               tnx_config.batch_size,
+                                               tnx_config.n_positions,
                                                draft_model=draft_model,
                                                spec_length=spec_length)
 

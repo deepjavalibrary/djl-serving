@@ -11,6 +11,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import tensorrt_llm_toolkit
+
+from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, Token
 
 
@@ -22,19 +24,19 @@ class TRTLLMRollingBatch(RollingBatch):
     """
 
     def __init__(self, model_id_or_path: str, properties: dict,
-                 **kwargs) -> None:
+                 configs: TensorRtLlmProperties) -> None:
         """
         Initializes the TRTLLMRollingBatch
 
         :param model_id_or_path: model id or path
         :param properties: other properties of the model, such as decoder strategy
         """
-        super().__init__(**kwargs)
-        if properties.get("mpi_mode") != "true":
+        super().__init__(configs)
+        if configs.is_mpi:
             raise AssertionError(
                 f"Need mpi_mode to start tensorrt llm RollingBatcher")
         self.model = tensorrt_llm_toolkit.init_inference(
-            model_id_or_path, **kwargs)
+            model_id_or_path, **properties)
         self.request_cache = {}
 
     def get_tokenizer(self):
