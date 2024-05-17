@@ -27,7 +27,6 @@ from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.streaming_utils import StreamingUtils
-from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
@@ -274,18 +273,17 @@ class HuggingFaceService(object):
                     outputs.add(Output.binary_encode(err),
                                 key="data",
                                 batch_index=i)
+                    outputs.add_property(f"batch_{i}_Content-Type",
+                                         "application/json")
                 else:
+                    content_type = result[idx].pop("content_type")
                     outputs.add(Output.binary_encode(result[idx]),
                                 key="data",
                                 batch_index=i)
+                    if content_type is not None:
+                        outputs.add_property(f"batch_{i}_Content-Type",
+                                             content_type)
                     idx += 1
-
-                formatter = parameters[i].get("output_formatter")
-                content_type = get_content_type_from_output_formatter(
-                    formatter)
-                if content_type is not None:
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         content_type)
 
             return outputs
         elif is_streaming_enabled(self.hf_configs.enable_streaming):

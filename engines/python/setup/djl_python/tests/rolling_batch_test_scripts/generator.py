@@ -66,7 +66,7 @@ class Generator:
             result = self.rolling_batch.inference(self.input_str, self.params)
             for res, req_id in zip(result, self.req_ids):
                 self.output_all[req_id].append(res['data'])
-                self.token_numbers[req_id].append(res['step_token_num'])
+                self.token_numbers[req_id].append(res.get('step_token_num', 1))
             self.req_ids = [
                 req_id for req_id, res in zip(self.req_ids, result)
                 if not res['last']
