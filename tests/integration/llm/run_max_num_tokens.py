@@ -35,6 +35,16 @@ if __name__ == '__main__':
             else:
                 os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
             model_id = "/tmp/model/"
+        if len(os.listdir("/tmp/model/")) < 5:
+            # failed in model downloading
+            print("Model download probably failed: directory had these contents:")
+            print(os.listdir("/tmp/model/"))
+            os.system("rm -rf /tmp/model/")
+            os.mkdir("/tmp/model/")
+            with open(f"max_num_token_results/{model_name}_log.txt",
+                      "w") as log_file:
+                log_file.write("{model_name} model download failed")
+            continue
         if isinstance(tp_list, int):
             tp_list = [tp_list]
         for tensor_parallel_degree in tp_list:
@@ -45,11 +55,16 @@ if __name__ == '__main__':
                 "model_id": model_id,
                 "tensor_parallel_degree": tensor_parallel_degree,
             }
-            model, tp, max_tokens = max_token_finder(properties)
+            try:
+                model, tp, max_tokens = max_token_finder(properties)
+            except:
+                max_tokens, tp = -1, tensor_parallel_degree
+                
             output = f"Summary:\nmodel: {model_name}\n tp: {tp}\n max_tokens: {max_tokens}"
             print(output)
             with open(f"max_num_token_results/{model_name}_{tp}_log.txt",
                       "w") as log_file:
                 log_file.write(output)
         os.system("rm -rf /tmp/model/")
+        os.mkdir("/tmp/model/")
         
