@@ -65,8 +65,9 @@ def parse_input_with_formatter(inputs: Input,
         input_data.extend(_inputs)
         input_size.append(len(_inputs))
 
-        adapters.extend(adapters_per_item)
-        found_adapters = found_adapter_per_item or found_adapters
+        if input_format_configs.is_adapters_supported:
+            adapters.extend(adapters_per_item)
+            found_adapters = found_adapter_per_item or found_adapters
 
         for _ in range(input_size[i]):
             parameters.append(_param)
