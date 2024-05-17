@@ -62,8 +62,8 @@ class TestRollingBatch(unittest.TestCase):
                       parameters={
                           "max_new_tokens": 256,
                           "return_full_text": True,
+                          "details": True
                       },
-                      details=True,
                       output_formatter=_json_output_formatter,
                       tgi_compat=True)
 
@@ -231,7 +231,12 @@ class TestRollingBatch(unittest.TestCase):
                 "text": " world",
                 "logprob": -0.567854
             },
-            "generated_text": "Hello world"
+            "generated_text": "Hello world",
+            "details": {
+                "finish_reason": "length",
+                "generated_tokens": 3,
+                "inputs": "This is a wonderful day"
+            }
         }
 
     def test_return_full_text(self):
@@ -285,7 +290,6 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
-                      details=True,
                       output_formatter=_json_output_formatter)
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
@@ -329,7 +333,6 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
-                      details=True,
                       output_formatter=_jsonlines_output_formatter)
         req.set_next_token(Token(244, "He", -0.334532))
         req.set_next_token(Token(576, "llo", -0.123123))
@@ -357,7 +360,6 @@ class TestRollingBatch(unittest.TestCase):
                           "details": True,
                           "decoder_input_details": True
                       },
-                      details=True,
                       output_formatter=_jsonlines_output_formatter)
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -383,16 +385,11 @@ class TestRollingBatch(unittest.TestCase):
                            True,
                            'length',
                            prompt_tokens_details=[
-                               Token(id=123, text="This",
-                                     log_prob=None).as_dict(),
-                               Token(id=456, text="is",
-                                     log_prob=0.456).as_dict(),
-                               Token(id=789, text="a",
-                                     log_prob=0.789).as_dict(),
-                               Token(id=124, text="wonderful",
-                                     log_prob=0.124).as_dict(),
-                               Token(id=356, text="day",
-                                     log_prob=0.356).as_dict()
+                               Token(id=123, text="This", log_prob=None),
+                               Token(id=456, text="is", log_prob=0.456),
+                               Token(id=789, text="a", log_prob=0.789),
+                               Token(id=124, text="wonderful", log_prob=0.124),
+                               Token(id=356, text="day", log_prob=0.356)
                            ])
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
@@ -441,7 +438,6 @@ class TestRollingBatch(unittest.TestCase):
                           "details": True,
                           "logprobs": True
                       },
-                      details=True,
                       output_formatter=_json_chat_output_formatter)
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
@@ -513,7 +509,6 @@ class TestRollingBatch(unittest.TestCase):
                           "decoder_input_details": True,
                           "logprobs": True
                       },
-                      details=True,
                       output_formatter=_jsonlines_chat_output_formatter)
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -615,7 +610,6 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
-                      details=True,
                       output_formatter=custom_fmt)
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -655,7 +649,6 @@ class TestRollingBatch(unittest.TestCase):
                           "max_new_tokens": 256,
                           "details": True
                       },
-                      details=True,
                       input_ids=[101, 1188, 1110, 170, 7310, 1285, 102],
                       output_formatter=custom_fmt)
         req.set_next_token(Token(244, "He", -0.334532))

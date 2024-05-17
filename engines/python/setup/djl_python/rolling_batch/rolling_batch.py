@@ -122,18 +122,18 @@ class RollingBatch(ABC):
                 params = parameters[i] if i < len(parameters) else {}
                 adapter = adapters[i] if adapters is not None and i < len(
                     parameters) else None
-                details = params.pop("details", self.configs.tgi_compat)
+                details = params.get("details", self.configs.tgi_compat)
                 request = Request(self.req_id_counter,
                                   data,
                                   params,
-                                  details,
                                   input_ids=self.get_tokenizer().encode(data)
                                   if details else None,
                                   adapter=adapter,
                                   output_formatter=params.pop(
                                       "output_formatter",
                                       self.configs.output_formatter),
-                                  tgi_compat=self.configs.tgi_compat)
+                                  tgi_compat=self.configs.tgi_compat,
+                                  tokenizer=self.get_tokenizer())
                 self.active_requests.append(request)
                 self.req_id_counter += 1
         return self.active_requests[total_req_len:]
