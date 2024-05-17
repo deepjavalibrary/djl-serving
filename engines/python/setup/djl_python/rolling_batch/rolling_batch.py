@@ -27,7 +27,7 @@ class Token(object):
     """
 
     def __init__(self,
-                 id: Union[List[int], int],
+                 id: int,
                  text: str,
                  log_prob: float = None,
                  special_token: bool = None):
@@ -39,7 +39,7 @@ class Token(object):
         :param log_prob: log probability for the token
         :param special_token: if this token is special token
         """
-        self.id = id if isinstance(id, list) else [id]
+        self.id = id
         self.text = text
         self.log_prob = log_prob
         self.special_token = special_token
@@ -48,13 +48,25 @@ class Token(object):
     def as_dict(self):
         output = {}
         if self.id:
-            output["id"] = self.id[0]
+            output["id"] = self.id
         if self.text:
             output["text"] = self.text
         if self.log_prob:
             output["log_prob"] = self.log_prob
         if self.special_token:
             output["special_token"] = self.special_token
+        return output
+
+    def as_tgi_dict(self):
+        output = {}
+        if self.id:
+            output["id"] = self.id
+        if self.text:
+            output["text"] = self.text
+        if self.log_prob:
+            output["logprob"] = self.log_prob
+        if self.special_token:
+            output["special"] = self.special_token
         return output
 
 
@@ -100,7 +112,11 @@ def _jsonlines_output_formatter(token: Token, first_token: bool,
 
     :return: formatted output
     """
-    token_dict = token.as_dict()
+    tgi_compat = details.pop("tgi_compat", False)
+    if tgi_compat:
+        token_dict = token.as_tgi_dict()
+    else:
+        token_dict = token.as_dict()
     final_dict = {"token": token_dict}
     if last_token:
         final_dict["generated_text"] = generated_text
@@ -227,34 +243,38 @@ def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
     return json_encoded_str
 
 
-def get_content_type_from_output_formatter(output_formatter: Union[str,
-                                                                   Callable]):
-    if output_formatter == "json" or output_formatter == "chat_json":
-        return "application/json"
-    elif output_formatter == "jsonlines" or output_formatter == "chat_jsonlines":
-        return "application/jsonlines"
-    return None
+def sse_response_formatter(*args, **kwargs):
+    """
+    Decorator that used to form as SSE
+    """
+    output_str = _jsonlines_output_formatter(*args, **kwargs)
+    return f"data: {output_str}\n"
 
 
-def get_output_formatter(output_formatter: Union[str, Callable], stream: bool):
+def get_output_formatter(output_formatter: Union[str, Callable], stream: bool,
+                         tgi_compat: bool):
     if callable(output_formatter):
-        return output_formatter
+        return output_formatter, None
     if output_formatter == "json":
-        return _json_output_formatter
+        return _json_output_formatter, "application/json"
     if output_formatter == "jsonlines":
-        return _jsonlines_output_formatter
+        return _jsonlines_output_formatter, "application/jsonlines"
+    if output_formatter == "sse":
+        return sse_response_formatter, "text/event-stream"
     if output_formatter == "json_chat":
-        return _json_chat_output_formatter
+        return _json_chat_output_formatter, "application/json"
     if output_formatter == "jsonlines_chat":
-        return _jsonlines_chat_output_formatter
+        return _jsonlines_chat_output_formatter, "application/jsonlines"
     if output_formatter == "none":
-        return None
+        return None, "text/plain"
     if output_formatter is not None:
         # TODO: Support custom loading of user supplied output formatter
         logging.warning(f"Unsupported output formatter: {output_formatter}")
     if stream:
-        return _jsonlines_output_formatter
-    return _json_output_formatter
+        if tgi_compat:
+            return sse_response_formatter, "text/event-stream"
+        return _jsonlines_output_formatter, "application/jsonlines"
+    return _json_output_formatter, "application/json"
 
 
 def filter_unused_generation_params(parameters: dict,
@@ -322,12 +342,11 @@ class Request(object):
             self.token_cache = []
         self.full_text_prefix = input_text if parameters.pop(
             "return_full_text", False) else ""
-        # spec_dec
-        self.step_token_number = 0
 
         # output formatter
         stream = parameters.pop("stream", False)
-        self.output_formatter = get_output_formatter(output_formatter, stream)
+        self.output_formatter, self.content_type = get_output_formatter(
+            output_formatter, stream, self.tgi_compat)
 
     def __repr__(self):
         return f"<Request id: {self.id} Input {self.input_text} Parameters {self.parameters} Finished {self.last_token}>"
@@ -353,10 +372,11 @@ class Request(object):
             next_token = Token(-1, next_token)
         next_token.request_id = self.id
         if self.token_cache is not None:
-            self.token_cache.append(next_token.as_dict())
+            if self.tgi_compat:
+                self.token_cache.append(next_token.as_tgi_dict())
+            else:
+                self.token_cache.append(next_token.as_dict())
         self.generated_tokens.append(next_token.text)
-        self.step_token_number = len(
-            next_token.id) if next_token.id[0] != -1 else -1
         details_dict = {}
         # making detailed information captured for each token generation
         if self.details:
@@ -369,7 +389,7 @@ class Request(object):
         # Special handling for error case
         elif finish_reason == "error":
             details_dict["finish_reason"] = finish_reason
-        if self.output_formatter == _json_output_formatter:
+        if self.output_formatter == _json_output_formatter or self.output_formatter == sse_response_formatter:
             details_dict["tgi_compat"] = self.tgi_compat
         generated_text = self.full_text_prefix
         if last_token:
@@ -399,14 +419,6 @@ class Request(object):
         """
         self.next_token_str = ""
 
-    def get_step_token_number(self) -> int:
-        """
-        Gets the token number generated at each step
-
-        :return: step_token_number
-        """
-        return self.step_token_number
-
     def is_last_token(self) -> bool:
         """
         Whether the generated token is the last one
@@ -414,6 +426,14 @@ class Request(object):
         :return: whether last token of the sequence.
         """
         return self.last_token
+
+    def get_content_type(self) -> str:
+        """
+        Content type of this particular request
+
+        :return: content type
+        """
+        return self.content_type
 
 
 def stop_on_any_exception(func):
@@ -427,7 +447,7 @@ def stop_on_any_exception(func):
         except Exception:
             logging.exception("Rolling batch inference error")
             for request in self.active_requests:
-                token = Token(-1, "", -1, None)
+                token = Token(-1, "", -1, True)
                 request.set_next_token(token,
                                        last_token=True,
                                        finish_reason="error")
@@ -502,7 +522,7 @@ class RollingBatch(ABC):
                 params = parameters[i] if i < len(parameters) else {}
                 adapter = adapters[i] if adapters is not None and i < len(
                     parameters) else None
-                details = params.pop("details", False)
+                details = params.pop("details", self.configs.tgi_compat)
                 request = Request(self.req_id_counter,
                                   data,
                                   params,
@@ -539,7 +559,7 @@ class RollingBatch(ABC):
             res = {
                 "data": req.get_next_token(),
                 "last": req.is_last_token(),
-                "step_token_num": req.get_step_token_number()
+                "content_type": req.get_content_type()
             }
             req.reset_next_token()
             results.append(res)

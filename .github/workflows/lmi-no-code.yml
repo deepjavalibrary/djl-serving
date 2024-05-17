@@ -182,7 +182,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests numpy huggingface_hub
       - name: Install s5cmd
         working-directory: serving/docker
         run: sudo scripts/install_s5cmd.sh x64
@@ -192,6 +192,15 @@ jobs:
         working-directory: serving/docker
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Llama7b with tgi compat
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-7b-hf/\nOPTION_TGI_COMPAT=true" > docker_env
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
+          serve
+          python3 llm/tgi_client.py
+          ./remove_container.sh
       - name: Llama7b lmi container
         working-directory: tests/integration
         run: |

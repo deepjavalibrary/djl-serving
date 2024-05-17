@@ -14,14 +14,14 @@
 import json
 import copy
 import logging
-from transformers import AutoModelForCausalLM, AutoConfig, AutoTokenizer
+from transformers import AutoConfig, AutoTokenizer
 from djl_python import Input, Output
 from djl_python.encode_decode import encode
-from djl_python.rolling_batch.rolling_batch import get_content_type_from_output_formatter
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
-from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelLoaders
+from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, \
+    TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config
@@ -219,19 +219,21 @@ class TransformersNeuronXService(object):
             for i in range(len(batch)):
                 err = errors.get(i)
                 if err:
-                    err = json.dumps({"code": 424, "error": err})
-                    err = json.dumps({"data": err, "last": True})
-                    outputs.add(err, key="data", batch_index=i)
-                else:
-                    outputs.add(result[idx], key="data", batch_index=i)
-                    idx += 1
-
-                formatter = parameters[i].get("output_formatter")
-                content_type = get_content_type_from_output_formatter(
-                    formatter)
-                if content_type is not None:
+                    err = {"data": "", "last": True, "code": 424, "error": err}
+                    outputs.add(Output.binary_encode(err),
+                                key="data",
+                                batch_index=i)
                     outputs.add_property(f"batch_{i}_Content-Type",
-                                         content_type)
+                                         "application/json")
+                else:
+                    content_type = result[idx].pop("content_type")
+                    outputs.add(Output.binary_encode(result[idx]),
+                                key="data",
+                                batch_index=i)
+                    if content_type is not None:
+                        outputs.add_property(f"batch_{i}_Content-Type",
+                                             content_type)
+                    idx += 1
 
             return outputs
 

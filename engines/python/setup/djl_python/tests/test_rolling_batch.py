@@ -1,8 +1,6 @@
 import json
-import os
 import unittest
 
-import djl_python.rolling_batch.rolling_batch
 from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter
 
 
@@ -90,15 +88,15 @@ class TestRollingBatch(unittest.TestCase):
                 'tokens': [{
                     'id': 244,
                     'text': 'He',
-                    'log_prob': -0.334532
+                    'logprob': -0.334532
                 }, {
                     'id': 576,
                     'text': 'llo',
-                    'log_prob': -0.123123
+                    'logprob': -0.123123
                 }, {
                     'id': 4558,
                     'text': ' world',
-                    'log_prob': -0.567854
+                    'logprob': -0.567854
                 }]
             }
         }]
@@ -146,6 +144,93 @@ class TestRollingBatch(unittest.TestCase):
                 },
                 "generated_text": "Hello world"
             }
+
+    def test_sse_fmt(self):
+        req = Request(0,
+                      "This is a wonderful day",
+                      parameters={"max_new_tokens": 256},
+                      output_formatter="sse")
+        req.set_next_token(Token(244, "He", -0.334532))
+        next_token = req.get_next_token()
+        print(next_token, end='')
+        self.assertTrue(next_token.startswith("data: "))
+        assert json.loads(next_token[5:]) == {
+            "token": {
+                "id": 244,
+                "text": "He",
+                "log_prob": -0.334532
+            }
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(576, "llo", -0.123123))
+        next_token = req.get_next_token()
+        print(next_token, end='')
+        self.assertTrue(next_token.startswith("data: "))
+        assert json.loads(next_token[5:]) == {
+            "token": {
+                "id": 576,
+                "text": "llo",
+                "log_prob": -0.123123
+            }
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        next_token = req.get_next_token()
+        print(next_token, end='')
+        self.assertTrue(next_token.startswith("data: "))
+        assert json.loads(next_token[5:]) == {
+            "token": {
+                "id": 4558,
+                "text": " world",
+                "log_prob": -0.567854
+            },
+            "generated_text": "Hello world"
+        }
+
+    def test_sse_tgi_compat_fmt(self):
+        req = Request(1,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 256,
+                          "stream": True
+                      },
+                      tgi_compat=True)
+        req.set_next_token(Token(244, "He", -0.334532))
+        next_token = req.get_next_token()
+        print(next_token, end='')
+        self.assertTrue(next_token.startswith("data: "))
+        assert json.loads(next_token[5:]) == {
+            "token": {
+                "id": 244,
+                "text": "He",
+                "logprob": -0.334532
+            }
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(576, "llo", -0.123123))
+        next_token = req.get_next_token()
+        print(next_token, end='')
+        self.assertTrue(next_token.startswith("data: "))
+        assert json.loads(next_token[5:]) == {
+            "token": {
+                "id": 576,
+                "text": "llo",
+                "logprob": -0.123123
+            }
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        next_token = req.get_next_token()
+        print(next_token, end='')
+        self.assertTrue(next_token.startswith("data: "))
+        assert json.loads(next_token[5:]) == {
+            "token": {
+                "id": 4558,
+                "text": " world",
+                "logprob": -0.567854
+            },
+            "generated_text": "Hello world"
+        }
 
     def test_return_full_text(self):
         req = Request(0,
@@ -369,7 +454,7 @@ class TestRollingBatch(unittest.TestCase):
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
-            'token_id': [244],
+            'token_id': 244,
             'token_text': 'He',
             "request_id": 132
         }
@@ -377,7 +462,7 @@ class TestRollingBatch(unittest.TestCase):
         req.set_next_token(Token(576, "llo", -0.123123))
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
-            'token_id': [576],
+            'token_id': 576,
             'token_text': 'llo',
             "request_id": 132
         }
@@ -385,7 +470,7 @@ class TestRollingBatch(unittest.TestCase):
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
-            'token_id': [4558],
+            'token_id': 4558,
             'token_text': ' world',
             'finish_reason': 'length',
             "request_id": 132
