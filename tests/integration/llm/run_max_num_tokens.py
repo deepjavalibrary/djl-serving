@@ -54,6 +54,7 @@ if __name__ == '__main__':
             properties = {
                 "model_id": model_id,
                 "tensor_parallel_degree": tensor_parallel_degree,
+                "trust_remote_code": "true"
             }
             try:
                 model, tp, max_tokens = max_token_finder(properties)
