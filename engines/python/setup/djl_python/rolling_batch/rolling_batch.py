@@ -46,25 +46,13 @@ class Token(object):
         self.request_id = None
 
     def as_dict(self):
-        output = {}
-        if self.id:
-            output["id"] = self.id
-        if self.text:
-            output["text"] = self.text
-        if self.log_prob:
-            output["log_prob"] = self.log_prob
+        output = {"id": self.id, "text": self.text, "log_prob": self.log_prob}
         if self.special_token:
             output["special_token"] = self.special_token
         return output
 
     def as_tgi_dict(self):
-        output = {}
-        if self.id:
-            output["id"] = self.id
-        if self.text:
-            output["text"] = self.text
-        if self.log_prob:
-            output["logprob"] = self.log_prob
+        output = {"id": self.id, "text": self.text, "logprob": self.log_prob}
         if self.special_token:
             output["special"] = self.special_token
         return output

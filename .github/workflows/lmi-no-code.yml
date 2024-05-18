@@ -50,6 +50,15 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
+    outputs:
+      g512_instance_id_1: ${{ steps.create_gpu_g512_1.outputs.action_g5_instance_id }}
+      g512_instance_id_2: ${{ steps.create_gpu_g512_2.outputs.action_g5_instance_id }}
+      g612_instance_id_1: ${{ steps.create_gpu_g612_1.outputs.action_g6_instance_id }}
+      g612_instance_id_2: ${{ steps.create_gpu_g612_2.outputs.action_g6_instance_id }}
+
+  create-runners-p4d:
+    runs-on: [ self-hosted, scheduler ]
+    steps:
       - name: Create new P4d instance
         id: create_gpu_p4d
         run: |
@@ -60,16 +69,12 @@ jobs:
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_lmic_p4d $token djl-serving
     outputs:
-      g512_instance_id_1: ${{ steps.create_gpu_g512_1.outputs.action_g5_instance_id }}
-      g512_instance_id_2: ${{ steps.create_gpu_g512_2.outputs.action_g5_instance_id }}
-      g612_instance_id_1: ${{ steps.create_gpu_g612_1.outputs.action_g6_instance_id }}
-      g612_instance_id_2: ${{ steps.create_gpu_g612_2.outputs.action_g6_instance_id }}
       p4d_instance_id: ${{ steps.create_gpu_p4d.outputs.action_lmic_p4d_instance_id }}
 
   p4d-no-code-tests:
     runs-on: [self-hosted, p4d]
     timeout-minutes: 240
-    needs: create-runners
+    needs: create-runners-p4d
     strategy:
       # Limit to 1 so we don't steal a p4d from another test that may be running
       max-parallel: 1
@@ -328,7 +333,7 @@ jobs:
   stop-runners-p4d:
     if: always()
     runs-on: [self-hosted, scheduler]
-    needs: [create-runners, p4d-no-code-tests]
+    needs: [create-runners-p4d, p4d-no-code-tests]
     steps:
       - name: Stop all instances
         run: |

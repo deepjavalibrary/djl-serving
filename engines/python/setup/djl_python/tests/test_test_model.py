@@ -95,6 +95,42 @@ class TestTestModel(unittest.TestCase):
         for key in envs.keys():
             del os.environ[key]
 
+    def test_with_tgi_compat_env(self):
+        envs = {
+            "OPTION_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
+            "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
+            "OPTION_ROLLING_BATCH": "auto",
+            "OPTION_TGI_COMPAT": "true"
+        }
+        for key, value in envs.items():
+            os.environ[key] = value
+        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        handler = TestHandler(huggingface)
+        self.assertEqual(handler.serving_properties["model_id"],
+                         envs["OPTION_MODEL_ID"])
+        self.assertEqual(handler.serving_properties["rolling_batch"],
+                         envs["OPTION_ROLLING_BATCH"])
+        self.assertEqual(handler.serving_properties["tgi_compat"],
+                         envs["OPTION_TGI_COMPAT"])
+        inputs = [{
+            "inputs": "The winner of oscar this year is",
+            "parameters": {
+                "max_new_tokens": 50
+            },
+            "stream": True
+        }]
+        result = handler.inference_rolling_batch(inputs)
+        self.assertEqual(len(result), len(inputs))
+        # TGI compat tests
+        sse_result = result[0].split("\n\n")[:-1]
+        loaded_result = []
+        for row in sse_result:
+            loaded_result.append(json.loads(row[6:]))
+        self.assertTrue("details" in loaded_result[-1], loaded_result[-1])
+
+        for key in envs.keys():
+            del os.environ[key]
+
     def test_all_code_chat(self):
         model_id = "TheBloke/Llama-2-7B-Chat-fp16"
         huggingface.get_rolling_batch_class_from_str = override_rolling_batch
