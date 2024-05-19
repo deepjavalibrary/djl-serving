@@ -259,6 +259,27 @@ lmi_dist_model_spec = {
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
+    "llama2-13b-awq-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mistral-7b-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["spanish", "german"],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
+    },
+    "mistral-7b-awq-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["spanish", "german"],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
+    },
     "llama-7b-unmerged-lora-overflow": {
         "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [3],
@@ -322,6 +343,27 @@ vllm_model_spec = {
         "worker": 1,
         "adapters": ["english-alpaca", "portugese-alpaca", "english-alpaca"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama2-13b-awq-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mistral-7b-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["spanish", "german"],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
+    },
+    "mistral-7b-awq-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["spanish", "german"],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
     },
     "llama-7b-unmerged-lora-overflow": {
         "max_memory_per_gpu": [15.0, 15.0],
@@ -954,10 +996,12 @@ def test_handler_adapters(model, model_spec):
     logging.info(f"call deleted adapter {res}")
     if "error" not in res:
         raise RuntimeError(f"Should not work with new adapters")
-    res = send_json(reqs[1]).content.decode("utf-8")
-    logging.info(f"call valid adapter after deletion {res}")
-    if "error" in res:
-        raise RuntimeError(f"Deleting adapter breaking inference")
+
+    if len(reqs) > 1:
+        res = send_json(reqs[1]).content.decode("utf-8")
+        logging.info(f"call valid adapter after deletion {res}")
+        if "error" in res:
+            raise RuntimeError(f"Deleting adapter breaking inference")
 
 
 def test_handler_rolling_batch_chat(model, model_spec):

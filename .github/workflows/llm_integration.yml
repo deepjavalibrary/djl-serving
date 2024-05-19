@@ -584,6 +584,33 @@ jobs:
           serve
           python3 llm/client.py lmi_dist_adapters llama-7b-unmerged-lora-overflow
           docker rm -f $(docker ps -aq)
+      - name: Test lmi-dist lora awq - llama2-13b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama2-13b-awq-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py lmi_dist_adapters llama2-13b-awq-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test lmi-dist lora - mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mistral-7b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py lmi_dist_adapters mistral-7b-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test lmi-dist lora awq - mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist mistral-7b-awq-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py lmi_dist_adapters mistral-7b-awq-unmerged-lora
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -819,6 +846,33 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py vllm_adapters llama-7b-unmerged-lora-overflow
+          docker rm -f $(docker ps -aq)
+      - name: Test vllm lora awq - llama2-13b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama2-13b-awq-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py vllm_adapters llama2-13b-awq-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test vllm lora - mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm mistral-7b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py vllm_adapters mistral-7b-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test vllm lora awq - mistral-7b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm mistral-7b-awq-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py vllm_adapters mistral-7b-awq-unmerged-lora
           docker rm -f $(docker ps -aq)
       - name: Test llama2-7b-chat
         working-directory: tests/integration
