@@ -17,9 +17,9 @@ from typing import Any
 from lmi_dist.arg_utils import VllmEngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput
 from vllm.lora.request import LoRARequest
-from djl_python.rolling_batch.rolling_batch import Token
+from djl_python.request_io import Token
 
-from djl_python.rolling_batch.rolling_batch import Request
+from djl_python.request import Request
 
 DTYPE_MAPPER = {
     "fp32": "float32",

@@ -1,8 +1,9 @@
 import json
 import unittest
 
-from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter, \
-    _jsonlines_chat_output_formatter, _json_chat_output_formatter
+from djl_python.request import Request
+from djl_python.output_formatter import _json_output_formatter, _jsonlines_output_formatter, _jsonlines_chat_output_formatter, _json_chat_output_formatter
+from djl_python.request_io import Token
 
 
 class TestRollingBatch(unittest.TestCase):

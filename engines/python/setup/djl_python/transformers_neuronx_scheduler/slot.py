@@ -16,7 +16,8 @@ import torch
 from enum import Enum
 from typing import Optional, Any, List
 from transformers.generation import GenerationConfig
-from djl_python.rolling_batch.rolling_batch import Request, filter_unused_generation_params
+from djl_python.rolling_batch.rolling_batch import filter_unused_generation_params
+from djl_python.request import Request
 from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText, TokenDecoder
 
 GENERATION_PARAMS = list(GenerationConfig().__dict__.keys())
