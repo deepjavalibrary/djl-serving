@@ -27,7 +27,7 @@ DJL Serving use a `config.properties` file to store configurations.
 DJL Serving only allows localhost access by default.
 
 * inference_address: inference API binding address, default: http://127.0.0.1:8080
-* management_address: management API binding address, default: http://127.0.0.1:8081
+* management_address: management API binding address, default: http://127.0.0.1:8080
 
 Here are a couple of examples:
 
