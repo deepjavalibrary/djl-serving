@@ -16,6 +16,7 @@ if __name__ == '__main__':
     data = urllib.request.urlopen(args.i_model_tp_json)
     json_str = "".join([line.decode("utf-8").strip() for line in data])
     model_tp_dict = json.loads(json_str)
+    os.mkdir("/tmp/model/")
 
     for model_id, tp_list in model_tp_dict.items():
         model_name = os.path.basename(os.path.normpath(model_id))
@@ -39,8 +40,7 @@ if __name__ == '__main__':
             # failed in model downloading
             print("Model download probably failed: directory had these contents:")
             print(os.listdir("/tmp/model/"))
-            os.system("rm -rf /tmp/model/")
-            os.mkdir("/tmp/model/")
+            os.system("rm -rf /tmp/model/*")
             with open(f"max_num_token_results/{model_name}_log.txt",
                       "w") as log_file:
                 log_file.write("{model_name} model download failed")
@@ -66,6 +66,5 @@ if __name__ == '__main__':
             with open(f"max_num_token_results/{model_name}_{tp}_log.txt",
                       "w") as log_file:
                 log_file.write(output)
-        os.system("rm -rf /tmp/model/")
-        os.mkdir("/tmp/model/")
+        os.system("rm -rf /tmp/model/*")
         
