@@ -1,7 +1,8 @@
 import json
 import unittest
 
-from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter
+from djl_python.rolling_batch.rolling_batch import Request, Token, _json_output_formatter, _jsonlines_output_formatter, \
+    _jsonlines_chat_output_formatter, _json_chat_output_formatter
 
 
 class TestRollingBatch(unittest.TestCase):
@@ -430,6 +431,169 @@ class TestRollingBatch(unittest.TestCase):
             },
             "generated_text": "Hello world"
         }
+
+    def test_chat_json(self):
+        req = Request(0,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 256,
+                          "details": True,
+                          "logprobs": True
+                      },
+                      details=True,
+                      output_formatter=_json_chat_output_formatter)
+        final_str = []
+        req.set_next_token(Token(244, "He", -0.334532))
+        final_str.append(req.get_next_token())
+        req.reset_next_token()
+        req.set_next_token(Token(576, "llo", -0.123123))
+        final_str.append(req.get_next_token())
+        req.reset_next_token()
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        final_str.append(req.get_next_token())
+        final_json = json.loads(''.join(final_str))
+        print(final_json)
+        assert final_json['choices'] == [{
+            'index': 0,
+            'message': {
+                'role': 'assistant',
+                'content': 'Hello world'
+            },
+            'logprobs': {
+                'content': [{
+                    'token':
+                    'He',
+                    'logprob':
+                    -0.334532,
+                    'bytes': [72, 101],
+                    'top_logprobs': [{
+                        'token': 'He',
+                        'logprob': -0.334532,
+                        'bytes': [72, 101]
+                    }]
+                }, {
+                    'token':
+                    'llo',
+                    'logprob':
+                    -0.123123,
+                    'bytes': [108, 108, 111],
+                    'top_logprobs': [{
+                        'token': 'llo',
+                        'logprob': -0.123123,
+                        'bytes': [108, 108, 111]
+                    }]
+                }, {
+                    'token':
+                    ' world',
+                    'logprob':
+                    -0.567854,
+                    'bytes': [32, 119, 111, 114, 108, 100],
+                    'top_logprobs': [{
+                        'token': ' world',
+                        'logprob': -0.567854,
+                        'bytes': [32, 119, 111, 114, 108, 100]
+                    }]
+                }]
+            },
+            'finish_reason': 'length'
+        }]
+        assert final_json['usage'] == {
+            'prompt_tokens': 0,
+            'completion_tokens': 3,
+            'total_tokens': 3
+        }
+
+    def test_chat_jsonlines(self):
+        req = Request(0,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 256,
+                          "details": True,
+                          "decoder_input_details": True,
+                          "logprobs": True
+                      },
+                      details=True,
+                      output_formatter=_jsonlines_chat_output_formatter)
+        req.set_next_token(Token(244, "He", -0.334532))
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token())["choices"] == [{
+            "index":
+            0,
+            "delta": {
+                "content": "He",
+                "role": "assistant"
+            },
+            "logprobs": [{
+                "content": [{
+                    "token":
+                    "He",
+                    "logprob":
+                    -0.334532,
+                    "bytes": [72, 101],
+                    "top_logprobs": [{
+                        "token": -0.334532,
+                        "logprob": -0.334532,
+                        "bytes": [72, 101]
+                    }]
+                }]
+            }],
+            "finish_reason":
+            None
+        }]
+        req.reset_next_token()
+        req.set_next_token(Token(576, "llo", -0.123123))
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token())["choices"] == [{
+            "index":
+            0,
+            "delta": {
+                "content": "llo"
+            },
+            "logprobs": [{
+                "content": [{
+                    "token":
+                    "llo",
+                    "logprob":
+                    -0.123123,
+                    "bytes": [108, 108, 111],
+                    "top_logprobs": [{
+                        "token": -0.123123,
+                        "logprob": -0.123123,
+                        "bytes": [108, 108, 111]
+                    }]
+                }]
+            }],
+            "finish_reason":
+            None
+        }]
+        req.reset_next_token()
+
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token())["choices"] == [{
+            "index":
+            0,
+            "delta": {
+                "content": " world"
+            },
+            "logprobs": [{
+                "content": [{
+                    "token":
+                    " world",
+                    "logprob":
+                    -0.567854,
+                    "bytes": [32, 119, 111, 114, 108, 100],
+                    "top_logprobs": [{
+                        "token": -0.567854,
+                        "logprob": -0.567854,
+                        "bytes": [32, 119, 111, 114, 108, 100]
+                    }]
+                }]
+            }],
+            "finish_reason":
+            "length"
+        }]
+        req.reset_next_token()
 
     def test_custom_fmt(self):
 
