@@ -23,8 +23,10 @@ if __name__ == '__main__':
         print(f"Starting runs for model {model_name}:")
         if model_id[:2] == 's3':
             # download model
+            print("Downloading from s3...")
             s3url = model_id
             if Path("/opt/djl/bin/s5cmd").is_file():
+                print("Using s5cmd...")
                 if not s3url.endswith("*"):
                     if s3url.endswith("/"):
                         s3url = s3url + '*'
@@ -34,14 +36,16 @@ if __name__ == '__main__':
                     f"/opt/djl/bin/s5cmd --retry-count 1 sync {s3url} /tmp/model/"
                 )
             else:
+                print("Using AWS CLI...")
                 os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
             model_id = "/tmp/model/"
         if len(os.listdir("/tmp/model/")) < 3:
             # failed in model downloading, try again
+            print("Failed in model downloading, trying again with AWS CLI...")
             os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
         if len(os.listdir("/tmp/model/")) < 3:
             # Still failed
-            print("Model download probably failed: directory had these contents:")
+            print("Model download failed again: directory had these contents:")
             print(os.listdir("/tmp/model/"))
             os.system("rm -rf /tmp/model/*")
             with open(f"max_num_token_results/{model_name}_log.txt",
