@@ -36,8 +36,11 @@ if __name__ == '__main__':
             else:
                 os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
             model_id = "/tmp/model/"
-        if len(os.listdir("/tmp/model/")) < 5:
-            # failed in model downloading
+        if len(os.listdir("/tmp/model/")) < 3:
+            # failed in model downloading, try again
+            os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
+        if len(os.listdir("/tmp/model/")) < 3:
+            # Still failed
             print("Model download probably failed: directory had these contents:")
             print(os.listdir("/tmp/model/"))
             os.system("rm -rf /tmp/model/*")
