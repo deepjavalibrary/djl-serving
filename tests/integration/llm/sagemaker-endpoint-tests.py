@@ -1,133 +1,117 @@
-import os
 import sagemaker
 import boto3
 import time
-from sagemaker.djl_inference import DJLModel, HuggingFaceAccelerateModel, DeepSpeedModel
-from sagemaker.huggingface import HuggingFaceModel
+from sagemaker import Model, Predictor
 from sagemaker.multidatamodel import MultiDataModel
 from sagemaker.utils import unique_name_from_base
+from sagemaker.serializers import JSONSerializer
+from sagemaker.deserializers import JSONDeserializer
 from argparse import ArgumentParser
 import numpy as np
+
+ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
+DEFAULT_SME_INSTANCE_TYPE = "ml.g5.12xlarge"
+DEFAULT_MME_INSTANCE_TYPE = "ml.g5.8xlarge"
+DEFAULT_PAYLOAD = {"inputs": "Deep Learning is"}
+DEFAULT_BUCKET = "sm-integration-tests-rubikon-usw2"
+REGION = "us-west-2"
+
+NIGHTLY_IMAGES = {
+    "lmi":
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:lmi-nightly",
+    "tensorrt-llm":
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:tensorrt-llm-nightly",
+    "neuronx":
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:pytorch-inf2-nightly",
+}
+
+CANDIDATE_IMAGES = {
+    # TODO: update this to new tag once lmi rename has been applied to newer release
+    "lmi":
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-deepspeed",
+    "tensorrt-llm":
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-tensorrt-llm",
+    "neuronx":
+    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{version}-pytorch-inf2"
+}
+
+SINGLE_MODEL_ENDPOINT_CONFIGS = {
+    # This tests the uncompressed model artifact SM capability (network isolation use-case)
+    "llama3-8b": {
+        "model_name": "llama3-8b",
+        "s3_location": "s3://djl-llm-sm-endpoint-tests/llama-3-8b-hf/",
+    },
+    # This tests the S5CMD s3 downloading at runtime
+    "mistral-7b": {
+        "model_name": "mistral-7b",
+        "env": {
+            "HF_MODEL_ID": "s3://djl-llm-sm-endpoint-tests/mistral-7b/",
+        }
+    },
+    # This tests the hf hub downloading at runtime
+    "phi-2": {
+        "model_name": "phi2",
+        "env": {
+            "HF_MODEL_ID": "microsoft/phi-2"
+        }
+    }
+}
+
+MME_CONFIGS = {
+    "mme_common": {
+        "models": [{
+            "model_name": "flan-t5-small",
+            "env": {
+                "HF_MODEL_ID": "google/flan-t5-small",
+            }
+        }, {
+            "model_name": "gpt2",
+            "env": {
+                "HF_MODEL_ID": "openai-community/gpt2",
+            }
+        }],
+    }
+}
+
+
+def parse_args():
+    parser = ArgumentParser(
+        description=
+        "This Script deploys a model with predefined configuration to a SageMaker Inference Endpoint"
+    )
+    parser.add_argument(
+        "model_name",
+        help="The predefined model and configuration to use for deployment")
+    parser.add_argument(
+        "endpoint_type",
+        help=
+        "The test case to execute (single model endpoint, multi model endpoint)",
+        choices=["sme", "mme"])
+    parser.add_argument(
+        "image_type",
+        help=
+        "Whether to use nightly image, or candidate release image from internal ecr repo"
+    )
+    parser.add_argument("container",
+                        help="Which container to use",
+                        choices=["lmi", "tensorrt-llm", "neuronx"])
+    parser.add_argument(
+        "run_benchmark",
+        help="Whether to run benchmark and upload the metrics to cloudwatch",
+        type=boolean_arg)
+    return parser.parse_args()
 
 
 def boolean_arg(value):
     return str(value).lower() == "true"
 
 
-parser = ArgumentParser(
-    description=
-    "This Script deploys a model with predefined configuration to a SageMaker Inference Endpoint"
-)
-parser.add_argument(
-    "model_name",
-    help="The predefined model and configuration to use for deployment")
-parser.add_argument("test_case",
-                    help="The test case to execute",
-                    choices=["djl", "no_code", "djl_mme"])
-parser.add_argument(
-    "image_type",
-    help="Whether to use release or nightly images for testing",
-    choices=["nightly", "release", "candidate"])
-
-parser.add_argument(
-    "run_benchmark",
-    help="Whether to run benchmark and upload the metrics to cloudwatch",
-    type=boolean_arg)
-
-ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
-DEFAULT_INSTANCE_TYPE = "ml.g5.12xlarge"
-DEFAULT_PAYLOAD = {"inputs": "Deep Learning is"}
-DEFAULT_BUCKET = "sm-integration-tests-rubikon-usw2"
-RELEASE_VERSION = "0.23.0"
-REGION = "us-west-2"
-
-SINGLE_MODEL_ENDPOINT_CONFIGS = {
-    "stable-diffusion-2-1-base": {
-        "model_id": "stabilityai/stable-diffusion-2-1",
-        "model_kwargs": {
-            "dtype": "fp16",
-            "number_of_partitions": 1,
-        },
-        "payload": {
-            "prompt": "A picture of a cowboy in space"
-        },
-        "deserializer": sagemaker.deserializers.BytesDeserializer()
-    },
-    "gpt2-xl": {
-        "model_id": "gpt2-xl",
-        "model_kwargs": {
-            "dtype": "fp32",
-            "number_of_partitions": 2,
-        }
-    },
-    "opt-1-3-b": {
-        "model_id": "s3://djl-llm-sm-endpoint-tests/opt-1.3b/",
-        "model_kwargs": {
-            "dtype": "fp32",
-            "number_of_partitions": 1,
-        },
-        "cls_to_use": HuggingFaceAccelerateModel,
-    },
-    "gpt-j-6b": {
-        "model_id": "s3://djl-llm-sm-endpoint-tests/gpt-j-6b/",
-        "model_kwargs": {
-            "dtype": "bf16",
-            "tensor_parallel_degree": 2,
-            "parallel_loading": True,
-        },
-        "cls_to_use": DeepSpeedModel,
-    },
-    "pythia-12b": {
-        "model_id": "EleutherAI/pythia-12b",
-        "model_kwargs": {
-            "dtype": "fp16",
-            "tensor_parallel_degree": 4,
-            "parallel_loading": True,
-        },
-        "partition_s3_uri": "s3://djl-llm-sm-endpoint-tests/pythia-12b-4p/",
-        "cls_to_use": DeepSpeedModel,
-    }
-}
-
-MME_CONFIGS = {
-    "deepspeed-mme": {
-        "models": [{
-            'name': 'gpt-neo-2-7b',
-            "model_id": "EleutherAI/gpt-neo-2.7B",
-            "model_kwargs": {
-                "dtype": "fp16",
-                "number_of_partitions": 1,
-            }
-        }, {
-            'name': 'opt-1-3b',
-            "model_id": "s3://djl-llm-sm-endpoint-tests/opt-1.3b/",
-            "model_kwargs": {
-                "dtype": "fp16",
-                "number_of_partitions": 1,
-            }
-        }],
-        "instance_type":
-        "ml.g5.8xlarge",
-        "framework":
-        "deepspeed",
-    }
-}
-
-ENGINE_TO_METRIC_CONFIG_ENGINE = {"python": "accelerate"}
-
-NIGHTLY_IMAGES = {
-    "python":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:deepspeed-nightly",
-    "deepspeed":
-    "125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:deepspeed-nightly"
-}
-
-CANDIDATE_IMAGES = {
-    "python":
-    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed",
-    "deepspeed":
-    f"125045733377.dkr.ecr.us-west-2.amazonaws.com/djl-serving:{RELEASE_VERSION}-deepspeed"
-}
+def get_image_uri(image_type, framework_tag):
+    if image_type == 'nightly':
+        return NIGHTLY_IMAGES[framework_tag]
+    else:
+        image_uri = CANDIDATE_IMAGES[framework_tag]
+        return image_uri.format(version=image_type)
 
 
 def get_sagemaker_session(default_bucket=DEFAULT_BUCKET,
@@ -181,12 +165,10 @@ def _upload_metrics(data):
 
 
 def _get_metric_name(name, model, engine, instance_type):
-    engine_name = ENGINE_TO_METRIC_CONFIG_ENGINE.get(engine, engine)
-
     num_partitions = 1
     if hasattr(model, 'number_of_partitions') and model.number_of_partitions:
         num_partitions = model.number_of_partitions
-    return f"{name}-{engine_name}-{num_partitions}p-{instance_type}"
+    return f"{name}-{engine}-{num_partitions}p-{instance_type}"
 
 
 def _run_benchmarks(predictor, payload_data, metric_name, target_model=None):
@@ -216,50 +198,35 @@ def _run_benchmarks(predictor, payload_data, metric_name, target_model=None):
     _upload_metrics(benchmark_data)
 
 
-def mme_test(name, image_type, run_benchmark):
-    config = MME_CONFIGS.get(name)
+def mme_test(name, image_type, framework, run_benchmark):
     session = get_sagemaker_session(
         default_bucket_prefix=get_name_for_resource("mme-tests"))
-    models = config.get("models")
-    framework = config.get("framework")
-    instance_type = config.get("instance_type", DEFAULT_INSTANCE_TYPE)
     created_models = []
     mme = None
     predictor = None
+    config = MME_CONFIGS.get(name)
     try:
-        for model_config in models:
-            model = DJLModel(model_config.get("model_id"),
-                             ROLE,
-                             name=get_name_for_resource(
-                                 model_config.get("model_id") + '-mme'),
-                             sagemaker_session=session,
-                             **model_config.get("model_kwargs"))
+        for model_config in config.get("models"):
+            model = Model(image_uri=get_image_uri(image_type, framework),
+                          role=ROLE,
+                          env=model_config.get("env"),
+                          name=get_name_for_resource(f"djl-{framework}-mme"))
             model.create()
             created_models.append(model)
 
-        if image_type == "nightly":
-            mme_image_uri = NIGHTLY_IMAGES[framework]
-        elif image_type == "candidate":
-            mme_image_uri = CANDIDATE_IMAGES[framework]
-        else:
-            mme_image_uri = sagemaker.image_uris.retrieve(
-                framework="djl-" + framework,
-                version=RELEASE_VERSION,
-                region=REGION)
-        mme = MultiDataModel(get_name_for_resource(name),
-                             "s3://" + session.default_bucket() + '/' +
-                             session.default_bucket_prefix,
-                             config.get("prefix"),
-                             image_uri=mme_image_uri,
-                             role=ROLE,
-                             sagemaker_session=session,
-                             predictor_cls=sagemaker.predictor.Predictor)
+        mme = MultiDataModel(
+            get_name_for_resource(f"djl-{framework}-mme"),
+            "s3://" + session.default_bucket() + '/' +
+            session.default_bucket_prefix,
+            image_uri=get_image_uri(image_type, framework),
+            role=ROLE,
+            sagemaker_session=session,
+        )
 
-        predictor = mme.deploy(
-            1,
-            instance_type,
-            serializer=sagemaker.serializers.JSONSerializer(),
-            deserializer=sagemaker.deserializers.JSONDeserializer())
+        predictor = mme.deploy(1,
+                               DEFAULT_MME_INSTANCE_TYPE,
+                               serializer=JSONSerializer(),
+                               deserializer=JSONDeserializer())
         for i, model in enumerate(list(mme.list_models())):
             outputs = predictor.predict(DEFAULT_PAYLOAD, target_model=model)
             print(outputs)
@@ -269,11 +236,11 @@ def mme_test(name, image_type, run_benchmark):
                                 payload_data=DEFAULT_PAYLOAD,
                                 metric_name=_get_metric_name(
                                     models[i]['name'], created_models[i],
-                                    framework, instance_type),
+                                    framework, DEFAULT_MME_INSTANCE_TYPE),
                                 target_model=model)
 
     except Exception as e:
-        print(f"Encountered error for creating model {name}. Exception: {e}")
+        print(f"Encountered error for creating model mme. Exception: {e}")
         raise e
     finally:
         delete_s3_test_artifacts(session)
@@ -285,45 +252,53 @@ def mme_test(name, image_type, run_benchmark):
             predictor.delete_endpoint()
 
 
-def single_model_endpoint_test(name, image_type, run_benchmark):
+def sme_test(name, image_type, framework, run_benchmark):
     config = SINGLE_MODEL_ENDPOINT_CONFIGS.get(name)
     data = config.get("payload", DEFAULT_PAYLOAD)
     session = get_sagemaker_session(
         default_bucket_prefix=get_name_for_resource("single_endpoint-tests"))
-    model = None
+    model_name = config.get("model_name")
+    env = config.get("env")
+    instance_type = config.get("instance_type", DEFAULT_SME_INSTANCE_TYPE)
+    s3_location = config.get("s3_location", None)
+    image_uri = get_image_uri(image_type, framework)
+    model_data = None
+    if s3_location is not None:
+        model_data = {
+            'S3DataSource': {
+                'S3Uri': s3_location,
+                'S3DataType': 'S3Prefix',
+                'CompressionType': 'None'
+            }
+        }
+
+    model = Model(
+        image_uri=image_uri,
+        model_data=model_data,
+        role=ROLE,
+        env=env,
+        name=get_name_for_resource(model_name),
+    )
+    endpoint_name = get_name_for_resource(model_name + "-endpoint")
     predictor = None
     try:
-        model_cls = config.get("cls_to_use", DJLModel)
-        model = model_cls(
-            config.get("model_id"),
-            ROLE,
-            sagemaker_session=session,
-            name=get_name_for_resource(name),
-            **config.get("model_kwargs"),
+        model.deploy(
+            initial_instance_count=1,
+            instance_type=instance_type,
+            endpoint_name=endpoint_name,
         )
-        engine_name = model.engine.value[0].lower()
-        if image_type == "nightly":
-            model.image_uri = NIGHTLY_IMAGES[engine_name]
-        elif image_type == "candidate":
-            model.image_uri = CANDIDATE_IMAGES[engine_name]
-
-        if config.get("partition", False):
-            model.partition(instance_type=DEFAULT_INSTANCE_TYPE,
-                            s3_output_uri=config.get("partition_s3_uri"))
-
-        predictor = model.deploy(DEFAULT_INSTANCE_TYPE,
-                                 endpoint_name=get_name_for_resource(name),
-                                 serializer=config.get("serializer", None),
-                                 deserializer=config.get("deserializer", None))
-        outputs = predictor.predict(data=data)
-        print(outputs)
+        predictor = Predictor(
+            endpoint_name=endpoint_name,
+            sagemaker_session=session,
+            serializer=JSONSerializer(),
+            deserializer=JSONDeserializer(),
+        )
 
         if run_benchmark:
             _run_benchmarks(predictor=predictor,
                             payload_data=data,
                             metric_name=_get_metric_name(
-                                name, model, engine_name,
-                                DEFAULT_INSTANCE_TYPE),
+                                name, model, framework, instance_type),
                             target_model=None)
 
     except Exception as e:
@@ -338,15 +313,17 @@ def single_model_endpoint_test(name, image_type, run_benchmark):
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
+    args = parse_args()
     model_name = args.model_name
-    test_case = args.test_case
+    endpoint_type = args.endpoint_type
     image_type = args.image_type
-    if test_case == "djl":
-        single_model_endpoint_test(model_name, image_type, args.run_benchmark)
-    elif test_case == "djl_mme":
-        mme_test(model_name, image_type, args.run_benchmark)
+    container = args.container
+    run_benchmark = args.run_benchmark
+    if endpoint_type == "sme":
+        sme_test(model_name, image_type, container, run_benchmark)
+    elif endpoint_type == "mme":
+        mme_test(model_name, image_type, container, run_benchmark)
     else:
         raise ValueError(
-            f"{test_case} is not a valid test case. Valid choices: [djl, no_code, djl_mme])"
+            f"{endpoint_type} is not a valid endpoint type. Valid choices: [sme, mme])"
         )
