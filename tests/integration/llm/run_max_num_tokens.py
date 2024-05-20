@@ -51,16 +51,16 @@ if __name__ == '__main__':
             print(
                 f"Starting run for model {model_name} with tp={tensor_parallel_degree}:"
             )
-            # properties = {
-            #     "model_id": model_id,
-            #     "tensor_parallel_degree": tensor_parallel_degree,
-            #     "trust_remote_code": "true"
-            # }
-            # try:
-            #     model, tp, max_tokens = max_token_finder(properties)
-            # except:
-            #     max_tokens, tp = -1, tensor_parallel_degree
-            output = f"Summary:\nmodel: {model_name}\n tp: {tensor_parallel_degree}\n max_tokens: {1010101010}"
+            properties = {
+                "model_id": model_id,
+                "tensor_parallel_degree": tensor_parallel_degree,
+                "trust_remote_code": "true"
+            }
+            try:
+                model, tp, max_tokens = max_token_finder(properties)
+            except:
+                max_tokens, tp = -1, tensor_parallel_degree
+            output = f"Summary:\nmodel: {model_name}\n tp: {tensor_parallel_degree}\n max_tokens: {max_tokens}"
             print(output)
             with open(f"max_num_token_results/{model_name}_{tensor_parallel_degree}_log.txt",
                       "w") as log_file:
