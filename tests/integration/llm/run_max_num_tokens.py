@@ -60,10 +60,9 @@ if __name__ == '__main__':
             #     model, tp, max_tokens = max_token_finder(properties)
             # except:
             #     max_tokens, tp = -1, tensor_parallel_degree
-                
             output = f"Summary:\nmodel: {model_name}\n tp: {tensor_parallel_degree}\n max_tokens: {1010101010}"
             print(output)
-            with open(f"max_num_token_results/{model_name}_{tp}_log.txt",
+            with open(f"max_num_token_results/{model_name}_{tensor_parallel_degree}_log.txt",
                       "w") as log_file:
                 log_file.write(output)
         os.system("rm -rf /tmp/model/*")
