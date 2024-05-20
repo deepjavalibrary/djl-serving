@@ -77,6 +77,10 @@ class TRTLLMRollingBatch(RollingBatch):
             parameters['len_penalty'] = parameters.pop('length_penalty')
         parameters["streaming"] = parameters.pop(
             "stream", parameters.get("streaming", True))
+        stop = parameters.pop("stop", None)
+        if stop:
+            # stop_sequences is translated to stop_words_list in tensorrt_llm_toolkit
+            parameters["stop_sequences"] = stop
         return parameters
 
     @stop_on_any_exception
