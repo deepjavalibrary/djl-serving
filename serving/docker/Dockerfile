@@ -11,6 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04 AS base
 ARG djl_version=0.28.0~SNAPSHOT
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
@@ -71,9 +72,12 @@ RUN scripts/install_python.sh && \
     scripts/patch_oss_dlc.sh python && \
     rm -rf /opt/djl/logs && \
     chown -R djl:djl /opt/djl && \
-    rm -rf scripts && pip3 cache purge && \
-    apt-get clean -y && rm -rf /var/lib/apt/lists/* \
+    rm -rf scripts && \
+    pip3 install transformers onnx sentence_transformers && \
+    pip3 install ${djl_converter_wheel} --no-deps && \
+    pip3 cache purge && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.cpu-full="true"
 LABEL torch-version=$torch_version

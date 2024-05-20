@@ -12,6 +12,7 @@
 FROM arm64v8/ubuntu:22.04
 ARG djl_version=0.28.0~SNAPSHOT
 ARG torch_version=2.2.2
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
 
 EXPOSE 8080
 
@@ -38,7 +39,8 @@ COPY config.properties /opt/djl/conf/
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-RUN scripts/install_djl_serving.sh $djl_version && \
+RUN scripts/install_python.sh && \
+    scripts/install_djl_serving.sh $djl_version && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} aarch" > /opt/djl/bin/telemetry && \
@@ -52,12 +54,15 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
+    pip3 install transformers onnx sentence_transformers && \
+    pip3 install ${djl_converter_wheel} --no-deps && \
+    pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch64="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.aarch64="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.aarch64="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
