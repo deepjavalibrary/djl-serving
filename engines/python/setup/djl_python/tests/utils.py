@@ -10,7 +10,6 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
 import sys
 from types import FunctionType
 
@@ -84,20 +83,3 @@ def mock_import_modules(modules):
             if mock.__name__ in WILDCARD_CLASS_MOCKS:
                 mock.__all__ = "none"
             sys.modules[mock_module] = mock
-
-def profile_objects(func):
-    """
-    Profile on system for object leakage
-    """
-    import os
-    import objgraph
-    do_profiling = os.environ.get("DJL_PYTHON_DO_PROFILING", "false").lower() == "true"
-
-    def apply_profiling(self, *args, **kwargs):
-        result = func(self, *args, **kwargs)
-        if do_profiling:
-            # getting top 100 objects that need tracking
-            objgraph.show_growth(limit=100)
-        return result
-
-    return apply_profiling

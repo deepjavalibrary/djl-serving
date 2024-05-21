@@ -163,3 +163,32 @@ def _validate_adapters(adapters_per_item, adapter_registry):
     for adapter_name in adapters_per_item:
         if adapter_name and adapter_name not in adapter_registry:
             raise ValueError(f"Adapter {adapter_name} is not registered")
+
+
+def profile_objects(func):
+    """
+    Profile on system for object leakage
+    """
+    import os
+    do_profiling = os.environ.get("DJL_PYTHON_PROFILING",
+                                  "false").lower() == "true"
+    if do_profiling:
+        import objgraph
+    top_objects = int(os.environ.get("DJL_PYTHON_PROFILING_TOP_OBJ", "50"))
+
+    def apply_profiling(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)
+        if do_profiling:
+            logging.info(f"Function: {func.__name__} in {func.__module__}")
+            # getting top 100 objects that need tracking
+            mem_tracker = objgraph.growth(limit=top_objects)
+            if mem_tracker:
+                final_outcome = []
+                width = max(len(name) for name, _, _ in mem_tracker)
+                for name, count, delta in mem_tracker:
+                    final_outcome.append('%-*s%9d %+9d\n' %
+                                         (width, name, count, delta))
+                logging.info("".join(final_outcome))
+        return result
+
+    return apply_profiling
