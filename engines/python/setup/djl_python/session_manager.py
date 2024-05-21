@@ -21,7 +21,8 @@ from collections import OrderedDict
 class SessionManager:
 
     def __init__(self, properties: dict):
-        self.limit = int(properties.get("option.sessions.limit", str(sys.maxsize)))
+        self.limit = int(
+            properties.get("option.sessions.limit", str(sys.maxsize)))
 
     def load(self, session_id):
         """
