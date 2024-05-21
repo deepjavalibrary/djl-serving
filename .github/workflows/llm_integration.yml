@@ -973,7 +973,7 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, hf-handler-test, trt-llm-handler-test,  trt-llm-handler-test-2, scheduler-single-gpu-test, scheduler-multi-gpu-test, lmi-dist-test-1, lmi-dist-test-2, vllm-test, vllm-lora-test, lmi-lora-test]
+    needs: [ create-runners, hf-handler-test, trt-llm-handler-test,  trt-llm-handler-test-2, scheduler-single-gpu-test, scheduler-multi-gpu-test, lmi-dist-test-1, lmi-dist-test-2, vllm-test, vllm-lora-test, lmi-dist-lora-test]
     steps:
       - name: Stop all instances
         run: |
