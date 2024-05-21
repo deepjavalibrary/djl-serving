@@ -45,7 +45,7 @@ jobs:
     container:
       image: deepjavalibrary/djl-serving:tensorrt-llm-nightly
       options: --gpus all --runtime=nvidia --shm-size 12g
-    timeout-minutes: 90
+    timeout-minutes: 1440
     needs: create-runners
     steps:
       - uses: actions/checkout@v4
