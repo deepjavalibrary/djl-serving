@@ -975,6 +975,13 @@ trtllm_neo_list = {
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
     },
+    "llama2-13b-smoothquant-tp4": {
+        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "smoothquant",
+    },
     "falcon-7b": {
         "option.model_id": "s3://djl-llm/falcon-7b-updated/",
         "option.tensor_parallel_degree": 1,
