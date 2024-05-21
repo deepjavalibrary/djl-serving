@@ -976,11 +976,23 @@ trtllm_neo_list = {
         "option.output_formatter": "jsonlines",
     },
     "falcon-7b": {
-        "option.model_id": "s3://djl-llm/falcon-7b/",
+        "option.model_id": "s3://djl-llm/falcon-7b-updated/",
         "option.tensor_parallel_degree": 1,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
-    }
+    },
+    "llama2-70b": {
+        "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+    },
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b/",
+        "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines"
+    },
 }
 
 transformers_neuronx_neo_list = {

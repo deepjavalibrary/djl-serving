@@ -653,6 +653,18 @@ trtllm_neo_model_spec = {
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-7b"
     },
+    "llama2-70b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mistral-7b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "mistralai/Mistral-7B-v0.1"
+    },
 }
 
 
