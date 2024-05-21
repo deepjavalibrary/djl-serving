@@ -10,10 +10,12 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from typing import Union, Callable
+import inspect
+from typing import Union, Callable, Any
 
-from djl_python.output_formatter import get_output_formatter, _json_output_formatter, sse_response_formatter
-from djl_python.request_io import Token
+from djl_python.output_formatter import get_output_formatter, _json_output_formatter, sse_response_formatter, \
+    adapt_legacy_output_formatter
+from djl_python.request_io import Token, TextGenerationOutput, TextInput, RequestOutput
 
 
 class Request(object):
@@ -30,18 +32,17 @@ class Request(object):
                  id: int,
                  input_text: str,
                  parameters: dict,
-                 details: bool = False,
                  input_ids: list = [],
                  adapter=None,
                  output_formatter: Union[str, Callable] = None,
-                 tgi_compat: bool = False):
+                 tgi_compat: bool = False,
+                 tokenizer: Any = None):
         """
         Initialize a request
 
         :param id: request id
         :param input_text: request's input text
         :param parameters: list of parameters
-        :param details: whether to include details
         :param input_ids: request's input ids
         :param adapter: list of adapters
         :param output_formatter: output formatter function (for example,
@@ -50,27 +51,41 @@ class Request(object):
         self.id = id
         self.input_text = input_text
         self.parameters = parameters
-        self.original_params = parameters.copy()
-        self.details = details
-        self.adapter = adapter
-        self.input_ids = input_ids
-        self.next_token_str = ""
-        self.first_token = True
+        original_parameters = parameters.copy()
         self.last_token = False
-        self.token_cache = None
-        self.generated_tokens = []
-        self.decoder_input_details = parameters.get("decoder_input_details",
-                                                    False)
-        self.tgi_compat = tgi_compat
-        if self.details:
-            self.token_cache = []
-        self.full_text_prefix = input_text if parameters.pop(
-            "return_full_text", False) else ""
+        self.adapter = adapter
 
         # output formatter
         stream = parameters.pop("stream", False)
         self.output_formatter, self.content_type = get_output_formatter(
-            output_formatter, stream, self.tgi_compat)
+            output_formatter, stream, tgi_compat)
+        self.legacy_formatter = self._is_output_formatter_legacy()
+
+        # remove extra fields
+        parameters.pop("details")
+        extra_fields = parameters.pop("extra_fields", {})
+        original_parameters.update(extra_fields)
+
+        # TODO: Strategically find the task and initialize based on task
+        self.request_input = TextInput(request_id=id,
+                                       output_formatter=self.output_formatter,
+                                       parameters=original_parameters,
+                                       input_text=input_text,
+                                       input_ids=input_ids,
+                                       adapters=adapter,
+                                       tokenizer=tokenizer)
+        if self.output_formatter == _json_output_formatter or self.output_formatter == sse_response_formatter:
+            self.request_input.tgi_compat = tgi_compat
+        self.request_output = TextGenerationOutput(request_id=id,
+                                                   input=self.request_input)
+        self.next_token_str = ""
+
+    def _is_output_formatter_legacy(self):
+        signature_parameters = list(
+            inspect.signature(self.output_formatter).parameters.values())
+        return signature_parameters[0].annotation not in [
+            RequestOutput, TextGenerationOutput
+        ]
 
     def __repr__(self):
         return f"<Request id: {self.id} Input {self.input_text} Parameters {self.parameters} Finished {self.last_token}>"
@@ -79,7 +94,7 @@ class Request(object):
                        next_token: Union[Token, str],
                        last_token: bool = False,
                        finish_reason: str = None,
-                       prompt_tokens_details: list[dict] = None):
+                       prompt_tokens_details: list[Token] = None):
         """
         Sets the newly generated token.
         If the function is called for multiple times, we will append tokens to the token string.
@@ -95,39 +110,11 @@ class Request(object):
         if isinstance(next_token, str):
             next_token = Token(-1, next_token)
         next_token.request_id = self.id
-        if self.token_cache is not None:
-            if self.tgi_compat:
-                self.token_cache.append(next_token.as_tgi_dict())
-            else:
-                self.token_cache.append(next_token.as_dict())
-        self.generated_tokens.append(next_token.text)
-        details_dict = {}
-        # making detailed information captured for each token generation
-        if self.details:
-            details_dict["finish_reason"] = finish_reason
-            details_dict["tokens"] = self.token_cache
-            details_dict["generated_tokens"] = len(self.token_cache)
-            details_dict["inputs"] = self.input_text
-            details_dict["parameters"] = self.original_params
-            details_dict["prompt_tokens"] = len(self.input_ids)
-        # Special handling for error case
-        elif finish_reason == "error":
-            details_dict["finish_reason"] = finish_reason
-        if self.output_formatter == _json_output_formatter or self.output_formatter == sse_response_formatter:
-            details_dict["tgi_compat"] = self.tgi_compat
-        generated_text = self.full_text_prefix
-        if last_token:
-            generated_text = generated_text + ''.join(self.generated_tokens)
-            if self.decoder_input_details:
-                details_dict["prompt_tokens_details"] = prompt_tokens_details
-        if self.output_formatter is None:
-            self.next_token_str += next_token.text
-        else:  # output only supports size one now
-            self.next_token_str += self.output_formatter(
-                next_token, self.first_token, last_token, details_dict,
-                generated_text, self.id)
+        self.request_output.set_next_token(next_token,
+                                           is_last_token=last_token)
+        self.request_output.set_finish_reason(finish_reason)
+        self.request_output.prompt_tokens_details = prompt_tokens_details
         self.last_token = last_token
-        self.first_token = False
 
     def get_next_token(self) -> str:
         """
@@ -135,7 +122,20 @@ class Request(object):
 
         :return: next_token
         """
-        return self.next_token_str
+        if self.next_token_str:
+            return self.next_token_str
+        else:
+            # TODO: Remove this support when all of our customers onboard.
+            if self.legacy_formatter:
+                self.next_token_str = adapt_legacy_output_formatter(
+                    self.request_output)
+            else:
+                best_sequence = self.request_output.sequences[
+                    self.request_output.best_sequence_index]
+                while best_sequence.has_next_token():
+                    self.next_token_str += self.output_formatter(
+                        self.request_output)
+            return self.next_token_str
 
     def reset_next_token(self):
         """

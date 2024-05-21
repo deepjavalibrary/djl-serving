@@ -117,6 +117,12 @@ def _parse_inputs_params(input_map, item, input_format_configs):
     if not "output_formatter" in _param:
         _param["output_formatter"] = input_format_configs.output_formatter
 
+    if not is_chat_completions_request(input_map):
+        extra_fields = {}
+        for key, value in input_map.items():
+            extra_fields[key] = value
+        _param["extra_fields"] = extra_fields
+
     if isinstance(_inputs, list):
         return _inputs, _param, True
     else:

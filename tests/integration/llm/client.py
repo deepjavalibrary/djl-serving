@@ -231,7 +231,10 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "tokenizer": "TheBloke/Llama-2-13B-fp16",
+        "parameters": {
+            "decoder_input_details": True
+        }
     },
     "mistral-7b": {
         "max_memory_per_gpu": [23.0],
@@ -243,7 +246,10 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [1024],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "tokenizer": "TheBloke/Llama-2-13B-fp16",
+        "parameters": {
+            "decoder_input_details": True
+        }
     },
     "mistral-7b-128k-awq": {
         "max_memory_per_gpu": [23.0],
@@ -295,7 +301,10 @@ vllm_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
+        "parameters": {
+            "decoder_input_details": True
+        }
     },
     "phi-2": {
         "max_memory_per_gpu": [23.0],
@@ -887,6 +896,8 @@ def test_handler_rolling_batch(model, model_spec):
     seq_length = 100
     params = {"do_sample": True, "max_new_tokens": seq_length, "details": True}
     req["parameters"] = params
+    if "parameters" in spec:
+        req["parameters"].update(spec["parameters"])
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
     logging.info(f"req {req}")

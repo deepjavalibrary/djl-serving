@@ -64,7 +64,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
                 log_prob=None if index == 0 else
                 request_output.prompt_logprobs[index][prompt_token_id])
             request_cache[request_id]["prompt_tokens_details"].append(
-                prompt_token.as_dict())
+                prompt_token)
     return request_cache
 
 
