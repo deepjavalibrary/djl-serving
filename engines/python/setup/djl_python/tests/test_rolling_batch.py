@@ -730,9 +730,8 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_custom_fmt_wait_till_last(self):
-        """ Test with custom formatter. Tests two cases:
-            1. Wait till last token is generated, and send out the whole response at once.
-            2. Check whether the extra parameters sent are sent to output formatter.
+        """ Test with custom formatter.
+            Waits till last token is generated, and send out the whole response at once.
         """
 
         def custom_fmt_wait(request_output: TextGenerationOutput):
