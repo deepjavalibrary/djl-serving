@@ -11,53 +11,50 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import mmap
 import os
 import pickle
-import mmap
-
-from djl_python import Input
+import sys
 from collections import OrderedDict
 
 
 class SessionManager:
 
     def __init__(self, properties: dict):
-        self.limit = properties.get("option.sessions.limit", None)
-        if self.limit is not None:
-            self.limit = int(self.limit)
+        self.limit = int(properties.get("option.sessions.limit", str(sys.maxsize)))
 
     def load(self, session_id):
         """
-    Loads the data associated with a session_id
-    :param session_id: the id for the session to load
-    :return: loads the data (what kind of data depend on what type of SessionManager)
-    """
+        Loads the data associated with a session_id
+        :param session_id: the id for the session to load
+        :return: loads the data (what kind of data depend on what type of SessionManager)
+        """
         pass
 
     def save(self, session_id, value):
         """
-    Saves the data associated with a session_id
-    :param session_id: the id for the session to save
-    :param value: the updated data to save for the session
-    :return: None
-    """
+        Saves the data associated with a session_id
+        :param session_id: the id for the session to save
+        :param value: the updated data to save for the session
+        :return: None
+        """
         pass
 
     def remove(self, session_id):
         """
-    Removes the data associated with a session_id
-    :param session_id: the id for the session to remove
-    :return: None
-    """
+        Removes the data associated with a session_id
+        :param session_id: the id for the session to remove
+        :return: None
+        """
         pass
 
     def prune(self, limit, backup=None):
         """
-    Prunes all data, leaving only the newest limit sessions remaining
-    :param limit: how many data items to leave
-    :param backup: an optional SessionManager to backup the pruned data to (todo)
-    :return: None
-    """
+        Prunes all data, leaving only the newest limit sessions remaining
+        :param limit: how many data items to leave
+        :param backup: an optional SessionManager to backup the pruned data to (todo)
+        :return: None
+        """
         pass
 
 
@@ -65,7 +62,7 @@ class LocalSessionManager(SessionManager):
 
     def __init__(self, properties: dict):
         super().__init__(properties)
-        self.sessions: dict = OrderedDict()
+        self.sessions = OrderedDict()
 
     def load(self, session_id):
         return self.sessions.get(session_id, None)
@@ -73,7 +70,7 @@ class LocalSessionManager(SessionManager):
     def save(self, session_id, value):
         self.sessions[session_id] = value
         self.sessions.move_to_end(session_id)
-        if self.limit is not None and len(self.sessions) > self.limit:
+        if len(self.sessions) > self.limit:
             self.prune(self.limit)
 
     def remove(self, session_id):
@@ -81,7 +78,7 @@ class LocalSessionManager(SessionManager):
 
     def prune(self, limit, backup: SessionManager = None):
         while len(self.sessions) > self.limit:
-            popped_id, popped_value = self.sessions.popitem(0)
+            popped_id, popped_value = self.sessions.popitem(False)
             if backup is not None:
                 backup.save(popped_id, popped_value)
 
@@ -90,7 +87,7 @@ class FileSessionManager(SessionManager):
 
     def __init__(self, properties: dict):
         super().__init__(properties)
-        self.files_path = properties["option.sessions.path"]
+        self.files_path = properties["sessions_path"]
 
     def load(self, session_id):
         path = self._path(session_id)
@@ -102,8 +99,8 @@ class FileSessionManager(SessionManager):
     def save(self, session_id, value):
         with open(self._path(session_id), "wb") as f:
             pickle.dump(value, f)
-        if self.limit is not None:
-            self.prune(self.limit)
+
+        self.prune(self.limit)
 
     def remove(self, session_id):
         os.remove(self._path(session_id))
@@ -127,7 +124,7 @@ class MmapSessionManager(FileSessionManager):
 
     def __init__(self, properties: dict):
         super().__init__(properties)
-        self.file_size = int(properties["option.sessions.file_size"])
+        self.file_size = int(properties["sessions_file_size"])
         self.opened = {}
 
     def load(self, session_id):
@@ -148,19 +145,15 @@ class MmapSessionManager(FileSessionManager):
             f, m = self.opened[session_id]
             m.close()
             f.close()
-        if self.limit is not None:
-            self.prune(self.limit)
+
+        self.prune(self.limit)
 
 
 def get_session_manager(properties: dict):
-    if "option.sessions" not in properties:
-        return None
-    mode = properties["option.sessions"].lower()
+    mode = properties.get("session_manager")
     if mode == "local":
         return LocalSessionManager(properties)
     elif mode == "files":
         return FileSessionManager(properties)
-    elif mode == "mmap":
-        return MmapSessionManager(properties)
     else:
-        raise ValueError("Unknown session manager type: " + mode)
+        return MmapSessionManager(properties)

@@ -32,15 +32,17 @@ class StatefulService:
 
         for i, input in enumerate(inputs.get_batches()):
             data = input.get_as_string()
-            if input.contains_key("session_id"):
-                session_id = input.get_as_string("session_id")
+            session_id = input.get_property("sagemaker_session_id")
+            if session_id is not None:
                 cur_session = self.sessions.load(session_id)
                 if cur_session is None:
                     cur_session = 1
                 out = str(cur_session) + data
                 self.sessions.save(session_id, cur_session + 1)
             else:
+                session_id = "1"
                 out = data
+            outputs.add_property("sagemaker_session_id", session_id)
             outputs.add(out, key="data", batch_index=i)
 
         return outputs
