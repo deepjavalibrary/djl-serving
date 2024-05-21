@@ -425,42 +425,77 @@ lmi_dist_model_list = {
         "option.gpu_memory_utilization": "0.8",
     },
     "llama2-13b-awq-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/TheBloke-Llama-2-13b-Chat-AWQ/",
-        "option.tensor_parallel_degree": "max",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "adapter_ids": ["UnderstandLing/llama-2-13b-chat-fr", "UnderstandLing/llama-2-13b-chat-es"],
+        "option.model_id":
+        "s3://djl-llm/TheBloke-Llama-2-13b-Chat-AWQ/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "adapter_ids": [
+            "UnderstandLing/llama-2-13b-chat-fr",
+            "UnderstandLing/llama-2-13b-chat-es"
+        ],
         "adapter_names": ["french", "spanish"],
-        "option.gpu_memory_utilization": "0.8",
+        "option.gpu_memory_utilization":
+        "0.8",
     },
     "mistral-7b-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v02/",
-        "option.tensor_parallel_degree": "max",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "option.max_loras":2,
-        "adapter_ids": ["UnderstandLing/Mistral-7B-Instruct-v0.2-es", "UnderstandLing/Mistral-7B-Instruct-v0.2-de"],
+        "option.model_id":
+        "s3://djl-llm/mistral-7b-instruct-v02/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "option.max_loras":
+        2,
+        "adapter_ids": [
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
+        ],
         "adapter_names": ["spanish", "german"],
-        "option.gpu_memory_utilization": "0.8",
+        "option.gpu_memory_utilization":
+        "0.8",
     },
     "mistral-7b-awq-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v02-awq/",
-        "option.tensor_parallel_degree": "2",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "option.max_loras":2,
-        "adapter_ids": ["UnderstandLing/Mistral-7B-Instruct-v0.2-es", "UnderstandLing/Mistral-7B-Instruct-v0.2-de"],
+        "option.model_id":
+        "s3://djl-llm/mistral-7b-instruct-v02-awq/",
+        "option.tensor_parallel_degree":
+        "2",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "option.max_loras":
+        2,
+        "adapter_ids": [
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
+        ],
         "adapter_names": ["spanish", "german"],
-        "option.gpu_memory_utilization": "0.8",
+        "option.gpu_memory_utilization":
+        "0.8",
     },
 }
 
@@ -517,42 +552,77 @@ vllm_model_list = {
         "option.gpu_memory_utilization": "0.8",
     },
     "llama2-13b-awq-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/TheBloke-Llama-2-13b-Chat-AWQ/",
-        "option.tensor_parallel_degree": "max",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "adapter_ids": ["UnderstandLing/llama-2-7b-chat-es", "UnderstandLing/llama-2-7b-chat-ru"],
+        "option.model_id":
+        "s3://djl-llm/TheBloke-Llama-2-13b-Chat-AWQ/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "adapter_ids": [
+            "UnderstandLing/llama-2-7b-chat-es",
+            "UnderstandLing/llama-2-7b-chat-ru"
+        ],
         "adapter_names": ["spanish", "russian"],
-        "option.gpu_memory_utilization": "0.8",
+        "option.gpu_memory_utilization":
+        "0.8",
     },
     "mistral-7b-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v02/",
-        "option.tensor_parallel_degree": "max",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "option.max_loras":2,
-        "adapter_ids": ["UnderstandLing/Mistral-7B-Instruct-v0.2-es", "UnderstandLing/Mistral-7B-Instruct-v0.2-de"],
+        "option.model_id":
+        "s3://djl-llm/mistral-7b-instruct-v02/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "option.max_loras":
+        2,
+        "adapter_ids": [
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
+        ],
         "adapter_names": ["spanish", "german"],
-        "option.gpu_memory_utilization": "0.8",
+        "option.gpu_memory_utilization":
+        "0.8",
     },
     "mistral-7b-awq-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v02-awq/",
-        "option.tensor_parallel_degree": "2",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "option.max_lora_rank": 64,
-        "option.max_loras":2,
-        "adapter_ids": ["UnderstandLing/Mistral-7B-Instruct-v0.2-es", "UnderstandLing/Mistral-7B-Instruct-v0.2-de"],
+        "option.model_id":
+        "s3://djl-llm/mistral-7b-instruct-v02-awq/",
+        "option.tensor_parallel_degree":
+        "2",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "option.max_loras":
+        2,
+        "adapter_ids": [
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-es",
+            "UnderstandLing/Mistral-7B-Instruct-v0.2-de"
+        ],
         "adapter_names": ["spanish", "german"],
-        "option.gpu_memory_utilization": "0.8",
+        "option.gpu_memory_utilization":
+        "0.8",
     },
     "llama-7b-unmerged-lora-overflow": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
