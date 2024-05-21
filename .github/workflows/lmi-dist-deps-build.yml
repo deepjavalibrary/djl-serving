@@ -26,9 +26,9 @@ jobs:
   lmi-deps-build:
     runs-on: [ self-hosted, p4d ]
     container:
-      image: nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+      image: nvidia/cuda:12.4.1-devel-ubuntu22.04
       options: --gpus all --runtime=nvidia --shm-size 20g
-    timeout-minutes: 35
+    timeout-minutes: 90
     needs: create-runners-p4d
     steps:
       - uses: actions/checkout@v4
@@ -45,8 +45,8 @@ jobs:
           python -m venv venv
           . ./venv/bin/activate
           python -m pip install --upgrade pip
-          python -m pip install numpy cmake awscli packaging wheel setuptools ninja \
-          git-remote-codecommit torch==2.1.2 --extra-index-url https://download.pytorch.org/whl/cu121
+          python -m pip install numpy cmake awscli packaging wheel setuptools ninja git-remote-codecommit \
+                                torch==2.3.0 --extra-index-url https://download.pytorch.org/whl/cu121
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -56,14 +56,14 @@ jobs:
         run: |
           . ./venv/bin/activate
           export FLASH_ATTENTION_FORCE_BUILD=TRUE
-          git clone https://github.com/ymwangg/flash-attention flash-attention-v2 -b specdec_v0.3.3
+          git clone https://github.com/ymwangg/flash-attention flash-attention-v2 -b specdec_v0.4.2
           cd flash-attention-v2
           pip wheel . --no-deps
           cp flash_attn-*.whl ../build_artifacts
-      - name: Build vllm 0.3.3 speculative decoding
+      - name: Build vllm 0.4.2 LoRA TP fix
         run: |
           . ./venv/bin/activate
-          git clone https://github.com/ymwangg/vllm -b specdec_v0.3.3
+          git clone https://github.com/rohithkrn/vllm -b 0.4.2-lora-tp-fix
           cd vllm
           export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
           export VLLM_INSTALL_PUNICA_KERNELS=1
@@ -91,8 +91,8 @@ jobs:
             name: build-artifacts
       - name: upload to S3
         run: |
-          aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu121-pt212/
-          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu121-pt212/
+          aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu124-pt230/
+          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu124-pt230/
 
   stop-runners-p4d:
     if: always()
