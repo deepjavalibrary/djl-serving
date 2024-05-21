@@ -62,7 +62,7 @@ class Request(object):
         self.legacy_formatter = self._is_output_formatter_legacy()
 
         # remove extra fields
-        parameters.pop("details")
+        parameters.pop("details", None)
         extra_fields = parameters.pop("extra_fields", {})
         original_parameters.update(extra_fields)
 
