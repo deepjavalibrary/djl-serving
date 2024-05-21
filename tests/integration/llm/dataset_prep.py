@@ -9,7 +9,9 @@ dataset_urls = {
     "mbpp":
     "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/mbpp.jsonl",
     "mtbench":
-    "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/mt_bench.jsonl"
+    "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/mt_bench.jsonl",
+    "openorca":
+    "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/openorca_curated_750.jsonl"
 }
 
 parameters = {
@@ -41,6 +43,11 @@ parameters = {
         "top_p": 0.8,
         "top_k": 40,
         "max_num_tokens": 512
+    },
+    "openorca": {
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_num_tokens": 256
     }
 }
 
@@ -61,11 +68,16 @@ def mtbench_parsing(row: dict, parameters):
     return {"inputs": row["prompt"], "parameters": parameters, "stream": True}
 
 
+def openorca_parsing(row: dict, parameters):
+    return {"inputs": row["prompt"], "parameters": parameters, "stream": True}
+
+
 parsing = {
     "gsm8k": gsm8k_parsing,
     "humaneval": humaneval_parsing,
     "mbpp": mbpp_parsing,
-    "mtbench": mtbench_parsing
+    "mtbench": mtbench_parsing,
+    "openorca": openorca_parsing
 }
 
 
@@ -81,3 +93,4 @@ build_djl_serving_request("gsm8k")
 build_djl_serving_request("humaneval")
 build_djl_serving_request("mbpp")
 build_djl_serving_request("mtbench")
+build_djl_serving_request("openorca")
