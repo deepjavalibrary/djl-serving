@@ -54,6 +54,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -205,6 +206,9 @@ public final class AwsCurl {
             ExecutorService executor = Executors.newFixedThreadPool(clients);
             ArrayList<Callable<Void>> tasks = new ArrayList<>(clients);
             long stopTime = config.getStopTime();
+            if (stopTime != Long.MAX_VALUE) {
+                logger.info("Benchmark will stop at: {}", new Date(stopTime));
+            }
             for (int i = 0; i < clients; ++i) {
                 final int clientId = i;
                 tasks.add(
