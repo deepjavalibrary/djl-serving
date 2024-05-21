@@ -15,33 +15,46 @@ import logging
 import time
 from typing import Union, Callable
 
-from djl_python.request_io import Token
+from typing_extensions import deprecated
+
+from djl_python.request_io import Token, TextGenerationOutput, RequestOutput
 
 
-def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
-                           details: dict, generated_text: str, id: int):
+def _json_output_formatter(request_output: RequestOutput):
     """
     json output formatter
 
     :return: formatted output
     """
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+
+    parameters = request_output.input.parameters
+    generated_text = ""
+    if parameters.get("return_full_text"):
+        generated_text = request_output.input.input_text
+    next_token, first_token, last_token = best_sequence.get_next_token()
     json_encoded_str = f"{{\"generated_text\": \"{generated_text}" if first_token else ""
-    tgi_compat = details.pop("tgi_compat", False)
+    tgi_compat = request_output.input.tgi_compat
     if first_token and tgi_compat:
         json_encoded_str = f"[{json_encoded_str}"
-    json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
+    json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
-        if details:
+        if parameters.get("details", tgi_compat):
             final_dict = {
-                "finish_reason": details.get("finish_reason", None),
-                "generated_tokens": details.get("generated_tokens", None),
-                "inputs": details.get("inputs", None),
-                "tokens": details.get("tokens", None),
+                "finish_reason": best_sequence.finish_reason,
+                "generated_tokens": len(best_sequence.tokens),
+                "inputs": request_output.input.input_text,
+                "tokens": request_output.get_tokens_as_dict(),
             }
 
-            if "prompt_tokens_details" in details:
-                final_dict["prefill"] = details.get("prompt_tokens_details")
-
+            if parameters.get("decoder_input_details"):
+                final_dict[
+                    "prefill"] = request_output.get_prompt_tokes_as_dict()
+            details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
+            json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
+        elif best_sequence.finish_reason == "error":
+            final_dict = {"finish_reason": best_sequence.finish_reason}
             details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
             json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
         else:
@@ -52,43 +65,56 @@ def _json_output_formatter(token: Token, first_token: bool, last_token: bool,
     return json_encoded_str
 
 
-def _jsonlines_output_formatter(token: Token, first_token: bool,
-                                last_token: bool, details: dict,
-                                generated_text: str, id: int):
+def _jsonlines_output_formatter(request_output: RequestOutput):
     """
     jsonlines output formatter
 
     :return: formatted output
     """
-    tgi_compat = details.pop("tgi_compat", False)
-    if tgi_compat:
-        token_dict = token.as_tgi_dict()
-    else:
-        token_dict = token.as_dict()
+    tgi_compat = request_output.input.tgi_compat
+    parameters = request_output.input.parameters
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    next_token, _, last_token = best_sequence.get_next_token()
+    token_dict = next_token.as_tgi_dict(
+    ) if tgi_compat else next_token.as_dict()
     final_dict = {"token": token_dict}
     if last_token:
+        generated_text = request_output.input.input_text if parameters.get(
+            "return_full_text") else ""
+        for token in best_sequence.tokens:
+            generated_text += token.text
         final_dict["generated_text"] = generated_text
-        if details:
+        if parameters.get("details", tgi_compat):
             final_dict["details"] = {
-                "finish_reason": details.get("finish_reason", None),
-                "generated_tokens": details.get("generated_tokens", None),
-                "inputs": details.get("inputs", None),
+                "finish_reason": best_sequence.finish_reason,
+                "generated_tokens": len(best_sequence.tokens),
+                "inputs": request_output.input.input_text,
             }
-            if "prompt_tokens_details" in details:
-                final_dict["details"]["prefill"] = details.get(
-                    "prompt_tokens_details")
+            if parameters.get("decoder_input_details"):
+                final_dict["details"][
+                    "prefill"] = request_output.get_prompt_tokes_as_dict()
+        elif best_sequence.finish_reason == "error":
+            final_dict["details"] = {
+                "finish_reason": best_sequence.finish_reason
+            }
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 
 
-def _json_chat_output_formatter(token: Token, first_token: bool,
-                                last_token: bool, details: dict,
-                                generated_text: str, id: int):
+def _json_chat_output_formatter(request_output: RequestOutput):
     """
     json output formatter for chat completions API
 
     :return: formatted output
     """
+    parameters = request_output.input.parameters
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    generated_text = request_output.input.input_text if parameters.get(
+        "return_full_text") else ""
+    next_token, first_token, last_token = best_sequence.get_next_token()
+
     created = int(time.time())
     choice1 = {
         "index": 0,
@@ -104,35 +130,31 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
         "choices": [choice1]  # Currently only support 1 choice
     }
     json_encoded_str = f"{json.dumps(response1, ensure_ascii=False)[:-5]}" if first_token else ""
-    json_encoded_str = f"{json_encoded_str}{json.dumps(token.text, ensure_ascii=False)[1:-1]}"
+    json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
         logprobs = None
-        parameters = details.get("parameters", {})
         if parameters.get("logprobs"):
             logprobs = {
                 "content": [{
-                    "token":
-                        t.get("text"),
-                    "logprob":
-                        t.get("log_prob"),
-                    "bytes":
-                        (b := [ord(c)
-                               for c in t.get("text")] if t.get("text") else None),
+                    "token": t.text,
+                    "logprob": t.log_prob,
+                    "bytes": (b := [ord(c)
+                               for c in t.text] if t.text else None),
                     "top_logprobs":  # Currently only support 1 top_logprobs
                         [{
-                            "token": t.get("text"),
-                            "logprob": t.get("log_prob"),
+                            "token": t.text,
+                            "logprob": t.log_prob,
                             "bytes": b
                         }]
-                } for t in details.get("tokens", [])
+                } for t in best_sequence.tokens
                 ]
             }
         choice2 = {
             "logprobs": logprobs,
-            "finish_reason": details.get("finish_reason")
+            "finish_reason": best_sequence.finish_reason
         }
-        prompt_tokens = int(details.get("prompt_tokens", 0))
-        completion_tokens = int(details.get("generated_tokens", 0))
+        prompt_tokens = len(request_output.input.input_ids)
+        completion_tokens = len(best_sequence.tokens)
         response2 = {
             "choices": [choice2],
             "usage": {
@@ -145,32 +167,34 @@ def _json_chat_output_formatter(token: Token, first_token: bool,
     return json_encoded_str
 
 
-def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
-                                     last_token: bool, details: dict,
-                                     generated_text: str, id: int):
+def _jsonlines_chat_output_formatter(request_output: RequestOutput):
     """
     jsonlines output formatter for chat completions API
 
     :return: formatted output
     """
+    parameters = request_output.input.parameters
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    next_token, first_token, last_token = best_sequence.get_next_token()
+
     created = int(time.time())
-    delta = {"content": token.text}
+    delta = {"content": next_token.text}
     if first_token:
         delta["role"] = "assistant"
 
     logprobs = None
-    parameters = details.get("parameters", {})
     if parameters.get("logprobs"):
         logprobs = {
             "content":
                 [{
-                    "token": token.text,
-                    "logprob": token.log_prob,
-                    "bytes": (b := [ord(c) for c in token.text] if token.text else None),
+                    "token": next_token.text,
+                    "logprob": next_token.log_prob,
+                    "bytes": (b := [ord(c) for c in next_token.text] if next_token.text else None),
                     "top_logprobs":  # Currently only support 1 top_logprobs
                         [{
-                            "token": token.log_prob,
-                            "logprob": token.log_prob,
+                            "token": next_token.log_prob,
+                            "logprob": next_token.log_prob,
                             "bytes": b
                         }]
                 }]
@@ -179,7 +203,7 @@ def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
         "index": 0,
         "delta": delta,
         "logprobs": logprobs,
-        "finish_reason": details.get("finish_reason")
+        "finish_reason": best_sequence.finish_reason
     }
     response = {
         "id": f"chatcmpl-{id}",
@@ -191,12 +215,50 @@ def _jsonlines_chat_output_formatter(token: Token, first_token: bool,
     return json_encoded_str
 
 
-def sse_response_formatter(*args, **kwargs):
+def sse_response_formatter(request_output: RequestOutput):
     """
     Decorator that used to form as SSE
     """
-    output_str = _jsonlines_output_formatter(*args, **kwargs)
+    output_str = _jsonlines_output_formatter(request_output)
     return f"data: {output_str}\n"
+
+
+@deprecated(
+    "onboard to new output_formatter signature. will be removed by 0.29.0")
+def adapt_legacy_output_formatter(request_output: TextGenerationOutput) -> str:
+    sequence_index = request_output.best_sequence_index
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    parameters = request_output.input.parameters
+    output_formatter = request_output.input.output_formatter
+    input_text = request_output.input.input_text
+    generated_text = ""
+    if parameters.get("return_full_text"):
+        generated_text = input_text
+    next_token_str = ""
+    while best_sequence.has_next_token():
+        details_dict = {}
+        # making detailed information captured for each token generation
+        if parameters.get("details", False):
+            details_dict["finish_reason"] = best_sequence.finish_reason
+            details_dict["tokens"] = request_output.get_tokens_as_dict(
+                sequence_index)
+            details_dict["generated_tokens"] = len(best_sequence.tokens)
+            details_dict["inputs"] = input_text
+            details_dict["parameters"] = parameters
+            details_dict["prompt_tokens"] = len(request_output.input.input_ids)
+        # Special handling for error case
+        elif best_sequence.finish_reason == "error":
+            details_dict["finish_reason"] = best_sequence.finish_reason
+
+        next_token, first_token, last_token = best_sequence.get_next_token()
+        if last_token:
+            for token in best_sequence.tokens:
+                generated_text += token.text
+        next_token_str += output_formatter(next_token, first_token, last_token,
+                                           details_dict, generated_text,
+                                           request_output.request_id)
+    return next_token_str
 
 
 def get_output_formatter(output_formatter: Union[str, Callable], stream: bool,
