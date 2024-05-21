@@ -84,3 +84,20 @@ def mock_import_modules(modules):
             if mock.__name__ in WILDCARD_CLASS_MOCKS:
                 mock.__all__ = "none"
             sys.modules[mock_module] = mock
+
+def profile_objects(func):
+    """
+    Profile on system for object leakage
+    """
+    import os
+    import objgraph
+    do_profiling = os.environ.get("DJL_PYTHON_DO_PROFILING", "false").lower() == "true"
+
+    def apply_profiling(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)
+        if do_profiling:
+            # getting top 100 objects that need tracking
+            objgraph.show_growth(limit=100)
+        return result
+
+    return apply_profiling
