@@ -32,8 +32,8 @@ class StatefulService:
 
         for i, input in enumerate(inputs.get_batches()):
             data = input.get_as_string()
-            if input.contains_key("session_id"):
-                session_id = input.get_as_string("session_id")
+            session_id = input.get_property("X-Amzn-SageMaker-Session-Id")
+            if session_id is not None:
                 mem, new_mem = self.sessions.load(session_id)
                 if new_mem:
                     current_value = 1
@@ -44,7 +44,9 @@ class StatefulService:
                 mem.write_byte(current_value)
                 self.sessions.save(session_id)
             else:
+                session_id = "1"
                 out = data
+            outputs.add_property("X-Amzn-SageMaker-Session-Id", session_id)
             outputs.add(out, key="data", batch_index=i)
 
         return outputs

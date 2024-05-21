@@ -41,14 +41,14 @@ public class PySessionsTests {
     @Test
     public void testLocalLoadSave() throws TranslateException, IOException, ModelException {
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "local");
+        options.put("session_manager", "local");
         testLoadSave("src/test/resources/sessionecho/simple", options);
     }
 
     @Test
     public void testLocalPrune() throws TranslateException, IOException, ModelException {
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "local");
+        options.put("session_manager", "local");
         testPrune("src/test/resources/sessionecho/simple", options);
     }
 
@@ -56,8 +56,8 @@ public class PySessionsTests {
     public void testFilesLoadSave() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "files");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
+        options.put("session_manager", "files");
+        options.put("sessions_path", path.toAbsolutePath().toString());
         testLoadSave("src/test/resources/sessionecho/simple", options);
     }
 
@@ -65,8 +65,8 @@ public class PySessionsTests {
     public void testFilesPersistence() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "files");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
+        options.put("session_manager", "files");
+        options.put("sessions_path", path.toAbsolutePath().toString());
         testPersistence("src/test/resources/sessionecho/simple", options);
     }
 
@@ -74,8 +74,8 @@ public class PySessionsTests {
     public void testFilesParallel() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "files");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
+        options.put("session_manager", "files");
+        options.put("sessions_path", path.toAbsolutePath().toString());
         testParallel("src/test/resources/sessionecho/simple", options);
     }
 
@@ -83,8 +83,8 @@ public class PySessionsTests {
     public void testFilesPrune() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "files");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
+        options.put("session_manager", "files");
+        options.put("sessions_path", path.toAbsolutePath().toString());
         testPrune("src/test/resources/sessionecho/simple", options);
     }
 
@@ -92,9 +92,9 @@ public class PySessionsTests {
     public void testMmapLoadSave() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "mmap");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
-        options.put("option.sessions.file_size", "1");
+        options.put("session_manager", "mmap");
+        options.put("sessions_path", path.toAbsolutePath().toString());
+        options.put("sessions_file_size", "1");
         testLoadSave("src/test/resources/sessionecho/mmap", options);
     }
 
@@ -102,9 +102,9 @@ public class PySessionsTests {
     public void testMmapPersistence() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "mmap");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
-        options.put("option.sessions.file_size", "1");
+        options.put("session_manager", "mmap");
+        options.put("sessions_path", path.toAbsolutePath().toString());
+        options.put("sessions_file_size", "1");
         testPersistence("src/test/resources/sessionecho/mmap", options);
     }
 
@@ -112,9 +112,9 @@ public class PySessionsTests {
     public void testMmapParallel() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "mmap");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
-        options.put("option.sessions.file_size", "1");
+        options.put("session_manager", "mmap");
+        options.put("sessions_path", path.toAbsolutePath().toString());
+        options.put("sessions_file_size", "1");
         testParallel("src/test/resources/sessionecho/mmap", options);
     }
 
@@ -122,9 +122,9 @@ public class PySessionsTests {
     public void testMmapPrune() throws TranslateException, IOException, ModelException {
         Path path = resetDirectory(Paths.get("build/sessionTest"));
         Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("option.sessions", "mmap");
-        options.put("option.sessions.path", path.toAbsolutePath().toString());
-        options.put("option.sessions.file_size", "1");
+        options.put("session_manager", "mmap");
+        options.put("sessions_path", path.toAbsolutePath().toString());
+        options.put("sessions_file_size", "1");
         testPrune("src/test/resources/sessionecho/mmap", options);
     }
 
@@ -150,7 +150,7 @@ public class PySessionsTests {
                 // Run the sessionecho model with the session
                 Input input = new Input();
                 input.add("input");
-                input.add("session_id", sessionId);
+                input.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
                 Output output = predictor.predict(input);
                 Assert.assertEquals(output.getData().getAsString(), sessionCount + "input");
             }
@@ -173,7 +173,7 @@ public class PySessionsTests {
                 // Run the sessionecho model with the session
                 Input input = new Input();
                 input.add("input");
-                input.add("session_id", "sess");
+                input.addProperty("X-Amzn-SageMaker-Session-Id", "sess");
                 Output output = predictor.predict(input);
                 Assert.assertEquals(output.getData().getAsString(), i + "input");
             }
@@ -211,7 +211,7 @@ public class PySessionsTests {
             // Run the sessionecho model with the session
             Input input = new Input();
             input.add("input");
-            input.add("session_id", sessionId);
+            input.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
             Output output = predictor.predict(input);
             Assert.assertEquals(output.getData().getAsString(), sessionCount + "input");
         }
@@ -227,7 +227,7 @@ public class PySessionsTests {
                         .optModelPath(Paths.get(modelPath))
                         .optEngine("Python")
                         .optOptions(options)
-                        .optOption("option.sessions.limit", "2")
+                        .optOption("sessions_limit", "2")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
@@ -240,7 +240,7 @@ public class PySessionsTests {
                 // Run the sessionecho model with the session
                 Input input = new Input();
                 input.add("input");
-                input.add("session_id", sessionId);
+                input.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
                 Output output = predictor.predict(input);
                 Assert.assertEquals(output.getData().getAsString(), "1input");
             }
