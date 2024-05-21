@@ -136,7 +136,7 @@ public final class LmiUtils {
     }
 
     static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
-        String prefix = info.prop.getProperty("option.modelName", "model");
+        String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
         if (Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
                 || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
             return;
@@ -203,7 +203,7 @@ public final class LmiUtils {
             logger.info("Onnx artifacts built successfully");
             return repoDir;
         } catch (InterruptedException e) {
-            throw new IOException("Failed to build TensorRT-LLM artifacts", e);
+            throw new IOException("Failed to build Onnx artifacts", e);
         } finally {
             if (!success) {
                 Utils.deleteQuietly(repoDir);
