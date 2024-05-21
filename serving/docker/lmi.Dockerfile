@@ -9,31 +9,33 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.1.1-cudnn8-devel-ubuntu22.04
+ARG version=12.4.1-cudnn-devel-ubuntu22.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu121
+ARG cuda_version=cu124
 ARG djl_version=0.28.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
-ARG torch_version=2.1.2
-ARG torch_vision_version=0.16.2
+ARG torch_version=2.3.0
+ARG torch_vision_version=0.18.0
 ARG onnx_version=1.17.1
-ARG pydantic_version=2.6.1
+ARG pydantic_version=2.7.1
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
+ARG vllm_cuda_name="cu12"
+ARG vllm_nccl_version=2.18.1
 # HF Deps
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.40.0
-ARG accelerate_version=0.29.3
+ARG accelerate_version=0.30.1
 ARG bitsandbytes_version=0.43.1
-ARG optimum_version=1.19.1
+ARG optimum_version=1.19.2
 ARG auto_gptq_version=0.7.1
-ARG datasets_version=2.19.0
+ARG datasets_version=2.19.1
 # LMI-Dist Deps
-ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.4.0/vllm-0.4.0-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu121-pt212/flash_attn-2.5.6-cp310-cp310-linux_x86_64.whl"
+ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt230/vllm-0.4.2%2Bcu124-cp310-cp310-linux_x86_64.whl"
+ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu124-pt230/flash_attn-2.5.8-cp310-cp310-linux_x86_64.whl"
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
-ARG peft_version=0.10.0
+ARG peft_version=0.11.1
 
 EXPOSE 8080
 
@@ -52,6 +54,7 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu121-precxx11
 ENV VLLM_NO_USAGE_STATS=1
+ENV VLLM_CONFIG_ROOT=/tmp/vllm/.config
 
 
 ENV HF_HOME=/tmp/.cache/huggingface
@@ -104,7 +107,14 @@ RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} pydantic=
     pip3 cache purge
 
 # Add CUDA-Compat
-RUN apt-get update && apt-get install -y cuda-compat-12-1 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# We use the same NCCL version as vLLM for lmi-dist https://github.com/vllm-project/vllm/blob/v0.4.2/vllm/utils.py#L641-L646
+# This is due to https://github.com/vllm-project/vllm/blob/v0.4.2/vllm/distributed/device_communicators/pynccl.py#L1-L9
+RUN mkdir -p ${VLLM_CONFIG_ROOT}/vllm/nccl/$vllm_cuda_name/ && curl -L -o ${VLLM_CONFIG_ROOT}/vllm/nccl/$vllm_cuda_name/libnccl.so.$vllm_nccl_version \
+    https://github.com/vllm-project/vllm-nccl/releases/download/v0.1.0/$vllm_cuda_name-libnccl.so.$vllm_nccl_version && \
+    # The following is done only so that we can run the CI with `-u djl`. Sagemaker wouldn't require this.
+    chmod -R a+w ${VLLM_CONFIG_ROOT}
 
 RUN scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh lmi && \
