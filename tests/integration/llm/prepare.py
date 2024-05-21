@@ -1257,7 +1257,7 @@ supported_handler = {
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
     'trtllm': build_trtllm_handler_model,
-    'trtllm_neo_aot': build_trtllm_neo_model,
+    'trtllm_neo': build_trtllm_neo_model,
     'transformers_neuronx_neo': build_transformers_neuronx_neo_model,
     'correctness': build_correctness_model,
 }
