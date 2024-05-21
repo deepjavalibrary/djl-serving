@@ -162,8 +162,6 @@ class NeuronGenerator(ABC):
                 generated_tokens=slot_request.slot.generated_tokens,
                 finish_reason=finish_reason,
                 seed=slot_request.slot.seed)
-            # mark the slot as available
-            slot_request.slot.clear()
         generation = Generation(
             request_id=slot_request.slot.request_id,
             prefill_tokens=None,
@@ -174,6 +172,9 @@ class NeuronGenerator(ABC):
                               in slot_request.slot.special_tokens),
             generated_text=generated_text,
             speculated_generations=SpeculatedGenerationsQueue())
+        if finish_reason is not None:
+            # mark the slot as available
+            slot_request.slot.clear()
         return generation, finish_reason
 
     def _generate_token(self, inputs: GenerationInputs) -> List[Generation]:
