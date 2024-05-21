@@ -9,11 +9,11 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 ARG djl_version=0.28.0~SNAPSHOT
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
-ARG python_version=3.9
+ARG python_version=3.10
 ARG neuronsdk_version=2.18.2
 ARG torch_neuronx_version=2.1.2.2.1.0
 ARG transformers_neuronx_version=0.10.0.360
@@ -24,7 +24,7 @@ ARG transformers_version=4.36.2
 ARG accelerate_version=0.23.0
 ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
-ARG optimum_neuron_version=0.0.21
+ARG optimum_neuron_version=0.0.22
 ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-nightly-py3-none-any.whl"
 EXPOSE 8080
 
@@ -43,9 +43,9 @@ ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
-ENV NEURON_SDK_PATH=/usr/local/lib/python3.9/dist-packages/torch_neuronx/lib
+ENV NEURON_SDK_PATH=/usr/local/lib/python3.10/dist-packages/torch_neuronx/lib
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEURON_SDK_PATH
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.9/dist-packages/torch/lib
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_EXTRA_LIBRARY_PATH=$NEURON_SDK_PATH/libtorchneuron.so
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=2.1.2
@@ -68,7 +68,7 @@ COPY config.properties /opt/djl/conf/
 COPY partition /opt/djl/partition
 RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
-    scripts/install_python.sh ${python_version} && \
+    scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version && \
     scripts/install_inferentia2.sh && \
     pip install transformers==${transformers_version} accelerate==${accelerate_version} safetensors ${vllm_wheel} \
