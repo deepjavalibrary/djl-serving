@@ -44,6 +44,9 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     cur_len = len(seq_output.token_ids)
 
     new_token_ids = seq_output.token_ids[prev_len:cur_len]
+    output_token_texts = []
+    if hasattr(seq_output, "output_token_texts"):
+        output_token_texts = seq_output.output_token_texts[prev_len:cur_len]
     if seq_output.logprobs:
         new_logprobs_list = seq_output.logprobs[prev_len:cur_len]
         new_logprobs = [
@@ -57,7 +60,9 @@ def update_request_cache_with_output(request_cache: OrderedDict,
 
     request_cache[request_id]["token_ids"] = new_token_ids
     request_cache[request_id]["logprobs"] = new_logprobs
-    request_cache[request_id]['cumulative_logprob'] = seq_output.cumulative_logprob
+    request_cache[request_id]['output_token_texts'] = output_token_texts
+    request_cache[request_id][
+        'cumulative_logprob'] = seq_output.cumulative_logprob
     request_cache[request_id]["text"] = seq_output.text
     request_cache[request_id]["finish_reason"] = seq_output.finish_reason
     request_cache[request_id]['num_generated_tokens'] = cur_len

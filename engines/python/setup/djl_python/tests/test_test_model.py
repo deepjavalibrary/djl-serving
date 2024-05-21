@@ -285,6 +285,7 @@ class TestTestModel(unittest.TestCase):
         # gen.step(step=3, input_str_delta=input_str1, params_delta=params1)
         rolling_batch.inference(input_str1, params1)
         cum_logprob_cache = defaultdict()
+        token_texts_cache = defaultdict(list)
         for request_id in rolling_batch.request_cache.keys():
             cum_logprob = rolling_batch.request_cache[request_id][
                 'cumulative_logprob']
@@ -293,6 +294,10 @@ class TestTestModel(unittest.TestCase):
             assert len(logprobs) == len(token_ids) == 1
             assert cum_logprob == logprobs[0]
             cum_logprob_cache[request_id] = cum_logprob
+            token_texts_cache[request_id].extend(
+                rolling_batch.request_cache[request_id]['output_token_texts'])
+            ref_text = rolling_batch.request_cache[request_id]['text']
+            assert "".join(token_texts_cache[request_id]) == ref_text
 
         for _ in range(3):
             rolling_batch.inference(input_str1, params1)
@@ -307,3 +312,8 @@ class TestTestModel(unittest.TestCase):
                 assert cum_logprob == cum_logprob_cache[request_id] + sum(
                     logprobs)
                 cum_logprob_cache[request_id] = cum_logprob
+                token_texts_cache[request_id].extend(
+                    rolling_batch.request_cache[request_id]
+                    ['output_token_texts'])
+                ref_text = rolling_batch.request_cache[request_id]['text']
+                assert "".join(token_texts_cache[request_id]) == ref_text
