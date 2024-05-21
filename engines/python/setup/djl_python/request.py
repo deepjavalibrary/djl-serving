@@ -56,15 +56,14 @@ class Request(object):
         self.adapter = adapter
 
         # output formatter
+        # remove stream from parameters
         stream = parameters.pop("stream", False)
         self.output_formatter, self.content_type = get_output_formatter(
             output_formatter, stream, tgi_compat)
         self.legacy_formatter = self._is_output_formatter_legacy()
 
-        # remove extra fields
+        # remove details from parameters
         parameters.pop("details", None)
-        extra_fields = parameters.pop("extra_fields", {})
-        original_parameters.update(extra_fields)
 
         # TODO: Strategically find the task and initialize based on task
         self.request_input = TextInput(request_id=id,

@@ -2,8 +2,9 @@ import json
 import unittest
 
 from djl_python.request import Request
-from djl_python.output_formatter import _json_output_formatter, _jsonlines_output_formatter, _jsonlines_chat_output_formatter, _json_chat_output_formatter
-from djl_python.request_io import Token
+from djl_python.output_formatter import _json_output_formatter, _jsonlines_output_formatter, \
+    _jsonlines_chat_output_formatter, _json_chat_output_formatter
+from djl_python.request_io import Token, RequestOutput, TextGenerationOutput
 
 
 class TestRollingBatch(unittest.TestCase):
@@ -726,6 +727,85 @@ class TestRollingBatch(unittest.TestCase):
             },
             "prompt_tokens":
             7
+        }
+
+    def test_custom_fmt_wait_till_last(self):
+        """ Test with custom formatter. Tests two cases:
+            1. Wait till last token is generated, and send out the whole response at once.
+            2. Check whether the extra parameters sent are sent to output formatter.
+        """
+
+        def custom_fmt_wait(request_output: TextGenerationOutput):
+            sequence_index = request_output.best_sequence_index
+            best_sequence = request_output.sequences[
+                request_output.best_sequence_index]
+            _, _, last_token = best_sequence.get_next_token()
+            if last_token:
+                tokens = best_sequence.tokens
+                generated_text = ""
+                for token in tokens:
+                    generated_text += token.text
+                result = {"generated_text": generated_text}
+                parameters = request_output.input.parameters
+                if parameters.get("details", False):
+                    result["finish_reason"] = best_sequence.finish_reason
+                    result["tokens"] = request_output.get_tokens_as_dict(
+                        sequence_index)
+                    result["generated_tokens"] = len(best_sequence.tokens)
+                    result["inputs"] = request_output.input.input_text
+                    result["parameters"] = parameters
+                # Special handling for error case
+                elif best_sequence.finish_reason == "error":
+                    result["finish_reason"] = best_sequence.finish_reason
+                return json.dumps(result) + "\n"
+            return json.dumps("") + "\n"
+
+        parameters = {"max_new_tokens": 256, "details": True, "stream": False}
+
+        req = Request(132,
+                      "This is a wonderful day",
+                      parameters=parameters,
+                      output_formatter=custom_fmt_wait)
+        print(parameters)
+        assert parameters == {"max_new_tokens": 256}
+
+        req.set_next_token(Token(244, "He", -0.334532))
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == ""
+        req.reset_next_token()
+        req.set_next_token(Token(576, "llo", -0.123123))
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == ""
+        req.reset_next_token()
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            "generated_text":
+            "Hello world",
+            "finish_reason":
+            "length",
+            "tokens": [{
+                "id": 244,
+                "text": "He",
+                "log_prob": -0.334532
+            }, {
+                "id": 576,
+                "text": "llo",
+                "log_prob": -0.123123
+            }, {
+                "id": 4558,
+                "text": " world",
+                "log_prob": -0.567854
+            }],
+            "generated_tokens":
+            3,
+            "inputs":
+            "This is a wonderful day",
+            "parameters": {
+                "max_new_tokens": 256,
+                "details": True,
+                "stream": False
+            },
         }
 
 
