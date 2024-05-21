@@ -223,7 +223,8 @@ def sse_response_formatter(request_output: RequestOutput):
     return f"data: {output_str}\n"
 
 
-@deprecated("onboard to new output_formatter signature. will be removed by 0.29.0")
+@deprecated(
+    "onboard to new output_formatter signature. will be removed by 0.29.0")
 def adapt_legacy_output_formatter(request_output: TextGenerationOutput) -> str:
     sequence_index = request_output.best_sequence_index
     best_sequence = request_output.sequences[
