@@ -1004,7 +1004,7 @@ transformers_neuronx_neo_list = {
     "codellama-34b-rb": {
         "option.model_id": "s3://djl-llm/codellama-34b/",
         "option.tensor_parallel_degree": 8,
-        "option.n_positions": 1024,
+        "option.n_positions": 256,
         "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 4,
         "option.model_loading_timeout": 3600,

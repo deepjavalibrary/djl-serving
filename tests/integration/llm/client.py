@@ -205,7 +205,7 @@ transformers_neuronx_neo_model_spec = {
     },
     "codellama-34b-rb": {
         "workers": 1,
-        "seq_length": [1024],
+        "seq_length": [256],
         "batch_size": [4]
     },
     "mistral-7b-rb": {

@@ -12,9 +12,9 @@ platform=$3     #required
 args=${@:4}     #optional
 
 is_sm_neo_context=false
-if [ $4 == "sm_neo_context" ]; then
+if [[ $4 == "sm_neo_context" ]]; then
   is_sm_neo_context=true
-  if [ $5 == "jumpstart_integration" ]; then
+  if [[ $5 == "jumpstart_integration" ]]; then
       jumpstart_integration=true
   fi
 fi
