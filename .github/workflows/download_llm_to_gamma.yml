@@ -58,6 +58,7 @@ jobs:
         working-directory: tests/integration/llm
         run: |
           aws s3 sync model/ s3://djl-llm/${{ inputs.s3_model_name }}/
+          rm -rf model/
       - name: Clean docker env
         working-directory: serving/docker
         run: |
