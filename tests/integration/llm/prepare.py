@@ -476,7 +476,7 @@ lmi_dist_model_list = {
         "option.model_id":
         "s3://djl-llm/mistral-7b-instruct-v02-awq/",
         "option.tensor_parallel_degree":
-        "2",
+        "max",
         "option.task":
         "text-generation",
         "option.dtype":
@@ -603,7 +603,7 @@ vllm_model_list = {
         "option.model_id":
         "s3://djl-llm/mistral-7b-instruct-v02-awq/",
         "option.tensor_parallel_degree":
-        "2",
+        "max",
         "option.task":
         "text-generation",
         "option.dtype":
