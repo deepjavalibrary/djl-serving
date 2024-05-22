@@ -109,7 +109,7 @@ Run the container and run the model partitioning script.
 The command below assumes that we are using a `serving.properties` in the `~/` directory and that we will be downloading the model artifacts from s3. If you need to download the model from HuggingFace using an access token you would add the following line to the `docker run` command:
 
 ```
-  -e HUGGING_FACE_HUB_TOKEN="hf_YOUR_TOKEN_VALUE" \
+  -e HF_TOKEN="hf_YOUR_TOKEN_VALUE" \
 ```
 
 Tutorial `docker run` for our example model compilation.
