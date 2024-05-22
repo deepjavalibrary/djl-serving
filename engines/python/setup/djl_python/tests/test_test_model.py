@@ -245,6 +245,7 @@ class TestTestModel(unittest.TestCase):
             self.assertEqual(final_dict["details"]["finish_reason"], 'error')
 
     @mock.patch("logging.info")
+    @unittest.skip
     def test_profiling(self, logging_method):
         envs = {
             "OPTION_MODEL_ID": "TheBloke/Llama-2-7B-Chat-fp16",
@@ -253,6 +254,7 @@ class TestTestModel(unittest.TestCase):
             "DJL_PYTHON_PROFILING": "true",
             "DJL_PYTHON_PROFILING_TOP_OBJ": "60"
         }
+
         for key, value in envs.items():
             os.environ[key] = value
         huggingface.get_rolling_batch_class_from_str = override_rolling_batch

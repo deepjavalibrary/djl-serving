@@ -60,8 +60,8 @@ class FakeRollingBatch(RollingBatch):
         self.cache = OrderedDict()
         super().reset()
 
-    @stop_on_any_exception
     @profile_objects
+    @stop_on_any_exception
     def inference(self, input_data, parameters, adapters=None):
         batch_size = len(input_data)
         new_requests = self.get_new_requests(input_data, parameters,
@@ -115,8 +115,8 @@ class FakeRollingBatchWithException(FakeRollingBatch):
         self.dead_counter = 0
         self.dead_trigger = random.randint(1, 50)
 
-    @stop_on_any_exception
     @profile_objects
+    @stop_on_any_exception
     def inference(self, input_data, parameters, adapters=None):
 
         if self.dead_counter < self.dead_trigger:
