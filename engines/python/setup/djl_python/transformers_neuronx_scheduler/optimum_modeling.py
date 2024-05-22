@@ -28,6 +28,7 @@ from transformers_neuronx.constants import LAYOUT_BSH, LAYOUT_HSB
 from optimum.neuron.generation import TokenSelector
 from optimum.neuron.utils.version_utils import check_compiler_compatibility, get_neuronxcc_version
 from optimum.modeling_base import OptimizedModel
+from transformers.generation import StoppingCriteriaList
 
 
 class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
@@ -194,6 +195,7 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
         input_ids: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
         generation_config: Optional["GenerationConfig"] = None,
+        stopping_criteria: Optional["StoppingCriteriaList"] = None,
         **kwargs,
     ) -> torch.LongTensor:
         r"""
@@ -219,6 +221,9 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
                 priority: 1) from the `generation_config.json` model file, if it exists; 2) from the model
                 configuration. Please note that unspecified parameters will inherit [`~transformers.generation.GenerationConfig`]'s
                 default values, whose documentation should be checked to parameterize generation.
+            stopping_criteria (`Optional[transformers.generation.StoppingCriteriaList], defaults to `None`):
+                Custom stopping criteria that complement the default stopping criteria built from arguments and a
+                generation config.
 
         Returns:
             `torch.Tensor`: A  `torch.FloatTensor`.
@@ -233,8 +238,11 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
         self._validate_model_kwargs(model_kwargs)
 
         # Instantiate a TokenSelector for the specified configuration
-        selector = TokenSelector.create(input_ids, generation_config, self,
-                                        self.max_length)
+        selector = TokenSelector.create(input_ids,
+                                        generation_config,
+                                        self,
+                                        self.max_length,
+                                        stopping_criteria=stopping_criteria)
 
         # Verify that the inputs are compatible with the model static input dimensions
         batch_size, sequence_length = input_ids.shape
@@ -331,9 +339,8 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
                 ],
                                            dim=-1)
 
-            # if eos_token was found in one sentence, set sentence to finished
-            unfinished_sequences = unfinished_sequences * next_tokens.ne(
-                selector.eos_token_id)
+            unfinished_sequences = unfinished_sequences & ~selector.stopping_criteria(
+                input_ids, None)
 
             # stop when each sentence is finished
             if unfinished_sequences.max() == 0:
