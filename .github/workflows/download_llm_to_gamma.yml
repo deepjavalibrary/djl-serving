@@ -19,25 +19,25 @@ on:
 
 
 jobs:
-  create-aarch64-runner:
+  create-cpu-runner:
     runs-on: [ self-hosted, scheduler ]
     steps:
-      - name: Create new Graviton instance
-        id: create_aarch64
+      - name: Create new CPU instance
+        id: create_cpu
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_graviton $token djl-serving
+          ./start_instance.sh action_cpu $token djl-serving
     outputs:
-      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
+      action_cpu_instance_id: ${{ steps.create_cpu.outputs.action_cpu_instance_id }}
 
   download_job:
-    runs-on: [ self-hosted, aarch64 ]
+    runs-on: [ self-hosted, cpu ]
     timeout-minutes: 60
-    needs: create-aarch64-runner
+    needs: create-cpu-runner
     steps:
       - uses: actions/checkout@v4
       - name: Clean docker env
@@ -47,13 +47,14 @@ jobs:
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10.x'
+          python-version: '3.11'
       - name: Install pip dependencies
         run: pip3 install awscli huggingface_hub
       - name: Download the model to local
         working-directory: tests/integration/llm
         run: |
           python3 download_llm.py ${{ inputs.model_id }} --token "${{ inputs.token }}" --allow-patterns "${{ inputs.allow_pattern }}"
+          rm -rf model/.huggingface/
       - name: upload the model to s3
         working-directory: tests/integration/llm
         run: |
@@ -64,13 +65,13 @@ jobs:
         run: |
           yes | docker system prune -a --volumes
 
-  stop-aarch64-runner:
+  stop-runner:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [download_job, create-aarch64-runner]
+    needs: [download_job, create-cpu-runner]
     steps:
       - name: Stop all instances
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
-          instance_id=${{ needs.create-aarch64-runner.outputs.aarch64_instance_id }}
+          instance_id=${{ needs.create-cpu-runner.outputs.action_cpu_instance_id }}
           ./stop_instance.sh $instance_id
