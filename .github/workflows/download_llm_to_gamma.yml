@@ -54,6 +54,7 @@ jobs:
         working-directory: tests/integration/llm
         run: |
           python3 download_llm.py ${{ inputs.model_id }} --token "${{ inputs.token }}" --allow-patterns "${{ inputs.allow_pattern }}"
+          rm -rf model/.huggingface/
       - name: upload the model to s3
         working-directory: tests/integration/llm
         run: |
