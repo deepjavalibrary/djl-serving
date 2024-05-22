@@ -1,0 +1,75 @@
+name: Download the LLM to LMI Gamma account
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_id:
+        description: 'The hf model id of your model'
+        required: true
+      s3_model_name:
+        description: 'The name used in s3'
+        required: true
+      token:
+        description: 'The hf token used to download'
+        required: false
+      allow_pattern:
+        description: 'The list of file postfix to download'
+        required: false
+        default: '*.json, *.pt, *.safetensors, *.txt, *.model, *.tiktoken'
+
+
+jobs:
+  create-aarch64-runner:
+    runs-on: [ self-hosted, scheduler ]
+    steps:
+      - name: Create new Graviton instance
+        id: create_aarch64
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_graviton $token djl-serving
+    outputs:
+      aarch64_instance_id: ${{ steps.create_aarch64.outputs.action_graviton_instance_id }}
+
+  download_job:
+    runs-on: [ self-hosted, aarch64 ]
+    timeout-minutes: 60
+    needs: create-aarch64-runner
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean docker env
+        working-directory: serving/docker
+        run: |
+          yes | docker system prune -a --volumes
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install awscli huggingface_hub
+      - name: Download the model to local
+        working-directory: tests/integration/llm
+        run: |
+          python3 download_llm.py ${{ inputs.model_id }} --token "${{ inputs.token }}" --allow-patterns "${{ inputs.allow_pattern }}"
+      - name: upload the model to s3
+        working-directory: tests/integration/llm
+        run: |
+          aws s3 sync model/ s3://djl-llm/${{ inputs.s3_model_name }}/
+      - name: Clean docker env
+        working-directory: serving/docker
+        run: |
+          yes | docker system prune -a --volumes
+
+  stop-aarch64-runner:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [download_job, create-aarch64-runner]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-aarch64-runner.outputs.aarch64_instance_id }}
+          ./stop_instance.sh $instance_id
