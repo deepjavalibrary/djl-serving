@@ -26,9 +26,10 @@ if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
 elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"*  || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
-  shm="12gb"
   if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"*]]; then
     shm="20gb"
+  else
+    shm="12gb"
   fi
 elif [[ "$platform" == *"inf1"* ]]; then # if the platform is inferentia
   host_device="--device /dev/neuron0"
