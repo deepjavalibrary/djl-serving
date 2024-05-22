@@ -27,6 +27,9 @@ elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"*  || "$platform" == *
   runtime="nvidia"
   is_llm=true
   shm="12gb"
+  if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"*]]; then
+    shm="20gb"
+  fi
 elif [[ "$platform" == *"inf1"* ]]; then # if the platform is inferentia
   host_device="--device /dev/neuron0"
 elif [[ "$platform" == *"inf2"* ]]; then # inf2: pytorch-inf2-24 24 will be the total devices
