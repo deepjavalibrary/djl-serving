@@ -8,14 +8,14 @@ def llm_download(model_id, token, allow_patterns):
     local_model_path.mkdir(exist_ok=True)
     if not allow_patterns:
         # Only download pytorch checkpoint files
-        allow_patterns = ["*.json", "*.pt", "*.safetensors", "*.txt", "*.model", "*.tiktoken"]
+        allow_patterns = [
+            "*.json", "*.pt", "*.safetensors", "*.txt", "*.model", "*.tiktoken"
+        ]
 
-    snapshot_download(
-        repo_id=model_id,
-        local_dir=local_model_path,
-        allow_patterns=allow_patterns,
-        token=token
-    )
+    snapshot_download(repo_id=model_id,
+                      local_dir=local_model_path,
+                      allow_patterns=allow_patterns,
+                      token=token)
 
 
 if __name__ == '__main__':
