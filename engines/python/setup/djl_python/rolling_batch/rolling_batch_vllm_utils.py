@@ -39,15 +39,34 @@ def update_request_cache_with_output(request_cache: OrderedDict,
                                      request_output: RequestOutput,
                                      tokenizer: Any = None) -> OrderedDict:
     request_id = request_output.request_id
-    request_cache[request_id]["id"] = request_output.outputs[0].token_ids[-1]
-    request_cache[request_id]["text"] = request_output.outputs[0].text
-    # calculate log_prob of the token based on the diff between two cumulative log probs
-    request_cache[request_id]["log_prob"] = request_output.outputs[
-        0].cumulative_logprob - request_cache[request_id]["cumulative_logprob"]
-    request_cache[request_id]["cumulative_logprob"] = request_output.outputs[
-        0].cumulative_logprob
-    request_cache[request_id]["finish_reason"] = request_output.outputs[
-        0].finish_reason
+    seq_output = request_output.outputs[0]
+    prev_len = request_cache[request_id]['num_generated_tokens']
+    cur_len = len(seq_output.token_ids)
+
+    new_token_ids = seq_output.token_ids[prev_len:cur_len]
+    output_token_texts = []
+    if hasattr(seq_output, "output_token_texts"):
+        output_token_texts = seq_output.output_token_texts[prev_len:cur_len]
+    if seq_output.logprobs:
+        new_logprobs_list = seq_output.logprobs[prev_len:cur_len]
+        new_logprobs = [
+            # NOTE: vLLM 0.4.1 changed logprob type
+            logprobs[token_id] if isinstance(logprobs[token_id], float) else
+            logprobs[token_id].logprob
+            for token_id, logprobs in zip(new_token_ids, new_logprobs_list)
+        ]
+    else:
+        new_logprobs = [None] * len(new_token_ids)
+
+    request_cache[request_id]["token_ids"] = new_token_ids
+    request_cache[request_id]["logprobs"] = new_logprobs
+    request_cache[request_id]['output_token_texts'] = output_token_texts
+    request_cache[request_id][
+        'cumulative_logprob'] = seq_output.cumulative_logprob
+    request_cache[request_id]["text"] = seq_output.text
+    request_cache[request_id]["finish_reason"] = seq_output.finish_reason
+    request_cache[request_id]['num_generated_tokens'] = cur_len
+
     if len(request_output.outputs) > 1:
         logging.warning(
             f"Finding more than 1 output for single request {len(request_output.outputs)}"

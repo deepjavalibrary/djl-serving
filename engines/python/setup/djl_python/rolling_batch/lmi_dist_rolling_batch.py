@@ -168,10 +168,13 @@ class LmiDistRollingBatch(RollingBatch):
             self.request_cache[request_id] = {
                 "curr_length": 0,
                 "text": "",
+                "output_token_texts": [],
                 "cumulative_logprob": 0.0,
-                "log_prob": 0.0,
+                "logprobs": [],
+                "token_ids": [],
                 "finished": False,
-                "finish_reason": None
+                "finish_reason": None,
+                "num_generated_tokens": 0,
             }
         request_outputs = self.engine.step()
 
@@ -202,12 +205,18 @@ class LmiDistRollingBatch(RollingBatch):
                     cache["finish_reason"], None)
                 prompt_tokens_details = cache.get("prompt_tokens_details")
             text = cache["text"][cache["curr_length"]:]
+            output_token_texts = [text] * len(cache['token_ids']) if not cache[
+                'output_token_texts'] else cache['output_token_texts']
             if len(text) > 0:
                 # token id is not determined since there could be multiple token comes at the same time
                 # only return the last one
-                token = Token(cache['id'], text, cache["log_prob"])
-                request.set_next_token(token, cache["finished"], finish_reason,
-                                       prompt_tokens_details)
+                for token_id, token_text, logprob, in zip(
+                        cache['token_ids'], output_token_texts,
+                        cache['logprobs']):
+                    token = Token(token_id, token_text, logprob)
+                    request.set_next_token(token, cache["finished"],
+                                           finish_reason,
+                                           prompt_tokens_details)
             else:
                 request.set_next_token("", cache["finished"], finish_reason,
                                        prompt_tokens_details)
