@@ -386,6 +386,18 @@ public class KServeRequestHandler implements RequestHandler<Void> {
             }
             return input;
         }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public void setInputs(KServeTensor[] inputs) {
+            this.inputs = inputs;
+        }
+
+        public void setOutputs(KServeTensor[] outputs) {
+            this.outputs = outputs;
+        }
     }
 
     private static final class InferenceResponse {
@@ -405,16 +417,20 @@ public class KServeRequestHandler implements RequestHandler<Void> {
             this.modelVersion = modelVersion;
         }
 
-        public String getModelName() {
-            return modelName;
+        public void setModelName(String modelName) {
+            this.modelName = modelName;
         }
 
-        public String getModelVersion() {
-            return modelVersion;
+        public void setModelVersion(String modelVersion) {
+            this.modelVersion = modelVersion;
         }
 
-        public String getId() {
-            return id;
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public void setOutputs(KServeTensor[] outputs) {
+            this.outputs = outputs;
         }
     }
 }
