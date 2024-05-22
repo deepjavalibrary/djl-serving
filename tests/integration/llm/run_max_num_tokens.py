@@ -5,6 +5,13 @@ import urllib.request
 from tensorrt_llm_toolkit.utils.utils import max_token_finder
 from pathlib import Path
 
+
+def clear_artifacts():
+    os.system("rm -rf /tmp/trtllm*")
+    os.system("rm -rf /tmp/model")
+    os.mkdir("/tmp/model")
+    
+
 if __name__ == '__main__':
     os.mkdir("max_num_token_results")
 
@@ -26,7 +33,7 @@ if __name__ == '__main__':
             num_tries = 0
             while len(os.listdir("/tmp/model/")) < 3 and num_tries < 5:
                 print(f"Downloading from s3 (try {num_tries}...")
-                os.system("rm -rf /tmp/model/*")
+                clear_artifacts()
                 s3url = model_id
                 if Path("/opt/djl/bin/s5cmd").is_file() and num_tries < 2:
                     print("Using s5cmd...")
@@ -47,7 +54,7 @@ if __name__ == '__main__':
             # Still failed
             print("Model download failed after multiple tries: directory had these contents:")
             print(os.listdir("/tmp/model/"))
-            os.system("rm -rf /tmp/model/*")
+            clear_artifacts()
             with open(f"max_num_token_results/{model_name}_log.txt",
                       "w") as log_file:
                 log_file.write("{model_name} model download failed")
@@ -72,5 +79,5 @@ if __name__ == '__main__':
             with open(f"max_num_token_results/{model_name}_{tensor_parallel_degree}_log.txt",
                       "w") as log_file:
                 log_file.write(output)
-        os.system("rm -rf /tmp/model/*")
+        clear_artifacts()
         
