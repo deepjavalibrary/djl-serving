@@ -17,14 +17,14 @@ from transformers import AutoConfig, AutoTokenizer
 from djl_python import Input, Output
 from djl_python.encode_decode import encode
 from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
-from djl_python.rolling_batch.neuron_vllm_rolling_batch import NeuronVLLMRollingBatch
+from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
 from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, \
     TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
-from djl_python.neuron_utils.utils import task_from_config
+from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import InputFormatConfigs, parse_input_with_formatter
 
 model = None
@@ -124,12 +124,13 @@ class TransformersNeuronXService(object):
         if not self.tokenizer.pad_token_id:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-    def set_rolling_batch(self):
+    def set_rolling_batch(self, properties: dict):
         if self.config.rolling_batch == "vllm":
+            self.rolling_batch_config = build_vllm_rb_properties(properties)
             if self.model:
                 self.rolling_batch_config["preloaded_model"] = self.model
-            self.rolling_batch = NeuronVLLMRollingBatch(
-                self.config, **self.rolling_batch_config)
+            self.rolling_batch = VLLMRollingBatch(self.config.model_id_or_path,
+                                                  self.rolling_batch_config)
         elif self.config.rolling_batch != "disable":
             if self.draft_model:
                 self.rolling_batch_config["draft_model"] = self.draft_model
@@ -191,7 +192,7 @@ class TransformersNeuronXService(object):
         self.set_tokenizer()
         self.set_model_loader()
         self.load_model()
-        self.set_rolling_batch()
+        self.set_rolling_batch(properties)
         self.input_format_configs = InputFormatConfigs(
             is_rolling_batch=is_rolling_batch_enabled(
                 self.config.rolling_batch),
@@ -229,7 +230,7 @@ class TransformersNeuronXService(object):
             self.config.save_mp_checkpoint_path,
             tokenizer=self.tokenizer,
             model_schema=self.config.partition_schema)
-        self.set_rolling_batch()
+        self.set_rolling_batch(properties)
         self.initialized = True
 
     def inference(self, inputs: Input) -> Output:

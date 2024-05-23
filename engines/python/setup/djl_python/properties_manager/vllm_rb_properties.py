@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import field_validator
 
@@ -43,6 +43,9 @@ class VllmRbProperties(Properties):
     max_lora_rank: Optional[int] = 16
     lora_extra_vocab_size: Optional[int] = 256
     max_cpu_loras: Optional[int] = None
+    # Neuron vLLM properties
+    device: Optional[str] = None
+    preloaded_model: Optional[Any] = None
 
     @field_validator('engine')
     def validate_engine(cls, engine):

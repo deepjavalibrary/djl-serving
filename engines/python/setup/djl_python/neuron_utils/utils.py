@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import copy
 import torch
 from typing import TYPE_CHECKING, Optional, Union
 from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
@@ -31,6 +32,18 @@ ARCHITECTURES_2_TASK = {
     "ForCausalLM": "text-generation",
     "ForFeatureExtraction": "feature-extraction"
 }
+
+TNX_ONLY_PROPERTIES = [
+    "quantize", "neuron_optimize_level", "enable_mixed_precision_accumulation",
+    "enable_saturate_infinity", "unroll", "load_in_8bit", "low_cpu_mem_usage",
+    "load_split_model", "context_length_estimate", "amp",
+    "compiled_graph_path", "draft_model_compiled_path",
+    "speculative_draft_model", "speculative_length", "draft_model_tp_size",
+    "task", "save_mp_checkpoint_path", "group_query_attention", "model_loader",
+    "rolling_batch_strategy", "fuse_qkv", "on_device_embedding_config",
+    "attention_layout", "collectives_layout", "cache_layout",
+    "partition_schema", "all_reduce_dtype", "cast_logits_dtype"
+]
 
 _neuronxcc_version: Optional[str] = None
 
@@ -66,6 +79,19 @@ def get_neuronxcc_version() -> str:
             "NeuronX Compiler python package is not installed.")
     _neuronxcc_version = neuronxcc.__version__
     return _neuronxcc_version
+
+
+def build_vllm_rb_properties(properties: dict) -> dict:
+    vllm_properties = copy.deepcopy(properties)
+    vllm_properties["device"] = "neuron"
+    vllm_properties["max_model_len"] = properties["n_positions"]
+    del vllm_properties["n_positions"]
+
+    for tnx_only_property in TNX_ONLY_PROPERTIES:
+        if tnx_only_property in vllm_properties:
+            del vllm_properties[tnx_only_property]
+
+    return vllm_properties
 
 
 class NeuronXModelAdapter(OptimumModelForCausalLM):

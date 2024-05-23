@@ -20,7 +20,7 @@ from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exc
 from djl_python.request_io import Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, get_lora_request_params, DTYPE_MAPPER,
-    FINISH_REASON_MAPPER)
+    FINISH_REASON_MAPPER, get_engine_args_from_config)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 VLLM_GENERATION_PARAMS = set(SamplingParams().__dict__.keys())
@@ -44,25 +44,7 @@ class VLLMRollingBatch(RollingBatch):
         """
         self.vllm_configs = VllmRbProperties(**properties)
         super().__init__(self.vllm_configs)
-        args = EngineArgs(
-            model=self.vllm_configs.model_id_or_path,
-            tensor_parallel_size=self.vllm_configs.tensor_parallel_degree,
-            dtype=DTYPE_MAPPER[self.vllm_configs.dtype],
-            seed=0,
-            max_model_len=self.vllm_configs.max_model_len,
-            enforce_eager=self.vllm_configs.enforce_eager,
-            gpu_memory_utilization=self.vllm_configs.gpu_memory_utilization,
-            max_num_batched_tokens=self.vllm_configs.
-            max_rolling_batch_prefill_tokens,
-            trust_remote_code=self.vllm_configs.trust_remote_code,
-            load_format=self.vllm_configs.load_format,
-            quantization=self.vllm_configs.quantize,
-            enable_lora=self.vllm_configs.enable_lora,
-            max_loras=self.vllm_configs.max_loras,
-            max_lora_rank=self.vllm_configs.max_lora_rank,
-            lora_extra_vocab_size=self.vllm_configs.lora_extra_vocab_size,
-            max_cpu_loras=self.vllm_configs.max_cpu_loras,
-            revision=self.vllm_configs.revision)
+        args = get_engine_args_from_config(self.vllm_configs)
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)

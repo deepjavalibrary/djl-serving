@@ -20,7 +20,7 @@ import sys
 
 try:
     from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
-    from djl_python.rolling_batch.neuron_vllm_rolling_batch import NeuronVLLMRollingBatch
+    from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
     from djl_python.tests.rolling_batch_test_scripts.generator import Generator
     SKIP_TEST = False
 except ImportError:
@@ -61,17 +61,16 @@ class TestNeuronVLLM(unittest.TestCase):
             properties = {
                 "tensor_parallel_degree": 1,
                 "dtype": "fp16",
-                "n_positions": "128",
+                "device": "neuron",
+                "max_model_len": "128",
                 "rolling_batch": "vllm",
-                "model_loader": "vllm",
                 "max_rolling_batch_size": 4,
                 "model_loading_timeout": 3600,
                 "model_id": model_id
             }
 
             # ===================== neuron-vllm ============================
-            config = TransformerNeuronXProperties(**properties)
-            rolling_batch = NeuronVLLMRollingBatch(config, None)
+            rolling_batch = VLLMRollingBatch(model_id, properties)
 
             gen = Generator(rolling_batch=rolling_batch)
 
