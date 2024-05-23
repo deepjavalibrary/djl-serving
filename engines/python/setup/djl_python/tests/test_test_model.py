@@ -13,18 +13,21 @@
 import json
 import os
 import unittest
+from unittest import mock
+
 from djl_python.test_model import TestHandler
 from djl_python import huggingface
-from .rolling_batch.fake_rolling_batch import FakeRollingBatch, FakeRollingBatchWithException
 
 
 def override_rolling_batch(rolling_batch_type: str, is_mpi: bool,
                            model_config):
+    from djl_python.tests.rolling_batch.fake_rolling_batch import FakeRollingBatch
     return FakeRollingBatch
 
 
 def override_rolling_batch_with_exception(rolling_batch_type: str,
                                           is_mpi: bool, model_config):
+    from djl_python.tests.rolling_batch.fake_rolling_batch import FakeRollingBatchWithException
     return FakeRollingBatchWithException
 
 
@@ -240,3 +243,45 @@ class TestTestModel(unittest.TestCase):
         for _, value in result.items():
             final_dict = json.loads(value.splitlines()[-1])
             self.assertEqual(final_dict["details"]["finish_reason"], 'error')
+
+    @mock.patch("logging.info")
+    @unittest.skip
+    def test_profiling(self, logging_method):
+        envs = {
+            "OPTION_MODEL_ID": "TheBloke/Llama-2-7B-Chat-fp16",
+            "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
+            "OPTION_ROLLING_BATCH": "auto",
+            "DJL_PYTHON_PROFILING": "true",
+            "DJL_PYTHON_PROFILING_TOP_OBJ": "60"
+        }
+
+        for key, value in envs.items():
+            os.environ[key] = value
+        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        handler = TestHandler(huggingface)
+        self.assertEqual(handler.serving_properties["model_id"],
+                         envs["OPTION_MODEL_ID"])
+        self.assertEqual(handler.serving_properties["rolling_batch"],
+                         envs["OPTION_ROLLING_BATCH"])
+        inputs = [{
+            "inputs":
+            "<|system|>You are a helpful assistant.</s><|user|>What is deep learning?</s>",
+            "parameters": {
+                "max_new_tokens": 50
+            }
+        }, {
+            "inputs":
+            "<|system|>You are a friendly chatbot who always responds in the style of a pirate</s><|user|>How many helicopters can a human eat in one sitting?</s>",
+            "parameters": {
+                "min_new_tokens": 51,
+                "max_new_tokens": 256
+            }
+        }]
+        logging_method.return_value = None
+        result = handler.inference_rolling_batch(inputs)
+        logging_response = logging_method.call_args_list[1][0][0]
+        print(logging_response)
+        self.assertTrue(len(logging_response.splitlines()) > 50)
+
+        for key in envs.keys():
+            os.environ[key] = ""

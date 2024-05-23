@@ -17,6 +17,7 @@ from transformers import AutoTokenizer
 from djl_python.properties_manager.properties import Properties
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from djl_python.request_io import Token
+from djl_python.utils import profile_objects
 
 
 class FakeRollingBatch(RollingBatch):
@@ -59,6 +60,7 @@ class FakeRollingBatch(RollingBatch):
         self.cache = OrderedDict()
         super().reset()
 
+    @profile_objects
     @stop_on_any_exception
     def inference(self, input_data, parameters, adapters=None):
         batch_size = len(input_data)
@@ -113,6 +115,7 @@ class FakeRollingBatchWithException(FakeRollingBatch):
         self.dead_counter = 0
         self.dead_trigger = random.randint(1, 50)
 
+    @profile_objects
     @stop_on_any_exception
     def inference(self, input_data, parameters, adapters=None):
 
