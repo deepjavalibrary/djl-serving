@@ -865,10 +865,12 @@ def response_checker(res, message):
     if 'content-type' in res.headers.keys():
         if 'application/json' == res.headers['content-type']:
             output_json = json.loads(message)
-            if isinstance(output_json,
-                          dict) and "details" in output_json.keys():
-                if "error" == output_json["details"]["finish_reason"]:
-                    raise RuntimeError(f"Inference failed!")
+            if isinstance(output_json, dict):
+                if "details" in output_json.keys():
+                    if "error" == output_json["details"]["finish_reason"]:
+                        raise RuntimeError(f"Inference failed!")
+                elif output_json.get("code", 200) != 200:
+                    raise RuntimeError("Inference failed!")
         elif 'application/jsonlines' == res.headers['content-type']:
             json_lines = []
             for item in message.splitlines():
