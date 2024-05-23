@@ -44,7 +44,7 @@ jobs:
     runs-on: [ self-hosted, "${{ inputs.instance }}" ]
     container:
       image: deepjavalibrary/djl-serving:tensorrt-llm-nightly
-      options: --gpus all --runtime=nvidia --shm-size 12g
+      options: --gpus all --runtime=nvidia --shm-size 20g
     timeout-minutes: 1440
     needs: create-runners
     steps:
