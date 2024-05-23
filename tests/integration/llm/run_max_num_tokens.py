@@ -9,6 +9,7 @@ from pathlib import Path
 def clear_artifacts():
     os.system("rm -rf /tmp/trtllm*")
     os.system("rm -rf /tmp/model")
+    os.system("rm -rf /tmp/.djl.ai*")
     os.mkdir("/tmp/model")
     
 
