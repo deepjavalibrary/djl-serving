@@ -21,26 +21,26 @@ if [[ "$model_path" == "no_code" ]]; then
 fi
 
 get_instance_type() {
-    local instance_type=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.instanceType')
-    echo "$instance_type"
+  local token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+  local instance_type=$(curl -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.instanceType')
+  echo "$instance_type"
 }
 
 is_p4d_or_p5() {
-    local instance_type=$(get_instance_type)
-    if [[ "$instance_type" == *"p4"* || "$instance_type" == *"p5"* ]]; then
-        echo "true"
-    else
-        echo "false"
-    fi
+  local instance_type=$(get_instance_type)
+  if [[ "$instance_type" == *"p4d"* || "$instance_type" == *"p5"* ]]; then
+    echo "true"
+  else
+    echo "false"
+  fi
 }
-
 is_llm=false
 if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
-elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"*  || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
+elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
-  if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]] && [[ $(is_p4d_or_p5) == "true" ]]; then
+  if [[ "$(is_p4d_or_p5)" == *"true"* ]]; then
     shm="20gb"
   else
     shm="12gb"
