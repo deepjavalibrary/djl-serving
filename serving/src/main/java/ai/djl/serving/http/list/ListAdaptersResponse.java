@@ -12,8 +12,6 @@
  */
 package ai.djl.serving.http.list;
 
-import ai.djl.serving.http.list.ListAdaptersResponse.AdapterItem;
-
 import java.util.ArrayList;
 import java.util.List;
 
