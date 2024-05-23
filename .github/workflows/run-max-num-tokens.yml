@@ -18,6 +18,7 @@ on:
           - g5.12xlarge
           - g5.48xlarge
           - p4d.24xlarge
+          - p5.48xlarge
 
 permissions:
   id-token: write
