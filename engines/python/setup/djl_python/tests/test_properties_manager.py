@@ -232,6 +232,7 @@ class TestConfigManager(unittest.TestCase):
     }, {
         'rolling_batch': 'auto'
     }, {
+        'model_loader': 'tnx',
         'partition_schema': 'optimum',
         'load_split_model': 'true'
     }, {

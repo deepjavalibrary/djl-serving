@@ -325,6 +325,26 @@ jobs:
           curl http://127.0.0.1:8080/models
           python3 llm/client.py transformers_neuronx_rolling_batch llama-7b-rb
           docker rm -f $(docker ps -aq)
+      - name: Test transformers-neuronx tiny-llama vllm model load and rolling batch
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx tiny-llama-rb-vllm
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-1 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx_rolling_batch tiny-llama-rb-vllm
+          docker rm -f $(docker ps -aq)
+      - name: Test transformers-neuronx llama-3-8b vllm rolling batch
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py transformers_neuronx llama-3-8b-rb-vllm
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models pytorch-inf2-4 \
+          serve
+          curl http://127.0.0.1:8080/models
+          python3 llm/client.py transformers_neuronx_rolling_batch llama-3-8b-rb-vllm
+          docker rm -f $(docker ps -aq)
           sudo rm -rf models
       - name: Test transformers-neuronx mixtral-8x-7b rolling batch
         working-directory: tests/integration

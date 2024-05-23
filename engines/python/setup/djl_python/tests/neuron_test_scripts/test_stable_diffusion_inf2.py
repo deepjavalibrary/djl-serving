@@ -15,25 +15,17 @@ import unittest
 from unittest.mock import patch
 from djl_python.tests.utils import parameterized, parameters, mock_import_modules
 
-MOCK_MODULES = [
-    "torch_neuronx", "transformers_neuronx", "transformers_neuronx.config",
-    "transformers_neuronx.module", "optimum", "optimum.neuron",
-    "optimum.exporters", "optimum.neuron.generation", "optimum.neuron.utils",
-    "optimum.modeling_base",
-    "djl_python.transformers_neuronx_scheduler.optimum_modeling",
-    "optimum.exporters.neuron", "optimum.neuron.utils.version_utils",
-    "diffusers", "diffusers.models", "optimum.exporters.neuron.model_configs",
-    "optimum.exporters.tasks", "diffusers.models.unet_2d_condition",
-    "diffusers.models.attention_processor"
-]
-mock_import_modules(MOCK_MODULES)
-
-from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
-from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
-from djl_python.neuron_utils.model_loader import OptimumStableDiffusionLoader
+try:
+    from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
+    from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
+    from djl_python.neuron_utils.model_loader import OptimumStableDiffusionLoader
+    SKIP_TEST = False
+except ImportError:
+    SKIP_TEST = True
 
 
 @parameterized
+@unittest.skipIf(SKIP_TEST, "Neuron dependencies are not available")
 class TestStableDiffusionNeuronXService(unittest.TestCase):
 
     def setUp(self):

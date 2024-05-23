@@ -14,12 +14,12 @@ import logging
 from collections import OrderedDict
 from typing import Any
 
-from lmi_dist.arg_utils import VllmEngineArgs
+from vllm import EngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput
 from vllm.lora.request import LoRARequest
 from djl_python.request_io import Token
-
 from djl_python.request import Request
+from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 
 DTYPE_MAPPER = {
     "fp32": "float32",
@@ -105,7 +105,12 @@ def get_speculative_decoding_metrics_record(
 
 
 def supports_speculative_decoding() -> bool:
-    return "draft_model" in VllmEngineArgs.__annotations__
+    try:
+        # Moved the import inside a try to support neuron vllm container w/o lmi-dist
+        from lmi_dist.arg_utils import VllmEngineArgs
+        return "draft_model" in VllmEngineArgs.__annotations__
+    except ImportError:
+        return False
 
 
 def get_lora_request_params(request: Request, lora_ids: dict) -> dict:
@@ -118,3 +123,36 @@ def get_lora_request_params(request: Request, lora_ids: dict) -> dict:
         result["lora_request"] = LoRARequest(adapter_name, adapter_id,
                                              adapter_path)
     return result
+
+
+def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
+    if config.device == "neuron":
+        return EngineArgs(model=config.model_id_or_path,
+                          preloaded_model=config.preloaded_model,
+                          tensor_parallel_size=config.tensor_parallel_degree,
+                          dtype=DTYPE_MAPPER[config.dtype],
+                          seed=0,
+                          max_model_len=config.max_model_len,
+                          max_num_seqs=config.max_rolling_batch_size,
+                          block_size=config.max_model_len,
+                          trust_remote_code=config.trust_remote_code,
+                          revision=config.revision)
+    else:
+        return EngineArgs(
+            model=config.model_id_or_path,
+            tensor_parallel_size=config.tensor_parallel_degree,
+            dtype=DTYPE_MAPPER[config.dtype],
+            seed=0,
+            max_model_len=config.max_model_len,
+            enforce_eager=config.enforce_eager,
+            gpu_memory_utilization=config.gpu_memory_utilization,
+            max_num_batched_tokens=config.max_rolling_batch_prefill_tokens,
+            trust_remote_code=config.trust_remote_code,
+            load_format=config.load_format,
+            quantization=config.quantize,
+            enable_lora=config.enable_lora,
+            max_loras=config.max_loras,
+            max_lora_rank=config.max_lora_rank,
+            lora_extra_vocab_size=config.lora_extra_vocab_size,
+            max_cpu_loras=config.max_cpu_loras,
+            revision=config.revision)

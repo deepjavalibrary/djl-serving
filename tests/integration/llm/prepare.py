@@ -224,6 +224,25 @@ transformers_neuronx_handler_list = {
         "option.load_split_model": True,
         "option.output_formatter": "jsonlines"
     },
+    "llama-3-8b-rb-vllm": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 1024,
+        "option.max_rolling_batch_size": 4,
+        "option.rolling_batch": 'vllm',
+        "option.model_loading_timeout": 2400,
+        "option.output_formatter": "jsonlines"
+    },
+    "tiny-llama-rb-vllm": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
+        "option.n_positions": 1024,
+        "option.max_rolling_batch_size": 4,
+        "option.rolling_batch": 'vllm',
+        "option.model_loader": 'vllm',
+        "option.model_loading_timeout": 1200,
+        "option.output_formatter": "jsonlines"
+    },
     "mistral-7b-rb": {
         "option.model_id": "s3://djl-llm/mistral-7b/",
         "option.tensor_parallel_degree": 4,
