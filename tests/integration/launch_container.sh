@@ -20,13 +20,27 @@ if [[ "$model_path" == "no_code" ]]; then
   unset model_path
 fi
 
+get_instance_type() {
+    local instance_type=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.instanceType')
+    echo "$instance_type"
+}
+
+is_p4d_or_p5() {
+    local instance_type=$(get_instance_type)
+    if [[ "$instance_type" == *"p4"* || "$instance_type" == *"p5"* ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
 is_llm=false
 if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
 elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"*  || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
-  if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"*]]; then
+  if [[ "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]] && [[ $(is_p4d_or_p5) == "true" ]]; then
     shm="20gb"
   else
     shm="12gb"
