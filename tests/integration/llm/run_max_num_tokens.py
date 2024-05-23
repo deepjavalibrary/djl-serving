@@ -42,12 +42,14 @@ if __name__ == '__main__':
                             s3url = s3url + '*'
                         else:
                             s3url = s3url + '/*'
-                    os.system(
+                    return_value = os.system(
                         f"/opt/djl/bin/s5cmd --retry-count 1 sync {s3url} /tmp/model/"
                     )
+                    print("Return value from s5cmd: ", return_value)
                 else:
                     print("Using AWS CLI...")
-                    os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
+                    return_value = os.system(f"aws s3 cp {s3url} /tmp/model/ --recursive")
+                    print("Return value from aws s3 cp: ", return_value)
                 model_id = "/tmp/model/"
                 num_tries += 1
         if len(os.listdir("/tmp/model/")) < 3:
