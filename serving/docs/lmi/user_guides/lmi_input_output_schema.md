@@ -83,6 +83,45 @@ Example response:
 }
 ```
 
+#### Error Responses
+
+When rolling batch is enabled, errors are returned with HTTP response code 200.
+Error details are returned in the response content.
+
+If the request is poorly formatted (i.e. invalid json in the request body), the response content will be:
+
+```
+{
+    "error": "<error details>",
+    "code": 424
+}
+```
+
+If there is an issue with the request (such as bad generation parameter value), or an error occurs during generation, the response content will be:
+
+When not using streaming:
+
+```
+{
+    "generated_text": "", 
+    "details": {
+        "finish_reason": "error", 
+        "generated_tokens": null, 
+        "inputs": null, 
+        "tokens": null
+    }
+}
+```
+
+When using streaming:
+
+```
+{
+    "token": {"id": -1, "text": "", "log_prob": -1, "special_token": true}, 
+    "generated_text": "", 
+    "details": {"finish_reason": "error", "generated_tokens": null, "inputs": null}}
+}
+```
 ## Dynamic Batch/Static Batch Schema
 
 ### Request Schema
@@ -141,6 +180,19 @@ Example response:
 {"outputs": ["is"]}
 ...more outputs until the last one
 ```
+
+#### Error Responses
+
+When using dynamic batching, errors are returned with HTTP response code 424 and content:
+
+``` 
+{
+    "code": 424,
+    "message": "prediction failure",
+    "error": "<error details"
+}
+```
+
 
 ## API Object Schemas
 
