@@ -22,7 +22,7 @@ import re
 from abc import ABC, abstractmethod
 from transformers import AutoModelForCausalLM, GenerationConfig
 from transformers_neuronx import NeuronAutoModelForCausalLM
-from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig
+from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig, GenerationConfig as NeuronGenerationConfig
 from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema
 from transformers_neuronx.module import save_pretrained_split
 from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version
@@ -163,9 +163,6 @@ class TNXModelLoader(ModelLoader):
                 "group_query_attention"] = self.config.group_query_attention
         if self.config.fuse_qkv:
             neuron_config["fuse_qkv"] = self.config.fuse_qkv
-        if self.config.on_device_embedding:
-            neuron_config[
-                "on_device_embedding"] = self.config.on_device_embedding
         if self.config.collectives_layout:
             neuron_config[
                 "collectives_layout"] = self.config.collectives_layout
@@ -177,7 +174,10 @@ class TNXModelLoader(ModelLoader):
             neuron_config["all_reduce_dtype"] = self.config.all_reduce_dtype
         if self.config.cast_logits_dtype:
             neuron_config["cast_logits_dtype"] = self.config.cast_logits_dtype
-
+        if self.config.on_device_embedding_config:
+            if len(self.config.on_device_embedding_config.keys()) > 0:
+                neuron_config["on_device_embedding"] = NeuronGenerationConfig(
+                    **self.config.on_device_embedding_config)
         self.neuron_config = NeuronConfig(**neuron_config)
 
     def get_model_specific_kwargs(self) -> dict:

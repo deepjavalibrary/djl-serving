@@ -14,9 +14,10 @@
 import logging
 import os
 import re
-from typing import Optional, List
+import json
+from typing import Optional, List, Any
 
-from pydantic import field_validator, model_validator, ValidationInfo
+from pydantic import field_validator, model_validator, ValidationInfo, Field
 from enum import IntEnum, Enum
 
 from djl_python.properties_manager.properties import Properties, RollingBatchEnum, StreamingEnum
@@ -102,13 +103,13 @@ class TransformerNeuronXProperties(Properties):
     model_loader: Optional[TnXModelLoaders] = None
     rolling_batch_strategy: Optional[TnXGenerationStrategy] = None
     fuse_qkv: Optional[bool] = None
-    on_device_embedding: Optional[bool] = None
     attention_layout: Optional[TnXMemoryLayout] = None
     collectives_layout: Optional[TnXMemoryLayout] = None
     cache_layout: Optional[TnXMemoryLayout] = None
     partition_schema: Optional[TnXModelSchema] = None
     all_reduce_dtype: Optional[TnXDtypeName] = None
     cast_logits_dtype: Optional[TnXDtypeName] = None
+    on_device_embedding_config: Optional[Any] = Field(default_factory=dict)
 
     @field_validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
@@ -258,3 +259,8 @@ class TransformerNeuronXProperties(Properties):
             elif properties.get("speculative_draft_model") is not None:
                 properties['model_loader'] = TnXModelLoaders.tnx
         return properties
+
+    @field_validator('on_device_embedding_config')
+    def set_on_device_embedding_config(cls, config_path):
+        with open(config_path, "r") as f:
+            return json.load(f)
