@@ -104,11 +104,11 @@ jobs:
         working-directory: serving/docker
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Llama70b lmi container
+      - name: Llama3-70b lmi container
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-70b-hf/" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/llama-3-70b-hf/" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code llama-70b
@@ -197,7 +197,7 @@ jobs:
         working-directory: serving/docker
         run: |
           docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-      - name: Llama7b with tgi compat
+      - name: Llama2-7b with tgi compat
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -206,16 +206,16 @@ jobs:
           serve
           python3 llm/tgi_client.py
           ./remove_container.sh
-      - name: Llama7b lmi container
+      - name: Llama3-8b lmi container
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-7b-hf/" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/llama-3-8b-hf/" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code llama-7b
           ./remove_container.sh
-      - name: Llama13b lmi container
+      - name: Llama2-13b lmi container
         working-directory: tests/integration
         run: |
           rm -rf models
@@ -255,7 +255,7 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "HF_MODEL_ID=microsoft/phi-2" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/phi-2/" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code phi-2
