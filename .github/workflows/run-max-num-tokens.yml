@@ -47,8 +47,15 @@ jobs:
     steps:
       - name: Mount NVME
         run: |
+          echo "lsblk..."
+          lsblk
+          echo "sudo file -s /dev/nvme1n1..."
+          sudo file -s /dev/nvme1n1
+          echo "making directory..."
           sudo mkdir /mnt/nvme-disk
+          echo "formatting..."
           sudo mkfs -t ext4 /dev/nvme1n1
+          echo "mounting..."
           sudo mount /dev/nvme1n1 /mnt/nvme-disk
 
   run-max-num-tokens:
