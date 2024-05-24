@@ -577,6 +577,7 @@ def unregister_adapter(inputs: Input):
     """
     adapter_name = inputs.get_property("name")
     logging.info(f"Unregistering adapter {adapter_name}")
+    #TODO: delete in vllm engine as well
     del _service.adapter_registry[adapter_name]
     if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
         _service.model.base_model.delete_adapter(adapter_name)
