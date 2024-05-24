@@ -41,28 +41,11 @@ jobs:
     outputs:
       gpu_instance_id: ${{ steps.create_instance.outputs.action_ib_instance_id }}
 
-  mount-nvme:
-    runs-on: [ self-hosted, "${{ inputs.instance }}" ]
-    needs: create-runners
-    steps:
-      - name: Mount NVME
-        run: |
-          echo "lsblk..."
-          lsblk
-          echo "sudo file -s /dev/nvme1n1..."
-          sudo file -s /dev/nvme1n1
-          echo "making directory..."
-          sudo mkdir /mnt/nvme-disk
-          echo "formatting..."
-          sudo mkfs -t ext4 /dev/nvme1n1
-          echo "mounting..."
-          sudo mount /dev/nvme1n1 /mnt/nvme-disk
-
   run-max-num-tokens:
     runs-on: [ self-hosted, "${{ inputs.instance }}" ]
     container:
       image: deepjavalibrary/djl-serving:tensorrt-llm-nightly
-      options: --gpus all --runtime=nvidia --shm-size 20g -v /mnt/nvme-disk:/tmp
+      options: --gpus all --runtime=nvidia --shm-size 20g -v /opt/dlami/nvme:/tmp
     timeout-minutes: 1440
     needs: mount-nvme
     steps:
