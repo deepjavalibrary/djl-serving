@@ -37,6 +37,61 @@ jobs:
       inf2_instance_id_1: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
       inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
 
+  transformers-neuronx-container-unit-tests:
+    runs-on: [ self-hosted, inf2 ]
+    timeout-minutes: 15
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy pillow wheel
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Run djl_python unit/integration tests on container
+        working-directory: engines/python/setup
+        run: |
+          # Setup
+          pip install setuptools
+          python3 -m setup bdist_wheel
+          mkdir logs
+          docker run -t --rm --network="host" \
+          --name neuron-test \
+          -v $PWD/:/opt/ml/model/ \
+          -w /opt/ml/model \
+          --device=/dev/neuron0:/dev/neuron0 \
+          deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          /bin/bash -c "'pip install /opt/ml/model/dist/*.whl pytest' && \
+          pytest djl_python/tests/neuron_test_scripts/ | tee logs/results.log"
+          
+          # Cleanup
+          sudo rm -rf TinyLlama .pytest_cache djl_python
+          
+          # Fail on failed tests
+          if grep -F "failed" logs/results.log &>/dev/null; then exit 1; fi
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: engines/python/setup
+        run: |
+          cat logs/results.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: transformers-neuronx-${{ matrix.arch }}-logs
+          path: engines/python/setup/logs/
+
   transformers-neuronx-test-1:
     runs-on: [ self-hosted, inf2 ]
     timeout-minutes: 90
@@ -162,6 +217,7 @@ jobs:
           # checking whether requirements.txt download is successful
           if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
           then echo "requirements.txt install was successful"; else exit 1; fi
+          if [ -d models ]; then sudo rm -rf models; fi
       - name: Test gpt2-quantize partition
         working-directory: tests/integration
         run: |
@@ -181,10 +237,12 @@ jobs:
           # checking whether requirements.txt download is successful
           if grep -F "pip install requirements succeed!" partition_output.log &>/dev/null; \
           then echo "requirements.txt install was successful"; else exit 1; fi
+          if [ -d models ]; then sudo rm -rf models; fi
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          if [ -d models ]; then sudo rm -rf models; fi
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -277,6 +335,7 @@ jobs:
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          if [ -d models ]; then sudo rm -rf models; fi
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -382,6 +441,7 @@ jobs:
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
+          if [ -d models ]; then sudo rm -rf models; fi
           cat logs/serving.log
       - name: Upload test logs
         uses: actions/upload-artifact@v3
@@ -392,7 +452,7 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, transformers-neuronx-test-1, transformers-neuronx-test-2, transformers-neuronx-rolling-batch ]
+    needs: [ create-runners, transformers-neuronx-container-unit-tests, transformers-neuronx-test-1, transformers-neuronx-test-2, transformers-neuronx-rolling-batch ]
     steps:
       - name: Stop all instances
         run: |
