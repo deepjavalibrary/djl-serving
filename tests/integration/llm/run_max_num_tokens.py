@@ -14,6 +14,12 @@ def clear_artifacts():
     
 
 if __name__ == '__main__':
+    print("listing temp:")
+    os.system("ls /tmp")
+    print("making a file:")
+    os.system('echo "hello_world" >> /tmp/test.txt')
+    print("listing temp again:")
+    os.system('ls /tmp')
     os.mkdir("max_num_token_results")
 
     parser = argparse.ArgumentParser(description='Parse inputs to script')
