@@ -125,6 +125,7 @@ class LmiDistRollingBatch(RollingBatch):
             parameters["use_beam_search"] = True
         if parameters.pop("decoder_input_details", False):
             parameters["prompt_logprobs"] = 1
+        parameters["logprobs"] = parameters.get("logprobs", 1)
         parameters = filter_unused_generation_params(
             parameters,
             LMI_DIST_GENERATION_PARAMS,
