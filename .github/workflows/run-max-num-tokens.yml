@@ -47,7 +47,7 @@ jobs:
       image: deepjavalibrary/djl-serving:tensorrt-llm-nightly
       options: --gpus all --runtime=nvidia --shm-size 20g -v /opt/dlami/nvme:/tmp
     timeout-minutes: 1440
-    needs: mount-nvme
+    needs: create-runners
     steps:
       - uses: actions/checkout@v4
       - name: Configure AWS Credentials
