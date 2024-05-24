@@ -376,6 +376,7 @@ lmi_dist_model_list = {
         "option.trust_remote_code": True,
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
+        "option.max_model_len": 2656,
     },
     "llama2-13b-gptq": {
         "option.model_id": "s3://djl-llm/TheBloke-Llama-2-13b-Chat-GPTQ/",
@@ -390,11 +391,14 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
     },
+    # TODO: Adding max_model_len due to changes mem profiling
+    #       for RoPE scaling models in vLLM
     "llama2-7b-32k": {
         "option.model_id": "togethercomputer/LLaMA-2-7B-32K",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
-        "option.max_rolling_batch_size": 4
+        "option.max_rolling_batch_size": 4,
+        "option.max_model_len": 51888,
     },
     "mistral-7b-128k-awq": {
         "option.model_id": "TheBloke/Yarn-Mistral-7B-128k-AWQ",
@@ -511,7 +515,7 @@ vllm_model_list = {
         "option.trust_remote_code": True,
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
-        "option.max_model_len": 3280,
+        "option.max_model_len": 2656,
     },
     "llama2-7b-chat": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
@@ -751,7 +755,7 @@ def build_rolling_batch_model(model):
             f"{model} is not one of the supporting handler {list(rolling_batch_model_list.keys())}"
         )
     options = rolling_batch_model_list[model]
-    options["rolling_batch"] = "scheduler"
+    options["option.rolling_batch"] = "scheduler"
     write_model_artifacts(options)
 
 
