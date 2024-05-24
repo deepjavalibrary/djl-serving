@@ -47,6 +47,8 @@ class LmiDistRollingBatch(RollingBatch):
         :param properties (dict): other properties of the model, such as decoder strategy
         """
         self.lmi_dist_config = LmiDistRbProperties(**properties)
+        self.model_type = getattr(kwargs.get("model_config", None),
+                                  "model_type", None)
         super().__init__(self.lmi_dist_config)
         self.supports_speculative_decoding = supports_speculative_decoding()
         engine_kwargs = {}
@@ -83,8 +85,6 @@ class LmiDistRollingBatch(RollingBatch):
             kwargs["warmup_prefill_tokens"] = _WARMUP_PREFILL_TOKENS
         self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
-        self.model_type = getattr(kwargs.get("model_config", None),
-                                  "model_type", None)
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
 
     def reset(self) -> None:
@@ -96,6 +96,8 @@ class LmiDistRollingBatch(RollingBatch):
         super().reset()
 
     def get_tokenizer(self):
+        if "t5" == self.model_type:
+            return self.engine.preprocessor.tokenizer
         return self.engine.preprocessor.tokenizer.tokenizer
 
     def translate_lmi_dist_params(self, parameters: dict):

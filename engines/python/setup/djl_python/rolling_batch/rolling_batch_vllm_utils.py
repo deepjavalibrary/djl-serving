@@ -75,6 +75,9 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     if "prompt_tokens_details" not in request_cache[
             request_id] and request_output.prompt_logprobs:
         request_cache[request_id]["prompt_tokens_details"] = []
+        if not isinstance(request_output.prompt_token_ids, list):
+            ## lmi-dist does not return prompt_token_ids for t5
+            request_output.prompt_token_ids = []
         for index, prompt_token_id in enumerate(
                 request_output.prompt_token_ids):
             prompt_token = Token(
