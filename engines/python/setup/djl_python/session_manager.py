@@ -10,150 +10,147 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
-import mmap
+import atexit
+import logging
 import os
 import pickle
-import sys
-from collections import OrderedDict
+import re
+import shutil
+import tempfile
+import time
+import uuid
+import subprocess as sp
+
+import numpy as np
+
+from djl_python.aws.cloud_watch import CloudWatch
+
+UUID_PATTERN = re.compile("[0-9a-f-]{36}")
+
+
+class Session:
+
+    def __init__(self, session_id: str, session_root: str):
+        self.session_id = session_id
+        self.files_path = os.path.join(session_root, session_id)
+
+    def put(self, key: str, value):
+        with open(self._path(key), "wb") as f:
+            pickle.dump(value, f)
+
+    def get_as_numpy(self, key: str, shape, dtype=np.float32, create=False):
+        if create:
+            open(self._path(key), "wb").close()
+        return np.memmap(self._path(key), dtype=dtype, mode="r+", shape=shape)
+
+    def get(self, key: str, d=None):
+        path = self._path(key)
+        if not os.path.isfile(path):
+            return d
+
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+    def remove(self):
+        if os.path.exists(self.files_path):
+            logging.info(f"closing session: {self.session_id}")
+            shutil.rmtree(self.files_path)
+            return True
+        else:
+            logging.warning(f"session not found: {self.session_id}")
+            return False
+
+    def _path(self, key: str):
+        return os.path.join(self.files_path, key.replace("/", "-"))
 
 
 class SessionManager:
 
     def __init__(self, properties: dict):
-        self.limit = int(properties.get("sessions_limit", str(sys.maxsize)))
+        self.expiration = int(
+            properties.get("sessions_expiration", str(20 * 60)))
+        self.cloud_watch = CloudWatch()
+        if os.path.exists("/dev/shm"):
+            session_dir = "/dev/shm/djl_sessions"
+        else:
+            session_dir = os.path.join(tempfile.gettempdir(), "djl_sessions")
 
-    def load(self, session_id):
+        self.sessions_path = properties.get("sessions_path", session_dir)
+        self.sessions_s3url = properties.get("sessions_s3url", None)
+        if not os.path.exists(self.sessions_path):
+            os.makedirs(self.sessions_path)
+
+        atexit.register(self._save_sessions_to_s3)
+
+    def create_session(self) -> Session:
         """
-        Loads the data associated with a session_id
-        :param session_id: the id for the session to load
-        :return: loads the data (what kind of data depend on what type of SessionManager)
+        Creates a new session
+        :return: the new session id
         """
-        pass
+        self._clean_expired_session()
+        session_id = str(uuid.uuid4())
+        session = Session(session_id, self.sessions_path)
+        os.makedirs(session.files_path)
+        session.put(".creation_time", time.time())
 
-    def save(self, session_id, value):
-        """
-        Saves the data associated with a session_id
-        :param session_id: the id for the session to save
-        :param value: the updated data to save for the session
-        :return: None
-        """
-        pass
+        self.cloud_watch.post("create_session")
+        return session
 
-    def remove(self, session_id):
-        """
-        Removes the data associated with a session_id
-        :param session_id: the id for the session to remove
-        :return: None
-        """
-        pass
+    def get_session(self, session_id: str) -> (Session | None):
+        if not session_id or not UUID_PATTERN.match(session_id):
+            raise ValueError(f"invalid session_id: {session_id}")
 
-    def prune(self, limit, backup=None):
-        """
-        Prunes all data, leaving only the newest limit sessions remaining
-        :param limit: how many data items to leave
-        :param backup: an optional SessionManager to backup the pruned data to (todo)
-        :return: None
-        """
-        pass
+        session = Session(session_id, self.sessions_path)
+        if not os.path.exists(session.files_path):
+            return self._recover_from_s3(session)
 
+        return session
 
-class LocalSessionManager(SessionManager):
+    def close_session(self, session_id):
+        if not session_id or not UUID_PATTERN.match(session_id):
+            raise ValueError(f"invalid session_id: {session_id}")
 
-    def __init__(self, properties: dict):
-        super().__init__(properties)
-        self.sessions = OrderedDict()
+        session = Session(session_id, self.sessions_path)
+        if session.remove():
+            self.cloud_watch.post("close_session")
 
-    def load(self, session_id):
-        return self.sessions.get(session_id, None)
+    def _clean_expired_session(self):
+        sessions = os.listdir(self.sessions_path)
+        for session_id in sessions:
+            session = Session(session_id, self.sessions_path)
+            if time.time() - session.get(".creation_time") > self.expiration:
+                self.close_session(session_id)
 
-    def save(self, session_id, value):
-        self.sessions[session_id] = value
-        self.sessions.move_to_end(session_id)
-        if len(self.sessions) > self.limit:
-            self.prune(self.limit)
-
-    def remove(self, session_id):
-        return self.sessions.pop(session_id)
-
-    def prune(self, limit, backup: SessionManager = None):
-        while len(self.sessions) > self.limit:
-            popped_id, popped_value = self.sessions.popitem(False)
-            if backup is not None:
-                backup.save(popped_id, popped_value)
-
-
-class FileSessionManager(SessionManager):
-
-    def __init__(self, properties: dict):
-        super().__init__(properties)
-        self.files_path = properties["sessions_path"]
-
-    def load(self, session_id):
-        path = self._path(session_id)
-        if not os.path.isfile(path):
+    def _recover_from_s3(self, session: Session) -> (Session | None):
+        if not self.sessions_s3url:
             return None
-        with open(path, "rb") as f:
-            return pickle.load(f)
 
-    def save(self, session_id, value):
-        with open(self._path(session_id), "wb") as f:
-            pickle.dump(value, f)
+        logging.info(f"Restoring session {session.session_id} from s3...")
+        os.makedirs(session.files_path)
+        command = [
+            "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync",
+            f"{self.sessions_s3url}/{session.session_id}/*",
+            f"{session.files_path}"
+        ]
+        result = sp.run(command)
+        if result.returncode == 0:
+            return session
 
-        self.prune(self.limit)
+        logging.warning(f"s5cmd download failed: {result.stderr}")
+        shutil.rmtree(session.files_path)
+        return None
 
-    def remove(self, session_id):
-        os.remove(self._path(session_id))
+    def _save_sessions_to_s3(self):
+        if not self.sessions_s3url:
+            return None
 
-    def prune(self, limit, backup: SessionManager = None):
-        files = list(os.listdir(self.files_path))
-        if len(files) < limit:
-            return
-        files.sort(key=lambda f: os.path.getmtime(self._path(f)))
-        to_prune = files[:len(files) - limit]
-        for session_id in to_prune:
-            if backup is not None:
-                backup.save(session_id, self._path(session_id))
-            os.remove(self._path(session_id))
-
-    def _path(self, session_id):
-        return os.path.join(self.files_path, session_id.replace("/", "-"))
-
-
-class MmapSessionManager(FileSessionManager):
-
-    def __init__(self, properties: dict):
-        super().__init__(properties)
-        self.file_size = int(properties["sessions_file_size"])
-        self.opened = {}
-
-    def load(self, session_id):
-        path = self._path(session_id)
-        new_mmap = not os.path.isfile(path)
-        if new_mmap:
-            with open(path, "wb") as f:
-                f.write(self.file_size * b'\x00')
-        f = open(path, "r+")
-        m = mmap.mmap(f.fileno(),
-                      length=self.file_size,
-                      access=mmap.ACCESS_WRITE)
-        self.opened[session_id] = (f, m)
-        return m, new_mmap
-
-    def save(self, session_id, value=None):
-        if session_id in self.opened:
-            f, m = self.opened[session_id]
-            m.close()
-            f.close()
-
-        self.prune(self.limit)
-
-
-def get_session_manager(properties: dict):
-    mode = properties.get("session_manager")
-    if mode == "local":
-        return LocalSessionManager(properties)
-    elif mode == "files":
-        return FileSessionManager(properties)
-    else:
-        return MmapSessionManager(properties)
+        logging.info("Session manager shutdown, backup sessions to s3...")
+        command = [
+            "/opt/djl/bin/s5cmd", "--retry-count", "1", "sync",
+            f"{self.sessions_path}/*", f"{self.sessions_s3url}/"
+        ]
+        result = sp.run(command)
+        if result.returncode != 0:
+            logging.warning(f"s5cmd upload failed: {result.stderr}")
+            return None
+        return None

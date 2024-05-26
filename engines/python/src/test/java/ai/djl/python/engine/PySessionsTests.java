@@ -14,248 +14,107 @@ package ai.djl.python.engine;
 
 import ai.djl.ModelException;
 import ai.djl.inference.Predictor;
+import ai.djl.inference.streaming.ChunkedBytesSupplier;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.ndarray.BytesSupplier;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ZooModel;
 import ai.djl.translate.TranslateException;
-import ai.djl.util.RandomUtils;
+import ai.djl.util.Utils;
 
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /** Tests for the session manager. */
 public class PySessionsTests {
 
     @Test
-    public void testLocalLoadSave() throws TranslateException, IOException, ModelException {
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "local");
-        testLoadSave("src/test/resources/sessionecho/simple", options);
-    }
+    public void testLocalLoadSave()
+            throws TranslateException, IOException, ModelException, InterruptedException {
+        Path path = Paths.get("build/djl_sessions");
+        Utils.deleteQuietly(path);
 
-    @Test
-    public void testLocalPrune() throws TranslateException, IOException, ModelException {
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "local");
-        testPrune("src/test/resources/sessionecho/simple", options);
-    }
-
-    @Test
-    public void testFilesLoadSave() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "files");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        testLoadSave("src/test/resources/sessionecho/simple", options);
-    }
-
-    @Test
-    public void testFilesPersistence() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "files");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        testPersistence("src/test/resources/sessionecho/simple", options);
-    }
-
-    @Test
-    public void testFilesParallel() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "files");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        testParallel("src/test/resources/sessionecho/simple", options);
-    }
-
-    @Test
-    public void testFilesPrune() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "files");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        testPrune("src/test/resources/sessionecho/simple", options);
-    }
-
-    @Test
-    public void testMmapLoadSave() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "mmap");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        options.put("sessions_file_size", "1");
-        testLoadSave("src/test/resources/sessionecho/mmap", options);
-    }
-
-    @Test
-    public void testMmapPersistence() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "mmap");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        options.put("sessions_file_size", "1");
-        testPersistence("src/test/resources/sessionecho/mmap", options);
-    }
-
-    @Test
-    public void testMmapParallel() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "mmap");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        options.put("sessions_file_size", "1");
-        testParallel("src/test/resources/sessionecho/mmap", options);
-    }
-
-    @Test
-    public void testMmapPrune() throws TranslateException, IOException, ModelException {
-        Path path = resetDirectory(Paths.get("build/sessionTest"));
-        Map<String, String> options = new ConcurrentHashMap<>();
-        options.put("session_manager", "mmap");
-        options.put("sessions_path", path.toAbsolutePath().toString());
-        options.put("sessions_file_size", "1");
-        testPrune("src/test/resources/sessionecho/mmap", options);
-    }
-
-    private void testLoadSave(String modelPath, Map<String, String> options)
-            throws TranslateException, IOException, ModelException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
-                        .optModelPath(Paths.get(modelPath))
+                        .optModelPath(Paths.get("src/test/resources/stateful"))
                         .optEngine("Python")
-                        .optOptions(options)
+                        .optOption("sessions_path", path.toAbsolutePath().toString())
+                        .optOption("sessions_expiration", "1")
                         .build();
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
-            Map<String, Integer> sessionCounts = new ConcurrentHashMap<>(3);
-            for (int i = 0; i < 20; i++) {
+            // test create session
+            Input createSession = new Input();
+            createSession.addProperty("Content-Type", "application/json");
+            createSession.add(BytesSupplier.wrapAsJson(Map.of("action", "create_session")));
+            Output ret = predictor.predict(createSession);
+            String sessionId = ret.getProperty("X-Amzn-SageMaker-Session-Id", null);
+            Assert.assertNotNull(sessionId);
+            Assert.assertEquals(ret.getProperty("Content-Type", null), "application/json");
 
-                // Choose a random session, and increment the session count
-                String sessionId = Integer.toString(RandomUtils.nextInt(3));
-                sessionCounts.compute(sessionId, (k, v) -> v != null ? v + 1 : 1);
-                int sessionCount = sessionCounts.get(sessionId);
+            // test regular request
+            Input regular = new Input();
+            regular.addProperty("Content-Type", "application/json");
+            regular.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
+            regular.add(BytesSupplier.wrapAsJson(Map.of("action", "regular")));
+            ret = predictor.predict(regular);
+            Assert.assertEquals(ret.getProperty("Content-Type", null), "application/json");
+            Assert.assertTrue(ret.getAsString(0).contains("(10, 5, 5)"));
 
-                // Run the sessionecho model with the session
-                Input input = new Input();
-                input.add("input");
-                input.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
-                Output output = predictor.predict(input);
-                Assert.assertEquals(output.getData().getAsString(), sessionCount + "input");
+            // test streaming request
+            Input stream = new Input();
+            stream.addProperty("Content-Type", "application/json");
+            stream.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
+            stream.add(BytesSupplier.wrapAsJson(Map.of("action", "streaming")));
+            ret = predictor.predict(stream);
+            Assert.assertEquals(ret.getProperty("Content-Type", null), "application/jsonlines");
+            BytesSupplier data = ret.getData();
+            Assert.assertTrue(data instanceof ChunkedBytesSupplier);
+            String content = data.getAsString();
+            Assert.assertEquals(content.split("\n").length, 10);
+
+            // test session timeout
+            Thread.sleep(1000);
+            ret = predictor.predict(createSession);
+            sessionId = ret.getProperty("X-Amzn-SageMaker-Session-Id", null);
+            Assert.assertNotNull(sessionId);
+            long count;
+            try (Stream<Path> files = Files.list(path)) {
+                count = files.count();
             }
-        }
-    }
+            Assert.assertEquals(count, 1);
 
-    private void testPersistence(String modelPath, Map<String, String> options)
-            throws TranslateException, IOException, ModelException {
-        for (int i = 1; i <= 3; i++) {
-            Criteria<Input, Output> criteria =
-                    Criteria.builder()
-                            .setTypes(Input.class, Output.class)
-                            .optModelPath(Paths.get(modelPath))
-                            .optEngine("Python")
-                            .optOptions(options)
-                            .build();
-            try (ZooModel<Input, Output> model = criteria.loadModel();
-                    Predictor<Input, Output> predictor = model.newPredictor()) {
-
-                // Run the sessionecho model with the session
-                Input input = new Input();
-                input.add("input");
-                input.addProperty("X-Amzn-SageMaker-Session-Id", "sess");
-                Output output = predictor.predict(input);
-                Assert.assertEquals(output.getData().getAsString(), i + "input");
+            // test close session with missing sessionId
+            Input closeSession = new Input();
+            closeSession.addProperty("Content-Type", "application/json");
+            closeSession.add(BytesSupplier.wrapAsJson(Map.of("action", "close_session")));
+            ret = predictor.predict(closeSession);
+            Assert.assertEquals(ret.getProperty("Content-Type", null), "application/json");
+            Assert.assertTrue(ret.getAsString(0).contains("invalid session_id"));
+            try (Stream<Path> files = Files.list(path)) {
+                count = files.count();
             }
-        }
-    }
+            Assert.assertEquals(count, 1);
 
-    private void testParallel(String modelPath, Map<String, String> options)
-            throws TranslateException, IOException, ModelException {
-        List<ZooModel<Input, Output>> models = new ArrayList<>();
-        List<Predictor<Input, Output>> predictors = new ArrayList<>();
-        int numPredictors = 3;
-        for (int i = 0; i < numPredictors; i++) {
-            Criteria<Input, Output> criteria =
-                    Criteria.builder()
-                            .setTypes(Input.class, Output.class)
-                            .optModelPath(Paths.get(modelPath))
-                            .optEngine("Python")
-                            .optOptions(options)
-                            .build();
-            ZooModel<Input, Output> model = criteria.loadModel();
-            models.add(model);
-            predictors.add(model.newPredictor());
-        }
-        Map<String, Integer> sessionCounts = new ConcurrentHashMap<>(3);
-        for (int i = 0; i < 20; i++) {
-
-            // Choose a random session, and increment the session count
-            String sessionId = Integer.toString(RandomUtils.nextInt(3));
-            sessionCounts.compute(sessionId, (k, v) -> v != null ? v + 1 : 1);
-            int sessionCount = sessionCounts.get(sessionId);
-
-            // Choose a random predictor
-            Predictor<Input, Output> predictor = predictors.get(RandomUtils.nextInt(numPredictors));
-
-            // Run the sessionecho model with the session
-            Input input = new Input();
-            input.add("input");
-            input.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
-            Output output = predictor.predict(input);
-            Assert.assertEquals(output.getData().getAsString(), sessionCount + "input");
-        }
-        models.forEach(ZooModel::close);
-        predictors.forEach(Predictor::close);
-    }
-
-    private void testPrune(String modelPath, Map<String, String> options)
-            throws TranslateException, IOException, ModelException {
-        Criteria<Input, Output> criteria =
-                Criteria.builder()
-                        .setTypes(Input.class, Output.class)
-                        .optModelPath(Paths.get(modelPath))
-                        .optEngine("Python")
-                        .optOptions(options)
-                        .optOption("sessions_limit", "2")
-                        .build();
-        try (ZooModel<Input, Output> model = criteria.loadModel();
-                Predictor<Input, Output> predictor = model.newPredictor()) {
-            for (int i = 0; i < 4; i++) {
-
-                // 3 sessions in cycle: 0, 1, 2, 0
-                // Should prune 0 when calling 2 then need to re-init it when re-calling 0
-                String sessionId = Integer.toString(i % 3);
-
-                // Run the sessionecho model with the session
-                Input input = new Input();
-                input.add("input");
-                input.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
-                Output output = predictor.predict(input);
-                Assert.assertEquals(output.getData().getAsString(), "1input");
+            // test close session
+            closeSession.addProperty("X-Amzn-SageMaker-Session-Id", sessionId);
+            ret = predictor.predict(closeSession);
+            Assert.assertEquals(ret.getProperty("X-Amzn-SageMaker-Session-Closed", null), "true");
+            Assert.assertEquals(ret.getProperty("Content-Type", null), "application/json");
+            Assert.assertTrue(ret.getAsString(0).contains("session closed"));
+            try (Stream<Path> files = Files.list(path)) {
+                count = files.count();
             }
+            Assert.assertEquals(count, 0);
         }
-    }
-
-    private Path resetDirectory(Path path) throws IOException {
-        File file = path.toFile();
-        if (file.exists()) {
-            Files.walk(path)
-                    .sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
-        }
-        Assert.assertTrue(file.mkdirs());
-        return path;
     }
 }
