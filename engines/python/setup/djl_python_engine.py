@@ -125,7 +125,7 @@ class PythonEngine(object):
                     outputs = Output().error(
                         f"Invalid output type: {type(outputs)}")
             except Exception as e:
-                logging.exception("Failed invoke service.invoke_handler()", e)
+                logging.exception("Failed invoke service.invoke_handler()")
                 if type(e).__name__ == "OutOfMemoryError" or type(
                         e).__name__ == "MemoryError":
                     outputs = Output(code=507, message=str(e))
