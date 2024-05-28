@@ -929,6 +929,8 @@ def response_checker(res, message):
             if "details" in output_json.keys():
                 if "error" == output_json["details"]["finish_reason"]:
                     raise RuntimeError(f"Inference failed!")
+            elif output_json.get("code", 200) != 200:
+                raise RuntimeError("Inference failed!")
         else:
             logging.info(
                 f"Skipping content check given non-supported content type {res.headers['content-type']}"
