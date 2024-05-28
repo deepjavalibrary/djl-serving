@@ -24,7 +24,7 @@ ARG vllm_cuda_name="cu12"
 ARG vllm_nccl_version=2.18.1
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.40.0
+ARG transformers_version=4.41.1
 ARG accelerate_version=0.30.1
 ARG bitsandbytes_version=0.43.1
 ARG optimum_version=1.19.2
