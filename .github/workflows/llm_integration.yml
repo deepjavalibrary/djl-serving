@@ -540,6 +540,15 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist falcon-7b
           docker rm -f $(docker ps -aq)
+      - name: Test falcon2-11b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist falcon-11b
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
+          python3 llm/client.py lmi_dist falcon-11b
+          docker rm -f $(docker ps -aq)
       - name: Test flan-t5-xxl
         working-directory: tests/integration
         run: |

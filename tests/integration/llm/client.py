@@ -194,6 +194,12 @@ lmi_dist_model_spec = {
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-7b"
     },
+    "falcon-11b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "tiiuae/falcon-11b"
+    },
     "flan-t5-xxl": {
         "max_memory_per_gpu": [10.0],
         "batch_size": [1, 4],
