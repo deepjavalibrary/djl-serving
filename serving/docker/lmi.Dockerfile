@@ -27,7 +27,8 @@ ARG protobuf_version=3.20.3
 ARG transformers_version=4.41.1
 ARG accelerate_version=0.30.1
 ARG bitsandbytes_version=0.43.1
-ARG optimum_version=1.19.2
+## Temporary until optimum has a release with the latest transformers
+ARG optimum_version=git+https://github.com/huggingface/optimum.git@7184ef4e720369ed75dcfa1404195fffb7b71aec
 ARG auto_gptq_version=0.7.1
 ARG datasets_version=2.19.1
 # LMI-Dist Deps
@@ -97,7 +98,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
+    ${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
     opencv-contrib-python-headless safetensors scipy onnx sentence_transformers \
     onnxruntime-gpu==${onnx_version} --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ && \
     pip3 install ${djl_converter_wheel} --no-deps && \
