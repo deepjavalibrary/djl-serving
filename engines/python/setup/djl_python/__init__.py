@@ -15,5 +15,3 @@ from .inputs import Input
 from .outputs import Output
 from .pair_list import PairList
 from .session_manager import SessionManager, Session
-
-__version__ = '0.28.0'
