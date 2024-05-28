@@ -18,6 +18,7 @@ ARG python_version=3.10
 ARG torch_version=2.3.0
 ARG torch_vision_version=0.18.0
 ARG onnx_version=1.18.0
+ARG onnxruntime_wheel="https://publish.djl.ai/onnxruntime/1.18.0/onnxruntime_gpu-1.18.0-cp310-cp310-linux_x86_64.whl"
 ARG pydantic_version=2.7.1
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
 ARG vllm_cuda_name="cu12"
@@ -99,8 +100,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     ${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
-    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers \
-    onnxruntime-gpu==${onnx_version} --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ && \
+    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} && \
     pip3 install ${djl_converter_wheel} --no-deps && \
     pip3 cache purge
 
