@@ -152,7 +152,7 @@ class TestTransformerNeuronXService(unittest.TestCase):
 
         # Test
         with self.patch_neuron_rolling_batch() as mock_rolling_batch:
-            self.service.set_rolling_batch()
+            self.service.set_rolling_batch(test_properties)
 
         # Evaluate
         self.assertEqual(mock_rolling_batch.called, expected)

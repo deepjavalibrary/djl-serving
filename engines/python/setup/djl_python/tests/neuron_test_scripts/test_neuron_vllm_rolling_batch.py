@@ -21,7 +21,6 @@ import sys
 try:
     from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
     from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
-    from djl_python.tests.rolling_batch_test_scripts.generator import Generator
     SKIP_TEST = False
 except ImportError:
     SKIP_TEST = True
@@ -46,10 +45,11 @@ class TestNeuronVLLM(unittest.TestCase):
     def test_models(self):
         # === Preparation ===
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        relative_path = "../../../"
+        relative_path = "../rolling_batch_test_scripts"
         new_path = os.path.normpath(
             os.path.join(script_directory, relative_path))
         sys.path.append(new_path)
+        from djl_python.tests.rolling_batch_test_scripts.generator import Generator
 
         # --- Models ---
         model_names = [
@@ -148,5 +148,4 @@ class TestNeuronVLLM(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    c = TestNeuronVLLM()
-    c.test_models()
+    unittest.main()

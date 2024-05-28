@@ -150,8 +150,8 @@ class TransformerNeuronXProperties(Properties):
         if rolling_batch not in TNX_SUPPORTED_ROLLING_BATCH_TYPES:
             logging.warning(
                 f"transformer neuronx only supports "
-                f"rolling batch type {TNX_SUPPORTED_ROLLING_BATCH_TYPES}."
-                f"choosing neuronx rolling batch automatically.")
+                f"rolling batch type {TNX_SUPPORTED_ROLLING_BATCH_TYPES} "
+                f"choosing 'tnx' rolling batch automatically.")
             return 'auto'
         return rolling_batch
 
