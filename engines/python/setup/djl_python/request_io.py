@@ -130,7 +130,7 @@ class RequestInput:
     """
     request_id: int
     output_formatter: Union[Callable, str] = None
-    parameters: Dict = field(default_factory=lambda: [])
+    parameters: Dict = field(default_factory=lambda: {})
     tgi_compat: bool = False
 
 
@@ -175,7 +175,7 @@ class TextGenerationOutput(RequestOutput):
     """
     sequences: dict[int, Sequence] = field(default_factory=lambda: {})
     best_sequence_index: int = 0
-    prompt_tokens_details: List[Token] = field(default_factory=lambda: {})
+    prompt_tokens_details: List[Token] = field(default_factory=lambda: [])
 
     def set_next_token(self,
                        token: Token,
