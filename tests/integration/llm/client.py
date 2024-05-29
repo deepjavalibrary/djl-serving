@@ -930,7 +930,11 @@ def response_checker(res, message):
         elif 'application/jsonlines' == res.headers['content-type']:
             json_lines = []
             for item in message.splitlines():
-                json_lines.append(json.loads(item))
+                try:
+                    json_lines.append(json.loads(item))
+                except:
+                    raise RuntimeError(f"Json loading failure {item}")
+
             output_json = json_lines[-1]
             if "details" in output_json.keys():
                 if "error" == output_json["details"]["finish_reason"]:
