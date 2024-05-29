@@ -38,6 +38,40 @@ option.max_rolling_batch_size=max(256,value you override)
 We understand finding the maximum number is difficult, so we precomputed a lookup table for you to find the numbers.
 In the future, we will fuse those number into our container and will not ask you to provide one.
 
+### LMI 0.28.0
+
+The following number is tested on the machine with batch size up to 128 and input context up to 3700.
+
+| Model         | Machine  | Tensor Parallel Degree | max number of tokens | 
+|---------------|----------|------------------------|----------------------|
+| LLaMA 3 8B    | g5.12xl  | 1	                     | 24000                |
+| LLaMA 3 8B    | g5.12xl  | 4	                     | 176000               |
+| LLaMA 2 7B    | g5.12xl  | 1	                     | 29000                |
+| LLaMA 2 7B    | g5.12xl  | 4	                     | 198000               | 
+| LLaMA 2 13B   | g5.12xl  | 4                      | 127000               |  
+| Gemma 7B      | g5.12xl  | 4                      | 125000               |  
+| Gemma 7B      | g5.12xl  | 1                      | 1190                 |  
+| Falcon 7B     | g5.12xl  | 1                      | 36000                |  
+| Mistral 7B    | g5.12xl  | 1                      | 35000                |  
+| Mistral 7B    | g5.12xl  | 4                      | 198000               |  
+| LLaMA 2 13B   | g6.12xl  | 4                      | 116000               |
+| LLaMA 2 13B   | g5.48xl  | 8                      | 142000               |  
+| LLaMA 2 70B   | g5.48xl  | 8                      | 4100                 |  
+| LLaMA 3 70B   | g5.48xl  | 8                      | Out of Memory        |  
+| Mixtral 8x7B  | g5.48xl  | 8                      | 31000                |  
+| Falcon 40B    | g5.48xl  | 8                      | 32000                |  
+| CodeLLAMA 34B | g5.48xl  | 8                      | 36000                |
+| LLAMA 2 13B   | p4d.24xl | 4                      | 235000               | 
+| LLAMA 2 70B   | p4d.24xl | 8                      | 97000                | 
+| LLAMA 3 70B   | p4d.24xl | 8                      | 82000                | 
+| Mixtral 8x7B  | p4d.24xl | 4                      | 50000                | 
+| Mixtral 8x7B  | p4d.24xl | 8                      | 112000               | 
+| Falcon 40B    | p4d.24xl | 4                      | 71000                | 
+| Mistral 7B    | p4d.24xl | 2                      | 245000               | 
+| Mistral 7B    | p4d.24xl | 4                      | 498000               | 
+| CodeLLaMA 34B | p4d.24xl | 4                      | 115000               | 
+| CodeLLaMA 34B | p4d.24xl | 8                      | 191000               |
+
 ### LMI 0.27.0
 
 The following number is tested on the machine with batch size up to 128 and input context up to 3700.

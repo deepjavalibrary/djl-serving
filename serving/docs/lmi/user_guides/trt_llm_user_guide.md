@@ -20,11 +20,13 @@ The below model architectures are supported for JIT model compiltation and teste
 * Mistral (since LMI V8 0.26.0)
 * Mixtral (since LMI V8 0.26.0)
 * Qwen (since LMI V8 0.26.0)
-* GPT2/SantaCoder (since LMI V8 0.26.0)
+* GPT2/SantaCoder/StarCoder/GPTBigCode (since LMI V8 0.26.0)
 * Phi2 (since LMI V9 0.27.0)
+* OPT (since LMI V9 0.27.0)
+* Gemma (since LMI V10 0.28.0)
 
-TRT-LLM LMI v9 0.27.0 containers come with [TRT-LLM 0.8.0](https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v0.8.0). 
-For models that are not listed here and supported by [TRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/tree/v0.8.0?tab=readme-ov-file#models) with [tensorrtllm_backend](https://github.com/triton-inference-server/tensorrtllm_backend), you can use this [tutorial](../tutorials/trtllm_manual_convert_tutorial.md) instead to prepare model manually.
+TRT-LLM LMI v10 0.28.0 containers come with [TRT-LLM 0.9.0](https://github.com/NVIDIA/TensorRT-LLM/releases/tag/v0.9.0). 
+For models that are not listed here and supported by [TRT-LLM](https://github.com/NVIDIA/TensorRT-LLM/tree/v0.9.0?tab=readme-ov-file#models) with [tensorrtllm_backend](https://github.com/triton-inference-server/tensorrtllm_backend), you can use this [tutorial](../tutorials/trtllm_manual_convert_tutorial.md) instead to prepare model manually.
 
 We will add more model support in the future versions in our CI. Please feel free to [file an issue](https://github.com/deepjavalibrary/djl-serving/issues/new/choose) if you are looking for a specific model support.
 
@@ -37,7 +39,6 @@ You can leverage `tensorrtllm` with LMI using the following starter configuratio
 ```
 engine=MPI
 option.tensor_parallel_degree=max
-option.rolling_batch=trtllm
 option.model_id=<your model id>
 # Adjust the following based on model size and instance type
 option.max_num_tokens=50000
@@ -50,7 +51,6 @@ You can follow [this example](../deployment_guide/deploying-your-endpoint.md#con
 ````
 HF_MODEL_ID=<your model id>
 TENSOR_PARALLEL_DEGREE=max
-OPTION_ROLLING_BATCH=trtllm
 # Adjust the following based on model size and instance type
 OPTION_MAX_NUM_TOKENS=50000
 ````
