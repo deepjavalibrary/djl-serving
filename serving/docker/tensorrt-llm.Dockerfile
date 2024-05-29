@@ -46,7 +46,7 @@ ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 ENV BITSANDBYTES_NOWELCOME=1
-ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:/usr/local/lib/python${python_version}/dist-packages/tensorrt_libs:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:/usr/local/lib/python${python_version}/dist-packages/tensorrt_libs:/usr/local/lib/python${python_version}/dist-packages/tensorrt_llm/libs/:${LD_LIBRARY_PATH}
 ENV SERVING_FEATURES=trtllm
 
 ENTRYPOINT ["/usr/local/bin/dockerd-entrypoint.sh"]
