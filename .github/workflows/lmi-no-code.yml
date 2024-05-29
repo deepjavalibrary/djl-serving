@@ -115,6 +115,7 @@ jobs:
           ./remove_container.sh
       - name: CodeLlama lmi container
         working-directory: tests/integration
+        if: ${{ matrix.container == 'lmi' }}
         run: |
           rm -rf models
           echo -en "HF_MODEL_ID=codellama/CodeLlama-34b-hf" > docker_env
