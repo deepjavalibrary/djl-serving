@@ -291,14 +291,14 @@ lmi_dist_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "mistral-7b-awq-unmerged-lora": {
         "batch_size": [3],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "llama-7b-unmerged-lora-overflow": {
         "max_memory_per_gpu": [15.0, 15.0],
@@ -379,14 +379,14 @@ vllm_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "mistral-7b-awq-unmerged-lora": {
         "batch_size": [3],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "llama-7b-unmerged-lora-overflow": {
         "max_memory_per_gpu": [15.0, 15.0],
