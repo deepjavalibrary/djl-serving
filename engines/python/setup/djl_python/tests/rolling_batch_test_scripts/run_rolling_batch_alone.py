@@ -35,8 +35,9 @@ def init_rolling_batch_neuron(rb_cls, model_id: str, properties: dict):
     _service = TransformersNeuronXService()
     properties['model_id'] = model_id
     _service.initialize(properties)
-    return rb_cls(_service.model, _service.tokenizer, _service.batch_size,
-                  _service.n_positions)
+    return rb_cls(_service.model,
+                  _service.tokenizer,
+                  tnx_config=_service.config)
 
 
 def init_rolling_batch(rolling_batch_type: str, model_id: str,

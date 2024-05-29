@@ -15,12 +15,9 @@ import unittest
 import warnings
 import json
 
-import os
-import sys
-
 try:
+    import transformers_neuronx
     from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties
-    from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
     SKIP_TEST = False
 except ImportError:
     SKIP_TEST = True
@@ -44,12 +41,7 @@ class TestNeuronVLLM(unittest.TestCase):
 
     def test_models(self):
         # === Preparation ===
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        relative_path = "../rolling_batch_test_scripts"
-        new_path = os.path.normpath(
-            os.path.join(script_directory, relative_path))
-        sys.path.append(new_path)
-        from djl_python.tests.rolling_batch_test_scripts.generator import Generator
+        from djl_python.tests.neuron_test_scripts.neuron_rb_generator import NeuronRollingBatchGenerator
 
         # --- Models ---
         model_names = [
@@ -59,20 +51,17 @@ class TestNeuronVLLM(unittest.TestCase):
         # === Test ===
         for model_id in model_names:
             properties = {
-                "tensor_parallel_degree": 1,
+                "tensor_parallel_degree": 2,
                 "dtype": "fp16",
-                "device": "neuron",
-                "max_model_len": "128",
+                "n_positions": "128",
                 "rolling_batch": "vllm",
                 "max_rolling_batch_size": 4,
-                "model_loading_timeout": 3600,
                 "model_id": model_id
             }
 
             # ===================== neuron-vllm ============================
-            rolling_batch = VLLMRollingBatch(model_id, properties)
-
-            gen = Generator(rolling_batch=rolling_batch)
+            gen = NeuronRollingBatchGenerator()
+            gen.init_neuron_service(properties)
 
             print('========== init inference ===========')
             input_str1 = [
@@ -124,25 +113,18 @@ class TestNeuronVLLM(unittest.TestCase):
                 )
                 if model_id in expected_text_30 and req_id in expected_text_30[
                         model_id]:
-                    print(gen.input_all[req_id][0] + out_str)
                     expected_prefix_30_req_id = expected_text_30[model_id][
                         req_id]
-                    backup_check = -req_id in expected_text_30[model_id] and (
-                        gen.input_all[req_id][0] +
-                        out_str)[:len(expected_text_30[model_id][-req_id]
-                                      )] == expected_text_30[model_id][-req_id]
                     assert expected_prefix_30_req_id == (
-                        gen.input_all[req_id][0] + out_str
-                    )[:len(expected_prefix_30_req_id)] or backup_check
+                        gen.input_all[req_id][0] +
+                        out_str)[:len(expected_prefix_30_req_id)]
                 elif req_id < 6:
                     warnings.warn(
                         f"\nWARNING:-----------v_v\nmodel_id = {model_id}, req_id = {req_id} is not asserted!\n\n",
                         UserWarning)
 
             # Reset
-            rolling_batch.reset()
-            rolling_batch.model = None
-            rolling_batch = None
+            gen.reset()
             import gc
             gc.collect()
 
