@@ -327,14 +327,12 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
-        "option.trust_remote_code": True
     },
     "falcon-11b": {
         "option.model_id": "s3://djl-llm/falcon-11B/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
         "option.max_rolling_batch_size": 4,
-        "option.trust_remote_code": True
     },
     "flan-t5-xxl": {
         "option.model_id": "google/flan-t5-xxl",
