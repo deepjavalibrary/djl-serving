@@ -1,5 +1,9 @@
 # DeepSpeed Engine User Guide
 
+> [!WARNING]
+> DeepSpeed support has been removed starting with LMI container release 0.28.0.
+> You should migrate to one of the other supported backends. 
+
 ## Model Artifacts Structure
 
 DeepSpeed expects the model to be in the [standard HuggingFace format](../deployment_guide/model-artifacts.md).
