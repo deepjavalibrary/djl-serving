@@ -18,7 +18,7 @@ from typing import Union, Callable
 from typing_extensions import deprecated
 
 from djl_python.request_io import TextGenerationOutput, RequestOutput
-from djl_python.utils import is_best_of, is_beam_search, wait_till_generation_finished
+from djl_python.utils import wait_till_generation_finished
 
 
 def get_generated_text(sequence, request_output):
@@ -74,10 +74,8 @@ def _json_output_formatter_best_of(request_output: RequestOutput):
             other_sequences.append(sequence_details)
 
         if other_sequences:
-            if is_best_of(parameters):
+            if wait_till_generation_finished(parameters):
                 details["best_of_sequences"] = other_sequences
-            elif is_beam_search(parameters):
-                details["beam_sequences"] = other_sequences
         result["details"] = details
         json_encoded_str = json.dumps(result, ensure_ascii=False)
         if request_output.input.tgi_compat:
