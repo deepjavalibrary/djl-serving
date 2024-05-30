@@ -192,3 +192,25 @@ def profile_objects(func):
         return result
 
     return apply_profiling
+
+
+def is_best_of(parameters: dict) -> bool:
+    """
+    Returns whether parameters indicate best_of should be applied.
+    :param parameters: parameters dictionary
+    :return: boolean
+    """
+    return "best_of" in parameters.keys() and parameters.get("best_of") > 1
+
+
+def is_beam_search(parameters: dict) -> bool:
+    """
+    Returns whether the parameters indicate beam search decoding to be used.
+    :param parameters: parameters dictionary
+    :return: boolean
+    """
+    return "num_beams" in parameters.keys() and parameters.get("num_beams") > 1
+
+
+def wait_till_generation_finished(parameters):
+    return is_best_of(parameters) or is_beam_search(parameters)

@@ -80,7 +80,7 @@ class Sequence:
     tokens: List[Token] = field(default_factory=lambda: [])
     top_tokens: Optional[List[List[Token]]] = field(default_factory=lambda: [])
     cumulative_log_prob: float = 0.0
-    finish_reason: str = False
+    finish_reason: str = None
     _last_token_index: Optional[int] = None
     stop_reason: Optional[str] = None
     _tokens_iterator: Optional[Iterator] = field(init=False, default=None)
@@ -172,24 +172,31 @@ class TextGenerationOutput(RequestOutput):
         sequences: generated sequences. If the user use beam search or best_of,multiple sequences could be generated.
         best_sequence_index: index of the best sequence.
         prompt_tokens_details: prompt tokens details such as their log_probs and token_ids.
+        other_sequences_indices: indices of the sequences other than best_sequence to return to user. For example,
+        if best_of=4 and n=3, then we return store the other two sequences' indices in this list.
     """
     sequences: dict[int, Sequence] = field(default_factory=lambda: {})
     best_sequence_index: int = 0
     prompt_tokens_details: List[Token] = field(default_factory=lambda: [])
+    other_sequences_indices: List[int] = field(default_factory=lambda: [])
 
     def set_next_token(self,
                        token: Token,
                        sequence_index=0,
-                       is_last_token: bool = False):
+                       is_last_token: bool = False,
+                       finish_reason: str = None):
         """Adds token to the given index sequence. If not given, adds to the first sequence.
 
         :param is_last_token: whether the token is the last token of the sequence.
         :param token: token to add to the given sequence.
         :param sequence_index: index of the sequence to add the token to.
+        :param finish_reason: finish reason for the sequence.
         """
         if sequence_index not in self.sequences:
             self.sequences[sequence_index] = Sequence()
         self.sequences[sequence_index].set_next_token(token, is_last_token)
+        if finish_reason:
+            self.sequences[sequence_index].finish_reason = finish_reason
 
     def set_next_top_tokens(self, top_tokens: List[Token], sequence_index):
         self.sequences[sequence_index].top_tokens.append(top_tokens)
@@ -220,7 +227,7 @@ class TextGenerationOutput(RequestOutput):
                 tokens.append(token.as_dict())
         return tokens
 
-    def get_prompt_tokes_as_dict(self):
+    def get_prompt_tokens_as_dict(self):
         """Returns the prompt tokens as a dictionary.
 
         :return: prompt tokens as a dictionary.
