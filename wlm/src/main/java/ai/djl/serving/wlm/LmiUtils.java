@@ -137,7 +137,8 @@ public final class LmiUtils {
 
     static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
         String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
-        if (Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
+        if (Files.isRegularFile(info.modelDir)
+                || Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
                 || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
             return;
         }
