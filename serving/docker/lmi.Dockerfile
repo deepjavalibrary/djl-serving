@@ -12,7 +12,7 @@
 ARG version=12.4.1-cudnn-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
-ARG djl_version=0.28.0~SNAPSHOT
+ARG djl_version=0.28.0
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.3.0
@@ -34,7 +34,7 @@ ARG datasets_version=2.19.1
 # LMI-Dist Deps
 ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt230/vllm-0.4.2%2Bcu124-cp310-cp310-linux_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu124-pt230/flash_attn-2.5.8-cp310-cp310-linux_x86_64.whl"
-ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-nightly-py3-none-any.whl"
+ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-10.0.0-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_version=0.11.1
 
