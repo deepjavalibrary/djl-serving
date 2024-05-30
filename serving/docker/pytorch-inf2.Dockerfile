@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04
-ARG djl_version=0.28.0~SNAPSHOT
+ARG djl_version=0.28.0
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.10
@@ -25,7 +25,7 @@ ARG accelerate_version=0.23.0
 ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.22
-ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-nightly-py3-none-any.whl"
+ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.4.2-py3-none-any.whl"
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
