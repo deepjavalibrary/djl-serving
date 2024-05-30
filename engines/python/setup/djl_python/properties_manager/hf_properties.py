@@ -22,6 +22,7 @@ class HFQuantizeMethods(str, Enum):
     # TODO remove this after refactor of all handlers
     # supported by vllm
     awq = 'awq'
+    deepspeedfp = 'deepspeedfp'
 
 
 def get_torch_dtype_from_str(dtype: str):

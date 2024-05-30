@@ -22,6 +22,7 @@ class LmiDistQuantizeMethods(str, Enum):
     awq = 'awq'
     gptq = 'gptq'
     squeezellm = 'squeezellm'
+    deepspeedfp = 'deepspeedfp'
 
 
 class LmiDistRbProperties(Properties):

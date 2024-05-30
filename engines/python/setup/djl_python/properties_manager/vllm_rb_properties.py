@@ -22,6 +22,7 @@ class VllmQuantizeMethods(str, Enum):
     awq = 'awq'
     gptq = 'gptq'
     squeezellm = 'squeezellm'
+    deepspeedfp = 'deepspeedfp'
 
 
 class VllmRbProperties(Properties):
