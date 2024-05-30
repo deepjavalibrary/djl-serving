@@ -43,12 +43,16 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     prev_len = request_cache[request_id]['num_generated_tokens']
     cur_len = len(seq_output.token_ids)
 
-    new_token_ids = seq_output.token_ids[prev_len:cur_len]
+    new_token_ids = seq_output.token_ids[
+        prev_len:cur_len] if prev_len < cur_len else seq_output.token_ids
     output_token_texts = []
     if hasattr(seq_output, "output_token_texts"):
-        output_token_texts = seq_output.output_token_texts[prev_len:cur_len]
+        output_token_texts = seq_output.output_token_texts[
+            prev_len:
+            cur_len] if prev_len < cur_len else seq_output.output_token_texts
     if seq_output.logprobs:
-        new_logprobs_list = seq_output.logprobs[prev_len:cur_len]
+        new_logprobs_list = seq_output.logprobs[
+            prev_len:cur_len] if prev_len < cur_len else seq_output.logprobs
         new_logprobs = [
             # NOTE: vLLM 0.4.1 changed logprob type
             logprobs[token_id] if isinstance(logprobs[token_id], float) else
