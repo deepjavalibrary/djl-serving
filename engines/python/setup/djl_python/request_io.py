@@ -80,7 +80,7 @@ class Sequence:
     tokens: List[Token] = field(default_factory=lambda: [])
     top_tokens: Optional[List[List[Token]]] = field(default_factory=lambda: [])
     cumulative_log_prob: float = 0.0
-    finish_reason: str = False
+    finish_reason: str = None
     _last_token_index: Optional[int] = None
     stop_reason: Optional[str] = None
     _tokens_iterator: Optional[Iterator] = field(init=False, default=None)
