@@ -38,6 +38,26 @@ def get_partition_cmd(is_mpi_mode, properties):
         ]
 
 
+def get_quantization_cmd(properties):
+    return [
+        get_python_executable(), "/opt/djl/partition/run_quantization.py",
+        "--properties",
+        str(json.dumps(properties))
+    ]
+    #return [
+    #    "mpirun", "-N",
+    #    properties.get("option.tensor_parallel_degree", "1"),
+    #    "--allow-run-as-root", "--mca", "btl_vader_single_copy_mechanism",
+    #    "none", "--tag-output", "-x", "FI_PROVIDER=efa", "-x",
+    #    "RDMAV_FORK_SAFE=1", "-x", "FI_EFA_USE_DEVICE_RDMA=1", "-x",
+    #    "LD_LIBRARY_PATH", "-x", f"MASTER_ADDR={MASTER_ADDR}", "-x",
+    #    f"MASTER_PORT={MASTER_PORT}", "-x", "PYTHONPATH",
+    #    get_python_executable(), "/opt/djl/partition/run_quantization.py",
+    #    "--properties",
+    #    str(json.dumps(properties))
+    #]
+
+
 def get_engine_configs(properties):
     engine = properties.get('engine')
     configs = {'option.parallel_loading': True}
@@ -57,6 +77,8 @@ def extract_python_jar(target_dir):
 
 def is_engine_mpi_mode(engine):
     if engine == 'DeepSpeed':
+        return True
+    elif engine.lower() == 'mpi':
         return True
     else:
         return False

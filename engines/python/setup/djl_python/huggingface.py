@@ -540,6 +540,24 @@ class HuggingFaceService(object):
             raise e
 
 
+    def quantize(self, properties: dict):
+        from awq import AutoAWQForCausalLM
+
+        self.hf_configs = HuggingFaceProperties(**properties)
+        self._read_model_config(self.hf_configs.model_id_or_path)
+        self._init_tokenizer(self.hf_configs.model_id_or_path)
+
+        logging.info(f"self: {self}")
+        output_path = self.hf_configs.save_mp_checkpoint_path
+
+        quant_config = {"zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM"}
+        awq_model = AutoAWQForCausalLM.from_pretrained(self.hf_configs.model_id_or_path)
+        awq_model.quantize(self.tokenizer, quant_config=quant_config)
+
+        awq_model.save_quantized(output_path)
+        self.tokenizer.save_pretrained(output_path)
+
+
 _service = HuggingFaceService()
 
 
@@ -582,6 +600,11 @@ def unregister_adapter(inputs: Input):
     if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
         _service.model.base_model.delete_adapter(adapter_name)
     return Output()
+
+
+def quantize(inputs: Input):
+    if not _service.initialized:
+        _service.quantize(inputs.get_properties())
 
 
 def handle(inputs: Input):
