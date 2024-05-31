@@ -55,7 +55,7 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu121-precxx11
 ENV VLLM_NO_USAGE_STATS=1
-ENV VLLM_CONFIG_ROOT=/tmp/vllm/.config
+ENV VLLM_CONFIG_ROOT=/opt/djl/vllm/.config
 
 
 ENV HF_HOME=/tmp/.cache/huggingface
