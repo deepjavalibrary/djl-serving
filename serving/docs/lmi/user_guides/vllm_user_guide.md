@@ -89,7 +89,7 @@ If you run into OOM by enabling adapter support, reduce the `option.gpu_memory_u
 
 The following table lists the advanced configurations that are available with the vLLM backend.
 There are two types of advanced configurations: `LMI`, and `Pass Through`.
-`LMI` configurations are processed by LMI and translated into configurations that DeepSpeed uses.
+`LMI` configurations are processed by LMI and translated into configurations that vLLM uses.
 `Pass Through` configurations are passed directly to the backend library. These are opaque configurations from the perspective of the model server and LMI.
 We recommend that you file an [issue](https://github.com/deepjavalibrary/djl-serving/issues/new?assignees=&labels=bug&projects=&template=bug_report.md&title=) for any issues you encounter with configurations.
 For `LMI` configurations, if we determine an issue with the configuration, we will attempt to provide a workaround for the current released version, and attempt to fix the issue for the next release.

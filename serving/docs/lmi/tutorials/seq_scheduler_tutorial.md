@@ -33,7 +33,7 @@ please take look at the djl-serving introduction tutorial.
 docker run -it --runtime=nvidia --gpus all --shm-size 3g \
 -v /home/ubuntu/model:/opt/ml/model -v /tmp:/tmp \
 -v /home/ubuntu/.cache/huggingface:/root/.cache/huggingface \
--p 8080:8080 deepjavalibrary/djl-serving:deepspeed-nightly
+-p 8080:8080 deepjavalibrary/djl-serving:lmi-nightly
 ```
 
 ## Send request to the server with a curl command

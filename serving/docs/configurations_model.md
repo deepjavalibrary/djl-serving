@@ -10,7 +10,7 @@ An example `serving.properties` can be found [here](https://github.com/deepjaval
 In `serving.properties`, you can set the following properties. Model properties are accessible to `Translator`
 and python handler functions.
 
-- `engine`: Which Engine to use, values include MXNet, PyTorch, TensorFlow, ONNX, DeepSpeed, etc.
+- `engine`: Which Engine to use, values include MXNet, PyTorch, TensorFlow, ONNX, etc.
 - `load_on_devices`: A ; delimited devices list, which the model to be loaded on, default to load on all devices.
 - `translatorFactory`: Specify the TranslatorFactory.
 - `job_queue_size`: Specify the job queue size at model level, this will override global `job_queue_size`, default is `1000`.
@@ -62,7 +62,7 @@ option.ortDevice=TensorRT/ROCM/CoreML
 retry_threshold=10
 
 option.pythonExecutable=python3
-option.entryPoint=deepspeed.py
+option.entryPoint=huggingface.py
 option.handler=hanlde
 option.predict_timeout=120
 option.model_loading_timeout=10

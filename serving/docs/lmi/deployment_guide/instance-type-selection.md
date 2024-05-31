@@ -3,15 +3,15 @@
 While there are many open source LLMs and architectures available, most models tend to fall within a few common parameter count sizes.
 The following table provides instance type recommendations for common model parameter counts using half-precision (fp16/bf16) weights.
 
-| Model Parameter Count | Instance Type    | Accelerators | Aggregate Accelerator Memory | Sample Models                              | Estimated Max Batch Size Range |
-|-----------------------|------------------|--------------|------------------------------|--------------------------------------------|--------------------------------|
-| ~7 billion            | ml.g5.2xlarge    | 1 x A10G     | 24 GB                        | Llama2-7b, Falcon-7b, GPT-J-6B, Mistral-7b | 32-64                          |
-| ~13 billion           | ml.g5.12xlarge   | 4 x A10G     | 96GB                         | Llama2-13b, CodeLlama-13b, Flan-T5-XXL     | 32-64                          |
-| ~20 billion           | ml.g5.12xlarge   | 4 x A10G     | 96GB                         | GPT-NEOX-20b, Flan-Ul2                     | 16-32                          |
-| ~35 billion           | ml.g5.48xlarge   | 8 x A10G     | 192GB                        | CodeLlama-34b, Falcon-40b                  | 32-64                          |
-| ~70 billion           | ml.g5.48xlarge   | 8 x A10G     | 192GB                        | Llama2-70b, CodeLlama-70b                  | 1-8                            |
-| ~70 billion           | ml.p4d.24xlarge  | 8 x A100     | 320GB                        | Llama2-70b, CodeLlama-70b                  | 32-64                          |
-| ~180 billion          | ml.p4de.24xlarge | 8 x A100     | 640GB                        | Falcon-180b, Bloom-176B                    | 32-64                          |
+| Model Parameter Count | Instance Type                                | Accelerators                   | Aggregate Accelerator Memory | Sample Models                              | Estimated Max Batch Size Range |
+|-----------------------|----------------------------------------------|--------------------------------|------------------------------|--------------------------------------------|--------------------------------|
+| ~7 billion            | <p>ml.g5.4xlarge</p><p>ml.g6.4xlarge</p>     | <p>1 x A10G</p><p>1 x L4</p>   | 24 GB                        | Llama2-7b, Falcon-7b, GPT-J-6B, Mistral-7b | 32-64                          |
+| ~13 billion           | <p>ml.g5.12xlarge</p><p>ml.g6.12xlarge</p>   | <p>4 x A10G</p><p>4 x L4</p>   | 96GB                         | Llama2-13b, CodeLlama-13b, Flan-T5-XXL     | 32-64                          |
+| ~20 billion           | <p>ml.g5.12xlarge</p><p>ml.g6.12xlarge</p>   | <p>4 x A10G</p><p>4 x L4</p>   | 96GB                         | GPT-NEOX-20b, Flan-Ul2                     | 16-32                          |
+| ~35 billion           | <p>ml.g5.48xlarge</p><p>ml.g6.48xlarge</p>   | <p>8 x A10G</p><p>8 x L4</p>   | 192GB                        | CodeLlama-34b, Falcon-40b                  | 32-64                          |
+| ~70 billion           | <p>ml.g5.48xlarge</p><p>ml.g6.48xlarge</p>   | <p>8 x A10G</p><p>8 x L4</p>   | 192GB                        | Llama2-70b, CodeLlama-70b                  | 1-8                            |
+| ~70 billion           | ml.p4d.24xlarge                              | 8 x A100                       | 320GB                        | Llama2-70b, CodeLlama-70b                  | 32-64                          |
+| ~180 billion          | <p>ml.p4de.24xlarge</p><p>ml.p5.48xlarge</p> | <p>8 x A100</p><p>8 x H100</p> | 640GB                        | Falcon-180b, Bloom-176B                    | 32-64                          |
 
 We recommend starting with the guidance above based on the model parameter count.
 The estimated batch size is a conservative estimate.
@@ -24,6 +24,7 @@ Selecting an instance is based on a few factors:
 * Model Size
 * Desired Accelerators (A10, A100, H100, AWS Inferentia etc.)
     * We recommend using instances with at least A series gpus (g5/p4). The performance is much greater compared to older T series gpus
+    * g6 instance types are slightly less performant than g5 instances, but provide fp8 support and are typically more price-performant
     * You should select an instance that has sufficient aggregate memory (across all gpus) for both loading the model, and making requests at runtime
 * Desired Concurrency/Batch Size
     *  Increasing Batch Size allows for more concurrent requests, but requires additional VRAM
@@ -36,11 +37,11 @@ We can establish a lower bound for the required memory based on the model size.
 The model size is determined by the number of parameters, and the data type.
 We can quickly estimate the model size in GB using the number of parameters and data type like this:
 
-* Half Precision data type (fp16, bf16): `Size in GB = Number of Parameters * 2 (bytes / param)`
+* Half-Precision data type (fp16, bf16): `Size in GB = Number of Parameters * 2 (bytes / param)`
 * Full Precision data type (fp32): `Size in GB = Number of Parameters * 4 (bytes / param)`
 * 8-bit Quantized data type (int8, fp8): `Size in GB = Number of Parameters * 1 (bytes / param)`
 
-We recommend using a half precision data type as it requires less memory than full precision without losing accuracy for most cases.
+We recommend using a half-precision data type as it requires less memory than full precision without losing accuracy for most cases.
 
 We estimate the Llama2-13b model to take `13 billion params * 2 bytes / param = 26GB` of memory.
 This is just the memory required to load the model.

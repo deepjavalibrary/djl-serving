@@ -63,7 +63,7 @@ When launching LLMs in production, you might best be served with multiple endpoi
 
 To summarize the above:
 
-* For uneven traffic patterns, we recommend `lmi-dist`. Other good options that may work better for your model are `vLLM`, and `deepspeed`.
+* For uneven traffic patterns, we recommend `lmi-dist`. 
 * For even traffic patterns, we recommend `TensorRT-LLM`. 
 
 ## Factor 3: Cost to Host
