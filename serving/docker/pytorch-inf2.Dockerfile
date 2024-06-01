@@ -70,6 +70,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version && \
+    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_inferentia2.sh && \
     pip install transformers==${transformers_version} accelerate==${accelerate_version} safetensors ${vllm_wheel} \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
