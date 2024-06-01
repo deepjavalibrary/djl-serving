@@ -72,8 +72,70 @@ RUN scripts/install_python.sh && \
     rm -rf /opt/djl/logs && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
-    apt-get clean -y && rm -rf /var/lib/apt/lists/* \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.cpu-full="true"
 LABEL torch-version=$torch_version
+
+
+FROM ubuntu:22.04 as vllm-build
+# Borrowed from https://github.com/vllm-project/vllm/blob/v0.4.3/Dockerfile.cpu
+ARG vllm_version=v0.4.3
+
+WORKDIR /usr/src
+
+RUN apt-get update  -y \
+    && apt-get install -y git wget vim numactl gcc-12 g++-12 python3 python3-pip \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 --slave /usr/bin/g++ g++ /usr/bin/g++-12
+
+RUN pip install --upgrade pip \
+    && pip install wheel packaging ninja setuptools>=49.4.0 numpy
+
+# FIXME: use official vLLM branch once the PR: https://github.com/vllm-project/vllm/pull/5200 merged
+RUN git clone https://github.com/lanking520/vllm -b ${vllm_version} && cd vllm && \
+    pip install -v -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu && \
+    VLLM_TARGET_DEVICE=cpu pip3 wheel . --no-deps
+
+
+FROM base AS lmi-cpu
+
+ARG torch_version=2.3.0
+ARG protobuf_version=3.20.3
+ARG transformers_version=4.41.1
+ARG accelerate_version=0.30.1
+ARG datasets_version=2.19.1
+ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
+ARG peft_version=0.11.1
+
+COPY scripts scripts/
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ && \
+    scripts/install_python.sh && \
+    scripts/install_djl_serving.sh $djl_version $torch_version && \
+    scripts/install_s5cmd.sh x64 && \
+    echo "${djl_version} cpufull" > /opt/djl/bin/telemetry && \
+    djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
+    djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.10.1:linux-x86_64 && \
+    pip3 cache purge && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+COPY --from=vllm-build /usr/src/vllm/*.whl scripts/
+
+# FIXME remove Trtion import in the next release
+RUN pip3 install torch==${torch_version}+cpu --extra-index-url https://download.pytorch.org/whl/cpu \
+    ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
+    transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
+    mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} \
+    triton >= 2.2.0 scripts/vllm*.whl \
+    jinja2 safetensors ninja scipy sentence_transformers && \
+    pip3 cache purge
+
+# final cleanup \
+RUN scripts/patch_oss_dlc.sh python && \
+    rm -rf /opt/djl/logs && \
+    chown -R djl:djl /opt/djl && \
+    rm -rf scripts && pip3 cache purge && \
+    apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.cpu-full="true"
