@@ -122,11 +122,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
 COPY --from=vllm-build /usr/src/vllm/*.whl scripts/
 
 # FIXME remove Trtion import in the next release
-RUN pip3 install torch==${torch_version}+cpu --extra-index-url https://download.pytorch.org/whl/cpu \
+RUN pip3 install torch==${torch_version}+cpu triton >= 2.2.0 --extra-index-url https://download.pytorch.org/whl/cpu \
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
-    mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} \
-    triton >= 2.2.0 scripts/vllm*.whl \
+    mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} scripts/vllm*.whl \
     jinja2 safetensors ninja scipy sentence_transformers && \
     pip3 cache purge
 
