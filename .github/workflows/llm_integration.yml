@@ -19,7 +19,7 @@ jobs:
   create-runners:
     runs-on: [self-hosted, scheduler]
     steps:
-      - name: Create new G5 instance
+      - name: Create new G6 instance
         id: create_gpu
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
@@ -27,8 +27,8 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g5 $token djl-serving
-      - name: Create new G5 instance
+          ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
         id: create_gpu2
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
@@ -36,8 +36,8 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g5 $token djl-serving
-      - name: Create new G5 instance
+          ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new G6 instance
         id: create_gpu3
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
@@ -45,15 +45,15 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_g5 $token djl-serving
+          ./start_instance.sh action_g6 $token djl-serving
     outputs:
-      gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
-      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g5_instance_id }}
-      gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g5_instance_id }}
+      gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
+      gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
+      gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g6_instance_id }}
 
   hf-handler-test:
     if: contains(fromJson('["", "hf"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     strategy:
@@ -160,7 +160,7 @@ jobs:
 
   trt-llm-handler-test:
     if: contains(fromJson('["", "trtllm"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 120
     needs: create-runners
     steps:
@@ -274,7 +274,7 @@ jobs:
 
   trt-llm-handler-test-2:
     if: contains(fromJson('["", "trtllm"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 120
     needs: create-runners
     steps:
@@ -366,7 +366,7 @@ jobs:
 
   scheduler-single-gpu-test:
     if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     steps:
@@ -437,7 +437,7 @@ jobs:
 
   scheduler-multi-gpu-test:
     if: contains(fromJson('["", "scheduler"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     steps:
@@ -499,7 +499,7 @@ jobs:
 
   lmi-dist-test-1:
     if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     steps:
@@ -589,7 +589,7 @@ jobs:
 
   lmi-dist-test-2:
     if: contains(fromJson('["", "lmi-dist"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     steps:
@@ -707,7 +707,7 @@ jobs:
 
   vllm-test:
     if: contains(fromJson('["", "vllm"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     steps:
@@ -817,7 +817,7 @@ jobs:
 
   vllm-lora-test:
     if: contains(fromJson('["", "vllm-lora"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     steps:
@@ -899,7 +899,7 @@ jobs:
 
   lmi-dist-lora-test:
     if: contains(fromJson('["", "lmi-dist-lora"]'), github.event.inputs.run_test)
-    runs-on: [ self-hosted, g5 ]
+    runs-on: [ self-hosted, g6 ]
     timeout-minutes: 60
     needs: create-runners
     steps:
