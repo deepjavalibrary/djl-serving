@@ -34,6 +34,22 @@ is_p4d_or_p5() {
     echo "false"
   fi
 }
+
+support_nvme() {
+    local instance_type=$(get_instance_type)
+    if [[ "$instance_type" == *"p4d"* || "$instance_type" == *"p5"* || "$instance_type" == *"g5"* || "$instance_type" == *"g6"* ]]; then
+      echo "true"
+    else
+      echo "false"
+    fi
+}
+
+if [[ "$(support_nvme)" == *"true"* ]]; then
+  sudo rm -rf /opt/dlami/nvme/inf_tmp || true
+  sudo mkdir -p /opt/dlami/nvme/inf_tmp && sudo chmod 777 /opt/dlami/nvme/inf_tmp
+  nvme="/opt/dlami/nvme/inf_tmp:/tmp"
+fi
+
 is_llm=false
 if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
   runtime="nvidia"
@@ -80,6 +96,7 @@ if $is_partition; then
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${nvme:+-v ${nvme}} \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     ${runtime:+--runtime="${runtime}"} \
@@ -96,6 +113,7 @@ elif [[ "$docker_image" == *"text-generation-inference"* ]]; then
     -p 8080:80 \
     ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${nvme:+-v ${nvme}} \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
@@ -114,6 +132,7 @@ else
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/home/djl/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${nvme:+-v ${nvme}} \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     -e SERVING_OPTS='-Dai.djl.logging.level=debug' \
