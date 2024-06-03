@@ -241,6 +241,11 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256]
     },
+    "gemma-2b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
     "llama2-13b-gptq": {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
@@ -407,6 +412,11 @@ vllm_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256]
     },
+    "gemma-2b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
 }
 
 vllm_chat_model_spec = {
@@ -549,6 +559,11 @@ no_code_rolling_batch_spec = {
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
     },
     "gemma-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "gemma-2b": {
         "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],

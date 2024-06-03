@@ -382,6 +382,13 @@ lmi_dist_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.max_model_len": 2656,
     },
+    "gemma-2b": {
+        "option.model_id": "s3://djl-llm/gemma-2b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 256,
+    },
     "llama2-13b-gptq": {
         "option.model_id": "s3://djl-llm/TheBloke-Llama-2-13b-Chat-GPTQ/",
         "option.task": "text-generation",
@@ -677,6 +684,13 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
         "option.max_model_len": 2656,
+    },
+    "gemma-2b": {
+        "option.model_id": "s3://djl-llm/gemma-2b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 256,
     },
     "llama2-7b-chat": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",

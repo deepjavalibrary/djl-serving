@@ -639,14 +639,14 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist starcoder2-7b
           docker rm -f $(docker ps -aq)
-      - name: Test gemma-7b
+      - name: Test gemma-2b
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py lmi_dist gemma-7b
+          python3 llm/prepare.py lmi_dist gemma-2b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py lmi_dist gemma-7b
+          python3 llm/client.py lmi_dist gemma-2b
           docker rm -f $(docker ps -aq)
       - name: Test llama2-13b-gptq
         working-directory: tests/integration
@@ -784,14 +784,14 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py vllm starcoder2-7b
           docker rm -f $(docker ps -aq)
-      - name: Test gemma-7b
+      - name: Test gemma-2b
         working-directory: tests/integration
         run: |
           rm -rf models
-          python3 llm/prepare.py vllm gemma-7b
+          python3 llm/prepare.py vllm gemma-2b
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
             serve -m test=file:/opt/ml/model/test/
-          python3 llm/client.py vllm gemma-7b
+          python3 llm/client.py vllm gemma-2b
           docker rm -f $(docker ps -aq)
       - name: Test llama2-7b-chat
         working-directory: tests/integration
