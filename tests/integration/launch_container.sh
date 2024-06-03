@@ -112,6 +112,7 @@ elif [[ "$docker_image" == *"text-generation-inference"* ]]; then
     -p 8080:80 \
     ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${nvme:+-v ${nvme}} \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
@@ -130,6 +131,7 @@ else
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/home/djl/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${nvme:+-v ${nvme}} \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     -e SERVING_OPTS='-Dai.djl.logging.level=debug' \
