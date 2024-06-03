@@ -807,6 +807,154 @@ class TestRollingBatch(unittest.TestCase):
             },
         }
 
+    def test_best_of(self):
+        """ Test with custom formatter.
+            Waits till last token is generated, and send out the whole response at once.
+        """
+
+        parameters = {"max_new_tokens": 256, "details": True, "best_of": 2}
+
+        req = Request(132,
+                      "This is a wonderful day",
+                      parameters=parameters,
+                      output_formatter=_json_output_formatter)
+        print(parameters)
+        assert parameters == {"max_new_tokens": 256, "best_of": 2}
+
+        req.set_next_token(Token(244, "He", -0.334532))
+        print(req.get_next_token(), end='')
+        assert req.get_next_token() == ""
+        req.reset_next_token()
+        req.set_next_token(Token(576, "llo", -0.123123))
+        print(req.get_next_token(), end='')
+        assert req.get_next_token() == ""
+        req.reset_next_token()
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            "generated_text": "Hello world",
+            "details": {
+                "finish_reason":
+                "length",
+                "tokens": [{
+                    "id": 244,
+                    "text": "He",
+                    "log_prob": -0.334532
+                }, {
+                    "id": 576,
+                    "text": "llo",
+                    "log_prob": -0.123123
+                }, {
+                    "id": 4558,
+                    "text": " world",
+                    "log_prob": -0.567854
+                }],
+                "generated_tokens":
+                3,
+                "inputs":
+                "This is a wonderful day"
+            }
+        }
+
+    def test_multiple_sequences(self):
+        """ Test with multiple sequences.
+        """
+
+        parameters = {"max_new_tokens": 4, "details": True, "best_of": 2}
+
+        req = Request(132,
+                      "This is a wonderful day",
+                      parameters=parameters,
+                      output_formatter=_json_output_formatter)
+        print(parameters)
+        assert parameters == {"max_new_tokens": 4, "best_of": 2}
+
+        req.request_output.set_next_token(Token(244, "He", -0.334532),
+                                          sequence_index=0)
+        req.request_output.set_next_token(Token(12, "I ", -0.563752),
+                                          sequence_index=1)
+        print(req.get_next_token(), end='')
+        assert req.get_next_token() == ""
+        req.reset_next_token()
+
+        req.request_output.set_next_token(Token(576, "llo", -0.123123),
+                                          sequence_index=0)
+        req.request_output.set_next_token(Token(123, "am", -0.452051),
+                                          sequence_index=1)
+
+        print(req.get_next_token(), end='')
+        assert req.get_next_token() == ""
+        req.reset_next_token()
+        req.request_output.set_next_token(Token(4558, " world", -0.567854),
+                                          sequence_index=0)
+        # best_sequence finishes before other sequences.
+        req.request_output.set_next_token(Token(8763, " AI", -0.836312),
+                                          sequence_index=1,
+                                          is_last_token=True,
+                                          finish_reason='eos_token')
+
+        assert req.get_next_token() == ""
+        req.reset_next_token()
+        req.request_output.set_next_token(Token(9872, " programming",
+                                                -0.835241),
+                                          sequence_index=0,
+                                          is_last_token=True,
+                                          finish_reason='length')
+
+        req.request_output.best_sequence_index = 1
+        req.request_output.other_sequences_indices = [0]
+        req.request_output.finished = True
+        print(req.get_next_token(), end='')
+        assert json.loads(req.get_next_token()) == {
+            "generated_text": "I am AI",
+            "details": {
+                "finish_reason":
+                "eos_token",
+                "tokens": [{
+                    "id": 12,
+                    "text": "I ",
+                    "log_prob": -0.563752
+                }, {
+                    "id": 123,
+                    "text": "am",
+                    "log_prob": -0.452051
+                }, {
+                    "id": 8763,
+                    "text": " AI",
+                    "log_prob": -0.836312
+                }],
+                "generated_tokens":
+                3,
+                "inputs":
+                "This is a wonderful day",
+                "best_of_sequences": [{
+                    "finish_reason":
+                    "length",
+                    "generated_tokens":
+                    4,
+                    "tokens": [{
+                        "id": 244,
+                        "text": "He",
+                        "log_prob": -0.334532
+                    }, {
+                        "id": 576,
+                        "text": "llo",
+                        "log_prob": -0.123123
+                    }, {
+                        "id": 4558,
+                        "text": " world",
+                        "log_prob": -0.567854
+                    }, {
+                        "id": 9872,
+                        "text": " programming",
+                        "log_prob": -0.835241
+                    }],
+                    "generated_text":
+                    "Hello world programming",
+                }]
+            }
+        }
+
 
 if __name__ == '__main__':
     unittest.main()

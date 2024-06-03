@@ -16,6 +16,7 @@ from typing import Union, Callable, Any
 from djl_python.output_formatter import get_output_formatter, _json_output_formatter, sse_response_formatter, \
     adapt_legacy_output_formatter
 from djl_python.request_io import Token, TextGenerationOutput, TextInput, RequestOutput
+from djl_python.utils import wait_till_generation_finished
 
 
 class Request(object):
@@ -110,10 +111,12 @@ class Request(object):
             next_token = Token(-1, next_token)
         next_token.request_id = self.id
         self.request_output.set_next_token(next_token,
-                                           is_last_token=last_token)
-        self.request_output.set_finish_reason(finish_reason)
+                                           is_last_token=last_token,
+                                           finish_reason=finish_reason)
         self.request_output.prompt_tokens_details = prompt_tokens_details
         self.last_token = last_token
+        if last_token:
+            self.request_output.finished = True
 
     def get_next_token(self) -> str:
         """
@@ -127,6 +130,11 @@ class Request(object):
             # TODO: Remove this support when all of our customers onboard.
             if self.legacy_formatter:
                 self.next_token_str = adapt_legacy_output_formatter(
+                    self.request_output)
+            elif wait_till_generation_finished(
+                    self.request_output.input.parameters):
+                # there is no need for iterators for best_of and num_beams.
+                self.next_token_str = self.output_formatter(
                     self.request_output)
             else:
                 best_sequence = self.request_output.sequences[

@@ -192,3 +192,26 @@ def profile_objects(func):
         return result
 
     return apply_profiling
+
+
+def is_best_of(parameters: dict) -> bool:
+    """
+    Returns whether parameters indicate best_of should be applied.
+    :param parameters: parameters dictionary
+    :return: boolean
+    """
+    return "best_of" in parameters.keys() and parameters.get("best_of") > 1
+
+
+def is_multiple_sequences(parameters: dict) -> bool:
+    """
+    Returns whether the parameters indicate number of output sequences to return is more than 1.
+    When the user give us n, best_of is automatically applied in vllm and lmi-dist.
+    :param parameters: parameters dictionary
+    :return: boolean
+    """
+    return "n" in parameters.keys() and parameters.get("n") > 1
+
+
+def wait_till_generation_finished(parameters):
+    return is_best_of(parameters) or is_multiple_sequences(parameters)
