@@ -72,12 +72,12 @@ The final "line" in the response will also contain the additional fields `genera
 
 Example response:
 ```
-{"token": {"id": [304], "text": "Deep ", "log_prob": -0.052432529628276825}}
-{"token": {"id": [11157], "text": " Learning", "log_prob": -1.2865009307861328}}
-{"token": {"id": [278], "text": " is", "log_prob": -0.007458459585905075}}
+{"token": {"id": 304, "text": "Deep ", "log_prob": -0.052432529628276825}}
+{"token": {"id": 11157, "text": " Learning", "log_prob": -1.2865009307861328}}
+{"token": {"id": 278, "text": " is", "log_prob": -0.007458459585905075}}
 ... more tokens until the last one
 {
-    "token": {"id": [5972], "text": " field.", "log_prob": -0.6950479745864868}, 
+    "token": {"id": 5972, "text": " field.", "log_prob": -0.6950479745864868}, 
     "generated_text": "Deep Learning is a really cool field.", 
     "details": {"finish_reason": "length", "generated_tokens": 100, "inputs": "What is Deep Learning?"}
 }
@@ -327,7 +327,7 @@ Example:
 ```
 {
   "token": {
-    "id": [763], 
+    "id": 763, 
     "text": " In", 
     "log_prob": -3.977081060409546
   }
