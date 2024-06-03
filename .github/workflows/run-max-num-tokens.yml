@@ -18,6 +18,8 @@ on:
           - g5.12xlarge
           - g5.48xlarge
           - p4d.24xlarge
+          - p5.48xlarge
+          - g6.12xlarge
 
 permissions:
   id-token: write
@@ -44,8 +46,8 @@ jobs:
     runs-on: [ self-hosted, "${{ inputs.instance }}" ]
     container:
       image: deepjavalibrary/djl-serving:tensorrt-llm-nightly
-      options: --gpus all --runtime=nvidia --shm-size 12g
-    timeout-minutes: 90
+      options: --gpus all --runtime=nvidia --shm-size 20g -v /opt/dlami/nvme:/tmp
+    timeout-minutes: 1440
     needs: create-runners
     steps:
       - uses: actions/checkout@v4
