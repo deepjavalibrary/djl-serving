@@ -46,6 +46,7 @@ support_nvme() {
 
 if [[ "$(support_nvme)" == *"true"* ]]; then
   sudo rm -rf /opt/dlami/nvme/inf_tmp || true
+  sudo mkdir -p /opt/dlami/nvme/inf_tmp && sudo chmod 777 /opt/dlami/nvme/inf_tmp
   nvme="/opt/dlami/nvme/inf_tmp:/tmp"
 fi
 
