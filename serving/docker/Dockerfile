@@ -92,10 +92,9 @@ RUN apt-get update  -y \
 RUN pip install --upgrade pip \
     && pip install wheel packaging ninja setuptools>=49.4.0 numpy
 
-# FIXME: use official vLLM branch once the PR: https://github.com/vllm-project/vllm/pull/5200 merged
-RUN git clone https://github.com/lanking520/vllm -b ${vllm_version} && cd vllm && \
+RUN git clone https://github.com/vllm-project/vllm -b ${vllm_version} && cd vllm && \
     pip install -v -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu && \
-    VLLM_TARGET_DEVICE=cpu pip3 wheel . --no-deps
+    VLLM_TARGET_DEVICE=cpu python3 setup.py bdist_wheel
 
 
 FROM base AS lmi-cpu
@@ -109,7 +108,8 @@ ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.
 ARG peft_version=0.11.1
 
 COPY scripts scripts/
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ && \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev gcc-12 g++-12 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 --slave /usr/bin/g++ g++ /usr/bin/g++-12 && \
     scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     scripts/install_s5cmd.sh x64 && \
@@ -119,10 +119,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-COPY --from=vllm-build /usr/src/vllm/*.whl scripts/
+COPY --from=vllm-build /usr/src/vllm/dist/*.whl scripts/
 
 # FIXME remove Trtion import in the next release
-RUN pip3 install torch==${torch_version}+cpu triton >= 2.2.0 --extra-index-url https://download.pytorch.org/whl/cpu \
+RUN pip3 install torch==${torch_version}+cpu triton>=2.2.0 --extra-index-url https://download.pytorch.org/whl/cpu \
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} scripts/vllm*.whl \
@@ -136,5 +136,5 @@ RUN scripts/patch_oss_dlc.sh python && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi-cpu="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.lmi-cpu="true"
