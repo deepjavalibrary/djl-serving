@@ -28,7 +28,7 @@ classDiagram
         +RequestInput input
     }
     class TextGenerationOutput{
-        +map sequences
+        +map[int, Sequence] sequences
         +int best_sequence_index
         +list[Token] prompt_tokens_details
     }
@@ -42,7 +42,7 @@ classDiagram
     
     class RequestInput{
         +int request_id
-        +dict parameters
+        +map[str, any] parameters
         +Union[str, Callable] output_formatter
     }
     class TextInput{
@@ -66,10 +66,18 @@ classDiagram
 - **RequestOutput**: This is the main class that encapsulates the output of a request.
 - **TextGenerationOutput**: This subclass of RequestOutput is specific to text generation tasks. Right now this is the only task supported for custom output formatter. Each text generation task can generate multiple sequences. 
   - best_sequence_index: index of the best sequence with the highest log probabilities. Please use this, when you are trying to look up the output sequence. 
-  - Note that, right now, only one sequence will be generated. In the future release, multiple sequences generation will be supported. 
+  - map[int, Sequence] - represents sequence_index and it's respective sequence.
+  - Note that, right now, only one sequence will be generated. In the future release, multiple sequences generation will be supported.
 - **Sequence** : Represents a sequence of generated tokens and it's details 
   - has_next_token() and get_next_token() methods function like an iterator. In iterative generation, each step produces a single token.
-  - get_next_token() advances the iterator to the next token and returns a Token instance along with details indicating whether it is the first token (first_token) and whether it is the last token (last_token).
+  - get_next_token() advances the iterator to the next token and returns a Token instance along with details indicating whether it is the first token (is_first_token) and whether it is the last token (is_last_token).
+
+### How will your custom output_formatter called?
+It's crucial to understand how your custom output formatter will be called before implementing it.
+- Your output formatter will be invoked at each generation step for each request individually.
+- Upon receiving the requests, DJLServing batches them together, performs preprocessing, and starts the inference process.
+- Inference may involve multiple token generations based on the max_new_tokens parameter. At each generation step, your custom formatter will be called for each request individually.
+
 
 ## Example
 Here is an example of a custom output formatter:
@@ -77,7 +85,7 @@ Here is an example of a custom output formatter:
 from djl_python.output_formatter import TextGenerationOutput
 import json
 
-def custom_output_formatter(request_output: TextGenerationOutput):
+def custom_output_formatter(request_output: TextGenerationOutput) -> str:
     """
     Replace this function with your custom output formatter.
 
@@ -89,9 +97,9 @@ def custom_output_formatter(request_output: TextGenerationOutput):
 
     """
     best_sequence = request_output.sequences[request_output.best_sequence_index]
-    next_token, first_token, last_token = best_sequence.get_next_token()
+    next_token, is_first_token, is_last_token = best_sequence.get_next_token()
     result = {"token_id": next_token.id, "token_text": next_token.text, "token_log_prob": next_token.log_prob}
-    if last_token:
+    if is_last_token:
         result["finish_reason"] = best_sequence.finish_reason
     return json.dumps(result) + "\n"
 ```
