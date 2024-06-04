@@ -929,9 +929,10 @@ def response_checker(res, message):
                     raise RuntimeError("Inference failed!")
         elif 'application/jsonlines' == res.headers['content-type']:
             json_lines = []
-            for item in message.splitlines():
+            for item in message.split('\n'):
                 try:
-                    json_lines.append(json.loads(item))
+                    if len(item) > 0:
+                        json_lines.append(json.loads(item))
                 except:
                     raise RuntimeError(f"Json loading failure {item}")
 
