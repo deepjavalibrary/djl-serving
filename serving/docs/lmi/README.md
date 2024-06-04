@@ -9,16 +9,16 @@
 
 # Overview - Large Model Inference (LMI) Containers
 
-LMI containers are a set of high performance Docker Containers purpose built for large language model (LLM) inference. 
-With these containers you can leverage high performance open-source inference libraries like [vLLM](https://github.com/vllm-project/vllm), [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM), 
-[DeepSpeed](https://github.com/microsoft/DeepSpeed), [Transformers NeuronX](https://github.com/aws-neuron/transformers-neuronx) to deploy LLMs on [AWS SageMaker Endpoints](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html). 
+LMI containers are a set of high-performance Docker Containers purpose built for large language model (LLM) inference. 
+With these containers, you can leverage high performance open-source inference libraries like [vLLM](https://github.com/vllm-project/vllm), [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM), 
+[Transformers NeuronX](https://github.com/aws-neuron/transformers-neuronx) to deploy LLMs on [AWS SageMaker Endpoints](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html). 
 These containers bundle together a model server with open-source inference libraries to deliver an all-in-one LLM serving solution.
 We provide quick start notebooks that get you deploying popular open source models in minutes, and advanced guides to maximize performance of your endpoint.
 
 LMI containers provide many features, including:
 
 * Optimized inference performance for popular model architectures like Llama, Bloom, Falcon, T5, Mixtral, and more
-* Integration with open source inference libraries like vLLM, TensorRT-LLM, DeepSpeed, and Transformers NeuronX
+* Integration with open source inference libraries like vLLM, TensorRT-LLM, and Transformers NeuronX
 * Continuous Batching for maximizing throughput at high concurrency
 * Token Streaming
 * Quantization through AWQ, GPTQ, and SmoothQuant
@@ -76,7 +76,6 @@ It is intended for users moving towards deploying LLMs in production settings.
 LMI Containers provide integration with multiple inference libraries.
 You can learn more about their integration with LMI from the respective user guides:
 
-* [DeepSpeed - User Guide](user_guides/deepspeed_user_guide.md)
 * [vLLM - User Guide](user_guides/vllm_user_guide.md)
 * [LMI-Dist - User Guide](user_guides/lmi-dist_user_guide.md)
 * [TensorRT-LLM - User Guide](user_guides/trt_llm_user_guide.md)
@@ -94,10 +93,9 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 
 | Backend                | SageMakerDLC    | Example URI                                                                              |
 |------------------------|-----------------|------------------------------------------------------------------------------------------|
-| `vLLM`                 | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
-| `lmi-dist`             | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
-| `hf-accelerate`        | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
-| `deepspeed`            | djl-deepspeed   | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
+| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
+| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
+| `hf-accelerate`        | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121  |
 | `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-tensorrtllm0.8.0-cu122 |
 | `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-neuronx-sdk2.18.0      |
 

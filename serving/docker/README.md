@@ -13,7 +13,7 @@ export DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {pr
 docker compose build --build-arg djl_version=${DJL_VERSION} <compose-target>
 ```
 
-You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `deepspeed`...
+You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `lmi`...
 
 ## Run docker image
 

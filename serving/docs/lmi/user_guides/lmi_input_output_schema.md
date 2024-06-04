@@ -200,7 +200,7 @@ The following sections describe each of the request or response objects in more 
 
 ### GenerationParameters
 
-The following parameters are available with every rolling batch backend (vLLM, lmi-dist, deepspeed, tensorrt-llm, hf-accelerate)
+The following parameters are available with every rolling batch backend (vLLM, lmi-dist, tensorrt-llm, hf-accelerate)
 
 ```
 "parameters": {
@@ -221,17 +221,6 @@ The following parameters are available with every rolling batch backend (vLLM, l
 If you are not specifying a specific engine or rolling batch implementation, we recommend you stick to the parameters above.
 
 If you are deploying with a specific backend, additional parameters are available that are unique to the specific backend.
-
-#### Additional DeepSpeed Generation parameters 
-
-```
-DeepSpeedRollingBatchParameters : {
-    'typical_p' : float (default= 1.0), 
-    'truncate' : integer (default = None),
-}
-```
-
-Decoding methods supported in DeepSpeed: Greedy (Default) and Sampling.
 
 #### Additional LMI Dist Generation parameters
 
