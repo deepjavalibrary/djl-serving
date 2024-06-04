@@ -172,6 +172,9 @@ public final class LmiUtils {
             return repoDir;
         }
 
+        Engine onnx = Engine.getEngine("OnnxRuntime");
+        boolean hasCuda = onnx.getGpuCount() > 0;
+
         String[] cmd = {
             "djl-convert",
             "--output-dir",
@@ -181,9 +184,9 @@ public final class LmiUtils {
             "-m",
             modelId,
             "--optimize",
-            CudaUtils.hasCuda() ? "O4" : "O2",
+            hasCuda ? "O4" : "O2",
             "--device",
-            CudaUtils.hasCuda() ? "cuda" : "cpu"
+            hasCuda ? "cuda" : "cpu"
         };
         boolean success = false;
         try {
