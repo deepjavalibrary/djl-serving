@@ -85,7 +85,7 @@ RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ && \
     scripts/install_djl_serving.sh $djl_version && \
-    rm -f /usr/local/djl-serving-*/lib/onnxruntime-$onnx_version.jar && \
+    rm -f /usr/local/djl-serving-*/lib/onnxruntime-1.*.jar && \
     curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} lmi" > /opt/djl/bin/telemetry && \
