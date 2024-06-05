@@ -45,6 +45,7 @@ class NeoQuantizationService():
     def update_dataset_cache_location(self):
         logging.info(f"Updating HuggingFace Datasets cache directory to: {self.COMPILER_CACHE_LOCATION}")
         os.environ['HF_DATASETS_CACHE'] = self.COMPILER_CACHE_LOCATION
+        os.environ['HF_DATASETS_OFFLINE'] = "1"
 
     def initialize_partition_args_namespace(self):
         """
@@ -54,13 +55,14 @@ class NeoQuantizationService():
         is easier to construct.
         """
         self.args.save_mp_checkpoint_path = self.OUTPUT_MODEL_DIRECTORY
+        self.args.engine = "MPI"
         # If skip_copy is not enabled, outputted configs are overwritten, and deployment fails.
         self.args.skip_copy = True
         # These attributes reflect the default values of the corresponding attributes
         # in the partition argparser. PropertiesManager expects these attributes to be defined.
         self.args.model_id = None
-        self.args.engine = None
         self.args.tensor_parallel_degree = None
+        self.args.quantize = None
 
 
     def construct_properties_manager(self):
@@ -82,7 +84,7 @@ class NeoQuantizationService():
         quantization_service = QuantizationService(self.properties_manager)
         extract_python_jar(PYTHON_CACHE_DIR)
         try:
-            return quantization_service.run_partition()
+            return quantization_service.run_quantization()
         except Exception as exc:
             raise CompilationFatalError(
                 f"Encountered an error during quantization: {exc}"

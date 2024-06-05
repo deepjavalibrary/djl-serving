@@ -32,12 +32,21 @@ else
     echo "Skip CUDA compat libs setup as package not found"
 fi
 
-if [ -n "$SM_NEO_EXECUTION_CONTEXT" ]; then
-  echo "SageMaker Neo execution context detected"
-  /usr/bin/python3 /opt/djl/partition/sm_neo_trt_llm_partition.py
-  exit_code=$?
-  echo "TensorRT-LLM compilation exited with code $exit_code"
-  exit $exit_code
+if [[ -n "$SM_NEO_EXECUTION_CONTEXT" ]]; then
+        echo "SageMaker Neo execution context detected"
+    if [[ "$SERVING_FEATURES" == "vllm,lmi-dist" ]]; then
+        /usr/bin/python3 /opt/djl/partition/sm_neo_quantize.py
+        exit_code=$?
+        echo "Quantization exited with code $exit_code"
+    elif [[ "$SERVING_FEATURES" == "trtllm" ]]; then
+        /usr/bin/python3 /opt/djl/partition/sm_neo_trt_llm_partition.py
+        exit_code=$?
+        echo "TensorRT-LLM compilation exited with code $exit_code"
+    else
+        echo "Container version does not support SageMaker Neo context"
+        exit_code=1
+    fi
+    exit $exit_code
 fi
 
 # Convert select SM/TGI Environment Variables to LMI Equivalents

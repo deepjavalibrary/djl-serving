@@ -18,7 +18,7 @@ SUPPORTED_QUANTIZATION_METHODS = ["awq", "fp8"]
 
 class QuantizationPropertiesManager(PropertiesManager):
     def __init__(self, args, **kwargs):
-        super.__init__(args, **kwargs)
+        super().__init__(args, **kwargs)
 
         if args.quantize:
             self.properties['option.quantize'] = args.quantize
@@ -36,6 +36,7 @@ class QuantizationPropertiesManager(PropertiesManager):
             'option.tensor_parallel_degree')
         if not tensor_parallel_degree:
             self.properties['option.tensor_parallel_degree'] = 1
+            tensor_parallel_degree = 1
 
         num_gpus = torch.cuda.device_count()
         if num_gpus < int(tensor_parallel_degree):
