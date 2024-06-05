@@ -1,0 +1,179 @@
+# LMI Text Embedding User Guide
+
+Text Embedding refers to the process of converting text data into numerical vectors. These embeddings capture the semantic meaning of the text and can be used for various tasks such as semantic search and similarity detection.
+
+The inference process involves:
+
+1. **Loading a Model**: Loading a model from local directory, S3 or from huggingface repository,.
+2. **Tokenization**: Breaking down the input text into tokens that the model can understand.
+3. **Embeddings**: Passing the tokens through the model to produce embeddings. Embedding is a multi-dimension vector that could be used for RAG or general embedding search.
+
+LMI supports Text Embedding Inference with the following engines:
+
+- OnnxRuntime
+- Rust
+- TensorRT
+- Python
+
+Currently, the OnnxRuntime engine provides the best performance for text embedding in LMI. 
+
+## Supported Model Architectures
+
+The following text models are supported:
+
+- Bert (`BAAI/bge-base-en-v1.5`, `BAAI/bge-small-en-v1.5`, `BAAI/bge-large-en-v1.5`, etc.)
+- XLMRoberta (`intfloat/multilingual-e5-base`, `intfloat/multilingual-e5-small`, `intfloat/multilingual-e5-large`, etc.)
+- NomicBert (`nomic-ai/nomic-embed-text-v1`, `nomic-ai/nomic-embed-text-v1.5`, etc.)
+- JinaBert (`jinaai/jina-embeddings-v2-base-en`, `jinaai/jina-embeddings-v2-small-en`, etc.)
+- Reranker (`BAAI/bge-reranker-base`, `BAAI/bge-reranker-large`, etc.)
+
+Other embedding models are also supported, but may not be as performant as the model architectures listed above.
+
+## Quick Start Configurations
+
+You can leverage LMI Text Embedding inference using the following starter configurations:
+
+### DJL model zoo
+
+You can specify the djl:// model url to load a model from the DJL model zoo.
+
+```
+OPTION_ENGINE=OnnxRuntime
+HF_MODEL_ID=djl://ai.djl.huggingface.onnxruntime/BAAI/bge-base-en-v1.5
+# Optional
+OPTION_BATCH_SIZE=32
+```
+
+### environment variables
+
+You can specify the `HF_MODEL_ID` environment variable to load a model from Hugging Face hub.
+
+```
+OPTION_ENGINE=OnnxRuntime
+HF_MODEL_ID=TaylorAI/bge-micro-v2
+# Optional
+OPTION_BATCH_SIZE=32
+```
+
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
+
+### serving.properties
+
+```
+engine=OnnxRuntime
+option.model_id=TaylorAI/bge-micro-v2
+translatorFactory=ai.djl.huggingface.translator.TextEmbeddingTranslatorFactory
+# Optional
+batch_size=32
+```
+
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
+
+## Deploy model to SageMaker
+
+The following code example demonstrates this configuration UX using the [SageMaker Python SDK](https://github.com/aws/sagemaker-python-sdk).
+
+This example will use the [BAAI/bge-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5) model. 
+
+```python
+# Assumes SageMaker Python SDK is installed. For example: "pip install sagemaker"
+import sagemaker
+from sagemaker import Model, image_uris, serializers, deserializers
+
+# Setup role and sagemaker session
+role = sagemaker.get_execution_role()  # execution role for the endpoint
+session = sagemaker.session.Session()  # sagemaker session for interacting with different AWS APIs
+
+# Fetch the uri of the LMI container
+image_uri = image_uris.retrieve(
+    framework="djl-lmi",
+    region=session.boto_session.region_name,
+    version="0.28.0"
+)
+
+# Create the SageMaker Model object.
+model_id = "BAAI/bge-base-en-v1.5"
+
+env = {
+    "HF_MODEL_ID": model_id,
+    "OPTION_ENGINE": "OnnxRuntime",
+    "SERVING_MIN_WORKERS": "1", # make sure min and max Workers are equals when deploy model on GPU
+    "SERVING_MAX_WORKERS": "1",
+}
+
+model = Model(image_uri=image_uri, env=env, role=role)
+
+# Deploy your model to a SageMaker Endpoint and create a Predictor to make inference requests
+instance_type = "ml.g4dn.2xlarge"
+endpoint_name = sagemaker.utils.name_from_base("lmi-text-embedding")
+
+model.deploy(initial_instance_count=1,
+             instance_type=instance_type,
+             endpoint_name=endpoint_name,
+             )
+
+predictor = sagemaker.Predictor(
+    endpoint_name=endpoint_name,
+    sagemaker_session=session,
+    serializer=serializers.JSONSerializer(),
+    deserializer=deserializers.JSONDeserializer(),
+)
+
+# Make an inference request against the endpoint
+predictor.predict(
+    {"inputs": "What is Deep Learning?"}
+)
+```
+
+The full notebook is available [here](https://github.com/deepjavalibrary/djl-demo/blob/master/aws/sagemaker/large-model-inference/sample-llm/text_embedding_deploy_bert.ipynb).
+
+## Available Environment Variable Configurations
+
+The following environment variables are exposed as part of the UX:
+
+**HF_MODEL_ID**
+
+This configuration is used to specify the location of your model artifacts.
+
+**HF_REVISION**
+
+If you are using a model from the HuggingFace Hub, this specifies the commit or branch to use when downloading the model.
+
+This is an optional config, and does not have a default value. 
+
+**HF_MODEL_TRUST_REMOTE_CODE**
+
+If the model artifacts contain custom modeling code, you should set this to true after validating the custom code is not malicious.
+If you are using a HuggingFace Hub model id, you should also specify `HF_REVISION` to ensure you are using artifacts and code that you have validated.
+
+This is an optional config, and defaults to `False`.
+
+**OPTION_ENGINE**
+
+This option represents the Engine to use, values include `OnnxRuntime`, `TensorRT`, `Rust`, etc.
+
+**OPTION_BATCH_SIZE**
+
+This option represents the dynamic batch size.
+
+This is an optional config, and defaults to `1`.
+
+**SERVING_MIN_WORKERS**
+
+This option represents minimum number of workers.
+
+This is an optional config, and defaults to `1`.
+
+**SERVING_MAX_WORKERS**
+
+This option represents the maximum number of workers.
+
+This is an optional config, and default is `#CPU/OMP_NUM_THREAD` for CPU, GPU default is `2`.
+
+For Text Embedding task, benchmarking result shows `SERVING_MAX_WORKERS=1` gives better performance than bigger numbers.
+This is because the model server could process the maximum number of requests in each batch.
+
+### Additional Configurations
+
+Additional configurations are available to further tune and customize your deployment.
+These configurations are covered as part of the advanced deployment guide [here](../deployment_guide/configurations.md).
