@@ -885,6 +885,15 @@ jobs:
           serve
           python3 llm/client.py vllm_adapters mistral-7b-awq-unmerged-lora
           docker rm -f $(docker ps -aq)
+      - name: Test vllm lora - llama-3-8b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py vllm llama3-8b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py vllm_adapters llama3-8b-unmerged-lora
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
@@ -966,6 +975,15 @@ jobs:
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
           serve
           python3 llm/client.py lmi_dist_adapters mistral-7b-awq-unmerged-lora
+          docker rm -f $(docker ps -aq)
+      - name: Test lmi-dist lora - llama-3-8b
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama3-8b-unmerged-lora
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+          serve
+          python3 llm/client.py lmi_dist_adapters llama3-8b-unmerged-lora
           docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}

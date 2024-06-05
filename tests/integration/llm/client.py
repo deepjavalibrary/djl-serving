@@ -313,6 +313,13 @@ lmi_dist_model_spec = {
         "adapters": [f"english-alpaca-{i}" for i in range(20)],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
+    "llama3-8b-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
 }
 
 lmi_dist_chat_model_spec = {
@@ -399,6 +406,13 @@ vllm_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": [f"english-alpaca-{i}" for i in range(20)],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama3-8b-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "starcoder2-7b": {
