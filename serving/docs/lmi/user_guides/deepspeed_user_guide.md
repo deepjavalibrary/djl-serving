@@ -2,7 +2,9 @@
 
 > [!WARNING]
 > DeepSpeed support has been removed starting with LMI container release 0.28.0.
-> You should migrate to one of the other supported backends. 
+> You should migrate to one of the other supported backends.  
+> Please see the [migration document](../announcements/deepspeed-deprecation.md) for more details.
+
 
 ## Model Artifacts Structure
 
