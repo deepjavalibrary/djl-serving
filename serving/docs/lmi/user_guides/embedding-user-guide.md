@@ -1,18 +1,21 @@
 # LMI Text Embedding User Guide
 
-Text Embedding refers to the process of converting text data into numerical vectors. These embeddings capture the semantic meaning of the text and can be used for various tasks such as semantic search and similarity detection.
+Text Embedding refers to the process of converting text data into numerical vectors.
+These embeddings capture the semantic meaning of the text and can be used for various
+tasks such as semantic search and similarity detection.
 
 The inference process involves:
 
-1. **Loading a Model**: Loading a model from local directory, S3 or from huggingface repository,.
+1. **Loading a Model**: Loading a model from local directory, S3, DJL model zoo or from huggingface repository.
 2. **Tokenization**: Breaking down the input text into tokens that the model can understand.
-3. **Embeddings**: Passing the tokens through the model to produce embeddings. Embedding is a multi-dimension vector that could be used for RAG or general embedding search.
+3. **Embeddings**: Passing the tokens through the model to produce embeddings. Embedding is a
+multi-dimension vector that could be used for RAG or general embedding search.
 
 LMI supports Text Embedding Inference with the following engines:
 
 - OnnxRuntime
+- PyTorch
 - Rust
-- TensorRT
 - Python
 
 Currently, the OnnxRuntime engine provides the best performance for text embedding in LMI. 
@@ -25,7 +28,7 @@ The following text models are supported:
 - XLMRoberta (`intfloat/multilingual-e5-base`, `intfloat/multilingual-e5-small`, `intfloat/multilingual-e5-large`, etc.)
 - NomicBert (`nomic-ai/nomic-embed-text-v1`, `nomic-ai/nomic-embed-text-v1.5`, etc.)
 - JinaBert (`jinaai/jina-embeddings-v2-base-en`, `jinaai/jina-embeddings-v2-small-en`, etc.)
-- Reranker (`BAAI/bge-reranker-base`, `BAAI/bge-reranker-large`, etc.)
+- XLMRobertaForSequenceClassification (`BAAI/bge-reranker-base`, `BAAI/bge-reranker-large`, etc.)
 
 Other embedding models are also supported, but may not be as performant as the model architectures listed above.
 
@@ -35,10 +38,9 @@ You can leverage LMI Text Embedding inference using the following starter config
 
 ### DJL model zoo
 
-You can specify the djl:// model url to load a model from the DJL model zoo.
+You can specify the `djl://` model url to load a model from the DJL model zoo.
 
 ```
-OPTION_ENGINE=OnnxRuntime
 HF_MODEL_ID=djl://ai.djl.huggingface.onnxruntime/BAAI/bge-base-en-v1.5
 # Optional
 OPTION_BATCH_SIZE=32
@@ -46,7 +48,8 @@ OPTION_BATCH_SIZE=32
 
 ### environment variables
 
-You can specify the `HF_MODEL_ID` environment variable to load a model from Hugging Face hub.
+You can specify the `HF_MODEL_ID` environment variable to load a model from HuggingFace hub. DJLServing
+will download the model from HuggingFace hub and optimize the model with OnnxRuntime at runtime.
 
 ```
 OPTION_ENGINE=OnnxRuntime
@@ -55,7 +58,8 @@ HF_MODEL_ID=TaylorAI/bge-micro-v2
 OPTION_BATCH_SIZE=32
 ```
 
-You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#option-2-configuration---environment-variables)
+to deploy a model with environment variable configuration on SageMaker.
 
 ### serving.properties
 
@@ -67,7 +71,8 @@ translatorFactory=ai.djl.huggingface.translator.TextEmbeddingTranslatorFactory
 batch_size=32
 ```
 
-You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#option-1-configuration---servingproperties)
+to deploy a model with serving.properties configuration on SageMaker.
 
 ## Deploy model to SageMaker
 
@@ -150,7 +155,7 @@ This is an optional config, and defaults to `False`.
 
 **OPTION_ENGINE**
 
-This option represents the Engine to use, values include `OnnxRuntime`, `TensorRT`, `Rust`, etc.
+This option represents the Engine to use, values include `OnnxRuntime`, `PyTorch`, `Rust`, etc.
 
 **OPTION_BATCH_SIZE**
 
@@ -168,10 +173,10 @@ This is an optional config, and defaults to `1`.
 
 This option represents the maximum number of workers.
 
-This is an optional config, and default is `#CPU/OMP_NUM_THREAD` for CPU, GPU default is `2`.
+This is an optional config, and default is `#CPU` for CPU, GPU default is `2`.
 
-For Text Embedding task, benchmarking result shows `SERVING_MAX_WORKERS=1` gives better performance than bigger numbers.
-This is because the model server could process the maximum number of requests in each batch.
+When running Text Embedding task on GPU, benchmarking result shows `SERVING_MAX_WORKERS=1` gives better performance.
+We recommend to use same value for `SERVING_MIN_WORKERS` and `SERVING_MAX_WORKERS` on GPU to avoid worker scaling overhead.
 
 ### Additional Configurations
 
