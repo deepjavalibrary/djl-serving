@@ -1,0 +1,43 @@
+[metadata]
+format.version = "1.1"
+
+[versions]
+djl = "0.28.0"
+onnxruntime = "1.17.1"
+commonsCli = "1.7.0"
+commonsCodec = "1.16.0"
+netty = "4.1.109.Final"
+slf4j = "1.7.36"
+log4jSlf4j = "2.23.1"
+snakeyaml = "2.2"
+disruptor = "3.4.4"
+prometheus = "1.2.1"
+awssdk = "2.25.45"
+httpcomponents = "4.5.14"
+
+testng = "7.10.2"
+junit = "4.13.2"
+
+[libraries]
+huggingface-tokenizers = { module = "ai.djl.huggingface:tokenizers" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+commons-cli = { module = "commons-cli:commons-cli", version.ref = "commonsCli" }
+commons-codec = { module = "commons-codec:commons-codec", version.ref = "commonsCodec" }
+apache-httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpcomponents" }
+apache-httpmime = { module = "org.apache.httpcomponents:httpmime", version.ref = "httpcomponents" }
+apache-log4j-slf4j = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4jSlf4j" }
+apache-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4jSlf4j" }
+disruptor = { module = "com.lmax:disruptor", version.ref = "disruptor" }
+netty-http = { module = "io.netty:netty-codec-http", version.ref = "netty" }
+netty-handler = { module = "io.netty:netty-handler", version.ref = "netty" }
+onnxruntime = { module = "com.microsoft.onnxruntime:onnxruntime", version.ref = "onnxruntime" }
+onnxruntime-gpu = { module = "com.microsoft.onnxruntime:onnxruntime_gpu", version.ref = "onnxruntime" }
+awssdk-bom = { module = "software.amazon.awssdk:bom", version.ref = "awssdk" }
+awssdk-s3 = { module = "software.amazon.awssdk:s3" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
+prometheus-core = { module = "io.prometheus:prometheus-metrics-core", version.ref = "prometheus" }
+prometheus-exposition-formats = { module = "io.prometheus:prometheus-metrics-exposition-formats", version.ref = "prometheus" }
+
+testng = { module = "org.testng:testng", version.ref = "testng" }
+junit = { module = "junit:junit", version.ref = "junit" }
