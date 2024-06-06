@@ -13,7 +13,7 @@
 
 import torch
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, List
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, FINISH_REASON_MAPPER
 from djl_python.request_io import Token
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NaiveRollingBatchNeuronGenerator, ContinuousBatchingNeuronGenerator
@@ -97,8 +97,8 @@ class NeuronRollingBatch(RollingBatch):
 
     @stop_on_any_exception
     def inference(self,
-                  input_data: list[str],
-                  parameters: list[dict],
+                  input_data: List[str],
+                  parameters: List[dict],
                   adapters=None) -> list:
         """
         Loads new requests and gets output tokens from all currently active requests from

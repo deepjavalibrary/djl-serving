@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import inspect
-from typing import Union, Callable, Any
+from typing import Union, Callable, Any, List
 
 from djl_python.output_formatter import get_output_formatter, _json_output_formatter, sse_response_formatter, \
     adapt_legacy_output_formatter
@@ -94,7 +94,7 @@ class Request(object):
                        next_token: Union[Token, str],
                        last_token: bool = False,
                        finish_reason: str = None,
-                       prompt_tokens_details: list[Token] = None):
+                       prompt_tokens_details: List[Token] = None):
         """
         Sets the newly generated token.
         If the function is called for multiple times, we will append tokens to the token string.

@@ -68,8 +68,8 @@ class SchedulerRollingBatch(RollingBatch):
 
     @stop_on_any_exception
     def inference(self,
-                  input_text: list[str],
-                  parameters: list[dict],
+                  input_text: List[str],
+                  parameters: List[dict],
                   adapters=None) -> list:
         """
         Performs prefill and decode operations for the batch.
@@ -328,11 +328,11 @@ class SchedulerRollingBatch(RollingBatch):
         return self.tokenizer
 
 
-def _get_request_ids_tensor(request_ids: list[int]) -> torch.Tensor:
+def _get_request_ids_tensor(request_ids: List[int]) -> torch.Tensor:
     """
     Converts a list of request ids into a 2-d pytorch tensor.
 
-    :param request_ids (list[int]): List of request IDs
+    :param request_ids (List[int]): List of request IDs
 
     :return: 2-D torch Tensor
     """

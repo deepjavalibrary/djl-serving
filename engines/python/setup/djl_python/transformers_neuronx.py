@@ -26,6 +26,7 @@ from djl_python.properties_manager.properties import StreamingEnum, is_rolling_b
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import InputFormatConfigs, parse_input_with_formatter
+from typing import Tuple, List
 
 model = None
 
@@ -203,7 +204,7 @@ class TransformersNeuronXService(object):
 
     def parse_input(
         self, inputs: Input, tokenizer, output_formatter
-    ) -> tuple[list[str], list[int], list[dict], dict, list]:
+    ) -> Tuple[List[str], List[int], List[dict], dict, list]:
         """
         Preprocessing function that extracts information from Input objects.
 
@@ -211,9 +212,9 @@ class TransformersNeuronXService(object):
         :param inputs :(Input) a batch of inputs, each corresponding to a new request
         :param tokenizer: the tokenizer used for inference
 
-        :return input_data (list[str]): a list of strings, each string being the prompt in a new request
-        :return input_size (list[int]): a list of ints being the size of each new request
-        :return parameters (list[dict]): parameters pertaining to each request
+        :return input_data (List[str]): a list of strings, each string being the prompt in a new request
+        :return input_size (List[int]): a list of ints being the size of each new request
+        :return parameters (List[dict]): parameters pertaining to each request
         :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
         :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """

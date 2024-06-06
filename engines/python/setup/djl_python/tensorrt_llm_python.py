@@ -6,6 +6,7 @@ import tensorrt_llm_toolkit
 from tensorrt_llm_toolkit.utils import utils as toolkit_utils
 
 from transformers import AutoConfig
+from typing import Tuple, List
 
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.encode_decode import encode
@@ -65,7 +66,7 @@ def _get_generation_result_from_python_backend(generations, inputs_size):
     return prediction_results
 
 
-def _get_accept_and_content_type(batch_item) -> tuple[str, str]:
+def _get_accept_and_content_type(batch_item) -> Tuple[str, str]:
     content_type = batch_item.get_property("Content-Type")
     accept = batch_item.get_property("Accept")
     if not accept:
@@ -100,7 +101,7 @@ class TRTLLMPythonService:
 
     def parse_input(
         self, inputs: Input, tokenizer, output_formatter
-    ) -> tuple[list[str], list[int], list[dict], dict, list]:
+    ) -> Tuple[List[str], List[int], List[dict], dict, list]:
         """
         Preprocessing function that extracts information from Input objects.
 
@@ -108,9 +109,9 @@ class TRTLLMPythonService:
         :param inputs :(Input) a batch of inputs, each corresponding to a new request
         :param tokenizer: the tokenizer used for inference
 
-        :return input_data (list[str]): a list of strings, each string being the prompt in a new request
-        :return input_size (list[int]): a list of ints being the size of each new request
-        :return parameters (list[dict]): parameters pertaining to each request
+        :return input_data (List[str]): a list of strings, each string being the prompt in a new request
+        :return input_size (List[int]): a list of ints being the size of each new request
+        :return parameters (List[dict]): parameters pertaining to each request
         :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
         :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """

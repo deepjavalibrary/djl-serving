@@ -22,6 +22,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, get_lora_request_params, DTYPE_MAPPER,
     FINISH_REASON_MAPPER, get_engine_args_from_config)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
+from typing import List
 
 VLLM_GENERATION_PARAMS = set(SamplingParams().__dict__.keys())
 
@@ -94,8 +95,8 @@ class VLLMRollingBatch(RollingBatch):
 
     @stop_on_any_exception
     def inference(self,
-                  input_data: list[str],
-                  parameters: list[dict],
+                  input_data: List[str],
+                  parameters: List[dict],
                   adapters=None) -> list:
         """
         Adds new requests and gets output tokens from the backend.

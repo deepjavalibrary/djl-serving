@@ -15,6 +15,7 @@ import tensorrt_llm_toolkit
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from djl_python.request_io import Token
+from typing import List
 
 
 class TRTLLMRollingBatch(RollingBatch):
@@ -86,8 +87,8 @@ class TRTLLMRollingBatch(RollingBatch):
 
     @stop_on_any_exception
     def inference(self,
-                  input_data: list[str],
-                  parameters: list[dict],
+                  input_data: List[str],
+                  parameters: List[dict],
                   adapters=None) -> list:
         """
         Loads new requests into the batch when there is availability, and gets output tokens from the backend

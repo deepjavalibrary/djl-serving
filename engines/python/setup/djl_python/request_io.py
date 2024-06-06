@@ -175,7 +175,7 @@ class TextGenerationOutput(RequestOutput):
         other_sequences_indices: indices of the sequences other than best_sequence to return to user. For example,
         if best_of=4 and n=3, then we return store the other two sequences' indices in this list.
     """
-    sequences: dict[int, Sequence] = field(default_factory=lambda: {})
+    sequences: Dict[int, Sequence] = field(default_factory=lambda: {})
     best_sequence_index: int = 0
     prompt_tokens_details: List[Token] = field(default_factory=lambda: [])
     other_sequences_indices: List[int] = field(default_factory=lambda: [])
