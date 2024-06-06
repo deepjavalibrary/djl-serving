@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("ai.djl:bom:${libs.versions.djl.get()}"))
+    implementation(platform("ai.djl:bom:${libs.versions.djl.get()}-SNAPSHOT"))
     implementation("ai.djl:api")
     implementation(libs.slf4j.api)
 
