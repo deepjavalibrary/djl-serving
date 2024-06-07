@@ -21,9 +21,9 @@ from dataclasses import dataclass, field
 
 @dataclass
 class ParsedInput:
-    input_data: list[str]
-    input_size: list[int]
-    parameters: list[dict]
+    input_data: List[str]
+    input_size: List[int]
+    parameters: List[dict]
     errors: dict
     batch: list
     is_client_side_batch: list = field(default_factory=lambda: [])

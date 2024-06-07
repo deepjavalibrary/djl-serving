@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
+from typing import List
 from collections import OrderedDict, defaultdict
 
 from lmi_dist.api import Request, RequestParams
@@ -137,8 +138,8 @@ class LmiDistRollingBatch(RollingBatch):
 
     @stop_on_any_exception
     def inference(self,
-                  input_data: list[str],
-                  parameters: list[dict],
+                  input_data: List[str],
+                  parameters: List[dict],
                   adapters=None) -> list:
         """
         Adds new requests and gets output tokens from the backend.
