@@ -31,7 +31,7 @@ Check out our latest [Large Model Inference Containers](https://github.com/aws/d
 
 #### DeepSpeed container (deprecated)
 
-- DeepSpeed container is now deprecated. If you are not using `deepspeed` engine, all you need is `0.28.0-lmi` container and continue using it. 
+- We have removed support for deepspeed and renamed our deepspeed container to lmi. The lmi container contains lmi-dist and vllm, and all existing workloads with deepspeed can be easily migrated to one of these backends. See https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/announcements/deepspeed-deprecation.md for steps on how to migrate your workload.
 
 ### CX Usability Enhancements/Changes
 
@@ -47,18 +47,18 @@ Check out our latest [Large Model Inference Containers](https://github.com/aws/d
       - New error handling mechanism:
         - Improved our error handling for container responses for rolling batch. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/e4d7e5da822a8c11b13e79eaeaec4101fe678b69/serving/docs/lmi/user_guides/lmi_input_output_schema.md#error-responses) to know more
       -New CX capability:
-        - We introduce OPTION_TGI_COMPAT env which enables you to get the same response format as TGI. [doc]()
+        - We introduce OPTION_TGI_COMPAT env which enables you to get the same response format as TGI. [doc](https://github.com/deepjavalibrary/djl-serving/blob/024780ee8393fe8c20830845175af8566c369cd1/serving/docs/lmi/user_guides/lmi_input_output_schema.md#response-with-tgi-compatibility)
         - We also now support SSE text/event-stream data format. 
 
 ### Breaking Changes
 
 - Inference CX for rolling batch:
   - Token id changed from list into integer in rolling batch response.
-  - Error handling: “finish_reason: error” during rolling batch inference
-- DeepSpeed container has been deprecated, functionality is generally available in the LMI container now
+  - Error handling: In the previous  release if any error happens, without sending any response back, the process hangs and request client gets timeout. Now, instead of timeout, you will receive the end jsonline of “finish_reason: error” during rolling batch inference. 
+- DeepSpeed container has been deprecated, functionality is generally available in the LMI container now.
 
 ### Known Issues
-
+We will be addressing these issues in the upcoming release. 
 - LMI-TensorRT-LLM container
-  - TensorRT-LLM periodically crashes during model compilation
-  - TensorRT-LLM AWQ quantization currently crashes due to an internal error
+  - TensorRT-LLM periodically crashes during model compilation. 
+  - TensorRT-LLM AWQ runtime quantization currently crashes due to an internal error. 
