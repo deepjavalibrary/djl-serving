@@ -149,9 +149,9 @@ When using streaming: Response will be Server Sent Events (text/event-stream) wh
 
 ```
 data: {
-    "token": {"id": -1, "text": "", "log_prob": -1, "special_token": true}, 
-    "generated_text": "", 
-    "details": {"finish_reason": "error", "generated_tokens": null, "inputs": null}}
+    "token": {"id": 5972, "text": " field.", "log_prob": -0.6950479745864868}, 
+    "generated_text": "Deep Learning is a really cool field.", 
+    "details": {"finish_reason": "length", "generated_tokens": 100, "inputs": "What is Deep Learning?"}
 }
 ```
 
