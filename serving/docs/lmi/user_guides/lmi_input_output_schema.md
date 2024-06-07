@@ -122,6 +122,40 @@ When using streaming:
     "details": {"finish_reason": "error", "generated_tokens": null, "inputs": null}}
 }
 ```
+
+## Response with TGI compatibility
+
+In order to get the same response output as HuggingFace's Text Generation Inference, you can use the env `OPTION_TGI_COMPAT=true` or `option.tgi_compat=true` in your serving.properties. Right now, DJLServing for LMI with rolling batch has minor differences in the response schema compared to TGI. 
+
+This feature is designed for customers transitioning from TGI, making their lives easier by allowing them to continue using their client-side code without any special modifications for our LMI containers or DJLServing.
+Enabling the tgi_compat option would make the response look like below:
+
+When not using streaming: Response will be a JSONArray, instead of JSONObject. 
+```
+[
+    {
+        "generated_text": "Deep Learning is a really cool field",
+        "details": {
+            "finish reason": "length",
+            "generated_tokens": 8,
+            "inputs": "What is Deep Learning?",
+            "tokens": [<Token1>, <Token2>, ...]
+        }
+    }
+]
+```
+
+When using streaming: Response will be Server Sent Events (text/event-stream) which will prefix with `data:`
+
+```
+data: {
+    "token": {"id": 5972, "text": " field.", "log_prob": -0.6950479745864868}, 
+    "generated_text": "Deep Learning is a really cool field.", 
+    "details": {"finish_reason": "length", "generated_tokens": 100, "inputs": "What is Deep Learning?"}
+}
+```
+
+
 ## Dynamic Batch/Static Batch Schema
 
 ### Request Schema
