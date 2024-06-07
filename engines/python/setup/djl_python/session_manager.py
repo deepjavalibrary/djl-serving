@@ -20,6 +20,7 @@ import tempfile
 import time
 import uuid
 import subprocess as sp
+from typing import Optional
 
 import numpy as np
 
@@ -96,7 +97,7 @@ class SessionManager:
         self.cloud_watch.post("create_session")
         return session
 
-    def get_session(self, session_id: str) -> (Session | None):
+    def get_session(self, session_id: str) -> Optional[Session]:
         if not session_id or not UUID_PATTERN.match(session_id):
             raise ValueError(f"invalid session_id: {session_id}")
 
@@ -121,7 +122,7 @@ class SessionManager:
             if time.time() - session.get(".creation_time") > self.expiration:
                 self.close_session(session_id)
 
-    def _recover_from_s3(self, session: Session) -> (Session | None):
+    def _recover_from_s3(self, session: Session) -> Optional[Session]:
         if not self.sessions_s3url:
             return None
 
