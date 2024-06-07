@@ -17,7 +17,70 @@ from typing import Union, Callable
 
 from typing_extensions import deprecated
 
-from djl_python.request_io import Token, TextGenerationOutput, RequestOutput
+from djl_python.request_io import TextGenerationOutput, RequestOutput
+from djl_python.utils import wait_till_generation_finished
+
+
+def get_generated_text(sequence, request_output):
+    parameters = request_output.input.parameters
+    generated_text = request_output.input.input_text if parameters.get(
+        "return_full_text") else ""
+    for token in sequence.tokens:
+        generated_text += token.text
+    return generated_text
+
+
+def get_sequence_details(request_output: RequestOutput,
+                         sequence_index: int) -> dict:
+    sequence = request_output.sequences[sequence_index]
+    parameters = request_output.input.parameters
+
+    sequence_details = {
+        "finish_reason": sequence.finish_reason,
+        "generated_tokens": len(sequence.tokens),
+        "tokens": request_output.get_tokens_as_dict(sequence_index),
+    }
+    if parameters.get("decoder_input_details"):
+        sequence_details["prefill"] = request_output.get_prompt_tokens_as_dict(
+        )
+    return sequence_details
+
+
+def _json_output_formatter_best_of(request_output: RequestOutput):
+    """When multiple sequences are generated, then we hold off sending the result until the generation is finished.
+    The is because, in case of best_of or beam_search, we would know the best sequence only at the end of the
+    generation of a request.
+    """
+    json_encoded_str = ""
+    if request_output.finished:
+        parameters = request_output.input.parameters
+        best_sequence = request_output.sequences[
+            request_output.best_sequence_index]
+        result = {
+            "generated_text": get_generated_text(best_sequence, request_output)
+        }
+        details = {"inputs": request_output.input.input_text}
+        details.update(
+            get_sequence_details(request_output,
+                                 request_output.best_sequence_index))
+
+        # other sequences indicate, all other sequences except the best/chosen sequence.
+        other_sequences = []
+        for index in request_output.other_sequences_indices:
+            sequence = request_output.sequences[index]
+            generated_text = get_generated_text(sequence, request_output)
+            sequence_details = get_sequence_details(request_output, index)
+            sequence_details["generated_text"] = generated_text
+            other_sequences.append(sequence_details)
+
+        if other_sequences:
+            if wait_till_generation_finished(parameters):
+                details["best_of_sequences"] = other_sequences
+        result["details"] = details
+        json_encoded_str = json.dumps(result, ensure_ascii=False)
+        if request_output.input.tgi_compat:
+            json_encoded_str = f"[{json_encoded_str}]"
+    return json_encoded_str
 
 
 def _json_output_formatter(request_output: RequestOutput):
@@ -26,10 +89,13 @@ def _json_output_formatter(request_output: RequestOutput):
 
     :return: formatted output
     """
-    best_sequence = request_output.sequences[
-        request_output.best_sequence_index]
 
     parameters = request_output.input.parameters
+    if wait_till_generation_finished(parameters):
+        return _json_output_formatter_best_of(request_output)
+
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
     generated_text = ""
     if parameters.get("return_full_text"):
         generated_text = request_output.input.input_text
@@ -50,7 +116,7 @@ def _json_output_formatter(request_output: RequestOutput):
 
             if parameters.get("decoder_input_details"):
                 final_dict[
-                    "prefill"] = request_output.get_prompt_tokes_as_dict()
+                    "prefill"] = request_output.get_prompt_tokens_as_dict()
             details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
             json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
         elif best_sequence.finish_reason == "error":
@@ -80,10 +146,7 @@ def _jsonlines_output_formatter(request_output: RequestOutput):
     ) if tgi_compat else next_token.as_dict()
     final_dict = {"token": token_dict}
     if last_token:
-        generated_text = request_output.input.input_text if parameters.get(
-            "return_full_text") else ""
-        for token in best_sequence.tokens:
-            generated_text += token.text
+        generated_text = get_generated_text(best_sequence, request_output)
         final_dict["generated_text"] = generated_text
         if parameters.get("details", tgi_compat):
             final_dict["details"] = {
@@ -93,7 +156,7 @@ def _jsonlines_output_formatter(request_output: RequestOutput):
             }
             if parameters.get("decoder_input_details"):
                 final_dict["details"][
-                    "prefill"] = request_output.get_prompt_tokes_as_dict()
+                    "prefill"] = request_output.get_prompt_tokens_as_dict()
         elif best_sequence.finish_reason == "error":
             final_dict["details"] = {
                 "finish_reason": best_sequence.finish_reason

@@ -9,11 +9,11 @@ Currently, we created docker compose to simplify the building experience. Just r
 
 ```shell
 cd serving/docker
-export DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+export DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
 docker compose build --build-arg djl_version=${DJL_VERSION} <compose-target>
 ```
 
-You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `deepspeed`...
+You can find different `compose-target` in `docker-compose.yml`, like `cpu`, `lmi`...
 
 ## Run docker image
 

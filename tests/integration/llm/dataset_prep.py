@@ -18,7 +18,7 @@ parameters = {
     "gsm8k": {
         "temperature": 0.0,
         "stop": ["Question:", "</s>", "<|im_end|>"],
-        "max_num_tokens": 256
+        "max_new_tokens": 256
     },
     "humaneval": {
         "temperature":
@@ -27,7 +27,7 @@ parameters = {
             "\nclass", "\ndef", "\n#", "\n@", "\nprint", "\nif", "\n```",
             "<file_sep>"
         ],
-        "max_num_tokens":
+        "max_new_tokens":
         512
     },
     "mbpp": {
@@ -35,19 +35,19 @@ parameters = {
         0.1,
         "stop":
         ["\nclass", "\nassert", '\n"""', "\nprint", "\nif", "\n<|/", "\n```"],
-        "max_num_tokens":
+        "max_new_tokens":
         512
     },
     "mtbench": {
         "temperature": 1.0,
         "top_p": 0.8,
         "top_k": 40,
-        "max_num_tokens": 512
+        "max_new_tokens": 512
     },
     "openorca": {
         "temperature": 0.7,
         "top_p": 0.95,
-        "max_num_tokens": 256
+        "max_new_tokens": 256
     }
 }
 

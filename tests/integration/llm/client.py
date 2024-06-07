@@ -241,6 +241,11 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256]
     },
+    "gemma-2b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
     "llama2-13b-gptq": {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
@@ -291,14 +296,14 @@ lmi_dist_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "mistral-7b-awq-unmerged-lora": {
         "batch_size": [3],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "llama-7b-unmerged-lora-overflow": {
         "max_memory_per_gpu": [15.0, 15.0],
@@ -306,6 +311,13 @@ lmi_dist_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": [f"english-alpaca-{i}" for i in range(20)],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama3-8b-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
 }
@@ -379,14 +391,14 @@ vllm_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "mistral-7b-awq-unmerged-lora": {
         "batch_size": [3],
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": ["spanish", "german"],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
     "llama-7b-unmerged-lora-overflow": {
         "max_memory_per_gpu": [15.0, 15.0],
@@ -394,6 +406,13 @@ vllm_model_spec = {
         "seq_length": [16, 32],
         "worker": 1,
         "adapters": [f"english-alpaca-{i}" for i in range(20)],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama3-8b-unmerged-lora": {
+        "batch_size": [3],
+        "seq_length": [16, 32],
+        "worker": 1,
+        "adapters": ["french", "spanish"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "starcoder2-7b": {
@@ -406,6 +425,11 @@ vllm_model_spec = {
         "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256]
+    },
+    "gemma-2b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
     },
 }
 
@@ -549,6 +573,11 @@ no_code_rolling_batch_spec = {
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
     },
     "gemma-7b": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "gemma-2b": {
         "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
@@ -929,9 +958,10 @@ def response_checker(res, message):
                     raise RuntimeError("Inference failed!")
         elif 'application/jsonlines' == res.headers['content-type']:
             json_lines = []
-            for item in message.splitlines():
+            for item in message.split('\n'):
                 try:
-                    json_lines.append(json.loads(item))
+                    if len(item) > 0:
+                        json_lines.append(json.loads(item))
                 except:
                     raise RuntimeError(f"Json loading failure {item}")
 

@@ -55,7 +55,7 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu121-precxx11
 ENV VLLM_NO_USAGE_STATS=1
-ENV VLLM_CONFIG_ROOT=/tmp/vllm/.config
+ENV VLLM_CONFIG_ROOT=/opt/djl/vllm/.config
 
 
 ENV HF_HOME=/tmp/.cache/huggingface
@@ -85,10 +85,11 @@ RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ && \
     scripts/install_djl_serving.sh $djl_version && \
-    rm -f /usr/local/djl-serving-*/lib/onnxruntime-$onnx_version.jar && \
+    rm -f /usr/local/djl-serving-*/lib/onnxruntime-1.*.jar && \
     curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} lmi" > /opt/djl/bin/telemetry && \
+    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     pip3 cache purge && \

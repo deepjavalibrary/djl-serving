@@ -382,6 +382,13 @@ lmi_dist_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.max_model_len": 2656,
     },
+    "gemma-2b": {
+        "option.model_id": "s3://djl-llm/gemma-2b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 256,
+    },
     "llama2-13b-gptq": {
         "option.model_id": "s3://djl-llm/TheBloke-Llama-2-13b-Chat-GPTQ/",
         "option.task": "text-generation",
@@ -524,6 +531,29 @@ lmi_dist_model_list = {
         "option.gpu_memory_utilization":
         "0.8",
     },
+    "llama3-8b-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "adapter_ids": [
+            "UnderstandLing/Llama-3-8B-Instruct-fr",
+            "UnderstandLing/Llama-3-8B-Instruct-es",
+        ],
+        "adapter_names": ["french", "spanish"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
 }
 
 vllm_model_list = {
@@ -663,6 +693,29 @@ vllm_model_list = {
         "adapter_names": [f"english-alpaca-{i}" for i in range(20)],
         "option.gpu_memory_utilization": "0.8",
     },
+    "llama3-8b-unmerged-lora": {
+        "option.model_id":
+        "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.tensor_parallel_degree":
+        "max",
+        "option.task":
+        "text-generation",
+        "option.dtype":
+        "fp16",
+        "option.adapters":
+        "adapters",
+        "option.enable_lora":
+        "true",
+        "option.max_lora_rank":
+        64,
+        "adapter_ids": [
+            "UnderstandLing/Llama-3-8B-Instruct-fr",
+            "UnderstandLing/Llama-3-8B-Instruct-es",
+        ],
+        "adapter_names": ["french", "spanish"],
+        "option.gpu_memory_utilization":
+        "0.8",
+    },
     "starcoder2-7b": {
         "option.model_id": "s3://djl-llm/bigcode-starcoder2",
         "option.task": "text-generation",
@@ -677,6 +730,13 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 1,
         "option.max_rolling_batch_size": 4,
         "option.max_model_len": 2656,
+    },
+    "gemma-2b": {
+        "option.model_id": "s3://djl-llm/gemma-2b",
+        "option.task": "text-generation",
+        "option.trust_remote_code": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 256,
     },
     "llama2-7b-chat": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",

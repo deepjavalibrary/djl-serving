@@ -101,15 +101,15 @@ class RollingBatch(ABC):
         pass
 
     def get_new_requests(self,
-                         input_data: list[str],
-                         parameters: list[dict],
+                         input_data: List[str],
+                         parameters: List[dict],
                          batch_size: int,
-                         adapters=None) -> list[Request]:
+                         adapters=None) -> List[Request]:
         """
         Adds requests to the batch when there is availability
 
-        :param input_data: (list[str]) List of input prompts.
-        :param parameters: (list[str]) List of settings pertaining to each request.
+        :param input_data: (List[str]) List of input prompts.
+        :param parameters: (List[str]) List of settings pertaining to each request.
         :param batch_size: (int) Maximum number of requests in a batch
         :param adapters: List of adapters inputs for each request in a batch
 
@@ -139,15 +139,15 @@ class RollingBatch(ABC):
         return self.active_requests[total_req_len:]
 
     @abstractmethod
-    def preprocess_requests(self, requests: list[Request]):
+    def preprocess_requests(self, requests: List[Request]):
         """
         Converts requests into specific formats that are required by specific backends.
 
-        :param requests (list[Request]): requests that will be sent to the backend after preprocessing
+        :param requests (List[Request]): requests that will be sent to the backend after preprocessing
         """
         pass
 
-    def postprocess_results(self) -> list[dict]:
+    def postprocess_results(self) -> List[dict]:
         """
         Returns most recent produced token by each request in a list of dicts
 

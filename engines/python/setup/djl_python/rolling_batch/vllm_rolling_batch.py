@@ -22,6 +22,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, get_lora_request_params, DTYPE_MAPPER,
     FINISH_REASON_MAPPER, get_engine_args_from_config)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
+from typing import List
 
 VLLM_GENERATION_PARAMS = set(SamplingParams().__dict__.keys())
 
@@ -73,9 +74,17 @@ class VLLMRollingBatch(RollingBatch):
         parameters["max_tokens"] = parameters.pop("max_new_tokens", 30)
         if "seed" in parameters.keys():
             parameters["seed"] = int(parameters["seed"])
-        if not parameters.pop('do_sample', False):
-            # if temperature is zero, vLLM does greedy sampling
-            parameters['temperature'] = 0
+
+        # if parameters' do_sample is not set, we set temperature=0, to do greedy
+        if "do_sample" not in parameters.keys():
+            is_beam_search = "num_beams" in parameters.keys()
+            is_best_of = "best_of" in parameters.keys(
+            ) and parameters["best_of"] > 1
+            if not (is_beam_search and is_best_of):
+                # if temperature is zero, vLLM does greedy sampling
+                parameters['temperature'] = 0
+        elif parameters.pop("do_sample"):
+            parameters["temperature"] = 0
         if "stop_sequences" in parameters.keys():
             parameters["stop"] = parameters.pop("stop_sequences")
         if "ignore_eos_token" in parameters.keys():
@@ -94,8 +103,8 @@ class VLLMRollingBatch(RollingBatch):
 
     @stop_on_any_exception
     def inference(self,
-                  input_data: list[str],
-                  parameters: list[dict],
+                  input_data: List[str],
+                  parameters: List[dict],
                   adapters=None) -> list:
         """
         Adds new requests and gets output tokens from the backend.
@@ -120,55 +129,19 @@ class VLLMRollingBatch(RollingBatch):
             self.engine.add_request(request_id, request.input_text,
                                     sampling_params, **request_params)
             self.request_cache[request_id] = {
-                "curr_length": 0,
-                "text": "",
-                "output_token_texts": [],
-                "cumulative_logprob": 0.0,
-                "logprobs": [],
-                "token_ids": [],
-                "finished": False,
-                "finish_reason": None,
-                "num_generated_tokens": 0,
+                "request_output": request.request_output
             }
         request_outputs = self.engine.step()
 
-        # step 1: put result to cache
+        # step 1: put result to cache and request_output
         for request_output in request_outputs:
             self.request_cache = update_request_cache_with_output(
                 self.request_cache, request_output, self.get_tokenizer())
 
-        # step 2: send result back
-        finished_id = []
-        for (key, cache), request in zip(self.request_cache.items(),
-                                         self.active_requests):
-            finish_reason = None
-            prompt_tokens_details = None
-            if cache["finished"]:
-                finished_id.append(key)
-                finish_reason = FINISH_REASON_MAPPER.get(
-                    cache["finish_reason"], None)
-                prompt_tokens_details = cache.get("prompt_tokens_details")
-            text = cache["text"][cache["curr_length"]:]
-            output_token_texts = [text] * len(cache['token_ids']) if not cache[
-                'output_token_texts'] else cache['output_token_texts']
-            if cache['token_ids']:
-                # token id is not determined since there could be multiple token comes at the same time
-                # only return the last one
-                for token_id, token_text, logprob, in zip(
-                        cache['token_ids'], output_token_texts,
-                        cache['logprobs']):
-                    token = Token(token_id, token_text, logprob)
-                    request.set_next_token(token, cache["finished"],
-                                           finish_reason,
-                                           prompt_tokens_details)
-            else:
-                request.set_next_token("", cache["finished"], finish_reason,
-                                       prompt_tokens_details)
-            cache["curr_length"] = len(cache["text"])
-
-        # step 3: clean finished requests
-        for key in finished_id:
-            self.request_cache.pop(key)
+        for request in self.active_requests:
+            request_output = request.request_output
+            if request_output.finished:
+                request.last_token = True
 
         return self.postprocess_results()
 

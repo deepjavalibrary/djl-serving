@@ -51,7 +51,7 @@ sagemaker_session = sagemaker.session.Session()
 # region is needed to retrieve the lmi container
 region = sagemaker_session._region_name
 # get the lmi image uri
-# available frameworks: "djl-deepspeed" (for vllm, lmi-dist, deepspeed), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
+# available frameworks: "djl-deepspeed" (for vllm, lmi-dist), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
 container_uri = sagemaker.image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
 # create a unique endpoint name
 endpoint_name = sagemaker.utils.name_from_base("my-lmi-endpoint")
@@ -176,7 +176,8 @@ The following options may be added to the `ModelDataSource` field to support unc
 This mechanism is useful when deploying SageMaker endpoints with network isolation.
 Model artifacts will be downloaded by SageMaker and mounted to the container rather than being downloaded by the container at runtime.
 
-If you use this mechanism to deploy the container, you should set `option.model_id=/opt/ml/model` in serving.properties, or `OPTION_MODEL_ID=/opt/ml/model` in environment variables depending on which configuration style you are using.  
+If you use this mechanism to deploy the container, you do not need to specify the `option.model_id` or `HF_MODEL_ID` config.
+LMI will load the model artifacts from the model directory by default, which is where SageMaker downloads and mounts the model artifacts from S3.
 
 Follow this link for a detailed overview of this option: https://docs.aws.amazon.com/sagemaker/latest/dg/large-model-inference-uncompressed.html
 

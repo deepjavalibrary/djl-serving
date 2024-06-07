@@ -219,6 +219,8 @@ def load_properties(properties_dir):
 def update_properties_with_env_vars(kwargs):
     env_vars = os.environ
     for key, value in env_vars.items():
+        if key == "HF_MODEL_ID":
+            kwargs.setdefault("model_id", value)
         if key.startswith("OPTION_"):
             key = key[7:].lower()
             if key == "entrypoint":

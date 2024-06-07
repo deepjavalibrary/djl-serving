@@ -137,7 +137,8 @@ public final class LmiUtils {
 
     static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
         String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
-        if (Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
+        if (Files.isRegularFile(info.modelDir)
+                || Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
                 || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
             return;
         }
@@ -171,6 +172,9 @@ public final class LmiUtils {
             return repoDir;
         }
 
+        Engine onnx = Engine.getEngine("OnnxRuntime");
+        boolean hasCuda = onnx.getGpuCount() > 0;
+
         String[] cmd = {
             "djl-convert",
             "--output-dir",
@@ -180,9 +184,9 @@ public final class LmiUtils {
             "-m",
             modelId,
             "--optimize",
-            CudaUtils.hasCuda() ? "O4" : "O2",
+            hasCuda ? "O4" : "O2",
             "--device",
-            CudaUtils.hasCuda() ? "cuda" : "cpu"
+            hasCuda ? "cuda" : "cpu"
         };
         boolean success = false;
         try {

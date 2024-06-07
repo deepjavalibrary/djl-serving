@@ -17,6 +17,7 @@ from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.tensorrt_llm_python import TRTLLMPythonService
 from djl_python.utils import parse_input_with_formatter, InputFormatConfigs
+from typing import List, Tuple
 
 
 class TRTLLMService(object):
@@ -47,7 +48,7 @@ class TRTLLMService(object):
     # Backward compatibility.
     def parse_input(
         self, inputs: Input, tokenizer, output_formatter
-    ) -> tuple[list[str], list[int], list[dict], dict, list]:
+    ) -> Tuple[List[str], List[int], List[dict], dict, list]:
         """
         Preprocessing function that extracts information from Input objects.
 
@@ -55,9 +56,9 @@ class TRTLLMService(object):
         :param inputs :(Input) a batch of inputs, each corresponding to a new request
         :param tokenizer: the tokenizer used for inference
 
-        :return input_data (list[str]): a list of strings, each string being the prompt in a new request
-        :return input_size (list[int]): a list of ints being the size of each new request
-        :return parameters (list[dict]): parameters pertaining to each request
+        :return input_data (List[str]): a list of strings, each string being the prompt in a new request
+        :return input_size (List[int]): a list of ints being the size of each new request
+        :return parameters (List[dict]): parameters pertaining to each request
         :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
         :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """

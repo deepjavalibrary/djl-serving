@@ -28,12 +28,12 @@ iam_role = sagemaker.get_execution_role()
 sagemaker_session = sagemaker.session.Session()
 region = sagemaker_session._region_name
 
-# Fetch the uri of the LMI DeepSpeed container that supports vLLM, LMI-Dist, HuggingFace Accelerate, DeepSpeed backends
-deepspeed_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
+# Fetch the uri of the LMI container that supports vLLM, LMI-Dist, HuggingFace Accelerate backends
+lmi_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
 
 # Create the SageMaker Model object. In this example we let LMI configure the deployment settings based on the model architecture  
 model = Model(
-  image_uri=deepspeed_image_uri,
+  image_uri=lmi_image_uri,
   role=iam_role,
   env={
     "HF_MODEL_ID": "TheBloke/Llama-2-7B-fp16",
@@ -106,6 +106,11 @@ If you are using [SageMaker's capability to specify uncompressed model artifacts
 If you are using a model from the HuggingFace Hub, this specifies the commit or branch to use when downloading the model.
 
 This is an optional config, and does not have a default value. 
+
+**HF_TOKEN**
+
+Some models on the HuggingFace Hub are gated and require permission from the owner to access.
+To deploy a gated model from the HuggingFace Hub using LMI, you must provide an Access Token via this environment variable.
 
 **HF_MODEL_TRUST_REMOTE_CODE**
 
