@@ -38,14 +38,6 @@ def get_partition_cmd(is_mpi_mode, properties):
         ]
 
 
-#def get_quantization_cmd(properties):
-#    return [
-#        get_python_executable(), "/opt/djl/partition/run_quantization.py",
-#        "--properties",
-#        str(json.dumps(properties))
-#    ]
-
-
 def get_engine_configs(properties):
     engine = properties.get('engine')
     configs = {'option.parallel_loading': True}
