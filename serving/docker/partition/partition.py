@@ -263,6 +263,12 @@ def main():
         help=
         'toggle to skip copying associated tokenizer and config files from source model'
     )
+    parser.add_argument(
+        '--quantization',
+        type=str,
+        dest='quantize',
+        help="the quantization technique to use. options: awq"
+    )
 
     args = parser.parse_args()
 

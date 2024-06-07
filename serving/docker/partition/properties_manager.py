@@ -24,6 +24,8 @@ EXCLUDE_PROPERTIES = [
     'upload_checkpoints_s3url', 'properties_dir'
 ]
 
+SUPPORTED_QUANTIZATION_METHODS = ["awq"]
+
 
 class PropertiesManager(object):
 
@@ -43,6 +45,8 @@ class PropertiesManager(object):
         if args.tensor_parallel_degree:
             self.properties[
                 'option.tensor_parallel_degree'] = args.tensor_parallel_degree
+        if args.quantize:
+            self.properties['option.quantize'] = args.quantize
 
         if 'addl_properties' in kwargs:
             self.properties |= kwargs['addl_properties']
@@ -56,6 +60,7 @@ class PropertiesManager(object):
 
         self.set_and_validate_entry_point()
         self.set_and_validate_save_mp_checkpoint_path()
+        self.validate_quantization_method()
 
     def set_and_validate_model_dir(self):
         if 'model_dir' in self.properties:
@@ -141,6 +146,7 @@ class PropertiesManager(object):
 
     def set_and_validate_entry_point(self):
         entry_point = self.properties.get('option.entryPoint')
+        quantize = self.properties.get('option.quantize')
         if entry_point is None:
             entry_point = os.environ.get("DJL_ENTRY_POINT")
             if entry_point is None:
@@ -152,6 +158,12 @@ class PropertiesManager(object):
                     engine = self.properties.get('engine')
                     if engine is None:
                         raise ValueError("Please specify engine")
+                    elif quantize: 
+                        if engine.lower() == "mpi":
+                            entry_point = "djl_python.huggingface"
+                            #self.properties['option.mpi_mode'] = "True"
+                        else:
+                            raise ValueError(f"Invalid engine: {engine}. Quantization only supports MPI engine")
                     elif engine.lower() == "deepspeed":
                         entry_point = "djl_python.deepspeed"
                     elif engine.lower() == "python":
@@ -182,3 +194,9 @@ class PropertiesManager(object):
             self.properties[
                 "option.save_mp_checkpoint_path"] = get_download_dir(
                     self.properties_dir, "partition-model")
+
+    def validate_quantization_method(self):
+        quantize = self.properties.get('option.quantize')
+        if quantize:
+            if quantize not in SUPPORTED_QUANTIZATION_METHODS:
+                raise ValueError(f"Quantize method: {quantize} not supported. Support options are: {SUPPORTED_QUANTIZATION_METHODS}")

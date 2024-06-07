@@ -16,13 +16,16 @@ import logging
 import os
 from types import SimpleNamespace
 from typing import Final, Optional
+import torch
 
 from sm_neo_utils import (InputConfiguration, CompilationFatalError,
                           write_error_to_file, get_neo_env_vars,
                           get_neo_compiler_flags)
 from utils import extract_python_jar
-from quantization_properties_manager import QuantizationPropertiesManager
-from quantize import QuantizationService
+#from quantization_properties_manager import QuantizationPropertiesManager
+#from quantize import QuantizationService
+from properties_manager import PropertiesManager
+from partition import PartitionService
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -31,7 +34,7 @@ class NeoQuantizationService():
 
     def __init__(self):
         self.args: SimpleNamespace = SimpleNamespace()
-        self.properties_manager: QuantizationPropertiesManager = None
+        self.properties_manager: PropertiesManager = None
         self.compiler_flags: dict = None
 
         env = get_neo_env_vars()
@@ -45,7 +48,7 @@ class NeoQuantizationService():
     def update_dataset_cache_location(self):
         logging.info(f"Updating HuggingFace Datasets cache directory to: {self.COMPILER_CACHE_LOCATION}")
         os.environ['HF_DATASETS_CACHE'] = self.COMPILER_CACHE_LOCATION
-        os.environ['HF_DATASETS_OFFLINE'] = "1"
+        #os.environ['HF_DATASETS_OFFLINE'] = "1"
 
     def initialize_partition_args_namespace(self):
         """
@@ -53,16 +56,18 @@ class NeoQuantizationService():
         PropertiesManager for partitioning. PropertiesManager expects an
         argparse.Namespace, but we use a SimpleNamespace in its place because it
         is easier to construct.
+
+        These attributes are defined in the partition.py argparser.
+        PropertiesManager expects these attributes to be defined to be initialized.
         """
         self.args.save_mp_checkpoint_path = self.OUTPUT_MODEL_DIRECTORY
         self.args.engine = "MPI"
+        self.args.quantize = "awq"
+        num_gpus = torch.cuda.device_count()
+        self.args.tensor_parallel_degree = num_gpus
         # If skip_copy is not enabled, outputted configs are overwritten, and deployment fails.
         self.args.skip_copy = True
-        # These attributes reflect the default values of the corresponding attributes
-        # in the partition argparser. PropertiesManager expects these attributes to be defined.
         self.args.model_id = None
-        self.args.tensor_parallel_degree = None
-        self.args.quantize = None
 
 
     def construct_properties_manager(self):
@@ -74,17 +79,17 @@ class NeoQuantizationService():
         logging.debug(
             "Constructing PropertiesManager from "
             f"serving.properties\nargs:{self.args}\n")
-        self.properties_manager = QuantizationPropertiesManager(self.args)
+        self.properties_manager = PropertiesManager(self.args)
 
 
     def run_quantization(self) -> str:
         """
         :return: the output of the partition command captured from stdout
         """
-        quantization_service = QuantizationService(self.properties_manager)
+        partition_service = PartitionService(self.properties_manager)
         extract_python_jar(PYTHON_CACHE_DIR)
         try:
-            return quantization_service.run_quantization()
+            return partition_service.run_partition()
         except Exception as exc:
             raise CompilationFatalError(
                 f"Encountered an error during quantization: {exc}"
