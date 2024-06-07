@@ -1,5 +1,6 @@
 plugins {
     ai.djl.javaProject
+    ai.djl.publish
 }
 
 dependencies {
