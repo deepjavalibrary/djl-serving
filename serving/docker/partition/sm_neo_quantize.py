@@ -18,8 +18,8 @@ from types import SimpleNamespace
 from typing import Final
 import torch
 
-from sm_neo_utils import (CompilationFatalError,
-                          write_error_to_file, get_neo_env_vars)
+from sm_neo_utils import (CompilationFatalError, write_error_to_file,
+                          get_neo_env_vars)
 from utils import extract_python_jar
 #from quantization_properties_manager import QuantizationPropertiesManager
 #from quantize import QuantizationService
