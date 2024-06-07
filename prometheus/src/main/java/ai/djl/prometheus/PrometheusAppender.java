@@ -14,11 +14,13 @@ package ai.djl.prometheus;
 
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
+import ai.djl.metric.MetricType;
 import ai.djl.metric.Unit;
 import ai.djl.util.Utils;
 
 import io.prometheus.metrics.core.metrics.Counter;
 import io.prometheus.metrics.core.metrics.Gauge;
+import io.prometheus.metrics.core.metrics.Histogram;
 import io.prometheus.metrics.model.snapshots.Labels;
 
 import org.apache.logging.log4j.core.LogEvent;
@@ -37,6 +39,7 @@ public final class PrometheusAppender extends AbstractAppender {
 
     private static final Map<String, Counter> COUNTERS = new ConcurrentHashMap<>();
     private static final Map<String, Gauge> GAUGES = new ConcurrentHashMap<>();
+    private static final Map<String, Histogram> HISTOGRAM = new ConcurrentHashMap<>();
 
     private boolean usePrometheus;
 
@@ -56,13 +59,29 @@ public final class PrometheusAppender extends AbstractAppender {
             String labelName = dimension[0].getName();
             String labelValue = dimension[0].getValue();
             Labels labels = Labels.of(labelName, labelValue);
-            if (unit == Unit.COUNT) {
-                Counter counter =
-                        COUNTERS.computeIfAbsent(name, k -> newCounter(name, labelName, unit));
-                counter.labelValues(labelValue).incWithExemplar(metric.getValue(), labels);
-            } else {
-                Gauge gauge = GAUGES.computeIfAbsent(name, k -> newGauge(name, labelName, unit));
-                gauge.labelValues(labelValue).setWithExemplar(metric.getValue(), labels);
+            MetricType type = metric.getMetricType();
+            if (type == null) {
+                type = unit == Unit.COUNT ? MetricType.COUNTER : MetricType.GAUGE;
+            }
+            switch (type) {
+                case COUNTER:
+                    Counter counter =
+                            COUNTERS.computeIfAbsent(name, k -> newCounter(name, labelName, unit));
+                    counter.labelValues(labelValue).incWithExemplar(metric.getValue(), labels);
+                    break;
+                case GAUGE:
+                    Gauge gauge =
+                            GAUGES.computeIfAbsent(name, k -> newGauge(name, labelName, unit));
+                    gauge.labelValues(labelValue).setWithExemplar(metric.getValue(), labels);
+                    break;
+                default:
+                    Histogram histogram =
+                            HISTOGRAM.computeIfAbsent(
+                                    name, k -> newHistogram(name, labelName, unit));
+                    histogram
+                            .labelValues(labelValue)
+                            .observeWithExemplar(metric.getValue(), labels);
+                    break;
             }
         }
     }
@@ -80,6 +99,14 @@ public final class PrometheusAppender extends AbstractAppender {
                 .name(name)
                 .labelNames(labelName)
                 .help(": prometheus gauge metric, unit: " + unit.getValue())
+                .register();
+    }
+
+    private Histogram newHistogram(String name, String labelName, Unit unit) {
+        return Histogram.builder()
+                .name(name)
+                .labelNames(labelName)
+                .help(": prometheus histogram metric, unit: " + unit.getValue())
                 .register();
     }
 
