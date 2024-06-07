@@ -48,7 +48,7 @@ from djl_python import huggingface
 from djl_python.test_model import TestHandler
 
 envs = {
-            "OPTION_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
+            "HF_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
             "OPTION_MPI_MODE": "true",
             "OPTION_ROLLING_BATCH": "lmi-dist",
             "OPTION_TENSOR_PARALLEL_DEGREE": 4

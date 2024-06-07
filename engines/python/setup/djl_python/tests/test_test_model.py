@@ -61,8 +61,7 @@ class TestTestModel(unittest.TestCase):
 
     def test_with_env(self):
         envs = {
-            "OPTION_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
-            "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
+            "HF_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
             "OPTION_ROLLING_BATCH": "auto",
             "OPTION_TGI_COMPAT": "true"
         }
@@ -70,8 +69,6 @@ class TestTestModel(unittest.TestCase):
             os.environ[key] = value
         huggingface.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
-        self.assertEqual(handler.serving_properties["model_id"],
-                         envs["OPTION_MODEL_ID"])
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
         self.assertEqual(handler.serving_properties["tgi_compat"],
@@ -100,8 +97,7 @@ class TestTestModel(unittest.TestCase):
 
     def test_with_tgi_compat_env(self):
         envs = {
-            "OPTION_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
-            "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
+            "HF_MODEL_ID": "NousResearch/Nous-Hermes-Llama2-13b",
             "OPTION_ROLLING_BATCH": "auto",
             "OPTION_TGI_COMPAT": "true"
         }
@@ -109,8 +105,6 @@ class TestTestModel(unittest.TestCase):
             os.environ[key] = value
         huggingface.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
-        self.assertEqual(handler.serving_properties["model_id"],
-                         envs["OPTION_MODEL_ID"])
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
         self.assertEqual(handler.serving_properties["tgi_compat"],
@@ -162,16 +156,13 @@ class TestTestModel(unittest.TestCase):
 
     def test_with_env_chat(self):
         envs = {
-            "OPTION_MODEL_ID": "TheBloke/Llama-2-7B-Chat-fp16",
-            "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
+            "HF_MODEL_ID": "TheBloke/Llama-2-7B-Chat-fp16",
             "OPTION_ROLLING_BATCH": "auto"
         }
         for key, value in envs.items():
             os.environ[key] = value
         huggingface.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
-        self.assertEqual(handler.serving_properties["model_id"],
-                         envs["OPTION_MODEL_ID"])
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
         inputs = [{
@@ -248,8 +239,7 @@ class TestTestModel(unittest.TestCase):
     @unittest.skip
     def test_profiling(self, logging_method):
         envs = {
-            "OPTION_MODEL_ID": "TheBloke/Llama-2-7B-Chat-fp16",
-            "SERVING_LOAD_MODELS": "test::MPI=/opt/ml/model",
+            "HF_MODEL_ID": "TheBloke/Llama-2-7B-Chat-fp16",
             "OPTION_ROLLING_BATCH": "auto",
             "DJL_PYTHON_PROFILING": "true",
             "DJL_PYTHON_PROFILING_TOP_OBJ": "60"
@@ -259,8 +249,6 @@ class TestTestModel(unittest.TestCase):
             os.environ[key] = value
         huggingface.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
-        self.assertEqual(handler.serving_properties["model_id"],
-                         envs["OPTION_MODEL_ID"])
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
         inputs = [{
