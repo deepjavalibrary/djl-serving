@@ -539,7 +539,6 @@ class HuggingFaceService(object):
                 f"This is required for loading huggingface models")
             raise e
 
-
     def quantize(self, properties: dict):
         """
         Quantizes model using AutoAWQ. Saves output to save_mp_checkpoint_path.
@@ -553,11 +552,17 @@ class HuggingFaceService(object):
         logging.info(f"Initialized handler: {self}")
 
         output_path = self.hf_configs.save_mp_checkpoint_path
-        # Hard-coding these options for now. If vLLM continues to prioritize 
+        # Hard-coding these options for now. If vLLM continues to prioritize
         # AutoAWQ we will expose these options to customers in the future.
-        quant_config = {"zero_point": True, "q_group_size": 128, "w_bit": 4, "version": "GEMM"}
+        quant_config = {
+            "zero_point": True,
+            "q_group_size": 128,
+            "w_bit": 4,
+            "version": "GEMM"
+        }
         logging.info(f"Model loading kwargs: {self.hf_configs.kwargs}")
-        awq_model = AutoAWQForCausalLM.from_pretrained(self.hf_configs.model_id_or_path, **self.hf_configs.kwargs)
+        awq_model = AutoAWQForCausalLM.from_pretrained(
+            self.hf_configs.model_id_or_path, **self.hf_configs.kwargs)
         awq_model.quantize(self.tokenizer, quant_config=quant_config)
 
         logging.info(f"Saving model and tokenizer to: {output_path}")

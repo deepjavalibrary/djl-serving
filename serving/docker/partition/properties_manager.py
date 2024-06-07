@@ -158,12 +158,14 @@ class PropertiesManager(object):
                     engine = self.properties.get('engine')
                     if engine is None:
                         raise ValueError("Please specify engine")
-                    elif quantize: 
+                    elif quantize:
                         if engine.lower() == "mpi":
                             entry_point = "djl_python.huggingface"
                             #self.properties['option.mpi_mode'] = "True"
                         else:
-                            raise ValueError(f"Invalid engine: {engine}. Quantization only supports MPI engine")
+                            raise ValueError(
+                                f"Invalid engine: {engine}. Quantization only supports MPI engine"
+                            )
                     elif engine.lower() == "deepspeed":
                         entry_point = "djl_python.deepspeed"
                     elif engine.lower() == "python":
@@ -199,4 +201,6 @@ class PropertiesManager(object):
         quantize = self.properties.get('option.quantize')
         if quantize:
             if quantize not in SUPPORTED_QUANTIZATION_METHODS:
-                raise ValueError(f"Quantize method: {quantize} not supported. Support options are: {SUPPORTED_QUANTIZATION_METHODS}")
+                raise ValueError(
+                    f"Quantize method: {quantize} not supported. Support options are: {SUPPORTED_QUANTIZATION_METHODS}"
+                )

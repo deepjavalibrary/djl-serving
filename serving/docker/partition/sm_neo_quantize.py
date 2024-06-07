@@ -44,9 +44,10 @@ class NeoQuantizationService():
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
         self.COMPILER_CACHE_LOCATION: Final[str] = env[4]
 
-
     def update_dataset_cache_location(self):
-        logging.info(f"Updating HuggingFace Datasets cache directory to: {self.COMPILER_CACHE_LOCATION}")
+        logging.info(
+            f"Updating HuggingFace Datasets cache directory to: {self.COMPILER_CACHE_LOCATION}"
+        )
         os.environ['HF_DATASETS_CACHE'] = self.COMPILER_CACHE_LOCATION
         #os.environ['HF_DATASETS_OFFLINE'] = "1"
 
@@ -69,18 +70,15 @@ class NeoQuantizationService():
         self.args.skip_copy = True
         self.args.model_id = None
 
-
     def construct_properties_manager(self):
         """
         Factory method used to construct a QuantizationPropertiesManager from
         given serving.properties
         """
         self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
-        logging.debug(
-            "Constructing PropertiesManager from "
-            f"serving.properties\nargs:{self.args}\n")
+        logging.debug("Constructing PropertiesManager from "
+                      f"serving.properties\nargs:{self.args}\n")
         self.properties_manager = PropertiesManager(self.args)
-
 
     def run_quantization(self) -> str:
         """
@@ -92,8 +90,7 @@ class NeoQuantizationService():
             return partition_service.run_partition()
         except Exception as exc:
             raise CompilationFatalError(
-                f"Encountered an error during quantization: {exc}"
-            )
+                f"Encountered an error during quantization: {exc}")
 
     def neo_quantize(self):
         self.update_dataset_cache_location()
@@ -112,8 +109,8 @@ def main():
         neo_quantization_service = NeoQuantizationService()
         neo_quantization_service.neo_quantize()
     except Exception as exc:
-        write_error_to_file(
-            exc, neo_quantization_service.COMPILATION_ERROR_FILE)
+        write_error_to_file(exc,
+                            neo_quantization_service.COMPILATION_ERROR_FILE)
         raise exc
 
 
