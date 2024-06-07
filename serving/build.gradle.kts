@@ -4,6 +4,7 @@ import com.netflix.gradle.plugins.deb.Deb
 
 plugins {
     ai.djl.javaProject
+    ai.djl.publish
     application
     id("com.netflix.nebula.ospackage") version "11.4.0"
 }
