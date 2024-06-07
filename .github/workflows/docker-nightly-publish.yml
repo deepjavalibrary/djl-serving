@@ -59,7 +59,7 @@ jobs:
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
@@ -67,7 +67,7 @@ jobs:
         if: ${{ github.event.inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT ${{ matrix.arch }}
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
@@ -79,7 +79,7 @@ jobs:
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} ${{ matrix.arch }}
@@ -88,7 +88,7 @@ jobs:
         if: ${{ matrix.arch == 'cpu' && github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
           docker push deepjavalibrary/djl-serving:latest
 
@@ -158,7 +158,7 @@ jobs:
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT aarch64
           docker compose push aarch64
@@ -166,7 +166,7 @@ jobs:
         if: ${{ github.event.inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT aarch64
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
@@ -178,7 +178,7 @@ jobs:
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} aarch64
@@ -225,7 +225,7 @@ jobs:
         if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
           docker compose push lmi
@@ -233,7 +233,7 @@ jobs:
         if: ${{ github.event.inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
@@ -245,7 +245,7 @@ jobs:
         if: ${{ github.event.inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export BASE_RELEASE_VERSION="${DJL_VERSION}"
           export RELEASE_VERSION="${DJL_VERSION}-"
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} lmi

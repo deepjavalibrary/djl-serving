@@ -9,7 +9,7 @@ Currently, we created docker compose to simplify the building experience. Just r
 
 ```shell
 cd serving/docker
-export DJL_VERSION=$(cat ../../gradle.properties | awk -F '=' '/djl_version/ {print $2}')
+export DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
 docker compose build --build-arg djl_version=${DJL_VERSION} <compose-target>
 ```
 
