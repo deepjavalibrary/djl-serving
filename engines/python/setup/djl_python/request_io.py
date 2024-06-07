@@ -74,8 +74,6 @@ class Sequence:
         cumulative_log_prob: cumulative log probability of the sequence.
         finish_reason: finish reason of the sequence.
         stop_reason: stop reason of the sequence.
-        first_token: first token of the sequence.
-        last_token: last token of the sequence.
     """
     tokens: List[Token] = field(default_factory=lambda: [])
     top_tokens: Optional[List[List[Token]]] = field(default_factory=lambda: [])

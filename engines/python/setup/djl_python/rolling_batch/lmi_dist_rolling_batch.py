@@ -170,15 +170,7 @@ class LmiDistRollingBatch(RollingBatch):
                 if lora_request_params else None)
             self.engine.add_request(lmi_dist_request)
             self.request_cache[request_id] = {
-                "curr_length": 0,
-                "text": "",
-                "output_token_texts": [],
-                "cumulative_logprob": 0.0,
-                "logprobs": [],
-                "token_ids": [],
-                "finished": False,
-                "finish_reason": None,
-                "num_generated_tokens": 0,
+                "request_output": request.request_output
             }
         request_outputs = self.engine.step()
 
@@ -197,38 +189,10 @@ class LmiDistRollingBatch(RollingBatch):
                     logging.warning(
                         f"Ignoring logging speculative decoding metrics")
 
-        # step 2: send result back
-        finished_id = []
-        for (key, cache), request in zip(self.request_cache.items(),
-                                         self.active_requests):
-            finish_reason = None
-            prompt_tokens_details = None
-            if cache["finished"]:
-                finished_id.append(key)
-                finish_reason = FINISH_REASON_MAPPER.get(
-                    cache["finish_reason"], None)
-                prompt_tokens_details = cache.get("prompt_tokens_details")
-            text = cache["text"][cache["curr_length"]:]
-            output_token_texts = [text] * len(cache['token_ids']) if not cache[
-                'output_token_texts'] else cache['output_token_texts']
-            if cache['token_ids']:
-                # token id is not determined since there could be multiple token comes at the same time
-                # only return the last one
-                for token_id, token_text, logprob, in zip(
-                        cache['token_ids'], output_token_texts,
-                        cache['logprobs']):
-                    token = Token(token_id, token_text, logprob)
-                    request.set_next_token(token, cache["finished"],
-                                           finish_reason,
-                                           prompt_tokens_details)
-            else:
-                request.set_next_token("", cache["finished"], finish_reason,
-                                       prompt_tokens_details)
-            cache["curr_length"] = len(cache["text"])
-
-        # step 3: clean finished requests
-        for key in finished_id:
-            self.request_cache.pop(key)
+        for request in self.active_requests:
+            request_output = request.request_output
+            if request_output.finished:
+                request.last_token = True
 
         return self.postprocess_results()
 
