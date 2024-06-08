@@ -13,6 +13,7 @@
 package ai.djl.preometheus;
 
 import ai.djl.metric.Metric;
+import ai.djl.metric.MetricType;
 import ai.djl.metric.Unit;
 import ai.djl.prometheus.MetricExporter;
 
@@ -30,14 +31,17 @@ public class MetricExporterTest {
 
     @Test
     public void testExport() throws IOException {
-        Logger logger = LoggerFactory.getLogger("test_metric");
-        logger.info("{}", new Metric("MyCounter", 1));
-        logger.info("{}", new Metric("MyGauge", 1, Unit.MICROSECONDS));
+        Logger metrics = LoggerFactory.getLogger("test_metric");
+        metrics.info("{}", new Metric("MyCounter", 1));
+        metrics.info("{}", new Metric("MyGauge", 1, Unit.MICROSECONDS));
+        metrics.info("{}", new Metric("MyHistogram", MetricType.HISTOGRAM, 1, Unit.MICROSECONDS));
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             MetricExporter.export(os, new HashSet<>());
             String res = os.toString(StandardCharsets.UTF_8);
+            System.out.println(res);
             Assert.assertTrue(res.contains("MyCounter"));
             Assert.assertTrue(res.contains("MyGauge"));
+            Assert.assertTrue(res.contains("MyHistogram"));
         }
     }
 

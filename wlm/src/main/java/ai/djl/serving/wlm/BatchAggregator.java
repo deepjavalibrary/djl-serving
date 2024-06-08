@@ -14,6 +14,7 @@ package ai.djl.serving.wlm;
 
 import ai.djl.metric.Dimension;
 import ai.djl.metric.Metric;
+import ai.djl.metric.MetricType;
 import ai.djl.metric.Unit;
 import ai.djl.serving.wlm.util.WorkerJob;
 
@@ -69,7 +70,13 @@ abstract class BatchAggregator<I, O> {
         for (WorkerJob<I, O> wj : wjs) {
             Job<I, O> job = wj.getJob();
             long queueTime = job.getWaitingMicroSeconds();
-            Metric metric = new Metric("QueueTime", queueTime, Unit.MICROSECONDS, dimension);
+            Metric metric =
+                    new Metric(
+                            "QueueTime",
+                            MetricType.HISTOGRAM,
+                            queueTime,
+                            Unit.MICROSECONDS,
+                            dimension);
             MODEL_METRIC.info("{}", metric);
             list.add(job);
         }
@@ -86,8 +93,14 @@ abstract class BatchAggregator<I, O> {
         for (WorkerJob<I, O> wj : wjs) {
             wj.getFuture().complete(wj.getJob().getOutput());
             long latency = wj.getJob().getWaitingMicroSeconds();
-            Metric metric = new Metric("RequestLatency", latency, Unit.MICROSECONDS, dimension);
-            MODEL_METRIC.info("{}", metric);
+            MODEL_METRIC.info(
+                    "{}",
+                    new Metric(
+                            "RequestLatency",
+                            MetricType.HISTOGRAM,
+                            latency,
+                            Unit.MICROSECONDS,
+                            dimension));
         }
         wjs.clear();
     }
