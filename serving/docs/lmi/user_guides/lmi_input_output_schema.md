@@ -83,6 +83,23 @@ Example response:
 }
 ```
 
+When using streaming, if you want Server Side Events, then you could use `option.output_formatter=sse`. If you `stream=True`, the default `output_formatter` is `jsonlines`. So you would want to explicitly provide `option.output_formatter=sse` when you want SSE with streaming. Check out `TGI_COMPAT` option below, enabling that option will make SSE as the default formatter with streaming. 
+When using SSE the jsonline will have the prefix `data`. 
+
+Example response:
+```
+data:{"token": {"id": 304, "text": "Deep ", "log_prob": -0.052432529628276825}}
+data:{"token": {"id": 11157, "text": " Learning", "log_prob": -1.2865009307861328}}
+data:{"token": {"id": 278, "text": " is", "log_prob": -0.007458459585905075}}
+... more tokens until the last one
+data:{
+    "token": {"id": 5972, "text": " field.", "log_prob": -0.6950479745864868}, 
+    "generated_text": "Deep Learning is a really cool field.", 
+    "details": {"finish_reason": "length", "generated_tokens": 100, "inputs": "What is Deep Learning?"}
+}
+```
+
+
 #### Error Responses
 
 When rolling batch is enabled, errors are returned with HTTP response code 200.
