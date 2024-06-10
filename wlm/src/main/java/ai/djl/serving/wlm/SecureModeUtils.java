@@ -36,7 +36,8 @@ import java.util.stream.Stream;
 /** A class for utils related to SageMaker Secure Mode */
 public final class SecureModeUtils {
 
-    // Platform Secure Mode environment variables
+    // Platform Secure Mode environment variables – these are protected and can only be set by
+    // SageMaker platform
     private static final String SECURE_MODE_ENV_VAR = "SM_PLATFORM_SECURE_MODE";
     private static final String TRUSTED_CHANNELS_ENV_VAR = "SM_PLATFORM_TRUSTED_CHANNELS";
     private static final String UNTRUSTED_CHANNELS_ENV_VAR = "SM_PLATFORM_UNTRUSTED_CHANNELS";
