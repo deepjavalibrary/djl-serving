@@ -1456,6 +1456,10 @@ public class ModelServerTest {
             assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
             assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2");
         }
+
+        channel = connect(Connector.ConnectorType.INFERENCE);
+        request(channel, HttpMethod.GET, "/ping");
+        assertHttpCode(503);
     }
 
     private void testKServeV2HealthReady(Channel channel) throws InterruptedException {

@@ -77,11 +77,14 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     private RequestParser requestParser;
     private int chunkReadTime;
+    private ConfigManager config;
+    private static boolean exceedErrorRate;
 
     /** default constructor. */
     public InferenceRequestHandler() {
         this.requestParser = new RequestParser();
-        chunkReadTime = ConfigManager.getInstance().getChunkedReadTimeout();
+        config = ConfigManager.getInstance();
+        chunkReadTime = config.getChunkedReadTimeout();
     }
 
     /** {@inheritDoc} */
@@ -113,13 +116,16 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                                     boolean hasPending = (boolean) w.get("hasPending");
 
                                     HttpResponseStatus status;
-                                    if (hasFailure) {
+                                    if (exceedErrorRate) {
+                                        logger.info("PING FAILED: error rate exceed");
+                                        status = HttpResponseStatus.SERVICE_UNAVAILABLE;
+                                    } else if (hasFailure) {
                                         logger.info(
                                                 "PING FAILED: {}",
                                                 JsonUtils.GSON.toJson(w.get("data")));
                                         status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
                                     } else if (hasPending) {
-                                        if (ConfigManager.getInstance().allowsMultiStatus()) {
+                                        if (config.allowsMultiStatus()) {
                                             status = HttpResponseStatus.MULTI_STATUS;
                                         } else {
                                             status = HttpResponseStatus.OK;
@@ -230,7 +236,6 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
 
         ModelManager modelManager = ModelManager.getInstance();
-        ConfigManager config = ConfigManager.getInstance();
         Workflow workflow = modelManager.getWorkflow(workflowName, version, true);
         if (workflow == null) {
             String regex = config.getModelUrlPattern();
@@ -384,8 +389,16 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         } else {
             if (code >= 500) {
                 SERVER_METRIC.info("{}", RESPONSE_5_XX);
+                if (!exceedErrorRate && config.onServerError()) {
+                    exceedErrorRate = true;
+                }
             } else if (code >= 400) {
                 SERVER_METRIC.info("{}", RESPONSE_4_XX);
+                if (code == 424) {
+                    if (!exceedErrorRate && config.onServerError()) {
+                        exceedErrorRate = true;
+                    }
+                }
             } else {
                 SERVER_METRIC.info("{}", RESPONSE_2_XX);
             }
@@ -465,11 +478,17 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", WLM_ERROR);
             status = HttpResponseStatus.SERVICE_UNAVAILABLE;
+            if (!exceedErrorRate && config.onWlmError()) {
+                exceedErrorRate = true;
+            }
         } else {
             logger.warn("Unexpected error", t);
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", SERVER_ERROR);
             status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+            if (!exceedErrorRate && config.onServerError()) {
+                exceedErrorRate = true;
+            }
         }
 
         /*

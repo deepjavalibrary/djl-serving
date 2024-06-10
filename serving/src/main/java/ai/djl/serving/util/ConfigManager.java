@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /** A class that hold configuration information. */
@@ -79,6 +80,10 @@ public final class ConfigManager {
     private static final String LOAD_ON_DEVICES = "load_on_devices";
     private static final String PLUGIN_FOLDER = "plugin_folder";
     private static final String CHUNKED_READ_TIMEOUT = "chunked_read_timeout";
+    private static final String ERROR_RATE_WLM = "error_rate_wlm";
+    private static final String ERROR_RATE_SERVER = "error_rate_server";
+    private static final String ERROR_RATE_MODEL = "error_rate_model";
+    private static final String ERROR_RATE_ANY = "error_rate_any";
 
     // Configuration which are not documented or enabled through environment variables
     private static final String USE_NATIVE_IO = "use_native_io";
@@ -89,9 +94,11 @@ public final class ConfigManager {
     private static ConfigManager instance;
 
     private Properties prop;
+    private Map<String, RateLimiter> limiters;
 
     private ConfigManager(Arguments args) {
         prop = new Properties();
+        limiters = new ConcurrentHashMap<>();
 
         Path file = args.getConfigFile();
         if (file != null) {
@@ -116,6 +123,12 @@ public final class ConfigManager {
             String key = env.getKey();
             if (key.startsWith("SERVING_")) {
                 prop.put(key.substring(8).toLowerCase(Locale.ROOT), env.getValue());
+            }
+        }
+        for (Map.Entry<Object, Object> entry : prop.entrySet()) {
+            String key = (String) entry.getKey();
+            if (key.startsWith("error_rate_")) {
+                limiters.put(key, RateLimiter.parse(entry.getValue().toString()));
             }
         }
     }
@@ -169,6 +182,45 @@ public final class ConfigManager {
      */
     public static ConfigManager getInstance() {
         return instance;
+    }
+
+    /**
+     * Return true if exceed wlm error rate limit.
+     *
+     * @return true if exceed wlm error rate limit
+     */
+    public boolean onWlmError() {
+        return onError(ERROR_RATE_WLM);
+    }
+
+    /**
+     * Return true if exceed server error rate limit.
+     *
+     * @return true if exceed server error rate limit
+     */
+    public boolean onServerError() {
+        return onError(ERROR_RATE_SERVER);
+    }
+
+    /**
+     * Return true if exceed model error rate limit.
+     *
+     * @return true if exceed model error rate limit
+     */
+    public boolean onModelError() {
+        return onError(ERROR_RATE_MODEL);
+    }
+
+    private boolean onError(String key) {
+        RateLimiter limiter = limiters.get(key);
+        if (limiter != null && limiter.exceed()) {
+            return true;
+        }
+        limiter = limiters.get(ERROR_RATE_ANY);
+        if (limiter != null) {
+            return limiter.exceed();
+        }
+        return false;
     }
 
     /**
