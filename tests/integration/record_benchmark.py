@@ -171,10 +171,8 @@ def data_container(data: dict):
             version = container.split(":")[1]
             if not version.startswith("sha"):
                 data["tgiVersion"] = version
-        elif "suzuka" in container:
-            data["image"] = "suzuka"
         else:
-            data["image"] = "other"
+            data["image"] = container.split("/", 1)[1]
 
 
 def data_from_model_files(data: dict):
