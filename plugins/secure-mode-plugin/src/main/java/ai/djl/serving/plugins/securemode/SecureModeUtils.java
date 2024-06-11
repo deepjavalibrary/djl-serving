@@ -97,18 +97,19 @@ public final class SecureModeUtils {
         scanPaths(untrustedPathList);
     }
 
-    /**
-     * Handle files from additional model data sources. Currently, this only consists of installing
-     * all trusted requirements.txt files. More functionality can be added as needed.
-     *
-     * @param modelDir the main model directory
-     * @throws IOException if there is an error scanning the paths
-     */
-    static void reconcileSources(Path modelDir) throws IOException {
-        List<String> trustedPathList =
-                splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
-        // linkAdditionalRequirementsTxt(trustedPathList, modelDir);
-    }
+    // /**
+    //  * Handle files from additional model data sources. Currently, this only consists of
+    // installing
+    //  * all trusted requirements.txt files. More functionality can be added as needed.
+    //  *
+    //  * @param modelDir the main model directory
+    //  * @throws IOException if there is an error scanning the paths
+    //  */
+    // static void reconcileSources(Path modelDir) throws IOException {
+    //     List<String> trustedPathList =
+    //             splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
+    //     // linkAdditionalRequirementsTxt(trustedPathList, modelDir);
+    // }
 
     /**
      * Check if a disallowed option is set via environment variables. The disallowed value is
