@@ -10,7 +10,7 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package ai.djl.serving.wlm;
+package ai.djl.serving.plugins.securemode;
 
 import ai.djl.ModelException;
 import ai.djl.util.Utils;
@@ -21,12 +21,11 @@ import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+// import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,7 +33,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/** A class for utils related to SageMaker Secure Mode */
+/** A class for utils related to SageMaker Secure Mode. */
 public final class SecureModeUtils {
 
     // Platform Secure Mode environment variables – these are protected and can only be set by
@@ -264,14 +263,17 @@ public final class SecureModeUtils {
     private static void scanForChatTemplate(Path directory) throws IOException, ModelException {
         Path tokenizerConfig = lookForFile(directory, "tokenizer_config.json");
         if (tokenizerConfig != null) {
-            try (FileReader fileReader = new FileReader(tokenizerConfig.toString())) {
-                JsonObject jsonObject = JsonParser.parseReader(fileReader).getAsJsonObject();
+            try {
+                String content = Files.readString(Paths.get(tokenizerConfig.toString()));
+                JsonObject jsonObject = JsonParser.parseString(content).getAsJsonObject();
                 if (jsonObject.has("chat_template")) {
                     throw new ModelException(
                             "Jinja chat_template field found in "
                                     + tokenizerConfig.toString()
                                     + ", but is prohibited in Secure Mode. Exiting early.");
                 }
+            } catch (IOException e) {
+                throw new IOException("Error reading tokenizer_config.json", e);
             }
         }
     }

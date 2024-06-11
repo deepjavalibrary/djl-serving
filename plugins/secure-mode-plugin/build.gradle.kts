@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":serving"))
+    implementation(project(":wlm"))
 
     testImplementation(libs.testng) {
         exclude(group = "junit", module = "junit")

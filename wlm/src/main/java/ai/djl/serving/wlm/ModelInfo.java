@@ -523,20 +523,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
         }
 
-        if (SecureModeUtils.isSecureMode()) {
-            SecureModeUtils.validateSecurity();
-            // Network isolated in Secure Mode. Skip download
-            loadServingProperties();
-            eventManager.onModelDownloaded(this, modelDir);
-            configPerModelSettings();
-            SecureModeUtils.reconcileSources(modelDir);
-        } else {
-            loadServingProperties();
-            downloadS3();
-            eventManager.onModelDownloaded(this, downloadDir);
-            configPerModelSettings();
-            downloadDraftModel();
-        }
+        loadServingProperties();
+        downloadS3();
+        eventManager.onModelDownloaded(this, downloadDir);
+        configPerModelSettings();
+        downloadDraftModel();
 
         long duration = (System.nanoTime() - begin) / 1000;
         Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS, dimension);
