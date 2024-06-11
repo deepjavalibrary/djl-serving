@@ -276,7 +276,11 @@ if __name__ == "__main__":
         logging.info(f"Parsed running instruction: {result}")
         command = f"echo \"jobs={json.dumps(json.dumps(list(result.keys())))}\" >> $GITHUB_OUTPUT"
         sp.call(command, shell=True)
-        command = f"echo \"template={json.dumps(json.dumps(json.dumps(result)))}\" >> $GITHUB_OUTPUT"
+        # avoid too long template
+        template = json.dumps(json.dumps(json.dumps(result)))
+        with open("template_tmp.json", "w") as f:
+            f.write(f"template={template}")
+        command = f"cat template_tmp.json >> $GITHUB_OUTPUT"
         sp.call(command, shell=True)
     elif args.template and args.job and args.instance:
         build_running_script(args.template, args.job, args.instance,
