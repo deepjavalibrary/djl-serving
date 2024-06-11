@@ -470,7 +470,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 // FIXME: MXNet GPU Model doesn't support multi-threading
                 return 1;
             }
-            return 2;
+            return 1;
         }
 
         int cpuCores = Runtime.getRuntime().availableProcessors();
