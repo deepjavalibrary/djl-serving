@@ -5,10 +5,6 @@ verlte() {
     [ "$1" = "$2" ] && return 1 || [ "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
 }
 
-if [[ "${SM_PLATFORM_SECURE_MODE,,}" == "true" ]]; then
-    echo "SageMaker Secure Mode is enabled"
-fi
-
 # Takes 2 environment variables: SM/TGI env var name, LMI env var name
 # If SM/TGI env var is set, and LMI env var is unset, set LMI env var to SM/TGI env var value.
 translateTGIToLMI() {

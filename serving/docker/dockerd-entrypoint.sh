@@ -1,10 +1,6 @@
 #!/bin/bash
 #set -e
 
-if [[ "${SM_PLATFORM_SECURE_MODE,,}" == "true" ]]; then
-    echo "SageMaker Secure Mode is enabled"
-fi
-
 if [[ -n "$SM_NEO_EXECUTION_CONTEXT" ]]; then
     echo "SageMaker Neo execution context detected"
     /usr/bin/python3 /opt/djl/partition/sm_neo_neuron_partition.py

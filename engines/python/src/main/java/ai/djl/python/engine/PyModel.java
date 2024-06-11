@@ -34,7 +34,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -150,20 +149,13 @@ public class PyModel extends BaseModel {
             pyEnv.setFailOnInitialize(false);
         }
 
-        Boolean secureModeEnabled = isCustomEntryPointDisallowed();
-
         if (entryPoint == null) {
             entryPoint = Utils.getenv("DJL_ENTRY_POINT");
             if (entryPoint == null) {
                 Path modelFile = findModelFile(prefix);
                 String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
                 // find default entryPoint
-                if (secureModeEnabled) {
-                    logger.warn(
-                            "Custom entryPoint is not allowed in Secure Mode, using default"
-                                    + " inferred entryPoint module");
-                }
-                if (modelFile != null && !secureModeEnabled) {
+                if (modelFile != null) {
                     entryPoint = modelFile.toFile().getName();
                 } else if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
@@ -177,7 +169,7 @@ public class PyModel extends BaseModel {
                     throw new FileNotFoundException(".py file not found in: " + modelPath);
                 }
             }
-        } else if (entryPoint.toLowerCase(Locale.ROOT).startsWith("http") && !secureModeEnabled) {
+        } else if (entryPoint.toLowerCase(Locale.ROOT).startsWith("http")) {
             String hash = Utils.hash(entryPoint);
             Path dir = Utils.getCacheDir().resolve("tmp").resolve(hash);
             Path modelFile = dir.resolve("model.py");
@@ -348,25 +340,5 @@ public class PyModel extends BaseModel {
         if (pyEnv.isEnableVenv()) {
             pyEnv.deleteVirtualEnv(Utils.hash(modelDir.toString()));
         }
-    }
-
-    /**
-     * Check if the control to disable custom Python entrypoint is set in SageMaker Secure Mode.
-     *
-     * @return true if Secure Mode is enabled and DISALLOW_CUSTOM_ENTRYPOINT control is set,
-     *     otherwise false.
-     */
-    private Boolean isCustomEntryPointDisallowed() {
-        if (Boolean.parseBoolean(Utils.getenv("SM_PLATFORM_SECURE_MODE"))) {
-            // split comma separated string
-            String input = Utils.getenv("SM_PLATFORM_SECURITY_CONTROLS");
-            if (input != null && !input.isEmpty()) {
-                List<String> controls = Arrays.asList(input.split("\\s*,\\s*"));
-                if (controls.contains("DISALLOW_CUSTOM_ENTRYPOINT")) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }
