@@ -187,7 +187,8 @@ jobs:
       - name: Run benchmark job
         working-directory: tests/integration
         run: |
-          python3 instant_benchmark.py --template template-${{ inputs.instance }}/template_tmp.json \
+          cp template-${{ inputs.instance }}/template_tmp.json template.json
+          python3 instant_benchmark.py --template template.json \
           --job ${{ matrix.job }} --instance ${{ inputs.instance }} \
           --record ${{ inputs.record }}
           
