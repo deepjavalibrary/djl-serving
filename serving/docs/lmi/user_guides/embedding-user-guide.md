@@ -31,7 +31,7 @@ You can specify the `djl://` url to load a model from the DJL model zoo.
 ```
 HF_MODEL_ID=djl://ai.djl.huggingface.onnxruntime/BAAI/bge-base-en-v1.5
 # Optional
-OPTION_BATCH_SIZE=32
+SERVING_BATCH_SIZE=32
 ```
 
 ### environment variables
@@ -43,7 +43,7 @@ will download the model from HuggingFace hub and optimize the model with OnnxRun
 OPTION_ENGINE=OnnxRuntime
 HF_MODEL_ID=BAAI/bge-base-en-v1.5
 # Optional
-OPTION_BATCH_SIZE=32
+SERVING_BATCH_SIZE=32
 ```
 
 You can follow [this example](../deployment_guide/deploying-your-endpoint.md#option-2-configuration---environment-variables)
@@ -145,7 +145,7 @@ This is an optional config, and defaults to `False`.
 
 This option represents the Engine to use, values include `OnnxRuntime`, `PyTorch`, `Rust`, etc.
 
-**OPTION_BATCH_SIZE**
+**SERVING_BATCH_SIZE**
 
 This option represents the dynamic batch size.
 
