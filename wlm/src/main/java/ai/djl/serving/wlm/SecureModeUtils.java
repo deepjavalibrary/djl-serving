@@ -108,7 +108,7 @@ public final class SecureModeUtils {
     static void reconcileSources(Path modelDir) throws IOException {
         List<String> trustedPathList =
                 splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
-        linkAdditionalRequirementsTxt(trustedPathList, modelDir);
+        // linkAdditionalRequirementsTxt(trustedPathList, modelDir);
     }
 
     /**
@@ -276,44 +276,44 @@ public final class SecureModeUtils {
         }
     }
 
-    /**
-     * Link additional requirements.txt files into requirements.txt in modelDir using -r. This
-     * single requirements.txt will be installed during Python engine initialization.
-     *
-     * @param pathList list of absolute paths
-     * @param modelDir path to model_dir
-     * @throws IOException
-     */
-    private static void linkAdditionalRequirementsTxt(List<String> pathList, Path modelDir)
-            throws IOException {
-        // Gather requirements.txts found in trusted paths
-        List<String> additionalRequirementsTxts = new ArrayList<>();
-        for (String path : pathList) {
-            Path p = Paths.get(path.trim());
-            if (Files.isDirectory(p) && p != modelDir) {
-                Path requirementsTxt = lookForFile(p, "requirements.txt");
-                if (requirementsTxt != null) {
-                    additionalRequirementsTxts.add(requirementsTxt.toString());
-                }
+    // /**
+    //  * Link additional requirements.txt files into requirements.txt in modelDir using -r. This
+    //  * single requirements.txt will be installed during Python engine initialization.
+    //  *
+    //  * @param pathList list of absolute paths
+    //  * @param modelDir path to model_dir
+    //  * @throws IOException
+    //  */
+    // private static void linkAdditionalRequirementsTxt(List<String> pathList, Path modelDir)
+    //         throws IOException {
+    //     // Gather requirements.txts found in trusted paths
+    //     List<String> additionalRequirementsTxts = new ArrayList<>();
+    //     for (String path : pathList) {
+    //         Path p = Paths.get(path.trim());
+    //         if (Files.isDirectory(p) && p != modelDir) {
+    //             Path requirementsTxt = lookForFile(p, "requirements.txt");
+    //             if (requirementsTxt != null) {
+    //                 additionalRequirementsTxts.add(requirementsTxt.toString());
+    //             }
 
-            } else {
-                throw new IllegalArgumentException("Path " + p + " is not a directory.");
-            }
-        }
-        // Append to or create requirements.txt in modelDir
-        Path requirementsTxt = lookForFile(modelDir, "requirements.txt");
-        if (requirementsTxt == null) {
-            requirementsTxt = Files.createFile(modelDir.resolve("requirements.txt"));
-        } else {
-            logger.info("Existing requirements.txt found at " + requirementsTxt.toString());
-        }
-        for (String additionalRequirementsTxt : additionalRequirementsTxts) {
-            Files.write(
-                    requirementsTxt,
-                    ("-r " + additionalRequirementsTxt + "\n").getBytes(),
-                    StandardOpenOption.APPEND);
-        }
-    }
+    //         } else {
+    //             throw new IllegalArgumentException("Path " + p + " is not a directory.");
+    //         }
+    //     }
+    //     // Append to or create requirements.txt in modelDir
+    //     Path requirementsTxt = lookForFile(modelDir, "requirements.txt");
+    //     if (requirementsTxt == null) {
+    //         requirementsTxt = Files.createFile(modelDir.resolve("requirements.txt"));
+    //     } else {
+    //         logger.info("Existing requirements.txt found at " + requirementsTxt.toString());
+    //     }
+    //     for (String additionalRequirementsTxt : additionalRequirementsTxts) {
+    //         Files.write(
+    //                 requirementsTxt,
+    //                 ("-r " + additionalRequirementsTxt + "\n").getBytes(),
+    //                 StandardOpenOption.APPEND);
+    //     }
+    // }
 
     /**
      * Given an input string, split it into a list of strings using a comma as a delimiter.
