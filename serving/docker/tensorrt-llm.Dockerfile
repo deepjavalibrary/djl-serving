@@ -19,7 +19,7 @@ ARG transformers_version=4.40.0
 ARG accelerate_version=0.29.3
 ARG tensorrtlibs_version=10.0.1
 ARG trtllm_toolkit_version=nightly
-ARG trtllm_version=v0.10.0_dryrun
+ARG trtllm_version=v0.10.0
 ARG cuda_python_version=12.4
 ARG peft_version=0.10.0
 ARG triton_version=r24.04
@@ -27,7 +27,7 @@ ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_l
 ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.10.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/${triton_version}/tritontoolkit-24.4-py310-none-any.whl"
 ARG pydantic_version=2.6.1
-ARG ammo_version=0.7.0
+ARG modelopt_version=0.11.2
 ARG janus_version=1.0.0
 ARG pynvml_verison=11.5.0
 
@@ -65,7 +65,7 @@ COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
 # Install CUDNN 8
-RUN apt-get update && apt-get install -y --no-install-recommends libcudnn8 libcudnn8-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libcudnn8 && rm -rf /var/lib/apt/lists/*
 
 # Install OpenMPI and other deps
 ARG DEBIAN_FRONTEND=noninteractive
@@ -82,7 +82,7 @@ RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} ac
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
-RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} nvidia-ammo~=${ammo_version} janus==${janus_version} && \
+RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} janus==${janus_version} nvidia-modelopt==${modelopt_version} && \
     pip install --no-deps ${trtllm_wheel} && \
     pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
     pip3 cache purge
@@ -123,4 +123,4 @@ LABEL djl-version=$djl_version
 LABEL trtllm-version=$trtllm_version
 LABEL cuda-version=$cuda_version
 # To use the 535 CUDA driver
-LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.4
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
