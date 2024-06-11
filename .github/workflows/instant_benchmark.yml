@@ -187,7 +187,7 @@ jobs:
       - name: Run benchmark job
         working-directory: tests/integration
         run: |
-          ls -R my-artifact
+          ls -R .
           python3 instant_benchmark.py --template template.json \
           --job ${{ matrix.job }} --instance ${{ inputs.instance }} \
           --record ${{ inputs.record }}
