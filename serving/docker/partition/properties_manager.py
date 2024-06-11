@@ -66,7 +66,7 @@ class PropertiesManager(object):
         if 'model_dir' in self.properties:
             model_dir = self.properties['model_dir']
             model_files = glob.glob(os.path.join(model_dir, '*.bin'))
-            model_files = glob.glob(os.path.join(model_dir, '*.safetensors'))
+            model_files.append(glob.glob(os.path.join(model_dir, '*.safetensors')))
             if not model_files:
                 raise ValueError(
                     f'No .bin or .safetensors files found in the dir: {model_dir}'
@@ -75,8 +75,8 @@ class PropertiesManager(object):
             self.properties['model_dir'] = self.properties_dir
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
-            model_files = glob.glob(
-                os.path.join(self.properties_dir, '*.safetensors'))
+            model_files.append(glob.glob(
+                os.path.join(self.properties_dir, '*.safetensors')))
             if model_files:
                 self.properties['model_dir'] = self.properties_dir
             else:
