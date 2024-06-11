@@ -102,24 +102,24 @@ tasks {
         dependsOn("prepareDeb")
 
         packageName = "djl-bench"
-        archiveVersion = version
+        archiveVersion = "$project.version"
         release = "1"
         maintainer = "Deep Java Library <djl-dev@amazon.com>"
         summary = "djl-bench is a command line tool that allows you to benchmark the\n" +
                 "  model on all different platforms for single-thread/multi-thread\n" +
                 "  inference performance."
 
-        from(buildDirectory / "benchmark-${version}") {
-            into("/usr/local/djl-bench-${version}")
+        from(buildDirectory / "benchmark-${project.version}") {
+            into("/usr/local/djl-bench-${project.version}")
         }
-        link("/usr/bin/djl-bench", "/usr/local/djl-bench-${version}/bin/benchmark")
+        link("/usr/bin/djl-bench", "/usr/local/djl-bench-${project.version}/bin/benchmark")
     }
 
     register<Exec>("installOnLinux") {
         dependsOn("createDeb")
         doFirst {
             if ("linux" in os) {
-                val ver = version.toString().replace("-", "~")
+                val ver = project.version.toString().replace("-", "~")
                 commandLine("sudo", "dpkg", "-i", "${buildDirectory}/distributions/djl-bench_${ver}-1_all.deb")
             } else {
                 throw GradleException("task installOnLinux Only supported on Linux.")
