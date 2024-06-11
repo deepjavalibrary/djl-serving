@@ -183,11 +183,11 @@ jobs:
       - name: Download template
         uses: actions/download-artifact@v4
         with:
-          name: template
           path: tests/integration
       - name: Run benchmark job
         working-directory: tests/integration
         run: |
+          ls -R my-artifact
           python3 instant_benchmark.py --template template.json \
           --job ${{ matrix.job }} --instance ${{ inputs.instance }} \
           --record ${{ inputs.record }}
