@@ -372,7 +372,7 @@ public final class SecureModeUtils {
         patternBuilder.append(".*\\.(");
         for (int i = 0; i < extensions.length; i++) {
             if (i > 0) {
-                patternBuilder.append("|");
+                patternBuilder.append('|');
             }
             patternBuilder.append(Pattern.quote(extensions[i].substring(1)));
         }

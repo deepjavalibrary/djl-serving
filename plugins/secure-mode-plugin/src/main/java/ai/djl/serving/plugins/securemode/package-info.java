@@ -10,5 +10,5 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-
+/** This package contains classes of the Secure Mode plugin. */
 package ai.djl.serving.plugins.securemode;
