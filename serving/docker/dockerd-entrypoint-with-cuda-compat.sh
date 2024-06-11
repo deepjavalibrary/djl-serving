@@ -80,9 +80,6 @@ if [[ "$1" = "serve" ]]; then
 elif [[ "$1" = "partition" ]] || [[ "$1" = "train" ]]; then
     shift 1
     /usr/bin/python3 /opt/djl/partition/partition.py "$@"
-elif [[ "$1" = "quantize" ]]; then
-    shift 1
-    /usr/bin/python3 /opt/djl/partition/quantize.py "$@"
 else
     eval "$@"
 fi
