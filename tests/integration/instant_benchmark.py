@@ -277,7 +277,7 @@ if __name__ == "__main__":
         command = f"echo \"jobs={json.dumps(json.dumps(list(result.keys())))}\" >> $GITHUB_OUTPUT"
         sp.call(command, shell=True)
         # avoid too long template
-        template = json.dumps(json.dumps(json.dumps(result)))
+        template = json.dumps(json.dumps(result))
         with open("template_tmp.json", "w") as f:
             f.write(f"template={template}")
         command = f"cat template_tmp.json >> $GITHUB_OUTPUT"
