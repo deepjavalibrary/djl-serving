@@ -12,6 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.ModelException;
 import ai.djl.util.Utils;
 
 import com.google.gson.JsonObject;
@@ -88,8 +89,9 @@ public final class SecureModeUtils {
      * Run enabled security checks on untrusted paths.
      *
      * @throws IOException if there is an error scanning the paths
+     * @throws ModelException if a security check fails
      */
-    static void validateSecurity() throws IOException {
+    static void validateSecurity() throws IOException, ModelException {
         checkOptionEnvVars();
         List<String> untrustedPathList =
                 splitCommaSeparatedString(Utils.getenv(UNTRUSTED_CHANNELS_ENV_VAR));
@@ -110,28 +112,19 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Log an error message and fast-fail the program upon a security violation, to avoid any
-     * unexpected behavior or unnecessary runtime.
-     *
-     * @param errorMessage the error message to log
-     */
-    private static void logErrorAndExit(String errorMessage) {
-        logger.error(errorMessage);
-        System.exit(1);
-    }
-
-    /**
      * Check if a disallowed option is set via environment variables. The disallowed value is
      * handled on a per-option basis.
+     *
+     * @throws ModelException if a security check fails
      */
-    private static void checkOptionEnvVars() {
+    private static void checkOptionEnvVars() throws ModelException {
         List<String> securityControls =
                 splitCommaSeparatedString(Utils.getenv(SECURITY_CONTROLS_ENV_VAR));
 
         if (securityControls.contains(TRUST_REMOTE_CODE_CONTROL)) {
             String optionEnvValue = Utils.getenv("OPTION_TRUST_REMOTE_CODE");
             if (optionEnvValue != null && Boolean.parseBoolean(optionEnvValue.trim())) {
-                logErrorAndExit(
+                throw new ModelException(
                         "Setting OPTION_TRUST_REMOTE_CODE to True is prohibited in Secure Mode."
                                 + " Exiting early.");
             }
@@ -142,7 +135,7 @@ public final class SecureModeUtils {
             String djlEnvValue = Utils.getenv("DJL_ENTRY_POINT");
             if ((optionEnvValue != null && optionEnvValue.trim().endsWith(".py"))
                     || (djlEnvValue != null && djlEnvValue.trim().endsWith(".py"))) {
-                logErrorAndExit(
+                throw new ModelException(
                         "Setting custom Python entryPoint using OPTION_ENTRYPOINT or"
                                 + " DJL_ENTRY_POINT is prohibited in Secure Mode. Exiting early.");
             }
@@ -154,8 +147,9 @@ public final class SecureModeUtils {
      *
      * @param pathList list of absolute paths
      * @throws IOException if there is an error scanning the paths
+     * @throws ModelException if a security check fails
      */
-    private static void scanPaths(List<String> pathList) throws IOException {
+    private static void scanPaths(List<String> pathList) throws IOException, ModelException {
         List<String> securityControls =
                 splitCommaSeparatedString(Utils.getenv(SECURITY_CONTROLS_ENV_VAR));
         for (String path : pathList) {
@@ -187,11 +181,12 @@ public final class SecureModeUtils {
      *
      * @param directory the directory to search for requirements.txt file
      * @throws IOException if there an error walking the directory
+     * @throws ModelException if a security check fails
      */
-    private static void scanForRequirementsTxt(Path directory) throws IOException {
+    private static void scanForRequirementsTxt(Path directory) throws IOException, ModelException {
         Path requirementsTxt = lookForFile(directory, "requirements.txt");
         if (requirementsTxt != null) {
-            logErrorAndExit(
+            throw new ModelException(
                     "requirements.txt found at "
                             + requirementsTxt.toString()
                             + ", but is prohibited in Secure Mode. Exiting early.");
@@ -203,10 +198,11 @@ public final class SecureModeUtils {
      *
      * @param directory the directory to search for pickle-based files
      * @throws IOException if there is an error walking the directory
+     * @throws ModelException if a security check fails
      */
-    private static void scanForPickle(Path directory) throws IOException {
+    private static void scanForPickle(Path directory) throws IOException, ModelException {
         if (containsFilesWithExtensions(directory, PICKLE_EXTENSIONS)) {
-            logErrorAndExit(
+            throw new ModelException(
                     "Pickle-based files found in directory "
                             + directory.toString()
                             + ", but only model files are permitted in Secure Mode. Exiting"
@@ -222,8 +218,10 @@ public final class SecureModeUtils {
      * @param directory the directory to search for disallowed options
      * @param option the option to check for
      * @throws IOException if there is an error walking the directory
+     * @throws ModelException if a security check fails
      */
-    private static void scanForDisallowedOption(Path directory, String option) throws IOException {
+    private static void scanForDisallowedOption(Path directory, String option)
+            throws IOException, ModelException {
         String servingPropertiesValue = null;
         // Walk directory for a serving.properties file containing option line
         Path servingPropertiesFile = lookForFile(directory, "serving.properties");
@@ -239,14 +237,14 @@ public final class SecureModeUtils {
         if ("option.trust_remote_code".equals(option)) {
             // The disallowed value is boolean "true"
             if (servingPropertiesValue != null && Boolean.parseBoolean(servingPropertiesValue)) {
-                logErrorAndExit(
+                throw new ModelException(
                         "Setting option.trust_remote_code to True is prohibited in Secure Mode."
                                 + " Exiting early.");
             }
         } else if ("option.entryPoint".equals(option)) {
             // The disallowed value is a .py file
             if (servingPropertiesValue != null && servingPropertiesValue.endsWith(".py")) {
-                logErrorAndExit(
+                throw new ModelException(
                         "Setting option.entryPoint to custom Python script is prohibited in Secure"
                                 + " Mode. Exiting early.");
             }
@@ -261,14 +259,15 @@ public final class SecureModeUtils {
      *
      * @param directory the directory to search for tokenizer_config.json
      * @throws IOException if there is an error walking the directory
+     * @throws ModelException if a security check fails
      */
-    private static void scanForChatTemplate(Path directory) throws IOException {
+    private static void scanForChatTemplate(Path directory) throws IOException, ModelException {
         Path tokenizerConfig = lookForFile(directory, "tokenizer_config.json");
         if (tokenizerConfig != null) {
             try (FileReader fileReader = new FileReader(tokenizerConfig.toString())) {
                 JsonObject jsonObject = JsonParser.parseReader(fileReader).getAsJsonObject();
                 if (jsonObject.has("chat_template")) {
-                    logErrorAndExit(
+                    throw new ModelException(
                             "Jinja chat_template field found in "
                                     + tokenizerConfig.toString()
                                     + ", but is prohibited in Secure Mode. Exiting early.");
