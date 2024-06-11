@@ -131,7 +131,7 @@ jobs:
           --container "${{ inputs.container }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: template
+          name: template-${{ inputs.instance }}
           path: tests/integration/template_tmp.json
     outputs:
       jobs: ${{ steps.generate_matrix.outputs.jobs }}
@@ -187,7 +187,7 @@ jobs:
       - name: Run benchmark job
         working-directory: tests/integration
         run: |
-          python3 instant_benchmark.py --template template/template_tmp.json \
+          python3 instant_benchmark.py --template template-${{ inputs.instance }}/template_tmp.json \
           --job ${{ matrix.job }} --instance ${{ inputs.instance }} \
           --record ${{ inputs.record }}
           
