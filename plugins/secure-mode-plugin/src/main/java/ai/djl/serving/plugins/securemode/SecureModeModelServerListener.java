@@ -12,12 +12,15 @@
  */
 package ai.djl.serving.plugins.securemode;
 
+import ai.djl.Device;
+import ai.djl.ModelException;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.ModelServerListenerAdapter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 class SecureModeModelServerListener extends ModelServerListenerAdapter {
@@ -25,14 +28,28 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(SecureModeModelServerListener.class);
 
-    // private static void foo(ModelInfo<?, ?> model) {
-    //     LOGGER.info("Resolving Draft Model for the Model Configuration...");
+    // @Override
+    // public void onModelDownloaded(ModelInfo<?, ?> model, Path downloadPath) {
+    //     super.onModelDownloaded(model, downloadPath);
+    //     LOGGER.info("MODEL PROPERTIES: {}", model.getProperties());
+    //     LOGGER.info("MODEL URL: {}", model.getModelUrl());
     // }
 
     @Override
-    public void onModelDownloaded(ModelInfo<?, ?> model, Path downloadPath) {
-        super.onModelDownloaded(model, downloadPath);
+    public void onModelLoading(ModelInfo<?, ?> model, Device device) {
+        super.onModelLoading(model, device);
         LOGGER.info("MODEL PROPERTIES: {}", model.getProperties());
         LOGGER.info("MODEL URL: {}", model.getModelUrl());
+        
+        if (SecureModeUtils.isSecureMode()) {
+            try {
+                SecureModeUtils.validateSecurity();
+            } catch (ModelException e) {
+                // TODO figure out is this is appropriate way to handle exceptions
+                throw new RuntimeException("Failed to validate security", e);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to read security file", e);
+            }
+        }
     }
 }

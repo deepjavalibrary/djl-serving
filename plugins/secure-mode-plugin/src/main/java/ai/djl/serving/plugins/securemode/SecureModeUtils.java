@@ -90,7 +90,7 @@ public final class SecureModeUtils {
      * @throws IOException if there is an error scanning the paths
      * @throws ModelException if a security check fails
      */
-    static void validateSecurity() throws IOException, ModelException {
+    public static void validateSecurity() throws IOException, ModelException {
         checkOptionEnvVars();
         List<String> untrustedPathList =
                 splitCommaSeparatedString(Utils.getenv(UNTRUSTED_CHANNELS_ENV_VAR));
