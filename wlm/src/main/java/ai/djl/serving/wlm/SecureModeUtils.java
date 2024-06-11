@@ -38,10 +38,10 @@ public final class SecureModeUtils {
 
     // Platform Secure Mode environment variables – these are protected and can only be set by
     // SageMaker platform
-    private static final String SECURE_MODE_ENV_VAR = "SM_PLATFORM_SECURE_MODE";
-    private static final String TRUSTED_CHANNELS_ENV_VAR = "SM_PLATFORM_TRUSTED_CHANNELS";
-    private static final String UNTRUSTED_CHANNELS_ENV_VAR = "SM_PLATFORM_UNTRUSTED_CHANNELS";
-    private static final String SECURITY_CONTROLS_ENV_VAR = "SM_PLATFORM_SECURITY_CONTROLS";
+    private static final String SECURE_MODE_ENV_VAR = "SAGEMAKER_SECURE_MODE";
+    private static final String TRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_TRUSTED_CHANNELS";
+    private static final String UNTRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_UNTRUSTED_CHANNELS";
+    private static final String SECURITY_CONTROLS_ENV_VAR = "SAGEMAKER_SECURITY_CONTROLS";
 
     // Individual security controls names
     private static final String REQUIREMENTS_TXT_CONTROL = "DISALLOW_REQUIREMENTS_TXT";
