@@ -279,9 +279,7 @@ if __name__ == "__main__":
         # avoid too long template
         template = json.dumps(result)
         with open("template_tmp.json", "w") as f:
-            f.write(f"template={template}")
-        command = f"cat template_tmp.json >> $GITHUB_OUTPUT"
-        sp.call(command, shell=True)
+            f.write(template)
     elif args.template and args.job and args.instance:
         build_running_script(args.template, args.job, args.instance,
                              args.record)
