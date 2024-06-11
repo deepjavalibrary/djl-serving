@@ -166,11 +166,13 @@ def data_container(data: dict):
             else:  # Nightly build
                 data["djlNightly"] = "true"
                 data["image"] = container[:-len("-nightly")]
-        if "text-generation-inference" in container:
+        elif "text-generation-inference" in container:
             data["modelServer"] = "TGI"
             version = container.split(":")[1]
             if not version.startswith("sha"):
                 data["tgiVersion"] = version
+        else:
+            data["image"] = container.split("/", 1)[1]
 
 
 def data_from_model_files(data: dict):
