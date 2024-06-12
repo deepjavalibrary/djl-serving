@@ -15,12 +15,9 @@ from collections import OrderedDict, defaultdict
 
 from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
-from vllm.lora.request import LoRARequest
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
-from djl_python.request_io import Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
-    update_request_cache_with_output, get_lora_request_params, DTYPE_MAPPER,
-    FINISH_REASON_MAPPER, get_engine_args_from_config)
+    update_request_cache_with_output, get_lora_request_params, get_engine_args_from_config)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from typing import List
 
@@ -75,16 +72,12 @@ class VLLMRollingBatch(RollingBatch):
         if "seed" in parameters.keys():
             parameters["seed"] = int(parameters["seed"])
 
-        # if parameters' do_sample is not set, we set temperature=0, to do greedy
-        if "do_sample" not in parameters.keys():
-            is_beam_search = "num_beams" in parameters.keys()
-            is_best_of = "best_of" in parameters.keys(
-            ) and parameters["best_of"] > 1
-            if not (is_beam_search and is_best_of):
-                # if temperature is zero, vLLM does greedy sampling
-                parameters['temperature'] = 0
-        elif not parameters.pop("do_sample", False):
-            parameters["temperature"] = 0
+        # If `do_sample` is not provided, force temperature=0.0, i.e. greedy
+        # else set to user-provided value or default to 1.0
+        if not parameters.pop('do_sample', False):
+            parameters['temperature'] = 0.0
+        else:
+            parameters['temperature'] = parameters.get('temperature', 1.0)
         if "stop_sequences" in parameters.keys():
             parameters["stop"] = parameters.pop("stop_sequences")
         if "ignore_eos_token" in parameters.keys():
