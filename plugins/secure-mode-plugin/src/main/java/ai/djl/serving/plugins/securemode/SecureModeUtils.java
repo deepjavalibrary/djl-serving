@@ -39,17 +39,17 @@ public final class SecureModeUtils {
 
     // Platform Secure Mode environment variables – these are protected and can only be set by
     // SageMaker platform
-    private static final String SECURE_MODE_ENV_VAR = "SAGEMAKER_SECURE_MODE";
-    private static final String TRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_TRUSTED_CHANNELS";
-    private static final String UNTRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_UNTRUSTED_CHANNELS";
-    private static final String SECURITY_CONTROLS_ENV_VAR = "SAGEMAKER_SECURITY_CONTROLS";
+    static final String SECURE_MODE_ENV_VAR = "SAGEMAKER_SECURE_MODE";
+    static final String TRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_TRUSTED_CHANNELS";
+    static final String UNTRUSTED_CHANNELS_ENV_VAR = "SAGEMAKER_UNTRUSTED_CHANNELS";
+    static final String SECURITY_CONTROLS_ENV_VAR = "SAGEMAKER_SECURITY_CONTROLS";
 
     // Individual security controls names
-    private static final String REQUIREMENTS_TXT_CONTROL = "DISALLOW_REQUIREMENTS_TXT";
-    private static final String PICKLE_FILES_CONTROL = "DISALLOW_PICKLE_FILES";
-    private static final String TRUST_REMOTE_CODE_CONTROL = "DISALLOW_TRUST_REMOTE_CODE";
-    private static final String CUSTOM_ENTRYPOINT_CONTROL = "DISALLOW_CUSTOM_ENTRYPOINT";
-    private static final String CHAT_TEMPLATE_CONTROL = "DISALLOW_CHAT_TEMPLATE";
+    static final String REQUIREMENTS_TXT_CONTROL = "DISALLOW_REQUIREMENTS_TXT";
+    static final String PICKLE_FILES_CONTROL = "DISALLOW_PICKLE_FILES";
+    static final String TRUST_REMOTE_CODE_CONTROL = "DISALLOW_TRUST_REMOTE_CODE";
+    static final String CUSTOM_ENTRYPOINT_CONTROL = "DISALLOW_CUSTOM_ENTRYPOINT";
+    static final String CHAT_TEMPLATE_CONTROL = "DISALLOW_CHAT_TEMPLATE";
 
     private static final String[] PICKLE_EXTENSIONS = {".bin", ".pt", ".pth", ".ckpt", ".pkl"};
 
