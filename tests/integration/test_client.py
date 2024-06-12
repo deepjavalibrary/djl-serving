@@ -67,5 +67,10 @@ class TestInputOutput(unittest.TestCase):
         self.assertEqual(res.content, img.tobytes())
 
 
+def run():
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestInputOutput)
+    unittest.TextTestRunner().run(suite)
+
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    run()

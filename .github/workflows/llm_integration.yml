@@ -42,29 +42,65 @@ jobs:
           --fail \
           | jq '.token' | tr -d '"' )
           ./start_instance.sh action_g6 $token djl-serving
+      - name: Create new Inf2.24xl instance
+        id: create_inf2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_inf2 $token djl-serving
+      - name: Create new Inf2.24xl instance
+        id: create_inf2_2
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh action_inf2 $token djl-serving
     outputs:
       gpu_instance_id_1: ${{ steps.create_gpu.outputs.action_g6_instance_id }}
       gpu_instance_id_2: ${{ steps.create_gpu2.outputs.action_g6_instance_id }}
       gpu_instance_id_3: ${{ steps.create_gpu3.outputs.action_g6_instance_id }}
+      inf2_instance_id_1: ${{ steps.create_inf2.outputs.action_inf2_instance_id }}
+      inf2_instance_id_2: ${{ steps.create_inf2_2.outputs.action_inf2_instance_id }}
 
   test:
-    runs-on: [ self-hosted, g6 ]
+    runs-on: [ self-hosted, "${{ matrix.test.instance }}" ]
     timeout-minutes: 60
     needs: create-runners
     strategy:
       fail-fast: false
       matrix:
         test:
-          - TestHfHandler
-          - TestTrtLlmHandler1
-          - TestTrtLlmHandler2
-          - TestSchedulerSingleGPU
-          - TestSchedulerMultiGPU
-          - TestLmiDist1
-          - TestLmiDist2
-          - TestVllm1
-          - TestVllmLora
-          - TestLmiDistLora
+          - test: TestHfHandler
+            instance: g6
+          - test: TestTrtLlmHandler1
+            instance: g6
+          - test: TestTrtLlmHandler2
+            instance: g6
+          - test: TestSchedulerSingleGPU
+            instance: g6
+          - test: TestSchedulerMultiGPU
+            instance: g6
+          - test: TestLmiDist1
+            instance: g6
+          - test: TestLmiDist2
+            instance: g6
+          - test: TestVllm1
+            instance: g6
+          - test: TestVllmLora
+            instance: g6
+          - test: TestLmiDistLora
+            instance: g6
+          - test: TestNeuronx1
+            instance: inf2
+          - test: TestNeuronx2
+            instance: inf2
+          - test: TestNeuronxRollingBatch
+            instance: inf2
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -78,7 +114,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install pytest requests "numpy<2" huggingface_hub
+        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
       - name: Install awscurl
         working-directory: tests/integration
         run: |
@@ -90,7 +126,7 @@ jobs:
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
         run: |
-          pytest -k ${{ matrix.test }} tests.py
+          pytest -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
         run: |
@@ -108,13 +144,68 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: test-${{ matrix.test }}-logs
+          name: test-${{ matrix.test.test }}-logs
           path: tests/integration/all_logs/
+
+  transformers-neuronx-container-unit-tests:
+    runs-on: [ self-hosted, inf2 ]
+    timeout-minutes: 15
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Install pip dependencies
+        run: pip3 install requests numpy pillow wheel
+      - name: Build container name
+        run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
+      - name: Download models and dockers
+        run: |
+          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
+      - name: Run djl_python unit/integration tests on container
+        working-directory: engines/python/setup
+        run: |
+          # Setup
+          pip install setuptools
+          python3 -m setup bdist_wheel
+          mkdir logs
+          docker run -t --rm --network="host" \
+          --name neuron-test \
+          -v $PWD/:/opt/ml/model/ \
+          -w /opt/ml/model \
+          --device=/dev/neuron0:/dev/neuron0 \
+          deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG \
+          /bin/bash -c "'pip install /opt/ml/model/dist/*.whl pytest' && \
+          pytest djl_python/tests/neuron_test_scripts/ | tee logs/results.log"
+          
+          # Cleanup
+          sudo rm -rf TinyLlama .pytest_cache djl_python
+          
+          # Fail on failed tests
+          if grep -F "failed" logs/results.log &>/dev/null; then exit 1; fi
+      - name: On fail step
+        if: ${{ failure() }}
+        working-directory: engines/python/setup
+        run: |
+          cat logs/results.log
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: transformers-neuronx-${{ matrix.arch }}-logs
+          path: engines/python/setup/logs/
 
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, test]
+    needs: [ create-runners, test, transformers-neuronx-container-unit-tests]
     steps:
       - name: Stop all instances
         run: |
@@ -124,4 +215,8 @@ jobs:
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_2 }}
           ./stop_instance.sh $instance_id
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_3 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_1 }}
+          ./stop_instance.sh $instance_id
+          instance_id=${{ needs.create-runners.outputs.inf2_instance_id_2 }}
           ./stop_instance.sh $instance_id

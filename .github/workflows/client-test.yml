@@ -62,7 +62,7 @@ jobs:
           cd tests
           djl-serving -m test::Python=file://$PWD/python &> output.log &
           sleep 15
-          python test_client.py
+          python integration/test_client.py
           jobs
           kill %1
       - name: On failure step
