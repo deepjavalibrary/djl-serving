@@ -33,7 +33,7 @@ public class SecureModePluginTest {
     private static final String TRUSTED_DIR = TEST_FILES_DIR + "trusted/";
     private static final String UNTRUSTED_DIR = TEST_FILES_DIR + "untrusted/";
 
-    // TODO: Make tests more organized & readable
+    // TODO: Refactor tests to improve organization and readability
     // TODO: Add tests for reconcileSources
 
     @BeforeMethod

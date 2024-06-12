@@ -99,14 +99,13 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Handle files from additional model data sources. Currently, this only consists of
-    installing
+     * Handle files from additional model data sources. Currently, this only consists of installing
      * all trusted requirements.txt files. More functionality can be added as needed.
      *
      * @param modelDir the main model directory
      * @throws IOException if there is an error scanning the paths
      */
-    static void reconcileSources(String modelDir) throws IOException {
+    public static void reconcileSources(String modelDir) throws IOException {
         List<String> trustedPathList =
                 splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
         linkAdditionalRequirementsTxt(trustedPathList, Paths.get(modelDir));
@@ -126,8 +125,7 @@ public final class SecureModeUtils {
             String optionEnvValue = Utils.getenv("OPTION_TRUST_REMOTE_CODE");
             if (optionEnvValue != null && Boolean.parseBoolean(optionEnvValue.trim())) {
                 throw new ModelException(
-                        "Setting OPTION_TRUST_REMOTE_CODE to True is prohibited in Secure Mode."
-                                + " Exiting early.");
+                        "Setting OPTION_TRUST_REMOTE_CODE to True is prohibited in Secure Mode.");
             }
         }
         if (securityControls.contains(CUSTOM_ENTRYPOINT_CONTROL)) {
@@ -137,8 +135,9 @@ public final class SecureModeUtils {
             if ((optionEnvValue != null && optionEnvValue.trim().endsWith(".py"))
                     || (djlEnvValue != null && djlEnvValue.trim().endsWith(".py"))) {
                 throw new ModelException(
-                        "Setting custom Python entryPoint using OPTION_ENTRYPOINT or"
-                                + " DJL_ENTRY_POINT is prohibited in Secure Mode. Exiting early.");
+                        "Setting OPTION_ENTRYPOINT or DJL_ENTRY_POINT to a custom Python script is"
+                                + " prohibited in Secure Mode. It must be set to a built-in handler"
+                                + " provided by LMI (i.e. starting with `djl_python`).");
             }
         }
     }
@@ -190,7 +189,7 @@ public final class SecureModeUtils {
             throw new ModelException(
                     "requirements.txt found at "
                             + requirementsTxt.toString()
-                            + ", but is prohibited in Secure Mode. Exiting early.");
+                            + ", but is prohibited in Secure Mode.");
         }
     }
 
@@ -206,8 +205,7 @@ public final class SecureModeUtils {
             throw new ModelException(
                     "Pickle-based files found in directory "
                             + directory.toString()
-                            + ", but only model files are permitted in Secure Mode. Exiting"
-                            + " early.");
+                            + ", but only model files are permitted in Secure Mode.");
         }
     }
 
@@ -239,15 +237,15 @@ public final class SecureModeUtils {
             // The disallowed value is boolean "true"
             if (servingPropertiesValue != null && Boolean.parseBoolean(servingPropertiesValue)) {
                 throw new ModelException(
-                        "Setting option.trust_remote_code to True is prohibited in Secure Mode."
-                                + " Exiting early.");
+                        "Setting option.trust_remote_code to True is prohibited in Secure Mode.");
             }
         } else if ("option.entryPoint".equals(option)) {
             // The disallowed value is a .py file
             if (servingPropertiesValue != null && servingPropertiesValue.endsWith(".py")) {
                 throw new ModelException(
-                        "Setting option.entryPoint to custom Python script is prohibited in Secure"
-                                + " Mode. Exiting early.");
+                        "Setting option.entryPoint to a custom Python script is prohibited in"
+                                + " Secure Mode. It must be set to a handler provided by LMI (i.e."
+                                + " starting with `djl_python`).");
             }
         } else {
             throw new IllegalArgumentException("Invalid disallowed option: " + option);
@@ -272,7 +270,7 @@ public final class SecureModeUtils {
                     throw new ModelException(
                             "Jinja chat_template field found in "
                                     + tokenizerConfig.toString()
-                                    + ", but is prohibited in Secure Mode. Exiting early.");
+                                    + ", but is prohibited in Secure Mode.");
                 }
             } catch (IOException e) {
                 throw new IOException("Error reading tokenizer_config.json", e);

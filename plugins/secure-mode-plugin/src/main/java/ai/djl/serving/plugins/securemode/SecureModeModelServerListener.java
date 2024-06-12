@@ -45,6 +45,12 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
                 LOGGER.error("Error while running Secure Mode checks: ", e);
                 throw new RuntimeException(e);
             }
+            if (model.getProperties().getProperty("option.entryPoint") == null) {
+                LOGGER.error(
+                        "In Secure Mode, option.entryPoint must be explicitly set via"
+                            + " serving.properties or environment variable.");
+                throw new RuntimeException("Secure Mode check failed: entryPoint is not set");
+            }
         }
     }
 }
