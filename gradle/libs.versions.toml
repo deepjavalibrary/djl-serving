@@ -17,6 +17,7 @@ httpcomponents = "4.5.14"
 
 testng = "7.10.2"
 junit = "4.13.2"
+mockito-core = "5.12.0"
 
 [libraries]
 huggingface-tokenizers = { module = "ai.djl.huggingface:tokenizers" }

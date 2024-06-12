@@ -9,7 +9,7 @@ dependencies {
     testImplementation(libs.testng) {
         exclude(group = "junit", module = "junit")
     }
-    testImplementation("org.mockito:mockito-core:5.12.0")
+    testImplementation("org.mockito:mockito-core")
 
 }
 
