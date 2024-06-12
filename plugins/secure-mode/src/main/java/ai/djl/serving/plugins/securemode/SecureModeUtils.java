@@ -13,10 +13,10 @@
 package ai.djl.serving.plugins.securemode;
 
 import ai.djl.ModelException;
+import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +32,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -89,7 +90,7 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Run enabled security checks on untrusted paths.
+     * Runs enabled security checks on untrusted paths.
      *
      * @throws IOException if there is an error scanning the paths
      * @throws ModelException if a security check fails
@@ -102,7 +103,7 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Handle files from additional model data sources. Currently, this only consists of installing
+     * Handles files from additional model data sources. Currently, this only consists of installing
      * all trusted requirements.txt files. More functionality can be added as needed.
      *
      * @param modelUri the main model directory
@@ -232,7 +233,7 @@ public final class SecureModeUtils {
         if (servingPropertiesFile != null) {
             List<String> lines = Files.readAllLines(servingPropertiesFile);
             for (String line : lines) {
-                if (line.toLowerCase().startsWith(option.toLowerCase())) {
+                if (line.toLowerCase(Locale.ROOT).startsWith(option.toLowerCase())) {
                     servingPropertiesValue = line.split("=")[1].trim();
                 }
             }
@@ -240,7 +241,7 @@ public final class SecureModeUtils {
         // Handle disallowed value on a per-option basis
         if ("option.trust_remote_code".equals(option)) {
             // The disallowed value is boolean "true"
-            if (servingPropertiesValue != null && Boolean.parseBoolean(servingPropertiesValue)) {
+            if (Boolean.parseBoolean(servingPropertiesValue)) {
                 throw new ModelException(
                         "Setting option.trust_remote_code to True is prohibited in Secure Mode.");
             }
@@ -270,7 +271,7 @@ public final class SecureModeUtils {
         if (tokenizerConfig != null) {
             try {
                 String content = Files.readString(Paths.get(tokenizerConfig.toString()));
-                JsonObject jsonObject = JsonParser.parseString(content).getAsJsonObject();
+                JsonObject jsonObject = JsonUtils.GSON.fromJson(content, JsonObject.class);
                 if (jsonObject.has("chat_template")) {
                     throw new ModelException(
                             "Jinja chat_template field found in "
@@ -293,11 +294,11 @@ public final class SecureModeUtils {
      */
     private static void linkAdditionalRequirementsTxt(List<String> pathList, Path modelDir)
             throws IOException {
-        // Gather requirements.txts found in trusted paths
+        // Gather requirements.txt found in trusted paths
         List<String> additionalRequirementsTxts = new ArrayList<>();
         for (String path : pathList) {
             Path p = Paths.get(path.trim());
-            if (Files.isDirectory(p) && p != modelDir) {
+            if (Files.isDirectory(p) && !Files.isSameFile(p, modelDir)) {
                 Path requirementsTxt = lookForFile(p, "requirements.txt");
                 if (requirementsTxt != null) {
                     additionalRequirementsTxts.add(requirementsTxt.toString());
@@ -312,7 +313,7 @@ public final class SecureModeUtils {
         if (requirementsTxt == null) {
             requirementsTxt = Files.createFile(modelDir.resolve("requirements.txt"));
         } else {
-            logger.info("Existing requirements.txt found at " + requirementsTxt.toString());
+            logger.info("Existing requirements.txt found at {}", requirementsTxt);
         }
         for (String additionalRequirementsTxt : additionalRequirementsTxts) {
             Files.write(
@@ -352,7 +353,7 @@ public final class SecureModeUtils {
                             .findFirst()
                             .orElse(null);
             if (result != null) {
-                logger.debug("File {} found at path {}", fileName, result.toString());
+                logger.debug("File {} found at path {}", fileName, result);
             } else {
                 logger.debug("File {} not found in {}", fileName, directory);
             }
