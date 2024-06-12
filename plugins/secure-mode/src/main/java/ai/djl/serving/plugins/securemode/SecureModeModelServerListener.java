@@ -17,16 +17,10 @@ import ai.djl.ModelException;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.ModelServerListenerAdapter;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 
 class SecureModeModelServerListener extends ModelServerListenerAdapter {
-
-    private static final Logger logger =
-            LoggerFactory.getLogger(SecureModeModelServerListener.class);
 
     @Override
     public void onModelLoading(ModelInfo<?, ?> model, Device device) {
@@ -45,7 +39,7 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
             if (model.getProperties().getProperty("option.entryPoint") == null) {
                 throw new IllegalConfigurationException(
                         "In Secure Mode, option.entryPoint must be explicitly set via"
-                            + " serving.properties or environment variable.");
+                                + " serving.properties or environment variable.");
             }
         }
     }

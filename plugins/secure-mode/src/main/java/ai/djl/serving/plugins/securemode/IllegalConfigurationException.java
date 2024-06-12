@@ -12,7 +12,7 @@
  */
 package ai.djl.serving.plugins.securemode;
 
-/** Thrown when Secure Mode encounters a violation during security checks */
+/** Thrown when Secure Mode encounters a violation during security checks. */
 public class IllegalConfigurationException extends RuntimeException {
 
     static final long serialVersionUID = 1L;
