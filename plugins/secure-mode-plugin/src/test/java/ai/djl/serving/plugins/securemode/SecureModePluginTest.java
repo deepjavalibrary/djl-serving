@@ -66,8 +66,6 @@ public class SecureModePluginTest {
         Files.write(file.toPath(), content.getBytes());
     }
 
-    /****************************************************/
-
     @Test
     void testSecureModeEnabled() throws IOException {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
@@ -112,8 +110,6 @@ public class SecureModePluginTest {
             // expect exception
         }
     }
-
-    /****************************************************/
 
     private void mockSecurityEnv(String securityControl, String filePath, String fileContent)
             throws IOException, ModelException {

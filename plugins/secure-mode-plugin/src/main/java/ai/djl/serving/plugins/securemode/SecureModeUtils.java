@@ -284,7 +284,7 @@ public final class SecureModeUtils {
      *
      * @param pathList list of absolute paths
      * @param modelDir path to model_dir
-     * @throws IOException
+     * @throws IOException if there is an error finding requirements.txt files
      */
     private static void linkAdditionalRequirementsTxt(List<String> pathList, Path modelDir)
             throws IOException {
