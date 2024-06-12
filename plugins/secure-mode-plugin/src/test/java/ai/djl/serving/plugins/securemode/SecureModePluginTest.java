@@ -15,15 +15,18 @@ package ai.djl.serving.plugins.securemode;
 import ai.djl.ModelException;
 import ai.djl.util.Utils;
 
+import org.apache.commons.io.FileUtils;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 /** Unit tests for the Secure Mode Plugin. */
@@ -37,33 +40,30 @@ public class SecureModePluginTest {
     // TODO: Add tests for reconcileSources
 
     @BeforeMethod
-    private void setUp() {
-        deleteTestFiles(new File(TEST_FILES_DIR));
+    private void setUp() throws IOException {
+        FileUtils.deleteDirectory(new File(TEST_FILES_DIR));
     }
 
     @AfterMethod
-    private void tearDown() {
-        deleteTestFiles(new File(TEST_FILES_DIR));
+    private void tearDown() throws IOException {
+        FileUtils.deleteDirectory(new File(TEST_FILES_DIR));
     }
 
-    private void deleteTestFiles(File directory) {
-        if (directory.exists()) {
-            File[] files = directory.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    file.delete();
-                }
-            }
-            directory.delete();
-        }
+    @AfterClass
+    private void cleanup() throws IOException {
+        FileUtils.deleteDirectory(new File(TEST_FILES_DIR));
     }
 
     private void createFileWithContent(String fileName, String content) throws IOException {
         File file = new File(fileName);
-        if (!file.getParentFile().exists()) {
-            file.getParentFile().mkdirs();
+        if (file.exists()) {
+            System.err.println("File already exists: " + file);
+            return;
         }
-        Files.write(file.toPath(), content.getBytes());
+        if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
+            throw new IOException("Failed to create parent directories for " + file);
+        }
+        Files.write(file.toPath(), content.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -108,6 +108,7 @@ public class SecureModePluginTest {
 
             boolean result = SecureModeUtils.isSecureMode();
             // expect exception
+            Assert.assertFalse(result);
         }
     }
 
@@ -230,7 +231,7 @@ public class SecureModePluginTest {
                     .thenReturn(UNTRUSTED_DIR);
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
-                    .thenReturn(SecureModeUtils.TRUST_REMOTE_CODE_CONTROL);
+                    .thenReturn(SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL);
             mockedUtils.when(() -> Utils.getenv("OPTION_ENTRYPOINT")).thenReturn("model.py");
 
             SecureModeUtils.validateSecurity();
@@ -251,7 +252,7 @@ public class SecureModePluginTest {
                     .thenReturn(UNTRUSTED_DIR);
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
-                    .thenReturn(SecureModeUtils.TRUST_REMOTE_CODE_CONTROL);
+                    .thenReturn(SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL);
             mockedUtils.when(() -> Utils.getenv("DJL_ENTRY_POINT")).thenReturn("model.py");
 
             SecureModeUtils.validateSecurity();
