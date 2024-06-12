@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** A class for utils related to SageMaker Secure Mode. */
@@ -55,7 +54,7 @@ public final class SecureModeUtils {
     static final String CUSTOM_ENTRYPOINT_CONTROL = "DISALLOW_CUSTOM_ENTRYPOINT";
     static final String CHAT_TEMPLATE_CONTROL = "DISALLOW_CHAT_TEMPLATE";
 
-    private static final String[] PICKLE_EXTENSIONS = {".bin", ".pt", ".pth", ".ckpt", ".pkl"};
+    private static final String PICKLE_EXTENSIONS_REGEX = ".*\\.(?i:bin|pt|pth|ckpt|pkl)$";
 
     private static final Logger logger = LoggerFactory.getLogger(SecureModeUtils.class);
 
@@ -98,7 +97,7 @@ public final class SecureModeUtils {
     public static void validateSecurity() throws IOException, ModelException {
         checkOptionEnvVars();
         List<String> untrustedPathList =
-                splitCommaSeparatedString(Utils.getenv(UNTRUSTED_CHANNELS_ENV_VAR));
+                Arrays.asList(Utils.getenv(UNTRUSTED_CHANNELS_ENV_VAR).split("\\s*,\\s*"));
         scanPaths(untrustedPathList);
     }
 
@@ -112,7 +111,7 @@ public final class SecureModeUtils {
      */
     public static void reconcileSources(String modelUri) throws IOException, URISyntaxException {
         List<String> trustedPathList =
-                splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
+                Arrays.asList(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR).split("\\s*,\\s*"));
         Path modelDir = Paths.get(new URI(modelUri));
         linkAdditionalRequirementsTxt(trustedPathList, modelDir);
     }
@@ -125,7 +124,7 @@ public final class SecureModeUtils {
      */
     private static void checkOptionEnvVars() throws ModelException {
         List<String> securityControls =
-                splitCommaSeparatedString(Utils.getenv(SECURITY_CONTROLS_ENV_VAR));
+                Arrays.asList(Utils.getenv(SECURITY_CONTROLS_ENV_VAR).split("\\s*,\\s*"));
 
         if (securityControls.contains(TRUST_REMOTE_CODE_CONTROL)) {
             String optionEnvValue = Utils.getenv("OPTION_TRUST_REMOTE_CODE");
@@ -157,7 +156,7 @@ public final class SecureModeUtils {
      */
     private static void scanPaths(List<String> pathList) throws IOException, ModelException {
         List<String> securityControls =
-                splitCommaSeparatedString(Utils.getenv(SECURITY_CONTROLS_ENV_VAR));
+                Arrays.asList(Utils.getenv(SECURITY_CONTROLS_ENV_VAR).split("\\s*,\\s*"));
         for (String path : pathList) {
             Path p = Paths.get(path.trim());
             if (Files.isDirectory(p)) {
@@ -207,7 +206,18 @@ public final class SecureModeUtils {
      * @throws ModelException if a security check fails
      */
     private static void scanForPickle(Path directory) throws IOException, ModelException {
-        if (containsFilesWithExtensions(directory, PICKLE_EXTENSIONS)) {
+        Pattern pattern = Pattern.compile(PICKLE_EXTENSIONS_REGEX);
+        boolean pickleFound = false;
+
+        try (Stream<Path> stream = Files.walk(directory)) {
+            pickleFound =
+                    stream.anyMatch(
+                            path -> {
+                                Matcher matcher = pattern.matcher(path.toString());
+                                return matcher.matches();
+                            });
+        }
+        if (pickleFound) {
             throw new ModelException(
                     "Pickle-based files found in directory "
                             + directory.toString()
@@ -324,20 +334,6 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Given an input string, split it into a list of strings using a comma as a delimiter and
-     * trimming whitespace.
-     *
-     * @param input a string containing a comma-separated list of strings
-     * @return a list of strings
-     */
-    private static List<String> splitCommaSeparatedString(String input) {
-        if (input == null || input.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return Arrays.stream(input.split(",")).map(String::trim).collect(Collectors.toList());
-    }
-
-    /**
      * Walk a directory for a file with the given name.
      *
      * @param directory directory to walk
@@ -358,39 +354,6 @@ public final class SecureModeUtils {
                 logger.debug("File {} not found in {}", fileName, directory);
             }
             return result;
-        }
-    }
-
-    /**
-     * Scan a directory for any files with the given extensions.
-     *
-     * @param directory directory to check
-     * @param extensions file extensions to look for
-     * @return true if any file with any of the given extensions is found in the directory, false
-     *     otherwise
-     * @throws IOException if there is an error walking the directory
-     */
-    private static boolean containsFilesWithExtensions(Path directory, String[] extensions)
-            throws IOException {
-        // Create a regex pattern to match any of the extensions
-        StringBuilder patternBuilder = new StringBuilder();
-        patternBuilder.append(".*\\.(");
-        for (int i = 0; i < extensions.length; i++) {
-            if (i > 0) {
-                patternBuilder.append('|');
-            }
-            patternBuilder.append(Pattern.quote(extensions[i].substring(1)));
-        }
-        patternBuilder.append(")$");
-
-        Pattern pattern = Pattern.compile(patternBuilder.toString(), Pattern.CASE_INSENSITIVE);
-
-        try (Stream<Path> stream = Files.walk(directory)) {
-            return stream.anyMatch(
-                    path -> {
-                        Matcher matcher = pattern.matcher(path.toString());
-                        return matcher.matches();
-                    });
         }
     }
 }
