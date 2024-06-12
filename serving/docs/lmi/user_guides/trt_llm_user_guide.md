@@ -43,7 +43,7 @@ option.model_id=<your model id>
 option.max_num_tokens=50000
 ```
 
-You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#option-1-configuration---servingproperties) to deploy a model with serving.properties configuration on SageMaker.
 
 ### environment variables
 
@@ -55,7 +55,7 @@ OPTION_ROLLING_BATCH=trtllm
 OPTION_MAX_NUM_TOKENS=50000
 ````
 
-You can follow [this example](../deployment_guide/deploying-your-endpoint.md#configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
+You can follow [this example](../deployment_guide/deploying-your-endpoint.md#option-2-configuration---environment-variables) to deploy a model with environment variable configuration on SageMaker.
 
 
 ### Where to find `max_num_tokens` number?
