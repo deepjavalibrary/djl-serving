@@ -161,7 +161,7 @@ public final class SecureModeUtils {
             Path p = Paths.get(path.trim());
             if (Files.isDirectory(p)) {
                 if (securityControls.contains(REQUIREMENTS_TXT_CONTROL)) {
-                    scanForRequirementsTxt(p);
+                    scanForDisallowedFile(p, "requirements.txt");
                 }
                 if (securityControls.contains(PICKLE_FILES_CONTROL)) {
                     scanForPickle(p);
@@ -171,6 +171,7 @@ public final class SecureModeUtils {
                 }
                 if (securityControls.contains(CUSTOM_ENTRYPOINT_CONTROL)) {
                     scanForDisallowedOption(p, "option.entryPoint");
+                    scanForDisallowedFile(p, "model.py");
                 }
                 if (securityControls.contains(CHAT_TEMPLATE_CONTROL)) {
                     scanForChatTemplate(p);
@@ -182,18 +183,22 @@ public final class SecureModeUtils {
     }
 
     /**
-     * Search for a requirements.txt file in the directory, and fast-fail if found.
+     * Search for a prohibited file in the directory, and fast-fail if found.
      *
-     * @param directory the directory to search for requirements.txt file
-     * @throws IOException if there an error walking the directory
+     * @param directory the directory to search for the file
+     * @param fileName the name of the file to search for
+     * @throws IOException if there is an error walking the directory
      * @throws ModelException if a security check fails
      */
-    private static void scanForRequirementsTxt(Path directory) throws IOException, ModelException {
-        Path requirementsTxt = lookForFile(directory, "requirements.txt");
-        if (requirementsTxt != null) {
+    private static void scanForDisallowedFile(Path directory, String fileName)
+            throws IOException, ModelException {
+        Path filePath = lookForFile(directory, fileName);
+        if (filePath != null) {
             throw new ModelException(
-                    "requirements.txt found at "
-                            + requirementsTxt.toString()
+                    "File "
+                            + fileName
+                            + " found at "
+                            + filePath.toString()
                             + ", but is prohibited in Secure Mode.");
         }
     }

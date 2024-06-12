@@ -159,7 +159,7 @@ public class SecureModePluginTest {
     }
 
     @Test(expectedExceptions = ModelException.class)
-    void testUntrustedEntryPointPy() throws IOException, ModelException {
+    void testUntrustedEntryPointPyProps() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
                 UNTRUSTED_DIR + "serving.properties",
@@ -167,11 +167,17 @@ public class SecureModePluginTest {
     }
 
     @Test
-    void testUntrustedEntryPointDJL() throws IOException, ModelException {
+    void testUntrustedEntryPointDJLProps() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
                 UNTRUSTED_DIR + "serving.properties",
                 "option.entryPoint=djl_python.huggingface");
+    }
+
+    @Test(expectedExceptions = ModelException.class)
+    void testUntrustedEntryPointPyFile() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL, UNTRUSTED_DIR + "model.py", "foo");
     }
 
     @Test(expectedExceptions = ModelException.class)
