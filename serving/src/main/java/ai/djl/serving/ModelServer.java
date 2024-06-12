@@ -505,7 +505,7 @@ public class ModelServer {
         Path path = Paths.get(modelId);
         if (Files.exists(path)) {
             // modelId point to a local file
-            return modelId;
+            return mapModelUrl(path);
         }
 
         // TODO: Download the full model from HF
