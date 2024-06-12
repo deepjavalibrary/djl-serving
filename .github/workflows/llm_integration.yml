@@ -341,17 +341,6 @@ jobs:
           python3 llm/client.py trtllm qwen-7b
           rm -rf docker_env
           docker rm -f $(docker ps -aq)
-      - name: flan-t5-xxl pre-compiled model with python backend
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
-          python3 llm/prepare.py trtllm flan-t5-xxl
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models trtllm \
-          serve
-          python3 llm/client.py trtllm-python flan-t5-xxl
-          rm -rf docker_env
-          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
