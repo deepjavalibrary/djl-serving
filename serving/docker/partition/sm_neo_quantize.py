@@ -37,7 +37,6 @@ class NeoQuantizationService():
         self.compiler_flags: dict = None
 
         env = get_neo_env_vars()
-        #self.NEO_COMPILER_OPTIONS: Final[str] = env[0]
         self.INPUT_MODEL_DIRECTORY: Final[str] = env[1]
         self.OUTPUT_MODEL_DIRECTORY: Final[str] = env[2]
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
@@ -61,20 +60,19 @@ class NeoQuantizationService():
         PropertiesManager expects these attributes to be defined to be initialized.
         """
         self.args.save_mp_checkpoint_path = self.OUTPUT_MODEL_DIRECTORY
-        self.args.engine = "MPI"
-        self.args.quantize = "awq"
         num_gpus = torch.cuda.device_count()
         self.args.tensor_parallel_degree = num_gpus
-        # If skip_copy is not enabled, outputted configs are overwritten, and deployment fails.
-        self.args.skip_copy = True
+        self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
         self.args.model_id = None
+        self.args.quantize = None
 
     def construct_properties_manager(self):
         """
         Factory method used to construct a QuantizationPropertiesManager from
         given serving.properties
         """
-        self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
+        # Default to awq quantization
+        os.environ['OPTION_QUANTIZE'] = 'awq'
         logging.debug("Constructing PropertiesManager from "
                       f"serving.properties\nargs:{self.args}\n")
         self.properties_manager = PropertiesManager(self.args)

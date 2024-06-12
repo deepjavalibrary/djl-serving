@@ -3,9 +3,12 @@ import json
 import glob
 import zipfile
 import tempfile
+import logging
 
 MASTER_ADDR = "127.0.0.1"
 MASTER_PORT = 29761
+
+from transformers import AutoConfig, AutoTokenizer
 
 
 def get_python_executable():
@@ -85,3 +88,39 @@ def load_properties(properties_dir):
                 value = value.strip()
                 properties[key] = value
     return properties
+
+
+def update_kwargs_with_env_vars(kwargs):
+    env_vars = os.environ
+    for key, value in env_vars.items():
+        if key.startswith("OPTION_"):
+            key = key.lower()
+            key = "option." + key[7:]
+            if key == "option.entrypoint":
+                key = "option.entryPoint"
+            kwargs.setdefault(key, value)
+    return kwargs
+
+
+def read_hf_model_config(model_config_path: str, hf_configs):
+    try:
+        model_config = AutoConfig.from_pretrained(
+            model_config_path,
+            trust_remote_code=hf_configs.trust_remote_code,
+            revision=hf_configs.revision)
+        return model_config
+    except Exception as e:
+        logging.error(
+            f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
+            f"This is required for loading huggingface models")
+        raise e
+
+
+def init_hf_tokenizer(model_id_or_path: str, hf_configs):
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_id_or_path,
+        padding_size="left",
+        trust_remote_code=hf_configs.trust_remote_code,
+        revision=hf_configs.revision,
+    )
+    return tokenizer

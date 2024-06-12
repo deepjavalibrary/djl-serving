@@ -51,7 +51,6 @@ class HuggingFaceProperties(Properties):
     quantize: Optional[HFQuantizeMethods] = None
     low_cpu_mem_usage: Optional[bool] = False
     disable_flash_attn: Optional[bool] = True
-    save_mp_checkpoint_path: Optional[str] = None
 
     device: Optional[str] = None
     kwargs: Optional[dict] = {}

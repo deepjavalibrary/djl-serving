@@ -17,7 +17,8 @@ import torch
 import requests
 
 # Properties to exclude while generating serving.properties
-from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir, load_properties
+from utils import (is_engine_mpi_mode, get_engine_configs, get_download_dir,
+                   load_properties, update_kwargs_with_env_vars)
 
 EXCLUDE_PROPERTIES = [
     'option.model_id', 'option.save_mp_checkpoint_path', 'model_dir',
@@ -32,7 +33,8 @@ class PropertiesManager(object):
     def __init__(self, args, **kwargs):
         self.entry_point_url = None
         self.properties_dir = args.properties_dir
-        self.properties = load_properties(self.properties_dir)
+        self.properties = update_kwargs_with_env_vars({})
+        self.properties |= (load_properties(self.properties_dir))
         self.skip_copy = args.skip_copy
 
         if args.model_id:
@@ -66,7 +68,8 @@ class PropertiesManager(object):
         if 'model_dir' in self.properties:
             model_dir = self.properties['model_dir']
             model_files = glob.glob(os.path.join(model_dir, '*.bin'))
-            model_files.append(glob.glob(os.path.join(model_dir, '*.safetensors')))
+            model_files.append(
+                glob.glob(os.path.join(model_dir, '*.safetensors')))
             if not model_files:
                 raise ValueError(
                     f'No .bin or .safetensors files found in the dir: {model_dir}'
@@ -75,8 +78,8 @@ class PropertiesManager(object):
             self.properties['model_dir'] = self.properties_dir
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
-            model_files.append(glob.glob(
-                os.path.join(self.properties_dir, '*.safetensors')))
+            model_files.append(
+                glob.glob(os.path.join(self.properties_dir, '*.safetensors')))
             if model_files:
                 self.properties['model_dir'] = self.properties_dir
             else:
@@ -156,16 +159,10 @@ class PropertiesManager(object):
                     self.properties['option.entryPoint'] = 'model.py'
                 else:
                     engine = self.properties.get('engine')
-                    if engine is None:
+                    if quantize:
+                        pass
+                    elif engine is None:
                         raise ValueError("Please specify engine")
-                    elif quantize:
-                        if engine.lower() == "mpi":
-                            entry_point = "djl_python.huggingface"
-                            #self.properties['option.mpi_mode'] = "True"
-                        else:
-                            raise ValueError(
-                                f"Invalid engine: {engine}. Quantization only supports MPI engine"
-                            )
                     elif engine.lower() == "deepspeed":
                         entry_point = "djl_python.deepspeed"
                     elif engine.lower() == "python":

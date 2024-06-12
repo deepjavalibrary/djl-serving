@@ -24,7 +24,9 @@ import utils
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
 
-from utils import get_partition_cmd, extract_python_jar, get_python_executable, get_download_dir
+from utils import (get_partition_cmd, extract_python_jar,
+                   get_python_executable, get_download_dir,
+                   read_hf_model_config, init_hf_tokenizer)
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -228,6 +230,48 @@ class PartitionService(object):
             if entry_point_file:
                 os.remove(os.path.join(saved_checkpoints_dir, 'model.py'))
 
+    def run_quantization(self):
+        quant_method = self.properties['option.quantize']
+        if quant_method == 'awq':
+            logging.info("Running AutoAWQ quantization")
+            self.autoawq_quantize()
+            self.properties_manager.generate_properties_file()
+            self.upload_checkpoints_to_s3()
+        else:
+            raise Exception(f"Invalid quantization method: {quant_method}")
+
+    def autoawq_quantize(self):
+        """
+        Quantizes model using AutoAWQ. Saves output to save_mp_checkpoint_path.
+        """
+        from awq import AutoAWQForCausalLM
+        sys.path.append(PYTHON_CACHE_DIR)
+        from djl_python.properties_manager.hf_properties import HuggingFaceProperties
+
+        logging.info(f"Properties: {self.properties}")
+        hf_configs = HuggingFaceProperties(**self.properties)
+        model_config = read_hf_model_config(hf_configs.model_id_or_path,
+                                            hf_configs)
+        tokenizer = init_hf_tokenizer(hf_configs.model_id_or_path, hf_configs)
+
+        # Hard-coding these options for now. If vLLM continues to prioritize
+        # AutoAWQ we will expose these options to customers in the future.
+        quant_config = {
+            "zero_point": True,
+            "q_group_size": 128,
+            "w_bit": 4,
+            "version": "GEMM"
+        }
+        logging.info(f"Model loading kwargs: {hf_configs.kwargs}")
+        awq_model = AutoAWQForCausalLM.from_pretrained(
+            hf_configs.model_id_or_path, **hf_configs.kwargs)
+        awq_model.quantize(tokenizer, quant_config=quant_config)
+
+        output_path = self.properties.save_mp_checkpoint_path
+        logging.info(f"Saving model and tokenizer to: {output_path}")
+        awq_model.save_quantized(output_path)
+        tokenizer.save_pretrained(output_path)
+
 
 def main():
     logging.basicConfig(stream=sys.stdout,
@@ -280,7 +324,10 @@ def main():
     extract_python_jar(PYTHON_CACHE_DIR)
 
     service = PartitionService(properties_manager)
-    service.run_partition()
+    if properties_manager.properties.get('option.quantize'):
+        service.run_quantization()
+    else:
+        service.run_partition()
 
 
 if __name__ == "__main__":
