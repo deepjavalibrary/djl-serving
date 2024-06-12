@@ -128,7 +128,14 @@ class LmiDistRollingBatch(RollingBatch):
             parameters["use_beam_search"] = True
         if parameters.pop("decoder_input_details", False):
             parameters["prompt_logprobs"] = 1
-        parameters["logprobs"] = parameters.get("logprobs", 1)
+        if "best_of" in parameters.keys():
+            # if n is not explicitly set, we return `best_of` values sequences.
+            if "n" not in "best_of":
+                parameters["n"] = parameters["best_of"]
+        if "top_n_tokens" in parameters.keys():
+            parameters["logprobs"] = parameters.pop("top_n_tokens")
+        else:
+            parameters["logprobs"] = parameters.get("logprobs", 1)
         parameters = filter_unused_generation_params(
             parameters,
             LMI_DIST_GENERATION_PARAMS,

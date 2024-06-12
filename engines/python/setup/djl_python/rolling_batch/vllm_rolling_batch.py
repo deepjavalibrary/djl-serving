@@ -83,7 +83,7 @@ class VLLMRollingBatch(RollingBatch):
             if not (is_beam_search and is_best_of):
                 # if temperature is zero, vLLM does greedy sampling
                 parameters['temperature'] = 0
-        elif parameters.pop("do_sample"):
+        elif not parameters.pop("do_sample", False):
             parameters["temperature"] = 0
         if "stop_sequences" in parameters.keys():
             parameters["stop"] = parameters.pop("stop_sequences")
@@ -94,7 +94,16 @@ class VLLMRollingBatch(RollingBatch):
             parameters["use_beam_search"] = True
         if parameters.pop("decoder_input_details", False):
             parameters["prompt_logprobs"] = 1
-        parameters["logprobs"] = parameters.get("logprobs", 1)
+
+        # if n is not explicitly set when best_of is set, we return `best_of` values sequences for tgi compatibility.
+        if "best_of" in parameters.keys():
+            if "n" not in "best_of":
+                parameters["n"] = parameters["best_of"]
+
+        if "top_n_tokens" in parameters.keys():
+            parameters["logprobs"] = parameters.pop("top_n_tokens")
+        else:
+            parameters["logprobs"] = parameters.get("logprobs", 1)
         parameters = filter_unused_generation_params(parameters,
                                                      VLLM_GENERATION_PARAMS,
                                                      "vllm",
