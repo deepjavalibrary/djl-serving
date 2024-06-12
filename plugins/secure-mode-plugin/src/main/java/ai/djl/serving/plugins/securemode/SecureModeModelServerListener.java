@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
 
 class SecureModeModelServerListener extends ModelServerListenerAdapter {
 
@@ -40,15 +39,17 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
         super.onModelLoading(model, device);
         LOGGER.info("MODEL PROPERTIES: {}", model.getProperties());
         LOGGER.info("MODEL URL: {}", model.getModelUrl());
-        
+
         if (SecureModeUtils.isSecureMode()) {
             try {
                 SecureModeUtils.validateSecurity();
             } catch (ModelException e) {
                 // TODO figure out is this is appropriate way to handle exceptions
-                throw new RuntimeException("Failed to validate security", e);
+                LOGGER.error("Secure Mode check failed: ", e);
+                throw new RuntimeException(e);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to read security file", e);
+                LOGGER.error("Error while running Secure Mode checks: ", e);
+                throw new RuntimeException(e);
             }
         }
     }

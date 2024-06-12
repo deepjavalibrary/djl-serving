@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** A class for utils related to SageMaker Secure Mode. */
@@ -319,7 +320,8 @@ public final class SecureModeUtils {
     // }
 
     /**
-     * Given an input string, split it into a list of strings using a comma as a delimiter.
+     * Given an input string, split it into a list of strings using a comma as a delimiter and
+     * trimming whitespace.
      *
      * @param input a string containing a comma-separated list of strings
      * @return a list of strings
@@ -328,8 +330,7 @@ public final class SecureModeUtils {
         if (input == null || input.isEmpty()) {
             return new ArrayList<>();
         }
-        String[] parts = input.split("\\s*,\\s*");
-        return new ArrayList<>(Arrays.asList(parts));
+        return Arrays.stream(input.split(",")).map(String::trim).collect(Collectors.toList());
     }
 
     /**

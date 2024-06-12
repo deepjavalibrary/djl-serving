@@ -12,10 +12,6 @@
  */
 package ai.djl.serving.plugins.securemode;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 /** Unit tests for the Secure Mode Plugin. */
-public class SecureModePluginTest {
-    
-}
+public class SecureModePluginTest {}
