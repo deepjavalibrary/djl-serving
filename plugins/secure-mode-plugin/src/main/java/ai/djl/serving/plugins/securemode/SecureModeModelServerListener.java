@@ -25,14 +25,14 @@ import java.net.URISyntaxException;
 
 class SecureModeModelServerListener extends ModelServerListenerAdapter {
 
-    private static final Logger LOGGER =
+    private static final Logger logger =
             LoggerFactory.getLogger(SecureModeModelServerListener.class);
 
     @Override
     public void onModelLoading(ModelInfo<?, ?> model, Device device) {
         super.onModelLoading(model, device);
-        LOGGER.info("MODEL PROPERTIES: {}", model.getProperties());
-        LOGGER.info("MODEL URL: {}", model.getModelUrl());
+        logger.info("MODEL PROPERTIES: {}", model.getProperties());
+        logger.info("MODEL URL: {}", model.getModelUrl());
 
         if (SecureModeUtils.isSecureMode()) {
             try {
@@ -40,14 +40,14 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
                 SecureModeUtils.reconcileSources(model.getModelUrl());
             } catch (ModelException e) {
                 // TODO figure out is this is proper for exceptions
-                LOGGER.error("Secure Mode check failed: ", e);
+                logger.error("Secure Mode check failed: ", e);
                 throw new RuntimeException(e);
             } catch (IOException | URISyntaxException e) {
-                LOGGER.error("Error while running Secure Mode checks: ", e);
+                logger.error("Error while running Secure Mode checks: ", e);
                 throw new RuntimeException(e);
             }
             if (model.getProperties().getProperty("option.entryPoint") == null) {
-                LOGGER.error(
+                logger.error(
                         "In Secure Mode, option.entryPoint must be explicitly set via"
                                 + " serving.properties or environment variable.");
                 throw new RuntimeException("Secure Mode check failed: entryPoint is not set");

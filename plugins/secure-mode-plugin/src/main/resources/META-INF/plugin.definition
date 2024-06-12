@@ -1,2 +1,2 @@
-name=secure-mode-plugin
+name=secure-mode
 export=ai.djl.serving.plugins.securemode.SecureModePlugin

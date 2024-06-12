@@ -91,7 +91,7 @@ tasks {
             ":plugins:management-console:copyJar",
             ":plugins:plugin-management-plugin:copyJar",
             ":plugins:static-file-plugin:copyJar",
-            ":plugins:secure-mode-plugin:copyJar"
+            ":plugins:secure-mode:copyJar"
         )
     }
 
@@ -102,7 +102,7 @@ tasks {
             ":plugins:management-console:copyJar",
             ":plugins:plugin-management-plugin:copyJar",
             ":plugins:static-file-plugin:copyJar",
-            ":plugins:secure-mode-plugin:copyJar"
+            ":plugins:secure-mode:copyJar"
         )
     }
 
