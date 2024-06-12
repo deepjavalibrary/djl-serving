@@ -23,15 +23,11 @@ from djl_python.inputs import Input
 from djl_python.service_loader import load_model_service
 
 PARTITION_HANDLER = "partition"
-QUANTIZATION_HANDLER = "quantize"
 
 
 def invoke_partition(properties):
     inputs = Input()
-    if properties.get("quantize"):
-        handler = QUANTIZATION_HANDLER
-    else:
-        handler = properties.get("partition_handler", PARTITION_HANDLER)
+    handler = properties.get("partition_handler", PARTITION_HANDLER)
     inputs.properties = properties
 
     try:
