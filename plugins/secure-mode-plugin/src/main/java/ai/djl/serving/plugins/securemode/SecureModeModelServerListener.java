@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 class SecureModeModelServerListener extends ModelServerListenerAdapter {
 
@@ -41,7 +42,7 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
                 // TODO figure out is this is proper for exceptions
                 LOGGER.error("Secure Mode check failed: ", e);
                 throw new RuntimeException(e);
-            } catch (IOException e) {
+            } catch (IOException | URISyntaxException e) {
                 LOGGER.error("Error while running Secure Mode checks: ", e);
                 throw new RuntimeException(e);
             }

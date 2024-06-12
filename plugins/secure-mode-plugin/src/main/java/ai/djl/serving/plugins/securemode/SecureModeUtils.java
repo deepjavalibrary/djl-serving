@@ -22,6 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -102,13 +105,15 @@ public final class SecureModeUtils {
      * Handle files from additional model data sources. Currently, this only consists of installing
      * all trusted requirements.txt files. More functionality can be added as needed.
      *
-     * @param modelDir the main model directory
+     * @param modelUri the main model directory
      * @throws IOException if there is an error scanning the paths
+     * @throws URISyntaxException if modelUri is invalid
      */
-    public static void reconcileSources(String modelDir) throws IOException {
+    public static void reconcileSources(String modelUri) throws IOException, URISyntaxException {
         List<String> trustedPathList =
                 splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
-        linkAdditionalRequirementsTxt(trustedPathList, Paths.get(modelDir));
+        Path modelDir = Paths.get(new URI(modelUri));
+        linkAdditionalRequirementsTxt(trustedPathList, modelDir);
     }
 
     /**
@@ -312,7 +317,7 @@ public final class SecureModeUtils {
         for (String additionalRequirementsTxt : additionalRequirementsTxts) {
             Files.write(
                     requirementsTxt,
-                    ("-r " + additionalRequirementsTxt + "\n").getBytes(),
+                    ("-r " + additionalRequirementsTxt + "\n").getBytes(StandardCharsets.UTF_8),
                     StandardOpenOption.APPEND);
         }
     }
