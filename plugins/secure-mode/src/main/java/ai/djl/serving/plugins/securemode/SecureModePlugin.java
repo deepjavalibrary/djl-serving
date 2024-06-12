@@ -24,7 +24,9 @@ public class SecureModePlugin implements RequestHandler<Void> {
 
     /** Constructs a new {@code SecureModePlugin} instance. */
     public SecureModePlugin() {
-        EventManager.getInstance().addListener(new SecureModeModelServerListener());
+        if (SecureModeUtils.isSecureMode()) {
+            EventManager.getInstance().addListener(new SecureModeModelServerListener());
+        }
     }
 
     /** {@inheritDoc} */

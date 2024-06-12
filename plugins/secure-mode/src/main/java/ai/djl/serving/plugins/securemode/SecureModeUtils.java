@@ -207,21 +207,20 @@ public final class SecureModeUtils {
      */
     private static void scanForPickle(Path directory) throws IOException, ModelException {
         Pattern pattern = Pattern.compile(PICKLE_EXTENSIONS_REGEX);
-        boolean pickleFound = false;
 
         try (Stream<Path> stream = Files.walk(directory)) {
-            pickleFound =
+            boolean pickleFound =
                     stream.anyMatch(
                             path -> {
                                 Matcher matcher = pattern.matcher(path.toString());
                                 return matcher.matches();
                             });
-        }
-        if (pickleFound) {
-            throw new ModelException(
-                    "Pickle-based files found in directory "
-                            + directory.toString()
-                            + ", but only model files are permitted in Secure Mode.");
+            if (pickleFound) {
+                throw new ModelException(
+                        "Pickle-based files found in directory "
+                                + directory.toString()
+                                + ", but only model files are permitted in Secure Mode.");
+            }
         }
     }
 

@@ -28,11 +28,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 
 /** Unit tests for the Secure Mode Plugin. */
 public class SecureModePluginTest {
 
-    private static final String TEST_FILES_DIR = "/tmp/securemodetest/";
+    private static final String TEST_FILES_DIR = "build/tmp/datasources/";
     private static final String TRUSTED_DIR = TEST_FILES_DIR + "trusted/";
     private static final String UNTRUSTED_DIR = TEST_FILES_DIR + "untrusted/";
 
@@ -41,17 +42,12 @@ public class SecureModePluginTest {
 
     @BeforeMethod
     private void setUp() throws IOException {
-        FileUtils.deleteDirectory(new File(TEST_FILES_DIR));
+        Utils.deleteQuietly(Paths.get(TEST_FILES_DIR));
     }
 
     @AfterMethod
     private void tearDown() throws IOException {
-        FileUtils.deleteDirectory(new File(TEST_FILES_DIR));
-    }
-
-    @AfterClass
-    private void cleanup() throws IOException {
-        FileUtils.deleteDirectory(new File(TEST_FILES_DIR));
+        Utils.deleteQuietly(Paths.get(TEST_FILES_DIR));
     }
 
     private void createFileWithContent(String fileName, String content) throws IOException {
