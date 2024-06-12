@@ -31,26 +31,21 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
     @Override
     public void onModelLoading(ModelInfo<?, ?> model, Device device) {
         super.onModelLoading(model, device);
-        logger.info("MODEL PROPERTIES: {}", model.getProperties());
-        logger.info("MODEL URL: {}", model.getModelUrl());
 
         if (SecureModeUtils.isSecureMode()) {
             try {
                 SecureModeUtils.validateSecurity();
                 SecureModeUtils.reconcileSources(model.getModelUrl());
             } catch (ModelException e) {
-                // TODO figure out is this is proper for exceptions
-                logger.error("Secure Mode check failed: ", e);
-                throw new RuntimeException(e);
+                throw new IllegalConfigurationException("Secure Mode check failed", e);
             } catch (IOException | URISyntaxException e) {
-                logger.error("Error while running Secure Mode checks: ", e);
-                throw new RuntimeException(e);
+                throw new IllegalConfigurationException(
+                        "Error while running Secure Mode checks", e);
             }
             if (model.getProperties().getProperty("option.entryPoint") == null) {
-                logger.error(
+                throw new IllegalConfigurationException(
                         "In Secure Mode, option.entryPoint must be explicitly set via"
-                                + " serving.properties or environment variable.");
-                throw new RuntimeException("Secure Mode check failed: entryPoint is not set");
+                            + " serving.properties or environment variable.");
             }
         }
     }
