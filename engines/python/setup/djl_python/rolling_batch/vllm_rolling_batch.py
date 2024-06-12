@@ -17,7 +17,8 @@ from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
-    update_request_cache_with_output, get_lora_request_params, get_engine_args_from_config)
+    update_request_cache_with_output, get_lora_request_params,
+    get_engine_args_from_config)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from typing import List
 
