@@ -31,7 +31,7 @@ Check out our latest [Large Model Inference Containers](https://github.com/aws/d
 
 #### DeepSpeed container (deprecated)
 
-- We have removed support for deepspeed and renamed our deepspeed container to lmi. The lmi container contains lmi-dist and vllm, and all existing workloads with deepspeed can be easily migrated to one of these backends. See https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/announcements/deepspeed-deprecation.md for steps on how to migrate your workload.
+- We have removed support for deepspeed and renamed our deepspeed container to lmi. The lmi container contains lmi-dist and vllm, and all existing workloads with deepspeed can be easily migrated to one of these backends. See https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/announcements/deepspeed-deprecation.md for steps on how to migrate your workload.
 
 ### CX Usability Enhancements/Changes
 
@@ -42,13 +42,13 @@ Check out our latest [Large Model Inference Containers](https://github.com/aws/d
       - Speculative decoding now in streaming, returns multiple jsonlines tokens at each generation step
       - Standardized the output formatter signature:
         - We reduced the parameters of output_formatter by introducing RequestOutput class.
-        - RequestOutput contains all input information such as text, token_ids and parameters and also output information such as output tokens, log probabilities, and other details like finish reason. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/e4d7e5da822a8c11b13e79eaeaec4101fe678b69/serving/docs/lmi/user_guides/lmi_input_output_schema.md#generationparameters) to know more.
-        - Introduced prompt details in the `details` of the response for vLLM and lmi-dist rolling batch options. These prompt details contains the prompt token_ids and their corresponding text and log probability. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/e4d7e5da822a8c11b13e79eaeaec4101fe678b69/serving/docs/lmi/user_guides/output_formatter_schema.md#custom-output-formatter-schema) to know more.
+        - RequestOutput contains all input information such as text, token_ids and parameters and also output information such as output tokens, log probabilities, and other details like finish reason. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/lmi_input_output_schema.md#generationparameters) to know more.
+        - Introduced prompt details in the `details` of the response for vLLM and lmi-dist rolling batch options. These prompt details contains the prompt token_ids and their corresponding text and log probability. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/output_formatter_schema.md#custom-output-formatter-schema) to know more.
       - New error handling mechanism:
-        - Improved our error handling for container responses for rolling batch. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/e4d7e5da822a8c11b13e79eaeaec4101fe678b69/serving/docs/lmi/user_guides/lmi_input_output_schema.md#error-responses) to know more
+        - Improved our error handling for container responses for rolling batch. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/lmi_input_output_schema.md#error-responses) to know more
       -New CX capability:
         - We introduce OPTION_TGI_COMPAT env which enables you to get the same response format as TGI. [doc](https://github.com/deepjavalibrary/djl-serving/blob/024780ee8393fe8c20830845175af8566c369cd1/serving/docs/lmi/user_guides/lmi_input_output_schema.md#response-with-tgi-compatibility)
-        - We also now support SSE text/event-stream data format. 
+        - We also now support SSE text/event-stream data format. [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/lmi_input_output_schema.md#response-schema)
 
 ### Breaking Changes
 
