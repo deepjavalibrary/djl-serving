@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-// import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -98,19 +98,19 @@ public final class SecureModeUtils {
         scanPaths(untrustedPathList);
     }
 
-    // /**
-    //  * Handle files from additional model data sources. Currently, this only consists of
-    // installing
-    //  * all trusted requirements.txt files. More functionality can be added as needed.
-    //  *
-    //  * @param modelDir the main model directory
-    //  * @throws IOException if there is an error scanning the paths
-    //  */
-    // static void reconcileSources(Path modelDir) throws IOException {
-    //     List<String> trustedPathList =
-    //             splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
-    //     // linkAdditionalRequirementsTxt(trustedPathList, modelDir);
-    // }
+    /**
+     * Handle files from additional model data sources. Currently, this only consists of
+    installing
+     * all trusted requirements.txt files. More functionality can be added as needed.
+     *
+     * @param modelDir the main model directory
+     * @throws IOException if there is an error scanning the paths
+     */
+    static void reconcileSources(String modelDir) throws IOException {
+        List<String> trustedPathList =
+                splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
+        linkAdditionalRequirementsTxt(trustedPathList, Paths.get(modelDir));
+    }
 
     /**
      * Check if a disallowed option is set via environment variables. The disallowed value is
@@ -280,44 +280,44 @@ public final class SecureModeUtils {
         }
     }
 
-    // /**
-    //  * Link additional requirements.txt files into requirements.txt in modelDir using -r. This
-    //  * single requirements.txt will be installed during Python engine initialization.
-    //  *
-    //  * @param pathList list of absolute paths
-    //  * @param modelDir path to model_dir
-    //  * @throws IOException
-    //  */
-    // private static void linkAdditionalRequirementsTxt(List<String> pathList, Path modelDir)
-    //         throws IOException {
-    //     // Gather requirements.txts found in trusted paths
-    //     List<String> additionalRequirementsTxts = new ArrayList<>();
-    //     for (String path : pathList) {
-    //         Path p = Paths.get(path.trim());
-    //         if (Files.isDirectory(p) && p != modelDir) {
-    //             Path requirementsTxt = lookForFile(p, "requirements.txt");
-    //             if (requirementsTxt != null) {
-    //                 additionalRequirementsTxts.add(requirementsTxt.toString());
-    //             }
+    /**
+     * Link additional requirements.txt files into requirements.txt in modelDir using -r. This
+     * single requirements.txt will be installed during Python engine initialization.
+     *
+     * @param pathList list of absolute paths
+     * @param modelDir path to model_dir
+     * @throws IOException
+     */
+    private static void linkAdditionalRequirementsTxt(List<String> pathList, Path modelDir)
+            throws IOException {
+        // Gather requirements.txts found in trusted paths
+        List<String> additionalRequirementsTxts = new ArrayList<>();
+        for (String path : pathList) {
+            Path p = Paths.get(path.trim());
+            if (Files.isDirectory(p) && p != modelDir) {
+                Path requirementsTxt = lookForFile(p, "requirements.txt");
+                if (requirementsTxt != null) {
+                    additionalRequirementsTxts.add(requirementsTxt.toString());
+                }
 
-    //         } else {
-    //             throw new IllegalArgumentException("Path " + p + " is not a directory.");
-    //         }
-    //     }
-    //     // Append to or create requirements.txt in modelDir
-    //     Path requirementsTxt = lookForFile(modelDir, "requirements.txt");
-    //     if (requirementsTxt == null) {
-    //         requirementsTxt = Files.createFile(modelDir.resolve("requirements.txt"));
-    //     } else {
-    //         logger.info("Existing requirements.txt found at " + requirementsTxt.toString());
-    //     }
-    //     for (String additionalRequirementsTxt : additionalRequirementsTxts) {
-    //         Files.write(
-    //                 requirementsTxt,
-    //                 ("-r " + additionalRequirementsTxt + "\n").getBytes(),
-    //                 StandardOpenOption.APPEND);
-    //     }
-    // }
+            } else {
+                throw new IllegalArgumentException("Path " + p + " is not a directory.");
+            }
+        }
+        // Append to or create requirements.txt in modelDir
+        Path requirementsTxt = lookForFile(modelDir, "requirements.txt");
+        if (requirementsTxt == null) {
+            requirementsTxt = Files.createFile(modelDir.resolve("requirements.txt"));
+        } else {
+            logger.info("Existing requirements.txt found at " + requirementsTxt.toString());
+        }
+        for (String additionalRequirementsTxt : additionalRequirementsTxts) {
+            Files.write(
+                    requirementsTxt,
+                    ("-r " + additionalRequirementsTxt + "\n").getBytes(),
+                    StandardOpenOption.APPEND);
+        }
+    }
 
     /**
      * Given an input string, split it into a list of strings using a comma as a delimiter and

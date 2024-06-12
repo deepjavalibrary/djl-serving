@@ -27,13 +27,6 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(SecureModeModelServerListener.class);
 
-    // @Override
-    // public void onModelDownloaded(ModelInfo<?, ?> model, Path downloadPath) {
-    //     super.onModelDownloaded(model, downloadPath);
-    //     LOGGER.info("MODEL PROPERTIES: {}", model.getProperties());
-    //     LOGGER.info("MODEL URL: {}", model.getModelUrl());
-    // }
-
     @Override
     public void onModelLoading(ModelInfo<?, ?> model, Device device) {
         super.onModelLoading(model, device);
@@ -43,8 +36,9 @@ class SecureModeModelServerListener extends ModelServerListenerAdapter {
         if (SecureModeUtils.isSecureMode()) {
             try {
                 SecureModeUtils.validateSecurity();
+                SecureModeUtils.reconcileSources(model.getModelUrl());
             } catch (ModelException e) {
-                // TODO figure out is this is appropriate way to handle exceptions
+                // TODO figure out is this is proper for exceptions
                 LOGGER.error("Secure Mode check failed: ", e);
                 throw new RuntimeException(e);
             } catch (IOException e) {
