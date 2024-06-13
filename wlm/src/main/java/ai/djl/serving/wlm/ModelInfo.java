@@ -566,6 +566,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     /**
+     * Returns the model directory.
+     *
+     * @return the model directory
+     */
+    public Path getModelDir() {
+        return modelDir;
+    }
+
+    /**
      * Adds an adapter to this {@link ModelInfo}.
      *
      * @param adapter the adapter to add
