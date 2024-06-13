@@ -17,12 +17,15 @@ import torch
 import requests
 
 # Properties to exclude while generating serving.properties
-from utils import is_engine_mpi_mode, get_engine_configs, get_download_dir, load_properties
+from utils import (is_engine_mpi_mode, get_engine_configs, get_download_dir,
+                   load_properties, update_kwargs_with_env_vars)
 
 EXCLUDE_PROPERTIES = [
     'option.model_id', 'option.save_mp_checkpoint_path', 'model_dir',
     'upload_checkpoints_s3url', 'properties_dir'
 ]
+
+SUPPORTED_QUANTIZATION_METHODS = ["awq"]
 
 
 class PropertiesManager(object):
@@ -31,6 +34,7 @@ class PropertiesManager(object):
         self.entry_point_url = None
         self.properties_dir = args.properties_dir
         self.properties = load_properties(self.properties_dir)
+        self.properties |= update_kwargs_with_env_vars({})
         self.skip_copy = args.skip_copy
 
         if args.model_id:
@@ -43,6 +47,8 @@ class PropertiesManager(object):
         if args.tensor_parallel_degree:
             self.properties[
                 'option.tensor_parallel_degree'] = args.tensor_parallel_degree
+        if args.quantize:
+            self.properties['option.quantize'] = args.quantize
 
         if 'addl_properties' in kwargs:
             self.properties |= kwargs['addl_properties']
@@ -56,12 +62,14 @@ class PropertiesManager(object):
 
         self.set_and_validate_entry_point()
         self.set_and_validate_save_mp_checkpoint_path()
+        self.validate_quantization_method()
 
     def set_and_validate_model_dir(self):
         if 'model_dir' in self.properties:
             model_dir = self.properties['model_dir']
             model_files = glob.glob(os.path.join(model_dir, '*.bin'))
-            model_files = glob.glob(os.path.join(model_dir, '*.safetensors'))
+            model_files.append(
+                glob.glob(os.path.join(model_dir, '*.safetensors')))
             if not model_files:
                 raise ValueError(
                     f'No .bin or .safetensors files found in the dir: {model_dir}'
@@ -70,8 +78,8 @@ class PropertiesManager(object):
             self.properties['model_dir'] = self.properties_dir
         else:
             model_files = glob.glob(os.path.join(self.properties_dir, '*.bin'))
-            model_files = glob.glob(
-                os.path.join(self.properties_dir, '*.safetensors'))
+            model_files.append(
+                glob.glob(os.path.join(self.properties_dir, '*.safetensors')))
             if model_files:
                 self.properties['model_dir'] = self.properties_dir
             else:
@@ -141,6 +149,7 @@ class PropertiesManager(object):
 
     def set_and_validate_entry_point(self):
         entry_point = self.properties.get('option.entryPoint')
+        quantize = self.properties.get('option.quantize')
         if entry_point is None:
             entry_point = os.environ.get("DJL_ENTRY_POINT")
             if entry_point is None:
@@ -150,7 +159,9 @@ class PropertiesManager(object):
                     self.properties['option.entryPoint'] = 'model.py'
                 else:
                     engine = self.properties.get('engine')
-                    if engine is None:
+                    if quantize:
+                        pass
+                    elif engine is None:
                         raise ValueError("Please specify engine")
                     elif engine.lower() == "deepspeed":
                         entry_point = "djl_python.deepspeed"
@@ -182,3 +193,11 @@ class PropertiesManager(object):
             self.properties[
                 "option.save_mp_checkpoint_path"] = get_download_dir(
                     self.properties_dir, "partition-model")
+
+    def validate_quantization_method(self):
+        quantize = self.properties.get('option.quantize')
+        if quantize:
+            if quantize not in SUPPORTED_QUANTIZATION_METHODS:
+                raise ValueError(
+                    f"Quantize method: {quantize} not supported. Support options are: {SUPPORTED_QUANTIZATION_METHODS}"
+                )
