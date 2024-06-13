@@ -149,6 +149,7 @@ tasks {
                         "if [ \"\${TF_NUM_INTRAOP_THREADS}\" = \"\" ] ; then\n" +
                         "    export TF_NUM_INTRAOP_THREADS=1\n" +
                         "fi\n" +
+                        "export APP_HOME\n" +
                         "exec env MXNET_ENGINE_TYPE=\"NaiveEngine\" \"\$JAVACMD\" \"\$@\""
             ).replace(
                 "DEFAULT_JVM_OPTS=\"\"",
