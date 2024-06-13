@@ -269,7 +269,7 @@ class PartitionService(object):
             hf_configs.model_id_or_path, **hf_configs.kwargs)
         awq_model.quantize(tokenizer, quant_config=quant_config)
 
-        output_path = self.properties.save_mp_checkpoint_path
+        output_path = self.properties['option.save_mp_checkpoint_path']
         logging.info(f"Saving model and tokenizer to: {output_path}")
         awq_model.save_quantized(output_path)
         tokenizer.save_pretrained(output_path)

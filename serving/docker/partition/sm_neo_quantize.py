@@ -21,8 +21,6 @@ import torch
 from sm_neo_utils import (CompilationFatalError, write_error_to_file,
                           get_neo_env_vars)
 from utils import extract_python_jar
-#from quantization_properties_manager import QuantizationPropertiesManager
-#from quantize import QuantizationService
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
@@ -65,6 +63,8 @@ class NeoQuantizationService():
         self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
         self.args.model_id = None
         self.args.quantize = None
+        self.args.skip_copy = None
+        self.args.engine = None
 
     def construct_properties_manager(self):
         """
