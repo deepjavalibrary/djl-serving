@@ -42,7 +42,7 @@ For example:
 aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 763104351884.dkr.ecr.us-west-2.amazonaws.com
 
 # Download docker image
-docker pull 763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.27.0-neuronx-sdk2.18.0
+docker pull 763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.28.0-neuronx-sdk2.18.2
 
 ```
 
@@ -129,7 +129,7 @@ docker run -t --rm --network=host \
   --device /dev/neuron9 \
   --device /dev/neuron10 \
   --device /dev/neuron11 \
-  763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.27.0-neuronx-sdk2.18.0 \
+  763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.28.0-neuronx-sdk2.18.2 \
   partition --model-dir /opt/ml/input/data/training --skip-copy
 ```
 

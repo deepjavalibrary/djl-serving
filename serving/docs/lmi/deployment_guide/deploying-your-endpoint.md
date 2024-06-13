@@ -51,8 +51,8 @@ sagemaker_session = sagemaker.session.Session()
 # region is needed to retrieve the lmi container
 region = sagemaker_session._region_name
 # get the lmi image uri
-# available frameworks: "djl-deepspeed" (for vllm, lmi-dist), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
-container_uri = sagemaker.image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
+# available frameworks: "djl-lmi" (for vllm, lmi-dist), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
+container_uri = sagemaker.image_uris.retrieve(framework="djl-lmi", version="0.28.0", region=region)
 # create a unique endpoint name
 endpoint_name = sagemaker.utils.name_from_base("my-lmi-endpoint")
 # s3 uri object prefix under which the serving.properties and optional model artifacts are stored
@@ -106,8 +106,8 @@ sagemaker_session = sagemaker.session.Session()
 # region is needed to retrieve the lmi container
 region = sagemaker_session._region_name
 # get the lmi image uri
-# available frameworks: "djl-deepspeed" (for vllm, lmi-dist, deepspeed), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
-container_uri = sagemaker.image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
+# available frameworks: "djl-lmi" (for vllm, lmi-dist), "djl-tensorrtllm" (for tensorrt-llm), "djl-neuronx" (for transformers neuronx)
+container_uri = sagemaker.image_uris.retrieve(framework="djl-lmi", version="0.28.0", region=region)
 # create a unique endpoint name
 endpoint_name = sagemaker.utils.name_from_base("my-lmi-endpoint")
 # instance type you will deploy your model to

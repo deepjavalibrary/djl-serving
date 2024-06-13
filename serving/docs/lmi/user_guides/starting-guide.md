@@ -29,7 +29,7 @@ sagemaker_session = sagemaker.session.Session()
 region = sagemaker_session._region_name
 
 # Fetch the uri of the LMI container that supports vLLM, LMI-Dist, HuggingFace Accelerate backends
-lmi_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
+lmi_image_uri = image_uris.retrieve(framework="djl-lmi", version="0.28.0", region=region)
 
 # Create the SageMaker Model object. In this example we let LMI configure the deployment settings based on the model architecture  
 model = Model(
