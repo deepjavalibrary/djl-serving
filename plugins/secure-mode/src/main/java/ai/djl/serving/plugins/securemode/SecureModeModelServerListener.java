@@ -12,30 +12,21 @@
  */
 package ai.djl.serving.plugins.securemode;
 
-import ai.djl.Device;
-import ai.djl.ModelException;
+import ai.djl.serving.http.IllegalConfigurationException;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.ModelServerListenerAdapter;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 
 class SecureModeModelServerListener extends ModelServerListenerAdapter {
 
+    /** {@inheritDoc} */
     @Override
-    public void onModelLoading(ModelInfo<?, ?> model, Device device) {
-        super.onModelLoading(model, device);
-
-        if (SecureModeUtils.isSecureMode()) {
-            try {
-                SecureModeUtils.validateSecurity();
-                SecureModeUtils.reconcileSources(model.getModelUrl());
-            } catch (ModelException e) {
-                throw new IllegalConfigurationException("Secure Mode check failed", e);
-            } catch (IOException | URISyntaxException e) {
-                throw new IllegalConfigurationException(
-                        "Error while running Secure Mode checks", e);
-            }
+    public void onModelConfigured(ModelInfo<?, ?> model) {
+        try {
+            SecureModeUtils.validateSecurity(model);
+        } catch (IOException e) {
+            throw new IllegalConfigurationException("Error while running Secure Mode checks", e);
         }
     }
 }

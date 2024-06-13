@@ -13,6 +13,10 @@
 package ai.djl.serving.plugins.securemode;
 
 import ai.djl.ModelException;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
+import ai.djl.serving.http.IllegalConfigurationException;
+import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.util.Utils;
 
 import org.mockito.MockedStatic;
@@ -22,131 +26,119 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 /** Unit tests for the Secure Mode Plugin. */
 public class SecureModePluginTest {
 
-    private static final String TEST_FILES_DIR = "build/tmp/datasources/";
-    private static final String TRUSTED_DIR = TEST_FILES_DIR + "trusted/";
-    private static final String UNTRUSTED_DIR = TEST_FILES_DIR + "untrusted/";
-
-    // TODO: Refactor tests to improve organization and readability
-    // TODO: Add tests for reconcileSources
+    private static final Path TEST_MODEL_DIR = Paths.get("build/mock/model/");
+    private static final Path UNTRUSTED_DIR = Paths.get("build/mock/untrusted/");
 
     @BeforeMethod
     private void setUp() throws IOException {
-        Utils.deleteQuietly(Paths.get(TEST_FILES_DIR));
+        Utils.deleteQuietly(Paths.get("build/mock"));
+        Files.createDirectories(TEST_MODEL_DIR);
+        Files.createDirectories(UNTRUSTED_DIR);
     }
 
     @AfterMethod
-    private void tearDown() throws IOException {
-        Utils.deleteQuietly(Paths.get(TEST_FILES_DIR));
-    }
-
-    private void createFileWithContent(String fileName, String content) throws IOException {
-        File file = new File(fileName);
-        if (file.exists()) {
-            System.err.println("File already exists: " + file);
-            return;
-        }
-        if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
-            throw new IOException("Failed to create parent directories for " + file);
-        }
-        Files.write(file.toPath(), content.getBytes(StandardCharsets.UTF_8));
+    private void tearDown() {
+        Utils.deleteQuietly(Paths.get("build/mock"));
     }
 
     @Test
-    void testSecureModeEnabled() throws IOException {
+    void testSecureModeEnabled() {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.TRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(TRUSTED_DIR);
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(UNTRUSTED_DIR);
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
-                    .thenReturn("foo");
-
-            boolean result = SecureModeUtils.isSecureMode();
-            Assert.assertTrue(result);
+            Assert.assertTrue(SecureModeUtils.isSecureMode());
         }
     }
 
     @Test
-    void testSecureModeDisabled() throws IOException {
-        boolean result = SecureModeUtils.isSecureMode();
-        Assert.assertFalse(result);
+    void testSecureModeDisabled() {
+        Assert.assertFalse(SecureModeUtils.isSecureMode());
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class)
-    void testMissingRequiredEnvVar() throws IOException {
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testMissingSecurityControl() throws IOException, ModelException {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.TRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn("foo");
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
                     .thenReturn("bar");
+            mockedUtils
+                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
+                    .thenReturn(TEST_MODEL_DIR);
 
-            boolean result = SecureModeUtils.isSecureMode();
-            // expect exception
-            Assert.assertFalse(result);
+            validateSecurity("Python");
         }
     }
 
-    private void mockSecurityEnv(String securityControl, String filePath, String fileContent)
-            throws IOException, ModelException {
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testMissingUntrustedChannels() throws IOException, ModelException {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
             mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.TRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(TRUSTED_DIR);
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(UNTRUSTED_DIR);
-            mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
-                    .thenReturn(securityControl);
+                    .thenReturn("bar");
+            mockedUtils
+                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
+                    .thenReturn(TEST_MODEL_DIR);
 
-            createFileWithContent(filePath, fileContent);
-            SecureModeUtils.validateSecurity();
+            validateSecurity("Python");
         }
     }
 
-    // Untrusted scenarios
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testInvalidUntrustedChannels() throws IOException, ModelException {
+        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+            mockedUtils
+                    .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
+                    .thenReturn("true");
+            mockedUtils
+                    .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
+                    .thenReturn("bar");
+            mockedUtils
+                    .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
+                    .thenReturn("bar");
+            mockedUtils
+                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
+                    .thenReturn(TEST_MODEL_DIR);
 
-    @Test(expectedExceptions = ModelException.class)
-    void testUntrustedPickle() throws IOException, ModelException {
-        mockSecurityEnv(SecureModeUtils.PICKLE_FILES_CONTROL, UNTRUSTED_DIR + "pickle.bin", "foo");
+            validateSecurity("Python");
+        }
     }
 
-    @Test(expectedExceptions = ModelException.class)
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testUntrustedPickle() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.PICKLE_FILES_CONTROL, UNTRUSTED_DIR.resolve("pickle.bin"), "foo");
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testUntrustedRequirementsTxt() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.REQUIREMENTS_TXT_CONTROL,
-                UNTRUSTED_DIR + "requirements.txt",
+                TEST_MODEL_DIR.resolve("requirements.txt"),
                 "foo");
     }
 
-    @Test(expectedExceptions = ModelException.class)
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testUntrustedTokenizerChatTemplate() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CHAT_TEMPLATE_CONTROL,
-                UNTRUSTED_DIR + "tokenizer_config.json",
+                UNTRUSTED_DIR.resolve("tokenizer_config.json"),
                 "{\"chat_template\": \"foo\"}");
     }
 
@@ -154,15 +146,15 @@ public class SecureModePluginTest {
     void testUntrustedTokenizer() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CHAT_TEMPLATE_CONTROL,
-                UNTRUSTED_DIR + "tokenizer_config.json",
+                UNTRUSTED_DIR.resolve("tokenizer_config.json"),
                 "{\"foo\": \"bar\"}");
     }
 
-    @Test(expectedExceptions = ModelException.class)
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testUntrustedEntryPointPyProps() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
-                UNTRUSTED_DIR + "serving.properties",
+                TEST_MODEL_DIR.resolve("serving.properties"),
                 "option.entryPoint=model.py");
     }
 
@@ -170,92 +162,165 @@ public class SecureModePluginTest {
     void testUntrustedEntryPointDJLProps() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
-                UNTRUSTED_DIR + "serving.properties",
+                TEST_MODEL_DIR.resolve("serving.properties"),
                 "option.entryPoint=djl_python.huggingface");
     }
 
-    @Test(expectedExceptions = ModelException.class)
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testUntrustedEntryPointPyFile() throws IOException, ModelException {
         mockSecurityEnv(
-                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL, UNTRUSTED_DIR + "model.py", "foo");
-    }
-
-    @Test(expectedExceptions = ModelException.class)
-    void testUntrustedTrustRemoteCodeTrue() throws IOException, ModelException {
-        mockSecurityEnv(
-                SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
-                UNTRUSTED_DIR + "serving.properties",
-                "option.trust_remote_code=true");
+                SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL,
+                TEST_MODEL_DIR.resolve("model.py"),
+                "foo");
     }
 
     @Test
     void testUntrustedTrustRemoteCodeFalse() throws IOException, ModelException {
         mockSecurityEnv(
                 SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
-                UNTRUSTED_DIR + "serving.properties",
+                TEST_MODEL_DIR.resolve("serving.properties"),
                 "option.trust_remote_code=false");
     }
 
-    @Test(expectedExceptions = ModelException.class)
+    @Test(expectedExceptions = IllegalConfigurationException.class)
+    void testTrustRemoteCodeTrue() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "option.trust_remote_code=true");
+    }
+
+    @Test
+    void testSkipValidation() throws IOException, ModelException {
+        mockSecurityEnv(
+                SecureModeUtils.TRUST_REMOTE_CODE_CONTROL,
+                TEST_MODEL_DIR.resolve("serving.properties"),
+                "engine=PyTorch\noption.trust_remote_code=true",
+                null);
+    }
+
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testTrustRemoteCodeEnvVar() throws IOException, ModelException {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
             mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.TRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(TRUSTED_DIR);
-            mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(UNTRUSTED_DIR);
+                    .thenReturn(UNTRUSTED_DIR.toString());
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
                     .thenReturn(SecureModeUtils.TRUST_REMOTE_CODE_CONTROL);
-            mockedUtils.when(() -> Utils.getenv("OPTION_TRUST_REMOTE_CODE")).thenReturn("true");
+            mockedUtils
+                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
+                    .thenReturn(TEST_MODEL_DIR);
+            mockedUtils.when(Utils::getenv).thenReturn(Map.of("OPTION_TRUST_REMOTE_CODE", "true"));
 
-            SecureModeUtils.validateSecurity();
+            validateSecurity("Python");
         }
     }
 
-    @Test(expectedExceptions = ModelException.class)
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testEntrypointOptionEnvVar() throws IOException, ModelException {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
             mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.TRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(TRUSTED_DIR);
-            mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(UNTRUSTED_DIR);
+                    .thenReturn(UNTRUSTED_DIR.toString());
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
                     .thenReturn(SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL);
+            mockedUtils
+                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
+                    .thenReturn(TEST_MODEL_DIR);
             mockedUtils.when(() -> Utils.getenv("OPTION_ENTRYPOINT")).thenReturn("model.py");
+            mockedUtils
+                    .when(() -> Utils.getenv("DJL_ENTRY_POINT", "model.py"))
+                    .thenReturn("model.py");
 
-            SecureModeUtils.validateSecurity();
+            validateSecurity("Python");
         }
     }
 
-    @Test(expectedExceptions = ModelException.class)
+    @Test(expectedExceptions = IllegalConfigurationException.class)
     void testEntrypointDJLEnvVar() throws IOException, ModelException {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
                     .thenReturn("true");
             mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.TRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(TRUSTED_DIR);
-            mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn(UNTRUSTED_DIR);
+                    .thenReturn(UNTRUSTED_DIR.toString());
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
                     .thenReturn(SecureModeUtils.CUSTOM_ENTRYPOINT_CONTROL);
-            mockedUtils.when(() -> Utils.getenv("DJL_ENTRY_POINT")).thenReturn("model.py");
+            mockedUtils
+                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
+                    .thenReturn(TEST_MODEL_DIR);
+            mockedUtils.when(() -> Utils.getenv("DJL_ENTRY_POINT", null)).thenReturn("model.py");
 
-            SecureModeUtils.validateSecurity();
+            validateSecurity("Python");
+        }
+    }
+
+    private void createFileWithContent(Path file, String content) throws IOException {
+        if (Files.exists(file)) {
+            return;
+        }
+        Path dir = file.getParent();
+        if (dir == null) {
+            throw new AssertionError("Should never happen");
+        }
+        Files.createDirectories(dir);
+        Files.write(file, content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void validateSecurity(String engine) throws ModelException, IOException {
+        ModelInfo<?, ?> modelInfo =
+                new ModelInfo<>(
+                        "",
+                        TEST_MODEL_DIR.toUri().toURL().toString(),
+                        null,
+                        engine,
+                        null,
+                        Input.class,
+                        Output.class,
+                        4711,
+                        1,
+                        300,
+                        1,
+                        -1,
+                        -1);
+        modelInfo.initialize();
+        new SecureModeModelServerListener().onModelConfigured(modelInfo);
+    }
+
+    private void mockSecurityEnv(String securityControl, Path file, String fileContent)
+            throws ModelException, IOException {
+        mockSecurityEnv(securityControl, file, fileContent, "Python");
+    }
+
+    private void mockSecurityEnv(
+            String securityControl, Path file, String fileContent, String engine)
+            throws IOException, ModelException {
+        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
+            mockedUtils
+                    .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
+                    .thenReturn("true");
+            mockedUtils
+                    .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
+                    .thenReturn(UNTRUSTED_DIR.toString());
+            mockedUtils
+                    .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
+                    .thenReturn(securityControl);
+            mockedUtils
+                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
+                    .thenReturn(TEST_MODEL_DIR);
+
+            createFileWithContent(file, fileContent);
+            validateSecurity(engine);
         }
     }
 }

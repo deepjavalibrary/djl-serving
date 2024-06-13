@@ -19,6 +19,7 @@ import ai.djl.repository.FilenameUtils;
 import ai.djl.repository.zoo.ModelNotFoundException;
 import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.http.ErrorResponse;
+import ai.djl.serving.http.IllegalConfigurationException;
 import ai.djl.serving.http.InternalServerException;
 import ai.djl.serving.http.MethodNotAllowedException;
 import ai.djl.serving.http.ResourceNotFoundException;
@@ -267,7 +268,7 @@ public final class NettyUtils {
         } else if (t instanceof WlmOutOfMemoryException) {
             logger.warn("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
-        } else if (t instanceof ModelException) {
+        } else if (t instanceof ModelException || t instanceof IllegalConfigurationException) {
             logger.debug("", t);
             NettyUtils.sendError(ctx, HttpResponseStatus.BAD_REQUEST, t);
         } else if (t instanceof MethodNotAllowedException) {

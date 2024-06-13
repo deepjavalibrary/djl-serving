@@ -10,12 +10,12 @@
  * OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
  */
-package ai.djl.serving.plugins.securemode;
+package ai.djl.serving.http;
 
-/** Thrown when Secure Mode encounters a violation during security checks. */
+/** Thrown when an illegal configuration encountered during model loading. */
 public class IllegalConfigurationException extends RuntimeException {
 
-    static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
     /**
      * Constructs a {@link IllegalConfigurationException} with the specified detail message.
