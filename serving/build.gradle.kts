@@ -90,7 +90,8 @@ tasks {
             ":plugins:kserve:copyJar",
             ":plugins:management-console:copyJar",
             ":plugins:plugin-management-plugin:copyJar",
-            ":plugins:static-file-plugin:copyJar"
+            ":plugins:static-file-plugin:copyJar",
+            ":plugins:secure-mode:copyJar"
         )
     }
 
@@ -100,7 +101,8 @@ tasks {
             ":plugins:kserve:copyJar",
             ":plugins:management-console:copyJar",
             ":plugins:plugin-management-plugin:copyJar",
-            ":plugins:static-file-plugin:copyJar"
+            ":plugins:static-file-plugin:copyJar",
+            ":plugins:secure-mode:copyJar"
         )
     }
 
