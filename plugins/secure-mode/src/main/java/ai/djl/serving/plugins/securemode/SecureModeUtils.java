@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** A class for utils related to SageMaker Secure Mode. */
@@ -97,7 +98,7 @@ public final class SecureModeUtils {
     public static void validateSecurity() throws IOException, ModelException {
         checkOptionEnvVars();
         List<String> untrustedPathList =
-                Arrays.asList(Utils.getenv(UNTRUSTED_CHANNELS_ENV_VAR).split("\\s*,\\s*"));
+                splitCommaSeparatedString(Utils.getenv(UNTRUSTED_CHANNELS_ENV_VAR));
         scanPaths(untrustedPathList);
     }
 
@@ -111,7 +112,7 @@ public final class SecureModeUtils {
      */
     public static void reconcileSources(String modelUri) throws IOException, URISyntaxException {
         List<String> trustedPathList =
-                Arrays.asList(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR).split("\\s*,\\s*"));
+                splitCommaSeparatedString(Utils.getenv(TRUSTED_CHANNELS_ENV_VAR));
         Path modelDir = Paths.get(new URI(modelUri));
         linkAdditionalRequirementsTxt(trustedPathList, modelDir);
     }
@@ -124,7 +125,7 @@ public final class SecureModeUtils {
      */
     private static void checkOptionEnvVars() throws ModelException {
         List<String> securityControls =
-                Arrays.asList(Utils.getenv(SECURITY_CONTROLS_ENV_VAR).split("\\s*,\\s*"));
+                splitCommaSeparatedString(Utils.getenv(SECURITY_CONTROLS_ENV_VAR));
 
         if (securityControls.contains(TRUST_REMOTE_CODE_CONTROL)) {
             String optionEnvValue = Utils.getenv("OPTION_TRUST_REMOTE_CODE");
@@ -156,7 +157,7 @@ public final class SecureModeUtils {
      */
     private static void scanPaths(List<String> pathList) throws IOException, ModelException {
         List<String> securityControls =
-                Arrays.asList(Utils.getenv(SECURITY_CONTROLS_ENV_VAR).split("\\s*,\\s*"));
+                splitCommaSeparatedString(Utils.getenv(SECURITY_CONTROLS_ENV_VAR));
         for (String path : pathList) {
             Path p = Paths.get(path.trim());
             if (Files.isDirectory(p)) {
@@ -359,5 +360,19 @@ public final class SecureModeUtils {
             }
             return result;
         }
+    }
+
+    /**
+     * Given an input string, split it into a list of strings using a comma as a delimiter and
+     * trimming whitespace.
+     *
+     * @param input a string containing a comma-separated list of strings
+     * @return a list of strings
+     */
+    private static List<String> splitCommaSeparatedString(String input) {
+        if (input == null || input.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return Arrays.stream(input.split(",")).map(String::trim).collect(Collectors.toList());
     }
 }
