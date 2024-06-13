@@ -17,6 +17,8 @@ import argparse
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
+from utils import remove_option_from_properties
+
 sys.path.append(PYTHON_CACHE_DIR)
 
 from djl_python.inputs import Input
@@ -51,13 +53,7 @@ def main():
     properties = json.loads(args.properties)
 
     # DJL handler expect 'option.' is removed
-    input_prop = {}
-    for key, value in properties.items():
-        if key.startswith("option."):
-            input_prop[key[7:]] = value
-        else:
-            input_prop[key] = value
-
+    input_prop = remove_option_from_properties(properties)
     invoke_partition(input_prop)
 
 

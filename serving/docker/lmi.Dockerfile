@@ -31,6 +31,7 @@ ARG bitsandbytes_version=0.43.1
 ARG optimum_version=1.20.0
 ARG auto_gptq_version=0.7.1
 ARG datasets_version=2.19.1
+ARG autoawq_version=0.2.5
 # LMI-Dist Deps
 ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt230/vllm-0.4.2%2Bcu124-cp310-cp310-linux_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu124-pt230/flash_attn-2.5.8-cp310-cp310-linux_x86_64.whl"
@@ -100,7 +101,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
-    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} && \
+    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} && \
     pip3 install ${djl_converter_wheel} --no-deps && \
     pip3 cache purge
 
