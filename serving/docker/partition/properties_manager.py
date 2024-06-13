@@ -33,8 +33,8 @@ class PropertiesManager(object):
     def __init__(self, args, **kwargs):
         self.entry_point_url = None
         self.properties_dir = args.properties_dir
-        self.properties = update_kwargs_with_env_vars({})
-        self.properties |= (load_properties(self.properties_dir))
+        self.properties = load_properties(self.properties_dir)
+        self.properties |= update_kwargs_with_env_vars({})
         self.skip_copy = args.skip_copy
 
         if args.model_id:

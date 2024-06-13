@@ -84,7 +84,7 @@ class NeoQuantizationService():
         partition_service = PartitionService(self.properties_manager)
         extract_python_jar(PYTHON_CACHE_DIR)
         try:
-            return partition_service.run_partition()
+            return partition_service.run_quantization()
         except Exception as exc:
             raise CompilationFatalError(
                 f"Encountered an error during quantization: {exc}")
