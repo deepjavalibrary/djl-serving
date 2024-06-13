@@ -1,0 +1,21 @@
+plugins {
+    id "java-library"
+}
+
+dependencies {
+    implementation(project(":serving"))
+    implementation(project(":wlm"))
+
+    testImplementation("org.testng:testng:${testng_version}") {
+        exclude group: "junit", module: "junit"
+    }
+    testImplementation "org.mockito:mockito-core:${mockitocore_version}"
+
+}
+
+tasks.register('copyJar', Copy) {
+    from jar
+    into "../../serving/plugins"
+}
+
+jar.finalizedBy(copyJar)
