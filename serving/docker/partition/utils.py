@@ -102,6 +102,16 @@ def update_kwargs_with_env_vars(kwargs):
     return kwargs
 
 
+def remove_option_from_properties(properties: dict):
+    output = {}
+    for key, value in properties.items():
+        if key.startswith("option."):
+            output[key[7:]] = value
+        else:
+            output[key] = value
+    return output
+
+
 def read_hf_model_config(model_config_path: str, hf_configs):
     try:
         model_config = AutoConfig.from_pretrained(

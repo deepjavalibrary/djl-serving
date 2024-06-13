@@ -26,7 +26,8 @@ from huggingface_hub import snapshot_download
 
 from utils import (get_partition_cmd, extract_python_jar,
                    get_python_executable, get_download_dir,
-                   read_hf_model_config, init_hf_tokenizer)
+                   read_hf_model_config, init_hf_tokenizer,
+                   remove_option_from_properties)
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -249,7 +250,8 @@ class PartitionService(object):
         from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 
         logging.info(f"Properties: {self.properties}")
-        hf_configs = HuggingFaceProperties(**self.properties)
+        properties = remove_option_from_properties(self.properties)
+        hf_configs = HuggingFaceProperties(**properties)
         model_config = read_hf_model_config(hf_configs.model_id_or_path,
                                             hf_configs)
         tokenizer = init_hf_tokenizer(hf_configs.model_id_or_path, hf_configs)
