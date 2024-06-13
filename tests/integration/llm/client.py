@@ -545,17 +545,6 @@ trtllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
-    },
-    "flan-t5-xl": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "google/flan-t5-xl",
-        "details": True
-    },
-    "flan-t5-xxl": {
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "google/flan-t5-xxl"
     }
 }
 
@@ -1292,8 +1281,6 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, lmi_dist_aiccl_model_spec)
     elif args.handler == "trtllm":
         test_handler_rolling_batch(args.model, trtllm_model_spec)
-    elif args.handler == "trtllm-python":
-        test_handler(args.model, trtllm_model_spec)
     elif args.handler == "no_code":
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
 
