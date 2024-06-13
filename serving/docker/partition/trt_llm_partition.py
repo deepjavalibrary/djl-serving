@@ -17,7 +17,7 @@ import os
 import sys
 from tensorrt_llm_toolkit import create_model_repo
 
-from utils import load_properties
+from utils import update_kwargs_with_env_vars, load_properties
 
 
 def create_trt_llm_repo(properties, args):
@@ -31,18 +31,6 @@ def create_trt_llm_repo(properties, args):
     kwargs["tensor_parallel_degree"] = args.tensor_parallel_degree
     model_id_or_path = args.model_path or kwargs['model_id']
     create_model_repo(model_id_or_path, **kwargs)
-
-
-def update_kwargs_with_env_vars(kwargs):
-    env_vars = os.environ
-    for key, value in env_vars.items():
-        if key.startswith("OPTION_"):
-            key = key.lower()
-            key = "option." + key[7:]
-            if key == "option.entrypoint":
-                key = "option.entryPoint"
-            kwargs.setdefault(key, value)
-    return kwargs
 
 
 def main():

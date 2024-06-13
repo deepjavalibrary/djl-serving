@@ -190,6 +190,7 @@ class NeoNeuronPartitionService():
         self.args.model_id = None
         self.args.engine = None
         self.args.tensor_parallel_degree = None
+        self.args.quantize = None
 
     def parse_neo_compiler_flags(self):
         """
@@ -420,8 +421,8 @@ def main():
         neo_neuron_partition_service = NeoNeuronPartitionService()
         neo_neuron_partition_service.neo_partition()
     except Exception as exc:
-        write_error_to_file(
-            exc, neo_neuron_partition_service.COMPILATION_ERROR_FILE)
+        write_error_to_file(exc,
+                            os.environ.get("SM_NEO_COMPILATION_ERROR_FILE"))
         raise exc
 
 
