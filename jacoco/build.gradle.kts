@@ -16,6 +16,7 @@ dependencies {
     jacocoAggregation(project(":plugins:kserve"))
     // jacocoAggregation(project(":plugins:management-console"))
     jacocoAggregation(project(":plugins:plugin-management-plugin"))
+    jacocoAggregation(project(":plugins:secure-mode"))
     jacocoAggregation(project(":plugins:static-file-plugin"))
     jacocoAggregation(project(":prometheus"))
     jacocoAggregation(project(":serving"))
