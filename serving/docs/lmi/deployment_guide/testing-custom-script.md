@@ -20,7 +20,7 @@ For example:
 
 ```
 docker run -it -p 8080:8080 --shm-size=12g --runtime=nvidia -v /home/ubuntu/test.py:/workplace/test.py \
-763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.27.0-deepspeed0.12.6-cu121 /bin/bash
+763104351884.dkr.ecr.us-west-2.amazonaws.com/djl-inference:0.28.0-lmi10.0.0-cu124 /bin/bash
 ```
 
 ### Step 2: Install DJLServing Python module
@@ -36,7 +36,7 @@ pip install git+https://github.com/deepjavalibrary/djl-serving.git#subdirectory=
 ### From a specific DLC version
 
 ```
-pip install git+https://github.com/deepjavalibrary/djl-serving.git@0.27.0-dlc#subdirectory=engines/python/setup
+pip install git+https://github.com/deepjavalibrary/djl-serving.git@0.28.0-dlc#subdirectory=engines/python/setup
 ```
 
 ## Tutorial 1: Running with default handler with rolling batch

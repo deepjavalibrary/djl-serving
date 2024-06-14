@@ -8,6 +8,25 @@ The `deepspeed` container has been renamed to the `lmi` container.
 As part of this change, we have decided to discontinue integration with the DeepSpeed inference library. 
 You can continue to use vLLM or LMi-dist Library with the LMI container. If you plan to use DeepSpeed Library, please follow the steps below, or use LMI V9 (0.27.0).
 
+## Fetching the container from SageMaker Python SDK
+
+As part of changing the container name, we have updated the framework tag in the [SageMaker Python SDK](https://github.com/aws/sagemaker-python-sdk).
+
+To fetch the new image uri from the SageMaker Python SDK:
+
+```python
+from sagemaker import image_uris
+
+# New Usage: For the 0.28.0 and future containers
+inference_image_uri = image_uris.retrieve(framework="djl-lmi", version="0.28.0", region=region)
+
+# Old Usage: For the 0.27.0 and previous containers
+inference_image_uri = image_uris.retrieve(framework="djl-deepspeed", version="0.27.0", region=region)
+```
+
+If you have been using the vllm or lmi-dist inference engine, this is the only change you need to make when using the SageMaker Python SDK.
+If you have been using the deepspeed inference engine, continue reading for further migration steps. 
+
 ## Migrating from DeepSpeed
 
 If you are not using DeepSpeed library (through importing) or using DeepSpeed as your inference engine, you can stop reading from here.

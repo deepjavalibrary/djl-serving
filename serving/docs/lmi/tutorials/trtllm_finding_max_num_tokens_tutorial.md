@@ -123,7 +123,7 @@ docker run -it --runtime=nvidia --gpus all --shm-size 12gb \
 -p 8080:8080 \
 -v /opt/dlami/nvme/large_store:/opt/djl/large_store \
 -v /opt/dlami/nvme/tmp/.cache:/tmp/.cache \
-763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.27.0-tensorrtllm0.8.0-cu122 /bin/bash
+763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.28.0-tensorrtllm0.9.0-cu122 /bin/bash
 ```
 
 Here we assume you are using g5, g6, p4d, p4de or p5 machine that has NVMe disk available. 

@@ -1,7 +1,8 @@
 # LMI handlers Inference API Schema
 
 This document provides the default API schema for the inference endpoints (`/invocations`, `/predictions/<model_name>`) when using the built-in inference handlers in LMI containers.
-This schema is applicable to our latest release, v0.27.0.
+This schema is applicable to our latest release, v0.28.0.
+Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.27.0-dlc).
 
 LMI provides two distinct schemas depending on what type of batching you use:
 
