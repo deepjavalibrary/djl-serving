@@ -551,8 +551,9 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "OPTION_MAX_ROLLING_BATCH_SIZE=2\nOPTION_OUTPUT_FORMATTER=jsonlines\nTENSOR_PARALLEL_DEGREE=1\nHF_MODEL_ID=gpt2\nOPTION_TASK=text-generation\nOPTION_ROLLING_BATCH=lmi-dist" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG nocode lmi
+          python3 llm/prepare.py lmi_dist gpt2
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+            serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist gpt2
           docker rm -f $(docker ps -aq)
       - name: Test mpt-7b
