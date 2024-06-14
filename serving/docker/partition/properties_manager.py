@@ -25,8 +25,6 @@ EXCLUDE_PROPERTIES = [
     'upload_checkpoints_s3url', 'properties_dir'
 ]
 
-SUPPORTED_QUANTIZATION_METHODS = ["awq"]
-
 
 class PropertiesManager(object):
 
@@ -62,7 +60,6 @@ class PropertiesManager(object):
 
         self.set_and_validate_entry_point()
         self.set_and_validate_save_mp_checkpoint_path()
-        self.validate_quantization_method()
 
     def set_and_validate_model_dir(self):
         if 'model_dir' in self.properties:
@@ -193,11 +190,3 @@ class PropertiesManager(object):
             self.properties[
                 "option.save_mp_checkpoint_path"] = get_download_dir(
                     self.properties_dir, "partition-model")
-
-    def validate_quantization_method(self):
-        quantize = self.properties.get('option.quantize')
-        if quantize:
-            if quantize not in SUPPORTED_QUANTIZATION_METHODS:
-                raise ValueError(
-                    f"Quantize method: {quantize} not supported. Support options are: {SUPPORTED_QUANTIZATION_METHODS}"
-                )
