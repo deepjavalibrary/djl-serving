@@ -62,7 +62,8 @@ def main():
     compilation_error_file = None
     try:
         (compiler_options, input_model_directory, compiled_model_directory,
-         compilation_error_file, neo_cache_dir) = get_neo_env_vars()
+         compilation_error_file, neo_cache_dir, neo_hf_cache_dir,
+         neo_deployment_instance_type) = get_neo_env_vars()
 
         # Neo requires that serving.properties is in same dir as model files
         serving_properties = load_properties(input_model_directory)

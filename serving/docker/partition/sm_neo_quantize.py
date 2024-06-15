@@ -38,13 +38,14 @@ class NeoQuantizationService():
         self.INPUT_MODEL_DIRECTORY: Final[str] = env[1]
         self.OUTPUT_MODEL_DIRECTORY: Final[str] = env[2]
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
-        self.COMPILER_CACHE_LOCATION: Final[str] = env[4]
+        self.HF_CACHE_LOCATION: Final[str] = env[5]
+        self.TARGET_INSTANCE_TYPE: Final[str] = env[6]
 
     def update_dataset_cache_location(self):
         logging.info(
-            f"Updating HuggingFace Datasets cache directory to: {self.COMPILER_CACHE_LOCATION}"
+            f"Updating HuggingFace Datasets cache directory to: {self.HF_CACHE_LOCATION}"
         )
-        os.environ['HF_DATASETS_CACHE'] = self.COMPILER_CACHE_LOCATION
+        os.environ['HF_DATASETS_CACHE'] = self.HF_CACHE_LOCATION
         #os.environ['HF_DATASETS_OFFLINE'] = "1"
 
     def initialize_partition_args_namespace(self):
