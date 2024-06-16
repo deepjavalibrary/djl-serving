@@ -19,6 +19,7 @@ ARG torch_version=2.2.2
 ARG torch_vision_version=0.17.2
 ARG onnx_version=1.17.1
 ARG python_version=3.10
+ARG numpy_version=1.26.4
 
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
@@ -56,7 +57,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
-    pip3 install numpy && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \
+    pip3 install numpy==${numpy_version} && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-gpu && \
     useradd -m -d /home/djl djl && \
