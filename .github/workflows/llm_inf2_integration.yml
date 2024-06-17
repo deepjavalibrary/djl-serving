@@ -54,7 +54,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy pillow wheel
+        run: pip3 install requests "numpy<2" pillow wheel
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -109,7 +109,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy pillow
+        run: pip3 install requests "numpy<2" pillow
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -267,7 +267,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy pillow
+        run: pip3 install requests "numpy<2" pillow
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -365,7 +365,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy pillow
+        run: pip3 install requests "numpy<2" pillow
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh pytorch-inf2 ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
