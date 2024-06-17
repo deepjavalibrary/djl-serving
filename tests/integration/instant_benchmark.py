@@ -218,7 +218,7 @@ def write_model_artifacts(properties, requirements=None, env=None):
         with open(os.path.join(model_path, "requirements.txt"), "w") as f:
             f.write('\n'.join(requirements) + '\n')
     if env and len(env) > 0:
-        with open(os.path.join(model_path, "docker_env"), "w") as f:
+        with open(os.path.join(os.getcwd(), "docker_env"), "w") as f:
             f.write('\n'.join(env) + '\n')
 
 
