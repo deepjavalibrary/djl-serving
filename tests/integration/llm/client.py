@@ -320,6 +320,11 @@ lmi_dist_model_spec = {
         "adapters": ["french", "spanish"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
+    "llama-2-tiny": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256]
+    }
 }
 
 lmi_dist_chat_model_spec = {
