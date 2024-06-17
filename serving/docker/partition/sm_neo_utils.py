@@ -40,11 +40,9 @@ def get_neo_env_vars():
         compilation_error_file = os.environ["SM_NEO_COMPILATION_ERROR_FILE"]
         neo_cache_dir = os.environ.get("SM_NEO_CACHE_DIR")
         neo_hf_cache_dir = os.environ.get("SM_NEO_HF_CACHE_DIR")
-        neo_deployment_instance_type = os.environ.get(
-            "SM_NEO_DEPLOYMENT_INSTANCE_TYPE")
         return (compiler_options, input_model_directory,
                 compiled_model_directory, compilation_error_file,
-                neo_cache_dir, neo_hf_cache_dir, neo_deployment_instance_type)
+                neo_cache_dir, neo_hf_cache_dir)
     except KeyError as exc:
         raise InputConfiguration(
             f"SageMaker Neo environment variable '{exc.args[0]}' expected but not found"
