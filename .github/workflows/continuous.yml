@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: install Python Dependencies
-        run: pip3 install numpy yapf
+        run: pip3 install "numpy<2" yapf
       # Enable gradle cache: https://github.com/actions/cache/blob/master/examples.md#java---gradle
       - uses: actions/cache@v3
         with:
