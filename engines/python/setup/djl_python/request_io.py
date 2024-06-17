@@ -240,3 +240,21 @@ class TextGenerationOutput(RequestOutput):
             else:
                 tokens.append(token.as_dict())
         return tokens
+
+    def get_top_tokens_as_dict(self, sequence_index=0):
+        """Returns the top tokens of the given sequence index as a dictionary.
+        If not given, returns the top tokens of the first sequence index as a dictionary.
+
+        :param sequence_index: index of the sequence to get the top tokens from.
+        :return: top tokens of the given sequence index as a dictionary.
+        """
+        top_tokens = []
+        for top_token in self.sequences[sequence_index].top_tokens:
+            top_token_list = []
+            for token in top_token:
+                if self.input.tgi_compat:
+                    top_token_list.append(token.as_tgi_dict())
+                else:
+                    top_token_list.append(token.as_dict())
+            top_tokens.append(top_token_list)
+        return top_tokens

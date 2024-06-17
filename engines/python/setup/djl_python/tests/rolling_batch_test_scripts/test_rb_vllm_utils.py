@@ -98,7 +98,11 @@ example_request_output = [
                                      2032:
                                      MockLogprob(logprob=-3.0240092277526855,
                                                  rank=1,
-                                                 decoded_token=' big')
+                                                 decoded_token=' big'),
+                                     888:
+                                     MockLogprob(logprob=-4.4099884033203125,
+                                                 rank=3,
+                                                 decoded_token=' new')
                                  }],
                                  finish_reason=None,
                                  stop_reason=None),
@@ -114,7 +118,15 @@ example_request_output = [
                                      2032:
                                      MockLogprob(logprob=-3.0240092277526855,
                                                  rank=1,
-                                                 decoded_token=' big')
+                                                 decoded_token=' big'),
+                                     17372:
+                                     MockLogprob(logprob=-13.409988403320312,
+                                                 rank=10489,
+                                                 decoded_token=' crown'),
+                                     888:
+                                     MockLogprob(logprob=-4.4099884033203125,
+                                                 rank=3,
+                                                 decoded_token=' new'),
                                  }],
                                  finish_reason=None,
                                  stop_reason=None)
@@ -147,12 +159,24 @@ example_request_output = [
                                      2032:
                                      MockLogprob(logprob=-3.0240092277526855,
                                                  rank=1,
-                                                 decoded_token=' big')
+                                                 decoded_token=' big'),
+                                     888:
+                                     MockLogprob(logprob=-4.4099884033203125,
+                                                 rank=3,
+                                                 decoded_token=' new'),
                                  }, {
                                      302:
                                      MockLogprob(logprob=-0.03010374866425991,
                                                  rank=1,
-                                                 decoded_token=' of')
+                                                 decoded_token=' of'),
+                                     235290:
+                                     MockLogprob(logprob=-2.2026185989379883,
+                                                 rank=1,
+                                                 decoded_token='-'),
+                                     578:
+                                     MockLogprob(logprob=-2.2026185989379883,
+                                                 rank=2,
+                                                 decoded_token=' and')
                                  }],
                                  finish_reason=None,
                                  stop_reason=None),
@@ -168,7 +192,15 @@ example_request_output = [
                                      2032:
                                      MockLogprob(logprob=-3.0240092277526855,
                                                  rank=1,
-                                                 decoded_token=' big')
+                                                 decoded_token=' big'),
+                                     17372:
+                                     MockLogprob(logprob=-13.409988403320312,
+                                                 rank=10489,
+                                                 decoded_token=' crown'),
+                                     888:
+                                     MockLogprob(logprob=-4.4099884033203125,
+                                                 rank=3,
+                                                 decoded_token=' new'),
                                  }, {
                                      601:
                                      MockLogprob(logprob=-1.2847318649291992,
@@ -177,7 +209,11 @@ example_request_output = [
                                      1028:
                                      MockLogprob(logprob=-0.909731924533844,
                                                  rank=1,
-                                                 decoded_token='ator')
+                                                 decoded_token='ator'),
+                                     1162:
+                                     MockLogprob(logprob=-0.8929234743118286,
+                                                 rank=2,
+                                                 decoded_token=' year')
                                  }],
                                  finish_reason=None,
                                  stop_reason=None)
@@ -211,17 +247,37 @@ example_request_output = [
                                      2032:
                                      MockLogprob(logprob=-3.0240092277526855,
                                                  rank=1,
-                                                 decoded_token=' big')
+                                                 decoded_token=' big'),
+                                     888:
+                                     MockLogprob(logprob=-4.4099884033203125,
+                                                 rank=3,
+                                                 decoded_token=' new'),
                                  }, {
                                      302:
                                      MockLogprob(logprob=-0.03010374866425991,
                                                  rank=1,
-                                                 decoded_token=' of')
+                                                 decoded_token=' of'),
+                                     235290:
+                                     MockLogprob(logprob=-2.2026185989379883,
+                                                 rank=1,
+                                                 decoded_token='-'),
+                                     578:
+                                     MockLogprob(logprob=-2.2026185989379883,
+                                                 rank=2,
+                                                 decoded_token=' and')
                                  }, {
                                      272:
                                      MockLogprob(logprob=-0.5115904808044434,
                                                  rank=1,
-                                                 decoded_token=' the')
+                                                 decoded_token=' the'),
+                                     169181:
+                                     MockLogprob(logprob=-8.463325500488281,
+                                                 rank=196,
+                                                 decoded_token=' aviator'),
+                                     194366:
+                                     MockLogprob(logprob=-2.463325023651123,
+                                                 rank=1,
+                                                 decoded_token=' Realtor')
                                  }],
                                  finish_reason='length',
                                  stop_reason=None),
@@ -237,7 +293,15 @@ example_request_output = [
                                      2032:
                                      MockLogprob(logprob=-3.0240092277526855,
                                                  rank=1,
-                                                 decoded_token=' big')
+                                                 decoded_token=' big'),
+                                     17372:
+                                     MockLogprob(logprob=-13.409988403320312,
+                                                 rank=10489,
+                                                 decoded_token=' crown'),
+                                     888:
+                                     MockLogprob(logprob=-4.4099884033203125,
+                                                 rank=3,
+                                                 decoded_token=' new'),
                                  }, {
                                      601:
                                      MockLogprob(logprob=-1.2847318649291992,
@@ -246,7 +310,11 @@ example_request_output = [
                                      1028:
                                      MockLogprob(logprob=-0.909731924533844,
                                                  rank=1,
-                                                 decoded_token='ator')
+                                                 decoded_token='ator'),
+                                     1162:
+                                     MockLogprob(logprob=-0.8929234743118286,
+                                                 rank=2,
+                                                 decoded_token=' year')
                                  }, {
                                      442:
                                      MockLogprob(logprob=-6.998573303222656,
@@ -255,7 +323,15 @@ example_request_output = [
                                      28725:
                                      MockLogprob(logprob=-3.7798233032226562,
                                                  rank=1,
-                                                 decoded_token=',')
+                                                 decoded_token=','),
+                                     1622:
+                                     MockLogprob(logprob=-4.463325023651123,
+                                                 rank=2,
+                                                 decoded_token=' New'),
+                                     576:
+                                     MockLogprob(logprob=-4.463325023651123,
+                                                 rank=3,
+                                                 decoded_token=' of')
                                  }],
                                  finish_reason='length',
                                  stop_reason=None)
@@ -287,7 +363,8 @@ class TestVllmUtils(unittest.TestCase):
             "details": True,
             "decoder_input_details": True,
             "best_of": 2,
-            "n": 2
+            "n": 2,
+            "top_n_tokens": 3
         }
 
         # 1. Creates the request
@@ -333,6 +410,56 @@ class TestVllmUtils(unittest.TestCase):
                       log_prob=-6.998573303222656,
                       special_token=None)
             ],
+                     top_tokens=[[
+                         Token(id=22968,
+                               text=' consolid',
+                               log_prob=-12.117759704589844,
+                               special_token=None),
+                         Token(id=2032,
+                               text=' big',
+                               log_prob=-3.0240092277526855,
+                               special_token=None),
+                         Token(id=17372,
+                               text=' crown',
+                               log_prob=-13.409988403320312,
+                               special_token=None),
+                         Token(id=888,
+                               text=' new',
+                               log_prob=-4.4099884033203125,
+                               special_token=None)
+                     ],
+                                 [
+                                     Token(id=601,
+                                           text='ated',
+                                           log_prob=-1.2847318649291992,
+                                           special_token=None),
+                                     Token(id=1028,
+                                           text='ator',
+                                           log_prob=-0.909731924533844,
+                                           special_token=None),
+                                     Token(id=1162,
+                                           text=' year',
+                                           log_prob=-0.8929234743118286,
+                                           special_token=None)
+                                 ],
+                                 [
+                                     Token(id=442,
+                                           text=' or',
+                                           log_prob=-6.998573303222656,
+                                           special_token=None),
+                                     Token(id=28725,
+                                           text=',',
+                                           log_prob=-3.7798233032226562,
+                                           special_token=None),
+                                     Token(id=1622,
+                                           text=' New',
+                                           log_prob=-4.463325023651123,
+                                           special_token=None),
+                                     Token(id=576,
+                                           text=' of',
+                                           log_prob=-4.463325023651123,
+                                           special_token=None)
+                                 ]],
                      finish_reason='length',
                      cumulative_log_prob=-20.4010648727417,
                      stop_reason=None),
@@ -352,6 +479,48 @@ class TestVllmUtils(unittest.TestCase):
                           log_prob=-0.5115904808044434,
                           special_token=None)
                 ],
+                top_tokens=[[
+                    Token(id=4292,
+                          text=' member',
+                          log_prob=-4.2740092277526855,
+                          special_token=None),
+                    Token(id=2032,
+                          text=' big',
+                          log_prob=-3.0240092277526855,
+                          special_token=None),
+                    Token(id=888,
+                          text=' new',
+                          log_prob=-4.4099884033203125,
+                          special_token=None)
+                ],
+                            [
+                                Token(id=302,
+                                      text=' of',
+                                      log_prob=-0.03010374866425991,
+                                      special_token=None),
+                                Token(id=235290,
+                                      text='-',
+                                      log_prob=-2.2026185989379883,
+                                      special_token=None),
+                                Token(id=578,
+                                      text=' and',
+                                      log_prob=-2.2026185989379883,
+                                      special_token=None)
+                            ],
+                            [
+                                Token(id=272,
+                                      text=' the',
+                                      log_prob=-0.5115904808044434,
+                                      special_token=None),
+                                Token(id=169181,
+                                      text=' aviator',
+                                      log_prob=-8.463325500488281,
+                                      special_token=None),
+                                Token(id=194366,
+                                      text=' Realtor',
+                                      log_prob=-2.463325023651123,
+                                      special_token=None)
+                            ]],
                 finish_reason='length',
                 cumulative_log_prob=-4.815703457221389,
                 stop_reason=None,
@@ -372,3 +541,12 @@ class TestVllmUtils(unittest.TestCase):
                 self.assertTrue(
                     _compare_tokens(token,
                                     actual_sequence.tokens[token_index]))
+            for top_tokens_index, top_tokens in enumerate(sequence.top_tokens):
+                self.assertEqual(
+                    len(top_tokens),
+                    len(actual_sequence.top_tokens[top_tokens_index]))
+                for token_index, token in enumerate(top_tokens):
+                    self.assertTrue(
+                        _compare_tokens(
+                            token, actual_sequence.top_tokens[top_tokens_index]
+                            [token_index]))

@@ -13,7 +13,7 @@
 import json
 import logging
 import time
-from typing import Union, Callable
+from typing import Union, Callable, Optional, Dict
 
 from typing_extensions import deprecated
 
@@ -43,6 +43,9 @@ def get_sequence_details(request_output: RequestOutput,
     if parameters.get("decoder_input_details"):
         sequence_details["prefill"] = request_output.get_prompt_tokens_as_dict(
         )
+    if parameters.get("top_n_tokens", 0) > 0:
+        sequence_details["top_tokens"] = request_output.get_top_tokens_as_dict(
+            sequence_index)
     return sequence_details
 
 
@@ -106,29 +109,43 @@ def _json_output_formatter(request_output: RequestOutput):
         json_encoded_str = f"[{json_encoded_str}"
     json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
-        if parameters.get("details", tgi_compat):
-            final_dict = {
-                "finish_reason": best_sequence.finish_reason,
-                "generated_tokens": len(best_sequence.tokens),
-                "inputs": request_output.input.input_text,
-                "tokens": request_output.get_tokens_as_dict(),
-            }
-
-            if parameters.get("decoder_input_details"):
-                final_dict[
-                    "prefill"] = request_output.get_prompt_tokens_as_dict()
-            details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
-            json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
-        elif best_sequence.finish_reason == "error":
-            final_dict = {"finish_reason": best_sequence.finish_reason}
-            details_str = f"\"details\": {json.dumps(final_dict, ensure_ascii=False)}"
+        details_dict = get_details_dict(request_output, include_tokens=True)
+        if details_dict:
+            details_str = f"\"details\": {json.dumps(details_dict, ensure_ascii=False)}"
             json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
         else:
             json_encoded_str = f"{json_encoded_str}\"}}"
         if tgi_compat:
             json_encoded_str = f"{json_encoded_str}]"
-
     return json_encoded_str
+
+
+def get_details_dict(request_output: RequestOutput,
+                     include_tokens: bool = True) -> Optional[Dict]:
+    parameters = request_output.input.parameters
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    if parameters.get("details", request_output.input.tgi_compat):
+        final_dict = {
+            "finish_reason": best_sequence.finish_reason,
+            "generated_tokens": len(best_sequence.tokens),
+            "inputs": request_output.input.input_text,
+        }
+
+        if include_tokens:
+            final_dict["tokens"] = request_output.get_tokens_as_dict()
+
+        if parameters.get("decoder_input_details"):
+            final_dict["prefill"] = request_output.get_prompt_tokens_as_dict()
+        if parameters.get("top_n_tokens", 0) > 0:
+            final_dict["top_tokens"] = request_output.get_top_tokens_as_dict(
+                request_output.best_sequence_index)
+
+        return final_dict
+    elif best_sequence.finish_reason == "error":
+        return {"finish_reason": best_sequence.finish_reason}
+    else:
+        return None
 
 
 def _jsonlines_output_formatter(request_output: RequestOutput):
@@ -148,19 +165,9 @@ def _jsonlines_output_formatter(request_output: RequestOutput):
     if last_token:
         generated_text = get_generated_text(best_sequence, request_output)
         final_dict["generated_text"] = generated_text
-        if parameters.get("details", tgi_compat):
-            final_dict["details"] = {
-                "finish_reason": best_sequence.finish_reason,
-                "generated_tokens": len(best_sequence.tokens),
-                "inputs": request_output.input.input_text,
-            }
-            if parameters.get("decoder_input_details"):
-                final_dict["details"][
-                    "prefill"] = request_output.get_prompt_tokens_as_dict()
-        elif best_sequence.finish_reason == "error":
-            final_dict["details"] = {
-                "finish_reason": best_sequence.finish_reason
-            }
+        details_dict = get_details_dict(request_output, include_tokens=False)
+        if details_dict:
+            final_dict["details"] = details_dict
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 
