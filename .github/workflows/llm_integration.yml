@@ -69,7 +69,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests "numpy<2"
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -127,7 +127,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -240,7 +240,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests "numpy<2"
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -286,7 +286,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests pillow numpy
+        run: pip3 install requests pillow "numpy<2"
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -406,7 +406,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests "numpy<2"
       - name: Install s5cmd
         working-directory: serving/docker
         run: sudo scripts/install_s5cmd.sh x64
@@ -472,7 +472,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests "numpy<2"
       - name: Install s5cmd
         working-directory: serving/docker
         run: sudo scripts/install_s5cmd.sh x64
@@ -560,7 +560,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests pillow numpy
+        run: pip3 install requests pillow "numpy<2"
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh deepspeed ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -638,7 +638,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -752,7 +752,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers

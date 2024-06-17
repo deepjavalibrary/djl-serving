@@ -53,7 +53,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
-    pip3 install numpy && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \
+    pip3 install "numpy<2" && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-gpu && \
     useradd -m -d /home/djl djl && \
