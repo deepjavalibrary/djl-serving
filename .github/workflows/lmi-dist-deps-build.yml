@@ -45,7 +45,7 @@ jobs:
           python -m venv venv
           . ./venv/bin/activate
           python -m pip install --upgrade pip
-          python -m pip install numpy cmake awscli packaging wheel setuptools ninja \
+          python -m pip install "numpy<2" cmake awscli packaging wheel setuptools ninja \
           git-remote-codecommit torch==2.1.2 --extra-index-url https://download.pytorch.org/whl/cu121
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

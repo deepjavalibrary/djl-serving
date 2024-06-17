@@ -56,7 +56,7 @@ if __name__ == '__main__':
     requirements = ['psutil', 'packaging', 'wheel']
 
     test_requirements = [
-        'numpy',
+        'numpy<2',
         'requests',
         'Pillow',
         'transformers',
