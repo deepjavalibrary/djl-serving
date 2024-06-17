@@ -178,6 +178,9 @@ class TextGenerationOutput(RequestOutput):
     prompt_tokens_details: List[Token] = field(default_factory=lambda: [])
     other_sequences_indices: List[int] = field(default_factory=lambda: [])
 
+    def __post_init__(self):
+        self.sequences[self.best_sequence_index] = Sequence()
+
     def set_next_token(self,
                        token: Token,
                        sequence_index=0,
