@@ -981,6 +981,29 @@ text_embedding_model_list = {
     }
 }
 
+handler_performance_model_list = {
+    "tiny-llama-lmi": {
+        "engine": "MPI",
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.rolling_batch": "lmi-dist",
+        "option.max_rolling_batch_size": 512,
+    },
+    "tiny-llama-vllm": {
+        "engine": "Python",
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.task": "text-generation",
+        "option.rolling_batch": "vllm",
+        "option.gpu_memory_utilization": "0.9",
+        "option.max_rolling_batch_size": 512,
+    },
+    "tiny-llama-trtllm": {
+        "engine": "Python",
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.rolling_batch": "trtllm",
+        "option.max_rolling_batch_size": 512,
+    },
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -1159,6 +1182,15 @@ def build_correctness_model(model):
     write_model_artifacts(options)
 
 
+def build_handler_performance_model(model):
+    if model not in handler_performance_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(handler_performance_model_list.keys())}"
+        )
+    options = handler_performance_model_list[model]
+    write_model_artifacts(options)
+
+
 def build_text_embedding_model(model):
     if model not in text_embedding_model_list:
         raise ValueError(
@@ -1176,6 +1208,7 @@ supported_handler = {
     'transformers_neuronx': build_transformers_neuronx_handler_model,
     'transformers_neuronx_aot': build_transformers_neuronx_aot_handler_model,
     'performance': build_performance_model,
+    'handler_performance': build_handler_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
     'lmi_dist': build_lmi_dist_model,
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
