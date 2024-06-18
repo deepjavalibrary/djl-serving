@@ -1,0 +1,17 @@
+name: SubRemoteWorkflowTest
+
+on:
+  push:
+    branches:
+      - test-ci
+  workflow_run:
+    workflows: ["RemoteWorkflowTest"]
+    types:
+      - completed
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Show trigger
+        run: echo "Complete"

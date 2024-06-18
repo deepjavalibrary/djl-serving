@@ -1,0 +1,19 @@
+name: RemoteWorkflowTest
+
+on:
+  push:
+    branches:
+      - test-ci
+  workflow_dispatch:
+    inputs:
+      parameter:
+        description: Remote Workflow Test Parameter
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Show environment v1
+        run: env | grep ^GITHUB
+      - name: Show ref v1
+        run: echo "=============> Version from $GITHUB_REF"
