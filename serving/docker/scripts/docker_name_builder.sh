@@ -13,8 +13,4 @@ else
   fi
 fi
 
-if [[ -n "$GITHUB_ENV" ]]; then
-  echo "DJLSERVING_DOCKER_TAG=$image" >> $GITHUB_ENV
-else
-  echo "$image"
-fi
+echo "DJLSERVING_DOCKER_TAG=$image" >> $GITHUB_ENV
