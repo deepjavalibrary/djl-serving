@@ -28,6 +28,7 @@ ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/r23.11/tritontoolk
 ARG pydantic_version=1.10.13
 ARG ammo_version=0.5.0
 ARG pynvml_verison=11.4.1
+ARG numpy_version=1.26.4
 EXPOSE 8080
 
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
@@ -106,6 +107,7 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
+    pip3 install numpy==${numpy_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
