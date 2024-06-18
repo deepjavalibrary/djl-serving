@@ -35,6 +35,8 @@ CONFIG_FILES_PATTERNS = ["*.json", "*.txt", "*.model"]
 
 ALLOW_PATTERNS = ["*.json", "*.pt", "*.bin", "*.txt"]
 
+WEIGHT_ONLY_QUANTIZATION_TYPES = ["static_int8"]
+
 
 class PartitionService(object):
 
@@ -326,7 +328,9 @@ def main():
     extract_python_jar(PYTHON_CACHE_DIR)
 
     service = PartitionService(properties_manager)
-    if properties_manager.properties.get('option.quantize'):
+    if properties_manager.properties.get(
+            'option.quantize') and properties_manager.properties.get(
+                'option.quantize') not in WEIGHT_ONLY_QUANTIZATION_TYPES:
         service.run_quantization()
     else:
         service.run_partition()

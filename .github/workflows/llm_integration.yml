@@ -72,7 +72,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh ${{ matrix.arch }} ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -176,7 +176,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -290,7 +290,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh tensorrt-llm ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
@@ -504,7 +504,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker
@@ -565,12 +565,31 @@ jobs:
             serve -m test=file:/opt/ml/model/test/
           python3 llm/client.py lmi_dist mpt-7b
           docker rm -f $(docker ps -aq)
+      - name: Test llama-2-tiny AutoAwq
+        working-directory: tests/integration
+        run: |
+          rm -rf models
+          python3 llm/prepare.py lmi_dist llama-2-tiny
+          echo -en "CUDA_VISIBLE_DEVICES=0,1,2,3" > docker_env
+          # partition
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+             partition --model-dir /opt/ml/input/data/training --save-mp-checkpoint-path /opt/ml/input/data/training/aot
+          # launch the container again
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
+             serve -m test=file:/opt/ml/model/test/aot
+          python3 llm/client.py lmi_dist llama-2-tiny
+          sudo rm -rf models
+          docker rm -f $(docker ps -aq)
       - name: On fail step
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
           docker rm -f $(docker ps -aq) || true
           cat logs/serving.log
+      - name: Remove model directory
+        working-directory: tests/integration
+        run: |
+          sudo rm -rf models
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
@@ -595,7 +614,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy
+        run: pip3 install requests "numpy<2"
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker
@@ -713,7 +732,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker
@@ -823,7 +842,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker
@@ -914,7 +933,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests numpy huggingface_hub
+        run: pip3 install requests "numpy<2" huggingface_hub
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download docker

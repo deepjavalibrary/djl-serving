@@ -554,6 +554,11 @@ lmi_dist_model_list = {
         "option.gpu_memory_utilization":
         "0.8",
     },
+    "llama-2-tiny": {
+        "option.model_id": "s3://djl-llm/llama-2-tiny/",
+        "option.quantize": "awq",
+        "option.tensor_parallel_degree": 4
+    }
 }
 
 vllm_model_list = {

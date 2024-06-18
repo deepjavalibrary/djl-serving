@@ -20,5 +20,5 @@ else
   rm -rf get-pip.py
 fi
 python3 -m pip --no-cache-dir install -U pip
-python3 -m pip --no-cache-dir install -U numpy awscli
+python3 -m pip --no-cache-dir install -U "numpy<2" awscli
 ln -sf /usr/bin/python3 /usr/bin/python

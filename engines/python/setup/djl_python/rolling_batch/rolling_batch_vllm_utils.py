@@ -63,6 +63,9 @@ def update_request_cache_with_output(request_cache: OrderedDict,
         request_output.best_sequence_index = vllm_request_output.outputs[
             0].index
         request_cache.pop(request_id)
+        for i in range(1, len(vllm_request_output.outputs)):
+            index = vllm_request_output.outputs[i].index
+            request_output.other_sequences_indices.append(index)
 
     return request_cache
 
@@ -105,17 +108,21 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
         output_token_texts = [text] * len(
             new_token_ids) if not output_token_texts else output_token_texts
 
+        top_tokens = []
         # calculate log probs
         if completion_output.logprobs:
             new_logprobs_list = completion_output.logprobs[
                 prev_len:
                 cur_len] if prev_len < cur_len else completion_output.logprobs
-            new_logprobs = [
-                # NOTE: vLLM 0.4.1 changed logprob type
-                logprobs[token_id] if isinstance(logprobs[token_id], float)
-                else logprobs[token_id].logprob
-                for token_id, logprobs in zip(new_token_ids, new_logprobs_list)
-            ]
+            new_logprobs = []
+            for token_id, logprobs in zip(new_token_ids, new_logprobs_list):
+                for token_id_key, logprob in logprobs.items():
+                    new_logprobs.append(logprobs[token_id].logprob)
+                    top_tokens.append(
+                        Token(id=token_id_key,
+                              text=logprob.decoded_token,
+                              log_prob=logprob.logprob))
+
         else:
             new_logprobs = [None] * len(new_token_ids)
 
@@ -139,6 +146,10 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
             is_last_token = finish_reason is not None
             request_output.sequences[sequence_index].set_next_token(
                 token, is_last_token)
+            top_tokens.append(token)
+
+        request_output.sequences[sequence_index].set_next_top_tokens(
+            top_tokens)
 
         cache[f"sequence_index_{sequence_index}"]["curr_length"] = len(
             completion_output.text)
