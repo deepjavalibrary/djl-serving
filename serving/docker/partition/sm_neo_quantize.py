@@ -20,7 +20,7 @@ import torch
 
 from sm_neo_utils import (CompilationFatalError, write_error_to_file,
                           get_neo_env_vars)
-from utils import extract_python_jar
+from utils import extract_python_jar, load_properties
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
@@ -38,13 +38,14 @@ class NeoQuantizationService():
         self.INPUT_MODEL_DIRECTORY: Final[str] = env[1]
         self.OUTPUT_MODEL_DIRECTORY: Final[str] = env[2]
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
-        self.COMPILER_CACHE_LOCATION: Final[str] = env[4]
+        self.HF_CACHE_LOCATION: Final[str] = env[5]
+        self.TARGET_INSTANCE_TYPE: Final[str] = env[6]
 
     def update_dataset_cache_location(self):
         logging.info(
-            f"Updating HuggingFace Datasets cache directory to: {self.COMPILER_CACHE_LOCATION}"
+            f"Updating HuggingFace Datasets cache directory to: {self.HF_CACHE_LOCATION}"
         )
-        os.environ['HF_DATASETS_CACHE'] = self.COMPILER_CACHE_LOCATION
+        os.environ['HF_DATASETS_CACHE'] = self.HF_CACHE_LOCATION
         #os.environ['HF_DATASETS_OFFLINE'] = "1"
 
     def initialize_partition_args_namespace(self):
@@ -72,6 +73,8 @@ class NeoQuantizationService():
         given serving.properties
         """
         # Default to awq quantization
+        # TODO: update this when new quantization methods are added,
+        # since envvar overrides customer serving.properties
         os.environ['OPTION_QUANTIZE'] = 'awq'
         logging.debug("Constructing PropertiesManager from "
                       f"serving.properties\nargs:{self.args}\n")
@@ -89,11 +92,42 @@ class NeoQuantizationService():
             raise CompilationFatalError(
                 f"Encountered an error during quantization: {exc}")
 
+    def write_properties(self):
+        """
+        Updates outputted serving.properties.
+        If a user passes in tensor_parallel_degree, it is passed through to the output.
+        Otherwise, tensor_parallel_degree is not outputted so that it can be defined
+        during serving.
+        """
+        customer_properties = load_properties(self.INPUT_MODEL_DIRECTORY)
+        user_tensor_parallel_degree = customer_properties.get(
+            "option.tensor_parallel_degree")
+        if os.environ.get("OPTION_TENSOR_PARALLEL_DEGREE"):
+            user_tensor_parallel_degree = os.environ.get(
+                "OPTION_TENSOR_PARALLEL_DEGREE")
+
+        output_properties = self.properties_manager.properties
+        if user_tensor_parallel_degree:
+            logging.info(
+                f"User passed tensor_parallel_degree={user_tensor_parallel_degree}"
+            )
+            output_properties[
+                "option.tensor_parallel_degree"] = user_tensor_parallel_degree
+        else:
+            logging.info(
+                "User did not passs tensor_parallel_degree. Outputted serving.properties"
+                "will not include this field.")
+            del output_properties["option.tensor_parallel_degree"]
+
+        self.properties_manager.properties = output_properties
+        self.properties_manager.generate_properties_file()
+
     def neo_quantize(self):
         self.update_dataset_cache_location()
         self.initialize_partition_args_namespace()
         self.construct_properties_manager()
         self.run_quantization()
+        self.write_properties()
 
 
 def main():
