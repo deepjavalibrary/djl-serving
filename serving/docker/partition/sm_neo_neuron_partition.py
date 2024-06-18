@@ -183,12 +183,12 @@ class NeoNeuronPartitionService():
         is easier to construct.
         """
         self.args.save_mp_checkpoint_path = self.OUTPUT_MODEL_DIRECTORY
+        self.args.engine = "Python"
         # If skip_copy is not enabled, outputted configs are overwritten, and deployment fails.
         self.args.skip_copy = True
         # These attributes reflect the default values of the corresponding attributes
         # in the partition argparser. PropertiesManager expects these attributes to be defined.
         self.args.model_id = None
-        self.args.engine = None
         self.args.tensor_parallel_degree = None
         self.args.quantize = None
 
