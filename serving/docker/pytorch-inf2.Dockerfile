@@ -26,6 +26,7 @@ ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.22
 ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.4.2-py3-none-any.whl"
+ARG numpy_version=1.26.4
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
@@ -78,6 +79,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
     pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile \
     torchvision==${torchvision_version} && \
+    pip install numpy==${numpy_version} && \
     scripts/install_s5cmd.sh x64 && \
     scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
