@@ -39,7 +39,6 @@ class NeoQuantizationService():
         self.OUTPUT_MODEL_DIRECTORY: Final[str] = env[2]
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
         self.HF_CACHE_LOCATION: Final[str] = env[5]
-        self.TARGET_INSTANCE_TYPE: Final[str] = env[6]
 
     def update_dataset_cache_location(self):
         logging.info(
