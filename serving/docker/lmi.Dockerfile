@@ -23,6 +23,7 @@ ARG pydantic_version=2.7.1
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
 ARG vllm_cuda_name="cu12"
 ARG vllm_nccl_version=2.18.1
+ARG numpy_version=1.26.4
 # HF Deps
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.41.1
@@ -123,6 +124,7 @@ RUN scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
+    pip3 install numpy==${numpy_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
