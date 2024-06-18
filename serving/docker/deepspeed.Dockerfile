@@ -17,6 +17,7 @@ ARG djl_version=0.26.0
 ARG python_version=3.10
 ARG torch_version=2.1.2
 ARG torch_vision_version=0.16.2
+ARG numpy_version=1.26.4
 # HF Deps
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.36.2
@@ -108,6 +109,7 @@ RUN scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
+    pip3 install numpy==${numpy_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
