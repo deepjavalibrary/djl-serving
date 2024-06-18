@@ -29,6 +29,7 @@ ARG pydantic_version=2.6.1
 ARG ammo_version=0.7.0
 ARG janus_version=1.0.0
 ARG pynvml_verison=11.5.0
+ARG numpy_version=1.26.4
 
 EXPOSE 8080
 
@@ -101,6 +102,7 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
+    pip3 install numpy==${numpy_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
