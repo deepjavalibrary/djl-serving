@@ -48,6 +48,10 @@ def var_replace(template, vars):
             if isinstance(v, str):
                 for var_key, var_val in vars.items():
                     v = v.replace("$" + var_key, var_val)
+                if v.startswith("$"):
+                    v = os.environ.get(v[1:], v)
+                for env_key, env_val in os.environ.items():
+                    v = v.replace("$" + env_key, env_val)
                 template[k] = v
             else:
                 var_replace(v, vars)
@@ -56,6 +60,8 @@ def var_replace(template, vars):
             if isinstance(v, str):
                 for var_key, var_val in vars.items():
                     v = v.replace("$" + var_key, var_val)
+                for env_key, env_val in os.environ.items():
+                    v = v.replace("$" + env_key, env_val)
                 template[k] = v
             else:
                 var_replace(v, vars)
