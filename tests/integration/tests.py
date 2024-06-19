@@ -249,6 +249,7 @@ class TestLmiDist1:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3",
                      cmd="serve -m test=file:/opt/ml/model/test/aot")
             client.run("lmi_dist llama-2-tiny".split())
+        os.system('sudo rm -rf models')
 
 
 class TestLmiDist2:
