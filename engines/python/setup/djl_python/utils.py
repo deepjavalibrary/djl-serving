@@ -11,8 +11,9 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
-from typing import Union, Callable, Any, List
+from typing import Union, Callable, Any, List, Dict
 
+from djl_python import Output
 from djl_python.inputs import Input
 from djl_python.encode_decode import decode
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
@@ -28,7 +29,6 @@ class ParsedInput:
     batch: list
     is_client_side_batch: list = field(default_factory=lambda: [])
     adapters: list = None
-    found_adapters: bool = False
 
 
 @dataclass
@@ -84,14 +84,20 @@ def parse_input_with_formatter(inputs: Input,
         for _ in range(input_size[i]):
             parameters.append(_param)
 
+    if found_adapters and adapters is not None:
+        adapter_data = [
+            adapter_registry.get(adapter, None) for adapter in adapters
+        ]
+    else:
+        adapter_data = None
+
     return ParsedInput(input_data=input_data,
                        input_size=input_size,
                        parameters=parameters,
                        errors=errors,
                        batch=batch,
                        is_client_side_batch=is_client_side_batch,
-                       adapters=adapters,
-                       found_adapters=found_adapters)
+                       adapters=adapter_data)
 
 
 def _parse_inputs_params(input_map, item, input_format_configs):
@@ -215,3 +221,28 @@ def is_multiple_sequences(parameters: dict) -> bool:
 
 def wait_till_generation_finished(parameters):
     return is_best_of(parameters) or is_multiple_sequences(parameters)
+
+
+def rolling_batch_inference(parsed_input: ParsedInput, inputs: Input,
+                            outputs: Output, rolling_batch):
+    if inputs.get_property("reset_rollingbatch"):
+        rolling_batch.reset()
+    result = rolling_batch.inference(parsed_input.input_data,
+                                     parsed_input.parameters,
+                                     adapters=parsed_input.adapters)
+    idx = 0
+    for i in range(len(parsed_input.batch)):
+        err = parsed_input.errors.get(i)
+        if err:
+            err = {"data": "", "last": True, "code": 424, "error": err}
+            outputs.add(Output.binary_encode(err), key="data", batch_index=i)
+            outputs.add_property(f"batch_{i}_Content-Type", "application/json")
+        else:
+            content_type = result[idx].pop("content_type")
+            outputs.add(Output.binary_encode(result[idx]),
+                        key="data",
+                        batch_index=i)
+            if content_type is not None:
+                outputs.add_property(f"batch_{i}_Content-Type", content_type)
+            idx += 1
+    return outputs
