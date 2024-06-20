@@ -25,7 +25,7 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
-from djl_python.utils import InputFormatConfigs, parse_input_with_formatter
+from djl_python.utils import InputFormatConfigs, parse_input_with_formatter, rolling_batch_inference
 from typing import Tuple, List
 
 model = None
@@ -49,6 +49,7 @@ class TransformersNeuronXService(object):
         self.rolling_batch_config = dict()
         self.input_format_configs = None
         self._model_loader_class = TNXModelLoader
+        self.parsed_input = None
 
     def optimum_not_supported(self) -> bool:
         support = False
@@ -218,9 +219,11 @@ class TransformersNeuronXService(object):
         :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
         :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """
-        parsed_input = parse_input_with_formatter(
+        self.parsed_input = parse_input_with_formatter(
             inputs, input_format_configs=self.input_format_configs)
-        return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
+        return (self.parsed_input.input_data, self.parsed_input.input_size,
+                self.parsed_input.parameters, self.parsed_input.errors,
+                self.parsed_input.batch)
 
     def partition(self, properties: dict):
         self.pre_model_load(properties)
@@ -240,30 +243,8 @@ class TransformersNeuronXService(object):
         outputs = Output()
 
         if self.rolling_batch:
-            if inputs.get_property("reset_rollingbatch"):
-                self.rolling_batch.reset()
-            result = self.rolling_batch.inference(input_data, parameters)
-            idx = 0
-            for i in range(len(batch)):
-                err = errors.get(i)
-                if err:
-                    err = {"data": "", "last": True, "code": 424, "error": err}
-                    outputs.add(Output.binary_encode(err),
-                                key="data",
-                                batch_index=i)
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         "application/json")
-                else:
-                    content_type = result[idx].pop("content_type")
-                    outputs.add(Output.binary_encode(result[idx]),
-                                key="data",
-                                batch_index=i)
-                    if content_type is not None:
-                        outputs.add_property(f"batch_{i}_Content-Type",
-                                             content_type)
-                    idx += 1
-
-            return outputs
+            return rolling_batch_inference(self.parsed_input, inputs, outputs,
+                                           self.rolling_batch)
 
         parameters = parameters[0]
         # Remove rolling batch default parameters
