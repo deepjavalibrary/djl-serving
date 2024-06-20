@@ -12,7 +12,7 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.utils import parse_input_with_formatter, InputFormatConfigs
+from djl_python.input_parser import InputFormatConfigs, parse_input_with_formatter
 
 
 def _get_value_based_on_tensor(value, index=None):
