@@ -106,6 +106,8 @@ def get_speculative_decoding_metrics_record(
                 completion_output.acceptance_history)
     else:
         record["mean_acceptance"] = 0
+    record["acceptance_history_len"] = len(
+        completion_output.acceptance_history)
     record["prompt_size"] = len(request_output.prompt_token_ids)
     record["output_size"] = len(completion_output.token_ids)
     return record

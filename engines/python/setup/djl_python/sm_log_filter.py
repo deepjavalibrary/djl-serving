@@ -19,7 +19,10 @@ import logging
 
 # https://docs.aws.amazon.com/deep-learning-containers/latest/devguide/logging-and-monitoring.html
 class SMLogFilter(logging.Filter):
-    sm_log_markers = ['ModelServerError', 'UserScriptError', 'SysHealth']
+    sm_log_markers = [
+        'ModelServerError', 'UserScriptError', 'SysHealth',
+        'ModelServerTelemetry'
+    ]
     counter = defaultdict(int)
 
     def filter(self, record):
