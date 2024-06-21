@@ -45,6 +45,7 @@ class LmiDistRbProperties(Properties):
     speculative_length: int = 5
     draft_model_tp_size: int = 1
     record_acceptance_rate: Optional[bool] = False
+    speculative_telemetry: Optional[bool] = True
     enable_lora: Optional[bool] = False
     max_loras: Optional[int] = 4
     max_lora_rank: Optional[int] = 16
