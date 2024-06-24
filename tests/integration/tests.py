@@ -239,6 +239,7 @@ class TestLmiDist1:
 
     def test_gpt2(self):
         with Runner('lmi', 'gpt2') as r:
+            prepare.build_lmi_dist_model("gpt2")
             envs = [
                 "OPTION_MAX_ROLLING_BATCH_SIZE=2",
                 "OPTION_OUTPUT_FORMATTER=jsonlines",
