@@ -9,27 +9,28 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.2.2-cudnn8-devel-ubuntu22.04
+ARG version=12.4.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu122
+ARG cuda_version=cu124
 ARG python_version=3.10
-ARG TORCH_VERSION=2.2.1
+ARG TORCH_VERSION=2.2.2
 ARG djl_version=0.28.0~SNAPSHOT
 ARG transformers_version=4.40.0
 ARG accelerate_version=0.29.3
-ARG tensorrtlibs_version=9.3.0.post12.dev1
+ARG tensorrtlibs_version=10.0.1
 ARG trtllm_toolkit_version=nightly
-ARG trtllm_version=v0.9.0
-ARG cuda_python_version=12.2.0
+ARG trtllm_version=v0.10.0
+ARG cuda_python_version=12.4
 ARG peft_version=0.10.0
 ARG triton_version=r24.04
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.9.0-cp310-cp310-linux_x86_64.whl"
+ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.10.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/${triton_version}/tritontoolkit-24.4-py310-none-any.whl"
 ARG pydantic_version=2.6.1
-ARG ammo_version=0.7.0
+ARG modelopt_version=0.11.2
 ARG janus_version=1.0.0
 ARG pynvml_verison=11.5.0
+ARG numpy_version=1.26.4
 
 EXPOSE 8080
 
@@ -60,8 +61,12 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/config.properties
 COPY partition /opt/djl/partition
 
+
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
+
+# Install CUDNN 8
+RUN apt-get update && apt-get install -y --no-install-recommends libcudnn8 && rm -rf /var/lib/apt/lists/*
 
 # Install OpenMPI and other deps
 ARG DEBIAN_FRONTEND=noninteractive
@@ -78,7 +83,7 @@ RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} ac
     pip3 cache purge
 
 # Install TensorRT and TRT-LLM Deps
-RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} nvidia-ammo~=${ammo_version} janus==${janus_version} && \
+RUN pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt==${tensorrtlibs_version} janus==${janus_version} nvidia-modelopt==${modelopt_version} && \
     pip install --no-deps ${trtllm_wheel} && \
     pyver=$(echo $python_version | awk -F. '{print $1$2}') && \
     pip3 cache purge
@@ -103,11 +108,12 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
+    pip3 install numpy==${numpy_version} && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Add CUDA-Compat
-RUN apt-get update && apt-get install -y cuda-compat-12-2 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
