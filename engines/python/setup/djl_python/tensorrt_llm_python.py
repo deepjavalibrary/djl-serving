@@ -94,7 +94,8 @@ class TRTLLMPythonService:
         self.input_formatter = InputFormatConfigs(
             is_rolling_batch=False,
             is_adapters_supported=False,
-            output_formatter=self.trt_configs.output_formatter)
+            output_formatter=self.trt_configs.output_formatter,
+            tokenizer=self.model.tokenizer)
         self.initialized = True
         return
 
