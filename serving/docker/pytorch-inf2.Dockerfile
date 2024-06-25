@@ -25,7 +25,8 @@ ARG accelerate_version=0.23.0
 ARG diffusers_version=0.26.1
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.22
-ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-nightly-py3-none-any.whl"
+# %2B is the url escape for the '+' character
+ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.4.2%2Bnightly-py3-none-any.whl"
 EXPOSE 8080
 
 # Sets up Path for Neuron tools
