@@ -24,6 +24,8 @@ from tensorrt_llm_toolkit import create_model_repo
 class NeoTRTLLMPartitionService():
 
     def __init__(self):
+        self.properties: dict = {}
+
         env = get_neo_env_vars()
         self.INPUT_MODEL_DIRECTORY: Final[str] = env[1]
         self.OUTPUT_MODEL_DIRECTORY: Final[str] = env[2]
@@ -42,11 +44,8 @@ class NeoTRTLLMPartitionService():
 
     # TODO: merge with / call other partition script if possible?
     def run_partition(self):
-        properties = update_kwargs_with_env_vars({})
-        properties.update(load_properties(self.INPUT_MODEL_DIRECTORY))
-
         kwargs = {}
-        for key, value in properties.items():
+        for key, value in self.properties.items():
             if key.startswith("option."):
                 kwargs[key[7:]] = value
             else:
@@ -59,9 +58,23 @@ class NeoTRTLLMPartitionService():
                 raise CompilationFatalError(
                     f"Encountered an error during TRT-LLM compilation: {exc}")
 
+    def get_properties(self):
+        """Get properties from serving.properties and/or environment variables."""
+        self.properties = update_kwargs_with_env_vars({})
+        self.properties.update(load_properties(self.INPUT_MODEL_DIRECTORY))
+
+    def generate_properties_file(self):
+        """Generate serving.properties file in output repo, so compiled artifacts can be deployed."""
+        with open(os.path.join(self.OUTPUT_MODEL_DIRECTORY, "serving.properties"), "w") as f:
+            for key, value in self.properties.items():
+                if key != "option.model_id" and key != "option.model_dir":
+                    f.write(f"{key}={value}\n")
+
     def neo_partition(self):
+        self.get_properties()
         self.update_dataset_cache_location()
         self.run_partition()
+        self.generate_properties_file()
 
 
 def main():
