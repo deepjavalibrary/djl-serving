@@ -67,6 +67,7 @@ class Connection {
     private static final String MASTER_ADDR = "127.0.0.1";
 
     private int port;
+    private int rank;
     private SocketAddress socketAddress;
     private Channel channel;
     private RequestHandler requestHandler;
@@ -74,6 +75,8 @@ class Connection {
     Connection(PyEnv pyEnv, int basePort, int rank) {
         requestHandler = new RequestHandler();
         port = 19000 + basePort;
+        // port = 2022;
+        this.rank = rank;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank);
     }
 
@@ -102,7 +105,7 @@ class Connection {
         File modelPath = model.getModelPath().toFile();
         String[] args = getPythonStartCmd(pyEnv, model, workerId, port);
         String[] envp = pyEnv.getEnvironmentVars(model);
-        logger.debug("cmd: {}", (Object) args);
+        logger.info("cmd: {}", (Object) args);
 
         return Runtime.getRuntime().exec(args, envp, modelPath);
     }
@@ -124,53 +127,61 @@ class Connection {
         Device device = model.getNDManager().getDevice();
         int deviceId = device.getDeviceId();
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+        int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
+        logger.info("Printing mpi boolean: {}", pyEnv.isMpiMode());
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
-            logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            String[] args = new String[40];
+            logger.info("Set before mpirun CUDA_VISIBLE_DEVICES={}", cudaDevices);
+            String[] args = new String[42];
             args[0] = "mpirun";
             args[1] = "-np";
             // TODO: When we support multi nodes, change it to the product of tensor parallel value
             // and
             // pipeline parallel value.
-            args[2] = String.valueOf(tensorParallelDegree);
-            args[3] = "--allow-run-as-root";
-            args[4] = "--bind-to";
-            args[5] = "none";
-            args[6] = "--mca";
-            args[7] = "btl_vader_single_copy_mechanism";
-            args[8] = "none";
-            args[9] = "--tag-output";
-            args[10] = "-x";
-            args[11] = "FI_PROVIDER=efa";
+            args[2] = String.valueOf(16);
+            args[3] = "--hostfile";
+            args[4] = "/opt/phoenix/hostfile";
+            args[5] = "--allow-run-as-root";
+            args[6] = "--bind-to";
+            args[7] = "none";
+            args[8] = "--mca";
+            args[9] = "btl_vader_single_copy_mechanism";
+            args[10] = "none";
+            args[11] = "--tag-output";
             args[12] = "-x";
-            args[13] = "RDMAV_FORK_SAFE=1";
+            args[13] = "FI_PROVIDER=efa";
             args[14] = "-x";
-            args[15] = "FI_EFA_USE_DEVICE_RDMA=1";
+            args[15] = "RDMAV_FORK_SAFE=1";
             args[16] = "-x";
-            args[17] = "LD_LIBRARY_PATH";
+            args[17] = "FI_EFA_USE_DEVICE_RDMA=1";
             args[18] = "-x";
-            args[19] = "PYTHONPATH";
+            args[19] = "LD_LIBRARY_PATH";
             args[20] = "-x";
-            args[21] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
+            args[21] = "PYTHONPATH";
             args[22] = "-x";
-            args[23] = "MASTER_ADDR=" + MASTER_ADDR;
+            args[23] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
             args[24] = "-x";
-            args[25] = "MASTER_PORT=" + port;
+            args[25] = "MASTER_ADDR=" + MASTER_ADDR;
             args[26] = "-x";
-            args[27] = "MKL_DYNAMIC=FALSE";
-            args[28] = pyEnv.getPythonExecutable();
-            args[29] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
-            args[30] = "--model-dir";
-            args[31] = model.getModelPath().toAbsolutePath().toString();
-            args[32] = "--entry-point";
-            args[33] = pyEnv.getEntryPoint();
-            args[34] = "--sock-type";
-            args[35] = "unix";
-            args[36] = "--sock-name";
-            args[37] = getSocketPath(port);
-            args[38] = "--tensor-parallel-degree";
-            args[39] = String.valueOf(tensorParallelDegree);
+            args[27] = "MASTER_PORT=" + 2022;
+            args[28] = "-x";
+            args[29] = "MKL_DYNAMIC=FALSE";
+            // args[30] = "-x";
+            // args[31] = "NCCL_SOCKET_IFNAME=^lo,docker0";
+            args[30] = pyEnv.getPythonExecutable();
+            args[31] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
+            args[32] = "--model-dir";
+            args[33] = model.getModelPath().toAbsolutePath().toString();
+            args[34] = "--entry-point";
+            args[35] = pyEnv.getEntryPoint();
+            args[36] = "--sock-type";
+            args[37] = "tcp";
+            args[38] = "--port";
+            args[39] = String.valueOf(port);
+            // args[38] = "--sock-name";
+            // args[39] = getSocketPath(port);
+            args[40] = "--tensor-parallel-degree";
+            args[41] = String.valueOf(tensorParallelDegree);
             return args;
         }
 
@@ -246,10 +257,23 @@ class Connection {
         EventLoopGroup group = PyEnv.getEventLoopGroup();
 
         Bootstrap clientBootstrap = new Bootstrap();
+
+        String localhost = "127.0.0.1";
+        String secondHost = "172.31.6.2";
+
+        String host;
+
+        if (this.rank > 7) {
+            host = secondHost;
+        } else {
+            host = localhost;
+        }
+
+        logger.info("Connecting to address: " + host + ":" + (port + this.rank));
         clientBootstrap
                 .group(group)
                 .channel(getClientChannel())
-                .remoteAddress(socketAddress)
+                .remoteAddress(host, port + this.rank)
                 .handler(
                         new ChannelInitializer<>() {
 
@@ -290,8 +314,20 @@ class Connection {
     }
 
     private SocketAddress getSocketAddress(boolean mpiMode, int rank) {
+
+        // If rank > 7, use the ip address of the second node
+        String localhost = "172.31.2.73";
+        String secondHost = "172.31.6.2";
+
         if (mpiMode) {
-            return new DomainSocketAddress(getSocketPath(port) + '.' + rank);
+            if (rank > 7) {
+                return new InetSocketAddress(secondHost, port+rank+16);
+            } else {
+                return new InetSocketAddress(localhost, port+rank+16);
+            }
+
+            // return new InetSocketAddress("127.0.0.1", port + rank + 16);
+            // return new DomainSocketAddress(getSocketPath(port) + '.' + rank);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
         if (uds) {
@@ -301,22 +337,27 @@ class Connection {
     }
 
     static EventLoopGroup newEventLoopGroup() {
-        if (Epoll.isAvailable()) {
-            return new EpollEventLoopGroup(new DaemonThreadFactory());
-        } else if (KQueue.isAvailable()) {
-            return new KQueueEventLoopGroup(new DaemonThreadFactory());
-        }
-
         return new NioEventLoopGroup(new DaemonThreadFactory());
+
+        // if (Epoll.isAvailable()) {
+        //     return new EpollEventLoopGroup(new DaemonThreadFactory());
+        // } else if (KQueue.isAvailable()) {
+        //     return new KQueueEventLoopGroup(new DaemonThreadFactory());
+        // }
+
+        // return new NioEventLoopGroup(new DaemonThreadFactory());
     }
 
     private static Class<? extends Channel> getClientChannel() {
-        if (Epoll.isAvailable()) {
-            return EpollDomainSocketChannel.class;
-        } else if (KQueue.isAvailable()) {
-            return KQueueDomainSocketChannel.class;
-        }
+
         return NioSocketChannel.class;
+
+        // if (Epoll.isAvailable()) {
+        //     return EpollDomainSocketChannel.class;
+        // } else if (KQueue.isAvailable()) {
+        //     return KQueueDomainSocketChannel.class;
+        // }
+        // return NioSocketChannel.class;
     }
 
     @ChannelHandler.Sharable

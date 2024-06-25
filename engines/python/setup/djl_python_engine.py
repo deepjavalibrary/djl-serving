@@ -41,12 +41,12 @@ class PythonEngine(object):
             os.environ["WORLD_SIZE"] = os.getenv('OMPI_COMM_WORLD_SIZE')
         if os.getenv('OMPI_COMM_WORLD_LOCAL_RANK'):
             os.environ["LOCAL_RANK"] = os.getenv('OMPI_COMM_WORLD_LOCAL_RANK')
-        rank = os.environ.get("OMPI_COMM_WORLD_RANK")
-        if rank:
-            os.environ["RANK"] = rank
+        self.rank = os.environ.get("OMPI_COMM_WORLD_RANK")
+        if self.rank:
+            os.environ["RANK"] = self.rank
 
         self.sock_type = args.sock_type
-        self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
+        self.sock_name = f"{args.sock_name}.{self.rank}" if self.rank else args.sock_name
         self.port = args.port
         self.service = service
         self.device_id = args.device_id
@@ -58,7 +58,7 @@ class PythonEngine(object):
 
             self.clean_up()
         elif self.sock_type == "tcp":
-            self.sock_name = "127.0.0.1"
+            self.sock_name = "0.0.0.0" # for multi-node, should be 0.0.0.0 so that service is available outside the container
             if self.port is None:
                 raise ValueError("Missing port argument.")
         else:
@@ -93,13 +93,17 @@ class PythonEngine(object):
         Run the backend worker process and listen on a socket
         :return:
         """
+        rank = os.environ.get("OMPI_COMM_WORLD_RANK")
+
+        port = int(self.port) + int(rank)
+
         if self.sock_type == "unix":
             self.sock.bind(self.sock_name)
         else:
-            self.sock.bind((self.sock_name, int(self.port)))
+            self.sock.bind((self.sock_name, port))
 
         self.sock.listen(128)
-        logging.info("Python engine started.")
+        logging.info("Python engine started on address: {self.sock_name}:{port}")
 
         (cl_socket, _) = self.sock.accept()
         # workaround error(35, 'Resource temporarily unavailable') on OSX
@@ -155,6 +159,9 @@ def main():
             f"{pid} - djl_python_engine started with args: {sys.argv[1:]}")
         args = ArgParser.python_engine_args().parse_args()
         rank = os.environ.get("OMPI_COMM_WORLD_RANK")
+
+        logging.info(f"Rank of MPI process is: {rank}")
+
         sock_type = args.sock_type
         sock_name = args.sock_name if rank is None else f"{args.sock_name}.{rank}"
 
