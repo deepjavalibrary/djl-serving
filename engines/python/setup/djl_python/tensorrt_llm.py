@@ -42,7 +42,8 @@ class TRTLLMService(object):
         self.input_format_configs = InputFormatConfigs(
             is_rolling_batch=True,
             is_adapters_supported=False,
-            output_formatter=self.trt_configs.output_formatter)
+            output_formatter=self.trt_configs.output_formatter,
+            tokenizer=self.rolling_batch.get_tokenizer())
         self.initialized = True
         return
 
