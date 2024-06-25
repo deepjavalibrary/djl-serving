@@ -2,16 +2,18 @@
 
 import os
 import subprocess
+import pytest
 import llm.prepare as prepare
 import llm.client as client
 import rb_client as rb_client
+import test_client
 
 djl_version = os.environ.get('TEST_DJL_VERSION', '').strip()
 
 
 class Runner:
 
-    def __init__(self, container, test_name=None):
+    def __init__(self, container, test_name=None, download=False):
         self.container = container
         self.test_name = test_name
 
@@ -26,9 +28,13 @@ class Runner:
 
         self.image = f"deepjavalibrary/djl-serving:{flavor}"
 
-    def __enter__(self):
         # os.system(f'docker pull {self.image}')
         os.system('rm -rf models')
+
+        if download:
+            os.system(f"./download_models.sh {self.container}")
+
+    def __enter__(self):
         return self
 
     def __exit__(self, *args):
@@ -39,7 +45,7 @@ class Runner:
         subprocess.run(["./remove_container.sh"], check=True)
         os.system("cat logs/serving.log")
 
-    def launch(self, env_vars=None, cmd=None):
+    def launch(self, env_vars=None, container=None, cmd=None):
         if env_vars is not None:
             with open("docker_env", "w") as f:
                 f.write(env_vars)
@@ -47,14 +53,18 @@ class Runner:
             if os.path.isfile("docker_env"):
                 os.remove("docker_env")
 
+        if container is None:
+            container = self.container
+
         if cmd is None:
             cmd = 'serve -m test=file:/opt/ml/model/test/'
 
         model_dir = os.path.join(os.getcwd(), 'models')
-        subprocess.run(
-            f'./launch_container.sh {self.image} {model_dir} {self.container} {cmd}'
+        return subprocess.run(
+            f'./launch_container.sh {self.image} {model_dir} {container} {cmd}'
             .split(),
-            check=True)
+            check=True,
+            capture_output=True)
 
 
 class TestHfHandler:
@@ -431,3 +441,173 @@ class TestLmiDistLora:
             prepare.build_lmi_dist_model("llama3-8b-unmerged-lora")
             r.launch()
             client.run("lmi_dist_adapters llama3-8b-unmerged-lora".split())
+
+
+class TestNeuronx1:
+    # Runs on inf2.24xl
+
+    def test_python_mode(self):
+        with Runner('pytorch-inf2', 'test_python_mode', download=True) as r:
+            r.launch(
+                cmd=
+                'serve -m test::PyTorch:nc0=file:/opt/ml/model/resnet18_inf2_2_4.tar.gz',
+                container='pytorch-inf2-1')
+            test_client.run()
+
+    def test_gpt2(self):
+        with Runner('pytorch-inf2', 'gpt2') as r:
+            prepare.build_transformers_neuronx_handler_model("gpt2")
+            r.launch(container='pytorch-inf2-1')
+            client.run("transformers_neuronx gpt2".split())
+
+    def test_gpt2_quantize(self):
+        with Runner('pytorch-inf2', 'gpt2-quantize') as r:
+            prepare.build_transformers_neuronx_handler_model("gpt2-quantize")
+            r.launch(container='pytorch-inf2-1')
+            client.run("transformers_neuronx gpt2-quantize".split())
+
+    def test_opt_1_3b(self):
+        with Runner('pytorch-inf2', 'opt-1.3b') as r:
+            prepare.build_transformers_neuronx_handler_model("opt-1.3b")
+            r.launch(container='pytorch-inf2-6')
+            client.run("transformers_neuronx opt-1.3b".split())
+
+    def test_gpt_j_6b(self):
+        with Runner('pytorch-inf2', 'gpt-j-6b') as r:
+            prepare.build_transformers_neuronx_handler_model("gpt-j-6b")
+            r.launch(container='pytorch-inf2-6')
+            client.run("transformers_neuronx gpt-j-6b".split())
+
+    def test_pythia(self):
+        with Runner('pytorch-inf2', 'pythia-2.8b') as r:
+            prepare.build_transformers_neuronx_handler_model("pythia-2.8b")
+            r.launch(container='pytorch-inf2-2')
+            client.run("transformers_neuronx pythia-2.8b".split())
+
+    def test_bloom(self):
+        with Runner('pytorch-inf2', 'bloom-7b1') as r:
+            prepare.build_transformers_neuronx_handler_model("bloom-7b1")
+            r.launch(container='pytorch-inf2-2')
+            client.run("transformers_neuronx bloom-7b1".split())
+
+    @pytest.mark.parametrize("model", ["gpt2", "gpt2-quantize"])
+    def test_partition(self, model):
+        try:
+            with Runner('pytorch-inf2', f'partition-{model}') as r:
+                prepare.build_transformers_neuronx_handler_model(model)
+                with open("models/test/requirements.txt", "a") as f:
+                    f.write("dummy_test")
+                partition_output = r.launch(
+                    container="pytorch-inf2-1",
+                    cmd=
+                    'partition --model-dir /opt/ml/input/data/training/ --save-mp-checkpoint-path /opt/ml/input/data/training/partition --skip-copy'
+                )
+
+                # Check if neff files are generated
+                if len([
+                        fn
+                        for fn in os.listdir("models/test/partition/compiled")
+                        if fn.endswith(".neff")
+                ]) == 0:
+                    raise Exception("Failed to generate any .neff files")
+
+                # Check whether requirements.txt download is sufficient
+                if 'pip install requirements succeed!' not in partition_output.stdout.decode(
+                        "utf-8"):
+                    raise Exception(
+                        "Requirements.txt not installed successfully")
+        finally:
+            os.system('sudo rm -rf models')
+
+
+class TestNeuronx2:
+    # Runs on inf2.24xl
+
+    def test_stream_opt(self):
+        with Runner('pytorch-inf2', 'opt-1.3b-streaming') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "opt-1.3b-streaming")
+            r.launch(container='pytorch-inf2-6')
+            client.run("transformers_neuronx opt-1.3b-streaming".split())
+
+    def test_mistral(self):
+        with Runner('pytorch-inf2', 'mistral-7b') as r:
+            prepare.build_transformers_neuronx_handler_model("mistral-7b")
+            r.launch(container='pytorch-inf2-2')
+            client.run("transformers_neuronx mistral-7b".split())
+
+    def test_stable_diffusion_1_5(self):
+        with Runner('pytorch-inf2', 'stable-diffusion-1.5-neuron') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "stable-diffusion-1.5-neuron")
+            r.launch(container='pytorch-inf2-2')
+            client.run(
+                "neuron-stable-diffusion stable-diffusion-1.5-neuron".split())
+
+    def test_stable_diffusion_2_1(self):
+        with Runner('pytorch-inf2', 'stable-diffusion-2.1-neuron') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "stable-diffusion-2.1-neuron")
+            r.launch(container='pytorch-inf2-2')
+            client.run(
+                "neuron-stable-diffusion stable-diffusion-2.1-neuron".split())
+
+    def test_stable_diffusion_xl(self):
+        with Runner('pytorch-inf2', 'stable-diffusion-xl-neuron') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "stable-diffusion-xl-neuron")
+            r.launch(container='pytorch-inf2-2')
+            client.run(
+                "neuron-stable-diffusion stable-diffusion-xl-neuron".split())
+
+
+class TestNeuronxRollingBatch:
+    # Runs on inf2.24xl
+
+    def test_llama_7b(self):
+        with Runner('pytorch-inf2', 'llama-7b-rb') as r:
+            prepare.build_transformers_neuronx_handler_model("llama-7b-rb")
+            r.launch(container='pytorch-inf2-2')
+            client.run(
+                "transformers_neuronx_rolling_batch llama-7b-rb".split())
+
+    def test_tiny_llama_vllm(self):
+        with Runner('pytorch-inf2', 'tiny-llama-rb-vllm') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "tiny-llama-rb-vllm")
+            r.launch(container='pytorch-inf2-1')
+            client.run("transformers_neuronx_rolling_batch tiny-llama-rb-vllm".
+                       split())
+
+    def test_llama3_vllm(self):
+        with Runner('pytorch-inf2', 'llama-3-8b-rb-vllm') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "llama-3-8b-rb-vllm")
+            r.launch(container='pytorch-inf2-4')
+            client.run("transformers_neuronx_rolling_batch llama-3-8b-rb-vllm".
+                       split())
+
+    def test_mixtral(self):
+        with Runner('pytorch-inf2', 'mixtral-8x7b-rb') as r:
+            prepare.build_transformers_neuronx_handler_model("mixtral-8x7b-rb")
+            r.launch(container='pytorch-inf2-4')
+            client.run(
+                "transformers_neuronx_rolling_batch mixtral-8x7b-rb".split())
+
+    def test_llama_speculative(self):
+        with Runner('pytorch-inf2', 'llama-speculative-rb') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "llama-speculative-rb")
+            r.launch(container='pytorch-inf2-6')
+            client.run(
+                "transformers_neuronx_rolling_batch llama-speculative-rb".
+                split())
+
+    def test_llama_speculative_compiled(self):
+        with Runner('pytorch-inf2', 'llama-speculative-compiled-rb') as r:
+            prepare.build_transformers_neuronx_handler_model(
+                "llama-speculative-compiled-rb")
+            r.launch(container='pytorch-inf2-6')
+            client.run(
+                "transformers_neuronx_rolling_batch llama-speculative-compiled-rb"
+                .split())
