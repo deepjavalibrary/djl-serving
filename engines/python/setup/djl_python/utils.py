@@ -17,7 +17,7 @@ from djl_python import Output
 from djl_python.inputs import Input
 from djl_python.encode_decode import decode
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
-from djl_python.bedrock.bedrock_utils import is_bedrock_request, parse_bedrock_request
+from djl_python.three_p.three_p_utils import is_3p_request, parse_3p_request
 from dataclasses import dataclass, field
 
 
@@ -63,10 +63,10 @@ def parse_input_with_formatter(inputs: Input,
     for i, item in enumerate(batch):
         try:
             content_type = item.get_property("Content-Type")
-            bedrock_invoke_type = item.get_property("X-Amzn-SageMaker-Forwarded-Api")
+            invoke_type = item.get_property("X-Amzn-SageMaker-Forwarded-Api")
             input_map = decode(item, content_type)
             _inputs, _param, is_client_side_batch[i] = _parse_inputs_params(
-                input_map, item, input_format_configs, bedrock_invoke_type)
+                input_map, item, input_format_configs, invoke_type)
             if input_format_configs.is_adapters_supported:
                 adapters_per_item, found_adapter_per_item = _parse_adapters(
                     _inputs, input_map, item, adapter_registry)
@@ -102,15 +102,15 @@ def parse_input_with_formatter(inputs: Input,
                        adapters=adapter_data)
 
 
-def _parse_inputs_params(input_map, item, input_format_configs, bedrock_invoke_type):
+def _parse_inputs_params(input_map, item, input_format_configs, invoke_type):
     if is_chat_completions_request(input_map):
         _inputs, _param = parse_chat_completions_request(
             input_map, input_format_configs.is_rolling_batch,
             input_format_configs.tokenizer)
-    elif is_bedrock_request(bedrock_invoke_type):
-        _inputs, _param = parse_bedrock_request(
+    elif is_3p_request(invoke_type):
+        _inputs, _param = parse_3p_request(
             input_map, input_format_configs.is_rolling_batch,
-            input_format_configs.tokenizer, bedrock_invoke_type)
+            input_format_configs.tokenizer, invoke_type)
     else:
         _inputs = input_map.pop("inputs", input_map)
         _param = input_map.pop("parameters", {})

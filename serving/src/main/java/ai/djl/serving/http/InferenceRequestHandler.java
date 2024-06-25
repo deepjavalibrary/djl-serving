@@ -196,7 +196,6 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String modelName)
             throws ModelNotFoundException {
         Input input = requestParser.parseRequest(req, decoder);
-        logger.info("Input is {}", input.toString());
         if (modelName == null) {
             modelName = NettyUtils.getParameter(decoder, "model_name", null);
         }

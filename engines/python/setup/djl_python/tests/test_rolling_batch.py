@@ -240,6 +240,63 @@ class TestRollingBatch(unittest.TestCase):
             }
         }
 
+    def test_3p_fmt(self):
+        req = Request(1,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 1024,
+                          "details": True
+                      },
+                      output_formatter="3p")
+        final_str = []
+        req.set_next_token(Token(244, "He", -0.334532))
+        req.set_next_token(Token(244, "llo", -0.123123))
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        final_str.append(req.get_next_token())
+        output = json.loads(''.join(final_str))
+        assert output == {
+            "generation": "This is a wonderful dayHello world",
+            "prompt_token_count": 0,
+            "generation_token_count": 3,
+            "stop_reason": "length"
+        }
+
+    def test_3p_stream_fmt(self):
+        req = Request(1,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 1024,
+                          "details": True
+                      },
+                      output_formatter="3p_stream")
+        req.set_next_token(Token(244, "He", -0.334532))
+        next_token = json.loads(req.get_next_token())
+        assert next_token == {
+            "generation": "He",
+            "prompt_token_count": 0,
+            "generation_token_count": 1,
+            "stop_reason": None,
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(244, "llo", -0.123123))
+        next_token = json.loads(req.get_next_token())
+        assert next_token == {
+            "generation": "llo",
+            "prompt_token_count": None,
+            "generation_token_count": 2,
+            "stop_reason": None,
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
+        next_token = json.loads(req.get_next_token())
+        self.assertEquals(
+            next_token, {
+                "generation": " world",
+                "prompt_token_count": None,
+                "generation_token_count": 3,
+                "stop_reason": "length",
+            })
+
     def test_return_full_text(self):
         req = Request(0,
                       "This is a wonderful day",
