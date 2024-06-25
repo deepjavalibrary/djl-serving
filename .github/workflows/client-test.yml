@@ -109,7 +109,7 @@ jobs:
           ./gradlew --stop
           ./gradlew :serving:run --args="-m test::Python=file:$(pwd -W)/tests/python" &> output.log &
           sleep 30
-          cd tests/ && python test_client.py
+          cd tests/ && python integration/test_client.py
       - name: On failure step
         if: ${{ failure() }}
         shell: bash
