@@ -34,7 +34,7 @@ expected_text_30 = {
         3:
         'The capital of France is Paris.\n\n2. The capital of the United States is Washington, D.C.\n\n3. The capital of Canada is Ott',
         4:
-        "The future of AI is bright, and it's already here. With the help of AI, we can create more personalized experiences, automate repetitive tasks, and even predict the future."
+        "The future of AI is bright, and it's not just in the realm of science fiction. Artificial intelligence is already being used in a wide range of industries",
     }
 }
 
