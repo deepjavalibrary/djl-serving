@@ -173,6 +173,12 @@ class TestTrtLlmHandler2:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm qwen-7b".split())
 
+    def test_llama2_7b_chat(self):
+        with Runner('tensorrt-llm', 'llama2-7b-chat') as r:
+            prepare.build_trtllm_handler_model("llama2-7b-chat")
+            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
+            client.run("trtllm_chat llama2-7b-chat".split())
+
 
 class TestSchedulerSingleGPU:
     # Runs on g5.12xl
