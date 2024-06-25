@@ -12,6 +12,12 @@ services:
       target: cpu-full
       dockerfile: Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}cpu-full${NIGHTLY}"
+  lmi-cpu:
+    build:
+      context: .
+      target: lmi-cpu
+      dockerfile: Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}lmi-cpu${NIGHTLY}"
   aarch64:
     build:
       context: .
