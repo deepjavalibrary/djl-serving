@@ -25,7 +25,7 @@ from optimum.commands.export.neuronx import parse_args_neuronx
 from sm_neo_utils import (InputConfiguration, CompilationFatalError,
                           write_error_to_file, get_neo_env_vars,
                           get_neo_compiler_flags, load_jumpstart_metadata)
-from utils import extract_python_jar
+from utils import extract_python_jar, load_properties
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
@@ -352,6 +352,8 @@ class NeoNeuronPartitionService():
         Factory method used to construct a PropertiesManager from serving.properties
         """
         self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
+        self.properties[
+            "option.entryPoint"] = "djl_python.transformers_neuronx"
         logging.debug(
             "Constructing PropertiesManager from "
             f"serving.properties\nargs:{self.args}\nprops:{self.properties}")
@@ -370,6 +372,41 @@ class NeoNeuronPartitionService():
             raise CompilationFatalError(
                 f"Encountered an error during Transformers-NeuronX compilation: {exc}"
             )
+
+    def write_properties(self) -> str:
+        """
+        Updates outputted serving.properties.
+
+        engine=Python & option.entryPoint=djl_python.transformers_neuronx are hard-coded for Neo partitioning.
+        This function outputs the customer inputs for these fields.
+        """
+        customer_properties = load_properties(self.INPUT_MODEL_DIRECTORY)
+        passthrough_properties = {}
+        passthrough_properties["engine"] = customer_properties.get('engine')
+        passthrough_properties["option.entryPoint"] = os.environ.get(
+            "OPTION_ENTRYPOINT") if os.environ.get(
+                "OPTION_ENTRYPOINT") else customer_properties.get(
+                    "option.entryPoint")
+
+        output_properties = self.properties_manager.properties
+        output_passthrough_properties = {}
+        for k, v in passthrough_properties.items():
+            output_properties.pop(k, None)
+            if v:
+                logging.info(
+                    f"User passed {k}={v}. Outputting in serving.properties")
+                output_passthrough_properties[k] = v
+
+        # Write out properties without pass-through properties
+        self.properties_manager.properties = output_properties
+        self.properties_manager.generate_properties_file()
+
+        # Write out pass-through properties
+        properties_file = os.path.join(self.OUTPUT_MODEL_DIRECTORY,
+                                       'serving.properties')
+        with open(properties_file, "a") as f:
+            for k, v in output_passthrough_properties.items():
+                f.write(f"{k}={v}\n")
 
     def neo_partition(self):
         self.update_neuron_cache_location()
@@ -409,6 +446,8 @@ class NeoNeuronPartitionService():
                     self.OUTPUT_MODEL_DIRECTORY)
                 cache_manager.create_jumpstart_neuron_cache_in_cache_dir(
                     self.jumpstart_metadata)
+
+        self.write_properties()
 
 
 def main():
