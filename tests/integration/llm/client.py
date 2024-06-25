@@ -553,6 +553,15 @@ trtllm_model_spec = {
     }
 }
 
+trtllm_chat_model_spec = {
+    "llama2-7b-chat": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
+    }
+}
+
 no_code_rolling_batch_spec = {
     "llama-7b": {
         "max_memory_per_gpu": [25.0],
@@ -1286,6 +1295,8 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, lmi_dist_aiccl_model_spec)
     elif args.handler == "trtllm":
         test_handler_rolling_batch(args.model, trtllm_model_spec)
+    elif args.handler == "trtllm_chat":
+        test_handler_rolling_batch_chat(args.model, trtllm_chat_model_spec)
     elif args.handler == "no_code":
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
 
