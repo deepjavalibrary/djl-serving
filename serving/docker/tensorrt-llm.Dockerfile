@@ -31,6 +31,7 @@ ARG ammo_version=0.7.0
 ARG janus_version=1.0.0
 ARG pynvml_verison=11.5.0
 ARG numpy_version=1.26.4
+ARG datasets_version=2.19.1
 
 EXPOSE 8080
 
@@ -74,7 +75,7 @@ RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-d
 # Install PyTorch
 # Qwen needs transformers_stream_generator, tiktoken and einops
 RUN pip install torch==${TORCH_VERSION} transformers==${transformers_version} accelerate==${accelerate_version} peft==${peft_version} sentencepiece \
-    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
+    mpi4py cuda-python==${cuda_python_version} onnx polygraphy pynvml==${pynvml_verison} datasets==${datasets_version} pydantic==${pydantic_version} scipy torchprofile bitsandbytes ninja \
     transformers_stream_generator einops tiktoken jinja2 graphviz blobfile colored h5py strenum pulp flax easydict && \
     pip3 cache purge
 
