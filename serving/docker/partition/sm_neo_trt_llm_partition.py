@@ -59,6 +59,7 @@ class NeoTRTLLMPartitionService():
     def generate_properties_file(self):
         """Generate serving.properties file in output repo, so compiled artifacts can be deployed."""
         with open(os.path.join(self.OUTPUT_MODEL_DIRECTORY, "serving.properties"), "w") as f:
+            f.write("engine=MPI\n")
             for key, value in self.properties.items():
                 if key != "option.model_id" and key != "option.model_dir":
                     f.write(f"{key}={value}\n")
