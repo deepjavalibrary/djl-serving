@@ -19,7 +19,7 @@ from typing import Final
 import torch
 
 from sm_neo_utils import (CompilationFatalError, write_error_to_file,
-                          get_neo_env_vars)
+                          get_neo_env_vars, update_dataset_cache_location)
 from utils import extract_python_jar, load_properties
 from properties_manager import PropertiesManager
 from partition import PartitionService
@@ -123,7 +123,7 @@ class NeoQuantizationService():
         self.properties_manager.generate_properties_file()
 
     def neo_quantize(self):
-        self.update_dataset_cache_location()
+        update_dataset_cache_location(self.HF_CACHE_LOCATION)
         self.initialize_partition_args_namespace()
         self.construct_properties_manager()
         self.run_quantization()

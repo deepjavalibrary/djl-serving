@@ -17,7 +17,8 @@ import sys
 from typing import Final
 
 from utils import update_kwargs_with_env_vars, load_properties
-from sm_neo_utils import CompilationFatalError, write_error_to_file, get_neo_env_vars
+from sm_neo_utils import (CompilationFatalError, write_error_to_file, 
+                          get_neo_env_vars, update_dataset_cache_location)
 from tensorrt_llm_toolkit import create_model_repo
 
 
@@ -33,14 +34,6 @@ class NeoTRTLLMPartitionService():
         self.COMPILER_CACHE_LOCATION: Final[str] = env[4]
         self.HF_CACHE_LOCATION: Final[str] = env[5]
 
-
-    # TODO: duplicate function, move to utils
-    def update_dataset_cache_location(self):
-        logging.info(
-            f"Updating HuggingFace Datasets cache directory to: {self.HF_CACHE_LOCATION}"
-        )
-        os.environ['HF_DATASETS_CACHE'] = self.HF_CACHE_LOCATION
-        #os.environ['HF_DATASETS_OFFLINE'] = "1"
 
     # TODO: merge with / call other partition script if possible?
     def run_partition(self):
@@ -71,8 +64,8 @@ class NeoTRTLLMPartitionService():
                     f.write(f"{key}={value}\n")
 
     def neo_partition(self):
+        update_dataset_cache_location(self.HF_CACHE_LOCATION)
         self.get_properties()
-        self.update_dataset_cache_location()
         self.run_partition()
         self.generate_properties_file()
 
