@@ -189,20 +189,21 @@ class LmiDistRollingBatch(RollingBatch):
                 self.request_cache, request_output, self.get_tokenizer())
             # Record SD metrics
             completion_output = request_output.outputs[0]
-            if (self.lmi_dist_config.record_acceptance_rate
+            if (
+                    self.lmi_dist_config.record_acceptance_rate
                     or self.lmi_dist_config.speculative_telemetry
-                ) and request_output.finished:
-                if self.supports_speculative_decoding and completion_output.acceptance_history:
-                    record = get_speculative_decoding_metrics_record(
-                        completion_output, request_output)
-                    if self.lmi_dist_config.record_acceptance_rate:
-                        logging.info(f"Speculative Decoding {record}")
-                    if self.lmi_dist_config.speculative_telemetry and os.environ.get(
-                            "SAGEMAKER_SECURE_MODE") == "true":
-                        telemetry_manager.record_speculative(record)
-                else:
-                    logging.warning(
-                        f"Ignoring logging speculative decoding metrics")
+            ) and self.lmi_dist_config.speculative_draft_model and request_output.finished:
+                try:
+                    if self.supports_speculative_decoding and completion_output.acceptance_history:
+                        record = get_speculative_decoding_metrics_record(
+                            completion_output, request_output)
+                        if self.lmi_dist_config.record_acceptance_rate:
+                            logging.info(f"Speculative Decoding {record}")
+                        if self.lmi_dist_config.speculative_telemetry and os.environ.get(
+                                "SAGEMAKER_SECURE_MODE") == "true":
+                            telemetry_manager.record_speculative(record)
+                except:
+                    logging.debug('exception in sd telemetry, ignore...')
 
         # step 2: send result back
         finished_id = []
