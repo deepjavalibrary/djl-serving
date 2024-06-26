@@ -137,7 +137,7 @@ jobs:
         working-directory: tests/integration
         run: |
           for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
-          rm -rf outputs && rm -rf models
+          sudo rm -rf outputs && sudo rm -rf models
           rm awscurl
           docker rm -f $(docker ps -aq) || true
       - name: Upload test logs
