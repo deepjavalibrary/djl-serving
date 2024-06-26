@@ -189,9 +189,10 @@ class LmiDistRollingBatch(RollingBatch):
                 self.request_cache, request_output, self.get_tokenizer())
             # Record SD metrics
             completion_output = request_output.outputs[0]
-            if (self.lmi_dist_config.record_acceptance_rate
+            if (
+                    self.lmi_dist_config.record_acceptance_rate
                     or self.lmi_dist_config.speculative_telemetry
-                ) and self.lmi_dist_config.speculative_draft_model and request_output.finished:
+            ) and self.lmi_dist_config.speculative_draft_model and request_output.finished:
                 try:
                     if self.supports_speculative_decoding and completion_output.acceptance_history:
                         record = get_speculative_decoding_metrics_record(
