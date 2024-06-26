@@ -24,6 +24,8 @@ import ai.djl.serving.cache.CacheEngine;
 import ai.djl.serving.cache.CacheManager;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
+import ai.djl.serving.util.HttpResponseStatusMapper;
+import ai.djl.serving.util.HttpResponseStatusMapperProvider;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.util.WlmException;
@@ -79,12 +81,16 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private int chunkReadTime;
     private ConfigManager config;
     private static boolean exceedErrorRate;
+    private HttpResponseStatusMapper httpResponseStatusMapper;
 
     /** default constructor. */
     public InferenceRequestHandler() {
         this.requestParser = new RequestParser();
         config = ConfigManager.getInstance();
         chunkReadTime = config.getChunkedReadTimeout();
+        String httpResponseProviderName = config.getHttpResponseMapper();
+        httpResponseStatusMapper =
+                HttpResponseStatusMapperProvider.getMapper(httpResponseProviderName);
     }
 
     /** {@inheritDoc} */
@@ -468,16 +474,14 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     }
 
     void onException(Throwable t, ChannelHandlerContext ctx) {
-        HttpResponseStatus status;
+        HttpResponseStatus status = httpResponseStatusMapper.getHttpStatusForException(t);
         if (t instanceof TranslateException || t instanceof BadRequestException) {
             logger.debug(t.getMessage(), t);
             SERVER_METRIC.info("{}", RESPONSE_4_XX);
-            status = HttpResponseStatus.BAD_REQUEST;
         } else if (t instanceof WlmException) {
             logger.warn(t.getMessage(), t);
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", WLM_ERROR);
-            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
             if (!exceedErrorRate && config.onWlmError()) {
                 exceedErrorRate = true;
             }
@@ -485,7 +489,6 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             logger.warn("Unexpected error", t);
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", SERVER_ERROR);
-            status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
             if (!exceedErrorRate && config.onServerError()) {
                 exceedErrorRate = true;
             }

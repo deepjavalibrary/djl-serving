@@ -84,6 +84,7 @@ public final class ConfigManager {
     private static final String ERROR_RATE_SERVER = "error_rate_server";
     private static final String ERROR_RATE_MODEL = "error_rate_model";
     private static final String ERROR_RATE_ANY = "error_rate_any";
+    private static final String HTTP_RESPONSE_MAPPER = "http_response_mapper";
 
     // Configuration which are not documented or enabled through environment variables
     private static final String USE_NATIVE_IO = "use_native_io";
@@ -554,6 +555,15 @@ public final class ConfigManager {
      */
     public int getMaxRequestSize() {
         return getIntProperty(MAX_REQUEST_SIZE, DEF_MAX_REQUEST_SIZE);
+    }
+
+    /**
+     * Returns the name of the HttpResponseMapper to use.
+     *
+     * @return the name of the http response provider.
+     */
+    public String getHttpResponseMapper() {
+        return getProperty(HTTP_RESPONSE_MAPPER, "default");
     }
 
     private int getIntProperty(String key, int def) {
