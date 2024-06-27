@@ -66,6 +66,8 @@ class NeoTRTLLMPartitionService():
 
     def neo_partition(self):
         update_dataset_cache_location(self.HF_CACHE_LOCATION)
+        os.environ['TRTLLM_TOOLKIT_SKIP_DOWNLOAD_DIR_CLEANUP'] = 'true'
+        os.environ['TRTLLM_TOOLKIT_SKIP_CHECKPOINT_DIR_CLEANUP'] = 'true'
         self.get_properties()
         self.run_partition()
         self.generate_properties_file()
