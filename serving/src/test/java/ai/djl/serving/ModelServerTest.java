@@ -954,8 +954,9 @@ public class ModelServerTest {
         if (CudaUtils.getGpuCount() <= 1) {
             // one request is not able to saturate workers in multi-GPU case
             // one of the request will be throttled
-            if ((httpStatus.code() != 503 || httpStatus2.code() != 200)
-                    && (httpStatus2.code() != 503 || httpStatus.code() != 200)) {
+            int throttleCode = configManager.getThrottleErrorHttpCode();
+            if ((httpStatus.code() != throttleCode || httpStatus2.code() != 200)
+                    && (httpStatus2.code() != throttleCode || httpStatus.code() != 200)) {
                 logger.info("request 1 code: {}, request 2 code: {}", httpStatus, httpStatus2);
                 Assert.fail("Expected one of the request be throttled.");
             }
@@ -1357,7 +1358,7 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            assertEquals(resp.getCode(), HttpResponseStatus.BAD_REQUEST.code());
+            assertEquals(resp.getCode(), configManager.getBadRequestErrorHttpCode());
             assertEquals(resp.getMessage(), "Parameter url is required.");
         }
     }
@@ -1453,7 +1454,7 @@ public class ModelServerTest {
 
         if (!System.getProperty("os.name").startsWith("Win")) {
             ErrorResponse resp = JsonUtils.GSON.fromJson(result, ErrorResponse.class);
-            assertEquals(resp.getCode(), HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+            assertEquals(resp.getCode(), configManager.getWlmErrorHttpCode());
             assertEquals(resp.getMessage(), "All model workers has been shutdown: mlp_2");
         }
 

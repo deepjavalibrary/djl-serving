@@ -26,6 +26,7 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.util.WlmCapacityException;
 import ai.djl.serving.wlm.util.WlmException;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.translate.TranslateException;
@@ -468,16 +469,20 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     }
 
     void onException(Throwable t, ChannelHandlerContext ctx) {
-        HttpResponseStatus status;
+        int code;
         if (t instanceof TranslateException || t instanceof BadRequestException) {
             logger.debug(t.getMessage(), t);
             SERVER_METRIC.info("{}", RESPONSE_4_XX);
-            status = HttpResponseStatus.BAD_REQUEST;
+            code = config.getBadRequestErrorHttpCode();
         } else if (t instanceof WlmException) {
             logger.warn(t.getMessage(), t);
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", WLM_ERROR);
-            status = HttpResponseStatus.SERVICE_UNAVAILABLE;
+            if (t instanceof WlmCapacityException) {
+                code = config.getThrottleErrorHttpCode();
+            } else {
+                code = config.getWlmErrorHttpCode();
+            }
             if (!exceedErrorRate && config.onWlmError()) {
                 exceedErrorRate = true;
             }
@@ -485,11 +490,12 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             logger.warn("Unexpected error", t);
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", SERVER_ERROR);
-            status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+            code = config.getServerErrorHttpCode();
             if (!exceedErrorRate && config.onServerError()) {
                 exceedErrorRate = true;
             }
         }
+        HttpResponseStatus status = HttpResponseStatus.valueOf(code);
 
         /*
          * We can load the models based on the configuration file.Since this Job is
