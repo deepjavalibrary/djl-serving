@@ -16,7 +16,7 @@ from djl_python.outputs import Output
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.tensorrt_llm_python import TRTLLMPythonService
-from djl_python.utils import parse_input_with_formatter, InputFormatConfigs
+from djl_python.utils import parse_input_with_formatter, InputFormatConfigs, rolling_batch_inference
 from typing import List, Tuple
 
 
@@ -32,6 +32,7 @@ class TRTLLMService(object):
         self.trt_configs = None
         self.rolling_batch = None
         self.input_format_configs = None
+        self.parsed_input = None
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
@@ -41,7 +42,8 @@ class TRTLLMService(object):
         self.input_format_configs = InputFormatConfigs(
             is_rolling_batch=True,
             is_adapters_supported=False,
-            output_formatter=self.trt_configs.output_formatter)
+            output_formatter=self.trt_configs.output_formatter,
+            tokenizer=self.rolling_batch.get_tokenizer())
         self.initialized = True
         return
 
@@ -62,9 +64,11 @@ class TRTLLMService(object):
         :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
         :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """
-        parsed_input = parse_input_with_formatter(
+        self.parsed_input = parse_input_with_formatter(
             inputs, input_format_configs=self.input_format_configs)
-        return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
+        return (self.parsed_input.input_data, self.parsed_input.input_size,
+                self.parsed_input.parameters, self.parsed_input.errors,
+                self.parsed_input.batch)
 
     def inference(self, inputs: Input) -> Output:
         """
@@ -88,31 +92,8 @@ class TRTLLMService(object):
                             batch_index=i)
             return outputs
 
-        if inputs.get_property("reset_rollingbatch"):
-            self.rolling_batch.reset()
-
-        result = self.rolling_batch.inference(input_data, parameters)
-        idx = 0
-        for i in range(len(batch)):
-            err = errors.get(i)
-            if err:
-                err = {"data": "", "last": True, "code": 424, "error": err}
-                outputs.add(Output.binary_encode(err),
-                            key="data",
-                            batch_index=i)
-                outputs.add_property(f"batch_{i}_Content-Type",
-                                     "application/json")
-            else:
-                content_type = result[idx].pop("content_type")
-                outputs.add(Output.binary_encode(result[idx]),
-                            key="data",
-                            batch_index=i)
-                if content_type is not None:
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         content_type)
-                idx += 1
-
-        return outputs
+        return rolling_batch_inference(self.parsed_input, inputs, outputs,
+                                       self.rolling_batch)
 
 
 _service = TRTLLMService()

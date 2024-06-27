@@ -22,16 +22,17 @@ from transformers import (
     AutoModelForQuestionAnswering, StoppingCriteria, StoppingCriteriaList)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from peft import PeftConfig, PeftModel, PeftModelForCausalLM
-from typing import Tuple, List
+from typing import Tuple, List, Callable, Dict
 
 from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
+from djl_python.rolling_batch.rolling_batch import RollingBatch
 from djl_python.streaming_utils import StreamingUtils
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-from djl_python.utils import parse_input_with_formatter, InputFormatConfigs
+from djl_python.utils import parse_input_with_formatter, InputFormatConfigs, ParsedInput, rolling_batch_inference
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -140,6 +141,7 @@ class HuggingFaceService(object):
         self.adapters = None
         self.hf_configs = None
         self.input_format_configs = None
+        self.parsed_input = None
 
     def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
@@ -230,13 +232,14 @@ class HuggingFaceService(object):
         :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
         """
 
-        parsed_input = parse_input_with_formatter(inputs,
-                                                  self.input_format_configs,
-                                                  self.adapter_registry)
-        self.adapters = parsed_input.adapters if parsed_input.found_adapters else None
-        return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
+        self.parsed_input = parse_input_with_formatter(
+            inputs, self.input_format_configs, self.adapter_registry)
+        self.adapters = self.parsed_input.adapters
+        return (self.parsed_input.input_data, self.parsed_input.input_size,
+                self.parsed_input.parameters, self.parsed_input.errors,
+                self.parsed_input.batch)
 
-    def inference(self, inputs):
+    def inference(self, inputs: Input) -> Output:
         outputs = Output()
 
         input_data, input_size, parameters, errors, batch = self.parse_input(
@@ -254,70 +257,28 @@ class HuggingFaceService(object):
             return outputs
 
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
-            if inputs.get_property("reset_rollingbatch"):
-                self.rolling_batch.reset()
-            if self.adapters is not None:
-                adapter_data = [
-                    self.adapter_registry.get(adapter, None)
-                    for adapter in self.adapters
-                ]
-            else:
-                adapter_data = None
-            result = self.rolling_batch.inference(input_data,
-                                                  parameters,
-                                                  adapters=adapter_data)
-            idx = 0
-            for i in range(len(batch)):
-                err = errors.get(i)
-                if err:
-                    err = {"data": "", "last": True, "code": 424, "error": err}
-                    outputs.add(Output.binary_encode(err),
-                                key="data",
-                                batch_index=i)
-                    outputs.add_property(f"batch_{i}_Content-Type",
-                                         "application/json")
-                else:
-                    content_type = result[idx].pop("content_type")
-                    outputs.add(Output.binary_encode(result[idx]),
-                                key="data",
-                                batch_index=i)
-                    if content_type is not None:
-                        outputs.add_property(f"batch_{i}_Content-Type",
-                                             content_type)
-                    idx += 1
-
-            return outputs
+            return rolling_batch_inference(self.parsed_input, inputs, outputs,
+                                           self.rolling_batch)
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
-            if len(batch) > 1:
-                raise NotImplementedError(
-                    "Dynamic batch not supported for generic streaming")
-            outputs.add_property("content-type", "application/jsonlines")
-            if self.hf_configs.enable_streaming.value == StreamingEnum.huggingface.value:
-                outputs.add_stream_content(
-                    StreamingUtils.use_hf_default_streamer(
-                        self.model, self.tokenizer, input_data,
-                        self.hf_configs.device, **parameters[0]))
-            else:
-                stream_generator = StreamingUtils.get_stream_generator(
-                    "Accelerate")
-                outputs.add_stream_content(
-                    stream_generator(self.model, self.tokenizer, input_data,
-                                     self.hf_configs.device, **parameters[0]))
-            return outputs
+            return self._streaming_inference(batch, input_data, outputs,
+                                             parameters)
+        else:
+            return self._dynamic_batch_inference(batch, errors, input_data,
+                                                 input_size, inputs, outputs,
+                                                 parameters)
 
+    def _dynamic_batch_inference(self, batch, errors, input_data, input_size,
+                                 inputs, outputs, parameters):
         if not all(p == parameters[0] for p in parameters):
             raise ValueError(
                 "In order to enable dynamic batching, all input batches must have the same parameters"
             )
-
         if isinstance(self.model, PeftModelForCausalLM):
             if self.adapters is None:
                 # Inference with only base model
                 self.adapters = [""] * len(input_data)
             parameters[0]["adapters"] = self.adapters
-
         prediction = self.hf_pipeline(input_data, **parameters[0])
-
         offset = 0
         for i, item in enumerate(batch):
             content_type = item.get_property("Content-Type")
@@ -341,7 +302,26 @@ class HuggingFaceService(object):
                        accept,
                        key=inputs.get_content().key_at(i))
                 offset += input_size[i]
+        return outputs
 
+    def _streaming_inference(self, batch, input_data, outputs, parameters):
+        if len(batch) > 1:
+            raise NotImplementedError(
+                "Dynamic batch not supported for generic streaming")
+        outputs.add_property("content-type", "application/jsonlines")
+        if self.hf_configs.enable_streaming.value == StreamingEnum.huggingface.value:
+            outputs.add_stream_content(
+                StreamingUtils.use_hf_default_streamer(self.model,
+                                                       self.tokenizer,
+                                                       input_data,
+                                                       self.hf_configs.device,
+                                                       **parameters[0]))
+        else:
+            stream_generator = StreamingUtils.get_stream_generator(
+                "Accelerate")
+            outputs.add_stream_content(
+                stream_generator(self.model, self.tokenizer, input_data,
+                                 self.hf_configs.device, **parameters[0]))
         return outputs
 
     def get_pipeline(self, task: str, model_id_or_path: str, kwargs):

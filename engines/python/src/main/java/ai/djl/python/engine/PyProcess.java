@@ -273,6 +273,9 @@ class PyProcess {
                         MODEL_METRIC.info("{}", Metric.parse(result.substring(metricLoc + 9)));
                         continue;
                     }
+                    if (result.contains("ModelServerTelemetry:")) {
+                        continue;
+                    }
 
                     if (error) {
                         logger.warn("{}: {}", getName(), result);

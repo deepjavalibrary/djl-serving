@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
+import os
 from typing import List
 from collections import OrderedDict, defaultdict
 
@@ -26,6 +27,7 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
     supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER,
     FINISH_REASON_MAPPER)
+from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
 _WARMUP_PREFILL_TOKENS = 4096
@@ -187,14 +189,21 @@ class LmiDistRollingBatch(RollingBatch):
                 self.request_cache, request_output, self.get_tokenizer())
             # Record SD metrics
             completion_output = request_output.outputs[0]
-            if self.lmi_dist_config.record_acceptance_rate and request_output.finished:
-                if self.supports_speculative_decoding and completion_output.acceptance_history:
-                    record = get_speculative_decoding_metrics_record(
-                        completion_output, request_output)
-                    logging.info(f"Speculative Decoding {record}")
-                else:
-                    logging.warning(
-                        f"Ignoring logging speculative decoding metrics")
+            if (
+                    self.lmi_dist_config.record_acceptance_rate
+                    or self.lmi_dist_config.speculative_telemetry
+            ) and self.lmi_dist_config.speculative_draft_model and request_output.finished:
+                try:
+                    if self.supports_speculative_decoding and completion_output.acceptance_history:
+                        record = get_speculative_decoding_metrics_record(
+                            completion_output, request_output)
+                        if self.lmi_dist_config.record_acceptance_rate:
+                            logging.info(f"Speculative Decoding {record}")
+                        if self.lmi_dist_config.speculative_telemetry and os.environ.get(
+                                "SAGEMAKER_SECURE_MODE") == "true":
+                            telemetry_manager.record_speculative(record)
+                except:
+                    logging.debug("SD telemetry collection failed, ignore")
 
         for request in self.active_requests:
             request_output = request.request_output

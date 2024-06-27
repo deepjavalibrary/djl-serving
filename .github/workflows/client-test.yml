@@ -62,7 +62,7 @@ jobs:
           cd tests
           djl-serving -m test::Python=file://$PWD/python &> output.log &
           sleep 15
-          python test_client.py
+          python integration/test_client.py
           jobs
           kill %1
       - name: On failure step
@@ -109,7 +109,7 @@ jobs:
           ./gradlew --stop
           ./gradlew :serving:run --args="-m test::Python=file:$(pwd -W)/tests/python" &> output.log &
           sleep 30
-          cd tests/ && python test_client.py
+          cd tests/ && python integration/test_client.py
       - name: On failure step
         if: ${{ failure() }}
         shell: bash
