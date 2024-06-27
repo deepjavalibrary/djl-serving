@@ -31,6 +31,7 @@ from partition import PartitionService
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 _neuronxcc_version: Optional[str] = None
+NEO_OPTIMIZED_MODEL_DIR = 'optimized_model'
 
 
 def get_neuronxcc_version() -> str:
@@ -401,12 +402,34 @@ class NeoNeuronPartitionService():
         self.properties_manager.properties = output_properties
         self.properties_manager.generate_properties_file()
 
+        output_passthrough_properties[
+            "option.model_id"] = f"./{NEO_OPTIMIZED_MODEL_DIR}"
         # Write out pass-through properties
         properties_file = os.path.join(self.OUTPUT_MODEL_DIRECTORY,
                                        'serving.properties')
         with open(properties_file, "a") as f:
             for k, v in output_passthrough_properties.items():
                 f.write(f"{k}={v}\n")
+
+    def copy_input_files_to_output(self):
+        """
+        Copies inputted files to output so that custom entrypoints or requirements files are preserved.
+
+        TODO: Avoid making redundant copies of model weights.
+        """
+        # move outputted files to subdirectory
+        optimized_model_dir = os.path.abspath(
+            os.path.join(self.OUTPUT_MODEL_DIRECTORY, NEO_OPTIMIZED_MODEL_DIR))
+        os.mkdir(optimized_model_dir)
+        with os.scandir(self.OUTPUT_MODEL_DIRECTORY) as it:
+            for entry in it:
+                if os.path.abspath(entry.path) != optimized_model_dir:
+                    shutil.move(entry.path, optimized_model_dir)
+
+        shutil.copytree(self.INPUT_MODEL_DIRECTORY,
+                        self.OUTPUT_MODEL_DIRECTORY,
+                        dirs_exist_ok=True)
+        self.write_properties()
 
     def neo_partition(self):
         self.update_neuron_cache_location()
@@ -447,7 +470,7 @@ class NeoNeuronPartitionService():
                 cache_manager.create_jumpstart_neuron_cache_in_cache_dir(
                     self.jumpstart_metadata)
 
-        self.write_properties()
+        self.copy_input_files_to_output()
 
 
 def main():
