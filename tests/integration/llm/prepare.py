@@ -1025,7 +1025,7 @@ transformers_neuronx_neo_list = {
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 256,
         "option.rolling_batch": "disable",
-        "option.max_rolling_batch_size": 4,
+        "option.batch_size": 4,
         "option.model_loading_timeout": 3600,
     },
     "mistral-7b-rb": {
