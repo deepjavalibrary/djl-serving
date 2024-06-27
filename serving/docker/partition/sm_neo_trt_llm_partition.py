@@ -16,9 +16,10 @@ import os
 import sys
 from typing import Final
 
-from utils import update_kwargs_with_env_vars, load_properties
+from utils import (update_kwargs_with_env_vars, load_properties,
+                   update_dataset_cache_location, remove_option_from_properties)
 from sm_neo_utils import (CompilationFatalError, write_error_to_file, 
-                          get_neo_env_vars, update_dataset_cache_location)
+                          get_neo_env_vars)
 from tensorrt_llm_toolkit import create_model_repo
 
 
@@ -34,17 +35,12 @@ class NeoTRTLLMPartitionService():
         self.COMPILER_CACHE_LOCATION: Final[str] = env[4]
         self.HF_CACHE_LOCATION: Final[str] = env[5]
 
-
-    # TODO: merge with / call other partition script if possible?
     def run_partition(self):
-        kwargs = {}
-        for key, value in self.properties.items():
-            if key.startswith("option."):
-                kwargs[key[7:]] = value
-            else:
-                kwargs[key] = value
+        kwargs = remove_option_from_properties(self.properties)
         kwargs["trt_llm_model_repo"] = self.OUTPUT_MODEL_DIRECTORY
         kwargs["neo_cache_dir"] = self.COMPILER_CACHE_LOCATION
+        os.environ['TRTLLM_TOOLKIT_SKIP_DOWNLOAD_DIR_CLEANUP'] = 'true'
+        os.environ['TRTLLM_TOOLKIT_SKIP_CHECKPOINT_DIR_CLEANUP'] = 'true'
         try:
             create_model_repo(self.INPUT_MODEL_DIRECTORY, **kwargs)
         except Exception as exc:
@@ -66,8 +62,6 @@ class NeoTRTLLMPartitionService():
 
     def neo_partition(self):
         update_dataset_cache_location(self.HF_CACHE_LOCATION)
-        os.environ['TRTLLM_TOOLKIT_SKIP_DOWNLOAD_DIR_CLEANUP'] = 'true'
-        os.environ['TRTLLM_TOOLKIT_SKIP_CHECKPOINT_DIR_CLEANUP'] = 'true'
         self.get_properties()
         self.run_partition()
         self.generate_properties_file()

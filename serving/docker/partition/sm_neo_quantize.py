@@ -19,8 +19,9 @@ from typing import Final
 import torch
 
 from sm_neo_utils import (CompilationFatalError, write_error_to_file,
-                          get_neo_env_vars, update_dataset_cache_location)
-from utils import extract_python_jar, load_properties
+                          get_neo_env_vars)
+from utils import (extract_python_jar, load_properties, 
+                   update_dataset_cache_location)
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
@@ -40,13 +41,6 @@ class NeoQuantizationService():
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
         self.HF_CACHE_LOCATION: Final[str] = env[5]
         self.TARGET_INSTANCE_TYPE: Final[str] = env[6]
-
-    def update_dataset_cache_location(self):
-        logging.info(
-            f"Updating HuggingFace Datasets cache directory to: {self.HF_CACHE_LOCATION}"
-        )
-        os.environ['HF_DATASETS_CACHE'] = self.HF_CACHE_LOCATION
-        #os.environ['HF_DATASETS_OFFLINE'] = "1"
 
     def initialize_partition_args_namespace(self):
         """

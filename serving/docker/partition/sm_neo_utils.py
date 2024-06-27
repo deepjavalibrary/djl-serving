@@ -27,7 +27,6 @@ def write_error_to_file(error_message, error_file):
         logging.error(f"Failed to write error file: {tb_exc}")
 
 
-# TODO: return map instead of tuple. remove compiler flags var.
 def get_neo_env_vars():
     """
     Get environment variables required by the SageMaker Neo interface
@@ -52,7 +51,6 @@ def get_neo_env_vars():
         )
 
 
-# TODO: to be deprecated/removed
 def get_neo_compiler_flags(compiler_options):
     """
     Get SageMaker Neo compiler_flags from the CompilerOptions field
@@ -89,10 +87,3 @@ def load_jumpstart_metadata(path: str) -> dict:
             js_metadata["script_info"] = json.load(file)
 
     return js_metadata
-
-def update_dataset_cache_location(hf_cache_location):
-    logging.info(
-        f"Updating HuggingFace Datasets cache directory to: {hf_cache_location}"
-    )
-    os.environ['HF_DATASETS_CACHE'] = hf_cache_location
-    #os.environ['HF_DATASETS_OFFLINE'] = "1"
