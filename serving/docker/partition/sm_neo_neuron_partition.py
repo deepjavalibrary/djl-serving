@@ -360,6 +360,11 @@ class NeoNeuronPartitionService():
             f"serving.properties\nargs:{self.args}\nprops:{self.properties}")
         self.properties_manager = PropertiesManager(
             self.args, addl_properties=self.properties)
+        if not self.properties_manager.properties.get(
+                "option.tensor_parallel_degree"):
+            raise InputConfiguration(
+                "Tensor parallel degree not specified. This is required for Neuron compilation"
+            )
 
     def run_partition(self) -> str:
         """
