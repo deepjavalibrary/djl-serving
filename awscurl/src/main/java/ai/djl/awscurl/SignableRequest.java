@@ -132,7 +132,7 @@ public class SignableRequest {
         if (host == null) {
             host = uri.getHost();
         }
-        path = uri.getPath();
+        path = uri.getPath().replace(":", "%253A");
         parameters = HttpClient.parseQueryString(uri.getQuery());
         headers.put("Host", host);
     }
