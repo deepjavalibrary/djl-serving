@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04 AS base
-ARG djl_version=0.28.0~SNAPSHOT
+ARG djl_version=0.29.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
@@ -60,20 +60,20 @@ LABEL djl-version=$djl_version
 
 FROM base AS cpu-full
 
-ARG torch_version=2.2.2
+ARG torch_version=2.3.1
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
-    echo "${djl_version} cpufull" > /opt/djl/bin/telemetry && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
-    djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.10.1:linux-x86_64 && \
+    djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.16.1:linux-x86_64 && \
     scripts/patch_oss_dlc.sh python && \
+    echo "${djl_version} cpufull" > /opt/djl/bin/telemetry && \
     rm -rf /opt/djl/logs && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.cpu-full="true"
 LABEL torch-version=$torch_version
