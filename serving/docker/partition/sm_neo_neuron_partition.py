@@ -25,12 +25,13 @@ from optimum.commands.export.neuronx import parse_args_neuronx
 from sm_neo_utils import (InputConfiguration, CompilationFatalError,
                           write_error_to_file, get_neo_env_vars,
                           get_neo_compiler_flags, load_jumpstart_metadata)
-from utils import extract_python_jar
+from utils import extract_python_jar, load_properties
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 _neuronxcc_version: Optional[str] = None
+NEO_OPTIMIZED_MODEL_DIR = 'optimized_model'
 
 
 def get_neuronxcc_version() -> str:
@@ -183,12 +184,12 @@ class NeoNeuronPartitionService():
         is easier to construct.
         """
         self.args.save_mp_checkpoint_path = self.OUTPUT_MODEL_DIRECTORY
+        self.args.engine = "Python"
         # If skip_copy is not enabled, outputted configs are overwritten, and deployment fails.
         self.args.skip_copy = True
         # These attributes reflect the default values of the corresponding attributes
         # in the partition argparser. PropertiesManager expects these attributes to be defined.
         self.args.model_id = None
-        self.args.engine = None
         self.args.tensor_parallel_degree = None
         self.args.quantize = None
 
@@ -352,11 +353,18 @@ class NeoNeuronPartitionService():
         Factory method used to construct a PropertiesManager from serving.properties
         """
         self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
+        self.properties[
+            "option.entryPoint"] = "djl_python.transformers_neuronx"
         logging.debug(
             "Constructing PropertiesManager from "
             f"serving.properties\nargs:{self.args}\nprops:{self.properties}")
         self.properties_manager = PropertiesManager(
             self.args, addl_properties=self.properties)
+        if not self.properties_manager.properties.get(
+                "option.tensor_parallel_degree"):
+            raise InputConfiguration(
+                "Tensor parallel degree not specified. This is required for Neuron compilation"
+            )
 
     def run_partition(self) -> str:
         """
@@ -370,6 +378,63 @@ class NeoNeuronPartitionService():
             raise CompilationFatalError(
                 f"Encountered an error during Transformers-NeuronX compilation: {exc}"
             )
+
+    def write_properties(self) -> str:
+        """
+        Updates outputted serving.properties.
+
+        engine=Python & option.entryPoint=djl_python.transformers_neuronx are hard-coded for Neo partitioning.
+        This function outputs the customer inputs for these fields.
+        """
+        customer_properties = load_properties(self.INPUT_MODEL_DIRECTORY)
+        passthrough_properties = {}
+        passthrough_properties["engine"] = customer_properties.get('engine')
+        passthrough_properties["option.entryPoint"] = os.environ.get(
+            "OPTION_ENTRYPOINT") if os.environ.get(
+                "OPTION_ENTRYPOINT") else customer_properties.get(
+                    "option.entryPoint")
+
+        output_properties = self.properties_manager.properties
+        output_passthrough_properties = {}
+        for k, v in passthrough_properties.items():
+            output_properties.pop(k, None)
+            if v:
+                logging.info(
+                    f"User passed {k}={v}. Outputting in serving.properties")
+                output_passthrough_properties[k] = v
+
+        # Write out properties without pass-through properties
+        self.properties_manager.properties = output_properties
+        self.properties_manager.generate_properties_file()
+
+        output_passthrough_properties[
+            "option.model_id"] = f"./{NEO_OPTIMIZED_MODEL_DIR}"
+        # Write out pass-through properties
+        properties_file = os.path.join(self.OUTPUT_MODEL_DIRECTORY,
+                                       'serving.properties')
+        with open(properties_file, "a") as f:
+            for k, v in output_passthrough_properties.items():
+                f.write(f"{k}={v}\n")
+
+    def copy_input_files_to_output(self):
+        """
+        Copies inputted files to output so that custom entrypoints or requirements files are preserved.
+
+        TODO: Avoid making redundant copies of model weights.
+        """
+        # move outputted files to subdirectory
+        optimized_model_dir = os.path.abspath(
+            os.path.join(self.OUTPUT_MODEL_DIRECTORY, NEO_OPTIMIZED_MODEL_DIR))
+        os.mkdir(optimized_model_dir)
+        with os.scandir(self.OUTPUT_MODEL_DIRECTORY) as it:
+            for entry in it:
+                if os.path.abspath(entry.path) != optimized_model_dir:
+                    shutil.move(entry.path, optimized_model_dir)
+
+        shutil.copytree(self.INPUT_MODEL_DIRECTORY,
+                        self.OUTPUT_MODEL_DIRECTORY,
+                        dirs_exist_ok=True)
+        self.write_properties()
 
     def neo_partition(self):
         self.update_neuron_cache_location()
@@ -409,6 +474,8 @@ class NeoNeuronPartitionService():
                     self.OUTPUT_MODEL_DIRECTORY)
                 cache_manager.create_jumpstart_neuron_cache_in_cache_dir(
                     self.jumpstart_metadata)
+
+        self.copy_input_files_to_output()
 
 
 def main():
