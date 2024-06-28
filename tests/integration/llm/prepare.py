@@ -791,6 +791,7 @@ trtllm_handler_list = {
         "option.smoothquant_per_channel": "True",
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
+        "option.trust_remote_code": True
     },
     "internlm-7b": {
         "option.model_id": "internlm/internlm-7b",
