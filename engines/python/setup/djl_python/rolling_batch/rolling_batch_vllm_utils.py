@@ -62,6 +62,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     else:
         new_logprobs = [None] * len(new_token_ids)
 
+    request_cache[request_id]["has_token_generated"] = True
     request_cache[request_id]["token_ids"] = new_token_ids
     request_cache[request_id]["logprobs"] = new_logprobs
     request_cache[request_id]['output_token_texts'] = output_token_texts
