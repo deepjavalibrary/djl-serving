@@ -97,7 +97,8 @@ class PythonEngine(object):
             self.sock.bind(self.sock_name)
         else:
             self.sock.bind((self.sock_name, int(self.port)))
-            logging.info(f"Socket bind on address: {self.sock_name}:{self.port}")
+            logging.info(
+                f"Socket bind on address: {self.sock_name}:{self.port}")
 
         self.sock.listen(128)
         logging.info("Python engine started.")

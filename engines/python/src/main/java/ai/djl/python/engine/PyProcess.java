@@ -190,7 +190,6 @@ class PyProcess {
                         "Python stream closed unexpectedly, exit code: " + exitCode);
             }
             for (Connection conn : connections) {
-                logger.warn("Trying to connect to processes");
                 conn.connect();
             }
 

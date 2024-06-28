@@ -366,9 +366,6 @@ public class PyEnv {
             }
             gpuCount = visibleCount;
         }
-
-        // return 1
-
         return gpuCount / getTensorParallelDegree();
     }
 
