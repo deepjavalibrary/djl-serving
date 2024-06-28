@@ -218,7 +218,7 @@ class LmiDistRollingBatch(RollingBatch):
             text = cache["text"][cache["curr_length"]:]
             output_token_texts = [text] * len(cache['token_ids']) if not cache[
                 'output_token_texts'] else cache['output_token_texts']
-            if cache['token_ids']:
+            if cache.get("has_token_generated") and cache['token_ids']:
                 # token id is not determined since there could be multiple token comes at the same time
                 # only return the last one
                 for token_id, token_text, logprob, in zip(
@@ -232,6 +232,7 @@ class LmiDistRollingBatch(RollingBatch):
                 request.set_next_token("", cache["finished"], finish_reason,
                                        prompt_tokens_details)
             cache["curr_length"] = len(cache["text"])
+            cache["has_token_generated"] = False
 
         # step 3: clean finished requests
         for key in finished_id:
