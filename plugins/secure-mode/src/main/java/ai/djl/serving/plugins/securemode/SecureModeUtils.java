@@ -95,8 +95,26 @@ final class SecureModeUtils {
         Set<String> controls = new HashSet<>(Arrays.asList(securityControls.split("\\s*,\\s*")));
         String[] untrustedPathList = untrustedChannels.split(",");
 
+        validateProperties(modelInfo, SecureModeAllowList.PROPERTIES_ALLOWLIST);
         checkOptions(modelInfo, controls);
         scanForbiddenFiles(untrustedPathList, controls);
+    }
+
+    /**
+     * In Secure Mode we only allow an explicit set of DJL-Serving properties to be set.
+     *
+     * @param modelInfo ModelInfo of the model
+     * @param allowedKeys set of allowlisted properties
+     */
+    private static void validateProperties(ModelInfo<?, ?> modelInfo, Set<String> allowedKeys) {
+        Properties prop = modelInfo.getProperties();
+        allowedKeys = new HashSet<>(allowedKeys);
+        for (String key : prop.stringPropertyNames()) {
+            if (!allowedKeys.contains(key)) {
+                throw new IllegalConfigurationException(
+                        "Property " + key + " is prohibited from being set in Secure Mode.");
+            }
+        }
     }
 
     /**
