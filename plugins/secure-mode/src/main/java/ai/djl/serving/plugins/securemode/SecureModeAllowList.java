@@ -14,13 +14,18 @@ package ai.djl.serving.plugins.securemode;
 
 import java.util.Set;
 
-/** A class for properties that are allowlisted in Secure Mode. */
-final class SecureModeAllowList {
+/** Properties that are explicitly allowlisted in Secure Mode. */
+interface SecureModeAllowList {
 
     public static final Set<String> PROPERTIES_ALLOWLIST =
             Set.of(
                     "engine",
                     "job_queue_size",
+                    "max_idle_time",
+                    "batch_size",
+                    "max_batch_delay",
+                    "minWorkers",
+                    "maxWorkers",
                     "option.entryPoint",
                     "option.task",
                     "option.model_id",
@@ -61,6 +66,4 @@ final class SecureModeAllowList {
                     "option.max_lora_rank",
                     "option.lora_extra_vocab_size",
                     "option.max_cpu_loras");
-
-    private SecureModeAllowList() {}
 }

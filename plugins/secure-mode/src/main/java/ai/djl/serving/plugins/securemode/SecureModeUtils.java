@@ -108,9 +108,9 @@ final class SecureModeUtils {
      */
     private static void validateProperties(ModelInfo<?, ?> modelInfo, Set<String> allowedKeys) {
         Properties prop = modelInfo.getProperties();
-        Set<String> allowedKeysSet = new HashSet<>(allowedKeys);
+        allowedKeys = new HashSet<>(allowedKeys);
         for (String key : prop.stringPropertyNames()) {
-            if (!allowedKeysSet.contains(key)) {
+            if (!allowedKeys.contains(key)) {
                 throw new IllegalConfigurationException(
                         "Property " + key + " is prohibited from being set in Secure Mode.");
             }
