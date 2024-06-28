@@ -19,6 +19,7 @@ import ai.djl.repository.zoo.ZooProvider;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.MutableClassLoader;
 import ai.djl.util.Utils;
+import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +76,15 @@ public final class DependencyManager {
                 installDependency("ai.djl.mxnet:mxnet-engine:" + djlVersion);
                 installDependency("ai.djl.mxnet:mxnet-model-zoo:" + djlVersion);
                 break;
+            case "OnnxRuntime":
+                installDependency("ai.djl.onnxruntime:onnxruntime-engine:" + djlVersion);
+                String ortVersion = getOrtVersion(djlVersion);
+                if (CudaUtils.hasCuda()) {
+                    installDependency("com.microsoft.onnxruntime:onnxruntime_gpu:" + ortVersion);
+                } else {
+                    installDependency("com.microsoft.onnxruntime:onnxruntime:" + ortVersion);
+                }
+                break;
             case "XGBoost":
                 installDependency("ai.djl.ml.xgboost:xgboost:" + djlVersion);
                 // TODO: Avoid hard code version
@@ -120,7 +130,10 @@ public final class DependencyManager {
             logger.info("Found existing dependency: {}", name);
         } else {
             String link;
-            if (version.endsWith("-SNAPSHOT")) {
+            if ("onnxruntime_gpu".equals(artifactId)) {
+                // TODO: Remove this hack when OnnxRuntime support cudnn9
+                link = "https://publish.djl.ai/onnxruntime/" + version + '/' + name;
+            } else if (version.endsWith("-SNAPSHOT")) {
                 link = getSnapshotUrl(groupId, artifactId, version) + ".jar";
             } else {
                 String maven = "https://search.maven.org/remotecontent?filepath=";
