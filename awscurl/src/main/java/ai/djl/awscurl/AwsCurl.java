@@ -148,13 +148,20 @@ public final class AwsCurl {
             String url = config.getUrl(cmdArgs.get(0));
             URI uri;
             try {
-                uri = new URI(url);
-                String scheme = uri.getScheme();
+                URI rawUri = new URI(url);
+                String scheme = rawUri.getScheme();
                 if (scheme == null || !scheme.startsWith("http")) {
                     System.err.println("Only HTTP url is supported: " + url);
                     ret.setHasError();
                     return ret;
                 }
+                String path = rawUri.getPath().replace(":", "%3A");
+                String queryString = rawUri.getRawQuery();
+                url = scheme + "://" + rawUri.getRawAuthority() + path;
+                if (queryString != null) {
+                    url += '?' + queryString;
+                }
+                uri = new URI(url);
             } catch (URISyntaxException e) {
                 System.err.println("Invalid url: " + url);
                 ret.setHasError();
