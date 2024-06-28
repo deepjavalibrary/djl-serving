@@ -84,11 +84,12 @@ final class SecureModeUtils {
             throw new IllegalConfigurationException(
                     "Security Controls environment variable is not set.");
         }
-        logger.info("Secure Mode with the following security controls: {}", securityControls);
+        logger.info(
+                "Secure Mode enabled with the following security controls: {}", securityControls);
 
         String engine = modelInfo.getEngineName();
         if (!"Python".equals(engine) && !"MPI".equals(engine)) {
-            logger.info("Skip security check for engine: {}", engine);
+            logger.info("Skipping security check for engine: {}", engine);
             return;
         }
 
@@ -127,7 +128,7 @@ final class SecureModeUtils {
         if (securityControls.contains(TRUST_REMOTE_CODE_CONTROL)) {
             if (Boolean.parseBoolean(prop.getProperty("option.trust_remote_code"))) {
                 throw new IllegalConfigurationException(
-                        "Setting TRUST_REMOTE_CODE is prohibited in Secure Mode.");
+                        "Setting TRUST_REMOTE_CODE to True is prohibited in Secure Mode.");
             }
         }
         if (securityControls.contains(CUSTOM_ENTRYPOINT_CONTROL)) {
@@ -148,7 +149,7 @@ final class SecureModeUtils {
         if (securityControls.contains(REQUIREMENTS_TXT_CONTROL)) {
             if (Files.isRegularFile(modelDir.resolve("requirements.txt"))) {
                 throw new IllegalConfigurationException(
-                        "Install dependencies is prohibited in Secure Mode.");
+                        "Installing additional dependencies is prohibited in Secure Mode.");
             }
         }
     }
@@ -176,7 +177,8 @@ final class SecureModeUtils {
                         throw new IllegalConfigurationException(
                                 "Pickle-based files found in directory "
                                         + path
-                                        + ", but only model files are permitted in Secure Mode.");
+                                        + ", but only the Safetensors format is permitted in Secure"
+                                        + " Mode.");
                     }
                     if (checkJinja && "tokenizer_config.json".equals(name)) {
                         try (Reader reader = Files.newBufferedReader(p)) {
