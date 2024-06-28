@@ -50,6 +50,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,18 +67,21 @@ class Connection {
     private static final Logger logger = LoggerFactory.getLogger(Connection.class);
     private static final String MASTER_ADDR = "127.0.0.1";
 
+    private int clusterSize;
     private int port;
     private SocketAddress socketAddress;
     private Channel channel;
     private RequestHandler requestHandler;
 
-    Connection(PyEnv pyEnv, int basePort, int rank) {
+    Connection(PyEnv pyEnv, int basePort, int rank, int clusterSize, String hostname) {
         requestHandler = new RequestHandler();
+        this.clusterSize = clusterSize;
         port = 19000 + basePort;
-        socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank);
+        socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank, clusterSize, hostname);
     }
 
-    static Process startPython(PyEnv pyEnv, Model model, int workerId, int port)
+    static Process startPython(
+            PyEnv pyEnv, Model model, int workerId, int port, int clusterSize, String[] hosts)
             throws IOException {
         Path tmp = Paths.get(System.getProperty("java.io.tmpdir"));
         try (Stream<Path> stream = Files.list(tmp)) {
@@ -100,7 +104,7 @@ class Connection {
                     });
         }
         File modelPath = model.getModelPath().toFile();
-        String[] args = getPythonStartCmd(pyEnv, model, workerId, port);
+        String[] args = getPythonStartCmd(pyEnv, model, workerId, port, clusterSize, hosts);
         String[] envp = pyEnv.getEnvironmentVars(model);
         logger.debug("cmd: {}", (Object) args);
 
@@ -120,10 +124,59 @@ class Connection {
         return f;
     }
 
-    static String[] getPythonStartCmd(PyEnv pyEnv, Model model, int workerId, int port) {
+    static String[] getPythonStartCmd(
+            PyEnv pyEnv, Model model, int workerId, int port, int clusterSize, String[] hosts) {
         Device device = model.getNDManager().getDevice();
         int deviceId = device.getDeviceId();
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+        // int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
+
+        if (clusterSize > 1) {
+            String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
+            logger.info("Set before mpirun CUDA_VISIBLE_DEVICES={}", cudaDevices);
+            String[] args = new String[36];
+            args[0] = "mpirun";
+            args[1] = "-np";
+            // TODO: When we support multi nodes, change it to the product of tensor parallel value
+            // and
+            // pipeline parallel value.
+            args[2] = String.valueOf(clusterSize * tensorParallelDegree);
+            args[3] = "--host";
+            args[4] = String.join(",", hosts);
+            args[5] = "--allow-run-as-root";
+            args[6] = "--bind-to";
+            args[7] = "none";
+            args[8] = "--mca";
+            args[9] = "btl_vader_single_copy_mechanism";
+            args[10] = "none";
+            args[11] = "--tag-output";
+            args[12] = "-x";
+            args[13] = "FI_PROVIDER=efa";
+            args[14] = "-x";
+            args[15] = "RDMAV_FORK_SAFE=1";
+            args[16] = "-x";
+            args[17] = "FI_EFA_USE_DEVICE_RDMA=1";
+            args[18] = "-x";
+            args[19] = "LD_LIBRARY_PATH";
+            args[20] = "-x";
+            args[21] = "PYTHONPATH";
+            args[22] = "-x";
+            args[23] = "CUDA_VISIBLE_DEVICES=" + cudaDevices;
+            args[24] = pyEnv.getPythonExecutable();
+            args[25] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
+            args[26] = "--model-dir";
+            args[27] = model.getModelPath().toAbsolutePath().toString();
+            args[28] = "--entry-point";
+            args[29] = pyEnv.getEntryPoint();
+            args[30] = "--sock-type";
+            args[31] = "tcp";
+            args[32] = "--port";
+            args[33] = String.valueOf(port);
+            args[34] = "--tensor-parallel-degree";
+            args[35] = String.valueOf(tensorParallelDegree);
+            return args;
+        }
+
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
@@ -242,13 +295,15 @@ class Connection {
         return String.valueOf(1);
     }
 
-    void connect() throws InterruptedException {
+    void connect() throws InterruptedException, UnknownHostException {
+        logger.info("Connecting to socket: {}", socketAddress);
         EventLoopGroup group = PyEnv.getEventLoopGroup();
 
         Bootstrap clientBootstrap = new Bootstrap();
+
         clientBootstrap
                 .group(group)
-                .channel(getClientChannel())
+                .channel(getClientChannel(this.clusterSize))
                 .remoteAddress(socketAddress)
                 .handler(
                         new ChannelInitializer<>() {
@@ -289,7 +344,11 @@ class Connection {
         return System.getProperty("java.io.tmpdir") + "/djl_sock." + port;
     }
 
-    private SocketAddress getSocketAddress(boolean mpiMode, int rank) {
+    private SocketAddress getSocketAddress(
+            boolean mpiMode, int rank, int clusterSize, String hostname) {
+        if (clusterSize > 1) {
+            return new InetSocketAddress(hostname, port + rank);
+        }
         if (mpiMode) {
             return new DomainSocketAddress(getSocketPath(port) + '.' + rank);
         }
@@ -300,17 +359,23 @@ class Connection {
         return new InetSocketAddress("127.0.0.1", port);
     }
 
-    static EventLoopGroup newEventLoopGroup() {
+    static EventLoopGroup newEventLoopGroup(int clusterSize) {
+        if (clusterSize > 1) {
+            return new NioEventLoopGroup(new DaemonThreadFactory());
+        }
         if (Epoll.isAvailable()) {
             return new EpollEventLoopGroup(new DaemonThreadFactory());
         } else if (KQueue.isAvailable()) {
             return new KQueueEventLoopGroup(new DaemonThreadFactory());
         }
-
         return new NioEventLoopGroup(new DaemonThreadFactory());
     }
 
-    private static Class<? extends Channel> getClientChannel() {
+    private static Class<? extends Channel> getClientChannel(int clusterSize) {
+
+        if (clusterSize > 1) {
+            return NioSocketChannel.class;
+        }
         if (Epoll.isAvailable()) {
             return EpollDomainSocketChannel.class;
         } else if (KQueue.isAvailable()) {

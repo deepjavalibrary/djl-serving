@@ -48,6 +48,7 @@ public class PyModel extends BaseModel {
 
     private static final Logger logger = LoggerFactory.getLogger(PyModel.class);
 
+    private int clusterSize;
     private PyEnv pyEnv;
     private boolean parallelLoading;
     private LinkedBlockingDeque<PyProcess> workerQueue;
@@ -63,6 +64,7 @@ public class PyModel extends BaseModel {
         this.manager = manager;
         this.manager.setName("pythonModel");
         boolean mpiMode = ((PyEngine) manager.getEngine()).isMpiMode();
+        clusterSize = ((PyEngine) manager.getEngine()).getClusterSize();
         pyEnv = new PyEnv(mpiMode);
         dataType = DataType.FLOAT32;
         workerQueue = new LinkedBlockingDeque<>();
@@ -256,7 +258,7 @@ public class PyModel extends BaseModel {
             }
             return new PyPredictor<>(this, workerQueue.poll(), timeout, translator, device);
         }
-        PyProcess worker = new PyProcess(this, pyEnv, -1);
+        PyProcess worker = new PyProcess(this, pyEnv, -1, clusterSize);
         worker.startPythonProcess();
         return new PyPredictor<>(this, worker, timeout, translator, device);
     }
@@ -305,7 +307,7 @@ public class PyModel extends BaseModel {
         int deviceId = manager.getDevice().getDeviceId();
         for (int i = 0; i < mpiWorkers; ++i) {
             logger.debug("Pre-creating python worker: {} ", i);
-            PyProcess worker = new PyProcess(this, pyEnv, deviceId + i * tp);
+            PyProcess worker = new PyProcess(this, pyEnv, deviceId + i * tp, clusterSize);
             workerQueue.offer(worker);
             if (pool != null) {
                 logger.debug("Submitting to pool: {}", i);

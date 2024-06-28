@@ -58,7 +58,7 @@ class PythonEngine(object):
 
             self.clean_up()
         elif self.sock_type == "tcp":
-            self.sock_name = "127.0.0.1"
+            self.sock_name = socket.gethostname()
             if self.port is None:
                 raise ValueError("Missing port argument.")
         else:
@@ -97,6 +97,7 @@ class PythonEngine(object):
             self.sock.bind(self.sock_name)
         else:
             self.sock.bind((self.sock_name, int(self.port)))
+            logging.info(f"Socket bind on address: {self.sock_name}:{self.port}")
 
         self.sock.listen(128)
         logging.info("Python engine started.")
