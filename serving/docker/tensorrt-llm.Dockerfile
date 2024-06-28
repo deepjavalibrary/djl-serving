@@ -13,8 +13,8 @@ ARG version=12.4.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
 ARG python_version=3.10
-ARG TORCH_VERSION=2.2.2
-ARG djl_version=0.28.0~SNAPSHOT
+ARG TORCH_VERSION=2.3.1
+ARG djl_version=0.29.0~SNAPSHOT
 ARG transformers_version=4.40.0
 ARG accelerate_version=0.29.3
 ARG tensorrtlibs_version=10.0.1
@@ -104,9 +104,9 @@ RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
 RUN scripts/install_djl_serving.sh $djl_version && \
     scripts/install_s5cmd.sh x64 && \
     scripts/security_patch.sh trtllm && \
+    scripts/patch_oss_dlc.sh python && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     echo "${djl_version} tensorrtllm" > /opt/djl/bin/telemetry && \
-    scripts/patch_oss_dlc.sh python && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
@@ -120,7 +120,7 @@ RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y &&
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.tensorrtllm="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.tensorrtllm="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.tensorrtllm="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
