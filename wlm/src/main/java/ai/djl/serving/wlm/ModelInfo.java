@@ -71,7 +71,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
 
     private static final Pattern PATTERN = Pattern.compile("MemAvailable:\\s+(\\d+) kB");
-    private static final Pattern SNAKE_CASE = Pattern.compile("[A-Z_]+");
+    private static final Pattern SNAKE_CASE = Pattern.compile("[A-Z_\\d]+");
 
     private String engineName;
     private String loadOnDevices;
