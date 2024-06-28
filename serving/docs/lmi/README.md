@@ -24,6 +24,7 @@ LMI containers provide many features, including:
 * Quantization through AWQ, GPTQ, and SmoothQuant
 * Multi GPU inference using Tensor Parallelism
 * Serving LoRA fine-tuned models
+* Text Embedding to convert text data into numerical vectors 
 
 LMI containers provide these features through integrations with popular inference libraries.
 A unified configuration format enables users to easily leverage the latest optimizations and technologies across libraries.
