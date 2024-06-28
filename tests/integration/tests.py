@@ -243,8 +243,8 @@ class TestLmiDist1:
             envs = [
                 "OPTION_MAX_ROLLING_BATCH_SIZE=2",
                 "OPTION_OUTPUT_FORMATTER=jsonlines",
-                "TENSOR_PARALLEL_DEGREE=1", "HF_MODEL_ID=gpt2",
-                "OPTION_TASK=text-generation", "OPTION_ROLLING_BATCH=lmi-dist"
+                "TENSOR_PARALLEL_DEGREE=1", "OPTION_TASK=text-generation",
+                "OPTION_ROLLING_BATCH=lmi-dist"
             ]
             r.launch("\n".join(envs))
             client.run("lmi_dist gpt2".split())
