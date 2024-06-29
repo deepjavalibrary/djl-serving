@@ -379,9 +379,9 @@ public class AwsCurlTest {
         TokenUtils.setTokenizer(); // reset tokenizer
         AsciiString contentType = AsciiString.cached("application/jsonlines");
         TestHttpHandler.setContent(
-                "{\"token\": {}}\n"
-                        + "{\"token\": {}}\n"
-                        + "{\"token\": {}, \"generated_text\"=\"Hello world.\", \"details\": {}}",
+                "{\"token\": {\"text\": \"Hello\"}}\n"
+                        + "{\"token\": {\"text\": \" world\"}}\n"
+                        + "{\"token\": {}, \"generated_text\"=\"Hello world\", \"details\": {}}",
                 contentType);
         String[] args = {
             "http://localhost:18080/invocations",
@@ -397,7 +397,7 @@ public class AwsCurlTest {
             "-t"
         };
         Result ret = AwsCurl.run(args);
-        Assert.assertEquals(ret.getTotalTokens(), 6);
+        Assert.assertEquals(ret.getTotalTokens(), 4);
         Assert.assertNotNull(ret.getTokenThroughput());
     }
 
@@ -437,8 +437,8 @@ public class AwsCurlTest {
         TokenUtils.setTokenizer(); // reset tokenizer
         AsciiString contentType = AsciiString.cached("text/event-stream");
         TestHttpHandler.setContent(
-                "data: {\"token\": {}}\n\n"
-                        + "data: {\"token\": {}}\n\n"
+                "data: {\"token\": {\"text\": \"prompt\"}}\n\n"
+                        + "data: {\"token\": {\"text\": \" Hello world.\"}}\n\n"
                         + "data: {\"token\": {}, \"generated_text\"=\"prompt Hello world.\","
                         + " \"details\": {}}",
                 contentType);
@@ -524,10 +524,11 @@ public class AwsCurlTest {
         System.setProperty("TOKENIZER", "gpt2");
         TokenUtils.setTokenizer(); // reset tokenizer
         AsciiString contentType = AsciiString.cached("application/vnd.amazon.eventstream");
-        byte[] line1 = buildCoralEvent("data: {\"token\": {}}\n\n");
+        byte[] line1 = buildCoralEvent("data: {\"token\": {\"text\": \"Hello\"}}\n\n");
         byte[] line2 =
                 buildCoralEvent(
-                        "data: {\"token\": {}, \"generated_text\"=\"prompt Hello world.\"}");
+                        "data: {\"token\": {\"text\": \" world.\"}, \"generated_text\"=\"Hello"
+                                + " world.\"}");
         byte[] content = new byte[line1.length + line2.length];
         System.arraycopy(line1, 0, content, 0, line1.length);
         System.arraycopy(line2, 0, content, line1.length, line2.length);
@@ -546,7 +547,7 @@ public class AwsCurlTest {
             "-t"
         };
         Result ret = AwsCurl.run(args);
-        Assert.assertEquals(ret.getTotalTokens(), 10);
+        Assert.assertEquals(ret.getTotalTokens(), 6);
         Assert.assertNotNull(ret.getTokenThroughput());
     }
 

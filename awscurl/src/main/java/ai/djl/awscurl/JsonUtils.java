@@ -44,7 +44,7 @@ final class JsonUtils {
             JsonElement e;
             if (names == null) {
                 e = find(obj, new String[] {"token", "text"}, 0);
-                if (e == null) {
+                if (e == null && obj.get("token") == null) {
                     e = obj.get("generated_text");
                 }
             } else {
@@ -88,7 +88,7 @@ final class JsonUtils {
                 outputs = map.get("outputs");
                 if (outputs == null) {
                     outputs = find(map, new String[] {"token", "text"}, 0);
-                    if (outputs == null) {
+                    if (outputs == null && map.get("token") == null) {
                         outputs = map.get("generated_text");
                     }
                 }
