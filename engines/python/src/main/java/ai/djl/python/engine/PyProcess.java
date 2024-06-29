@@ -60,11 +60,11 @@ class PyProcess {
         int port = counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
-            connections = new ArrayList<>(tensorParallelDegree);
-            for (int i = 0; i < tensorParallelDegree; ++i) {
+            connections = new ArrayList<>(tensorParallelDegree*2);
+            for (int i = 0; i < tensorParallelDegree*2; ++i) {
                 connections.add(new Connection(pyEnv, port, i));
             }
-            counter.set(port + tensorParallelDegree);
+            counter.set(port + tensorParallelDegree*2);
         } else {
             connections = Collections.singletonList(new Connection(pyEnv, port, -1));
         }
@@ -159,10 +159,21 @@ class PyProcess {
                 throw new IllegalThreadStateException(
                         "Python stream closed unexpectedly, exit code: " + exitCode);
             }
-
+           
             for (Connection conn : connections) {
+                logger.warn("Trying to connect to processes");
                 conn.connect();
             }
+
+            // if(!trtLlmMode) {
+            //     for (Connection conn : connections) {
+            //         conn.connect();
+            //     }
+            // } else {
+            //     logger.info("Connecting to the first connection in trtllm mode");
+            //     connections.get(0).connect();
+            // }
+
 
             // initialize model with an empty request
             Input init = new Input();
@@ -263,7 +274,7 @@ class PyProcess {
                         logger.warn("Got EOF: {}", getName());
                         break;
                     }
-                    if (result.contains("Python engine started.")) {
+                    if (result.contains("Python engine started")) {
                         logger.info("{}: {}", getName(), result);
                         lifeCycle.setStarted(true, processId);
                         continue;
