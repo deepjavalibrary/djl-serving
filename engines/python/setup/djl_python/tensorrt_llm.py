@@ -16,7 +16,8 @@ from djl_python.outputs import Output
 from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.tensorrt_llm_python import TRTLLMPythonService
-from djl_python.utils import parse_input_with_formatter, InputFormatConfigs, rolling_batch_inference
+from djl_python.utils import rolling_batch_inference
+from djl_python.input_parser import InputFormatConfigs, parse_input_with_formatter
 from typing import List, Tuple
 
 

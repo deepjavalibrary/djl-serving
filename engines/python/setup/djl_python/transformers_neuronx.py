@@ -25,7 +25,8 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
-from djl_python.utils import InputFormatConfigs, parse_input_with_formatter, rolling_batch_inference
+from djl_python.utils import rolling_batch_inference
+from djl_python.input_parser import InputFormatConfigs, parse_input_with_formatter
 from typing import Tuple, List
 
 model = None

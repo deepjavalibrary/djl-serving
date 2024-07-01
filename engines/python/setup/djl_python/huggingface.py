@@ -32,7 +32,8 @@ from djl_python.streaming_utils import StreamingUtils
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-from djl_python.utils import parse_input_with_formatter, InputFormatConfigs, ParsedInput, rolling_batch_inference
+from djl_python.utils import rolling_batch_inference
+from djl_python.input_parser import ParsedInput, InputFormatConfigs, parse_input_with_formatter
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
