@@ -66,7 +66,6 @@ COPY scripts scripts/
 RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
-    djl-serving -i ai.djl.tensorflow:tensorflow-native-cpu:2.16.1:linux-x86_64 && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.18.0 && \
     scripts/patch_oss_dlc.sh python && \
