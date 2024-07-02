@@ -208,7 +208,7 @@ transformers_neuronx_neo_model_spec = {
         "seq_length": [256],
         "batch_size": [4]
     },
-    "mistral-7b-rb": {
+    "mistral-7b": {
         "workers": 1,
         "seq_length": [512],
         "batch_size": [2]
