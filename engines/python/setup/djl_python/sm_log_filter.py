@@ -46,7 +46,8 @@ class SMLogFilter(logging.Filter):
                 return False
         except Exception as exc:
             logging.warning(
-                f"Forwarding {str(record)} failed due to {str(exc)}")
+                f"Forwarding {str(record)} failed due to {str(exc)}",
+                exc_info=True)
             return False
 
     def count(self, key):

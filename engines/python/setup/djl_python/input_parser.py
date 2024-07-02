@@ -70,9 +70,15 @@ def parse_input_with_formatter(inputs: Input,
                 adapters_per_item, found_adapter_per_item = _parse_adapters(
                     _inputs, input_map, item, adapter_registry)
         except Exception as e:  # pylint: disable=broad-except
-            logging.warning(f"Parse input failed: {i}")
             input_size.append(0)
-            errors[i] = str(e)
+            err_msg = "Input Parsing failed. Ensure that the request payload is valid. "
+            # str(e) for KeyError only yields the name of the key, which isn't useful as a response to the client
+            if isinstance(e, KeyError):
+                err_msg += f"Invalid Request Property: {e}"
+            else:
+                err_msg += str(e)
+            errors[i] = err_msg
+            logging.warning(err_msg, exc_info=True)
             continue
 
         input_data.extend(_inputs)
