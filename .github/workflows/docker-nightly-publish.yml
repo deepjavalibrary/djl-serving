@@ -61,7 +61,7 @@ jobs:
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT ${{ matrix.arch }}
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
       - name: Build and push temp image
         if: ${{ github.event.inputs.mode == 'temp' }}
@@ -69,7 +69,7 @@ jobs:
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT ${{ matrix.arch }}
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT ${{ matrix.arch }}
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
@@ -160,7 +160,7 @@ jobs:
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT aarch64
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT aarch64
           docker compose push aarch64
       - name: Build and push temp image
         if: ${{ github.event.inputs.mode == 'temp' }}
@@ -168,7 +168,7 @@ jobs:
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT aarch64
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT aarch64
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:aarch64-${GITHUB_SHA}"
@@ -227,7 +227,7 @@ jobs:
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT lmi
           docker compose push lmi
       - name: Build and push temp image
         if: ${{ github.event.inputs.mode == 'temp' }}
@@ -235,7 +235,7 @@ jobs:
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT lmi
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:lmi-$GITHUB_SHA"
