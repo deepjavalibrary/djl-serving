@@ -36,12 +36,12 @@ is_p4d_or_p5() {
 }
 
 support_nvme() {
-    local instance_type=$(get_instance_type)
-    if [[ "$instance_type" == *"p4d"* || "$instance_type" == *"p5"* || "$instance_type" == *"g5"* || "$instance_type" == *"g6"* ]]; then
-      echo "true"
-    else
-      echo "false"
-    fi
+  local instance_type=$(get_instance_type)
+  if [[ "$instance_type" == *"p4d"* || "$instance_type" == *"p5"* || "$instance_type" == *"g5"* || "$instance_type" == *"g6"* ]]; then
+    echo "true"
+  else
+    echo "false"
+  fi
 }
 
 if [[ "$(support_nvme)" == *"true"* ]]; then

@@ -16,8 +16,8 @@ curl -L https://apt.repos.neuron.amazonaws.com/GPG-PUB-KEY-AMAZON-AWS-NEURON.PUB
 
 # https://awsdocs-neuron.readthedocs-hosted.com/en/latest/release-notes/releasecontent.html#inf2-packages
 apt-get update -y && apt-get install -y aws-neuronx-collectives=2.20.22.0* \
-    aws-neuronx-runtime-lib=2.20.22.0* \
-    aws-neuronx-tools=2.17.1.0
+  aws-neuronx-runtime-lib=2.20.22.0* \
+  aws-neuronx-tools=2.17.1.0
 
 # TODO: Remove this hack after aws-neuronx-dkms install no longer throws an error, this bypasses the `set -ex`
 #       exit criteria. The package is installed and functional after running, just throws an error on install.
