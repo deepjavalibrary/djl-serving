@@ -120,6 +120,24 @@ def _json_output_formatter(request_output: RequestOutput):
     return json_encoded_str
 
 
+def _json_3p_output_formatter(request_output: RequestOutput):
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    next_token, first_token, last_token = best_sequence.get_next_token()
+    json_encoded_str = f"{{\"generation\": \"{request_output.input.input_text}" if first_token else ""
+    json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
+    if last_token:
+        details_dict = get_details_dict(request_output, include_tokens=True)
+        details = {
+            "prompt_token_count": len(request_output.input.input_ids),
+            "generation_token_count": details_dict["generated_tokens"],
+            "stop_reason": details_dict["finish_reason"],
+        }
+        details_str = f"{json.dumps(details, ensure_ascii=False)[1:-1]}"
+        json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
+    return json_encoded_str
+
+
 def get_details_dict(request_output: RequestOutput,
                      include_tokens: bool = True) -> Optional[Dict]:
     parameters = request_output.input.parameters
@@ -168,6 +186,23 @@ def _jsonlines_output_formatter(request_output: RequestOutput):
         details_dict = get_details_dict(request_output, include_tokens=False)
         if details_dict:
             final_dict["details"] = details_dict
+    json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
+    return json_encoded_str
+
+
+def _jsonlines_3p_output_formatter(request_output: RequestOutput):
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    next_token, first_token, last_token = best_sequence.get_next_token()
+    token_details = next_token.as_dict()
+    final_dict = {"generation": token_details["text"]}
+    num_prompt_tokens = request_output.input.prompt_tokens_length(
+    ) if first_token else None
+    current_token_count = len(best_sequence.tokens)
+    finish_reason = best_sequence.finish_reason if last_token else None
+    final_dict["prompt_token_count"] = num_prompt_tokens
+    final_dict["generation_token_count"] = current_token_count
+    final_dict["stop_reason"] = finish_reason
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 
@@ -345,6 +380,10 @@ def get_output_formatter(output_formatter: Union[str, Callable], stream: bool,
         return _json_chat_output_formatter, "application/json"
     if output_formatter == "jsonlines_chat":
         return _jsonlines_chat_output_formatter, "application/jsonlines"
+    if output_formatter == "3p":
+        return _json_3p_output_formatter, "application/json"
+    if output_formatter == "3p_stream":
+        return _jsonlines_3p_output_formatter, "application/jsonlines"
     if output_formatter == "none":
         return None, "text/plain"
     if output_formatter is not None:

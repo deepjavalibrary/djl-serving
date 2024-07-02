@@ -119,6 +119,18 @@ def create_text_request(text: str, key: str = None) -> Input:
     return request
 
 
+def create_3p_request(json_data: dict,
+                      stream: bool = False,
+                      key: str = None) -> Input:
+    request = Input()
+    request.properties["device_id"] = "-1"
+    request.properties["content-type"] = "application/json"
+    request.properties[
+        "X-Amzn-SageMaker-Forwarded-Api"] = "InvokeEndpointWithResponseStream" if stream else "InvokeEndpoint"
+    request.content.add(key=key, value=Output._encode_json(json_data))
+    return request
+
+
 def create_numpy_request(list, key: str = None) -> Input:
     request = Input()
     request.properties["device_id"] = "-1"
