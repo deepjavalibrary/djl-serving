@@ -158,10 +158,11 @@ public final class LmiUtils {
         if (modelId == null) {
             modelId = repo.toString();
         }
-        info.modelUrl = convertOnnx(modelId).toUri().toURL().toString();
+        String optimization = info.prop.getProperty("option.optimization");
+        info.modelUrl = convertOnnx(modelId, optimization).toUri().toURL().toString();
     }
 
-    private static Path convertOnnx(String modelId) throws IOException {
+    private static Path convertOnnx(String modelId, String optimization) throws IOException {
         logger.info("Converting model to onnx artifacts");
         String hash = Utils.hash(modelId);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
@@ -174,6 +175,11 @@ public final class LmiUtils {
 
         Engine onnx = Engine.getEngine("OnnxRuntime");
         boolean hasCuda = onnx.getGpuCount() > 0;
+        if (optimization == null || optimization.isBlank()) {
+            optimization = hasCuda ? "O4" : "O2";
+        } else if (!optimization.matches("O\\d")) {
+            throw new IllegalArgumentException("Unsupported optimization level: " + optimization);
+        }
 
         String[] cmd = {
             "djl-convert",
@@ -184,7 +190,7 @@ public final class LmiUtils {
             "-m",
             modelId,
             "--optimize",
-            hasCuda ? "O4" : "O2",
+            optimization,
             "--device",
             hasCuda ? "cuda" : "cpu"
         };
