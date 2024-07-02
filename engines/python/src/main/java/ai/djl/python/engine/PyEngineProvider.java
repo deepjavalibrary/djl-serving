@@ -14,6 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineProvider;
+import ai.djl.util.Utils;
 
 /** {@code PyEngineProvider} is the Python implementation of {@link EngineProvider}. */
 public class PyEngineProvider implements EngineProvider {
@@ -43,8 +44,9 @@ public class PyEngineProvider implements EngineProvider {
             synchronized (this) {
                 if (!initialized) {
                     initialized = true;
-                    PyEnv.init();
-                    engine = new PyEngine(getEngineName(), mpiMode);
+                    int clusterSize = Integer.parseInt(Utils.getenv("DJL_CLUSTER_SIZE", "-1"));
+                    PyEnv.init(clusterSize);
+                    engine = new PyEngine(getEngineName(), mpiMode, clusterSize);
                 }
             }
         }

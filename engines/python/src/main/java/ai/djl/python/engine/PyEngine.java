@@ -26,12 +26,15 @@ public final class PyEngine extends Engine {
 
     private String engineName;
     private boolean mpiMode;
+
+    private int clusterSize;
     private Engine alternativeEngine;
     private boolean initialized;
 
-    PyEngine(String engineName, boolean mpiMode) {
+    PyEngine(String engineName, boolean mpiMode, int clusterSize) {
         this.engineName = engineName;
         this.mpiMode = mpiMode;
+        this.clusterSize = clusterSize;
     }
 
     /** {@inheritDoc} */
@@ -97,5 +100,9 @@ public final class PyEngine extends Engine {
      */
     boolean isMpiMode() {
         return mpiMode;
+    }
+
+    int getClusterSize() {
+        return clusterSize;
     }
 }

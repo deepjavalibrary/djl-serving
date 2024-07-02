@@ -17,6 +17,7 @@ import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,9 @@ class PyProcess {
     private PyEnv pyEnv;
     private Model model;
     private int workerId;
+
+    private int clusterSize;
+    private String[] hosts;
     private Process process;
     private String pid;
     private List<Connection> connections;
@@ -53,21 +57,43 @@ class PyProcess {
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
-    PyProcess(Model model, PyEnv pyEnv, int workerId) {
+    PyProcess(Model model, PyEnv pyEnv, int workerId, int clusterSize) {
         this.model = model;
         this.pyEnv = pyEnv;
         this.workerId = workerId;
+        this.clusterSize = clusterSize;
         int port = counter.getAndIncrement();
-        if (pyEnv.isMpiMode()) {
+        if (clusterSize > 0) { // Multi node
+            hosts = getHosts();
+            int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+            connections = new ArrayList<>(hosts.length * tensorParallelDegree);
+
+            for (int i = 0; i < clusterSize; ++i) {
+                for (int j = 0; j < tensorParallelDegree; ++j) {
+                    connections.add(
+                            new Connection(
+                                    pyEnv,
+                                    port,
+                                    i * tensorParallelDegree + j,
+                                    clusterSize,
+                                    hosts[i]));
+                }
+            }
+            counter.set(port + tensorParallelDegree);
+        } else if (pyEnv.isMpiMode()) { // Single node
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             connections = new ArrayList<>(tensorParallelDegree);
-            for (int i = 0; i < tensorParallelDegree; ++i) {
-                connections.add(new Connection(pyEnv, port, i));
+
+            for (int j = 0; j < tensorParallelDegree; ++j) {
+                connections.add(
+                        new Connection(pyEnv, port, tensorParallelDegree + j, clusterSize, null));
             }
             counter.set(port + tensorParallelDegree);
         } else {
-            connections = Collections.singletonList(new Connection(pyEnv, port, -1));
+            connections =
+                    Collections.singletonList(new Connection(pyEnv, port, -1, 1, "127.0.0.1"));
         }
+
         restartCount = new AtomicInteger(0);
         // TODO: avoid using this hack when TRT-LLM improve its behavior
         trtLlmMode = "trtllm".equals(model.getProperty("rolling_batch"));
@@ -132,12 +158,16 @@ class PyProcess {
     }
 
     synchronized void startPythonProcess() {
+        // Do not start python process in worker nodes
+        if (Utils.getenv("WORKER_INDEX") != null) {
+            return;
+        }
         try {
             int id = restartCount.get();
             int port = connections.get(0).getPort();
             logger.info("Start process: {} - retry: {}", port, id);
             pyEnv.installDependency(model.getModelPath());
-            process = Connection.startPython(pyEnv, model, workerId, port);
+            process = Connection.startPython(pyEnv, model, workerId, port, clusterSize, hosts);
             pid = process.toString().split(", ")[0].replace("Process[pid=", "");
 
             String modelName = model.getName();
@@ -159,7 +189,6 @@ class PyProcess {
                 throw new IllegalThreadStateException(
                         "Python stream closed unexpectedly, exit code: " + exitCode);
             }
-
             for (Connection conn : connections) {
                 conn.connect();
             }
@@ -185,6 +214,20 @@ class PyProcess {
                 stopPythonProcess(true);
             }
         }
+    }
+
+    public static String[] getHosts() {
+        String leaderAddress = Utils.getenv("LWS_LEADER_ADDRESS");
+        int clusterSize = Integer.parseInt(Utils.getenv("DJL_CLUSTER_SIZE"));
+        String lwsName = Utils.getenv("LWS_NAME");
+        String namespace = Utils.getenv("NAMESPACE");
+        String groupIndex = Utils.getenv("GROUP_INDEX");
+        String[] hosts = new String[clusterSize];
+        hosts[0] = leaderAddress;
+        for (int i = 1; i < clusterSize; i++) {
+            hosts[i] = String.format("%s-%s-%d.%s.%s", lwsName, groupIndex, i, lwsName, namespace);
+        }
+        return hosts;
     }
 
     synchronized void stopPythonProcess(boolean error) {
