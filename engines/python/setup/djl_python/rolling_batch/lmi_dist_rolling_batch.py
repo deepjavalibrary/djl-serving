@@ -194,7 +194,8 @@ class LmiDistRollingBatch(RollingBatch):
                     or self.lmi_dist_config.speculative_telemetry
             ) and self.lmi_dist_config.speculative_draft_model and request_output.finished:
                 try:
-                    if self.supports_speculative_decoding and completion_output.acceptance_history:
+                    if self.supports_speculative_decoding and hasattr(
+                            completion_output, 'acceptance_history'):
                         record = get_speculative_decoding_metrics_record(
                             completion_output, request_output)
                         if self.lmi_dist_config.record_acceptance_rate:
