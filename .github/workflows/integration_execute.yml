@@ -16,14 +16,24 @@ on:
           - action_graviton
           - action_inf2
       djl-version:
-        description: 'The released version of DJL'
+        description: 'The released version of DJL. Can be "nightly", "temp", or a DJL release version like "0.28.0"'
         required: false
-        default: ''
+        default: 'temp'
 
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
+  build-temp:
+    if: ${{ inputs.djl-version == 'temp' }}
+    uses: ./.github/workflows/docker-nightly-publish.yml
+    secrets: inherit
+    with:
+      mode: temp
   create-runners:
     runs-on: [self-hosted, scheduler]
+    needs: [build-temp]
     steps:
       - name: Create new instance
         id: create_instance
@@ -37,12 +47,10 @@ jobs:
     outputs:
       instance_id: ${{ steps.create_instance.outputs.instance_id }}
       label: ${{ steps.create_instance.outputs.label }}
-
-
   test:
     runs-on: [ self-hosted, "${{ needs.create-runners.outputs.label }}"]
     timeout-minutes: 60
-    needs: create-runners
+    needs: [create-runners, build-temp]
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -64,6 +72,19 @@ jobs:
           sudo apt-get install python3 python-is-python3 python3-pip -y
       - name: Install pip dependencies
         run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
+      - name: install awscli
+        run: |
+          sudo apt-get update
+          sudo apt-get install awscli -y
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Login for temp
+        if: ${{ inputs.djl-version == 'temp' }}
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp
       - name: Install awscurl
         working-directory: tests/integration
         run: |
@@ -99,7 +120,7 @@ jobs:
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, test]
+    needs: [ build-temp, create-runners, test]
     steps:
       - name: Stop all instances
         run: |
