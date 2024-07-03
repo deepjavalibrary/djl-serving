@@ -492,7 +492,8 @@ class HuggingFaceService(object):
         except Exception as e:
             logging.error(
                 f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
-                f"This is required for loading huggingface models")
+                f"This is required for loading huggingface models",
+                exc_info=True)
             raise e
 
 
