@@ -17,7 +17,7 @@ from djl_python.rolling_batch.trtllm_rolling_batch import TRTLLMRollingBatch
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.tensorrt_llm_python import TRTLLMPythonService
 from djl_python.utils import rolling_batch_inference
-from djl_python.input_parser import InputFormatConfigs, parse_input_with_formatter
+from djl_python.input_parser import parse_input_with_formatter
 from typing import List, Tuple
 
 
@@ -32,44 +32,23 @@ class TRTLLMService(object):
         self.initialized = False
         self.trt_configs = None
         self.rolling_batch = None
-        self.input_format_configs = None
-        self.parsed_input = None
+        self.tokenizer = None
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
 
         self.rolling_batch = TRTLLMRollingBatch(
             self.trt_configs.model_id_or_path, properties, self.trt_configs)
-        self.input_format_configs = InputFormatConfigs(
-            is_rolling_batch=True,
-            is_adapters_supported=False,
-            output_formatter=self.trt_configs.output_formatter,
-            tokenizer=self.rolling_batch.get_tokenizer())
+        self.tokenizer = self.rolling_batch.get_tokenizer()
         self.initialized = True
         return
 
-    # Backward compatibility.
-    def parse_input(
-        self, inputs: Input, tokenizer, output_formatter
-    ) -> Tuple[List[str], List[int], List[dict], dict, list]:
-        """
-        Preprocessing function that extracts information from Input objects.
-
-        :param output_formatter: output formatter for the request
-        :param inputs :(Input) a batch of inputs, each corresponding to a new request
-        :param tokenizer: the tokenizer used for inference
-
-        :return input_data (List[str]): a list of strings, each string being the prompt in a new request
-        :return input_size (List[int]): a list of ints being the size of each new request
-        :return parameters (List[dict]): parameters pertaining to each request
-        :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
-        :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
-        """
-        self.parsed_input = parse_input_with_formatter(
-            inputs, input_format_configs=self.input_format_configs)
-        return (self.parsed_input.input_data, self.parsed_input.input_size,
-                self.parsed_input.parameters, self.parsed_input.errors,
-                self.parsed_input.batch)
+    def get_input_format_args(self):
+        return {
+            "configs": self.trt_configs,
+            "tokenizer": self.tokenizer,
+            "rolling_batch": self.rolling_batch
+        }
 
     def inference(self, inputs: Input) -> Output:
         """
@@ -80,20 +59,21 @@ class TRTLLMService(object):
         :return outputs (Output): a batch of outputs that contain status code, output text, and other information
         """
         outputs = Output()
+        kwargs = self.__dict__
+        kwargs[
+            "configs"] = self.trt_configs  # TODO: Rename it to configs, so it would uniform in all handlers
 
-        input_data, input_size, parameters, errors, batch = self.parse_input(
-            inputs, self.rolling_batch.get_tokenizer(),
-            self.trt_configs.output_formatter)
-        if len(input_data) == 0:
-            for i in range(len(batch)):
-                err = errors.get(i)
+        parsed_input = parse_input_with_formatter(inputs, **kwargs)
+        if len(parsed_input.requests) == 0:
+            for i in range(len(parsed_input.batch)):
+                err = parsed_input.errors.get(i)
                 err = {"data": "", "last": True, "code": 424, "error": err}
                 outputs.add(Output.binary_encode(err),
                             key="data",
                             batch_index=i)
             return outputs
 
-        return rolling_batch_inference(self.parsed_input, inputs, outputs,
+        return rolling_batch_inference(parsed_input, inputs, outputs,
                                        self.rolling_batch)
 
 

@@ -12,7 +12,8 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.input_parser import InputFormatConfigs, parse_input_with_formatter
+from djl_python.input_parser import parse_input_with_formatter
+from djl_python.utils import get_input_details
 
 
 def _get_value_based_on_tensor(value, index=None):
@@ -79,7 +80,6 @@ def _get_accept_and_content_type(batch_item) -> Tuple[str, str]:
 
 
 class TRTLLMPythonService:
-
     PYTHON_BACKEND_SUPPORTED_MODELS = {'t5'}
 
     def __init__(self):
@@ -87,39 +87,21 @@ class TRTLLMPythonService:
         self.trt_configs = None
         self.initialized = False
         self.is_client_side_batch = []
-        self.input_formatter = None
+        self.input_format_args = None
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)
         self._load_model(properties)
-        self.input_formatter = InputFormatConfigs(
-            is_rolling_batch=False,
-            is_adapters_supported=False,
-            output_formatter=self.trt_configs.output_formatter,
-            tokenizer=self.model.tokenizer)
+        self.input_format_args = self.get_input_format_args()
         self.initialized = True
         return
 
-    def parse_input(
-        self, inputs: Input, tokenizer, output_formatter
-    ) -> Tuple[List[str], List[int], List[dict], dict, list]:
-        """
-        Preprocessing function that extracts information from Input objects.
-
-        :param output_formatter: output formatter for the request
-        :param inputs :(Input) a batch of inputs, each corresponding to a new request
-        :param tokenizer: the tokenizer used for inference
-
-        :return input_data (List[str]): a list of strings, each string being the prompt in a new request
-        :return input_size (List[int]): a list of ints being the size of each new request
-        :return parameters (List[dict]): parameters pertaining to each request
-        :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
-        :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
-        """
-        parsed_input = parse_input_with_formatter(
-            inputs, input_format_configs=self.input_formatter)
-        self.is_client_side_batch = parsed_input.is_client_side_batch
-        return parsed_input.input_data, parsed_input.input_size, parsed_input.parameters, parsed_input.errors, parsed_input.batch
+    def get_input_format_args(self):
+        return {
+            "configs": self.trt_configs,
+            "tokenizer":
+            None,  # tokenizer, for chat completions is not supported for python backend.
+        }
 
     def inference(self, inputs: Input) -> Output:
         """
@@ -131,15 +113,18 @@ class TRTLLMPythonService:
         """
         outputs = Output()
 
-        input_data, input_size, parameters, errors, batch = self.parse_input(
-            inputs, None, self.trt_configs.output_formatter)
-        if len(input_data) == 0:
-            for i in range(len(batch)):
-                err = errors.get(i)
+        parsed_input = parse_input_with_formatter(inputs,
+                                                  **self.input_format_args)
+        if len(parsed_input.requests) == 0:
+            for i in range(len(parsed_input.batch)):
+                err = parsed_input.errors.get(i)
                 outputs.add(err, key="data", batch_index=i)
             return outputs
 
-        params = parameters[0]
+        input_data, input_size = get_input_details(parsed_input.requests,
+                                                   parsed_input.errors,
+                                                   parsed_input.batch)
+        params = parsed_input.requests[0].request_input.server_parameters
 
         if "output_formatter" in params:
             # output formatter is not supported for TensorRT-LLM python backend.
@@ -149,14 +134,14 @@ class TRTLLMPythonService:
             params.pop("stream")
         if params.get("details", False):
             return self._stream_inference(inputs, input_data, input_size,
-                                          params, batch)
+                                          params, parsed_input.batch)
 
         detokenized_python_response = self.model.generate(input_data, **params)
         results = [{
             "generated_text": s
         } for s in detokenized_python_response.batch_generation()]
         offset = 0
-        for i, item in enumerate(batch):
+        for i, item in enumerate(parsed_input.batch):
             content_type, accept = _get_accept_and_content_type(item)
             batch_item = results[offset:offset + input_size[i]] if i < len(
                 self.is_client_side_batch

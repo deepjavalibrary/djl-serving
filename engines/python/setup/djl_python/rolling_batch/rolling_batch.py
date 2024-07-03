@@ -17,6 +17,7 @@ from typing import List
 from djl_python.properties_manager.properties import Properties
 from djl_python.request import Request
 from djl_python.request_io import Token
+from djl_python.utils import IdCounter
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 
@@ -78,12 +79,12 @@ class RollingBatch(ABC):
         """
 
         self.active_requests: List[Request] = []
-        self.req_id_counter = 0
+        self.req_id_counter = IdCounter()
         self.configs = configs
 
     def reset(self):
         self.active_requests = []
-        self.req_id_counter = 0
+        self.req_id_counter.reset()
 
     def get_tokenizer(self):
         """
@@ -92,54 +93,29 @@ class RollingBatch(ABC):
         raise RuntimeError("get_tokenizer function not supported")
 
     @abstractmethod
-    def inference(self, input_data, parameters, adapters=None):
+    def inference(self, requests: List[Request]) -> List:
         """
         Performs prefill and decode operations for the batch.
 
-        :param input_data: List of input texts for each request in a batch
-        :param parameters: List of kwargs for each request in a batch
-        :param adapters: List of adapters inputs for each request in a batch
+        :param requests: List[Request] List of requests
 
         :return: generated batch decoded tokens
         """
         pass
 
-    def get_new_requests(self,
-                         input_data: List[str],
-                         parameters: List[dict],
-                         batch_size: int,
-                         adapters=None) -> List[Request]:
+    def get_new_requests(self, requests: List[Request]) -> List[Request]:
         """
         Adds requests to the batch when there is availability
 
-        :param input_data: (List[str]) List of input prompts.
-        :param parameters: (List[str]) List of settings pertaining to each request.
-        :param batch_size: (int) Maximum number of requests in a batch
-        :param adapters: List of adapters inputs for each request in a batch
+        :param requests: List[Request] List of requests
 
         :return: list of current active requests (including those that have just been added)
         """
         total_req_len = len(self.active_requests)
+        batch_size = len(requests)
         if batch_size > total_req_len:
             for i in range(total_req_len, batch_size):
-                data = input_data[i]
-                params = parameters[i] if i < len(parameters) else {}
-                adapter = adapters[i] if adapters is not None and i < len(
-                    parameters) else None
-                details = params.get("details", self.configs.tgi_compat)
-                request = Request(self.req_id_counter,
-                                  data,
-                                  params,
-                                  input_ids=self.get_tokenizer().encode(data)
-                                  if details else None,
-                                  adapter=adapter,
-                                  output_formatter=params.pop(
-                                      "output_formatter",
-                                      self.configs.output_formatter),
-                                  tgi_compat=self.configs.tgi_compat,
-                                  tokenizer=self.get_tokenizer())
-                self.active_requests.append(request)
-                self.req_id_counter += 1
+                self.active_requests.append(requests[i])
         return self.active_requests[total_req_len:]
 
     @abstractmethod
@@ -173,6 +149,6 @@ class RollingBatch(ABC):
         ]
 
         if len(self.active_requests) == 0:
-            self.req_id_counter = 0
+            self.req_id_counter.reset()
 
         return results

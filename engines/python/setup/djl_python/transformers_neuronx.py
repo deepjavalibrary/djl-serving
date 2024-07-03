@@ -25,9 +25,8 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
-from djl_python.utils import rolling_batch_inference
-from djl_python.input_parser import InputFormatConfigs, parse_input_with_formatter
-from typing import Tuple, List
+from djl_python.utils import rolling_batch_inference, get_input_details
+from djl_python.input_parser import parse_input_with_formatter
 
 model = None
 
@@ -50,7 +49,7 @@ class TransformersNeuronXService(object):
         self.rolling_batch_config = dict()
         self.input_format_configs = None
         self._model_loader_class = TNXModelLoader
-        self.parsed_input = None
+        self.input_format_args = None
 
     def optimum_not_supported(self) -> bool:
         support = False
@@ -189,6 +188,14 @@ class TransformersNeuronXService(object):
         self.set_model_loader()
         self.draft_model = self.model_loader.load_unwrapped_model()
 
+    def get_input_format_args(self):
+        return {
+            "configs": self.config,
+            "tokenizer": self.tokenizer,
+            "model_config": self.model_config,
+            "rolling_batch": self.rolling_batch
+        }
+
     def initialize(self, properties: dict):
         self.pre_model_load(properties)
         self.set_configs(properties)
@@ -196,35 +203,8 @@ class TransformersNeuronXService(object):
         self.set_model_loader()
         self.load_model()
         self.set_rolling_batch(properties)
-        self.input_format_configs = InputFormatConfigs(
-            is_rolling_batch=is_rolling_batch_enabled(
-                self.config.rolling_batch),
-            is_adapters_supported=False,
-            tokenizer=self.tokenizer,
-            output_formatter=self.config.output_formatter)
+        self.input_format_args = self.get_input_format_args()
         self.initialized = True
-
-    def parse_input(
-        self, inputs: Input, tokenizer, output_formatter
-    ) -> Tuple[List[str], List[int], List[dict], dict, list]:
-        """
-        Preprocessing function that extracts information from Input objects.
-
-        :param output_formatter: output formatter for the request
-        :param inputs :(Input) a batch of inputs, each corresponding to a new request
-        :param tokenizer: the tokenizer used for inference
-
-        :return input_data (List[str]): a list of strings, each string being the prompt in a new request
-        :return input_size (List[int]): a list of ints being the size of each new request
-        :return parameters (List[dict]): parameters pertaining to each request
-        :return errors (dict): a dictionary mapping int indices to corresponding error strings if any
-        :return batch (list): a list of Input objects contained in inputs (each one corresponds to a request)
-        """
-        self.parsed_input = parse_input_with_formatter(
-            inputs, input_format_configs=self.input_format_configs)
-        return (self.parsed_input.input_data, self.parsed_input.input_size,
-                self.parsed_input.parameters, self.parsed_input.errors,
-                self.parsed_input.batch)
 
     def partition(self, properties: dict):
         self.pre_model_load(properties)
@@ -239,15 +219,18 @@ class TransformersNeuronXService(object):
         self.initialized = True
 
     def inference(self, inputs: Input) -> Output:
-        input_data, input_size, parameters, errors, batch = self.parse_input(
-            inputs, self.tokenizer, self.config.output_formatter)
+        parsed_input = parse_input_with_formatter(inputs, **self.__dict__)
+        errors = parsed_input.errors
+        requests = parsed_input.requests
         outputs = Output()
 
         if self.rolling_batch:
-            return rolling_batch_inference(self.parsed_input, inputs, outputs,
+            return rolling_batch_inference(parsed_input, inputs, outputs,
                                            self.rolling_batch)
 
-        parameters = parameters[0]
+        batch = parsed_input.batch
+        input_data, input_size = get_input_details(requests, errors, batch)
+        parameters = parsed_input.requests[0].request_input.server_parameters
         # Remove rolling batch default parameters
         parameters.pop("output_formatter", None)
         parameters.pop("stream", None)

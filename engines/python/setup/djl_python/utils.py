@@ -13,8 +13,24 @@
 import logging
 
 from djl_python import Output
-from djl_python.input_parser import ParsedInput
 from djl_python.inputs import Input
+
+
+class IdCounter:
+
+    def __init__(self):
+        self.id = 0
+
+    def get_id(self):
+        return self.id
+
+    def next_id(self):
+        current_id = self.id
+        self.id += 1
+        return current_id
+
+    def reset(self):
+        self.id = 0
 
 
 def profile_objects(func):
@@ -69,13 +85,11 @@ def wait_till_generation_finished(parameters):
     return is_best_of(parameters) or is_multiple_sequences(parameters)
 
 
-def rolling_batch_inference(parsed_input: ParsedInput, inputs: Input,
-                            outputs: Output, rolling_batch):
+def rolling_batch_inference(parsed_input, inputs: Input, outputs: Output,
+                            rolling_batch):
     if inputs.get_property("reset_rollingbatch"):
         rolling_batch.reset()
-    result = rolling_batch.inference(parsed_input.input_data,
-                                     parsed_input.parameters,
-                                     adapters=parsed_input.adapters)
+    result = rolling_batch.inference(parsed_input.requests)
     idx = 0
     for i in range(len(parsed_input.batch)):
         err = parsed_input.errors.get(i)
@@ -92,3 +106,32 @@ def rolling_batch_inference(parsed_input: ParsedInput, inputs: Input,
                 outputs.add_property(f"batch_{i}_Content-Type", content_type)
             idx += 1
     return outputs
+
+
+def get_input_details(requests, errors, batch):
+    # Dynamic batching
+    input_data = []
+    input_size = []
+    adapters = []
+    idx = 0
+    request_input = requests[0].request_input
+    parameters = request_input.server_parameters
+    for i in range(len(batch)):
+        if i in errors:
+            input_size.append(0)
+            continue
+        request = requests[idx]
+        request_input = request.request_input
+        if request_input.server_parameters != parameters:
+            raise ValueError(
+                "In order to enable dynamic batching, all input batches must have the same parameters"
+            )
+        input_data.extend(request_input.input_text)
+        input_size.append(len(request_input.input_text))
+
+        if request_input.adapters:
+            adapters.extend(request_input.adapters)
+
+        idx += 1
+    adapters = adapters if adapters else None
+    return input_data, input_size, adapters

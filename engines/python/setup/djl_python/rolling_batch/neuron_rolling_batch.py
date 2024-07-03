@@ -14,6 +14,8 @@
 import torch
 import logging
 from typing import Optional, Any, List
+
+from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, FINISH_REASON_MAPPER
 from djl_python.request_io import Token
 from djl_python.transformers_neuronx_scheduler.optimum_neuron_scheduler import NaiveRollingBatchNeuronGenerator, ContinuousBatchingNeuronGenerator
@@ -96,24 +98,17 @@ class NeuronRollingBatch(RollingBatch):
             speculated_generation = generation.speculated_generations.dequeue()
 
     @stop_on_any_exception
-    def inference(self,
-                  input_data: List[str],
-                  parameters: List[dict],
-                  adapters=None) -> list:
+    def inference(self, requests: List[Request]) -> list:
         """
         Loads new requests and gets output tokens from all currently active requests from
         the Neuron backend.
 
-        :param input_data: List of input texts for each request in a batch
-        :param parameters: List of kwargs for each request in a batch
-        :param adapters: Optional adapters to apply
+        :param requests: List[Request] List of requests
 
         :return: generated batch decoded tokens - list of dictionaries, one for
                  each request, that contain output tokens and other data.
         """
-        batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(requests)
         if len(new_requests) > 0:
             generations = self.scheduler.prefill(new_requests)
         else:

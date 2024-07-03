@@ -129,11 +129,12 @@ class RequestInput:
     Attributes:
         request_id: The request ID.
         output_formatter: Output formatter of the request
-        parameters: parameters in the request payload
+        parameters: parameters in the request payload, will be used in the output formatter
     """
     request_id: int
     output_formatter: Union[Callable, str] = None
     parameters: Dict = field(default_factory=lambda: {})
+    server_parameters: Dict = field(default_factory=lambda: {})
     tgi_compat: bool = False
 
 
@@ -150,6 +151,7 @@ class TextInput(RequestInput):
     input_ids: List[int] = field(default_factory=lambda: [])
     adapters: Optional[Any] = None
     tokenizer: Optional[Any] = None
+    found_adapters: bool = False
 
     def prompt_tokens_length(self) -> int:
         return len(self.input_ids)

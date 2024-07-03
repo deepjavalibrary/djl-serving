@@ -15,6 +15,8 @@ from collections import OrderedDict, defaultdict
 
 from vllm import EngineArgs, LLMEngine, SamplingParams
 from vllm.utils import random_uuid
+
+from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, get_lora_request_params,
@@ -105,24 +107,15 @@ class VLLMRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self,
-                  input_data: List[str],
-                  parameters: List[dict],
-                  adapters=None) -> list:
+    def inference(self, requests: List[Request]) -> List:
         """
         Adds new requests and gets output tokens from the backend.
 
-        :param input_data: List of input prompts.
-        :param parameters: List of settings pertaining to each request.
-        :param adapters: List of adapters inputs for each request in a batch
+        :param requests: List[Request] List of requests
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
-        batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data,
-                                             parameters,
-                                             batch_size,
-                                             adapters=adapters)
+        new_requests = self.get_new_requests(requests)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()
