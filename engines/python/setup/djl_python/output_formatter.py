@@ -124,17 +124,38 @@ def _json_3p_output_formatter(request_output: RequestOutput):
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
     next_token, first_token, last_token = best_sequence.get_next_token()
-    json_encoded_str = f"{{\"generation\": \"{request_output.input.input_text}" if first_token else ""
+    json_encoded_str = f"{{\"body\": {{\"generation\": \"{request_output.input.input_text}" if first_token else ""
     json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
     if last_token:
         details_dict = get_details_dict(request_output, include_tokens=True)
+        num_prompt_tokens = len(request_output.input.input_ids)
+        num_output_tokens = details_dict["generated_tokens"]
+        finish_reason = details_dict["finish_reason"]
         details = {
-            "prompt_token_count": len(request_output.input.input_ids),
-            "generation_token_count": details_dict["generated_tokens"],
-            "stop_reason": details_dict["finish_reason"],
+            "prompt_token_count": num_prompt_tokens,
+            "generation_token_count": num_output_tokens,
+            "stop_reason": finish_reason,
+        }
+        metering = {
+            "metering": {
+                "inputTokenCount": num_prompt_tokens,
+                "outputTokenCount": num_output_tokens,
+            }
         }
         details_str = f"{json.dumps(details, ensure_ascii=False)[1:-1]}"
+        metering_str = f"{json.dumps(metering, ensure_ascii=False)[1:-1]}"
         json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
+        json_encoded_str = f"{json_encoded_str}, {metering_str}"
+        if finish_reason == "error":
+            error = {
+                "error": {
+                    "error_code": 400,
+                    "error_msg": next_token.error_msg
+                }
+            }
+            error_str = f"{json.dumps(error, ensure_ascii=False)[1:-1]}"
+            json_encoded_str = f"{json_encoded_str}, {error_str}"
+        json_encoded_str = f"{json_encoded_str}, \"content_type\": \"application/json\"}}"
     return json_encoded_str
 
 
@@ -195,14 +216,30 @@ def _jsonlines_3p_output_formatter(request_output: RequestOutput):
         request_output.best_sequence_index]
     next_token, first_token, last_token = best_sequence.get_next_token()
     token_details = next_token.as_dict()
-    final_dict = {"generation": token_details["text"]}
+    body = {"generation": token_details["text"]}
     num_prompt_tokens = request_output.input.prompt_tokens_length(
     ) if first_token else None
     current_token_count = len(best_sequence.tokens)
     finish_reason = best_sequence.finish_reason if last_token else None
-    final_dict["prompt_token_count"] = num_prompt_tokens
-    final_dict["generation_token_count"] = current_token_count
-    final_dict["stop_reason"] = finish_reason
+    body["prompt_token_count"] = num_prompt_tokens
+    body["generation_token_count"] = current_token_count
+    body["stop_reason"] = finish_reason
+    metering = {
+        "outputTokenCount": current_token_count,
+    }
+    if first_token:
+        metering["inputTokenCount"] = num_prompt_tokens
+    final_dict = {
+        "body": body,
+        "metering": metering,
+        "content_type": "application/jsonlines"
+    }
+    if last_token and finish_reason == "error":
+        final_dict["error"] = {
+            "error_code": 400,
+            "error_msg": token_details["error_msg"]
+        }
+
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 

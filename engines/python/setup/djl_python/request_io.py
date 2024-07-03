@@ -23,7 +23,8 @@ class Token(object):
                  id: int,
                  text: str,
                  log_prob: float = None,
-                 special_token: bool = None):
+                 special_token: bool = None,
+                 error_msg: str = None):
         """
         Initialize a Token
 
@@ -31,17 +32,21 @@ class Token(object):
         :param text: the decoded text
         :param log_prob: log probability for the token
         :param special_token: if this token is special token
+        :param error_msg: the exception message if an error occurs during rolling batch inference
         """
         self.id = id
         self.text = text
         self.log_prob = log_prob
         self.special_token = special_token
         self.request_id = None
+        self.error_msg = error_msg
 
     def as_dict(self):
         output = {"id": self.id, "text": self.text, "log_prob": self.log_prob}
         if self.special_token:
             output["special_token"] = self.special_token
+        if self.error_msg:
+            output["error_msg"] = self.error_msg
         return output
 
     def as_tgi_dict(self):
