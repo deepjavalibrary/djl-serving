@@ -10,14 +10,16 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+from typing import Dict
+
 from djl_python.chat_completions.chat_properties import ChatProperties
 
 
-def is_chat_completions_request(inputs: map) -> bool:
+def is_chat_completions_request(inputs: Dict) -> bool:
     return "messages" in inputs
 
 
-def parse_chat_completions_request(inputs: map, is_rolling_batch: bool,
+def parse_chat_completions_request(input_map: Dict, is_rolling_batch: bool,
                                    tokenizer):
     if not is_rolling_batch:
         raise ValueError(
@@ -28,14 +30,14 @@ def parse_chat_completions_request(inputs: map, is_rolling_batch: bool,
         raise AttributeError(
             f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
             f"please ensure that your tokenizer supports chat templates.")
-    chat_params = ChatProperties(**inputs)
-    _param = chat_params.model_dump(by_alias=True, exclude_none=True)
-    _messages = _param.pop("messages")
-    _inputs = tokenizer.apply_chat_template(_messages, tokenize=False)
-    _param[
+    chat_params = ChatProperties(**input_map)
+    param = chat_params.model_dump(by_alias=True, exclude_none=True)
+    messages = param.pop("messages")
+    inputs = tokenizer.apply_chat_template(messages, tokenize=False)
+    param[
         "do_sample"] = chat_params.temperature is not None and chat_params.temperature > 0.0
-    _param["details"] = True  # Enable details for chat completions
-    _param[
+    param["details"] = True  # Enable details for chat completions
+    param[
         "output_formatter"] = "jsonlines_chat" if chat_params.stream else "json_chat"
 
-    return _inputs, _param
+    return inputs, param
