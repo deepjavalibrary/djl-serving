@@ -23,7 +23,7 @@ from abc import ABC, abstractmethod
 from transformers import AutoModelForCausalLM, GenerationConfig
 from transformers_neuronx import NeuronAutoModelForCausalLM
 from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig, GenerationConfig as NeuronGenerationConfig
-from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema
+from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema, TnXMemoryLayout
 from transformers_neuronx.module import save_pretrained_split
 from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version
 from huggingface_hub import hf_hub_download
@@ -228,11 +228,12 @@ class TNXModelLoader(ModelLoader):
                 ]
             elif self.config.context_length_estimate != [
                     self.config.n_positions
-            ]:
+            ] and self.config.cache_layout == TnXMemoryLayout.LAYOUT_BSH:
                 raise RuntimeError(
                     f"context_length_estimate {self.config.context_length_estimate}"
                     f" need to be the same as n_positions {self.config.n_positions}"
-                    f" You can also unset option.context_length_estimate to make continuous batching to work"
+                    f" when using alternative cache layouts,"
+                    f" you can always unset cache_layout to support multi bucketing w/ continuous batching."
                 )
         return model_kwargs
 

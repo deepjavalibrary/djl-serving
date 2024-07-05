@@ -10,21 +10,21 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04
-ARG djl_version=0.28.0~SNAPSHOT
+ARG djl_version=0.29.0~SNAPSHOT
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.10
-ARG neuronsdk_version=2.18.2
-ARG torch_neuronx_version=2.1.2.2.1.0
-ARG transformers_neuronx_version=0.10.0.360
-ARG neuronx_distributed_version=0.7.0
-ARG neuronx_cc_version=2.13.72.0
+ARG neuronsdk_version=2.19.0
+ARG torch_neuronx_version=2.1.2.2.2.0
+ARG transformers_neuronx_version=0.11.351
+ARG neuronx_distributed_version=0.8.0
+ARG neuronx_cc_version=2.14.213.0
 ARG protobuf_version=3.19.6
-ARG transformers_version=4.36.2
-ARG accelerate_version=0.23.0
-ARG diffusers_version=0.26.1
+ARG transformers_version=4.41.1
+ARG accelerate_version=0.29.2
+ARG diffusers_version=0.28.2
 ARG pydantic_version=2.6.1
-ARG optimum_neuron_version=0.0.22
+ARG optimum_neuron_version=0.0.23
 # %2B is the url escape for the '+' character
 ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.4.2%2Bnightly-py3-none-any.whl"
 EXPOSE 8080

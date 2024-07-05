@@ -346,8 +346,4 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
             if unfinished_sequences.max() == 0:
                 break
 
-            # stop if we exceed the maximum length
-            if selector.stopping_criteria(input_ids, None):
-                break
-
         return input_ids
