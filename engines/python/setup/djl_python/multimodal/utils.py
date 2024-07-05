@@ -25,7 +25,6 @@ def get_image_text_prompt(prompt_text: str) -> str:
     # TODO: image token str must be decoded from image_token_id in serving.properties. Change it after refactor PR.
     image_token_str = '<image>'
 
-    # TODO: Remove image_token_str*1176 after vllm next release, as the image placeholder is not needed.
     return f"{image_token_str}\n{prompt_text}"
 
 

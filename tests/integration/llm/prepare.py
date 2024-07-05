@@ -749,6 +749,13 @@ vllm_model_list = {
         "option.dtype": "fp16",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
+    },
+    "llava-next-chat": {
+        "option.model_id": "llava-hf/llava-v1.6-34b-hf",
+        "option.image_token_id": 64003,
+        "option.image_input_type": "pixel_values",
+        "option.image_input_shape": "1,3,336,336",
+        "option.image_feature_size": 1176
     }
 }
 

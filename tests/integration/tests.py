@@ -7,6 +7,7 @@ import llm.prepare as prepare
 import llm.client as client
 import rb_client as rb_client
 import test_client
+import llm.openai_vision_client as openai_vision_client
 
 djl_version = os.environ.get('TEST_DJL_VERSION', '').strip()
 
@@ -493,6 +494,13 @@ class TestVllm1:
             prepare.build_vllm_model("llama2-7b-chat")
             r.launch()
             client.run("vllm_chat llama2-7b-chat".split())
+
+    def test_llava_next_chat(self):
+        with Runner('lmi', 'llava-next-chat') as r:
+            prepare.build_vllm_model("llava-next-chat")
+            r.launch()
+            openai_vision_client.run(
+                "url https://resources.djl.ai/images/dog_bike_car.jpg".split())
 
 
 class TestVllmLora:
