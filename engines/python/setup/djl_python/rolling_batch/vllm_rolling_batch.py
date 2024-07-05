@@ -10,17 +10,16 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-import logging
 from collections import OrderedDict, defaultdict
 
-from vllm import EngineArgs, LLMEngine, SamplingParams
+from vllm import LLMEngine, SamplingParams
 from vllm.utils import random_uuid
 
 from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     update_request_cache_with_output, get_lora_request_params,
-    get_engine_args_from_config)
+    get_engine_args_from_config, get_prompt_inputs)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from typing import List
 
@@ -119,11 +118,14 @@ class VLLMRollingBatch(RollingBatch):
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()
+            prompt_inputs = get_prompt_inputs(request)
             params = self.translate_vllm_params(request.parameters)
             sampling_params = SamplingParams(**params)
             request_params = get_lora_request_params(request, self.lora_ids)
-            self.engine.add_request(request_id, request.input_text,
-                                    sampling_params, **request_params)
+            self.engine.add_request(request_id=request_id,
+                                    inputs=prompt_inputs,
+                                    params=sampling_params,
+                                    **request_params)
             self.request_cache[request_id] = {
                 "request_output": request.request_output
             }

@@ -16,6 +16,9 @@ from typing import Any
 from vllm import EngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput as vLLMRequestOutput
 from vllm.lora.request import LoRARequest
+from vllm.multimodal.image import ImagePixelData
+from vllm.inputs import PromptInputs
+
 from djl_python.request_io import Token, Sequence
 from djl_python.request import Request
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
@@ -225,4 +228,27 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             lora_extra_vocab_size=config.lora_extra_vocab_size,
             max_cpu_loras=config.max_cpu_loras,
             revision=config.revision,
-            max_logprobs=config.max_logprobs)
+            max_logprobs=config.max_logprobs,
+            image_input_type=config.image_input_type,
+            image_token_id=config.image_token_id,
+            image_input_shape=config.image_input_shape,
+            image_feature_size=config.image_feature_size,
+            image_processor=config.image_processor,
+            image_processor_revision=config.image_processor_revision)
+
+
+def get_multi_modal_data(request: Request) -> dict:
+    parameters = request.request_input.parameters
+    images = parameters.pop("images", None)
+    multi_modal_data = None
+    if images:
+        multi_modal_data = ImagePixelData(images[0])
+    return multi_modal_data
+
+
+def get_prompt_inputs(request: Request):
+    prompt_inputs: PromptInputs = {"prompt": request.request_input.input_text}
+    multi_modal_data = get_multi_modal_data(request)
+    if multi_modal_data:
+        prompt_inputs["multi_modal_data"] = multi_modal_data
+    return prompt_inputs
