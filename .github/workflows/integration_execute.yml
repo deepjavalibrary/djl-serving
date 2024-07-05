@@ -1,0 +1,108 @@
+name: Integration Tests Executor
+
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: 'Which test to run. Should be a class in tests.py or TestClass::test_fun_name'
+        required: true
+      instance:
+        description: 'Instance used for testing'
+        required: true
+        default: 'action_g6'
+        type: choice
+        options:
+          - action_g6
+          - action_graviton
+          - action_inf2
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        default: ''
+
+
+jobs:
+  create-runners:
+    runs-on: [self-hosted, scheduler]
+    steps:
+      - name: Create new instance
+        id: create_instance
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          token=$( curl -X POST -H "Authorization: token ${{ secrets.ACTION_RUNNER_PERSONAL_TOKEN }}" \
+          https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
+          --fail \
+          | jq '.token' | tr -d '"' )
+          ./start_instance.sh ${{ inputs.instance }} $token djl-serving
+    outputs:
+      instance_id: ${{ steps.create_instance.outputs.instance_id }}
+      label: ${{ steps.create_instance.outputs.label }}
+
+
+  test:
+    runs-on: [ self-hosted, "${{ needs.create-runners.outputs.label }}"]
+    timeout-minutes: 60
+    needs: create-runners
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean env
+        run: |
+          yes | docker system prune -a --volumes
+          sudo rm -rf /home/ubuntu/actions-runner/_work/_tool/Java_Corretto_jdk/
+          echo "wait dpkg lock..."
+          while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 5; done
+      - name: Set up Python3
+        if: ${{ needs.create-runners.outputs.label != 'aarch64' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.x'
+      - name: Set up Python3 (aarch64)
+        if: ${{ needs.create-runners.outputs.label == 'aarch64' }}
+        run: |
+          # Using an alternate installation because of an incompatible combination
+          # of aarch64 with ubuntu-20.04 not supported by the actions/setup-python
+          sudo apt-get install python3 python-is-python3 python3-pip -y
+      - name: Install pip dependencies
+        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
+      - name: Install awscurl
+        working-directory: tests/integration
+        run: |
+          curl -OL https://github.com/frankfliu/junkyard/releases/download/v0.2.2/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Test
+        working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+        run: |
+          python -m pytest -k ${{ inputs.test }} tests.py
+      - name: Cleanup
+        working-directory: tests/integration
+        run: |
+          rm -rf outputs
+          rm awscurl
+      - name: On Failure
+        if: ${{ failure() }}
+        working-directory: tests/integration
+        run: |
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          sudo rm -rf outputs && sudo rm -rf models
+          rm awscurl
+          docker rm -f $(docker ps -aq) || true
+      - name: Upload test logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-${{ inputs.test }}-logs
+          path: tests/integration/all_logs/
+
+  stop-runners:
+    if: always()
+    runs-on: [ self-hosted, scheduler ]
+    needs: [ create-runners, test]
+    steps:
+      - name: Stop all instances
+        run: |
+          cd /home/ubuntu/djl_benchmark_script/scripts
+          instance_id=${{ needs.create-runners.outputs.instance_id }}
+          ./stop_instance.sh $instance_id
