@@ -49,6 +49,7 @@ public class PyEnv {
     private boolean mpiMode;
     private String pythonExecutable;
     private String entryPoint;
+    private String recommendedEntryPoint;
     private String handler;
     private int predictTimeout;
     private int modelLoadingTimeout;
@@ -366,6 +367,24 @@ public class PyEnv {
      */
     public void setEntryPoint(String entryPoint) {
         this.entryPoint = entryPoint;
+    }
+
+    /**
+     * Returns the lmi recommended entrypoint file path.
+     *
+     * @return lmi recommended entrypoint file path
+     */
+    public String getRecommendedEntryPoint() {
+        return this.recommendedEntryPoint;
+    }
+
+    /**
+     * Sets the lmi recommended entrypoint file path.
+     *
+     * @param recommendedEntryPoint the lmi recommended entrypoint file path
+     */
+    public void setRecommendedEntryPoint(String recommendedEntryPoint) {
+        this.recommendedEntryPoint = recommendedEntryPoint;
     }
 
     /**

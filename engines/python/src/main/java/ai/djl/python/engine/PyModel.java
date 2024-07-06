@@ -77,6 +77,7 @@ public class PyModel extends BaseModel {
                     "Python engine does not support dynamic blocks");
         }
         String entryPoint = null;
+        String recommendedEntryPoint = null;
         if (options != null) {
             logger.debug("options in serving.properties for model: {}", modelName);
             for (Map.Entry<String, ?> entry : options.entrySet()) {
@@ -152,12 +153,8 @@ public class PyModel extends BaseModel {
         if (entryPoint == null) {
             entryPoint = Utils.getenv("DJL_ENTRY_POINT");
             if (entryPoint == null) {
-                Path modelFile = findModelFile(prefix);
                 String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
-                // find default entryPoint
-                if (modelFile != null) {
-                    entryPoint = modelFile.toFile().getName();
-                } else if ("nc".equals(manager.getDevice().getDeviceType())
+                if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
                     entryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
@@ -165,6 +162,13 @@ public class PyModel extends BaseModel {
                 } else if (pyEnv.getInitParameters().containsKey("model_id")
                         || Files.exists(modelPath.resolve("config.json"))) {
                     entryPoint = "djl_python.huggingface";
+                }
+                Path modelFile = findModelFile(prefix);
+                if (modelFile != null) {
+                    if (entryPoint != null) {
+                        recommendedEntryPoint = entryPoint;
+                    }
+                    entryPoint = modelFile.toFile().getName();
                 } else {
                     throw new FileNotFoundException(".py file not found in: " + modelPath);
                 }
@@ -189,6 +193,7 @@ public class PyModel extends BaseModel {
             entryPoint = modelFile.toAbsolutePath().toString();
         }
         pyEnv.setEntryPoint(entryPoint);
+        pyEnv.setRecommendedEntryPoint(recommendedEntryPoint);
         if (pyEnv.isEnableVenv()) {
             pyEnv.createVirtualEnv(Utils.hash(modelDir.toString()));
         }

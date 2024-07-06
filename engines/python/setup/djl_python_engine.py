@@ -24,7 +24,7 @@ import sys
 from djl_python.arg_parser import ArgParser
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.service_loader import load_model_service
+from djl_python.service_loader import load_model_service, has_function_in_module
 from djl_python.sm_log_filter import SMLogFilter
 
 SOCKET_ACCEPT_TIMEOUT = 30.0
@@ -45,12 +45,15 @@ class PythonEngine(object):
         if rank:
             os.environ["RANK"] = rank
 
+        self.model_dir = args.model_dir
         self.sock_type = args.sock_type
         self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
         self.port = args.port
         self.service = service
         self.device_id = args.device_id
         self.tensor_parallel_degree = args.tensor_parallel_degree
+        self.entry_point = args.entry_point
+        self.recommended_entry_point = args.recommended_entry_point
 
         if self.sock_type == "unix":
             if self.sock_name is None:
@@ -105,6 +108,7 @@ class PythonEngine(object):
         # workaround error(35, 'Resource temporarily unavailable') on OSX
         cl_socket.setblocking(True)
 
+        is_entry_point_verified = False
         while True:
             inputs = Input()
             inputs.read(cl_socket)
@@ -117,6 +121,19 @@ class PythonEngine(object):
                 prop["output_formatter"] = getattr(self.service,
                                                    prop["output_formatter"])
             function_name = inputs.get_function_name()
+            if not is_entry_point_verified:
+                if self.recommended_entry_point:
+                    if not has_function_in_module(self.service.module,
+                                                  function_name):
+                        self.service = load_model_service(
+                            self.model_dir, self.recommended_entry_point,
+                            self.device_id)
+                        logging.info(
+                            f"{self.entry_point} file has no handler function {function_name}."
+                            f"Hence choosing the LMI recommended entry point {self.recommended_entry_point}"
+                        )
+                is_entry_point_verified = True
+
             try:
                 outputs = self.service.invoke_handler(function_name, inputs)
                 if outputs is None:
