@@ -49,15 +49,6 @@ class VllmRbProperties(Properties):
     preloaded_model: Optional[Any] = None
     max_logprobs: Optional[int] = 5
 
-    # Vision language configurations
-    # TODO: remove this after vLLM next release
-    image_token_id: Optional[int] = None
-    image_input_type: Optional[str] = None
-    image_input_shape: Optional[str] = None
-    image_feature_size: Optional[int] = None
-    image_processor: Optional[str] = None
-    image_processor_revision: Optional[str] = None
-
     @field_validator('engine')
     def validate_engine(cls, engine):
         if engine != "Python":

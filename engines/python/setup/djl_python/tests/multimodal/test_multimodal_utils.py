@@ -17,7 +17,7 @@ client = OpenAI(
 )
 
 
-class TestLmiDist(unittest.TestCase):
+class TestMultiModalUtils(unittest.TestCase):
 
     def test_open_ai_format_parse(self):
         image_url = "https://resources.djl.ai/images/dog_bike_car.jpg"
@@ -45,7 +45,21 @@ class TestLmiDist(unittest.TestCase):
                                                         is_rolling_batch=True,
                                                         tokenizer=tokenizer)
         print(inputs)
+        image_token = "<image>"
+        self.assertEqual(
+            f"<|im_start|>user\n{image_token*1176}\nWhat’s in this image?<|im_end|>\n",
+            inputs)
         images = params.pop("images", None)
         for image in images:
             print(image)
-        print(params)
+        self.assertEqual(
+            {
+                'frequency_penalty': 0.0,
+                'presence_penalty': 0.0,
+                'stream': False,
+                'temperature': 1.0,
+                'top_p': 1.0,
+                'do_sample': True,
+                'details': True,
+                'output_formatter': 'json_chat'
+            }, params)

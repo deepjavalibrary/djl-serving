@@ -25,11 +25,8 @@ def get_image_text_prompt(prompt_text: str) -> str:
     # TODO: image token str must be decoded from image_token_id in serving.properties. Change it after refactor PR.
     image_token_str = '<image>'
 
-    # TODO: image_feature_size should be referred from serving.properties. Change it after refactor PR.
-    image_feature_size = 1176
-
     # TODO: Remove image_token_str*1176 after vllm next release, as the image placeholder is not needed.
-    return f"{image_token_str*image_feature_size}\n{prompt_text}"
+    return f"{image_token_str}\n{prompt_text}"
 
 
 def load_image_from_base64(image: Union[bytes, str]) -> Image.Image:

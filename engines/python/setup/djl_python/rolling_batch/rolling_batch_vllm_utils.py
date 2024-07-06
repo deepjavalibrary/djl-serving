@@ -16,7 +16,6 @@ from typing import Any
 from vllm import EngineArgs
 from vllm.outputs import CompletionOutput, RequestOutput as vLLMRequestOutput
 from vllm.lora.request import LoRARequest
-from vllm.multimodal.image import ImagePixelData
 from vllm.inputs import PromptInputs
 
 from djl_python.request_io import Token, Sequence
@@ -238,11 +237,12 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
 
 
 def get_multi_modal_data(request: Request) -> dict:
-    parameters = request.request_input.parameters
+    parameters = request.parameters
     images = parameters.pop("images", None)
     multi_modal_data = None
     if images:
-        multi_modal_data = ImagePixelData(images[0])
+        # vLLM only supports one image per request.
+        multi_modal_data = {"image": images[0]}
     return multi_modal_data
 
 
