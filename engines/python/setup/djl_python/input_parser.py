@@ -44,6 +44,8 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     request_id_counter = get_req_id_counter(kwargs)
     for i, input_item in enumerate(batch):
         try:
+            kwargs["is_rolling_batch"] = is_rolling_batch_enabled(
+                kwargs.get("configs").rolling_batch)
             request_id = request_id_counter.next_id(
             ) if request_id_counter else i
             # TODO: Decide whether it is a text input based on content-type
@@ -70,7 +72,7 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
 
 def get_req_id_counter(kwargs):
     req_id_counter = None
-    if is_rolling_batch_enabled(kwargs.get("configs").rolling_batch):
+    if kwargs.get("is_rolling_batch"):
         req_id_counter = kwargs.get("rolling_batch").req_id_counter
     return req_id_counter
 
@@ -89,24 +91,27 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     invoke_type = input_item.get_property("X-Amzn-SageMaker-Forwarded-Api")
     tokenizer = kwargs.get("tokenizer")
     if is_chat_completions_request(input_map):
-        _inputs, _param = parse_chat_completions_request(
+        inputs, param = parse_chat_completions_request(
             input_map, kwargs.get("is_rolling_batch"), tokenizer)
     elif is_3p_request(invoke_type):
-        _inputs, _param = parse_3p_request(input_map,
-                                           kwargs.get("is_rolling_batch"),
-                                           tokenizer, invoke_type)
+        inputs, param = parse_3p_request(input_map,
+                                         kwargs.get("is_rolling_batch"),
+                                         tokenizer, invoke_type)
     else:
-        _inputs = input_map.pop("inputs", input_map)
-        _param = input_map.pop("parameters", {})
+        inputs = input_map.pop("inputs", input_map)
+        param = input_map.pop("parameters", {})
 
-    request_input.input_text = _inputs
-    request_input.parameters = _param
-    # assign input_ids
-    if kwargs.get("tokenizer"):
+    request_input.input_text = inputs
+    request_input.parameters = param
+    # assigns input_ids
+    # TODO: for dynamic batching, or HF pipeline, tokenizer is applied differently.
+    if kwargs.get("tokenizer") and kwargs.get("is_rolling_batch"):
         request_input.input_ids = tokenizer.encode(request_input.input_text)
 
+    # TODO: Instead of modifying user parameters, maintain this in server_parameters.
+    #  Added here for backward compatibility
     # re-organize the parameters
-    if is_rolling_batch_enabled(kwargs.get("configs").rolling_batch):
+    if kwargs.get("is_rolling_batch"):
         if "stream" in input_map:
             request_input.parameters["stream"] = input_map.pop("stream")
     if "cached_prompt" in input_map:
@@ -124,22 +129,15 @@ def add_server_maintained_params(request_input: TextInput, input_item: Input,
         if input_item.contains_key("seed"):
             request_input.server_parameters["seed"] = input_item.get_as_string(
                 key="seed")
+
+    # setting the output formatter
     if not "output_formatter" in request_input.server_parameters:
         request_input.server_parameters["output_formatter"] = kwargs.get(
             "configs").output_formatter
 
-    request_input.output_formatter = request_input.server_parameters.get(
-        "output_formatter")
-
-    if request_input.output_formatter == "json" or request_input.output_formatter == "sse":
+    output_formatter = request_input.server_parameters["output_formatter"]
+    if output_formatter == "json" or output_formatter == "sse":
         request_input.tgi_compat = kwargs.get("configs").tgi_compat
-
-    # duplicating parameters for client side batching
-    if isinstance(request_input.input_text, list):
-        parameters = []
-        for _ in range(len(request_input.input_text)):
-            parameters.append(request_input.server_parameters.copy())
-        request_input.server_parameters = parameters
 
 
 def parse_adapters(request_input: TextInput, input_item: Input,
@@ -147,22 +145,28 @@ def parse_adapters(request_input: TextInput, input_item: Input,
     adapter_registry = kwargs.get("adapter_registry")
     # if adapter registry exists and not empty, then we assume, peft is supported for the incoming
     if adapter_registry:
+        input_len = len(request_input.input_text) if isinstance(
+            request_input.input_text, list) else 1
         adapters_per_item = _fetch_adapters_from_input(input_map, input_item)
         if adapters_per_item:
             _validate_adapters(adapters_per_item,
                                kwargs.get("adapter_registry"))
         else:
             # inference with just base model.
-            adapters_per_item = [""] * len(request_input.input_text)
+            adapters_per_item = [""] * input_len
 
-        if len(request_input.input_text) != len(adapters_per_item):
+        if input_len != len(adapters_per_item):
             raise ValueError(
                 f"Number of adapters is not equal to the number of inputs")
         # lookup the adapter registry to get the adapter details of the registered adapter.
-        request_input.adapters = [
+        adapters_data = [
             kwargs.get("adapter_registry").get(adapter, None)
-            for adapter in adapter_registry
+            for adapter in adapters_per_item
         ]
+        if len(adapters_data) == 1:
+            adapters_data = adapters_data[0]
+
+        request_input.adapters = adapters_data
 
 
 def _fetch_adapters_from_input(input_map: dict, input_item: Input):

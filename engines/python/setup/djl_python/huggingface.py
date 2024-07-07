@@ -140,7 +140,6 @@ class HuggingFaceService(object):
         self.peft_config = None
         self.stopping_criteria_list = None
         self.adapter_registry = {}
-        self.adapters = None
         self.hf_configs = None
         self.input_format_args = None
 
@@ -254,14 +253,14 @@ class HuggingFaceService(object):
                                  inputs: Input, outputs: Output,
                                  requests: List):
         # Dynamic batching
-        input_data, input_size = get_input_details(requests, errors, batch)
-        parameters = requests[0].request_input.server_parameters
+        input_data, input_size, parameters, adapters = get_input_details(
+            requests, errors, batch)
 
         if isinstance(self.model, PeftModelForCausalLM):
-            if self.adapters is None:
+            if adapters is None:
                 # Inference with only base model
-                self.adapters = [""] * len(input_data)
-            parameters["adapters"] = self.adapters
+                adapters = [""] * len(input_data)
+            parameters["adapters"] = adapters
         prediction = self.hf_pipeline(input_data, **parameters)
         offset = 0
         for i, item in enumerate(batch):
@@ -293,20 +292,21 @@ class HuggingFaceService(object):
         if len(batch) > 1:
             raise NotImplementedError(
                 "Dynamic batch not supported for generic streaming")
+
+        parameters = request_input.server_parameters
         outputs.add_property("content-type", "application/jsonlines")
         if self.hf_configs.enable_streaming.value == StreamingEnum.huggingface.value:
             outputs.add_stream_content(
                 StreamingUtils.use_hf_default_streamer(
                     self.model, self.tokenizer, request_input.input_text,
-                    self.hf_configs.device, **request_input.server_parameters))
+                    self.hf_configs.device, **parameters))
         else:
             stream_generator = StreamingUtils.get_stream_generator(
                 "Accelerate")
             outputs.add_stream_content(
                 stream_generator(self.model, self.tokenizer,
                                  request_input.input_text,
-                                 self.hf_configs.device,
-                                 **request_input.server_parameters))
+                                 self.hf_configs.device, **parameters))
         return outputs
 
     def get_pipeline(self, task: str, model_id_or_path: str, kwargs):

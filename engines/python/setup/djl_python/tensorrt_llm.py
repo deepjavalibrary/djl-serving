@@ -29,6 +29,7 @@ class TRTLLMService(object):
     """
 
     def __init__(self):
+        self.input_format_args = None
         self.initialized = False
         self.trt_configs = None
         self.rolling_batch = None
@@ -40,6 +41,7 @@ class TRTLLMService(object):
         self.rolling_batch = TRTLLMRollingBatch(
             self.trt_configs.model_id_or_path, properties, self.trt_configs)
         self.tokenizer = self.rolling_batch.get_tokenizer()
+        self.input_format_args = self.get_input_format_args()
         self.initialized = True
         return
 
@@ -54,16 +56,14 @@ class TRTLLMService(object):
         """
         Does preprocessing and sends new requests to the rolling batch script for inference
 
-        :param inputs (Input): a batch of inputs, each corresponding to a new request
+        :param inputs: (Input) a batch of inputs, each corresponding to a new request
 
         :return outputs (Output): a batch of outputs that contain status code, output text, and other information
         """
         outputs = Output()
-        kwargs = self.__dict__
-        kwargs[
-            "configs"] = self.trt_configs  # TODO: Rename it to configs, so it would uniform in all handlers
 
-        parsed_input = parse_input_with_formatter(inputs, **kwargs)
+        parsed_input = parse_input_with_formatter(inputs,
+                                                  **self.input_format_args)
         if len(parsed_input.requests) == 0:
             for i in range(len(parsed_input.batch)):
                 err = parsed_input.errors.get(i)

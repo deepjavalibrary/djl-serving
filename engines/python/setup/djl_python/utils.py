@@ -114,8 +114,8 @@ def get_input_details(requests, errors, batch):
     input_size = []
     adapters = []
     idx = 0
-    request_input = requests[0].request_input
-    parameters = request_input.server_parameters
+    parameters = requests[0].request_input.server_parameters
+
     for i in range(len(batch)):
         if i in errors:
             input_size.append(0)
@@ -134,4 +134,4 @@ def get_input_details(requests, errors, batch):
 
         idx += 1
     adapters = adapters if adapters else None
-    return input_data, input_size, adapters
+    return input_data, input_size, parameters, adapters

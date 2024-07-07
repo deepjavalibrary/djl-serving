@@ -129,7 +129,8 @@ class RequestInput:
     Attributes:
         request_id: The request ID.
         output_formatter: Output formatter of the request
-        parameters: parameters in the request payload, will be used in the output formatter
+        parameters: parameters in the request payload
+        server_parameters: parameters that are modified by the built-in handlers to support backend engines.
     """
     request_id: int
     output_formatter: Union[Callable, str] = None
@@ -147,11 +148,10 @@ class TextInput(RequestInput):
         adapters: adapter used for the request.
         tokenizer: tokenizer used for the request.
     """
-    input_text: str = None
+    input_text: Union[str, List[str]] = None
     input_ids: List[int] = field(default_factory=lambda: [])
     adapters: Optional[Any] = None
     tokenizer: Optional[Any] = None
-    found_adapters: bool = False
 
     def prompt_tokens_length(self) -> int:
         return len(self.input_ids)

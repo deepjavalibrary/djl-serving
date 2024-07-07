@@ -219,7 +219,8 @@ class TransformersNeuronXService(object):
         self.initialized = True
 
     def inference(self, inputs: Input) -> Output:
-        parsed_input = parse_input_with_formatter(inputs, **self.__dict__)
+        parsed_input = parse_input_with_formatter(inputs,
+                                                  **self.input_format_args)
         errors = parsed_input.errors
         requests = parsed_input.requests
         outputs = Output()
@@ -229,11 +230,8 @@ class TransformersNeuronXService(object):
                                            self.rolling_batch)
 
         batch = parsed_input.batch
-        input_data, input_size = get_input_details(requests, errors, batch)
-        parameters = parsed_input.requests[0].request_input.server_parameters
-        # Remove rolling batch default parameters
-        parameters.pop("output_formatter", None)
-        parameters.pop("stream", None)
+        input_data, input_size, parameters, _ = get_input_details(
+            requests, errors, batch)
         model_kwargs = {}
 
         prompt_size = len(input_data)

@@ -121,10 +121,8 @@ class TRTLLMPythonService:
                 outputs.add(err, key="data", batch_index=i)
             return outputs
 
-        input_data, input_size = get_input_details(parsed_input.requests,
-                                                   parsed_input.errors,
-                                                   parsed_input.batch)
-        params = parsed_input.requests[0].request_input.server_parameters
+        input_data, input_size, params, _ = get_input_details(
+            parsed_input.requests, parsed_input.errors, parsed_input.batch)
 
         if "output_formatter" in params:
             # output formatter is not supported for TensorRT-LLM python backend.

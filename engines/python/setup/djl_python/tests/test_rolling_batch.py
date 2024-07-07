@@ -210,7 +210,7 @@ class TestRollingBatch(unittest.TestCase):
                       input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
-                          "stream": True
+                          "stream": True,
                       },
                       tgi_compat=True))
         req.set_next_token(Token(244, "He", -0.334532))

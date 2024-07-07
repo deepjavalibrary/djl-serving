@@ -34,17 +34,31 @@ class Request(object):
 
         :param id: request id
         """
+
+        #TODO: Remove some of these redundant attributes and
+        # use request_input and request_output wherever necessary.
         self.id = request_input.request_id
         self.request_input = request_input
-        self.parameters = self.request_input.server_parameters
         self.input_text = request_input.input_text
         self.last_token = False
         self.adapter = request_input.adapters
 
+        # server parameters may not be set, if custom input formatter is used.
+        if not self.request_input.server_parameters:
+            self.request_input.server_parameters = self.request_input.parameters.copy(
+            )
+        self.parameters = self.request_input.server_parameters
+
         # output formatter
-        stream = self.request_input.parameters.get("stream", False)
+        request_input.output_formatter = self.parameters.pop(
+            "output_formatter", request_input.output_formatter)
+        # stream parameter is only used for determining the output.
+        stream = self.parameters.pop("stream", False)
+        # details is only used in output formatter for rolling batch
+        self.parameters.pop("details", False)
         self.output_formatter, self.content_type = get_output_formatter(
             request_input.output_formatter, stream, request_input.tgi_compat)
+        request_input.output_formatter = self.output_formatter
         self.legacy_formatter = self._is_output_formatter_legacy()
 
         self.request_output = TextGenerationOutput(request_id=self.id,
