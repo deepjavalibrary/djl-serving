@@ -124,10 +124,12 @@ class Connection {
         Device device = model.getNDManager().getDevice();
         int deviceId = device.getDeviceId();
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+        String entryPoint = pyEnv.getEntryPoint();
+        String recommendedEntryPoint = pyEnv.getRecommendedEntryPoint();
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            String[] args = new String[40];
+            String[] args = new String[42];
             args[0] = "mpirun";
             args[1] = "-np";
             // TODO: When we support multi nodes, change it to the product of tensor parallel value
@@ -164,13 +166,15 @@ class Connection {
             args[30] = "--model-dir";
             args[31] = model.getModelPath().toAbsolutePath().toString();
             args[32] = "--entry-point";
-            args[33] = pyEnv.getEntryPoint();
+            args[33] = entryPoint == null ? "" : entryPoint;
             args[34] = "--sock-type";
             args[35] = "unix";
             args[36] = "--sock-name";
             args[37] = getSocketPath(port);
             args[38] = "--tensor-parallel-degree";
             args[39] = String.valueOf(tensorParallelDegree);
+            args[40] = "--recommended-entry-point";
+            args[41] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
             return args;
         }
 
@@ -192,7 +196,7 @@ class Connection {
             logger.info("Set OMP_NUM_THREADS={}", neuronThreads);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
-        String[] args = new String[12];
+        String[] args = new String[14];
         args[0] = pyEnv.getPythonExecutable();
         args[1] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
         args[2] = "--sock-type";
@@ -202,9 +206,11 @@ class Connection {
         args[6] = "--model-dir";
         args[7] = model.getModelPath().toAbsolutePath().toString();
         args[8] = "--entry-point";
-        args[9] = pyEnv.getEntryPoint();
+        args[9] = entryPoint == null ? "" : entryPoint;
         args[10] = "--device-id";
         args[11] = String.valueOf(deviceId);
+        args[12] = "--recommended-entry-point";
+        args[13] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
         return args;
     }
 
