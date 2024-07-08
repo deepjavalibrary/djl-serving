@@ -357,7 +357,7 @@ public class PyEnv {
      * @return the model's entrypoint file path
      */
     public String getEntryPoint() {
-        return entryPoint == null ? "model.py" : entryPoint;
+        return entryPoint;
     }
 
     /**

@@ -175,7 +175,8 @@ def main():
         sock_type = args.sock_type
         sock_name = args.sock_name if rank is None else f"{args.sock_name}.{rank}"
 
-        model_service = load_model_service(args.model_dir, args.entry_point,
+        entry_point = args.entry_point if args.entry_point else args.recommended_entry_point
+        model_service = load_model_service(args.model_dir, entry_point,
                                            args.device_id)
 
         engine = PythonEngine(args, model_service)

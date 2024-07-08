@@ -153,23 +153,23 @@ public class PyModel extends BaseModel {
         if (entryPoint == null) {
             entryPoint = Utils.getenv("DJL_ENTRY_POINT");
             if (entryPoint == null) {
+                Path modelFile = findModelFile(prefix);
                 String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
+                // find default entryPoint
+                if (modelFile != null) {
+                    entryPoint = modelFile.toFile().getName();
+                }
+                // find recommendedEntryPoint
                 if ("nc".equals(manager.getDevice().getDeviceType())
                         && pyEnv.getTensorParallelDegree() > 0) {
-                    entryPoint = "djl_python.transformers_neuronx";
+                    recommendedEntryPoint = "djl_python.transformers_neuronx";
                 } else if ("trtllm".equals(features)) {
-                    entryPoint = "djl_python.tensorrt_llm";
+                    recommendedEntryPoint = "djl_python.tensorrt_llm";
                 } else if (pyEnv.getInitParameters().containsKey("model_id")
                         || Files.exists(modelPath.resolve("config.json"))) {
-                    entryPoint = "djl_python.huggingface";
+                    recommendedEntryPoint = "djl_python.huggingface";
                 }
-                Path modelFile = findModelFile(prefix);
-                if (modelFile != null) {
-                    if (entryPoint != null) {
-                        recommendedEntryPoint = entryPoint;
-                    }
-                    entryPoint = modelFile.toFile().getName();
-                } else {
+                if (entryPoint == null && recommendedEntryPoint == null) {
                     throw new FileNotFoundException(".py file not found in: " + modelPath);
                 }
             }

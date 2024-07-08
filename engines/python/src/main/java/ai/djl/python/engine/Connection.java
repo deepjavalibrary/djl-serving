@@ -124,6 +124,7 @@ class Connection {
         Device device = model.getNDManager().getDevice();
         int deviceId = device.getDeviceId();
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+        String entryPoint = pyEnv.getEntryPoint();
         String recommendedEntryPoint = pyEnv.getRecommendedEntryPoint();
         if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
@@ -165,7 +166,7 @@ class Connection {
             args[30] = "--model-dir";
             args[31] = model.getModelPath().toAbsolutePath().toString();
             args[32] = "--entry-point";
-            args[33] = pyEnv.getEntryPoint();
+            args[33] = entryPoint == null ? "" : entryPoint;
             args[34] = "--sock-type";
             args[35] = "unix";
             args[36] = "--sock-name";
@@ -205,7 +206,7 @@ class Connection {
         args[6] = "--model-dir";
         args[7] = model.getModelPath().toAbsolutePath().toString();
         args[8] = "--entry-point";
-        args[9] = pyEnv.getEntryPoint();
+        args[9] = entryPoint == null ? "" : entryPoint;
         args[10] = "--device-id";
         args[11] = String.valueOf(deviceId);
         args[12] = "--recommended-entry-point";
