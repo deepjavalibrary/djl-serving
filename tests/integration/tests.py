@@ -17,16 +17,22 @@ class Runner:
         self.container = container
         self.test_name = test_name
 
-        # Compute flavor
-        if djl_version is not None and len(djl_version) > 0:
-            if container == "cpu":
-                flavor = djl_version
-            else:
-                flavor = f"{djl_version}-{container}"
-        else:
+        # Compute flavor and repo
+        repo = "deepjavalibrary/djl-serving"
+        if djl_version is None or len(
+                djl_version) == 0 or djl_version == "nightly":
             flavor = f"{container}-nightly"
+        else:
+            if djl_version == "temp":
+                repo = "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+                flavor = f"{container}-{os.environ['GITHUB_SHA']}"
+            else:
+                if container == "cpu":
+                    flavor = djl_version
+                else:
+                    flavor = f"{djl_version}-{container}"
 
-        self.image = f"deepjavalibrary/djl-serving:{flavor}"
+        self.image = f"{repo}:{flavor}"
 
         # os.system(f'docker pull {self.image}')
         os.system('rm -rf models')
