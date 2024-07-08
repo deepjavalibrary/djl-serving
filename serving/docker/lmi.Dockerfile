@@ -33,7 +33,7 @@ ARG auto_gptq_version=0.7.1
 ARG datasets_version=2.19.1
 ARG autoawq_version=0.2.5
 # LMI-Dist Deps
-ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt230/vllm-0.4.2%2Bcu124-cp310-cp310-linux_x86_64.whl"
+ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.5.1/vllm-0.5.1-cp310-cp310-manylinux1_x86_64.whl"
 ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu124-pt230/flash_attn-2.5.8-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
