@@ -130,10 +130,12 @@ class RequestInput:
         request_id: The request ID.
         output_formatter: Output formatter of the request
         parameters: parameters in the request payload
+        server_parameters: parameters that are modified by the built-in handlers to support backend engines.
     """
     request_id: int
     output_formatter: Union[Callable, str] = None
     parameters: Dict = field(default_factory=lambda: {})
+    server_parameters: Dict = field(default_factory=lambda: {})
     tgi_compat: bool = False
 
 
@@ -146,7 +148,7 @@ class TextInput(RequestInput):
         adapters: adapter used for the request.
         tokenizer: tokenizer used for the request.
     """
-    input_text: str = None
+    input_text: Union[str, List[str]] = None
     input_ids: List[int] = field(default_factory=lambda: [])
     adapters: Optional[Any] = None
     tokenizer: Optional[Any] = None

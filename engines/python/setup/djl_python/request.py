@@ -11,11 +11,10 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import inspect
-from typing import Union, Callable, Any, List
+from typing import Union, Callable, Any, List, Dict
 
-from djl_python.output_formatter import get_output_formatter, _json_output_formatter, sse_response_formatter, \
-    adapt_legacy_output_formatter
-from djl_python.request_io import Token, TextGenerationOutput, TextInput, RequestOutput
+from djl_python.output_formatter import get_output_formatter, adapt_legacy_output_formatter
+from djl_python.request_io import Token, TextGenerationOutput, TextInput, RequestOutput, RequestInput
 from djl_python.utils import wait_till_generation_finished
 
 
@@ -29,54 +28,40 @@ class Request(object):
 
     """
 
-    def __init__(self,
-                 id: int,
-                 input_text: str,
-                 parameters: dict,
-                 input_ids: list = [],
-                 adapter=None,
-                 output_formatter: Union[str, Callable] = None,
-                 tgi_compat: bool = False,
-                 tokenizer: Any = None):
+    def __init__(self, request_input: TextInput = None):
         """
         Initialize a request
 
         :param id: request id
-        :param input_text: request's input text
-        :param parameters: list of parameters
-        :param input_ids: request's input ids
-        :param adapter: list of adapters
-        :param output_formatter: output formatter function (for example,
-            _json_output_formatter, _jsonlines_output_formatter, or user provided function
         """
-        self.id = id
-        self.input_text = input_text
-        self.parameters = parameters
-        original_parameters = parameters.copy()
+
+        #TODO: Remove some of these redundant attributes and
+        # use request_input and request_output wherever necessary.
+        self.id = request_input.request_id
+        self.request_input = request_input
+        self.input_text = request_input.input_text
         self.last_token = False
-        self.adapter = adapter
+        self.adapter = request_input.adapters
+
+        # server parameters may not be set, if custom input formatter is used.
+        if not self.request_input.server_parameters:
+            self.request_input.server_parameters = self.request_input.parameters.copy(
+            )
+        self.parameters = self.request_input.server_parameters
 
         # output formatter
-        # remove stream from parameters
-        stream = parameters.pop("stream", False)
+        request_input.output_formatter = self.parameters.pop(
+            "output_formatter", request_input.output_formatter)
+        # stream parameter is only used for determining the output.
+        stream = self.parameters.pop("stream", False)
+        # details is only used in output formatter for rolling batch
+        self.parameters.pop("details", False)
         self.output_formatter, self.content_type = get_output_formatter(
-            output_formatter, stream, tgi_compat)
+            request_input.output_formatter, stream, request_input.tgi_compat)
+        request_input.output_formatter = self.output_formatter
         self.legacy_formatter = self._is_output_formatter_legacy()
 
-        # remove details from parameters
-        parameters.pop("details", None)
-
-        # TODO: Strategically find the task and initialize based on task
-        self.request_input = TextInput(request_id=id,
-                                       output_formatter=self.output_formatter,
-                                       parameters=original_parameters,
-                                       input_text=input_text,
-                                       input_ids=input_ids,
-                                       adapters=adapter,
-                                       tokenizer=tokenizer)
-        if self.output_formatter == _json_output_formatter or self.output_formatter == sse_response_formatter:
-            self.request_input.tgi_compat = tgi_compat
-        self.request_output = TextGenerationOutput(request_id=id,
+        self.request_output = TextGenerationOutput(request_id=self.id,
                                                    input=self.request_input)
         self.next_token_str = ""
 

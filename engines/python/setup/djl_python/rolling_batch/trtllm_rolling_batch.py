@@ -13,6 +13,7 @@
 import tensorrt_llm_toolkit
 
 from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
+from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from djl_python.request_io import Token
 from typing import List
@@ -86,24 +87,20 @@ class TRTLLMRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self,
-                  input_data: List[str],
-                  parameters: List[dict],
-                  adapters=None) -> list:
+    def inference(self, requests: List[Request]) -> List:
         """
         Loads new requests into the batch when there is availability, and gets output tokens from the backend
         asynchronously.
 
+        :param requests: List[Request] List of requests
         :param input_data: List of input prompts.
         :param parameters: List of settings pertaining to each request.
         :param adapters: List of adapters inputs for each request in a batch
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
-        batch_size = len(input_data)
         # add pending requests to active requests list
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(requests)
         # step 0: register new active requests
         for request in new_requests:
             param = self.translate_triton_params(request.parameters)

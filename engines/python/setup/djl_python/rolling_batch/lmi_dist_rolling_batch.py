@@ -18,15 +18,12 @@ from collections import OrderedDict, defaultdict
 from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
-from vllm.lora.request import LoRARequest
 from vllm import SamplingParams
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
-from djl_python.request_io import Token
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
-    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER,
-    FINISH_REASON_MAPPER)
+    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER)
 from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
@@ -146,24 +143,15 @@ class LmiDistRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self,
-                  input_data: List[str],
-                  parameters: List[dict],
-                  adapters=None) -> list:
+    def inference(self, requests: List[Request]) -> List:
         """
         Adds new requests and gets output tokens from the backend.
 
-        :param input_data: List of input prompts.
-        :param parameters: List of settings pertaining to each request.
-        :param adapters: List of adapters inputs for each request in a batch
+        :param requests: List of requests
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
-        batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data,
-                                             parameters,
-                                             batch_size,
-                                             adapters=adapters)
+        new_requests = self.get_new_requests(requests)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = str(request.id)

@@ -15,6 +15,8 @@ from seq_scheduler.lm_block import HuggingfaceBlock, BloomBlock, FalconBlock
 from seq_scheduler.search_config import SearchConfig
 from seq_scheduler.seq_batch_scheduler import SeqBatchScheduler
 from collections import namedtuple, defaultdict
+
+from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 
@@ -67,21 +69,14 @@ class SchedulerRollingBatch(RollingBatch):
         self._init_scheduler()
 
     @stop_on_any_exception
-    def inference(self,
-                  input_text: List[str],
-                  parameters: List[dict],
-                  adapters=None) -> list:
+    def inference(self, requests: List) -> List:
         """
         Performs prefill and decode operations for the batch.
 
-        :param input_text: List of input texts for each request in a batch
-        :param parameters: List of kwargs for each request in a batch
-        :param adapters: List of adapters inputs for each request in a batch
+        :param requests: List[Request] List of requests
         :return: generated batch decoded tokens
         """
-        batch_size = len(input_text)
-        new_requests = self.get_new_requests(input_text, parameters,
-                                             batch_size)
+        new_requests = self.get_new_requests(requests)
 
         preprocessed_new_requests = self.preprocess_requests(new_requests)
         self._prefill_and_decode(preprocessed_new_requests)

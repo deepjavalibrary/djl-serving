@@ -12,12 +12,15 @@
 # the specific language governing permissions and limitations under the License.
 import random
 from collections import OrderedDict
+from typing import List
+
 from transformers import AutoTokenizer
 
 from djl_python.properties_manager.properties import Properties
+from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception
 from djl_python.request_io import Token
-from djl_python.utils import profile_objects
+from djl_python.utils import profile_objects, IdCounter
 
 
 class FakeRollingBatch(RollingBatch):
@@ -62,10 +65,8 @@ class FakeRollingBatch(RollingBatch):
 
     @profile_objects
     @stop_on_any_exception
-    def inference(self, input_data, parameters, adapters=None):
-        batch_size = len(input_data)
-        new_requests = self.get_new_requests(input_data, parameters,
-                                             batch_size)
+    def inference(self, requests: List[Request]) -> List:
+        new_requests = self.get_new_requests(requests)
 
         for new_request in new_requests:
             max_len = new_request.parameters[
@@ -107,20 +108,20 @@ class FakeRollingBatchWithException(FakeRollingBatch):
 
     def __init__(self, model_id_or_path, properties, **kwargs):
         super().__init__(model_id_or_path, properties, **kwargs)
-        self.dead_counter = 0
+        self.dead_counter = IdCounter()
         self.dead_trigger = random.randint(1, 50)
 
     def reset(self):
         super().reset()
-        self.dead_counter = 0
+        self.dead_counter.reset()
         self.dead_trigger = random.randint(1, 50)
 
     @profile_objects
     @stop_on_any_exception
-    def inference(self, input_data, parameters, adapters=None):
+    def inference(self, requests: List[Request]):
 
-        if self.dead_counter < self.dead_trigger:
-            self.dead_counter += 1
-            return super().inference(input_data, parameters, adapters)
+        if self.dead_counter.get_id() < self.dead_trigger:
+            self.dead_counter.next_id()
+            return super().inference(requests)
         else:
             raise RuntimeError("Death trigger triggered...")

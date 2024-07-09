@@ -12,7 +12,7 @@ from transformers import AutoTokenizer
 import djl_python
 from djl_python.output_formatter import _json_output_formatter
 from djl_python.request import Request
-from djl_python.request_io import TextGenerationOutput, TextInput, Sequence, Token
+from djl_python.request_io import TextGenerationOutput, TextInput, Sequence, Token, RequestInput
 '''These Mock classes are in compliance with vllm RequestOutput version 0.4.2'''
 
 
@@ -367,12 +367,12 @@ class TestVllmUtils(unittest.TestCase):
             "top_n_tokens": 3
         }
 
+        request_input = TextInput(request_id=0,
+                                  input_text="I am a",
+                                  parameters=parameters.copy(),
+                                  tokenizer=tokenizer)
         # 1. Creates the request
-        req = Request(0,
-                      "I am a",
-                      parameters=parameters.copy(),
-                      output_formatter=_json_output_formatter,
-                      tokenizer=tokenizer)
+        req = Request(request_input)
         self.assertEqual(
             TextGenerationOutput(request_id=0,
                                  input=TextInput(

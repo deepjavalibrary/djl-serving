@@ -4,22 +4,28 @@ import unittest
 from djl_python.request import Request
 from djl_python.output_formatter import _json_output_formatter, _jsonlines_output_formatter, \
     _jsonlines_chat_output_formatter, _json_chat_output_formatter
-from djl_python.request_io import Token, RequestOutput, TextGenerationOutput
+from djl_python.request_io import Token, TextGenerationOutput, TextInput
 
 
 class TestRollingBatch(unittest.TestCase):
 
     def test_json_fmt(self):
-        req1 = Request(0,
-                       "This is a wonderful day",
-                       parameters={"max_new_tokens": 256},
-                       output_formatter=_json_output_formatter)
-        req2 = Request(1,
-                       "This is a wonderful day",
-                       parameters={
-                           "max_new_tokens": 256,
-                           "stream": False
-                       })
+        req_input1 = TextInput(
+            request_id=0,
+            input_text="This is a wonderful day",
+            parameters={"max_new_tokens": 256},
+            output_formatter=_json_output_formatter,
+        )
+        req1 = Request(req_input1)
+        req_input2 = TextInput(
+            request_id=1,
+            input_text="This is a wonderful day",
+            parameters={
+                "max_new_tokens": 256,
+                "stream": False
+            },
+        )
+        req2 = Request(req_input2)
         for req in [req1, req2]:
             req.set_next_token(Token(244, "He", -0.334532))
             print(req.get_next_token(), end='')
@@ -36,16 +42,20 @@ class TestRollingBatch(unittest.TestCase):
             req.reset_next_token()
 
     def test_json_fmt_with_appending(self):
-        req1 = Request(0,
-                       "This is a wonderful day",
-                       parameters={"max_new_tokens": 256},
-                       output_formatter=_json_output_formatter)
-        req2 = Request(1,
-                       "This is a wonderful day",
-                       parameters={
-                           "max_new_tokens": 256,
-                           "stream": False
-                       })
+        req_input1 = TextInput(request_id=0,
+                               input_text="This is a wonderful day",
+                               parameters={"max_new_tokens": 256},
+                               output_formatter=_json_output_formatter)
+        req1 = Request(req_input1)
+        req_input2 = TextInput(
+            request_id=1,
+            input_text="This is a wonderful day",
+            parameters={
+                "max_new_tokens": 256,
+                "stream": False
+            },
+        )
+        req2 = Request(req_input2)
         for req in [req1, req2]:
             req.set_next_token(Token(244, "He", -0.334532))
             req.set_next_token(Token(576, "llo", -0.123123))
@@ -58,15 +68,16 @@ class TestRollingBatch(unittest.TestCase):
             assert req.get_next_token() == ' world"}'
 
     def test_fmt_hf_compat(self):
-        req = Request(0,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "return_full_text": True,
                           "details": True
                       },
                       output_formatter=_json_output_formatter,
-                      tgi_compat=True)
+                      tgi_compat=True))
 
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
@@ -105,16 +116,18 @@ class TestRollingBatch(unittest.TestCase):
         }]
 
     def test_jsonlines_fmt(self):
-        req1 = Request(0,
-                       "This is a wonderful day",
-                       parameters={"max_new_tokens": 256},
-                       output_formatter=_jsonlines_output_formatter)
-        req2 = Request(1,
-                       "This is a wonderful day",
-                       parameters={
-                           "max_new_tokens": 256,
-                           "stream": True
-                       })
+        req1 = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
+                      parameters={"max_new_tokens": 256},
+                      output_formatter=_jsonlines_output_formatter))
+        req2 = Request(
+            TextInput(request_id=1,
+                      input_text="This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 256,
+                          "stream": True
+                      }))
         for req in [req1, req2]:
             req.set_next_token(Token(244, "He", -0.334532))
             print(req.get_next_token(), end='')
@@ -149,10 +162,11 @@ class TestRollingBatch(unittest.TestCase):
             }
 
     def test_sse_fmt(self):
-        req = Request(0,
-                      "This is a wonderful day",
-                      parameters={"max_new_tokens": 256},
-                      output_formatter="sse")
+        request_input = TextInput(request_id=0,
+                                  input_text="This is a wonderful day",
+                                  parameters={"max_new_tokens": 256},
+                                  output_formatter="sse")
+        req = Request(request_input)
         req.set_next_token(Token(244, "He", -0.334532))
         next_token = req.get_next_token()
         print(next_token, end='')
@@ -191,13 +205,14 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_sse_tgi_compat_fmt(self):
-        req = Request(1,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=1,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
-                          "stream": True
+                          "stream": True,
                       },
-                      tgi_compat=True)
+                      tgi_compat=True))
         req.set_next_token(Token(244, "He", -0.334532))
         next_token = req.get_next_token()
         print(next_token, end='')
@@ -241,13 +256,14 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_3p_fmt(self):
-        req = Request(1,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=1,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 1024,
                           "details": True
                       },
-                      output_formatter="3p")
+                      output_formatter="3p"))
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
         req.set_next_token(Token(244, "llo", -0.123123))
@@ -275,13 +291,14 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_3p_stream_fmt(self):
-        req = Request(1,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=1,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 1024,
                           "details": True
                       },
-                      output_formatter="3p_stream")
+                      output_formatter="3p_stream"))
         req.set_next_token(Token(244, "He", -0.334532))
         next_token = json.loads(req.get_next_token())
         assert next_token == {
@@ -349,13 +366,14 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_return_full_text(self):
-        req = Request(0,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "return_full_text": True,
                       },
-                      output_formatter=_json_output_formatter)
+                      output_formatter=_json_output_formatter))
 
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
@@ -372,13 +390,14 @@ class TestRollingBatch(unittest.TestCase):
             "generated_text": "This is a wonderful dayHello world",
         }
 
-        req = Request(0,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "return_full_text": True
                       },
-                      output_formatter=_jsonlines_output_formatter)
+                      output_formatter=_jsonlines_output_formatter))
         req.set_next_token(Token(244, "He", -0.334532))
         req.set_next_token(Token(576, "llo", -0.123123))
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
@@ -393,13 +412,14 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_details(self):
-        req = Request(0,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "details": True
                       },
-                      output_formatter=_json_output_formatter)
+                      output_formatter=_json_output_formatter))
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
         final_str.append(req.get_next_token())
@@ -436,13 +456,14 @@ class TestRollingBatch(unittest.TestCase):
             }
         }
         # Jsonlines tests
-        req = Request(0,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "details": True
                       },
-                      output_formatter=_jsonlines_output_formatter)
+                      output_formatter=_jsonlines_output_formatter))
         req.set_next_token(Token(244, "He", -0.334532))
         req.set_next_token(Token(576, "llo", -0.123123))
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
@@ -462,14 +483,15 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_details_jsonlines(self):
-        req = Request(0,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "details": True,
                           "decoder_input_details": True
                       },
-                      output_formatter=_jsonlines_output_formatter)
+                      output_formatter=_jsonlines_output_formatter))
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
@@ -540,14 +562,17 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_chat_json(self):
-        req = Request(0,
-                      "This is a wonderful day",
-                      parameters={
-                          "max_new_tokens": 256,
-                          "details": True,
-                          "logprobs": True
-                      },
-                      output_formatter=_json_chat_output_formatter)
+        req = Request(
+            TextInput(
+                request_id=0,
+                input_text="This is a wonderful day",
+                parameters={
+                    "max_new_tokens": 256,
+                    "details": True,
+                    "logprobs": True
+                },
+                output_formatter=_json_chat_output_formatter,
+            ))
         final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
         final_str.append(req.get_next_token())
@@ -610,15 +635,16 @@ class TestRollingBatch(unittest.TestCase):
         }
 
     def test_chat_jsonlines(self):
-        req = Request(0,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=0,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "details": True,
                           "decoder_input_details": True,
                           "logprobs": True
                       },
-                      output_formatter=_jsonlines_chat_output_formatter)
+                      output_formatter=_jsonlines_chat_output_formatter))
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token())["choices"] == [{
@@ -713,13 +739,14 @@ class TestRollingBatch(unittest.TestCase):
                 result["finish_reason"] = details["finish_reason"]
             return json.dumps(result) + "\n"
 
-        req = Request(132,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=132,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "details": True
                       },
-                      output_formatter=custom_fmt)
+                      output_formatter=custom_fmt))
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
@@ -752,14 +779,15 @@ class TestRollingBatch(unittest.TestCase):
             result = details
             return json.dumps(result) + "\n"
 
-        req = Request(132,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=132,
+                      input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 256,
                           "details": True
                       },
                       input_ids=[101, 1188, 1110, 170, 7310, 1285, 102],
-                      output_formatter=custom_fmt)
+                      output_formatter=custom_fmt))
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
         assert json.loads(req.get_next_token()) == {
@@ -869,12 +897,13 @@ class TestRollingBatch(unittest.TestCase):
 
         parameters = {"max_new_tokens": 256, "details": True, "stream": False}
 
-        req = Request(132,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=132,
+                      input_text="This is a wonderful day",
                       parameters=parameters,
-                      output_formatter=custom_fmt_wait)
-        print(parameters)
-        assert parameters == {"max_new_tokens": 256}
+                      output_formatter=custom_fmt_wait))
+        print(req.request_input.parameters)
+        assert req.request_input.parameters == parameters
 
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -922,12 +951,17 @@ class TestRollingBatch(unittest.TestCase):
 
         parameters = {"max_new_tokens": 256, "details": True, "best_of": 2}
 
-        req = Request(132,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=132,
+                      input_text="This is a wonderful day",
                       parameters=parameters,
-                      output_formatter=_json_output_formatter)
+                      output_formatter=_json_output_formatter))
         print(parameters)
-        assert parameters == {"max_new_tokens": 256, "best_of": 2}
+        assert parameters == {
+            "max_new_tokens": 256,
+            "details": True,
+            "best_of": 2
+        }
 
         req.set_next_token(Token(244, "He", -0.334532))
         print(req.get_next_token(), end='')
@@ -970,12 +1004,13 @@ class TestRollingBatch(unittest.TestCase):
 
         parameters = {"max_new_tokens": 4, "details": True, "best_of": 2}
 
-        req = Request(132,
-                      "This is a wonderful day",
+        req = Request(
+            TextInput(request_id=132,
+                      input_text="This is a wonderful day",
                       parameters=parameters,
-                      output_formatter=_json_output_formatter)
+                      output_formatter=_json_output_formatter))
         print(parameters)
-        assert parameters == {"max_new_tokens": 4, "best_of": 2}
+        assert req.request_input.parameters == parameters
 
         req.request_output.set_next_token(Token(244, "He", -0.334532),
                                           sequence_index=0)

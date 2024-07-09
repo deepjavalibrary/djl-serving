@@ -123,6 +123,7 @@ class TestTestModel(unittest.TestCase):
         loaded_result = []
         for row in sse_result:
             loaded_result.append(json.loads(row[6:]))
+        print(loaded_result)
         self.assertTrue("details" in loaded_result[-1], loaded_result[-1])
 
         for key in envs.keys():
