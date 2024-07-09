@@ -42,6 +42,7 @@ public class PyEnv {
 
     static final Logger logger = LoggerFactory.getLogger(PyEnv.class);
 
+    private static int clusterSize;
     private static String engineCacheDir;
     private static String version;
     private static EventLoopGroup eventLoopGroup;
@@ -49,6 +50,7 @@ public class PyEnv {
     private boolean mpiMode;
     private String pythonExecutable;
     private String entryPoint;
+    private String recommendedEntryPoint;
     private String handler;
     private int predictTimeout;
     private int modelLoadingTimeout;
@@ -83,6 +85,7 @@ public class PyEnv {
             return;
         }
 
+        setClusterSize();
         eventLoopGroup = Connection.newEventLoopGroup();
 
         Path tmp = null;
@@ -125,6 +128,20 @@ public class PyEnv {
                 Utils.deleteQuietly(tmp);
             }
         }
+    }
+
+    static void setClusterSize() {
+        if (clusterSize == 0) {
+            clusterSize = Integer.parseInt(Utils.getenv("DJL_CLUSTER_SIZE", "1"));
+        }
+    }
+
+    static int getClusterSize() {
+        return clusterSize;
+    }
+
+    static boolean isMultiNode() {
+        return clusterSize > 1;
     }
 
     static String getVersion() {
@@ -304,6 +321,15 @@ public class PyEnv {
     }
 
     /**
+     * Returns the master address.
+     *
+     * @return the master address
+     */
+    public String getMasterAddr() {
+        return Utils.getenv("MASTER_ADDR", "127.0.0.1");
+    }
+
+    /**
      * Returns the tensor parallel degree.
      *
      * @return the tensor parallel degree
@@ -338,7 +364,7 @@ public class PyEnv {
     }
 
     int getMpiWorkers() {
-        int gpuCount = CudaUtils.getGpuCount();
+        int gpuCount = CudaUtils.getGpuCount() * clusterSize;
         String visibleDevices = Utils.getenv("CUDA_VISIBLE_DEVICES");
         if (gpuCount > 0 && visibleDevices != null) {
             int visibleCount = visibleDevices.split(",").length;
@@ -356,7 +382,7 @@ public class PyEnv {
      * @return the model's entrypoint file path
      */
     public String getEntryPoint() {
-        return entryPoint == null ? "model.py" : entryPoint;
+        return entryPoint;
     }
 
     /**
@@ -366,6 +392,24 @@ public class PyEnv {
      */
     public void setEntryPoint(String entryPoint) {
         this.entryPoint = entryPoint;
+    }
+
+    /**
+     * Returns the lmi recommended entrypoint file path.
+     *
+     * @return lmi recommended entrypoint file path
+     */
+    public String getRecommendedEntryPoint() {
+        return this.recommendedEntryPoint;
+    }
+
+    /**
+     * Sets the lmi recommended entrypoint file path.
+     *
+     * @param recommendedEntryPoint the lmi recommended entrypoint file path
+     */
+    public void setRecommendedEntryPoint(String recommendedEntryPoint) {
+        this.recommendedEntryPoint = recommendedEntryPoint;
     }
 
     /**

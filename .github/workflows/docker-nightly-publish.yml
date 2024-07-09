@@ -7,6 +7,13 @@ on:
         description: 'release/nightly/temp, default is nightly'
         required: true
         default: 'nightly'
+  workflow_call:
+    inputs:
+      mode:
+        description: 'release/nightly/temp, default is nightly'
+        type: string
+        required: true
+        default: 'nightly'
   schedule:
     - cron: '0 13 * * *'
 
@@ -52,31 +59,31 @@ jobs:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
       - name: Build serving package for nightly
-        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build and push nightly docker image
-        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT ${{ matrix.arch }}
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
       - name: Build and push temp image
-        if: ${{ github.event.inputs.mode == 'temp' }}
+        if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT ${{ matrix.arch }}
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT ${{ matrix.arch }}
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
           docker push $tempTag
       - name: Build and push release docker image
-        if: ${{ github.event.inputs.mode == 'release' }}
+        if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
@@ -85,7 +92,7 @@ jobs:
           docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
       - name: Retag image for release
-        if: ${{ matrix.arch == 'cpu' && github.event.inputs.mode == 'release' }}
+        if: ${{ matrix.arch == 'cpu' && inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
@@ -151,31 +158,31 @@ jobs:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
       - name: Build serving package for nightly
-        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build and push nightly docker image
-        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT aarch64
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT aarch64
           docker compose push aarch64
       - name: Build and push temp image
-        if: ${{ github.event.inputs.mode == 'temp' }}
+        if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT aarch64
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT aarch64
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:aarch64-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:aarch64-nightly $tempTag
           docker push $tempTag
       - name: Build and push release docker image
-        if: ${{ github.event.inputs.mode == 'release' }}
+        if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
@@ -218,31 +225,31 @@ jobs:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
       - name: Build serving package for nightly
-        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         run: |
           ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build and push nightly docker image
-        if: ${{ github.event.inputs.mode == '' || github.event.inputs.mode == 'nightly' }}
+        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT lmi
           docker compose push lmi
       - name: Build and push temp image
-        if: ${{ github.event.inputs.mode == 'temp' }}
+        if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}~SNAPSHOT lmi
+          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT lmi
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:lmi-$GITHUB_SHA"
           docker tag deepjavalibrary/djl-serving:lmi-nightly $tempTag
           docker push $tempTag
       - name: Build and push release docker image
-        if: ${{ github.event.inputs.mode == 'release' }}
+        if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)

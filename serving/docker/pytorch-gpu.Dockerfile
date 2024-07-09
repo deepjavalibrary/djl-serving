@@ -9,15 +9,15 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.1.1-cudnn8-devel-ubuntu22.04
+ARG version=12.4.1-cudnn-devel-ubuntu22.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.28.0~SNAPSHOT
-ARG cuda_version=cu121
-ARG torch_version=2.2.2
-ARG torch_vision_version=0.17.2
-ARG onnx_version=1.17.1
+ARG djl_version=0.29.0~SNAPSHOT
+ARG cuda_version=cu124
+ARG torch_version=2.3.1
+ARG torch_vision_version=0.18.1
+ARG onnx_version=1.18.0
 ARG python_version=3.10
 ARG numpy_version=1.26.4
 
@@ -48,18 +48,19 @@ COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
 COPY scripts scripts/
+SHELL ["/bin/bash", "-c"]
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/install_djl_serving.sh $djl_version && \
-    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} pytorchgpu" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
-    rm -f /usr/local/djl-serving-*/lib/onnxruntime-$onnx_version.jar && \
-    curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
+    djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
+    djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
     pip3 install numpy==${numpy_version} && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-gpu && \
+    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
+    echo "${djl_version} pytorchgpu" > /opt/djl/bin/telemetry && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
@@ -74,7 +75,7 @@ CMD ["serve"]
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-gpu="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-27-0.pytorch-cu121="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.pytorch-cu121="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

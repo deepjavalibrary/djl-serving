@@ -44,10 +44,14 @@ def stop_on_any_exception(func):
     def try_catch_handling(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
-        except Exception:
+        except Exception as e:
             logging.exception("Rolling batch inference error")
             for request in self.active_requests:
-                token = Token(-1, "", -1, True)
+                token = Token(-1,
+                              "",
+                              log_prob=-1,
+                              special_token=True,
+                              error_msg=str(e))
                 request.set_next_token(token,
                                        last_token=True,
                                        finish_reason="error")

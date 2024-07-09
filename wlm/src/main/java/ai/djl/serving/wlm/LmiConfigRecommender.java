@@ -87,7 +87,10 @@ public final class LmiConfigRecommender {
             lmiProperties.setProperty("option.rolling_batch", "disable");
             return;
         }
-        String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
+
+        String defaultRollingBatch = isTnxEnabled(features) ? "disable" : "auto";
+        String rollingBatch =
+                lmiProperties.getProperty("option.rolling_batch", defaultRollingBatch);
         String modelType = modelConfig.getModelType();
         if (!"auto".equals(rollingBatch)) {
             return;

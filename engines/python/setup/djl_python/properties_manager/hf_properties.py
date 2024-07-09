@@ -45,6 +45,7 @@ class HuggingFaceProperties(Properties):
     device_id: int = -1
     task: str = None
     tensor_parallel_degree: int = -1
+    cluster_size: int = 1
     device_map: str = None
     load_in_4bit: Optional[bool] = None
     load_in_8bit: Optional[bool] = None
@@ -112,10 +113,12 @@ class HuggingFaceProperties(Properties):
             self.kwargs["device_map"] = self.device_map
             self.device = None
             logging.info(f"Using device map {self.device_map}")
-        elif self.tensor_parallel_degree > 0 and torch.cuda.device_count() > 0:
+        elif self.tensor_parallel_degree > 0 \
+                and self.cluster_size > 0 \
+                and torch.cuda.device_count() > 0:
             self.kwargs["device_map"] = "auto"
             self.device = None
-            world_size = torch.cuda.device_count()
+            world_size = torch.cuda.device_count() * self.cluster_size
             assert world_size == self.tensor_parallel_degree, \
                 f"TP degree ({self.tensor_parallel_degree}) doesn't match available GPUs ({world_size})"
             logging.info(f"Using {world_size} gpus")

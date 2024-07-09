@@ -17,6 +17,7 @@ import ai.djl.engine.EngineException;
 import ai.djl.metric.Metric;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.util.Utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,8 @@ class PyProcess {
     private PyEnv pyEnv;
     private Model model;
     private int workerId;
+    private String[] hosts;
+
     private Process process;
     private String pid;
     private List<Connection> connections;
@@ -60,14 +63,29 @@ class PyProcess {
         int port = counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+            int clusterSize = PyEnv.getClusterSize();
             connections = new ArrayList<>(tensorParallelDegree);
-            for (int i = 0; i < tensorParallelDegree; ++i) {
-                connections.add(new Connection(pyEnv, port, i));
+
+            if (clusterSize > 1) {
+                hosts = getHosts(clusterSize);
+                for (int i = 0; i < tensorParallelDegree; ++i) {
+                    connections.add(
+                            new Connection(
+                                    pyEnv,
+                                    port,
+                                    i,
+                                    hosts[i / (tensorParallelDegree / clusterSize)]));
+                }
+            } else {
+                for (int i = 0; i < tensorParallelDegree; ++i) {
+                    connections.add(new Connection(pyEnv, port, i, "127.0.0.1"));
+                }
             }
             counter.set(port + tensorParallelDegree);
         } else {
-            connections = Collections.singletonList(new Connection(pyEnv, port, -1));
+            connections = Collections.singletonList(new Connection(pyEnv, port, -1, "127.0.0.1"));
         }
+
         restartCount = new AtomicInteger(0);
         // TODO: avoid using this hack when TRT-LLM improve its behavior
         trtLlmMode = "trtllm".equals(model.getProperty("rolling_batch"));
@@ -137,7 +155,7 @@ class PyProcess {
             int port = connections.get(0).getPort();
             logger.info("Start process: {} - retry: {}", port, id);
             pyEnv.installDependency(model.getModelPath());
-            process = Connection.startPython(pyEnv, model, workerId, port);
+            process = Connection.startPython(pyEnv, model, workerId, port, hosts);
             pid = process.toString().split(", ")[0].replace("Process[pid=", "");
 
             String modelName = model.getName();
@@ -235,6 +253,17 @@ class PyProcess {
 
     boolean isStopped() {
         return !started;
+    }
+
+    private static String[] getHosts(int clusterSize) {
+        String leaderAddr = Utils.getenv("DJL_LEADER_ADDR");
+        String workerAddrFormat = Utils.getenv("DJL_WORKER_ADDR_FORMAT");
+        String[] res = new String[clusterSize];
+        res[0] = leaderAddr;
+        for (int i = 1; i < clusterSize; i++) {
+            res[i] = String.format(workerAddrFormat, i);
+        }
+        return res;
     }
 
     static final class ReaderThread extends Thread {

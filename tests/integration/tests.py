@@ -17,16 +17,22 @@ class Runner:
         self.container = container
         self.test_name = test_name
 
-        # Compute flavor
-        if djl_version is not None and len(djl_version) > 0:
-            if container == "cpu":
-                flavor = djl_version
-            else:
-                flavor = f"{djl_version}-{container}"
-        else:
+        # Compute flavor and repo
+        repo = "deepjavalibrary/djl-serving"
+        if djl_version is None or len(
+                djl_version) == 0 or djl_version == "nightly":
             flavor = f"{container}-nightly"
+        else:
+            if djl_version == "temp":
+                repo = "185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
+                flavor = f"{container}-{os.environ['GITHUB_SHA']}"
+            else:
+                if container == "cpu":
+                    flavor = djl_version
+                else:
+                    flavor = f"{djl_version}-{container}"
 
-        self.image = f"deepjavalibrary/djl-serving:{flavor}"
+        self.image = f"{repo}:{flavor}"
 
         # os.system(f'docker pull {self.image}')
         os.system('rm -rf models')
@@ -47,6 +53,8 @@ class Runner:
 
     def launch(self, env_vars=None, container=None, cmd=None):
         if env_vars is not None:
+            if isinstance(env_vars, list):
+                env_vars = "\n".join(env_vars)
             with open("docker_env", "w") as f:
                 f.write(env_vars)
         else:
@@ -65,6 +73,126 @@ class Runner:
             .split(),
             check=True,
             capture_output=True)
+
+
+class TestCpuFull:
+    # Runs on cpu
+    def test_python_model(self):
+        with Runner('cpu-full', 'python_model', download=True) as r:
+            r.launch(
+                cmd=
+                "serve -m test::Python=file:/opt/ml/model/resnet18_all_batch.zip"
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+            os.system("./test_client.sh tensor/ndlist 1,3,224,224")
+            os.system("./test_client.sh tensor/npz 1,3,224,224")
+
+    def test_python_dynamic_batch(self):
+        with Runner('cpu-full', 'dynamic_batch', download=True) as r:
+            env = ["SERVING_BATCH_SIZE=2", "SERVING_MAX_BATCH_DELAY=30000"]
+            r.launch(
+                env_vars=env,
+                cmd=
+                "serve -m test::Python=file:/opt/ml/model/resnet18_all_batch.zip"
+            )
+            os.system(
+                "EXPECT_TIMEOUT=1 ./test_client.sh image/jpg models/kitten.jpg"
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+
+@pytest.mark.parametrize('arch', ["cpu", "cpu-full"])
+class TestCpuBoth:
+    # Runs on cpu
+    def test_pytorch(self, arch):
+        with Runner(arch, 'pytorch', download=True) as r:
+            r.launch(
+                cmd=
+                "serve -m test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip"
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+    def test_pytorch_binary(self, arch):
+        with Runner(arch, 'pytorch_binary', download=True) as r:
+            r.launch(
+                cmd=
+                'serve -m "test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip?translatorFactory=ai.djl.translate.NoopServingTranslatorFactory&application=undefined'
+            )
+            os.system("./test_client.sh tensor/ndlist 1,3,224,224")
+            os.system("./test_client.sh tensor/npz 1,3,224,224")
+
+    def test_pytorch_dynamic_batch(self, arch):
+        with Runner(arch, 'pytorch_dynamic_batch', download=True) as r:
+            env = ["SERVING_BATCH_SIZE=2", "SERVING_MAX_BATCH_DELAY=30000"]
+            r.launch(
+                env_vars=env,
+                cmd=
+                'serve -m "test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip?translatorFactory=ai.djl.translate.NoopServingTranslatorFactory&application=undefined'
+            )
+            os.system(
+                "EXPECT_TIMEOUT=1 ./test_client.sh image/jpg models/kitten.jpg"
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+    def test_mxnet(self, arch):
+        with Runner(arch, 'mxnet', download=True) as r:
+            r.launch(
+                cmd='serve -m test::MXNet=file:/opt/ml/model/ssd_resnet50.zip')
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+    def test_onnx(self, arch):
+        with Runner(arch, 'onnx', download=True) as r:
+            r.launch(
+                cmd=
+                'serve -m test::OnnxRuntime=file:/opt/ml/model/resnet18-v1-7.zip'
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+    def test_tensorflow_binary(self, arch):
+        with Runner(arch, 'tensorflow_binary', download=True) as r:
+            r.launch(
+                cmd=
+                'serve -m test::TensorFlow=file:/opt/ml/model/resnet50v1.zip?model_name=resnet50'
+            )
+            os.system("./test_client.sh tensor/ndlist 1,224,224,3")
+
+
+class TestGpu:
+    # Runs on any gpu instance
+    def test_python_model(self):
+        with Runner('pytorch-gpu', 'python_model', download=True) as r:
+            r.launch(
+                cmd=
+                "serve -m test::Python=file:/opt/ml/model/resnet18_all_batch.zip"
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+    def test_pytorch(self):
+        with Runner('pytorch-gpu', 'pytorch_model', download=True) as r:
+            r.launch(
+                cmd=
+                "serve -m test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip"
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+
+class TestAarch64:
+    # Runs on aarch64
+    def test_pytorch(self):
+        with Runner('aarch64', 'pytorch_model', download=True) as r:
+            r.launch(
+                cmd=
+                "serve -m test::PyTorch=file:/opt/ml/model/resnet18_all_batch.zip"
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
+
+    def test_onnx(self):
+        with Runner('aarch64', 'onnx', download=True) as r:
+            r.launch(
+                cmd=
+                'serve -m test::OnnxRuntime=file:/opt/ml/model/resnet18-v1-7.zip'
+            )
+            os.system("./test_client.sh image/jpg models/kitten.jpg")
 
 
 class TestHfHandler:
@@ -243,8 +371,8 @@ class TestLmiDist1:
             envs = [
                 "OPTION_MAX_ROLLING_BATCH_SIZE=2",
                 "OPTION_OUTPUT_FORMATTER=jsonlines",
-                "TENSOR_PARALLEL_DEGREE=1", "HF_MODEL_ID=gpt2",
-                "OPTION_TASK=text-generation", "OPTION_ROLLING_BATCH=lmi-dist"
+                "TENSOR_PARALLEL_DEGREE=1", "OPTION_TASK=text-generation",
+                "OPTION_ROLLING_BATCH=lmi-dist"
             ]
             r.launch("\n".join(envs))
             client.run("lmi_dist gpt2".split())

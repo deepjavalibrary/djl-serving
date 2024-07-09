@@ -15,24 +15,25 @@ import os
 import re
 
 import torch
-from transformers import (
-    pipeline, Pipeline, Conversation, AutoModelForCausalLM,
-    AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
-    AutoModelForSequenceClassification, AutoModelForTokenClassification,
-    AutoModelForQuestionAnswering, StoppingCriteria, StoppingCriteriaList)
+from transformers import (pipeline, Pipeline, AutoModelForCausalLM,
+                          AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
+                          AutoModelForSequenceClassification,
+                          AutoModelForTokenClassification,
+                          AutoModelForQuestionAnswering, StoppingCriteria,
+                          StoppingCriteriaList)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from peft import PeftConfig, PeftModel, PeftModelForCausalLM
-from typing import Tuple, List, Callable, Dict
+from typing import Tuple, List
 
 from djl_python.encode_decode import encode
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.rolling_batch.rolling_batch import RollingBatch
 from djl_python.streaming_utils import StreamingUtils
 
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled, is_streaming_enabled
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-from djl_python.utils import parse_input_with_formatter, InputFormatConfigs, ParsedInput, rolling_batch_inference
+from djl_python.utils import rolling_batch_inference
+from djl_python.input_parser import ParsedInput, InputFormatConfigs, parse_input_with_formatter
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -383,12 +384,6 @@ class HuggingFaceService(object):
                                    tokenizer=self.tokenizer,
                                    device=self.hf_configs.device)
 
-        # wrap specific pipeline to support better ux
-        if task == "conversational":
-            self.hf_pipeline_unwrapped = hf_pipeline
-            hf_pipeline = self.wrap_conversation_pipeline(
-                self.hf_pipeline_unwrapped)
-
         if task == "text-generation":
             if issubclass(type(hf_pipeline.tokenizer),
                           PreTrainedTokenizerBase):
@@ -438,26 +433,6 @@ class HuggingFaceService(object):
 
         if self.hf_configs.device:
             self.model.to(self.hf_configs.device)
-
-    @staticmethod
-    def wrap_conversation_pipeline(hf_pipeline):
-
-        def wrapped_pipeline(inputs, *args, **kwargs):
-            converted_input = Conversation(
-                inputs["text"],
-                past_user_inputs=inputs.get("past_user_inputs", []),
-                generated_responses=inputs.get("generated_responses", []),
-            )
-            prediction = hf_pipeline(converted_input, *args, **kwargs)
-            return {
-                "generated_text": prediction.generated_responses[-1],
-                "conversation": {
-                    "past_user_inputs": prediction.past_user_inputs,
-                    "generated_responses": prediction.generated_responses,
-                },
-            }
-
-        return wrapped_pipeline
 
     def wrap_text_generation_pipeline(self, hf_pipeline):
 
@@ -517,7 +492,8 @@ class HuggingFaceService(object):
         except Exception as e:
             logging.error(
                 f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
-                f"This is required for loading huggingface models")
+                f"This is required for loading huggingface models",
+                exc_info=True)
             raise e
 
 

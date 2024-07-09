@@ -12,7 +12,7 @@
 ARG version=12.4.1-cudnn-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
-ARG djl_version=0.28.0~SNAPSHOT
+ARG djl_version=0.29.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.3.0
@@ -66,7 +66,7 @@ ENV BITSANDBYTES_NOWELCOME=1
 ENV USE_AICCL_BACKEND=true
 ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV SAFETENSORS_FAST_GPU=1
-ENV NCCL_BLOCKING_WAIT=0
+ENV TORCH_NCCL_BLOCKING_WAIT=0
 ENV NCCL_ASYNC_ERROR_HANDLING=1
 ENV TORCH_NCCL_AVOID_RECORD_STREAMS=1
 ENV SERVING_FEATURES=vllm,lmi-dist
@@ -87,13 +87,13 @@ RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ && \
     scripts/install_djl_serving.sh $djl_version && \
-    rm -f /usr/local/djl-serving-*/lib/onnxruntime-1.*.jar && \
-    curl -o $(ls -d /usr/local/djl-serving-*/)lib/onnxruntime_gpu-$onnx_version.jar https://publish.djl.ai/onnxruntime/$onnx_version/onnxruntime_gpu-$onnx_version.jar && \
-    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} lmi" > /opt/djl/bin/telemetry && \
     scripts/install_djl_serving.sh $djl_version ${torch_version} && \
+    djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
+    djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
+    mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
+    echo "${djl_version} lmi" > /opt/djl/bin/telemetry && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
@@ -130,7 +130,7 @@ RUN scripts/patch_oss_dlc.sh python && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-28-0.lmi="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

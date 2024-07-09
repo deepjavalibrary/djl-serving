@@ -240,6 +240,114 @@ class TestRollingBatch(unittest.TestCase):
             }
         }
 
+    def test_3p_fmt(self):
+        req = Request(1,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 1024,
+                          "details": True
+                      },
+                      output_formatter="3p")
+        final_str = []
+        req.set_next_token(Token(244, "He", -0.334532))
+        req.set_next_token(Token(244, "llo", -0.123123))
+        req.set_next_token(Token(4558, " world", -0.567854))
+        req.set_next_token(Token(245, "", -1, True, "some error"), True,
+                           "error")
+        final_str.append(req.get_next_token())
+        output = json.loads(''.join(final_str))
+        assert output == {
+            "body": {
+                "generation": "This is a wonderful dayHello world",
+                "prompt_token_count": 0,
+                "generation_token_count": 4,
+                "stop_reason": "error"
+            },
+            "content_type": "application/json",
+            "metering": {
+                "inputTokenCount": 0,
+                "outputTokenCount": 4,
+            },
+            "error": {
+                "error_code": 400,
+                "error_msg": "some error",
+            }
+        }
+
+    def test_3p_stream_fmt(self):
+        req = Request(1,
+                      "This is a wonderful day",
+                      parameters={
+                          "max_new_tokens": 1024,
+                          "details": True
+                      },
+                      output_formatter="3p_stream")
+        req.set_next_token(Token(244, "He", -0.334532))
+        next_token = json.loads(req.get_next_token())
+        assert next_token == {
+            "body": {
+                "generation": "He",
+                "prompt_token_count": 0,
+                "generation_token_count": 1,
+                "stop_reason": None,
+            },
+            "metering": {
+                "inputTokenCount": 0,
+                "outputTokenCount": 1,
+            },
+            "content_type": "application/jsonlines",
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(244, "llo", -0.123123))
+        next_token = json.loads(req.get_next_token())
+        assert next_token == {
+            "body": {
+                "generation": "llo",
+                "prompt_token_count": None,
+                "generation_token_count": 2,
+                "stop_reason": None,
+            },
+            "metering": {
+                "outputTokenCount": 2,
+            },
+            "content_type": "application/jsonlines",
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(4558, " world", -0.567854))
+        next_token = json.loads(req.get_next_token())
+        assert next_token == {
+            "body": {
+                "generation": " world",
+                "prompt_token_count": None,
+                "generation_token_count": 3,
+                "stop_reason": None,
+            },
+            "metering": {
+                "outputTokenCount": 3,
+            },
+            "content_type": "application/jsonlines",
+        }
+        req.reset_next_token()
+        req.set_next_token(Token(-1, "", -1, True, "some error"), True,
+                           "error")
+        next_token = json.loads(req.get_next_token())
+        assert next_token == {
+            "body": {
+                "generation": "",
+                "prompt_token_count": None,
+                "generation_token_count": 4,
+                "stop_reason": "error",
+            },
+            "metering": {
+                "outputTokenCount": 4,
+            },
+            "content_type": "application/jsonlines",
+            "error": {
+                "error_code": 400,
+                "error_msg": "some error",
+            }
+        }
+
     def test_return_full_text(self):
         req = Request(0,
                       "This is a wonderful day",

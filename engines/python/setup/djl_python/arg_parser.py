@@ -71,6 +71,16 @@ class ArgParser(object):
                             dest="tensor_parallel_degree",
                             type=int,
                             help='The tensor parallel degree')
+        parser.add_argument('--cluster-size',
+                            required=False,
+                            dest="cluster_size",
+                            type=int,
+                            help='The cluster size')
+        parser.add_argument('--recommended-entry-point',
+                            required=False,
+                            type=str,
+                            dest="recommended_entry_point",
+                            help="Lmi recommended entry point")
         return parser
 
     @staticmethod

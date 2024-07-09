@@ -87,6 +87,7 @@ class StreamingUtils:
             try:
                 model.generate(**kwargs)
             except Exception as e:
+                logging.warning("stream generation failed", exc_info=True)
                 streamer.put_text(str(e))
             finally:
                 streamer.end()

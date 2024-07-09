@@ -69,3 +69,8 @@ def load_model_service(model_dir, entry_point, device_id):
                                 batch_size, envelope)
 
     return TorchServeService(service, model_dir)
+
+
+def has_function_in_module(module, function_name):
+    return hasattr(module, function_name) and callable(
+        getattr(module, function_name))

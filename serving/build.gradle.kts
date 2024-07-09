@@ -32,15 +32,6 @@ dependencies {
     runtimeOnly("ai.djl.tensorrt:tensorrt")
     runtimeOnly(project(":engines:python"))
 
-    if (hasGpu) {
-        runtimeOnly("ai.djl.onnxruntime:onnxruntime-engine") {
-            exclude(group = "com.microsoft.onnxruntime", module = "onnxruntime")
-        }
-        runtimeOnly(libs.onnxruntime.gpu)
-    } else {
-        runtimeOnly("ai.djl.onnxruntime:onnxruntime-engine")
-    }
-
     testRuntimeOnly("org.bouncycastle:bcpkix-jdk18on:1.78")
     testRuntimeOnly("org.bouncycastle:bcprov-jdk18on:1.78")
     testRuntimeOnly(libs.snakeyaml)

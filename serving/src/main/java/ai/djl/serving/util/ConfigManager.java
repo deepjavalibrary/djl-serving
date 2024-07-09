@@ -84,6 +84,11 @@ public final class ConfigManager {
     private static final String ERROR_RATE_SERVER = "error_rate_server";
     private static final String ERROR_RATE_MODEL = "error_rate_model";
     private static final String ERROR_RATE_ANY = "error_rate_any";
+    private static final String BAD_REQUEST_ERROR_HTTP_CODE = "bad_request_http_code";
+    private static final String WLM_ERROR_HTTP_CODE = "wlm_error_http_code";
+    private static final String THROTTLE_ERROR_HTTP_CODE = "throttle_error_http_code";
+    private static final String TIMEOUT_ERROR_HTTP_CODE = "timeout_http_code";
+    private static final String SERVER_ERROR_HTTP_CODE = "server_error_http_code";
 
     // Configuration which are not documented or enabled through environment variables
     private static final String USE_NATIVE_IO = "use_native_io";
@@ -441,6 +446,51 @@ public final class ConfigManager {
      */
     public int getChunkedReadTimeout() {
         return getIntProperty(CHUNKED_READ_TIMEOUT, 60);
+    }
+
+    /**
+     * Returns the http response status code to use for bad request errors.
+     *
+     * @return the http response status code to use for bad request errors
+     */
+    public int getBadRequestErrorHttpCode() {
+        return getIntProperty(BAD_REQUEST_ERROR_HTTP_CODE, 400);
+    }
+
+    /**
+     * Returns the http response status code to use for WorkLoadManager errors.
+     *
+     * @return the http response status code to use for WorkLoadManager errors
+     */
+    public int getWlmErrorHttpCode() {
+        return getIntProperty(WLM_ERROR_HTTP_CODE, 503);
+    }
+
+    /**
+     * Returns the http response status code to use for throttling errors.
+     *
+     * @return the http response status code to use for throttling errors
+     */
+    public int getThrottleErrorHttpCode() {
+        return getIntProperty(THROTTLE_ERROR_HTTP_CODE, 503);
+    }
+
+    /**
+     * Returns the http response status code to use for Request Timeout errors.
+     *
+     * @return the http response status code to use for Request Timeout errors
+     */
+    public int getTimeoutErrorHttpCode() {
+        return getIntProperty(TIMEOUT_ERROR_HTTP_CODE, 400);
+    }
+
+    /**
+     * Returns the http response status code to use for generic Server errors.
+     *
+     * @return the http response status code to use for generic Server errors
+     */
+    public int getServerErrorHttpCode() {
+        return getIntProperty(SERVER_ERROR_HTTP_CODE, 500);
     }
 
     /**

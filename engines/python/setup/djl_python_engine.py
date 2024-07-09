@@ -24,7 +24,7 @@ import sys
 from djl_python.arg_parser import ArgParser
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.service_loader import load_model_service
+from djl_python.service_loader import load_model_service, has_function_in_module
 from djl_python.sm_log_filter import SMLogFilter
 
 SOCKET_ACCEPT_TIMEOUT = 30.0
@@ -45,22 +45,29 @@ class PythonEngine(object):
         if rank:
             os.environ["RANK"] = rank
 
+        self.model_dir = args.model_dir
         self.sock_type = args.sock_type
-        self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
+        self.sock_name = args.sock_name
         self.port = args.port
         self.service = service
         self.device_id = args.device_id
         self.tensor_parallel_degree = args.tensor_parallel_degree
+        self.cluster_size = args.cluster_size
+        self.entry_point = args.entry_point
+        self.recommended_entry_point = args.recommended_entry_point
 
         if self.sock_type == "unix":
             if self.sock_name is None:
                 raise ValueError("Missing sock-name argument.")
+            self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
 
             self.clean_up()
         elif self.sock_type == "tcp":
-            self.sock_name = "127.0.0.1"
+            if self.sock_name is None:
+                self.sock_name = "0.0.0.0"
             if self.port is None:
                 raise ValueError("Missing port argument.")
+            self.port = int(self.port) + int(rank) if rank else self.port
         else:
             raise ValueError(f"Invalid socket-type: {self.sock_type}.")
 
@@ -96,6 +103,8 @@ class PythonEngine(object):
         if self.sock_type == "unix":
             self.sock.bind(self.sock_name)
         else:
+            logging.info(
+                f"Socket bind on address: {self.sock_name}:{self.port}")
             self.sock.bind((self.sock_name, int(self.port)))
 
         self.sock.listen(128)
@@ -105,18 +114,34 @@ class PythonEngine(object):
         # workaround error(35, 'Resource temporarily unavailable') on OSX
         cl_socket.setblocking(True)
 
+        is_entry_point_verified = False
         while True:
             inputs = Input()
             inputs.read(cl_socket)
             prop = inputs.get_properties()
             if self.tensor_parallel_degree:
                 prop["tensor_parallel_degree"] = self.tensor_parallel_degree
+            if self.cluster_size:
+                prop["cluster_size"] = self.cluster_size
             prop["device_id"] = self.device_id
             if "output_formatter" in prop and hasattr(
                     self.service, prop["output_formatter"]):
                 prop["output_formatter"] = getattr(self.service,
                                                    prop["output_formatter"])
             function_name = inputs.get_function_name()
+            if not is_entry_point_verified:
+                if self.recommended_entry_point:
+                    if not has_function_in_module(self.service.module,
+                                                  function_name):
+                        self.service = load_model_service(
+                            self.model_dir, self.recommended_entry_point,
+                            self.device_id)
+                        logging.info(
+                            f"{self.entry_point} file has no handler function {function_name}."
+                            f"Hence choosing the LMI recommended entry point {self.recommended_entry_point}"
+                        )
+                is_entry_point_verified = True
+
             try:
                 outputs = self.service.invoke_handler(function_name, inputs)
                 if outputs is None:
@@ -158,7 +183,8 @@ def main():
         sock_type = args.sock_type
         sock_name = args.sock_name if rank is None else f"{args.sock_name}.{rank}"
 
-        model_service = load_model_service(args.model_dir, args.entry_point,
+        entry_point = args.entry_point if args.entry_point else args.recommended_entry_point
+        model_service = load_model_service(args.model_dir, entry_point,
                                            args.device_id)
 
         engine = PythonEngine(args, model_service)
