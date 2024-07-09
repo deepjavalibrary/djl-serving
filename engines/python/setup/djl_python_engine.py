@@ -47,23 +47,27 @@ class PythonEngine(object):
 
         self.model_dir = args.model_dir
         self.sock_type = args.sock_type
-        self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
+        self.sock_name = args.sock_name
         self.port = args.port
         self.service = service
         self.device_id = args.device_id
         self.tensor_parallel_degree = args.tensor_parallel_degree
+        self.cluster_size = args.cluster_size
         self.entry_point = args.entry_point
         self.recommended_entry_point = args.recommended_entry_point
 
         if self.sock_type == "unix":
             if self.sock_name is None:
                 raise ValueError("Missing sock-name argument.")
+            self.sock_name = f"{args.sock_name}.{rank}" if rank else args.sock_name
 
             self.clean_up()
         elif self.sock_type == "tcp":
-            self.sock_name = "127.0.0.1"
+            if self.sock_name is None:
+                self.sock_name = "0.0.0.0"
             if self.port is None:
                 raise ValueError("Missing port argument.")
+            self.port = int(self.port) + int(rank) if rank else self.port
         else:
             raise ValueError(f"Invalid socket-type: {self.sock_type}.")
 
@@ -99,6 +103,8 @@ class PythonEngine(object):
         if self.sock_type == "unix":
             self.sock.bind(self.sock_name)
         else:
+            logging.info(
+                f"Socket bind on address: {self.sock_name}:{self.port}")
             self.sock.bind((self.sock_name, int(self.port)))
 
         self.sock.listen(128)
@@ -115,6 +121,8 @@ class PythonEngine(object):
             prop = inputs.get_properties()
             if self.tensor_parallel_degree:
                 prop["tensor_parallel_degree"] = self.tensor_parallel_degree
+            if self.cluster_size:
+                prop["cluster_size"] = self.cluster_size
             prop["device_id"] = self.device_id
             if "output_formatter" in prop and hasattr(
                     self.service, prop["output_formatter"]):
