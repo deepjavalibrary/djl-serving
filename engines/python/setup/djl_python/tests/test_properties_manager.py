@@ -290,6 +290,7 @@ class TestConfigManager(unittest.TestCase):
             "model_id": "model_id",
             "model_dir": "model_dir",
             "tensor_parallel_degree": "4",
+            "cluster_size": "2",
             "load_in_4bit": "false",
             "load_in_8bit": "true",
             "low_cpu_mem_usage": "true",
@@ -305,6 +306,10 @@ class TestConfigManager(unittest.TestCase):
         }
 
         hf_configs = HuggingFaceProperties(**properties)
+        self.assertEqual(hf_configs.tensor_parallel_degree,
+                         int(properties['tensor_parallel_degree']))
+        self.assertEqual(hf_configs.cluster_size,
+                         int(properties['cluster_size']))
         self.assertTrue(hf_configs.load_in_8bit)
         self.assertTrue(hf_configs.low_cpu_mem_usage)
         self.assertFalse(hf_configs.disable_flash_attn)
