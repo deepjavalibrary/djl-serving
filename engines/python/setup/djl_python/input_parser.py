@@ -41,11 +41,11 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     errors = {}
     requests = []
     batch = inputs.get_batches()
+    kwargs["is_rolling_batch"] = is_rolling_batch_enabled(
+        kwargs.get("configs").rolling_batch)
     request_id_counter = get_req_id_counter(kwargs)
     for i, input_item in enumerate(batch):
         try:
-            kwargs["is_rolling_batch"] = is_rolling_batch_enabled(
-                kwargs.get("configs").rolling_batch)
             request_id = request_id_counter.next_id(
             ) if request_id_counter else i
             # TODO: Decide whether it is a text input based on content-type

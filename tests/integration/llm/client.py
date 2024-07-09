@@ -388,7 +388,7 @@ vllm_model_spec = {
         "batch_size": [3],
         "seq_length": [16, 32],
         "worker": 1,
-        "adapters": ["french", "spanish"],
+        "adapters": ["russian", "spanish"],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mistral-7b-unmerged-lora": {
