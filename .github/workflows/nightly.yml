@@ -1,0 +1,46 @@
+name: Nightly Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'release/nightly, default is nightly'
+        required: true
+        default: 'nightly'
+        options:
+          - nightly
+          - release
+  workflow_call:
+    inputs:
+      mode:
+        description: 'release/nightly, default is nightly'
+        type: string
+        required: true
+        default: 'nightly'
+  schedule:
+    - cron: '0 13 * * *'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/docker_build.yml
+    secrets: inherit
+    with:
+      mode: ${{ inputs.mode }}
+  integration:
+    needs: [build]
+    uses: ./.github/workflows/integration.yml
+    secrets: inherit
+    with:
+      djl-version: 'temp'
+  publish:
+    needs:
+      - build
+#      - integration # Uncomment to enable verified publishing only
+    uses: ./.github/workflows/docker_publish.yml
+    secrets: inherit
+    with:
+      mode: ${{ inputs.mode }}

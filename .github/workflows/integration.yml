@@ -4,11 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       djl-version:
-        description: 'The released version of DJL'
+        description: 'The released version of DJL. Can be "nightly", "temp", or a DJL release version like "0.28.0"'
         required: false
-        default: ''
-  schedule:
-    - cron: '0 15 * * *'
+        default: 'temp'
+  workflow_call:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL. Can be "nightly", "temp", or a DJL release version like "0.28.0"'
+        type: string
+        required: false
+        default: 'temp'
+
 
 
 jobs:
@@ -148,6 +154,15 @@ jobs:
         # Torch version doesn't really matter that much
         run: |
           pip3 install torch==2.3.0
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
+          aws-region: us-east-1
+      - name: Login for temp
+        if: ${{ inputs.djl-version == 'temp' }}
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp
       - name: Install awscurl
         working-directory: tests/integration
         run: |

@@ -1,4 +1,5 @@
-name: Sync docker and ECR repo
+name: OLD Sync docker and ECR repo
+# For use in building CVE patches for branches <= 0.28.0
 
 on:
   workflow_dispatch:
@@ -7,8 +8,6 @@ on:
         description: 'version string like 0.27.0, default is nightly'
         required: true
         default: 'nightly'
-  schedule:
-    - cron: '0 14 * * *'
 
 jobs:
   create-aarch64-runner:
