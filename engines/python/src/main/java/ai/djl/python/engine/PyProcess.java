@@ -256,8 +256,8 @@ class PyProcess {
     }
 
     private static String[] getHosts(int clusterSize) {
-        String leaderAddr = Utils.getenv("LEADER_ADDR");
-        String workerAddrFormat = Utils.getenv("WORKER_ADDR_FORMAT");
+        String leaderAddr = Utils.getenv("DJL_LEADER_ADDR");
+        String workerAddrFormat = Utils.getenv("DJL_WORKER_ADDR_FORMAT");
         String[] res = new String[clusterSize];
         res[0] = leaderAddr;
         for (int i = 1; i < clusterSize; i++) {
