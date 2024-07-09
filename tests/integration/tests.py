@@ -84,8 +84,8 @@ class Runner:
             capture_output=True)
 
 
+@pytest.mark.cpu
 class TestCpuFull:
-    # Runs on cpu
     def test_python_model(self):
         with Runner('cpu-full', 'python_model', download=True) as r:
             r.launch(
@@ -110,9 +110,9 @@ class TestCpuFull:
             os.system("./test_client.sh image/jpg models/kitten.jpg")
 
 
+@pytest.mark.cpu
 @pytest.mark.parametrize('arch', ["cpu", "cpu-full"])
 class TestCpuBoth:
-    # Runs on cpu
     def test_pytorch(self, arch):
         with Runner(arch, 'pytorch', download=True) as r:
             r.launch(
@@ -166,8 +166,9 @@ class TestCpuBoth:
             os.system("./test_client.sh tensor/ndlist 1,224,224,3")
 
 
+@pytest.mark.gpu
+@pytest.mark.gpu_4
 class TestGpu:
-    # Runs on any gpu instance
     def test_python_model(self):
         with Runner('pytorch-gpu', 'python_model', download=True) as r:
             r.launch(
@@ -185,8 +186,8 @@ class TestGpu:
             os.system("./test_client.sh image/jpg models/kitten.jpg")
 
 
+@pytest.mark.aarch64
 class TestAarch64:
-    # Runs on aarch64
     def test_pytorch(self):
         with Runner('aarch64', 'pytorch_model', download=True) as r:
             r.launch(
@@ -204,8 +205,9 @@ class TestAarch64:
             os.system("./test_client.sh image/jpg models/kitten.jpg")
 
 
+@pytest.mark.hf
+@pytest.mark.gpu_4
 class TestHfHandler:
-    # Runs on g5.12xl
     def test_gpt_neo(self):
         with Runner('lmi', 'test_gpt4all_lora') as r:
             prepare.build_hf_handler_model("gpt-neo-2.7b")
@@ -249,8 +251,9 @@ class TestHfHandler:
             client.run("huggingface t5-large".split())
 
 
+@pytest.mark.trtllm
+@pytest.mark.gpu_4
 class TestTrtLlmHandler1:
-    # Runs on g5.12xl
     def test_llama2_13b_tp4(self):
         with Runner('tensorrt-llm', 'llama2-13b') as r:
             prepare.build_trtllm_handler_model("llama2-13b")
@@ -294,8 +297,9 @@ class TestTrtLlmHandler1:
             client.run("trtllm santacoder".split())
 
 
+@pytest.mark.trtllm
+@pytest.mark.gpu_4
 class TestTrtLlmHandler2:
-    # Runs on g5.12xl
     def test_llama2_7b_hf_smoothquant(self):
         with Runner('tensorrt-llm', 'llama2-7b-smoothquant') as r:
             prepare.build_trtllm_handler_model("llama2-7b-smoothquant")
@@ -327,8 +331,9 @@ class TestTrtLlmHandler2:
             client.run("trtllm_chat llama2-7b-chat".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu_4
 class TestSchedulerSingleGPU:
-    # Runs on g5.12xl
 
     def test_gpt2(self):
         with Runner('lmi', 'gpt2') as r:
@@ -343,8 +348,9 @@ class TestSchedulerSingleGPU:
             rb_client.run("scheduler_single_gpu bloom-560m".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu_4
 class TestSchedulerMultiGPU:
-    # Runs on g5.12xl
 
     def test_gptj_6b(self):
         with Runner('lmi', 'gpt-j-6b') as r:
@@ -353,8 +359,9 @@ class TestSchedulerMultiGPU:
             rb_client.run("scheduler_multi_gpu gpt-j-6b".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu_4
 class TestLmiDist1:
-    # Runs on g5.12xl
 
     def test_gpt_neox_20b(self):
         with Runner('lmi', 'gpt-neox-20b') as r:
@@ -421,8 +428,9 @@ class TestLmiDist1:
         os.system('sudo rm -rf models')
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu_4
 class TestLmiDist2:
-    # Runs on g5.12xl
 
     def test_gpt_neox_20b(self):
         with Runner('lmi', 'octocoder') as r:
@@ -479,8 +487,9 @@ class TestLmiDist2:
             client.run("lmi_dist_chat llama2-7b-chat".split())
 
 
+@pytest.mark.vllm
+@pytest.mark.gpu_4
 class TestVllm1:
-    # Runs on g5.12xl
 
     def test_gpt_neox_20b(self):
         with Runner('lmi', 'gpt-neox-20b') as r:
@@ -527,8 +536,10 @@ class TestVllm1:
             client.run("vllm qwen2-7b-fp8".split())
 
 
+@pytest.mark.vllm
+@pytest.mark.lora
+@pytest.mark.gpu_4
 class TestVllmLora:
-    # Runs on g5.12xl
 
     def test_lora_unmerged(self):
         with Runner('lmi', 'llama-7b-unmerged-lora') as r:
@@ -567,8 +578,10 @@ class TestVllmLora:
             client.run("vllm_adapters llama3-8b-unmerged-lora".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.lora
+@pytest.mark.gpu_4
 class TestLmiDistLora:
-    # Runs on g5.12xl
 
     def test_lora_unmerged(self):
         with Runner('lmi', 'llama-7b-unmerged-lora') as r:
@@ -610,8 +623,8 @@ class TestLmiDistLora:
             client.run("lmi_dist_adapters llama3-8b-unmerged-lora".split())
 
 
+@pytest.mark.inf
 class TestNeuronx1:
-    # Runs on inf2.24xl
 
     def test_python_mode(self):
         with Runner('pytorch-inf2', 'test_python_mode', download=True) as r:
@@ -687,8 +700,8 @@ class TestNeuronx1:
             os.system('sudo rm -rf models')
 
 
+@pytest.mark.inf
 class TestNeuronx2:
-    # Runs on inf2.24xl
 
     def test_stream_opt(self):
         with Runner('pytorch-inf2', 'opt-1.3b-streaming') as r:
@@ -728,8 +741,8 @@ class TestNeuronx2:
                 "neuron-stable-diffusion stable-diffusion-xl-neuron".split())
 
 
+@pytest.mark.inf
 class TestNeuronxRollingBatch:
-    # Runs on inf2.24xl
 
     def test_llama_7b(self):
         with Runner('pytorch-inf2', 'llama-7b-rb') as r:
