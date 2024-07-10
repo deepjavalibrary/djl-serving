@@ -87,12 +87,12 @@ class TRTLLMRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self, requests: List[Request]) -> List:
+    def inference(self, new_requests: List[Request]) -> List:
         """
         Loads new requests into the batch when there is availability, and gets output tokens from the backend
         asynchronously.
 
-        :param requests: List[Request] List of requests
+        :param new_requests: List[Request] List of requests
         :param input_data: List of input prompts.
         :param parameters: List of settings pertaining to each request.
         :param adapters: List of adapters inputs for each request in a batch
@@ -100,7 +100,7 @@ class TRTLLMRollingBatch(RollingBatch):
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
         # add pending requests to active requests list
-        new_requests = self.get_new_requests(requests)
+        self.add_new_requests(new_requests)
         # step 0: register new active requests
         for request in new_requests:
             param = self.translate_triton_params(request.parameters)

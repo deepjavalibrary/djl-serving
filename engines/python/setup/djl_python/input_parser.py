@@ -30,6 +30,23 @@ class ParsedInput:
     batch: List = field(default_factory=lambda: [])
 
 
+def get_batch_start_id(batch, **kwargs):
+    if kwargs.get("is_rolling_batch"):
+        # for rolling batch, we only need to parse the new requests, as the active requests kept in cache.
+        rolling_batch = kwargs.get("rolling_batch")
+        active_requests_len = len(rolling_batch.active_requests)
+        batch_size = len(batch)
+        if batch_size > active_requests_len:
+            # if batch_size > active_requests_len, then new requests are received
+            return active_requests_len
+        else:
+            # no new requests are received, so sending batch_size, nothing will be parsed.
+            return batch_size
+    else:
+        # for non-rolling batch, python process only receives new requests.
+        return 0
+
+
 def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     """
     Preprocessing function that extracts information from Input objects.
@@ -44,7 +61,9 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     kwargs["is_rolling_batch"] = is_rolling_batch_enabled(
         kwargs.get("configs").rolling_batch)
     request_id_counter = get_req_id_counter(kwargs)
-    for i, input_item in enumerate(batch):
+    start_batch_id = get_batch_start_id(batch, **kwargs)
+    for i in range(start_batch_id, len(batch)):
+        input_item = batch[i]
         try:
             request_id = request_id_counter.next_id(
             ) if request_id_counter else i

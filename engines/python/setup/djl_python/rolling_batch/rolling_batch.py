@@ -93,30 +93,23 @@ class RollingBatch(ABC):
         raise RuntimeError("get_tokenizer function not supported")
 
     @abstractmethod
-    def inference(self, requests: List[Request]) -> List:
+    def inference(self, new_requests: List[Request]) -> List:
         """
         Performs prefill and decode operations for the batch.
 
-        :param requests: List[Request] List of requests
+        :param new_requests: List[Request] List of requests
 
         :return: generated batch decoded tokens
         """
         pass
 
-    def get_new_requests(self, requests: List[Request]) -> List[Request]:
+    def add_new_requests(self, requests: List[Request]):
         """
         Adds requests to the batch when there is availability
 
         :param requests: List[Request] List of requests
-
-        :return: list of current active requests (including those that have just been added)
         """
-        total_req_len = len(self.active_requests)
-        batch_size = len(requests)
-        if batch_size > total_req_len:
-            for i in range(total_req_len, batch_size):
-                self.active_requests.append(requests[i])
-        return self.active_requests[total_req_len:]
+        self.active_requests.extend(requests)
 
     @abstractmethod
     def preprocess_requests(self, requests: List[Request]):

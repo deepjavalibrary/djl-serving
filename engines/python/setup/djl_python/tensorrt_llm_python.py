@@ -115,7 +115,8 @@ class TRTLLMPythonService:
 
         parsed_input = parse_input_with_formatter(inputs,
                                                   **self.input_format_args)
-        if len(parsed_input.requests) == 0:
+        if parsed_input.errors and len(parsed_input.requests) == len(
+                parsed_input.errors):
             for i in range(len(parsed_input.batch)):
                 err = parsed_input.errors.get(i)
                 outputs.add(err, key="data", batch_index=i)

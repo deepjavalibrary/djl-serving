@@ -107,15 +107,15 @@ class VLLMRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self, requests: List[Request]) -> List:
+    def inference(self, new_requests: List[Request]) -> List:
         """
         Adds new requests and gets output tokens from the backend.
 
-        :param requests: List[Request] List of requests
+        :param new_requests: List[Request] List of requests
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
-        new_requests = self.get_new_requests(requests)
+        self.add_new_requests(new_requests)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = random_uuid()
