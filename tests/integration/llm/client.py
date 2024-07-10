@@ -212,6 +212,11 @@ transformers_neuronx_neo_model_spec = {
         "workers": 1,
         "seq_length": [512],
         "batch_size": [2]
+    },
+    "llama-3-8b": {
+        "workers": 1,
+        "seq_length": [128],
+        "batch_size": [1]
     }
 }
 
