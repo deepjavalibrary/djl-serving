@@ -19,14 +19,12 @@ from djl_python.test_model import TestHandler
 from djl_python import huggingface
 
 
-def override_rolling_batch(rolling_batch_type: str, is_mpi: bool,
-                           model_config):
+def override_rolling_batch(rolling_batch_type: str):
     from djl_python.tests.rolling_batch.fake_rolling_batch import FakeRollingBatch
     return FakeRollingBatch
 
 
-def override_rolling_batch_with_exception(rolling_batch_type: str,
-                                          is_mpi: bool, model_config):
+def override_rolling_batch_with_exception(rolling_batch_type: str):
     from djl_python.tests.rolling_batch.fake_rolling_batch import FakeRollingBatchWithException
     return FakeRollingBatchWithException
 
