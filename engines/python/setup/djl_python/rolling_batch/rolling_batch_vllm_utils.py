@@ -227,13 +227,7 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             lora_extra_vocab_size=config.lora_extra_vocab_size,
             max_cpu_loras=config.max_cpu_loras,
             revision=config.revision,
-            max_logprobs=config.max_logprobs,
-            image_input_type=config.image_input_type,
-            image_token_id=config.image_token_id,
-            image_input_shape=config.image_input_shape,
-            image_feature_size=config.image_feature_size,
-            image_processor=config.image_processor,
-            image_processor_revision=config.image_processor_revision)
+            max_logprobs=config.max_logprobs)
 
 
 def get_multi_modal_data(request: Request) -> dict:
