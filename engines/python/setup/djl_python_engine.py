@@ -24,7 +24,7 @@ import sys
 from djl_python.arg_parser import ArgParser
 from djl_python.inputs import Input
 from djl_python.outputs import Output
-from djl_python.service_loader import load_model_service, has_function_in_module
+from djl_python.service_loader import load_model_service, has_function_in_module, get_annotated_function
 from djl_python.sm_log_filter import SMLogFilter
 
 SOCKET_ACCEPT_TIMEOUT = 30.0
@@ -55,6 +55,8 @@ class PythonEngine(object):
         self.cluster_size = args.cluster_size
         self.entry_point = args.entry_point
         self.recommended_entry_point = args.recommended_entry_point
+        self.input_formatter = get_annotated_function(args.model_dir,
+                                                      "is_input_formatter")
 
         if self.sock_type == "unix":
             if self.sock_name is None:
@@ -128,6 +130,8 @@ class PythonEngine(object):
                     self.service, prop["output_formatter"]):
                 prop["output_formatter"] = getattr(self.service,
                                                    prop["output_formatter"])
+            if self.input_formatter:
+                prop["input_formatter"] = self.input_formatter
             function_name = inputs.get_function_name()
             if not is_entry_point_verified:
                 if self.recommended_entry_point:

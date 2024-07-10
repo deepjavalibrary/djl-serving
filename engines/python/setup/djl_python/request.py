@@ -28,7 +28,7 @@ class Request(object):
 
     """
 
-    def __init__(self, request_input: TextInput = None):
+    def __init__(self, request_input: RequestInput = None):
         """
         Initialize a request
 
@@ -42,11 +42,6 @@ class Request(object):
         self.input_text = request_input.input_text
         self.last_token = False
         self.adapter = request_input.adapters
-
-        # server parameters may not be set, if custom input formatter is used.
-        if not self.request_input.server_parameters:
-            self.request_input.server_parameters = self.request_input.parameters.copy(
-            )
         self.parameters = self.request_input.server_parameters
 
         # output formatter
