@@ -193,9 +193,10 @@ transformers_neuronx_aot_model_spec = {
 }
 
 transformers_neuronx_neo_model_spec = {
-    "llama-2-13b": {
+    "llama-2-13b-rb": {
         "seq_length": [1024],
-        "batch_size": [1, 4]
+        "batch_size": [1, 4],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
     "mixtral-8x22b": {
         "workers": 1,
@@ -1607,9 +1608,11 @@ def run(raw_args):
     elif args.handler == "transformers_neuronx-aot":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_aot_model_spec)
-    elif args.handler == "transformers_neuronx-neo":
+    elif args.handler == "transformers_neuronx_neo":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_neo_model_spec)
+    elif args.handler == "transformers_neuronx_neo_rolling_batch":
+        test_handler_rolling_batch(args.model, transformers_neuronx_neo_model_spec)
     elif args.handler == "lmi_dist":
         test_handler_rolling_batch(args.model, lmi_dist_model_spec)
     elif args.handler == "lmi_dist_adapters":

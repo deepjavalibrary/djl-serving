@@ -1003,7 +1003,7 @@ trtllm_neo_list = {
 }
 
 transformers_neuronx_neo_list = {
-    "llama-2-13b": {
+    "llama-2-13b-rb": {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
