@@ -224,4 +224,5 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             max_lora_rank=config.max_lora_rank,
             lora_extra_vocab_size=config.lora_extra_vocab_size,
             max_cpu_loras=config.max_cpu_loras,
-            revision=config.revision)
+            revision=config.revision,
+            max_logprobs=config.max_logprobs)
