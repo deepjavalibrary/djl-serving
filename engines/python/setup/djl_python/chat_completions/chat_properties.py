@@ -10,9 +10,86 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, Union, List, Dict, Any, Tuple
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, ConfigDict
+from PIL.Image import Image
 
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from djl_python.multimodal.utils import fetch_image
+
+
+class TextInput:
+    text: str
+
+    def __init__(self, text: str):
+        self.text = text
+
+
+class ImageInput:
+    image: Image
+
+    def __init__(self, image_url: str):
+        self.image = fetch_image(image_url)
+
+
+class Message(BaseModel):
+    # This is needed because TextInput/ImageInput are not BaseModel instances
+    # they don't really need to be, but we could figure out a way to avoid this if needed
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    role: str
+    content: List[
+        Union[TextInput, ImageInput],
+    ]
+
+    @field_validator('content', mode='before')
+    def validate_content(
+        cls, contents: Union[str, List[Dict[str, Any]]]
+    ) -> List[Union[TextInput, ImageInput]]:
+        if isinstance(contents, str):
+            return [TextInput(contents)]
+
+        transformed_content = []
+        for content in contents:
+            if "type" not in content:
+                raise ValueError(
+                    "You must provide 'type' for each object when providing a list of objects as content"
+                )
+            content_type = content["type"]
+            if content_type == "text":
+                if "text" not in content:
+                    raise ValueError(
+                        "'text' type content must specify the 'text'")
+                transformed_content.append(TextInput(content["text"]))
+            elif content_type == "image_url":
+                image_url = content.get("image_url", {})
+                url = image_url.get("url")
+                if url is None:
+                    raise ValueError(
+                        "image_url is not provided correctly. you must provide images as {'type': "
+                        "'image_url', 'image_url': {'url': <value>}}")
+                transformed_content.append(ImageInput(url))
+        return transformed_content
+
+    def get_tokenizer_inputs(self, image_token="<image>"):
+        texts = []
+        images = []
+        for content in self.content:
+            if isinstance(content, TextInput):
+                texts.append(content.text)
+            else:
+                images.append(content.image)
+
+        prompt_text = '\n'.join(texts)
+        if len(images) > 0:
+            # TODO: Find a reliable way to get the image token from tokenizer
+            prompt_text = f"{image_token}\n{prompt_text}"
+        return {
+            "role": self.role,
+            "content": prompt_text,
+        }
+
+    def get_images(self) -> List[Image]:
+        return [i.image for i in self.content if isinstance(i, ImageInput)]
 
 
 class ChatProperties(BaseModel):
@@ -21,7 +98,7 @@ class ChatProperties(BaseModel):
     See https://platform.openai.com/docs/api-reference/chat/create
     """
 
-    messages: List[Dict[str, Union[str, List]]]
+    messages: List[Message]
     model: Optional[str] = Field(default=None, exclude=True)  # Unused
     frequency_penalty: Optional[float] = 0.0
     logit_bias: Optional[Dict[str, float]] = Field(default=None, exclude=True)
@@ -38,20 +115,6 @@ class ChatProperties(BaseModel):
     temperature: Optional[float] = 1.0
     top_p: Optional[float] = 1.0
     user: Optional[str] = Field(default=None, exclude=True)
-
-    @field_validator('messages', mode='before')
-    def validate_messages(
-        cls, messages: List[Dict[str, Union[str, List]]]
-    ) -> List[Dict[str, Union[str, List]]]:
-        if messages is None:
-            return None
-
-        for message in messages:
-            if not ("role" in message and "content" in message):
-                raise ValueError(
-                    "When passing chat dicts as input, each dict must have a 'role' and 'content' key."
-                )
-        return messages
 
     @field_validator('frequency_penalty', mode='before')
     def validate_frequency_penalty(
