@@ -47,6 +47,7 @@ class VllmRbProperties(Properties):
     # Neuron vLLM properties
     device: Optional[str] = None
     preloaded_model: Optional[Any] = None
+    max_logprobs: Optional[int] = 5
 
     @field_validator('engine')
     def validate_engine(cls, engine):
