@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Any
 
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
 
@@ -21,7 +21,7 @@ class ChatProperties(BaseModel):
     See https://platform.openai.com/docs/api-reference/chat/create
     """
 
-    messages: List[Dict[str, str]]
+    messages: List[Dict[str, Union[str, List]]]
     model: Optional[str] = Field(default=None, exclude=True)  # Unused
     frequency_penalty: Optional[float] = 0.0
     logit_bias: Optional[Dict[str, float]] = Field(default=None, exclude=True)
@@ -41,7 +41,8 @@ class ChatProperties(BaseModel):
 
     @field_validator('messages', mode='before')
     def validate_messages(
-            cls, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        cls, messages: List[Dict[str, Union[str, List]]]
+    ) -> List[Dict[str, Union[str, List]]]:
         if messages is None:
             return None
 
