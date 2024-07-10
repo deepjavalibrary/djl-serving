@@ -143,15 +143,15 @@ class LmiDistRollingBatch(RollingBatch):
         return parameters
 
     @stop_on_any_exception
-    def inference(self, requests: List[Request]) -> List:
+    def inference(self, new_requests: List[Request]) -> List:
         """
         Adds new requests and gets output tokens from the backend.
 
-        :param requests: List of requests
+        :param new_requests: List of requests
 
         :return results: List of dictionaries, one for each request, that contain output tokens and other data.
         """
-        new_requests = self.get_new_requests(requests)
+        self.add_new_requests(new_requests)
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = str(request.id)
@@ -159,6 +159,7 @@ class LmiDistRollingBatch(RollingBatch):
             request_params = RequestParams(**params)
             lora_request_params = get_lora_request_params(
                 request, self.lora_ids)
+            # Constructing Request in lmi-dist library
             lmi_dist_request = Request(
                 id=request_id,
                 prompt=request.input_text,

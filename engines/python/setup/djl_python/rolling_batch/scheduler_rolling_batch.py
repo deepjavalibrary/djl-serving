@@ -69,14 +69,14 @@ class SchedulerRollingBatch(RollingBatch):
         self._init_scheduler()
 
     @stop_on_any_exception
-    def inference(self, requests: List) -> List:
+    def inference(self, new_requests: List) -> List:
         """
         Performs prefill and decode operations for the batch.
 
-        :param requests: List[Request] List of requests
+        :param new_requests: List[Request] List of requests
         :return: generated batch decoded tokens
         """
-        new_requests = self.get_new_requests(requests)
+        self.add_new_requests(new_requests)
 
         preprocessed_new_requests = self.preprocess_requests(new_requests)
         self._prefill_and_decode(preprocessed_new_requests)

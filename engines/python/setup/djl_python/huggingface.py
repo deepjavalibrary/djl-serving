@@ -226,7 +226,7 @@ class HuggingFaceService(object):
                                                   **self.input_format_args)
         requests = parsed_input.requests
         errors = parsed_input.errors
-        if len(requests) == 0:
+        if errors and len(parsed_input.batch) == len(errors):
             for i in range(len(parsed_input.batch)):
                 err = errors.get(i)
                 if is_rolling_batch_enabled(self.hf_configs.rolling_batch):

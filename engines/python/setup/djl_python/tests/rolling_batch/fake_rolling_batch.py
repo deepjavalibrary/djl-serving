@@ -65,8 +65,8 @@ class FakeRollingBatch(RollingBatch):
 
     @profile_objects
     @stop_on_any_exception
-    def inference(self, requests: List[Request]) -> List:
-        new_requests = self.get_new_requests(requests)
+    def inference(self, new_requests: List[Request]) -> List:
+        self.add_new_requests(new_requests)
 
         for new_request in new_requests:
             max_len = new_request.parameters[
@@ -118,10 +118,10 @@ class FakeRollingBatchWithException(FakeRollingBatch):
 
     @profile_objects
     @stop_on_any_exception
-    def inference(self, requests: List[Request]):
+    def inference(self, new_requests: List[Request]):
 
         if self.dead_counter.get_id() < self.dead_trigger:
             self.dead_counter.next_id()
-            return super().inference(requests)
+            return super().inference(new_requests)
         else:
             raise RuntimeError("Death trigger triggered...")

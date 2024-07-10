@@ -98,17 +98,17 @@ class NeuronRollingBatch(RollingBatch):
             speculated_generation = generation.speculated_generations.dequeue()
 
     @stop_on_any_exception
-    def inference(self, requests: List[Request]) -> list:
+    def inference(self, new_requests: List[Request]) -> list:
         """
         Loads new requests and gets output tokens from all currently active requests from
         the Neuron backend.
 
-        :param requests: List[Request] List of requests
+        :param new_requests: List[Request] List of requests
 
         :return: generated batch decoded tokens - list of dictionaries, one for
                  each request, that contain output tokens and other data.
         """
-        new_requests = self.get_new_requests(requests)
+        self.add_new_requests(new_requests)
         if len(new_requests) > 0:
             generations = self.scheduler.prefill(new_requests)
         else:
