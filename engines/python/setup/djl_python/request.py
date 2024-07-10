@@ -28,7 +28,7 @@ class Request(object):
 
     """
 
-    def __init__(self, request_input: TextInput = None):
+    def __init__(self, request_input: RequestInput = None):
         """
         Initialize a request
 

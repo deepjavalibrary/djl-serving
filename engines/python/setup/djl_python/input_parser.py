@@ -11,16 +11,28 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
+import os
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Optional, Callable
 
 from djl_python import Input
 from djl_python.chat_completions.chat_utils import is_chat_completions_request, parse_chat_completions_request
 from djl_python.encode_decode import decode
 from djl_python.properties_manager.properties import is_rolling_batch_enabled
 from djl_python.request import Request
-from djl_python.request_io import TextInput
+from djl_python.request_io import TextInput, RequestInput
 from djl_python.three_p.three_p_utils import is_3p_request, parse_3p_request
+
+
+def input_formatter(function):
+    """
+    Decorator for input_formatter. User just need to annotate @input_formatter for their custom defined function.
+    :param function:  Decorator takes in the function and adds an attribute.
+    :return:
+    """
+    # adding an attribute to the function, which is used to find the decorated function.
+    function.is_input_formatter = True
+    return function
 
 
 @dataclass
@@ -58,21 +70,26 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     errors = {}
     requests = []
     batch = inputs.get_batches()
+    configs = kwargs.get("configs")
     kwargs["is_rolling_batch"] = is_rolling_batch_enabled(
-        kwargs.get("configs").rolling_batch)
-    request_id_counter = get_req_id_counter(kwargs)
+        configs.rolling_batch)
+    req_id_counter = get_req_id_counter(kwargs)
     start_batch_id = get_batch_start_id(batch, **kwargs)
+    input_formatter_function = configs.input_formatter if configs.input_formatter else format_input
     for i in range(start_batch_id, len(batch)):
         input_item = batch[i]
         try:
-            request_id = request_id_counter.next_id(
-            ) if request_id_counter else i
-            # TODO: Decide whether it is a text input based on content-type
-            request_input = TextInput(
-                request_id=request_id,
-                tokenizer=kwargs.get("tokenizer"),
-                tgi_compat=kwargs.get("configs").tgi_compat)
-            format_input(request_input, input_item, **kwargs)
+            # input formatter can be user written as well. We look for model.py and search for the decorator.
+            request_input = input_formatter_function(input_item, **kwargs)
+
+            # populate additional information in request_input
+            request_id = req_id_counter.next_id() if req_id_counter else i
+            request_input.request_id = request_id
+            request_input.tokenizer = kwargs.get("tokenizer")
+            request_input.tgi_compat = configs.tgi_compat
+
+            # We add server maintained parameters
+            add_server_maintained_params(request_input, input_item, **kwargs)
             request = Request(request_input=request_input)
             requests.append(request)
         except Exception as e:  # pylint: disable=broad-except
@@ -96,13 +113,14 @@ def get_req_id_counter(kwargs):
     return req_id_counter
 
 
-def format_input(request_input: TextInput, input_item: Input,
-                 **kwargs) -> None:
+def format_input(input_item: Input, **kwargs) -> RequestInput:
+    # TODO: Decide whether it is a text input based on content-type
+    request_input = TextInput()
     content_type = input_item.get_property("Content-Type")
     input_map = decode(input_item, content_type)
     parse_text_inputs_params(request_input, input_item, input_map, **kwargs)
-    add_server_maintained_params(request_input, input_item, **kwargs)
     parse_adapters(request_input, input_item, input_map, **kwargs)
+    return request_input
 
 
 def parse_text_inputs_params(request_input: TextInput, input_item: Input,
@@ -138,9 +156,15 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
             "cached_prompt")
 
 
-def add_server_maintained_params(request_input: TextInput, input_item: Input,
-                                 **kwargs):
-    # Add some additional parameters for djl serving to do some work that are necessary.
+def add_server_maintained_params(request_input: RequestInput,
+                                 input_item: Input, **kwargs):
+    """
+    Add some additional parameters for djl serving to do some work that are necessary.
+
+    :param request_input: request_input
+    :param input_item: Input object
+    :param kwargs: other parameters that are needed.
+    """
     request_input.server_parameters = request_input.parameters.copy()
     # Per request streaming is only supported by rolling batch
     if "seed" not in request_input.server_parameters:

@@ -16,6 +16,7 @@ import json
 import logging
 import os
 from importlib.machinery import SourceFileLoader
+from typing import Callable, Optional
 
 
 class ModelService(object):
@@ -74,3 +75,39 @@ def load_model_service(model_dir, entry_point, device_id):
 def has_function_in_module(module, function_name):
     return hasattr(module, function_name) and callable(
         getattr(module, function_name))
+
+
+def is_valid_dir(dir_path: str) -> bool:
+    return os.path.exists(os.path.dirname(dir_path))
+
+
+def find_decorated_function(module,
+                            decorator_attribute: str) -> Optional[Callable]:
+    for function_name in dir(module):
+        obj = getattr(module, function_name)
+        if callable(obj) and getattr(obj, decorator_attribute, False):
+            return obj
+    return None
+
+
+def get_annotated_function(model_dir: str,
+                           decorator_attribute: str) -> Optional[Callable]:
+    """
+    Looks for a given annotation in model.py. User have to write their function
+    in model.py as of now.
+
+    :param model_dir: model directory to look for the model.py
+    :param decorator_attribute: decorated_attribute
+    :return: Callable input_formatter function
+    """
+    try:
+        service = load_model_service(model_dir, "model.py", -1)
+        input_formatter_function = find_decorated_function(
+            service.module, decorator_attribute)
+        if input_formatter_function:
+            return input_formatter_function
+    except ValueError:
+        # No model.py is found, we default to our default input formatter
+        pass
+
+    return None

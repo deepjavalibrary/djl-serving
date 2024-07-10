@@ -132,7 +132,7 @@ class RequestInput:
         parameters: parameters in the request payload
         server_parameters: parameters that are modified by the built-in handlers to support backend engines.
     """
-    request_id: int
+    request_id: int = None
     output_formatter: Union[Callable, str] = None
     parameters: Dict = field(default_factory=lambda: {})
     server_parameters: Dict = field(default_factory=lambda: {})
