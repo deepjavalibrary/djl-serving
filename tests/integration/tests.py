@@ -11,6 +11,15 @@ import test_client
 djl_version = os.environ.get('TEST_DJL_VERSION', '').strip()
 
 
+def is_applicable_cuda_capability(arch: int) -> bool:
+    import torch
+    if not torch.cuda.is_available():
+        return False
+
+    major, minor = torch.cuda.get_device_capability()
+    return (10 * major + minor) >= arch
+
+
 class Runner:
 
     def __init__(self, container, test_name=None, download=False):
@@ -383,6 +392,21 @@ class TestLmiDist1:
             r.launch()
             client.run("lmi_dist mpt-7b".split())
 
+    def test_mistral_7b_marlin(self):
+        with Runner('lmi', 'mistral-7b-marlin') as r:
+            prepare.build_lmi_dist_model("mistral-7b-marlin")
+            r.launch()
+            client.run("lmi_dist mistral-7b-marlin".split())
+
+    def test_llama2_13b_flashinfer(self):
+        with Runner('lmi', 'llama-2-13b-flashinfer') as r:
+            prepare.build_lmi_dist_model("llama-2-13b-flashinfer")
+            envs = [
+                "VLLM_ATTENTION_BACKEND=FLASHINFER",
+            ]
+            r.launch(env_vars=envs)
+            client.run("lmi_dist llama-2-13b-flashinfer".split())
+
     def test_llama2_tiny_autoawq(self):
         with Runner('lmi', 'llama-2-tiny-autoawq') as r:
             prepare.build_lmi_dist_model("llama-2-tiny")
@@ -493,6 +517,14 @@ class TestVllm1:
             prepare.build_vllm_model("llama2-7b-chat")
             r.launch()
             client.run("vllm_chat llama2-7b-chat".split())
+
+    @pytest.mark.skipif(not is_applicable_cuda_capability(89),
+                        reason="Unsupported CUDA capability")
+    def test_qwen2_7b_fp8(self):
+        with Runner('lmi', 'qwen2-7b-fp8') as r:
+            prepare.build_vllm_model("qwen2-7b-fp8")
+            r.launch()
+            client.run("vllm qwen2-7b-fp8".split())
 
 
 class TestVllmLora:

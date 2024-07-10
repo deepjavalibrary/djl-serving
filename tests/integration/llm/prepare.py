@@ -418,6 +418,19 @@ lmi_dist_model_list = {
         "option.max_rolling_batch_size": 4,
         "option.quantize": "awq"
     },
+    "mistral-7b-marlin": {
+        "option.model_id": "neuralmagic/OpenHermes-2.5-Mistral-7B-marlin",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+        "option.quantize": "marlin"
+    },
+    "llama-2-13b-flashinfer": {
+        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+    },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
         "option.tensor_parallel_degree": "max",
@@ -446,17 +459,6 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
-    },
-    "llama-7b-unmerged-lora": {
-        "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
-        "option.tensor_parallel_degree": "max",
-        "option.task": "text-generation",
-        "option.dtype": "fp16",
-        "option.adapters": "adapters",
-        "option.enable_lora": "true",
-        "adapter_ids": ["tloen/alpaca-lora-7b", "22h/cabrita-lora-v0-1"],
-        "adapter_names": ["english-alpaca", "portugese-alpaca"],
-        "option.gpu_memory_utilization": "0.8",
     },
     "llama2-13b-awq-unmerged-lora": {
         "option.model_id":
@@ -601,6 +603,13 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 8,
         "option.max_rolling_batch_size": 32,
         "option.output_formatter": "jsonlines"
+    },
+    "qwen2-7b-fp8": {
+        "option.model_id": "neuralmagic/Qwen2-7B-Instruct-FP8",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4,
+        "option.quantize": "fp8"
     },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",

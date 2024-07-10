@@ -19,22 +19,22 @@ ARG torch_version=2.3.0
 ARG torch_vision_version=0.18.0
 ARG onnx_version=1.18.0
 ARG onnxruntime_wheel="https://publish.djl.ai/onnxruntime/1.18.0/onnxruntime_gpu-1.18.0-cp310-cp310-linux_x86_64.whl"
-ARG pydantic_version=2.7.1
+ARG pydantic_version=2.8.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
-ARG vllm_cuda_name="cu12"
-ARG vllm_nccl_version=2.18.1
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.41.1
-ARG accelerate_version=0.30.1
+ARG transformers_version=4.42.3
+ARG accelerate_version=0.32.1
 ARG bitsandbytes_version=0.43.1
-ARG optimum_version=1.20.0
+ARG optimum_version=1.21.2
 ARG auto_gptq_version=0.7.1
-ARG datasets_version=2.19.1
+ARG datasets_version=2.20.0
 ARG autoawq_version=0.2.5
+ARG tokenizers_version=0.19.1
 # LMI-Dist Deps
-ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt230/vllm-0.4.2%2Bcu124-cp310-cp310-linux_x86_64.whl"
-ARG flash_attn_2_wheel="https://publish.djl.ai/flash_attn/cu124-pt230/flash_attn-2.5.8-cp310-cp310-linux_x86_64.whl"
+ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.5.1/vllm-0.5.1-cp310-cp310-manylinux1_x86_64.whl"
+ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.5.9/vllm_flash_attn-2.5.9-cp310-cp310-manylinux1_x86_64.whl"
+ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.0.8/flashinfer-0.0.8+cu121torch2.3-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
@@ -57,7 +57,7 @@ ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu121-precxx11
 ENV VLLM_NO_USAGE_STATS=1
-ENV VLLM_CONFIG_ROOT=/opt/djl/vllm/.config
+ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 
 ENV HF_HOME=/tmp/.cache/huggingface
@@ -102,22 +102,17 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     optimum==${optimum_version} auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
-    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} && \
+    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} \
+    tokenizers==${tokenizers_version} pydantic==${pydantic_version} && \
     pip3 install ${djl_converter_wheel} --no-deps && \
+    git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
     pip3 cache purge
 
-RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} pydantic==${pydantic_version} && \
+RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} ${flash_infer_wheel} && \
     pip3 cache purge
 
 # Add CUDA-Compat
 RUN apt-get update && apt-get install -y cuda-compat-12-4 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-
-# We use the same NCCL version as vLLM for lmi-dist https://github.com/vllm-project/vllm/blob/v0.4.2/vllm/utils.py#L641-L646
-# This is due to https://github.com/vllm-project/vllm/blob/v0.4.2/vllm/distributed/device_communicators/pynccl.py#L1-L9
-RUN mkdir -p ${VLLM_CONFIG_ROOT}/vllm/nccl/$vllm_cuda_name/ && curl -L -o ${VLLM_CONFIG_ROOT}/vllm/nccl/$vllm_cuda_name/libnccl.so.$vllm_nccl_version \
-    https://github.com/vllm-project/vllm-nccl/releases/download/v0.1.0/$vllm_cuda_name-libnccl.so.$vllm_nccl_version && \
-    # The following is done only so that we can run the CI with `-u djl`. Sagemaker wouldn't require this.
-    chmod -R a+w ${VLLM_CONFIG_ROOT}
 
 RUN scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh lmi && \
