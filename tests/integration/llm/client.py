@@ -194,9 +194,8 @@ transformers_neuronx_aot_model_spec = {
 
 transformers_neuronx_neo_model_spec = {
     "llama-2-13b": {
-        "workers": 1,
         "seq_length": [1024],
-        "batch_size": [4]
+        "batch_size": [1, 4]
     },
     "mixtral-8x22b": {
         "workers": 1,
