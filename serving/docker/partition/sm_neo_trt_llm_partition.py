@@ -17,8 +17,9 @@ import sys
 from typing import Final
 
 from utils import (update_kwargs_with_env_vars, load_properties,
-                   update_dataset_cache_location, remove_option_from_properties)
-from sm_neo_utils import (CompilationFatalError, write_error_to_file, 
+                   update_dataset_cache_location,
+                   remove_option_from_properties)
+from sm_neo_utils import (CompilationFatalError, write_error_to_file,
                           get_neo_env_vars)
 from tensorrt_llm_toolkit import create_model_repo
 
@@ -44,8 +45,8 @@ class NeoTRTLLMPartitionService():
         try:
             create_model_repo(self.INPUT_MODEL_DIRECTORY, **kwargs)
         except Exception as exc:
-                raise CompilationFatalError(
-                    f"Encountered an error during TRT-LLM compilation: {exc}")
+            raise CompilationFatalError(
+                f"Encountered an error during TRT-LLM compilation: {exc}")
 
     def get_properties(self):
         """Get properties from serving.properties and/or environment variables."""
@@ -54,7 +55,9 @@ class NeoTRTLLMPartitionService():
 
     def generate_properties_file(self):
         """Generate serving.properties file in output repo, so compiled artifacts can be deployed."""
-        with open(os.path.join(self.OUTPUT_MODEL_DIRECTORY, "serving.properties"), "w") as f:
+        with open(
+                os.path.join(self.OUTPUT_MODEL_DIRECTORY,
+                             "serving.properties"), "w") as f:
             f.write("engine=MPI\n")
             for key, value in self.properties.items():
                 if key != "option.model_id" and key != "option.model_dir":
@@ -77,8 +80,8 @@ def main():
         neo_trtllm_partition_service = NeoTRTLLMPartitionService()
         neo_trtllm_partition_service.neo_partition()
     except Exception as exc:
-        write_error_to_file(exc,
-                            neo_trtllm_partition_service.COMPILATION_ERROR_FILE)
+        write_error_to_file(
+            exc, neo_trtllm_partition_service.COMPILATION_ERROR_FILE)
         raise exc
 
 

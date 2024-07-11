@@ -20,7 +20,7 @@ import torch
 
 from sm_neo_utils import (CompilationFatalError, write_error_to_file,
                           get_neo_env_vars)
-from utils import (extract_python_jar, load_properties, 
+from utils import (extract_python_jar, load_properties,
                    update_dataset_cache_location)
 from properties_manager import PropertiesManager
 from partition import PartitionService
