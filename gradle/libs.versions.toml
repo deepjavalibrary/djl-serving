@@ -14,6 +14,7 @@ disruptor = "3.4.4"
 prometheus = "1.2.1"
 awssdk = "2.25.45"
 httpcomponents = "4.5.14"
+jsonpath = "2.9.0"
 
 testng = "7.10.2"
 junit = "4.13.2"

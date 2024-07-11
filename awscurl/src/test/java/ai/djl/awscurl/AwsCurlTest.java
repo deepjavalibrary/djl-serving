@@ -431,6 +431,36 @@ public class AwsCurlTest {
     }
 
     @Test
+    public void testTritonServerOutput() {
+        System.setProperty("TOKENIZER", "gpt2");
+        TokenUtils.setTokenizer(); // reset tokenizer
+        TestHttpHandler.setContent(
+                "{\"model_name\":\"tensorrt_llm_bls\", \"model_version\":\"1\",\n"
+                        + "\"outputs\":[\n"
+                        + "{\"name\":\"text_output\", \"data\":[\"Hello world\"]},\n"
+                        + "{\"name\":\"cum_log_probs\", \"data\":[0.0]}]}",
+                HttpHeaderValues.APPLICATION_JSON);
+        String[] args = {
+            "http://localhost:18080/invocations",
+            "-H",
+            "Content-type: application/json",
+            "-d",
+            "{}",
+            "-c",
+            "1",
+            "-N",
+            "2",
+            "-P",
+            "-t",
+            "-j",
+            "$.outputs[?(@.name==\"text_output\")].data[0]"
+        };
+        Result ret = AwsCurl.run(args);
+        Assert.assertEquals(ret.getTotalTokens(), 4);
+        Assert.assertNotNull(ret.getTokenThroughput());
+    }
+
+    @Test
     public void testServerSentEvent() {
         System.setProperty("TOKENIZER", "gpt2");
         System.setProperty("EXCLUDE_INPUT_TOKEN", "true");

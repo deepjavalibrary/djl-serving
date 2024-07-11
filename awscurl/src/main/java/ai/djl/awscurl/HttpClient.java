@@ -75,7 +75,7 @@ final class HttpClient {
             boolean dumpHeader,
             AtomicInteger tokens,
             long[] requestTime,
-            String[] names)
+            String[] jq)
             throws IOException {
         ps.write(("\n" + System.currentTimeMillis() + ": ").getBytes(StandardCharsets.UTF_8));
         long begin = System.nanoTime();
@@ -144,7 +144,7 @@ final class HttpClient {
                         try {
                             JsonElement element = JsonUtils.GSON.fromJson(body, JsonElement.class);
                             List<String> lines = new ArrayList<>();
-                            JsonUtils.getJsonList(element, lines, names);
+                            JsonUtils.getJsonList(element, lines, jq);
                             updateTokenCount(lines, tokens, request);
                         } catch (JsonParseException e) {
                             AwsCurl.logger.warn("Invalid json response: {}", body);
@@ -161,8 +161,7 @@ final class HttpClient {
                             List<StringBuilder> list = new ArrayList<>();
                             while ((line = reader.readLine()) != null) {
                                 hasError =
-                                        JsonUtils.processJsonLine(list, ps, line, names)
-                                                || hasError;
+                                        JsonUtils.processJsonLine(list, ps, line, jq) || hasError;
                             }
                             updateTokenCount(list, tokens, request);
                         }
@@ -172,25 +171,18 @@ final class HttpClient {
                             ret = new BasicHttpResponse(status);
                         }
                     } else if ("text/event-stream".equals(contentType)) {
-                        handleServerSentEvent(is, requestTime, begin, names, tokens, request, ps);
+                        handleServerSentEvent(is, requestTime, begin, jq, tokens, request, ps);
                     } else if ("application/vnd.amazon.eventstream".equals(contentType)) {
                         Header header = resp.getFirstHeader("X-Amzn-SageMaker-Content-Type");
                         String realContentType = header == null ? null : header.getValue();
                         handleEventStream(
-                                is,
-                                ps,
-                                realContentType,
-                                requestTime,
-                                begin,
-                                names,
-                                tokens,
-                                request);
+                                is, ps, realContentType, requestTime, begin, jq, tokens, request);
                     }
                 } else if ("application/vnd.amazon.eventstream".equals(contentType)) {
                     String realContentType =
                             resp.getFirstHeader("X-Amzn-SageMaker-Content-Type").getValue();
                     handleEventStream(
-                            is, ps, realContentType, requestTime, begin, names, null, request);
+                            is, ps, realContentType, requestTime, begin, jq, null, request);
                 } else {
                     is.transferTo(ps);
                     ps.flush();
@@ -208,7 +200,7 @@ final class HttpClient {
             InputStream is,
             long[] requestTime,
             long begin,
-            String[] names,
+            String[] jq,
             AtomicInteger tokens,
             SignableRequest request,
             OutputStream ps)
@@ -229,7 +221,7 @@ final class HttpClient {
                 ps.write(line.getBytes(StandardCharsets.UTF_8));
                 ps.write(new byte[] {'\n'});
                 JsonElement element = JsonUtils.GSON.fromJson(line, JsonElement.class);
-                JsonUtils.getJsonList(element, list, names);
+                JsonUtils.getJsonList(element, list, jq);
             }
             if (tokens != null) {
                 updateTokenCount(list, tokens, request);
@@ -243,7 +235,7 @@ final class HttpClient {
             String realContentType,
             long[] requestTime,
             long begin,
-            String[] names,
+            String[] jq,
             AtomicInteger tokens,
             SignableRequest request)
             throws IOException {
@@ -276,14 +268,14 @@ final class HttpClient {
         byte[] bytes = bos.toByteArray();
         InputStream bis = new ByteArrayInputStream(bytes);
         if ("text/event-stream".equalsIgnoreCase(realContentType)) {
-            handleServerSentEvent(bis, requestTime, begin, names, tokens, request, ps);
+            handleServerSentEvent(bis, requestTime, begin, jq, tokens, request, ps);
             return;
         }
         List<StringBuilder> list = new ArrayList<>();
         Scanner scanner = new Scanner(bis, StandardCharsets.UTF_8);
         while (scanner.hasNext()) {
             String line = scanner.nextLine();
-            if (JsonUtils.processJsonLine(list, ps, line, names)) {
+            if (JsonUtils.processJsonLine(list, ps, line, jq)) {
                 throw new IOException("Response contains error");
             }
         }

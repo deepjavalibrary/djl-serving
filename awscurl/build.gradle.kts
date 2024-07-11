@@ -12,6 +12,9 @@ dependencies {
     implementation(libs.commons.codec)
     implementation(libs.apache.httpclient)
     implementation(libs.apache.httpmime)
+    implementation("com.jayway.jsonpath:json-path:${libs.versions.jsonpath.get()}") {
+        exclude(group = "net.minidev", module = "json-smart")
+    }
 
     testImplementation(libs.netty.http)
     testImplementation(libs.testng) {

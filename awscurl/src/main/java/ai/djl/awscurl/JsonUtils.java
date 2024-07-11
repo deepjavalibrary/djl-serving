@@ -18,11 +18,20 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.GsonJsonProvider;
+import com.jayway.jsonpath.spi.json.JsonProvider;
+import com.jayway.jsonpath.spi.mapper.GsonMappingProvider;
+import com.jayway.jsonpath.spi.mapper.MappingProvider;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 final class JsonUtils {
@@ -31,24 +40,48 @@ final class JsonUtils {
     static final Gson GSON_PRETTY = new GsonBuilder().setPrettyPrinting().create();
     private static AtomicBoolean printException = new AtomicBoolean(true);
 
+    static {
+        Configuration.setDefaults(
+                new Configuration.Defaults() {
+
+                    private final JsonProvider jsonProvider = new GsonJsonProvider();
+                    private final MappingProvider mappingProvider = new GsonMappingProvider();
+
+                    @Override
+                    public JsonProvider jsonProvider() {
+                        return jsonProvider;
+                    }
+
+                    @Override
+                    public MappingProvider mappingProvider() {
+                        return mappingProvider;
+                    }
+
+                    @Override
+                    public Set<Option> options() {
+                        return EnumSet.noneOf(Option.class);
+                    }
+                });
+    }
+
     private JsonUtils() {}
 
-    static void getJsonList(JsonElement element, List<String> list, String[] names) {
+    static void getJsonList(JsonElement element, List<String> list, String[] jq) {
         if (element.isJsonArray()) {
             JsonArray array = element.getAsJsonArray();
             for (int i = 0; i < array.size(); ++i) {
-                getJsonList(array.get(i), list, names);
+                getJsonList(array.get(i), list, jq);
             }
         } else if (element.isJsonObject()) {
             JsonObject obj = element.getAsJsonObject();
             JsonElement e;
-            if (names == null) {
-                e = find(obj, new String[] {"token", "text"}, 0);
+            if (jq == null) {
+                e = find(obj, new String[] {"token", "text"});
                 if (e == null && obj.get("token") == null) {
                     e = obj.get("generated_text");
                 }
             } else {
-                e = find(obj, names, 0);
+                e = find(obj, jq);
             }
             if (e != null) {
                 if (e.isJsonPrimitive()) {
@@ -78,22 +111,22 @@ final class JsonUtils {
 
     @SuppressWarnings("PMD.SystemPrintln")
     static boolean processJsonLine(
-            List<StringBuilder> list, OutputStream ps, String line, String[] name)
+            List<StringBuilder> list, OutputStream ps, String line, String[] jq)
             throws IOException {
         boolean hasError = false;
         try {
             JsonObject map = GSON.fromJson(line, JsonObject.class);
             JsonElement outputs;
-            if (name == null) {
+            if (jq == null) {
                 outputs = map.get("outputs");
                 if (outputs == null) {
-                    outputs = find(map, new String[] {"token", "text"}, 0);
+                    outputs = find(map, new String[] {"token", "text"});
                     if (outputs == null && map.get("token") == null) {
                         outputs = map.get("generated_text");
                     }
                 }
             } else {
-                outputs = find(map, name, 0);
+                outputs = find(map, jq);
             }
             if (outputs != null) {
                 if (outputs.isJsonArray()) {
@@ -127,6 +160,13 @@ final class JsonUtils {
         ps.write(line.getBytes(StandardCharsets.UTF_8));
         ps.write(new byte[] {'\n'});
         return hasError;
+    }
+
+    static JsonElement find(JsonElement root, String[] jq) {
+        if (jq != null && jq.length == 1 && jq[0].startsWith("$")) {
+            return JsonPath.parse(GSON.toJson(root)).read(jq[0]);
+        }
+        return find(root, jq, 0);
     }
 
     static JsonElement find(JsonElement root, String[] names, int level) {
