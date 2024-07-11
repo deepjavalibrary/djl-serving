@@ -110,7 +110,7 @@ final class TokenUtils {
                             + djlVersion
                             + '/'
                             + classifier
-                            + '/'
+                            + "/cpu/"
                             + encodedLibName;
             DownloadUtils.download(new URL(url), path, null);
         }

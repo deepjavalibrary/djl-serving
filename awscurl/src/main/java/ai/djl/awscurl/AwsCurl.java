@@ -1007,6 +1007,9 @@ public final class AwsCurl {
             if (jq == null) {
                 return null; // NOPMD
             }
+            if (jq.startsWith("$")) {
+                return new String[] {jq};
+            }
             return jq.split("/");
         }
 
