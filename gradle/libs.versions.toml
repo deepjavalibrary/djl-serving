@@ -27,7 +27,7 @@ commons-cli = { module = "commons-cli:commons-cli", version.ref = "commonsCli" }
 commons-codec = { module = "commons-codec:commons-codec", version.ref = "commonsCodec" }
 apache-httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpcomponents" }
 apache-httpmime = { module = "org.apache.httpcomponents:httpmime", version.ref = "httpcomponents" }
-apache-log4j-slf4j = { module = "org.apache.logging.log4j:log4j-slf4j-impl", version.ref = "log4jSlf4j" }
+apache-log4j-slf4j = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4jSlf4j" }
 apache-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4jSlf4j" }
 disruptor = { module = "com.lmax:disruptor", version.ref = "disruptor" }
 netty-http = { module = "io.netty:netty-codec-http", version.ref = "netty" }
