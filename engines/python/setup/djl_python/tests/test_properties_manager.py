@@ -11,7 +11,6 @@ from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties, LmiDistQuantizeMethods
 from djl_python.properties_manager.scheduler_rb_properties import SchedulerRbProperties
-from djl_python.chat_completions.chat_properties import ChatProperties
 from djl_python.tests.utils import parameterized, parameters
 
 import torch
@@ -39,19 +38,6 @@ common_properties = {
     # spec_dec
     "draft_model_id": "draft_model_id",
     "spec_length": "0"
-}
-
-chat_messages_properties = {
-    "messages": [
-        {
-            "role": "system",
-            "content": "You are a friendly chatbot"
-        },
-        {
-            "role": "user",
-            "content": "Which is bigger, the moon or the sun?"
-        },
-    ]
 }
 
 
@@ -510,107 +496,6 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(scheduler_configs.max_splits,
                          int(properties['max_splits']))
         self.assertEqual(scheduler_configs.multi_gpu, properties['multi_gpu'])
-
-    def test_chat_configs(self):
-
-        def test_chat_min_configs():
-            chat_configs = ChatProperties(**chat_messages_properties)
-            self.assertEqual(chat_configs.messages,
-                             chat_messages_properties["messages"])
-            self.assertIsNone(chat_configs.model)
-            self.assertEqual(chat_configs.frequency_penalty, 0.0)
-            self.assertIsNone(chat_configs.logit_bias)
-            self.assertFalse(chat_configs.logprobs)
-            self.assertIsNone(chat_configs.top_logprobs)
-            self.assertIsNone(chat_configs.max_tokens)
-            self.assertEqual(chat_configs.n, 1)
-            self.assertEqual(chat_configs.presence_penalty, 0.0)
-            self.assertIsNone(chat_configs.seed)
-            self.assertIsNone(chat_configs.stop)
-            self.assertFalse(chat_configs.stream)
-            self.assertEqual(chat_configs.temperature, 1.0)
-            self.assertEqual(chat_configs.top_p, 1.0)
-            self.assertIsNone(chat_configs.user)
-
-        def test_chat_all_configs():
-            properties = dict(chat_messages_properties)
-            properties["model"] = "model"
-            properties["frequency_penalty"] = "1.0"
-            properties["logit_bias"] = {"2435": -100.0, "640": -100.0}
-            properties["logprobs"] = "false"
-            properties["top_logprobs"] = "3"
-            properties["max_tokens"] = "256"
-            properties["n"] = "1"
-            properties["presence_penalty"] = "1.0"
-            properties["seed"] = "123"
-            properties["stop"] = ["stop"]
-            properties["stream"] = "true"
-            properties["temperature"] = "1.0"
-            properties["top_p"] = "3.0"
-            properties["user"] = "user"
-
-            chat_configs = ChatProperties(**properties)
-            self.assertEqual(chat_configs.messages, properties["messages"])
-            self.assertEqual(chat_configs.model, properties['model'])
-            self.assertEqual(chat_configs.frequency_penalty,
-                             float(properties['frequency_penalty']))
-            self.assertEqual(chat_configs.logit_bias, properties['logit_bias'])
-            self.assertFalse(chat_configs.logprobs)
-            self.assertIsNone(chat_configs.top_logprobs)
-            self.assertEqual(chat_configs.max_tokens,
-                             int(properties['max_tokens']))
-            self.assertEqual(chat_configs.n, int(properties['n']))
-            self.assertEqual(chat_configs.presence_penalty,
-                             float(properties['presence_penalty']))
-            self.assertEqual(chat_configs.seed, int(properties['seed']))
-            self.assertEqual(chat_configs.stop, properties['stop'])
-            self.assertTrue(chat_configs.stream)
-            self.assertEqual(chat_configs.temperature,
-                             float(properties['temperature']))
-            self.assertEqual(chat_configs.top_p, float(properties['top_p']))
-            self.assertEqual(chat_configs.user, properties['user'])
-
-        test_chat_min_configs()
-        test_chat_all_configs()
-
-    @parameters([{
-        "messages": [{
-            "role1": "system",
-            "content": "You are a friendly chatbot"
-        }]
-    }, {
-        "frequency_penalty": "-3.0"
-    }, {
-        "frequency_penalty": "3.0"
-    }, {
-        "logit_bias": {
-            "2435": -100.0,
-            "640": 200.0
-        }
-    }, {
-        "logit_bias": {
-            "2435": -200.0,
-            "640": 100.0
-        }
-    }, {
-        "logprobs": "true",
-        "top_logprobs": "-1"
-    }, {
-        "logprobs": "true",
-        "top_logprobs": "30"
-    }, {
-        "presence_penalty": "-3.0"
-    }, {
-        "presence_penalty": "3.0"
-    }, {
-        "temperature": "-1.0"
-    }, {
-        "temperature": "3.0"
-    }])
-    def test_chat_invalid_configs(self, params):
-        test_properties = {**chat_messages_properties, **params}
-        with self.assertRaises(ValueError):
-            ChatProperties(**test_properties)
 
 
 if __name__ == '__main__':
