@@ -114,6 +114,8 @@ jobs:
             instance: g6
           - test: TestVllmLora
             instance: g6
+          - test: TestVLMs
+            instance: g6
           - test: TestLmiDistLora
             instance: g6
           - test: TestNeuronx1

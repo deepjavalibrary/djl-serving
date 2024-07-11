@@ -495,13 +495,6 @@ class TestVllm1:
             r.launch()
             client.run("vllm_chat llama2-7b-chat".split())
 
-    def test_llava_next_chat(self):
-        with Runner('lmi', 'llava-next-chat') as r:
-            prepare.build_vllm_model("llava-next-chat")
-            r.launch()
-            openai_vision_client.run(
-                "url https://resources.djl.ai/images/dog_bike_car.jpg".split())
-
 
 class TestVllmLora:
     # Runs on g5.12xl
@@ -541,6 +534,16 @@ class TestVllmLora:
             prepare.build_vllm_model("llama3-8b-unmerged-lora")
             r.launch()
             client.run("vllm_adapters llama3-8b-unmerged-lora".split())
+
+
+class TestVLMs:
+
+    def test_llava_next_chat(self):
+        with Runner('lmi', 'llava-next-chat') as r:
+            prepare.build_vllm_model("llava-next-chat")
+            r.launch()
+            openai_vision_client.run(
+                "url https://resources.djl.ai/images/dog_bike_car.jpg".split())
 
 
 class TestLmiDistLora:
