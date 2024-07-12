@@ -46,6 +46,7 @@ class Properties(BaseModel):
     # Required configurations from user
     model_id_or_path: str
     # Optional configurations with default values
+    model_dir: Optional[str] = None
     # Make the default to auto, after java front end changes and test cases are changed.
     rolling_batch: RollingBatchEnum = RollingBatchEnum.disable
     tensor_parallel_degree: int = 1
@@ -57,6 +58,7 @@ class Properties(BaseModel):
     dtype: Optional[str] = None
     revision: Optional[str] = None
     output_formatter: Optional[Union[str, Callable]] = None
+    input_formatter: Optional[Callable] = None
     waiting_steps: Optional[int] = None
     mpi_mode: bool = False
     tgi_compat: Optional[bool] = False
