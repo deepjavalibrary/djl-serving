@@ -161,7 +161,7 @@ class TokenSelector:
             generation_config.pad_token_id = eos_token_id if isinstance(
                 eos_token_id, int) else eos_token_id[0]
 
-        generation_mode = model._get_generation_mode(generation_config, None)
+        generation_mode = generation_config.get_generation_mode()
         if generation_mode not in [
                 GenerationMode.GREEDY_SEARCH, GenerationMode.SAMPLE
         ]:

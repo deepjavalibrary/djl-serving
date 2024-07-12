@@ -276,7 +276,7 @@ class ContinuousBatchingNeuronGenerator(NeuronGenerator):
 
         prefill_slots = []
         for request in new_requests:
-            slot = empty_slots.pop()
+            slot = empty_slots.pop(0)
             slot.assign(request, self.model.generation_config, self.tokenizer,
                         self.acceptor)
             prefill_slots.append(slot)

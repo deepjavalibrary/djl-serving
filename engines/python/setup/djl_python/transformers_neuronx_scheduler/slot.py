@@ -250,7 +250,7 @@ class Slot:
 
     @property
     def stopped(self) -> bool:
-        return self._selector.stopping_criteria(self._tokens, None)
+        return self._selector.stopping_criteria(self._tokens.view(1, -1), None)
 
     @property
     def tokens(self) -> torch.LongTensor:
