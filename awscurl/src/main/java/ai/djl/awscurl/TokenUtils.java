@@ -56,8 +56,9 @@ final class TokenUtils {
             Path cacheDir = Utils.getEngineCacheDir("tokenizers");
             Platform platform = Platform.detectPlatform("tokenizers");
             String classifier = platform.getClassifier();
+            String flavor = platform.getFlavor();
             String version = platform.getVersion();
-            Path dir = cacheDir.resolve(version + '-' + classifier);
+            Path dir = cacheDir.resolve(version + '-' + flavor + '-' + classifier);
             downloadLibs(dir, version, classifier, System.mapLibraryName("tokenizers"));
             if (classifier.startsWith("win-")) {
                 downloadLibs(dir, version, classifier, "libwinpthread-1.dll");
