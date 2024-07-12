@@ -63,21 +63,22 @@ class PyProcess {
         int port = counter.getAndIncrement();
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+            int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
             int clusterSize = PyEnv.getClusterSize();
-            connections = new ArrayList<>(tensorParallelDegree);
+            connections = new ArrayList<>(tensorParallelDegree*pipelineParallelDegree);
 
             if (clusterSize > 1) {
                 hosts = getHosts(clusterSize);
-                for (int i = 0; i < tensorParallelDegree; ++i) {
+                for (int i = 0; i < tensorParallelDegree*pipelineParallelDegree; ++i) {
                     connections.add(
                             new Connection(
                                     pyEnv,
                                     port,
                                     i,
-                                    hosts[i / (tensorParallelDegree / clusterSize)]));
+                                    hosts[i / (tensorParallelDegree*pipelineParallelDegree / clusterSize)]));
                 }
             } else {
-                for (int i = 0; i < tensorParallelDegree; ++i) {
+                for (int i = 0; i < tensorParallelDegree*pipelineParallelDegree; ++i) {
                     connections.add(new Connection(pyEnv, port, i, "127.0.0.1"));
                 }
             }

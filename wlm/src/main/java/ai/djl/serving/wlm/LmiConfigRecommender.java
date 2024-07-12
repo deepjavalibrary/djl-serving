@@ -84,6 +84,7 @@ public final class LmiConfigRecommender {
         setRollingBatch(lmiProperties, modelConfig, features);
         setMpiMode(lmiProperties, modelConfig, features);
         setTensorParallelDegree(lmiProperties);
+        setPipelineParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
     }
 
@@ -147,6 +148,14 @@ public final class LmiConfigRecommender {
             tpDegree = String.valueOf(CudaUtils.getGpuCount());
         }
         lmiProperties.setProperty("option.tensor_parallel_degree", tpDegree);
+    }
+
+    private static void setPipelineParallelDegree(Properties lmiProperties) {
+        if (lmiProperties.containsKey("option.pipeline_parallel_degree")) {
+            return;
+        }
+        String ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
+        lmiProperties.setProperty("option.pipeline_parallel_degree", ppDegree);
     }
 
     private static void setDynamicBatch(

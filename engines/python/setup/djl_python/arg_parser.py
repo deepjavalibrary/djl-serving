@@ -71,6 +71,11 @@ class ArgParser(object):
                             dest="tensor_parallel_degree",
                             type=int,
                             help='The tensor parallel degree')
+        parser.add_argument('--pipeline-parallel-degree',
+                            required=False,
+                            dest="pipeline_parallel_degree",
+                            type=int,
+                            help='The pipeline parallel degree')
         parser.add_argument('--cluster-size',
                             required=False,
                             dest="cluster_size",

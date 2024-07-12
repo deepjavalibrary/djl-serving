@@ -126,12 +126,23 @@ class Connection {
         int deviceId = device.getDeviceId();
         int clusterSize = PyEnv.getClusterSize();
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
+        int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
         String entryPoint = pyEnv.getEntryPoint();
         String recommendedEntryPoint = pyEnv.getRecommendedEntryPoint();
 
         if (PyEnv.isMultiNode()) {
-            String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree / clusterSize);
+
+            int mpiSlots = (tensorParallelDegree*pipelineParallelDegree) / 2;
+            int mpiProcesses = tensorParallelDegree*pipelineParallelDegree;
+
+            // if (pipelineParallelDegree != clusterSize) {
+            //     logger.warn("In multi-node setting, pipeline parallel degree must equal the cluster size. Setting pp degree = cluster size = {}.", clusterSize);
+            //     pipelineParallelDegree = clusterSize;
+            // }
+
+            String cudaDevices = getVisibleDevices(workerId, mpiSlots);
             logger.info("Set before mpirun CUDA_VISIBLE_DEVICES={}", cudaDevices);
+            logger.info("Received: pp degree: {} and tp depgree: {} and cluster size: {}", pipelineParallelDegree, tensorParallelDegree, clusterSize);
             StringBuilder sb = new StringBuilder();
             boolean first = true;
             for (String host : hosts) {
@@ -140,12 +151,12 @@ class Connection {
                 } else {
                     sb.append(',');
                 }
-                sb.append(host).append(':').append(tensorParallelDegree / clusterSize);
+                sb.append(host).append(':').append(mpiSlots);
             }
-            String[] args = new String[46];
+            String[] args = new String[48];
             args[0] = "mpirun";
             args[1] = "-np";
-            args[2] = String.valueOf(tensorParallelDegree);
+            args[2] = String.valueOf(mpiProcesses);
             args[3] = "--host";
             args[4] = sb.toString();
             args[5] = "--allow-run-as-root";
@@ -185,10 +196,12 @@ class Connection {
             args[39] = String.valueOf(port);
             args[40] = "--tensor-parallel-degree";
             args[41] = String.valueOf(tensorParallelDegree);
-            args[42] = "--cluster-size";
-            args[43] = String.valueOf(clusterSize);
-            args[44] = "--recommended-entry-point";
-            args[45] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+            args[42] = "--pipeline-parallel-degree";
+            args[43] = String.valueOf(pipelineParallelDegree);
+            args[44] = "--cluster-size";
+            args[45] = String.valueOf(clusterSize);
+            args[46] = "--recommended-entry-point";
+            args[47] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
             return args;
         }
 

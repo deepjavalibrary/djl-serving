@@ -52,6 +52,7 @@ class PythonEngine(object):
         self.service = service
         self.device_id = args.device_id
         self.tensor_parallel_degree = args.tensor_parallel_degree
+        self.pipeline_parallel_degree = args.pipeline_parallel_degree
         self.cluster_size = args.cluster_size
         self.entry_point = args.entry_point
         self.recommended_entry_point = args.recommended_entry_point
@@ -123,6 +124,8 @@ class PythonEngine(object):
             prop = inputs.get_properties()
             if self.tensor_parallel_degree:
                 prop["tensor_parallel_degree"] = self.tensor_parallel_degree
+            if self.pipeline_parallel_degree:
+                prop["pipeline_parallel_degree"] = self.pipeline_parallel_degree
             if self.cluster_size:
                 prop["cluster_size"] = self.cluster_size
             prop["device_id"] = self.device_id
