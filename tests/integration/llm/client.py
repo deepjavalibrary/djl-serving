@@ -521,6 +521,14 @@ vllm_model_spec = {
     },
 }
 
+vllm_neo_model_spec = {
+    "llama-3-8b": {
+        "batch_size": [1],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3-8B"
+    }
+}
+
 vllm_chat_model_spec = {
     "llama2-7b-chat": {
         "max_memory_per_gpu": [25.0],
@@ -1625,6 +1633,8 @@ def run(raw_args):
         test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
+    elif args.handler == "vllm_neo":
+        test_handler_rolling_batch(args.model, vllm_neo_model_spec)
     elif args.handler == "performance":
         test_performance()
     elif args.handler == "lmi_dist_aiccl":

@@ -799,6 +799,13 @@ vllm_model_list = {
     },
 }
 
+vllm_neo_model_list = {
+    "llama-3-8b": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 4
+    }
+}
+
 lmi_dist_aiccl_model_list = {
     "llama-2-70b-aiccl": {
         "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
@@ -1213,6 +1220,15 @@ def build_vllm_model(model):
                           adapter_names=adapter_names)
 
 
+def build_vllm_neo_model(model):
+    if model not in vllm_neo_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(transformers_neuronx_neo_list.keys())}"
+        )
+    options = vllm_neo_model_list[model]
+    create_neo_input_model(options)
+
+
 def build_lmi_dist_aiccl_model(model):
     if model not in lmi_dist_aiccl_model_list.keys():
         raise ValueError(
@@ -1255,8 +1271,6 @@ def build_transformers_neuronx_neo_model(model):
             f"{model} is not one of the supporting handler {list(transformers_neuronx_neo_list.keys())}"
         )
     options = transformers_neuronx_neo_list[model]
-    options["engine"] = "Python"
-    options["option.entryPoint"] = "djl_python.transformers_neuronx"
     create_neo_input_model(options)
 
 def build_correctness_model(model):
@@ -1278,6 +1292,7 @@ supported_handler = {
     'lmi_dist': build_lmi_dist_model,
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
+    'vllm_neo': build_vllm_neo_model,
     'trtllm': build_trtllm_handler_model,
     'trtllm_neo': build_trtllm_neo_model,
     'transformers_neuronx_neo': build_transformers_neuronx_neo_model,
