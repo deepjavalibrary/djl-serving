@@ -1045,7 +1045,8 @@ transformers_neuronx_neo_list = {
         "option.model_loading_timeout": 3600,
     },
     "llama-3-8b": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-hf/"
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 8
     }
 }
 
