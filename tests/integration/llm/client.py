@@ -276,6 +276,17 @@ lmi_dist_model_spec = {
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
     },
+    "mistral-7b-marlin": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
+    },
+    "llama-2-13b-flashinfer": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16",
+    },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [3],
@@ -375,6 +386,15 @@ vllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
+    },
+    "qwen2-7b-fp8": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "Qwen/Qwen-7B",
+        "parameters": {
+            "decoder_input_details": True
+        }
     },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],

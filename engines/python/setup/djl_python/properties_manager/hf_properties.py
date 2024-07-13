@@ -23,6 +23,11 @@ class HFQuantizeMethods(str, Enum):
     # supported by vllm
     awq = 'awq'
     deepspeedfp = 'deepspeedfp'
+    fp8 = 'fp8'
+    gptq_marlin = 'gptq_marlin'
+    gptq_marlin_24 = 'gptq_marlin_24'
+    marlin = 'marlin'
+    squeezellm = 'squeezellm'
 
 
 def get_torch_dtype_from_str(dtype: str):

@@ -20,9 +20,13 @@ from djl_python.properties_manager.properties import Properties
 
 class VllmQuantizeMethods(str, Enum):
     awq = 'awq'
-    gptq = 'gptq'
-    squeezellm = 'squeezellm'
     deepspeedfp = 'deepspeedfp'
+    fp8 = 'fp8'
+    gptq = 'gptq'
+    gptq_marlin = 'gptq_marlin'
+    gptq_marlin_24 = 'gptq_marlin_24'
+    marlin = 'marlin'
+    squeezellm = 'squeezellm'
 
 
 class VllmRbProperties(Properties):
