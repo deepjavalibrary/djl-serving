@@ -132,15 +132,10 @@ class Connection {
 
         if (PyEnv.isMultiNode()) {
 
-            int mpiSlots = (tensorParallelDegree*pipelineParallelDegree) / 2;
-            int mpiProcesses = tensorParallelDegree*pipelineParallelDegree;
+            int localSize = (tensorParallelDegree*pipelineParallelDegree) / clusterSize;
+            int worldSize = tensorParallelDegree*pipelineParallelDegree;
 
-            // if (pipelineParallelDegree != clusterSize) {
-            //     logger.warn("In multi-node setting, pipeline parallel degree must equal the cluster size. Setting pp degree = cluster size = {}.", clusterSize);
-            //     pipelineParallelDegree = clusterSize;
-            // }
-
-            String cudaDevices = getVisibleDevices(workerId, mpiSlots);
+            String cudaDevices = getVisibleDevices(workerId, localSize);
             logger.info("Set before mpirun CUDA_VISIBLE_DEVICES={}", cudaDevices);
             logger.info("Received: pp degree: {} and tp depgree: {} and cluster size: {}", pipelineParallelDegree, tensorParallelDegree, clusterSize);
             StringBuilder sb = new StringBuilder();
@@ -151,12 +146,12 @@ class Connection {
                 } else {
                     sb.append(',');
                 }
-                sb.append(host).append(':').append(mpiSlots);
+                sb.append(host).append(':').append(localSize);
             }
             String[] args = new String[48];
             args[0] = "mpirun";
             args[1] = "-np";
-            args[2] = String.valueOf(mpiProcesses);
+            args[2] = String.valueOf(worldSize);
             args[3] = "--host";
             args[4] = sb.toString();
             args[5] = "--allow-run-as-root";

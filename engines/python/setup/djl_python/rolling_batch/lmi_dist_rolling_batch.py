@@ -82,7 +82,7 @@ class LmiDistRollingBatch(RollingBatch):
             **engine_kwargs)
 
         kwargs = {}
-        print(f"engine_args: {engine_args}, kwargs={kwargs}")
+        logging.info(f"engine_args: {engine_args}, kwargs: {kwargs}")
 
         if self.lmi_dist_config.max_rolling_batch_prefill_tokens is None:
             kwargs["warmup_prefill_tokens"] = _WARMUP_PREFILL_TOKENS
