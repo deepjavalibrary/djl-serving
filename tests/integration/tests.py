@@ -86,6 +86,7 @@ class Runner:
 
 @pytest.mark.cpu
 class TestCpuFull:
+
     def test_python_model(self):
         with Runner('cpu-full', 'python_model', download=True) as r:
             r.launch(
@@ -113,6 +114,7 @@ class TestCpuFull:
 @pytest.mark.cpu
 @pytest.mark.parametrize('arch', ["cpu", "cpu-full"])
 class TestCpuBoth:
+
     def test_pytorch(self, arch):
         with Runner(arch, 'pytorch', download=True) as r:
             r.launch(
@@ -169,6 +171,7 @@ class TestCpuBoth:
 @pytest.mark.gpu
 @pytest.mark.gpu_4
 class TestGpu:
+
     def test_python_model(self):
         with Runner('pytorch-gpu', 'python_model', download=True) as r:
             r.launch(
@@ -188,6 +191,7 @@ class TestGpu:
 
 @pytest.mark.aarch64
 class TestAarch64:
+
     def test_pytorch(self):
         with Runner('aarch64', 'pytorch_model', download=True) as r:
             r.launch(
@@ -208,6 +212,7 @@ class TestAarch64:
 @pytest.mark.hf
 @pytest.mark.gpu_4
 class TestHfHandler:
+
     def test_gpt_neo(self):
         with Runner('lmi', 'test_gpt4all_lora') as r:
             prepare.build_hf_handler_model("gpt-neo-2.7b")
@@ -254,6 +259,7 @@ class TestHfHandler:
 @pytest.mark.trtllm
 @pytest.mark.gpu_4
 class TestTrtLlmHandler1:
+
     def test_llama2_13b_tp4(self):
         with Runner('tensorrt-llm', 'llama2-13b') as r:
             prepare.build_trtllm_handler_model("llama2-13b")
@@ -300,6 +306,7 @@ class TestTrtLlmHandler1:
 @pytest.mark.trtllm
 @pytest.mark.gpu_4
 class TestTrtLlmHandler2:
+
     def test_llama2_7b_hf_smoothquant(self):
         with Runner('tensorrt-llm', 'llama2-7b-smoothquant') as r:
             prepare.build_trtllm_handler_model("llama2-7b-smoothquant")
