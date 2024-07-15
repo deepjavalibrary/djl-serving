@@ -703,7 +703,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
         String modelId = prop.getProperty("option.model_id");
         if (modelId != null && modelId.startsWith("djl://")) {
-            Repository repo = Repository.newInstance("tmp", modelId);
+            Repository repo = Repository.newInstance("tmp", modelId.trim());
             MRL mrl = repo.getResources().get(0);
             String groupId = mrl.getGroupId();
             ModelZoo zoo = ModelZoo.getModelZoo(groupId);
@@ -1112,10 +1112,10 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             return;
         }
         if (modelId.startsWith("s3://")) {
-            this.downloadDir = downloadS3ToDownloadDir(modelId);
+            this.downloadDir = downloadS3ToDownloadDir(modelId.trim());
         } else if (modelId.startsWith("djl://")) {
             logger.info("{}: djl model zoo url found: {}", uid, modelId);
-            modelUrl = modelId;
+            modelUrl = modelId.trim();
             // download real model from model zoo
             downloadModel();
         }
