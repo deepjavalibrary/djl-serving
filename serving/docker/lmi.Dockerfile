@@ -105,7 +105,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} \
     tokenizers==${tokenizers_version} pydantic==${pydantic_version} && \
     pip3 install ${djl_converter_wheel} --no-deps && \
-    git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
+    git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 && \
     pip3 cache purge
 
 RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} ${flash_infer_wheel} && \
