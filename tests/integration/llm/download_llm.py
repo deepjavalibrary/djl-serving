@@ -12,9 +12,11 @@ def llm_download(model_id, token, allow_patterns):
             "*.json", "*.pt", "*.safetensors", "*.txt", "*.model", "*.tiktoken"
         ]
 
+    ignore_patterns = [".git*"]
     snapshot_download(repo_id=model_id,
                       local_dir=local_model_path,
                       allow_patterns=allow_patterns,
+                      ignore_patterns=ignore_patterns,
                       token=token)
 
 

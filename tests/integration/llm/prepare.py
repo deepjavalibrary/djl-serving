@@ -766,7 +766,7 @@ lmi_dist_aiccl_model_list = {
         "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
     },
     "codellama-34b-aiccl": {
-        "option.model_id": "codellama/CodeLlama-34b-hf",
+        "option.model_id": "s3://djl-llm/CodeLlama-34b-Instruct-hf/",
     },
     "falcon-40b-aiccl": {
         "option.model_id": "s3://djl-llm/falcon-40b/",
