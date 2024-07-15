@@ -55,7 +55,7 @@ class LmiDistRbProperties(Properties):
     max_lora_rank: Optional[int] = 16
     lora_extra_vocab_size: Optional[int] = 256
     max_cpu_loras: Optional[int] = None
-    max_logprobs: Optional[int] = 5
+    max_logprobs: Optional[int] = 20
 
     @model_validator(mode='after')
     def validate_mpi(self):
