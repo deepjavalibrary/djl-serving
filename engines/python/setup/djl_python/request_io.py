@@ -115,6 +115,11 @@ class Sequence:
             return self.tokens[index], first_token, last_token
         return None, False, False
 
+    def get_last_token(self) -> Optional[Token]:
+        if self._last_token_index:
+            return self.tokens[self._last_token_index]
+        return None
+
     def get_next_top_tokens(self):
         """Returns the next list of top tokens from the top_tokens list, or None if all have been iterated."""
         if self.has_next_top_tokens():

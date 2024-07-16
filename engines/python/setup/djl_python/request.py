@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import inspect
-from typing import Union, Callable, Any, List, Dict
+from typing import Union, Callable, Any, List, Dict, Optional
 
 from djl_python.output_formatter import get_output_formatter, adapt_legacy_output_formatter
 from djl_python.request_io import Token, TextGenerationOutput, TextInput, RequestOutput, RequestInput
@@ -64,6 +64,8 @@ class Request(object):
         self.request_output = TextGenerationOutput(request_id=self.id,
                                                    input=self.request_input)
         self.next_token_str = ""
+        self.error_message = None
+        self.error_code = None
 
     def _is_output_formatter_legacy(self):
         signature_parameters = list(
@@ -111,23 +113,20 @@ class Request(object):
         """
         if self.next_token_str:
             return self.next_token_str
+        if self.legacy_formatter:
+            self.next_token_str = adapt_legacy_output_formatter(
+                self.request_output)
+        elif wait_till_generation_finished(
+                self.request_output.input.parameters):
+            # there is no need for iterators for best_of and num_beams.
+            self.next_token_str = self.output_formatter(self.request_output)
         else:
-            # TODO: Remove this support when all of our customers onboard.
-            if self.legacy_formatter:
-                self.next_token_str = adapt_legacy_output_formatter(
+            best_sequence = self.request_output.sequences[
+                self.request_output.best_sequence_index]
+            while best_sequence.has_next_token():
+                self.next_token_str += self.output_formatter(
                     self.request_output)
-            elif wait_till_generation_finished(
-                    self.request_output.input.parameters):
-                # there is no need for iterators for best_of and num_beams.
-                self.next_token_str = self.output_formatter(
-                    self.request_output)
-            else:
-                best_sequence = self.request_output.sequences[
-                    self.request_output.best_sequence_index]
-                while best_sequence.has_next_token():
-                    self.next_token_str += self.output_formatter(
-                        self.request_output)
-            return self.next_token_str
+        return self.next_token_str
 
     def reset_next_token(self):
         """
@@ -150,3 +149,31 @@ class Request(object):
         :return: content type
         """
         return self.content_type
+
+    def get_error_message(self) -> Optional[str]:
+        """
+        Error message for the request if inference failed
+
+        :return: the error message
+        """
+        return self.error_message
+
+    def get_error_code(self) -> Optional[int]:
+        """
+        HTTP Status code to return when inference fails
+
+        :return: the status code
+        """
+        return self.error_code
+
+    def set_error_message(self, error_message: str):
+        """
+        Sets the Error message for the request if inference failed
+        """
+        self.error_message = error_message
+
+    def set_error_code(self, code: int):
+        """
+        Sets the HTTP Status code to return when inference fails
+        """
+        self.error_code = code
