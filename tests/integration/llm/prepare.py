@@ -184,7 +184,7 @@ transformers_neuronx_handler_list = {
     },
     "stable-diffusion-2.1-neuron": {
         "option.model_id":
-        "s3://djl-llm/stable-diffusion-2-1-neuron-compiled/",
+        "s3://djl-llm/optimum/latest/stable-diffusion-2-1-neuron-compiled/",
         "option.height": 512,
         "option.width": 512,
         "batch_size": 1,
@@ -195,7 +195,7 @@ transformers_neuronx_handler_list = {
     },
     "stable-diffusion-1.5-neuron": {
         "option.model_id":
-        "s3://djl-llm/stable-diffusion-1-5-neuron-compiled/",
+        "s3://djl-llm/optimum/latest/stable-diffusion-1-5-neuron-compiled/",
         "option.height": 512,
         "option.width": 512,
         "batch_size": 1,
@@ -205,7 +205,8 @@ transformers_neuronx_handler_list = {
         "option.use_stable_diffusion": True
     },
     "stable-diffusion-xl-neuron": {
-        "option.model_id": "s3://djl-llm/stable-diffusion-xl-neuron-compiled/",
+        "option.model_id":
+        "s3://djl-llm/optimum/latest/stable-diffusion-xl-neuron-compiled/",
         "option.height": 1024,
         "option.width": 1024,
         "batch_size": 1,
