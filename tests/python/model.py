@@ -23,7 +23,11 @@ def handle(inputs: Input) -> None:
     elif content_type == "tensor/npz":
         return Output().add_as_npz(np_list=inputs.get_as_npz())
     elif content_type == "application/json":
-        return Output().add_as_json(inputs.get_as_json())
+        data = inputs.get_as_json()
+        if "exception" in data:
+            return Output().error(data["exception"], 401)
+        else:
+            return Output().add_as_json(inputs.get_as_json())
     elif content_type is not None and content_type.startswith("text/"):
         return Output().add(inputs.get_as_string())
     else:
