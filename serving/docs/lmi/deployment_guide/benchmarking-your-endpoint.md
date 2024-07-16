@@ -1,29 +1,33 @@
 # Benchmarking your Endpoint
 
-Benchmarking your endpoint is crucial to understanding how the configuration and backend you are using handle the expected traffic.
-This document will focus on how to benchmark your sagemaker endpoint with a lightweight tool, `awscurl`.
+Benchmarking your endpoint is crucial to understanding how the configuration and backend you are using handle the
+expected traffic.
+This document will focus on how to benchmark your SageMaker endpoint or Bedrock API with a lightweight tool, `awscurl`.
 
 Within LMI, we use [`awscurl`](https://github.com/deepjavalibrary/djl-serving/tree/master/awscurl) for benchmarking.
-`awscurl` is a tool that provides a `curl` like API to make requests to AWS Services. It provides the following features:
+`awscurl` is a tool that provides a `curl` like API to make requests to AWS Services. It provides the following
+features:
 
-* Launch concurrent clients 
+* Launch concurrent clients
 * Specify number of requests per client
 * Specify a tokenizer to get accurate token counts
-* Accepts a list of request bodies to benchmark your endpoint across a variety of input/output lengths, and generation parameters
+* Accepts a list of request bodies to benchmark your endpoint across a variety of input/output lengths, and generation
+  parameters
 * Reports metrics like:
-  * Total Time taken for benchmark
-  * Non 200 responses and error rate
-  * Average, P50, P90, P99 latency
-  * Requests Per second (TPS)
-  * Tokens per Request (generated tokens)
-  * Tokens per Second (total Throughput of system across all clients/requests)
-  * Time to first Byte (for streaming, represents the time to first token)
+    * Total Time taken for benchmark
+    * Non 200 responses and error rate
+    * Average, P50, P90, P99 latency
+    * Requests Per second (TPS)
+    * Tokens per Request (generated tokens)
+    * Tokens per Second (total Throughput of system across all clients/requests)
+    * Time to first Byte (for streaming, represents the time to first token)
 
 We will now walk through some examples of using `awscurl` to benchmark your SageMaker Endpoint.
 
 ## awscurl Usage
 
-To install awscurl, and setup AWS credentials, see the `awscurl` [documentation](https://github.com/deepjavalibrary/djl-serving/tree/master/awscurl).
+To install awscurl, and setup AWS credentials, see
+the `awscurl` [documentation](https://github.com/deepjavalibrary/djl-serving/tree/master/awscurl).
 
 To see a list of available options, run `./awscurl -h`.
 
@@ -33,16 +37,19 @@ The options we use in the examples below are:
 * `-N`: number of requests per client (c * N is the total number of requests made during the benchmark)
 * `-n`: name of aws service to call (will always be `sagemaker` for this use-case)
 * `-X`: HTTP method to use (will always be `POST` for this use-case)
-* `--connect-timeout`: time in seconds to wait for response (sagemaker has default 60 second invocation time, so typically this is 60)
+* `--connect-timeout`: time in seconds to wait for response (sagemaker has default 60 second invocation time, so
+  typically this is 60)
 * `-d`: request body JSON (this is a single request body that will be used across all clients and requests)
-* `--dataset`: a path to directory of files, or path to a single file that contain payloads 
+* `--dataset`: a path to directory of files, or path to a single file that contain payloads
 * `-P`: print output in JSON
 * `-t`: report tokens per second in benchmark metrics
 * `-H`: custom HTTP Headers
 * `-o`: output file prefix to save results of requests (1 file is generated per client)
 
-Additionally, we recommend that you set the `TOKENIZER` environment variable to the value of your model's tokenizer (either HuggingFace Hub model id, or local path where the `tokenizer.json` file is present).
-If a tokenizer is not specified, and tokens per second is requested, `awscurl` will use the number of words in the response to calculate token level metrics.
+Additionally, we recommend that you set the `TOKENIZER` environment variable to the value of your model's tokenizer (
+either HuggingFace Hub model id, or local path where the `tokenizer.json` file is present).
+If a tokenizer is not specified, and tokens per second is requested, `awscurl` will use the number of words in the
+response to calculate token level metrics.
 
 All the following examples use a sample sagemaker endpoint URL. You should replace this with your own endpoint URL.
 
@@ -59,7 +66,9 @@ TOKENIZER=<tokenizer_id> ./awscurl -c 10 -N 30 -X POST \
   -P -t -o output.txt
 ```
 
-After running the above command, you should see output like this (these are sample numbers, not guarantees of performance):
+After running the above command, you should see output like this (these are sample numbers, not guarantees of
+performance):
+
 ```shell
 {
   "tokenizer": "TheBloke/Llama-2-13B-fp16",
@@ -80,14 +89,16 @@ After running the above command, you should see output like this (these are samp
 }
 ```
 
-Additionally, you will find `output.txt.<c>` files that contain the responses per client (there will be c files in total).
+Additionally, you will find `output.txt.<c>` files that contain the responses per client (there will be c files in
+total).
 
 ### Usage with multiple payloads
 
 You can also use `awscurl` to send multiple different payloads instead of a single payload.
 To do so, you must provide the `--dataset` argument.
 
-The dataset argument must point to a directory containing multiple files, with each file containing a single line with a request payload.
+The dataset argument must point to a directory containing multiple files, with each file containing a single line with a
+request payload.
 Alternatively, the dataset argument can point to a single file which contains line separated payloads.
 
 As an example, we can construct a dataset directory with sample payloads like this:
@@ -108,10 +119,25 @@ TOKENIZER=<tokenizer_id> ./awscurl -c 10 -N 30 -X POST -n sagemaker https://runt
   -P -t -o output.txt
 ```
 
+### Usage for Bedrock API
+
+Benchmark against Bedrock API is similar to SageMaker endpoint. You only need to change SageMaker endpoint url with
+Bedrock and specify `--service bedrock`. For example:
+
+```
+./awscurl -X POST \
+  -n bedrock https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke \
+  -d '{"anthropic_version": "bedrock-2023-05-31", "max_tokens": 1024, "system": "Please respond only with english.","messages": [{"role": "user", "content": "Hello World"}]}' \
+  -H 'Content-Type: application/json'
+```
+
 ### Usage with SageMaker Streaming Response
 
-You can also use `awscurl` to invoke your endpoint with streaming responses. 
-This assumes that you have configured your deployment [configuration](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/deployment_guide/configurations.md#lmi-common-configurations) with `option.output_formatter=jsonlines` or you have passed 'stream': true as part of the payload(works only from 0.27.0) so that LMI streams responses.
+You can also use `awscurl` to invoke your endpoint with streaming responses.
+This assumes that you have configured your
+deployment [configuration](https://github.com/deepjavalibrary/djl-serving/blob/master/serving/docs/lmi/deployment_guide/configurations.md#lmi-common-configurations)
+with `option.output_formatter=jsonlines` or you have passed 'stream': true as part of the payload(works only from
+0.27.0) so that LMI streams responses.
 
 To benchmark your endpoint with streaming, you must call the `/invocations-response-stream` API.
 
@@ -123,8 +149,8 @@ TOKENIZER=<tokenizer_id> ./awscurl -c 10 -N 30 -X POST -n sagemaker https://runt
   -P -t -o output.txt
 ```
 
-With streaming, the `timeToFirstByte` metric is more meaningful. 
-It represents the average latency across all requests between the request being issued and the first token being returned.
-
+With streaming, the `timeToFirstByte` metric is more meaningful.
+It represents the average latency across all requests between the request being issued and the first token being
+returned.
 
 Previous: [Deploying your endpoint](deploying-your-endpoint.md)
