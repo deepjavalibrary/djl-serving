@@ -113,6 +113,7 @@ if $is_sm_neo_context; then
     -e SM_NEO_COMPILED_MODEL_DIR=/opt/ml/model/compiled \
     -e SM_NEO_COMPILATION_ERROR_FILE=/opt/ml/compilation/errors/errors.json \
     -e SM_NEO_CACHE_DIR=/opt/ml/compilation/cache \
+    $(if [[ "$platform" == *"lmi"* ]]; then echo "-e SM_NEO_HF_CACHE_DIR=/opt/ml/compilation/cache"; else echo ""; fi) \
     -e COMPILER_OPTIONS={} \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
