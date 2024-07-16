@@ -58,6 +58,15 @@ class TestInputOutput(unittest.TestCase):
         result = res.json()
         self.assertEqual(result, data)
 
+    def test_json_error(self):
+        data = {"exception": "Error condition"}
+        headers = {'content-type': 'application/json'}
+        res = requests.post(endpoint, headers=headers, json=data)
+        self.assertEqual(res.status_code, 401)
+        result = res.json()
+        self.assertTrue("error" in result)
+        self.assertEqual(result.get("error", None), data["exception"])
+
     def test_image(self):
         from PIL import Image
         response = requests.get("https://ultralytics.com/images/zidane.jpg")
