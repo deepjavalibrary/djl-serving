@@ -152,7 +152,9 @@ class PropertiesManager(object):
         pipeline_parallel_degree = self.properties.get(
             'option.pipeline_parallel_degree')
         if not pipeline_parallel_degree:
-            raise ValueError('Expecting pipeline_parallel_degree to be set of a default of 1')
+            raise ValueError(
+                'Expecting pipeline_parallel_degree to be set of a default of 1'
+            )
 
     def set_and_validate_entry_point(self):
         entry_point = self.properties.get('option.entryPoint')
