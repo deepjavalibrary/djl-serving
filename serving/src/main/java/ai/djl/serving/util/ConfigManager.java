@@ -57,6 +57,7 @@ public final class ConfigManager {
 
     private static final String INFERENCE_ADDRESS = "inference_address";
     private static final String MANAGEMENT_ADDRESS = "management_address";
+    private static final String CLUSTER_ADDRESS = "cluster_address";
     private static final String LOAD_MODELS = "load_models";
     private static final String WAIT_MODEL_LOADING = "wait_model_loading";
     private static final String ALLOW_MULTI_STATUS = "allow_multi_status";
@@ -236,10 +237,18 @@ public final class ConfigManager {
      */
     public Connector getConnector(Connector.ConnectorType type) {
         String binding;
-        if (type == Connector.ConnectorType.MANAGEMENT) {
-            binding = prop.getProperty(MANAGEMENT_ADDRESS, "http://127.0.0.1:8080");
-        } else {
-            binding = prop.getProperty(INFERENCE_ADDRESS, "http://127.0.0.1:8080");
+        switch (type) {
+            case MANAGEMENT:
+                binding = prop.getProperty(MANAGEMENT_ADDRESS, "http://127.0.0.1:8080");
+                break;
+            case CLUSTER:
+                binding = prop.getProperty(CLUSTER_ADDRESS, "http://127.0.0.1:8888");
+                break;
+            case INFERENCE:
+            case BOTH:
+            default:
+                binding = prop.getProperty(INFERENCE_ADDRESS, "http://127.0.0.1:8080");
+                break;
         }
         return Connector.parse(binding, type);
     }
