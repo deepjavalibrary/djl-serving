@@ -128,8 +128,10 @@ class HuggingFaceProperties(Properties):
             self.device = None
             world_size = torch.cuda.device_count() * self.cluster_size
 
-            if world_size != self.tensor_parallel_degree*self.pipeline_parallel_degree:
-                logging.error(f"TP*PP degree ({self.tensor_parallel_degree*self.pipeline_parallel_degree}) doesn't match available GPUs ({world_size})")
+            if world_size != self.tensor_parallel_degree * self.pipeline_parallel_degree:
+                raise ValueError(
+                    f"TP*PP degree ({self.tensor_parallel_degree*self.pipeline_parallel_degree}) doesn't match available GPUs ({world_size})"
+                )
 
             logging.info(f"Using {world_size} gpus collectively.")
         return self
