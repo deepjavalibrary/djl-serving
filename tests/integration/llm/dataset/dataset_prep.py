@@ -48,6 +48,9 @@ parameters = {
         "temperature": 0.7,
         "top_p": 0.95,
         "max_new_tokens": 256
+    },
+    "mmlu": {
+        "max_new_tokens": 20
     }
 }
 
@@ -72,12 +75,22 @@ def openorca_parsing(row: dict, parameters):
     return {"inputs": row["prompt"], "parameters": parameters, "stream": True}
 
 
+def mmlu_parsing(row: dict, parameters):
+    return {
+        "inputs": row["prompt"],
+        "parameters": parameters,
+        "stream": True,
+        "answer": row["answer"]
+    }
+
+
 parsing = {
     "gsm8k": gsm8k_parsing,
     "humaneval": humaneval_parsing,
     "mbpp": mbpp_parsing,
     "mtbench": mtbench_parsing,
-    "openorca": openorca_parsing
+    "openorca": openorca_parsing,
+    "mmlu": mmlu_parsing
 }
 
 
@@ -94,3 +107,15 @@ build_djl_serving_request("humaneval")
 build_djl_serving_request("mbpp")
 build_djl_serving_request("mtbench")
 build_djl_serving_request("openorca")
+
+
+def build_djl_serving_mmlu_request():
+    content = open(f"prompts/merged.jsonl")
+    with open(f"mmlu_djlserving.jsonl", "w") as f:
+        for line in content.readlines():
+            line = json.loads(line)
+            request_line = parsing["mmlu"](line, parameters["mmlu"])
+            f.writelines(f"{json.dumps(request_line)}\n")
+
+
+build_djl_serving_mmlu_request()
