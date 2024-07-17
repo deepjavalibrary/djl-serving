@@ -134,3 +134,11 @@ def init_hf_tokenizer(model_id_or_path: str, hf_configs):
         revision=hf_configs.revision,
     )
     return tokenizer
+
+
+def update_dataset_cache_location(hf_cache_location):
+    logging.info(
+        f"Updating HuggingFace Datasets cache directory to: {hf_cache_location}"
+    )
+    os.environ['HF_DATASETS_CACHE'] = hf_cache_location
+    #os.environ['HF_DATASETS_OFFLINE'] = "1"
