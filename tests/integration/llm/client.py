@@ -198,7 +198,7 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [25.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-11b"
+        "tokenizer": "tiiuae/falcon-11B"
     },
     "flan-t5-xxl": {
         "max_memory_per_gpu": [10.0],
@@ -260,6 +260,18 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
+    },
+    "llama3-8b-chunked-prefill": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
+    },
+    "falcon-11b-chunked-prefill": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "tiiuae/falcon-11B"
     },
     "llama2-7b-32k": {
         "max_memory_per_gpu": [23.0],
@@ -395,6 +407,18 @@ vllm_model_spec = {
         "parameters": {
             "decoder_input_details": True
         }
+    },
+    "llama3-8b-chunked-prefill": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
+    },
+    "falcon-11b-chunked-prefill": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "tiiuae/falcon-11B"
     },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],

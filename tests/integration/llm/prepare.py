@@ -431,6 +431,18 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
     },
+    "llama3-8b-chunked-prefill": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.enable_chunked_prefill": "true",
+    },
+    "falcon-11b-chunked-prefill": {
+        "option.model_id": "s3://djl-llm/falcon-11B/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.enable_chunked_prefill": "true",
+    },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
         "option.tensor_parallel_degree": "max",
@@ -610,6 +622,18 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
         "option.quantize": "fp8"
+    },
+    "llama3-8b-chunked-prefill": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.enable_chunked_prefill": "true",
+    },
+    "falcon-11b-chunked-prefill": {
+        "option.model_id": "s3://djl-llm/falcon-11B/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.enable_chunked_prefill": "true",
     },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",

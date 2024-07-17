@@ -420,6 +420,20 @@ class TestLmiDist1:
             client.run("lmi_dist llama-2-tiny".split())
         os.system('sudo rm -rf models')
 
+    def test_llama3_8b_chunked_prefill(self):
+        with Runner('lmi', 'llama3-8b-chunked-prefill') as r:
+            prepare.build_lmi_dist_model("llama3-8b-chunked-prefill")
+            r.launch()
+            client.run(
+                "lmi_dist llama3-8b-chunked-prefill --in_tokens 1200".split())
+
+    def test_falcon_11b_chunked_prefill(self):
+        with Runner('lmi', 'falcon_11b-chunked-prefill') as r:
+            prepare.build_lmi_dist_model("falcon_11b-chunked-prefill")
+            r.launch()
+            client.run(
+                "lmi_dist falcon_11b-chunked-prefill --in_tokens 1200".split())
+
 
 class TestLmiDist2:
     # Runs on g5.12xl
@@ -525,6 +539,20 @@ class TestVllm1:
             prepare.build_vllm_model("qwen2-7b-fp8")
             r.launch()
             client.run("vllm qwen2-7b-fp8".split())
+
+    def test_llama3_8b_chunked_prefill(self):
+        with Runner('lmi', 'llama3-8b-chunked-prefill') as r:
+            prepare.build_vllm_model("llama3-8b-chunked-prefill")
+            r.launch()
+            client.run(
+                "vllm llama3-8b-chunked-prefill --in_tokens 1200".split())
+
+    def test_falcon_11b_chunked_prefill(self):
+        with Runner('lmi', 'falcon_11b-chunked-prefill') as r:
+            prepare.build_vllm_model("falcon_11b-chunked-prefill")
+            r.launch()
+            client.run(
+                "vllm falcon_11b-chunked-prefill --in_tokens 1200".split())
 
 
 class TestVllmLora:
