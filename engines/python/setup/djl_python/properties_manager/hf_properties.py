@@ -61,6 +61,7 @@ class HuggingFaceProperties(Properties):
     device: Optional[str] = None
     kwargs: Optional[dict] = {}
     data_type: Optional[str] = None
+    image_placeholder_token: Optional[str] = None
 
     @field_validator('load_in_4bit')
     def validate_load_in_4bit(cls, load_in_4bit):

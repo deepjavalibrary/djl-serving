@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from typing import Dict
+from typing import Dict, Optional
 
 from djl_python.chat_completions.chat_properties import ChatProperties
 
@@ -19,8 +19,10 @@ def is_chat_completions_request(inputs: Dict) -> bool:
     return "messages" in inputs
 
 
-def parse_chat_completions_request(input_map: Dict, is_rolling_batch: bool,
-                                   tokenizer):
+def parse_chat_completions_request(input_map: Dict,
+                                   is_rolling_batch: bool,
+                                   tokenizer,
+                                   image_token: Optional[str] = None):
     if not is_rolling_batch:
         raise ValueError(
             "chat completions support is not currently available for dynamic batching. "
@@ -36,7 +38,8 @@ def parse_chat_completions_request(input_map: Dict, is_rolling_batch: bool,
     images = []
     tokenizer_inputs = []
     for message in messages:
-        tokenizer_inputs.append(message.get_tokenizer_inputs())
+        tokenizer_inputs.append(
+            message.get_tokenizer_inputs(image_token=image_token))
         images.extend(message.get_images())
     inputs = tokenizer.apply_chat_template(tokenizer_inputs, tokenize=False)
     param[
