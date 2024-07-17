@@ -13,6 +13,8 @@ import numpy as np
 from datetime import datetime
 from io import BytesIO
 
+FAILED_DEPENDENCY_CODE = 424
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -1078,16 +1080,22 @@ def test_handler_adapters(model, model_spec):
     res = requests.delete(
         f"http://127.0.0.1:8080/models/test/adapters/{del_adapter}")
     logging.info(f"del adapter {res}")
-    res = send_json(reqs[0]).content.decode("utf-8")
+    headers = {'content-type': 'application/json'}
+    endpoint = f"http://127.0.0.1:8080/invocations"
+    res = requests.post(endpoint, headers=headers,
+                        json=reqs[0]).content.decode("utf-8")
     logging.info(f"call deleted adapter {res}")
-    if "error" not in res:
-        raise RuntimeError(f"Should not work with new adapters")
+    assert json.loads(res).get(
+        "code"
+    ) == FAILED_DEPENDENCY_CODE, "Calling deleted adapter should not work with new adapters"
 
     if len(reqs) > 1:
         res = send_json(reqs[1]).content.decode("utf-8")
         logging.info(f"call valid adapter after deletion {res}")
         if "error" in res:
-            raise RuntimeError(f"Deleting adapter breaking inference")
+            raise RuntimeError(
+                f"Deleting adapter should not break inference for remaining adapters"
+            )
 
 
 def test_handler_rolling_batch_chat(model, model_spec):
