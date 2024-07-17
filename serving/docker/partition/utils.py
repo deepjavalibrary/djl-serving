@@ -43,9 +43,10 @@ def get_partition_cmd(is_mpi_mode, properties):
 
 def get_engine_configs(properties):
     engine = properties.get('engine')
-    configs = {'option.parallel_loading': True}
+    configs = {}
     if engine == 'DeepSpeed':
         configs['option.checkpoint'] = 'ds_inference_config.json'
+        configs['option.parallel_loading'] = True
 
     return configs
 
