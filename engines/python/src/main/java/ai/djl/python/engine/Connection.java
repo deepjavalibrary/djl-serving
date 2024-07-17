@@ -132,12 +132,25 @@ class Connection {
 
         if (PyEnv.isMultiNode()) {
 
-            int localSize = (tensorParallelDegree*pipelineParallelDegree) / clusterSize;
-            int worldSize = tensorParallelDegree*pipelineParallelDegree;
+            int worldSize = tensorParallelDegree * pipelineParallelDegree;
+
+            if (tensorParallelDegree * pipelineParallelDegree % clusterSize != 0) {
+                throw new IllegalArgumentException(
+                        "Error: Cannot use cluster size: "
+                                + clusterSize
+                                + "for world size (number of total GPUs): "
+                                + worldSize);
+            }
+
+            int localSize = (tensorParallelDegree * pipelineParallelDegree) / clusterSize;
 
             String cudaDevices = getVisibleDevices(workerId, localSize);
             logger.info("Set before mpirun CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            logger.info("Received: pp degree: {} and tp depgree: {} and cluster size: {}", pipelineParallelDegree, tensorParallelDegree, clusterSize);
+            logger.info(
+                    "Received: pp degree: {} and tp depgree: {} and cluster size: {}",
+                    pipelineParallelDegree,
+                    tensorParallelDegree,
+                    clusterSize);
             StringBuilder sb = new StringBuilder();
             boolean first = true;
             for (String host : hosts) {

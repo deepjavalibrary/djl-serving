@@ -314,8 +314,8 @@ public final class LmiUtils {
         }
     }
 
-    private static Path buildTrtLlmArtifacts(Path modelDir, String modelId, String tpDegree, String ppDegree)
-            throws IOException {
+    private static Path buildTrtLlmArtifacts(
+            Path modelDir, String modelId, String tpDegree, String ppDegree) throws IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
         String hash = Utils.hash(modelId + tpDegree);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);

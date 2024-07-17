@@ -131,7 +131,7 @@ public class PyModel extends BaseModel {
                         }
                         break;
                     case "pipeline_parallel_degree":
-                        if(value != null) {
+                        if (value != null) {
                             pyEnv.setPipelineParallelDegree(Integer.parseInt(value));
                         } else {
                             pyEnv.setPipelineParallelDegree(1);
