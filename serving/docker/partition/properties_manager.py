@@ -45,6 +45,9 @@ class PropertiesManager(object):
         if args.tensor_parallel_degree:
             self.properties[
                 'option.tensor_parallel_degree'] = args.tensor_parallel_degree
+        if args.pipeline_parallel_degree:
+            self.properties[
+                'option.pipeline_parallel_degree'] = args.pipeline_parallel_degree
         if args.quantize:
             self.properties['option.quantize'] = args.quantize
 
@@ -57,6 +60,7 @@ class PropertiesManager(object):
 
         if self.is_mpi_mode:
             self.validate_tp_degree()
+            self.validate_pp_degree()
 
         self.set_and_validate_entry_point()
         self.set_and_validate_save_mp_checkpoint_path()
@@ -142,6 +146,14 @@ class PropertiesManager(object):
         if num_gpus < int(tensor_parallel_degree):
             raise ValueError(
                 f'GPU devices are not enough to run {tensor_parallel_degree} partitions.'
+            )
+
+    def validate_pp_degree(self):
+        pipeline_parallel_degree = self.properties.get(
+            'option.pipeline_parallel_degree')
+        if not pipeline_parallel_degree:
+            raise ValueError(
+                'Expecting pipeline_parallel_degree to be set of a default of 1'
             )
 
     def set_and_validate_entry_point(self):

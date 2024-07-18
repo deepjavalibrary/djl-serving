@@ -110,12 +110,18 @@ public final class LmiUtils {
         if (modelId == null) {
             modelId = trtRepo.toString();
         }
+
         String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
         if (tpDegree == null) {
             tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
         }
         if ("max".equals(tpDegree)) {
             tpDegree = String.valueOf(CudaUtils.getGpuCount());
+        }
+
+        String ppDegree = info.prop.getProperty("option.pipeline_parallel_degree");
+        if (ppDegree == null) {
+            ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
         }
 
         // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
@@ -125,12 +131,12 @@ public final class LmiUtils {
             // And whether it is valid or not is checked in tensorrt_llm_toolkit. So it is not
             // necessary to check here.
             if (!isValidTrtLlmPythonModelRepo(trtRepo)) {
-                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree, ppDegree);
             }
         } else {
             info.prop.put("option.rolling_batch", "trtllm");
             if (!isValidTrtLlmModelRepo(trtRepo)) {
-                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree);
+                info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree, ppDegree);
             }
         }
     }
@@ -308,8 +314,8 @@ public final class LmiUtils {
         }
     }
 
-    private static Path buildTrtLlmArtifacts(Path modelDir, String modelId, String tpDegree)
-            throws IOException {
+    private static Path buildTrtLlmArtifacts(
+            Path modelDir, String modelId, String tpDegree, String ppDegree) throws IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
         String hash = Utils.hash(modelId + tpDegree);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
@@ -329,6 +335,8 @@ public final class LmiUtils {
             trtLlmRepoDir.toString(),
             "--tensor_parallel_degree",
             tpDegree,
+            "--pipeline_parallel_degree",
+            ppDegree,
             "--model_path",
             modelId
         };
