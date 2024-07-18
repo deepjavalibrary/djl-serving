@@ -846,8 +846,10 @@ def awscurl_run(data,
     if output:
         output_path = os.path.join(os.path.curdir, "outputs", "output")
         command = f"{command} -o {output_path}"
-    LOGGER.info(f"Running command {command}")
-    sp.call(command, shell=True)
+    logging.info(f"Running command {command}")
+    res = sp.run(command, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+    if "error rate: 100" in res.stdout.decode("utf-8"):
+        raise ValueError("Found error result in awscurl_run")
     if dataset:
         shutil.rmtree(dataset_dir)
 
