@@ -28,6 +28,11 @@ from transformers_neuronx.module import save_pretrained_split
 from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version
 from huggingface_hub import hf_hub_download
 
+# Temporary Fix: These loggers are disabled during vLLM import.
+# Remove when fixed in vLLM
+logging.getLogger("NEURON_CC_WRAPPER").disabled = False
+logging.getLogger("NEURON_CACHE").disabled = False
+
 
 class ModelLoader(ABC):
 
