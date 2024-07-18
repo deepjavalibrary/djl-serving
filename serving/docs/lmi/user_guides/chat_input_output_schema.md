@@ -125,10 +125,10 @@ The following sections describe each of the request or response objects in more 
 The message object represents a single message of the conversation.
 It contains the following fields:
 
-| Field Name | Type        | Description                 | Example                                 |
-|------------|-------------|-----------------------------|-----------------------------------------|
-| `role`     | string enum | The role of the message     | "system", "user", "assistant"           |
-| `content`  | string      | The content of the message  | Example: "You are a helpful assistant." |
+| Field Name | Type                       | Description                | Example                                 |
+|------------|----------------------------|----------------------------|-----------------------------------------|
+| `role`     | string enum                | The role of the message    | "system", "user", "assistant"           |
+| `content`  | string or array of objects | The content of the message | Example: "You are a helpful assistant." |
 
 Example:
 
@@ -136,6 +136,30 @@ Example:
 {
     "role":"system",
     "content":"You are a helpful assistant."
+}
+```
+
+Starting in v0.29.0, we have added experimental support for vision language models. 
+You can specify an image as part of the content when using a vision language model.
+Image data can either be specified as a url, or via a base64 encoding of the image data.
+
+Example:
+
+```
+{
+    "role": "user",
+    "content": [
+        {
+            "type": "text",
+            "text": "What is this an image of?"
+        },
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": "<base64 encoded image data | image url>"
+            }
+        }
+    ]
 }
 ```
 
