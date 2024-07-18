@@ -13,6 +13,7 @@
 package ai.djl.serving;
 
 import ai.djl.serving.http.AdapterManagementRequestHandler;
+import ai.djl.serving.http.ClusterRequestHandler;
 import ai.djl.serving.http.ConfigurableHttpRequestHandler;
 import ai.djl.serving.http.InferenceRequestHandler;
 import ai.djl.serving.http.InvalidRequestHandler;
@@ -73,6 +74,9 @@ public class ServerInitializer extends ChannelInitializer<Channel> {
                 break;
             case INFERENCE:
                 pipeline.addLast("inference", new InferenceRequestHandler());
+                break;
+            case CLUSTER:
+                pipeline.addLast("cluster", new ClusterRequestHandler());
                 break;
             case BOTH:
             default:

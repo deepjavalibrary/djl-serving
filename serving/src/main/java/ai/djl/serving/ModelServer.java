@@ -25,6 +25,7 @@ import ai.djl.serving.http.ServerStartupException;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.plugins.DependencyManager;
 import ai.djl.serving.plugins.FolderScanPluginManager;
+import ai.djl.serving.util.ClusterConfig;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
 import ai.djl.serving.util.ServerGroups;
@@ -194,7 +195,6 @@ public class ModelServer {
                     GeneralSecurityException,
                     ServerStartupException {
         long begin = System.nanoTime();
-        stopped.set(false);
 
         String version = Engine.getDjlVersion();
         logger.info("Starting djl-serving: {} ...", version);
@@ -204,6 +204,8 @@ public class ModelServer {
 
         pluginManager.loadPlugins(true);
 
+        initMultiNode();
+
         try {
             initModelStore();
         } catch (BadWorkflowException | CompletionException e) {
@@ -211,6 +213,7 @@ public class ModelServer {
                     "Failed to initialize startup models and workflows", e);
         }
 
+        stopped.set(false);
         Connector inferenceConnector =
                 configManager.getConnector(Connector.ConnectorType.INFERENCE);
         Connector managementConnector =
@@ -271,6 +274,41 @@ public class ModelServer {
         }
         serverGroups.shutdown(true);
         serverGroups.reset();
+    }
+
+    private void initMultiNode()
+            throws GeneralSecurityException,
+                    IOException,
+                    InterruptedException,
+                    ServerStartupException {
+        ClusterConfig cc = ClusterConfig.getInstance();
+        int clusterSize = cc.getClusterSize();
+        if (clusterSize > 1) {
+            Connector multiNodeConnector =
+                    configManager.getConnector(Connector.ConnectorType.CLUSTER);
+            multiNodeConnector.clean();
+
+            EventLoopGroup serverGroup = serverGroups.getServerGroup();
+            EventLoopGroup workerGroup = serverGroups.getChildGroup();
+
+            ChannelFuture future = initializeServer(multiNodeConnector, serverGroup, workerGroup);
+
+            // start download model here
+            cc.countDown();
+
+            logger.info("Waiting for all worker nodes ready ...");
+            cc.await();
+
+            future.channel().close();
+            serverGroups.shutdown(true);
+            serverGroups.reset();
+
+            String status = cc.getError();
+            if (status != null) {
+                throw new ServerStartupException("Failed to initialize cluster: " + status);
+            }
+            logger.info("Cluster initialized with {} nodes.", clusterSize);
+        }
     }
 
     private ChannelFuture initializeServer(
@@ -486,7 +524,7 @@ public class ModelServer {
         } catch (MalformedURLException e) {
             throw new AssertionError("Invalid path: " + path, e);
         } catch (IOException e) {
-            logger.warn("Failed to access file: " + path, e);
+            logger.warn("Failed to access file: {}", path, e);
             return null;
         }
     }
