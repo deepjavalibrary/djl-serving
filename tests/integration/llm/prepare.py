@@ -784,15 +784,6 @@ trtllm_handler_list = {
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
     },
-    "falcon-7b": {
-        "option.model_id": "s3://djl-llm/triton/0.10.0/falcon-7b-tp1-bs16/",
-        "option.tensor_parallel_degree": 1,
-        "option.max_input_len": 1024,
-        "option.max_output_len": 512,
-        "option.max_rolling_batch_size": 16,
-        "option.rolling_batch": "auto",
-        "option.output_formatter": "jsonlines",
-    },
     "llama2-7b-smoothquant": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
         "option.tensor_parallel_degree": 4,

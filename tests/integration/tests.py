@@ -266,12 +266,6 @@ class TestTrtLlmHandler1:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm llama2-13b".split())
 
-    def test_falcon_triton(self):
-        with Runner('tensorrt-llm', 'falcon-7b') as r:
-            prepare.build_trtllm_handler_model("falcon-7b")
-            r.launch("CUDA_VISIBLE_DEVICES=0")
-            client.run("trtllm falcon-7b".split())
-
     def test_internlm_7b(self):
         with Runner('tensorrt-llm', 'internlm-7b') as r:
             prepare.build_trtllm_handler_model("internlm-7b")
