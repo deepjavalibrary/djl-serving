@@ -301,6 +301,10 @@ def main():
         type=str,
         required=False,
         help='local path or s3 uri to save/upload the partitioned checkpoints')
+    parser.add_argument('--pipeline-parallel-degree',
+                        type=str,
+                        required=False,
+                        help='pipeline parallel degree')
     parser.add_argument('--tensor-parallel-degree',
                         type=str,
                         required=False,
