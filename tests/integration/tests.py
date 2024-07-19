@@ -792,3 +792,38 @@ class TestNeuronxRollingBatch:
             client.run(
                 "transformers_neuronx_rolling_batch llama-speculative-compiled-rb"
                 .split())
+
+
+@pytest.mark.correctness
+@pytest.mark.trtllm
+@pytest.mark.gpu_4
+class TestCorrectnessTrtLlm:
+
+    def test_llama3_1_8b(self):
+        with Runner('tensorrt-llm', 'llama3-1-8b') as r:
+            prepare.build_correctness_model("trtllm-llama3-1-8b")
+            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
+            client.run("correctness trtllm-llama3-1-8b".split())
+
+
+@pytest.mark.correctness
+@pytest.mark.lmi_dist
+@pytest.mark.gpu_4
+class TestCorrectnessLmiDist:
+
+    def test_llama3_1_8b(self):
+        with Runner('lmi', 'llama3-1-8b') as r:
+            prepare.build_correctness_model("lmi-dist-llama3-1-8b")
+            r.launch()
+            client.run("correctness lmi-dist-llama3-1-8b".split())
+
+
+@pytest.mark.correctness
+@pytest.mark.inf
+class TestCorrectnessNeuronx:
+
+    def test_llama3_1_8b(self):
+        with Runner('pytorch-inf2', 'llama3-1-8b') as r:
+            prepare.build_correctness_model("neuronx-llama3-1-8b")
+            r.launch(container='pytorch-inf2-2')
+            client.run("correctness neuronx-llama3-1-8b".split())
