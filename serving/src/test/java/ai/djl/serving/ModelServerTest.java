@@ -36,6 +36,7 @@ import ai.djl.serving.http.list.ListWorkflowsResponse.WorkflowItem;
 import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.ConfigManager;
 import ai.djl.serving.util.Connector;
+import ai.djl.serving.util.ModelStore;
 import ai.djl.serving.wlm.util.EventManager;
 import ai.djl.serving.wlm.util.ModelServerListenerAdapter;
 import ai.djl.util.JsonUtils;
@@ -214,7 +215,7 @@ public class ModelServerTest {
         try {
             EventManager.getInstance().addListener(new Listener());
             Path notModel = Paths.get("build/non-model");
-            String url = server.mapModelUrl(notModel); // not a model dir
+            String url = ModelStore.mapModelUrl(notModel); // not a model dir
             assertNull(url);
 
             assertTrue(server.isRunning());
