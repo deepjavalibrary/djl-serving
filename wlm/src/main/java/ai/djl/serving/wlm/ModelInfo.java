@@ -88,6 +88,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private boolean dynamicAdapters;
 
     transient Path modelDir;
+    transient String resolvedModelUrl;
     private transient String artifactName;
     transient Path downloadDir;
 
@@ -231,7 +232,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 builder =
                         Criteria.builder()
                                 .setTypes(inputClass, outputClass)
-                                .optModelUrls(modelUrl)
+                                .optModelUrls(resolvedModelUrl)
                                 .optModelName(modelName)
                                 .optEngine(engineName)
                                 .optFilters(filters)
@@ -502,6 +503,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         if (initialize) {
             return;
         }
+        this.resolvedModelUrl = modelUrl;
         if (adapters == null) {
             adapters = new ConcurrentHashMap<>();
         }
@@ -694,6 +696,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         String prefix = prop.getProperty("option.modelName", artifactName);
+        if (prefix == null) {
+            prefix = modelDir.toFile().getName();
+        }
         if (Files.isRegularFile(modelDir.resolve("metadata.yaml"))) {
             eng = SageMakerUtils.inferSageMakerEngine(this);
             if (eng != null) {
@@ -762,15 +767,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     private void downloadModel() throws ModelException, IOException {
-        if (modelUrl.startsWith("s3://")) {
-            modelDir = downloadS3ToDownloadDir(modelUrl);
-            modelUrl = modelDir.toUri().toURL().toString();
+        if (resolvedModelUrl.startsWith("s3://")) {
+            modelDir = downloadS3ToDownloadDir(resolvedModelUrl);
+            resolvedModelUrl = modelDir.toUri().toURL().toString();
             return;
         }
-        Repository repository = Repository.newInstance("modelStore", modelUrl);
+        Repository repository = Repository.newInstance("modelStore", resolvedModelUrl);
         List<MRL> mrls = repository.getResources();
         if (mrls.isEmpty()) {
-            throw new ModelNotFoundException("Invalid model url: " + modelUrl);
+            throw new ModelNotFoundException("Invalid model url: " + resolvedModelUrl);
         }
 
         Artifact artifact = mrls.get(0).getDefaultArtifact();
@@ -1115,7 +1120,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             this.downloadDir = downloadS3ToDownloadDir(modelId.trim());
         } else if (modelId.startsWith("djl://")) {
             logger.info("{}: djl model zoo url found: {}", uid, modelId);
-            modelUrl = modelId.trim();
+            resolvedModelUrl = modelId.trim();
             // download real model from model zoo
             downloadModel();
         }

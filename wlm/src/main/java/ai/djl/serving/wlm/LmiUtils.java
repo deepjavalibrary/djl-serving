@@ -165,7 +165,7 @@ public final class LmiUtils {
             modelId = repo.toString();
         }
         String optimization = info.prop.getProperty("option.optimization");
-        info.modelUrl = convertOnnx(modelId, optimization).toUri().toURL().toString();
+        info.resolvedModelUrl = convertOnnx(modelId, optimization).toUri().toURL().toString();
     }
 
     private static Path convertOnnx(String modelId, String optimization) throws IOException {

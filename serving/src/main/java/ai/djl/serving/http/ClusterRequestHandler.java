@@ -13,8 +13,14 @@
 package ai.djl.serving.http;
 
 import ai.djl.ModelException;
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.serving.util.ClusterConfig;
+import ai.djl.serving.util.ModelStore;
 import ai.djl.serving.util.NettyUtils;
+import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkerPoolConfig;
+import ai.djl.serving.workflow.Workflow;
 import ai.djl.util.Utils;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -30,6 +36,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** A class handling inbound HTTP requests for the cluster management API. */
 public class ClusterRequestHandler extends HttpRequestHandler {
@@ -64,6 +72,18 @@ public class ClusterRequestHandler extends HttpRequestHandler {
                     sshkeygen(home.resolve("id_rsa").toString());
                 }
                 NettyUtils.sendFile(ctx, file, false);
+                return;
+            case "models":
+                ModelStore modelStore = ModelStore.getInstance();
+                List<Workflow> workflows = modelStore.getWorkflows();
+                Map<String, String> map = new ConcurrentHashMap<>();
+                for (Workflow workflow : workflows) {
+                    for (WorkerPoolConfig<Input, Output> wpc : workflow.getWpcs()) {
+                        ModelInfo<Input, Output> model = (ModelInfo<Input, Output>) wpc;
+                        map.put(model.getId(), model.getModelUrl());
+                    }
+                }
+                NettyUtils.sendJsonResponse(ctx, map);
                 return;
             case "status":
                 List<String> messages = decoder.parameters().get("message");
