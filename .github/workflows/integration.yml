@@ -172,7 +172,7 @@ jobs:
           for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
           sudo rm -rf outputs && sudo rm -rf models
           rm awscurl
-          docker rm -f $(docker ps -aq) || true
+          ./remove_container.sh
       - name: Upload test logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

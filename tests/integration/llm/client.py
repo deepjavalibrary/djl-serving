@@ -19,11 +19,16 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from llm.correctness.execution import check_correctness
 
+from PIL import Image
+
 FAILED_DEPENDENCY_CODE = 424
 TIMEOUT = 3.0
 N_WORKERS = 8
 
-logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger()
+LOGGER.setLevel(logging.INFO)
+# write output to console
+LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def get_model_name():
@@ -697,6 +702,25 @@ correctness_model_spec = {
 }
 
 
+def add_file_handler_to_logger(file_path: str):
+    handler = logging.FileHandler(file_path, mode='w')
+    handler.setLevel(logging.INFO)
+    LOGGER.addHandler(handler)
+    return handler
+
+
+def remove_file_handler_from_logger(handler):
+    LOGGER.removeHandler(handler)
+    handler.close()
+
+
+def modelspec_checker(model: str, model_spec: dict):
+    if model not in model_spec:
+        msg = f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        LOGGER.error(msg)
+        raise ValueError(msg)
+
+
 def check_worker_number(desired):
     model_name = get_model_name()
     endpoint = f"http://127.0.0.1:8080/models/{model_name}"
@@ -706,8 +730,9 @@ def check_worker_number(desired):
     elif desired == len(res[0]["models"][0]["workerGroups"][0]["workers"]):
         return
     else:
-        raise AssertionError(
-            f"Worker number does not meet requirements! {res}")
+        msg = f"Worker number does not meet requirements! {res}"
+        LOGGER.error(msg)
+        raise AssertionError(msg)
 
 
 def validate_correctness(tasks, expected):
@@ -755,7 +780,7 @@ def send_json(data):
     resp = requests.post(endpoint, headers=headers, json=data)
 
     if resp.status_code >= 300:
-        logging.exception(f"HTTP error: {resp}")
+        LOGGER.exception(f"HTTP error: {resp}")
         raise ValueError("Failed to send reqeust to model server")
     return resp
 
@@ -765,7 +790,7 @@ def find_awscurl():
     try:
         sp.check_output(command, shell=True)
     except sp.CalledProcessError:
-        logging.info("Downloading awscurl...")
+        LOGGER.info("Downloading awscurl...")
         command = "wget https://publish.djl.ai/awscurl/awscurl && chmod +x awscurl"
         sp.call(command, shell=True)
 
@@ -797,7 +822,7 @@ def awscurl_run(data,
     if output:
         output_path = os.path.join(os.path.curdir, "outputs", "output")
         command = f"{command} -o {output_path}"
-    logging.info(f"Running command {command}")
+    LOGGER.info(f"Running command {command}")
     sp.call(command, shell=True)
     if dataset:
         shutil.rmtree(dataset_dir)
@@ -812,7 +837,7 @@ def send_image_json(img_url, data):
     resp = requests.post(endpoint, files=multipart_form_data)
 
     if resp.status_code >= 300:
-        logging.exception(f"HTTP error: {resp}")
+        LOGGER.exception(f"HTTP error: {resp}")
         raise ValueError("Failed to send reqeust to model server")
     return resp
 
@@ -832,11 +857,13 @@ def get_gpu_memory():
 
 def validate_memory_usage(expected_memory_limit):
     used_memory_per_gpu = get_gpu_memory()
-    logging.info(f"Used memory per GPU: {used_memory_per_gpu}")
+    LOGGER.info(f"Used memory per GPU: {used_memory_per_gpu}")
     if any(x > expected_memory_limit for x in used_memory_per_gpu):
-        raise AssertionError(f"Memory usage is too high!"
-                             f"Used Memory:{used_memory_per_gpu}"
-                             f"Expected Upper Limit:{expected_memory_limit}")
+        msg = (f"Memory usage is too high!"
+               f"Used Memory:{used_memory_per_gpu}"
+               f"Expected Upper Limit:{expected_memory_limit}")
+        LOGGER.error(msg)
+        raise AssertionError(msg)
 
 
 def fake_tokenizer(prompt, in_tokens):
@@ -1002,9 +1029,9 @@ def log_metrics(response_times):
     required_args = ["batch_size", "out_tokens"]
     for arg in required_args:
         if arg not in args:
-            raise ValueError(
-                f"Logging metrics requires the following arguments: {required_args}"
-            )
+            msg = f"Logging metrics requires the following arguments: {required_args}"
+            LOGGER.error(msg)
+            raise ValueError(msg)
 
     p50 = np.percentile(response_times, 50)
     p90 = np.percentile(response_times, 90)
@@ -1076,16 +1103,13 @@ def response_checker(res, message):
             elif output_json.get("code", 200) != 200:
                 raise RuntimeError("Inference failed!")
         else:
-            logging.info(
+            LOGGER.info(
                 f"Skipping content check given non-supported content type {res.headers['content-type']}"
             )
 
 
 def test_handler_rolling_batch(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
+    modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
@@ -1098,16 +1122,16 @@ def test_handler_rolling_batch(model, model_spec):
         req["parameters"].update(spec["parameters"])
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
-    logging.info(f"req {req}")
+    LOGGER.info(f"req {req}")
     res = send_json(req)
     message = res.content.decode("utf-8")
-    logging.info(f"res: {message}")
+    LOGGER.info(f"res: {message}")
     response_checker(res, message)
 
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            logging.info(
+            LOGGER.info(
                 f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
             )
             req["parameters"]["max_new_tokens"] = seq_length
@@ -1115,10 +1139,7 @@ def test_handler_rolling_batch(model, model_spec):
 
 
 def test_handler_adapters(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
+    modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
@@ -1136,16 +1157,16 @@ def test_handler_adapters(model, model_spec):
         req["parameters"] = params
         req["adapters"] = adapter
         reqs.append(req)
-    logging.info(f"reqs {reqs}")
+    LOGGER.info(f"reqs {reqs}")
     for req in reqs:
         res = send_json(req)
         message = res.content.decode("utf-8")
-        logging.info(f"res: {message}")
+        LOGGER.info(f"res: {message}")
         response_checker(res, message)
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            logging.info(
+            LOGGER.info(
                 f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
             )
             for req in reqs:
@@ -1158,30 +1179,27 @@ def test_handler_adapters(model, model_spec):
     del_adapter = spec.get("adapters")[0]
     res = requests.delete(
         f"http://127.0.0.1:8080/models/test/adapters/{del_adapter}")
-    logging.info(f"del adapter {res}")
+    LOGGER.info(f"del adapter {res}")
     headers = {'content-type': 'application/json'}
     endpoint = f"http://127.0.0.1:8080/invocations"
     res = requests.post(endpoint, headers=headers,
                         json=reqs[0]).content.decode("utf-8")
-    logging.info(f"call deleted adapter {res}")
+    LOGGER.info(f"call deleted adapter {res}")
     assert json.loads(res).get(
         "code"
     ) == FAILED_DEPENDENCY_CODE, "Calling deleted adapter should not work with new adapters"
 
     if len(reqs) > 1:
         res = send_json(reqs[1]).content.decode("utf-8")
-        logging.info(f"call valid adapter after deletion {res}")
+        LOGGER.info(f"call valid adapter after deletion {res}")
         if "error" in res:
-            raise RuntimeError(
-                f"Deleting adapter should not break inference for remaining adapters"
-            )
+            msg = f"Deleting adapter should not break inference for remaining adapters"
+            LOGGER.error(msg)
+            raise RuntimeError(msg)
 
 
 def test_handler_rolling_batch_chat(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
+    modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
@@ -1193,13 +1211,13 @@ def test_handler_rolling_batch_chat(model, model_spec):
     req["top_logprobs"] = 1
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
-    logging.info(f"req {req}")
+    LOGGER.info(f"req {req}")
     res = send_json(req)
-    logging.info(f"res: {res.content}")
+    LOGGER.info(f"res: {res.content}")
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            logging.info(
+            LOGGER.info(
                 f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
             )
             req["max_tokens"] = seq_length
@@ -1207,10 +1225,7 @@ def test_handler_rolling_batch_chat(model, model_spec):
 
 
 def test_handler(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
+    modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
@@ -1226,17 +1241,17 @@ def test_handler(model, model_spec):
             if spec.get("details", False):
                 params["details"] = True
             req["parameters"] = params
-            logging.info(f"req {req}")
+            LOGGER.info(f"req {req}")
             res = send_json(req)
             if spec.get("stream_output", False):
-                logging.info(f"res: {res.content}")
+                LOGGER.info(f"res: {res.content}")
                 result = res.content.decode().split("\n")[:-1]
                 assert len(
                     result
                 ) <= seq_length, "generated more tokens than max_new_tokens"
             else:
                 res = res.json()
-                logging.info(f"res {res}")
+                LOGGER.info(f"res {res}")
                 if isinstance(res, list):
                     result = [item['generated_text'] for item in res]
                     assert len(result) == batch_size
@@ -1248,56 +1263,30 @@ def test_handler(model, model_spec):
                 awscurl_run(req, spec.get("tokenizer"), batch_size)
 
 
-def test_ds_raw_model(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
-    spec = model_spec[args.model]
-    for i, batch_size in enumerate(spec["batch_size"]):
-        for seq_length in spec["seq_length"]:
-            req = {
-                "batch_size": batch_size,
-                "text_length": seq_length,
-                "use_pipeline": spec["use_pipeline"]
-            }
-            logging.info(f"req: {req}")
-            res = send_json(req)
-            res = res.json()
-            logging.info(f"res: {res}")
-            assert len(res["outputs"]) == batch_size
-            if "max_memory_per_gpu" in spec:
-                validate_memory_usage(spec["max_memory_per_gpu"][i])
-
-
 def test_performance():
     response_times = []
     for i in range(args.count):
         req = {"inputs": batch_generation(args.batch_size)}
         params = {"max_new_tokens": args.out_tokens}
         req["parameters"] = params
-        logging.info(f"req: {req}")
+        LOGGER.info(f"req: {req}")
         start = datetime.now()
         res = send_json(req)
         delta = (datetime.now() - start).total_seconds() * 1000
         response_times.append(delta)
         res = res.json()
-        logging.info(f"res: {res}")
+        LOGGER.info(f"res: {res}")
     log_metrics(response_times)
 
 
 def test_neuron_sd_handler(model, model_spec):
-    from PIL import Image
-    if model not in model_spec:
-        raise ValueError(
-            f"{model} is not one of the supporting models {list(neuron_sd_model_spec.keys())}"
-        )
+    modelspec_checker(model, model_spec)
     spec = neuron_sd_model_spec[model]
     for step in spec["num_inference_steps"]:
         req = {"prompt": "A bird and cat flying through space"}
         params = {"num_inference_steps": step}
         req["parameters"] = params
-        logging.info(f"req: {req}")
+        LOGGER.info(f"req: {req}")
         res = send_json(req)
         try:
             Image.open(BytesIO(res.content)).convert("RGB")
@@ -1306,10 +1295,7 @@ def test_neuron_sd_handler(model, model_spec):
 
 
 def test_transformers_neuronx_handler(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
+    modelspec_checker(model, model_spec)
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
@@ -1320,13 +1306,13 @@ def test_transformers_neuronx_handler(model, model_spec):
             if "use_sample" in spec:
                 params["use_sample"] = True
             req["parameters"] = params
-            logging.info(f"req {req}")
+            LOGGER.info(f"req {req}")
             res = send_json(req)
             if spec.get("stream_output", False):
-                logging.info(f"res: {res.content}")
+                LOGGER.info(f"res: {res.content}")
             else:
                 res = res.json()
-                logging.info(f"res {res}")
+                LOGGER.info(f"res {res}")
                 result = res
                 assert len(result) == batch_size
 
@@ -1364,7 +1350,7 @@ def run(raw_args):
     parser.add_argument("--engine",
                         required=False,
                         type=str,
-                        choices=["deepspeed", "huggingface"],
+                        choices=["mpi", "huggingface"],
                         help="The engine used for inference")
     parser.add_argument("--dtype",
                         required=False,

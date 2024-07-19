@@ -25,6 +25,7 @@ class Runner:
     def __init__(self, container, test_name=None, download=False):
         self.container = container
         self.test_name = test_name
+        self.client_file_handler = None
 
         # Compute flavor and repo
         repo = "deepjavalibrary/djl-serving"
@@ -53,9 +54,13 @@ class Runner:
         return self
 
     def __exit__(self, *args):
+        client.remove_file_handler_from_logger(self.client_file_handler)
         if self.test_name is not None:
             esc_test_name = self.test_name.replace("/", "-")
             os.system(f"mkdir -p all_logs/{esc_test_name}")
+            os.system(
+                f"cp client_logs/{self.test_name}_client.log all_logs/{esc_test_name}/"
+            )
             os.system(f"cp -r logs all_logs/{esc_test_name}")
         subprocess.run(["./remove_container.sh"], check=True)
         os.system("cat logs/serving.log")
@@ -77,6 +82,9 @@ class Runner:
             cmd = 'serve -m test=file:/opt/ml/model/test/'
 
         model_dir = os.path.join(os.getcwd(), 'models')
+        os.makedirs("client_logs", exist_ok=True)
+        self.client_file_handler = client.add_file_handler_to_logger(
+            f"client_logs/{self.test_name}_client.log")
         return subprocess.run(
             f'./launch_container.sh {self.image} {model_dir} {container} {cmd}'
             .split(),
