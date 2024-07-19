@@ -41,7 +41,7 @@ def parse_chat_completions_request(input_map: Dict,
         tokenizer_inputs.append(
             message.get_tokenizer_inputs(image_token=image_token))
         images.extend(message.get_images())
-    inputs = tokenizer.apply_chat_template(tokenizer_inputs, tokenize=False)
+    inputs = apply_chat_template(tokenizer, tokenizer_inputs)
     param[
         "do_sample"] = chat_params.temperature is not None and chat_params.temperature > 0.0
     param["details"] = True  # Enable details for chat completions
@@ -52,3 +52,15 @@ def parse_chat_completions_request(input_map: Dict,
         param["images"] = images
 
     return inputs, param
+
+
+def apply_chat_template(tokenizer, inputs):
+    try:
+        inputs = tokenizer.apply_chat_template(inputs,
+                                               tokenize=False,
+                                               add_generation_prompt=True)
+        return inputs
+    except Exception as e:
+        # add_generation_prompt doesn't work for all tokenizers...
+        # This is a workaround for now until we can verify it works for all tokenizers
+        return tokenizer.apply_chat_template(inputs, tokenize=False)
