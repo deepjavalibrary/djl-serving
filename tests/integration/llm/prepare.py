@@ -556,8 +556,6 @@ lmi_dist_model_list = {
         "adapter_names": ["french", "spanish"],
         "option.gpu_memory_utilization":
         "0.8",
-        "option.max_model_len":
-        65528,
     },
     "llama-2-tiny": {
         "option.model_id": "s3://djl-llm/llama-2-tiny/",
@@ -732,8 +730,6 @@ vllm_model_list = {
         "adapter_names": ["french", "spanish"],
         "option.gpu_memory_utilization":
         "0.8",
-        "option.max_model_len":
-        65528,
     },
     "starcoder2-7b": {
         "option.model_id": "s3://djl-llm/bigcode-starcoder2",
