@@ -277,12 +277,8 @@ def _json_chat_output_formatter(request_output: RequestOutput):
             "role": "assistant",
             "content": generated_text,
         },
+        "logprobs": None,
         "finish_reason": best_sequence.finish_reason,
-    }
-    response1 = {
-        "id": f"chatcmpl-{id}",
-        "object": "chat.completion",
-        "created": created,
     }
     if parameters.get("logprobs"):
         logprobs = {
@@ -310,7 +306,7 @@ def _json_chat_output_formatter(request_output: RequestOutput):
         "total_tokens": (prompt_tokens + completion_tokens)
     }
     result = {
-        "id": f"chatcmpl-{id}",
+        "id": f"chatcmpl-{id(request_output)}",
         "object": "chat.completion",
         "created": created,
         "choices": [choice],
@@ -358,7 +354,7 @@ def _jsonlines_chat_output_formatter(request_output: RequestOutput):
         "finish_reason": best_sequence.finish_reason
     }
     response = {
-        "id": f"chatcmpl-{id}",
+        "id": f"chatcmpl-{id(request_output)}",
         "object": "chat.completion.chunk",
         "created": created,
         "choices": [choice]  # Currently only support 1 choice
