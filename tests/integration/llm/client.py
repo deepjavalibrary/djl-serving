@@ -710,8 +710,9 @@ def add_file_handler_to_logger(file_path: str):
 
 
 def remove_file_handler_from_logger(handler):
-    LOGGER.removeHandler(handler)
-    handler.close()
+    if handler:
+        LOGGER.removeHandler(handler)
+        handler.close()
 
 
 def modelspec_checker(model: str, model_spec: dict):

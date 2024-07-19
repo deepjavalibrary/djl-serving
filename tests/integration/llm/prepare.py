@@ -363,7 +363,7 @@ lmi_dist_model_list = {
         "option.max_rolling_batch_size": 4
     },
     "speculative-llama-13b": {
-        "option.model_id": "TheBloke/Llama-2-13B-fp16",
+        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.gpu_memory_utilization": "0.8",
         "option.tensor_parallel_degree": "max",
