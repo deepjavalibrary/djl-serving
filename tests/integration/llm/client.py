@@ -27,6 +27,8 @@ N_WORKERS = 8
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
+# write output to console
+LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def get_model_name():
