@@ -72,6 +72,7 @@ DJLServing build on top of Deep Java Library (DJL). Here is a list of settings f
 | DJL_ENTRY_POINT                   | env var             | The entrypoint python file or module, default: model.py                                                                                                |
 | MODEL_LOADING_TIMEOUT             | env var             | Python worker load model timeout: default: 240 seconds                                                                                                 |
 | PREDICT_TIMEOUT                   | env var             | Python predict call timeout, default: 120 seconds                                                                                                      |
+| MAX_NETTY_BUFFER_SIZE             | env var/system prop | Max response size in bytes, default 20 * 1024 * 1024 (20M)                                                                                             |
 | DJL_VENV_DIR                      | env var/system prop | The venv directory, default: $DJL_CACHE_DIR/venv                                                                                                       |
 | ai.djl.python.disable_alternative | system prop         | Disable alternative engine                                                                                                                             |
 | TENSOR_PARALLEL_DEGREE            | env var             | Set tensor parallel degree.<br>For mpi mode, the default is number of accelerators.<br>Use "max" for non-mpi mode to use all GPUs for tensor parallel. |

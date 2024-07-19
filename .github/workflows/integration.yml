@@ -175,7 +175,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
       - name: Upload test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-${{ matrix.test.test }}-logs
           path: tests/integration/all_logs/
@@ -230,7 +230,7 @@ jobs:
         run: |
           cat logs/results.log
       - name: Upload test logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: transformers-neuronx-${{ matrix.arch }}-logs
           path: engines/python/setup/logs/

@@ -27,7 +27,7 @@ import java.util.Set;
 public final class LmiConfigRecommender {
 
     private static final Logger logger = LoggerFactory.getLogger(LmiConfigRecommender.class);
-    // TODO: model list is up to date with vLLM 0.4.2
+    // TODO: model list is up to date with vLLM 0.5.1
     private static final Map<String, String> MODEL_TO_ROLLING_BATCH =
             Map.ofEntries(
                     Map.entry("falcon", "lmi-dist"),
@@ -59,7 +59,16 @@ public final class LmiConfigRecommender {
                     Map.entry("qwen2_moe", "lmi-dist"),
                     Map.entry("stablelm", "lmi-dist"),
                     Map.entry("xverse", "lmi-dist"),
-                    Map.entry("starcoder2", "lmi-dist"));
+                    Map.entry("starcoder2", "lmi-dist"),
+                    // vllm 0.5.1
+                    Map.entry("arctic", "lmi-dist"),
+                    Map.entry("gemma2", "lmi-dist"),
+                    Map.entry("jamba", "lmi-dist"),
+                    Map.entry("phi3small", "lmi-dist"),
+                    Map.entry("llava", "lmi-dist"),
+                    Map.entry("llava_next", "lmi-dist"),
+                    Map.entry("paligemma", "lmi-dist"),
+                    Map.entry("phi3_v", "lmi-dist"));
 
     private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =
             Set.of("ForCausalLM", "LMHeadModel", "ForConditionalGeneration");
@@ -75,6 +84,7 @@ public final class LmiConfigRecommender {
         setRollingBatch(lmiProperties, modelConfig, features);
         setMpiMode(lmiProperties, modelConfig, features);
         setTensorParallelDegree(lmiProperties);
+        setPipelineParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
     }
 
@@ -138,6 +148,14 @@ public final class LmiConfigRecommender {
             tpDegree = String.valueOf(CudaUtils.getGpuCount());
         }
         lmiProperties.setProperty("option.tensor_parallel_degree", tpDegree);
+    }
+
+    private static void setPipelineParallelDegree(Properties lmiProperties) {
+        if (lmiProperties.containsKey("option.pipeline_parallel_degree")) {
+            return;
+        }
+        String ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
+        lmiProperties.setProperty("option.pipeline_parallel_degree", ppDegree);
     }
 
     private static void setDynamicBatch(

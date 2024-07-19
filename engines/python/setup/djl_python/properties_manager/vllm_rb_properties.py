@@ -51,7 +51,7 @@ class VllmRbProperties(Properties):
     # Neuron vLLM properties
     device: Optional[str] = None
     preloaded_model: Optional[Any] = None
-    max_logprobs: Optional[int] = 5
+    max_logprobs: Optional[int] = 20
     enable_chunked_prefill: Optional[bool] = False
 
     @field_validator('engine')

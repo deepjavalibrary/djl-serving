@@ -257,6 +257,7 @@ public final class Connector {
 
     /** An enum represents type of connector. */
     public enum ConnectorType {
+        CLUSTER,
         INFERENCE,
         MANAGEMENT,
         BOTH

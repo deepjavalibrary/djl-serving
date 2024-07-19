@@ -29,7 +29,3 @@ After that, please store the model to:
 ```
 aws s3 sync model/ s3://djl-llm/opt-30b/
 ```
-
-## Add benchmark dataset
-
-You can modify the [dataset_prep.py](dataset_prep.py) script to add more dataset for serving benchmarks.

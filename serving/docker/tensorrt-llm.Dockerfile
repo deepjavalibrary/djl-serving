@@ -15,20 +15,20 @@ ARG cuda_version=cu124
 ARG python_version=3.10
 ARG TORCH_VERSION=2.3.1
 ARG djl_version=0.29.0~SNAPSHOT
-ARG transformers_version=4.40.0
-ARG accelerate_version=0.29.3
-ARG tensorrtlibs_version=10.0.1
+ARG transformers_version=4.42.4
+ARG accelerate_version=0.32.1
+ARG tensorrtlibs_version=10.1.0
 # %2B is the url escape for the '+' character
-ARG trtllm_toolkit_version=0.10.0%2Bnightly
-ARG trtllm_version=v0.10.0
+ARG trtllm_toolkit_version=0.11.0%2Bnightly
+ARG trtllm_version=v0.11.0
 ARG cuda_python_version=12.4
 ARG peft_version=0.10.0
 ARG triton_version=r24.04
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://djl-ai.s3.amazonaws.com/publish/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.10.0-cp310-cp310-linux_x86_64.whl"
+ARG trtllm_wheel="https://publish.djl.ai/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.11.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/${triton_version}/tritontoolkit-24.4-py310-none-any.whl"
 ARG pydantic_version=2.6.1
-ARG modelopt_version=0.11.2
+ARG modelopt_version=0.13.1
 ARG janus_version=1.0.0
 ARG pynvml_verison=11.5.0
 ARG numpy_version=1.26.4
@@ -68,7 +68,7 @@ COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
 # Install CUDNN 8
-RUN apt-get update && apt-get install -y --no-install-recommends libcudnn8 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libcudnn9-cuda-12 && rm -rf /var/lib/apt/lists/*
 
 # Install OpenMPI and other deps
 ARG DEBIAN_FRONTEND=noninteractive

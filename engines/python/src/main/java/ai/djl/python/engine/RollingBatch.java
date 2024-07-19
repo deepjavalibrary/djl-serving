@@ -307,6 +307,11 @@ class RollingBatch implements Runnable {
             }
             ++count;
             if (json[0] == '{') {
+                logger.warn(
+                        "Customizing the parse_input method of the huggingface inference handler is"
+                            + " no longer supported.This functionality will be removed in an"
+                            + " upcoming version. For custom input parsing, please migrate to using"
+                            + " the custom input formatter support");
                 // TODO: backward compatible for 0.23.0 release in case user
                 // customize huggingface.parse_input()
                 String s = new String(json, StandardCharsets.UTF_8);
@@ -348,11 +353,18 @@ class RollingBatch implements Runnable {
                         break;
                 }
             }
+            if ((nextToken == null || nextToken.isEmpty()) && code == null) {
+                // in non-streaming cases, we do not return content until generation is finished
+                return;
+            }
             if (code != null) {
                 Map<String, Object> map = new ConcurrentHashMap<>(2);
-                map.put("code", Integer.parseInt(code));
+                int httpStatusCode = Integer.parseInt(code);
+                map.put("code", httpStatusCode);
+                output.setCode(httpStatusCode);
                 if (error != null) {
                     map.put("error", error);
+                    output.setMessage(error);
                 }
                 byte[] buffer = JsonUtils.GSON.toJson(map).getBytes(StandardCharsets.UTF_8);
                 data.appendContent(buffer, true);

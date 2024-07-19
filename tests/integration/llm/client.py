@@ -12,6 +12,16 @@ from random import randrange
 import numpy as np
 from datetime import datetime
 from io import BytesIO
+import urllib
+import tqdm
+
+from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from llm.correctness.execution import check_correctness
+
+FAILED_DEPENDENCY_CODE = 424
+TIMEOUT = 3.0
+N_WORKERS = 8
 
 logging.basicConfig(level=logging.INFO)
 
@@ -525,12 +535,6 @@ trtllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
     },
-    "falcon-7b": {
-        "max_memory_per_gpu": [22.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-7b"
-    },
     "llama2-7b-smoothquant": {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
@@ -695,6 +699,27 @@ no_code_rolling_batch_spec = {
     }
 }
 
+correctness_model_spec = {
+    "trtllm-llama3-1-8b": {
+        "batch_size": [32],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "correctness": 0.25
+    },
+    "lmi-dist-llama3-1-8b": {
+        "batch_size": [32],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "correctness": 0.25
+    },
+    "neuronx-llama3-1-8b": {
+        "batch_size": [32],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "correctness": 0.25
+    }
+}
+
 
 def check_worker_number(desired):
     model_name = get_model_name()
@@ -707,6 +732,45 @@ def check_worker_number(desired):
     else:
         raise AssertionError(
             f"Worker number does not meet requirements! {res}")
+
+
+def validate_correctness(tasks, expected):
+    responses = []
+    output_dir = os.path.join(os.path.curdir, "outputs")
+    for file in os.listdir(output_dir):
+        with open(os.path.join(output_dir, file), 'r+') as f:
+            for line in f:
+                if line and not line == '\n':
+                    timestamp, json_data = line.split(':', 1)
+                    responses.append(json.loads(json_data.strip()))
+
+    total_pass = set()
+    count = 0
+    for response in responses:
+        completion_id = Counter()
+
+        with ThreadPoolExecutor(max_workers=N_WORKERS) as executor:
+            futures = []
+            results = defaultdict(list)
+            for task in tasks:
+                task_id = task['task_id']
+                completion = response.get('generated_text', '')
+                args = (task, completion, TIMEOUT, completion_id[task_id])
+                future = executor.submit(check_correctness, *args)
+                futures.append(future)
+                completion_id[task_id] += 1
+            logging.info(f"Running test suites {count}...")
+            count += 1
+            for future in tqdm.tqdm(as_completed(futures), total=len(futures)):
+                result = future.result()
+                if result['passed']:
+                    results[result["task_id"]].append(
+                        (result["completion_id"], result))
+                    total_pass.add(result["task_id"])
+
+    score = len(total_pass) / len(responses)
+    logging.info(f'Correctness: {score}')
+    assert score >= expected
 
 
 def send_json(data):
@@ -730,7 +794,12 @@ def find_awscurl():
         sp.call(command, shell=True)
 
 
-def awscurl_run(data, tokenizer, concurrency, num_run=5, dataset=False):
+def awscurl_run(data,
+                tokenizer,
+                concurrency,
+                num_run=5,
+                dataset=False,
+                output=False):
     find_awscurl()
     headers = "Content-type: application/json"
     endpoint = f"http://127.0.0.1:8080/invocations"
@@ -749,6 +818,9 @@ def awscurl_run(data, tokenizer, concurrency, num_run=5, dataset=False):
                f"-H {headers} {command_data} -P -t")
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
+    if output:
+        output_path = os.path.join(os.path.curdir, "outputs", "output")
+        command = f"{command} -o {output_path}"
     logging.info(f"Running command {command}")
     sp.call(command, shell=True)
     if dataset:
@@ -917,6 +989,15 @@ def t5_batch_generation(batch_size):
     if batch_size > len(input_sentences):
         input_sentences *= math.ceil(batch_size / len(input_sentences))
     return input_sentences[:batch_size]
+
+
+def load_dataset(dataset):
+    data = []
+    if dataset == "humaneval":
+        url = "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/humaneval.jsonl"
+        for line in urllib.request.urlopen(url):
+            data.append(json.loads(line.decode('utf-8')))
+    return data
 
 
 def get_total_memory(memory_snapshot):
@@ -1102,16 +1183,22 @@ def test_handler_adapters(model, model_spec):
     res = requests.delete(
         f"http://127.0.0.1:8080/models/test/adapters/{del_adapter}")
     logging.info(f"del adapter {res}")
-    res = send_json(reqs[0]).content.decode("utf-8")
+    headers = {'content-type': 'application/json'}
+    endpoint = f"http://127.0.0.1:8080/invocations"
+    res = requests.post(endpoint, headers=headers,
+                        json=reqs[0]).content.decode("utf-8")
     logging.info(f"call deleted adapter {res}")
-    if "error" not in res:
-        raise RuntimeError(f"Should not work with new adapters")
+    assert json.loads(res).get(
+        "code"
+    ) == FAILED_DEPENDENCY_CODE, "Calling deleted adapter should not work with new adapters"
 
     if len(reqs) > 1:
         res = send_json(reqs[1]).content.decode("utf-8")
         logging.info(f"call valid adapter after deletion {res}")
         if "error" in res:
-            raise RuntimeError(f"Deleting adapter breaking inference")
+            raise RuntimeError(
+                f"Deleting adapter should not break inference for remaining adapters"
+            )
 
 
 def test_handler_rolling_batch_chat(model, model_spec):
@@ -1268,6 +1355,32 @@ def test_transformers_neuronx_handler(model, model_spec):
                 assert len(result) == batch_size
 
 
+def test_correctness(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    correctness = int(spec.get("correctness", 0.4))
+    tasks = load_dataset("humaneval")
+    for i, batch_size in enumerate(spec["batch_size"]):
+        for seq_length in spec["seq_length"]:
+            logging.info(
+                f"Correctness testing: concurrency {batch_size} seq_len {seq_length}"
+            )
+            parameters = {"max_new_tokens": seq_length}
+            reqs = [{
+                "inputs": task["prompt"],
+                "parameters": parameters
+            } for task in tasks]
+            awscurl_run(reqs,
+                        spec.get("tokenizer", None),
+                        batch_size,
+                        dataset=True,
+                        output=True)
+            validate_correctness(tasks, correctness)
+
+
 def run(raw_args):
     parser = argparse.ArgumentParser(description="Build the LLM configs")
     parser.add_argument("handler", help="the handler used in the model")
@@ -1343,6 +1456,8 @@ def run(raw_args):
         test_handler_rolling_batch_chat(args.model, trtllm_chat_model_spec)
     elif args.handler == "no_code":
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
+    elif args.handler == "correctness":
+        test_correctness(args.model, correctness_model_spec)
 
     else:
         raise ValueError(

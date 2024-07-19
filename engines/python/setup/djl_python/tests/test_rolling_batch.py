@@ -28,18 +28,14 @@ class TestRollingBatch(unittest.TestCase):
         req2 = Request(req_input2)
         for req in [req1, req2]:
             req.set_next_token(Token(244, "He", -0.334532))
-            print(req.get_next_token(), end='')
-            assert req.get_next_token() == '{"generated_text": "He'
-            req.reset_next_token()
+            req.get_next_token()
             req.set_next_token(Token(576, "llo", -0.123123))
-            print(req.get_next_token(), end='')
-            assert req.get_next_token() == 'llo'
-            req.reset_next_token()
+            req.get_next_token()
             req.set_next_token(Token(4558, " world", -0.567854), True,
                                'length')
             print(req.get_next_token(), end='')
-            assert req.get_next_token() == ' world"}'
-            req.reset_next_token()
+            assert req.get_next_token() == json.dumps(
+                {"generated_text": "Hello world"})
 
     def test_json_fmt_with_appending(self):
         req_input1 = TextInput(request_id=0,
@@ -58,14 +54,14 @@ class TestRollingBatch(unittest.TestCase):
         req2 = Request(req_input2)
         for req in [req1, req2]:
             req.set_next_token(Token(244, "He", -0.334532))
+            req.get_next_token()
             req.set_next_token(Token(576, "llo", -0.123123))
-            print(req.get_next_token(), end='')
-            assert req.get_next_token() == '{"generated_text": "Hello'
-            req.reset_next_token()
+            req.get_next_token()
             req.set_next_token(Token(4558, " world", -0.567854), True,
                                'length')
             print(req.get_next_token(), end='')
-            assert req.get_next_token() == ' world"}'
+            assert req.get_next_token() == json.dumps(
+                {"generated_text": "Hello world"})
 
     def test_fmt_hf_compat(self):
         req = Request(
@@ -79,16 +75,12 @@ class TestRollingBatch(unittest.TestCase):
                       output_formatter=_json_output_formatter,
                       tgi_compat=True))
 
-        final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
-        final_str.append(req.get_next_token())
-        req.reset_next_token()
+        req.get_next_token()
         req.set_next_token(Token(576, "llo", -0.123123))
-        final_str.append(req.get_next_token())
-        req.reset_next_token()
+        req.get_next_token()
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
-        final_str.append(req.get_next_token())
-        final_json = json.loads(''.join(final_str))
+        final_json = json.loads(req.get_next_token())
         print(final_json, end='')
         assert final_json == [{
             'generated_text': 'This is a wonderful dayHello world',
@@ -261,33 +253,31 @@ class TestRollingBatch(unittest.TestCase):
                       input_text="This is a wonderful day",
                       parameters={
                           "max_new_tokens": 1024,
-                          "details": True
+                          "details": True,
+                          "return_full_text": True,
                       },
                       output_formatter="3p"))
-        final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
+        req.get_next_token()
         req.set_next_token(Token(244, "llo", -0.123123))
+        req.get_next_token()
         req.set_next_token(Token(4558, " world", -0.567854))
-        req.set_next_token(Token(245, "", -1, True, "some error"), True,
-                           "error")
-        final_str.append(req.get_next_token())
-        output = json.loads(''.join(final_str))
+        req.get_next_token()
+        req.set_next_token(Token(245, "", -1, True), True, "length")
+        output = json.loads(req.get_next_token())
+        print(req.get_next_token())
         assert output == {
             "body": {
                 "generation": "This is a wonderful dayHello world",
                 "prompt_token_count": 0,
                 "generation_token_count": 4,
-                "stop_reason": "error"
+                "stop_reason": "length"
             },
             "content_type": "application/json",
             "metering": {
                 "inputTokenCount": 0,
                 "outputTokenCount": 4,
             },
-            "error": {
-                "error_code": 400,
-                "error_msg": "some error",
-            }
         }
 
     def test_3p_stream_fmt(self):
@@ -375,20 +365,14 @@ class TestRollingBatch(unittest.TestCase):
                       },
                       output_formatter=_json_output_formatter))
 
-        final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
-        final_str.append(req.get_next_token())
-        req.reset_next_token()
+        req.get_next_token()
         req.set_next_token(Token(576, "llo", -0.123123))
-        final_str.append(req.get_next_token())
-        req.reset_next_token()
+        req.get_next_token()
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
-        final_str.append(req.get_next_token())
-        final_json = json.loads(''.join(final_str))
-        print(final_json, end='')
-        assert final_json == {
-            "generated_text": "This is a wonderful dayHello world",
-        }
+
+        assert req.get_next_token() == json.dumps(
+            {"generated_text": "This is a wonderful dayHello world"})
 
         req = Request(
             TextInput(request_id=0,
@@ -420,17 +404,14 @@ class TestRollingBatch(unittest.TestCase):
                           "details": True
                       },
                       output_formatter=_json_output_formatter))
-        final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
-        final_str.append(req.get_next_token())
-        req.reset_next_token()
+        req.get_next_token()
         req.set_next_token(Token(576, "llo", -0.123123))
-        final_str.append(req.get_next_token())
-        req.reset_next_token()
+        req.get_next_token()
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
-        final_str.append(req.get_next_token())
-        final_json = json.loads(''.join(final_str))
-        print(final_json)
+
+        final_json = json.loads(req.get_next_token())
+
         assert final_json == {
             "generated_text": "Hello world",
             "details": {
@@ -569,22 +550,20 @@ class TestRollingBatch(unittest.TestCase):
                 parameters={
                     "max_new_tokens": 256,
                     "details": True,
-                    "logprobs": True
+                    "logprobs": True,
                 },
                 output_formatter=_json_chat_output_formatter,
             ))
-        final_str = []
         req.set_next_token(Token(244, "He", -0.334532))
-        final_str.append(req.get_next_token())
+        req.get_next_token()
         req.reset_next_token()
         req.set_next_token(Token(576, "llo", -0.123123))
-        final_str.append(req.get_next_token())
+        req.get_next_token()
         req.reset_next_token()
         req.set_next_token(Token(4558, " world", -0.567854), True, 'length')
-        final_str.append(req.get_next_token())
-        final_json = json.loads(''.join(final_str))
-        print(final_json)
-        assert final_json['choices'] == [{
+        output = json.loads(req.get_next_token())
+        print(output)
+        assert output['choices'] == [{
             'index': 0,
             'message': {
                 'role': 'assistant',
@@ -628,7 +607,7 @@ class TestRollingBatch(unittest.TestCase):
             },
             'finish_reason': 'length'
         }]
-        assert final_json['usage'] == {
+        assert output['usage'] == {
             'prompt_tokens': 0,
             'completion_tokens': 3,
             'total_tokens': 3

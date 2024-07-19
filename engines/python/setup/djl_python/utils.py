@@ -98,7 +98,7 @@ def rolling_batch_inference(parsed_input, inputs: Input, outputs: Output,
             outputs.add(Output.binary_encode(err), key="data", batch_index=i)
             outputs.add_property(f"batch_{i}_Content-Type", "application/json")
         else:
-            content_type = result[idx].pop("content_type")
+            content_type = result[idx].get("content_type")
             outputs.add(Output.binary_encode(result[idx]),
                         key="data",
                         batch_index=i)

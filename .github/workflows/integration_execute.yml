@@ -4,8 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       test:
-        description: 'Which test to run. Should be a class in tests.py or TestClass::test_fun_name'
-        required: true
+        description: 'Which test to run as a pytest keyword expression. Should be a class in tests.py or TestClass::test_fun_name'
+        required: false
+        default: ""
+      mark:
+        description: 'Which tests to run as a pytest marker expression. Should be a mark from pytest.ini'
+        required: false
+        default: ""
       instance:
         description: 'Instance used for testing'
         required: true
@@ -72,6 +77,11 @@ jobs:
           sudo apt-get install python3 python-is-python3 python3-pip -y
       - name: Install pip dependencies
         run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
+      - name: Install torch
+        # Use torch to get cuda capability of current device to selectively run tests
+        # Torch version doesn't really matter that much
+        run: |
+          pip3 install torch==2.3.0
       - name: install awscli
         run: |
           sudo apt-get update
@@ -96,7 +106,7 @@ jobs:
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
         run: |
-          python -m pytest -k ${{ inputs.test }} tests.py
+          python -m pytest tests.py -k "${{ inputs.test }}"  -m "${{ inputs.mark }}"
       - name: Cleanup
         working-directory: tests/integration
         run: |
@@ -112,7 +122,7 @@ jobs:
           docker rm -f $(docker ps -aq) || true
       - name: Upload test logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-${{ inputs.test }}-logs
           path: tests/integration/all_logs/

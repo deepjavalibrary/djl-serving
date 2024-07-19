@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
+import json
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -56,6 +57,9 @@ def stop_on_any_exception(func):
                 request.set_next_token(token,
                                        last_token=True,
                                        finish_reason="error")
+                request.set_error_message(str(e))
+                # TODO: make configurable
+                request.set_error_code(424)
             response = self.postprocess_results()
             self.reset()
             return response
@@ -134,6 +138,10 @@ class RollingBatch(ABC):
                 "last": req.is_last_token(),
                 "content_type": req.get_content_type()
             }
+            if req.get_error_message():
+                res["error"] = req.get_error_message()
+            if req.get_error_code():
+                res["code"] = req.get_error_code()
             req.reset_next_token()
             results.append(res)
 

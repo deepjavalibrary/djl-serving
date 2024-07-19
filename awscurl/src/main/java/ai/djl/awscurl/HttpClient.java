@@ -77,7 +77,11 @@ final class HttpClient {
             long[] requestTime,
             String[] jq)
             throws IOException {
-        ps.write(("\n" + System.currentTimeMillis() + ": ").getBytes(StandardCharsets.UTF_8));
+        ps.write(
+                ("\ntimestamp: " + System.currentTimeMillis() + "\ninput: ")
+                        .getBytes(StandardCharsets.UTF_8));
+        ps.write(request.getContent());
+        ps.write(("\noutput: ").getBytes(StandardCharsets.UTF_8));
         long begin = System.nanoTime();
         try (CloseableHttpClient client = getHttpClient(insecure, timeout)) {
             HttpUriRequest req =

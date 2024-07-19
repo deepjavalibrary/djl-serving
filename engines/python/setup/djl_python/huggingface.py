@@ -163,7 +163,8 @@ class HuggingFaceService(object):
             "adapter_registry": self.adapter_registry,
             "model_config": self.model_config,
             "peft_config": self.peft_config,
-            "rolling_batch": self.rolling_batch
+            "rolling_batch": self.rolling_batch,
+            "image_placeholder_token": self.get_image_token(),
         }
 
     @staticmethod
@@ -459,6 +460,29 @@ class HuggingFaceService(object):
                 f"This is required for loading huggingface models",
                 exc_info=True)
             raise e
+
+    def get_image_token(self):
+        if self.hf_configs.image_placeholder_token:
+            return self.hf_configs.image_placeholder_token
+
+        logging.warning(
+            "image_placeholder_token is not explicitly set. It is highly recommended to explicitly"
+            "set the image_placeholder_token as it differs between models, and is not easy to infer from the model or tokenizer"
+        )
+
+        # TODO: Improve. We hardcode these for know model architectures as it is the most accurate and quickest way to set
+        # This is less than ideal, but until there is a good way to obtain this from the tokenizer/model, it's the best way to do so
+        model_type = self.model_config.model_type
+        if model_type == "phi3_v":
+            # phi3_v does support multiple images, but vllm/lmi-dist can only support 1 per request
+            return "<|image_1|>"
+        if model_type in {"llava", "llava_next", "paligemma"}:
+            return "<image>"
+
+        logging.warning(
+            "could not infer image token from the model artifacts. Using <image> as default."
+        )
+        return "<image>"
 
 
 _service = HuggingFaceService()

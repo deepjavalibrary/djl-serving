@@ -6,11 +6,11 @@ on:
       trtllm_branch:
         description: 'The interal branch of trtllm'
         required: true
-        default: 'lmi_v0.9.0'
+        default: 'lmi_v0.11.0'
       release_tag:
         description: 'The released tag version of trtllm'
         required: true
-        default: 'v0.9.0'
+        default: 'v0.11.0'
       python_version:
         description: 'The python version of release'
         required: false
@@ -48,7 +48,7 @@ jobs:
   trtllm-deps-build:
     runs-on: [ self-hosted, g5 ]
     container:
-      image: nvidia/cuda:12.2.2-devel-ubuntu22.04
+      image: nvidia/cuda:12.4.1-devel-ubuntu22.04
       options: --gpus all --runtime=nvidia --shm-size 12g
     timeout-minutes: 90
     needs: create-runners
@@ -71,7 +71,7 @@ jobs:
         run: |
           ./build_artifacts.sh ${{ inputs.trtllm_branch }} ${{ inputs.release_tag }} ${{ inputs.python_version }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: /tmp/binaries/tensorrtllm/
@@ -87,7 +87,7 @@ jobs:
       - name: Install dependencies
         run: pip install awscli
       - name: Download built-artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
             name: build-artifacts
             path: tensorrtllm

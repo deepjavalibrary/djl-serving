@@ -17,18 +17,14 @@ import os
 import sys
 from tensorrt_llm_toolkit import create_model_repo
 
-from utils import update_kwargs_with_env_vars, load_properties
+from utils import update_kwargs_with_env_vars, load_properties, remove_option_from_properties
 
 
 def create_trt_llm_repo(properties, args):
-    kwargs = {}
-    for key, value in properties.items():
-        if key.startswith("option."):
-            kwargs[key[7:]] = value
-        else:
-            kwargs[key] = value
+    kwargs = remove_option_from_properties(properties)
     kwargs['trt_llm_model_repo'] = args.trt_llm_model_repo
     kwargs["tensor_parallel_degree"] = args.tensor_parallel_degree
+    kwargs["pipeline_parallel_degree"] = args.pipeline_parallel_degree
     model_id_or_path = args.model_path or kwargs['model_id']
     create_model_repo(model_id_or_path, **kwargs)
 
@@ -53,6 +49,10 @@ def main():
                         type=int,
                         required=True,
                         help='Tensor parallel degree')
+    parser.add_argument('--pipeline_parallel_degree',
+                        type=int,
+                        required=True,
+                        help='Pipeline parallel degree')
     parser.add_argument('--model_path',
                         type=str,
                         required=False,

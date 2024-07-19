@@ -184,7 +184,7 @@ transformers_neuronx_handler_list = {
     },
     "stable-diffusion-2.1-neuron": {
         "option.model_id":
-        "s3://djl-llm/stable-diffusion-2-1-neuron-compiled/",
+        "s3://djl-llm/optimum/latest/stable-diffusion-2-1-neuron-compiled/",
         "option.height": 512,
         "option.width": 512,
         "batch_size": 1,
@@ -195,7 +195,7 @@ transformers_neuronx_handler_list = {
     },
     "stable-diffusion-1.5-neuron": {
         "option.model_id":
-        "s3://djl-llm/stable-diffusion-1-5-neuron-compiled/",
+        "s3://djl-llm/optimum/latest/stable-diffusion-1-5-neuron-compiled/",
         "option.height": 512,
         "option.width": 512,
         "batch_size": 1,
@@ -205,7 +205,8 @@ transformers_neuronx_handler_list = {
         "option.use_stable_diffusion": True
     },
     "stable-diffusion-xl-neuron": {
-        "option.model_id": "s3://djl-llm/stable-diffusion-xl-neuron-compiled/",
+        "option.model_id":
+        "s3://djl-llm/optimum/latest/stable-diffusion-xl-neuron-compiled/",
         "option.height": 1024,
         "option.width": 1024,
         "batch_size": 1,
@@ -790,7 +791,7 @@ lmi_dist_aiccl_model_list = {
         "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
     },
     "codellama-34b-aiccl": {
-        "option.model_id": "codellama/CodeLlama-34b-hf",
+        "option.model_id": "s3://djl-llm/CodeLlama-34b-Instruct-hf/",
     },
     "falcon-40b-aiccl": {
         "option.model_id": "s3://djl-llm/falcon-40b/",
@@ -805,15 +806,6 @@ trtllm_handler_list = {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
-    },
-    "falcon-7b": {
-        "option.model_id": "s3://djl-llm/triton/0.10.0/falcon-7b-tp1-bs16/",
-        "option.tensor_parallel_degree": 1,
-        "option.max_input_len": 1024,
-        "option.max_output_len": 512,
-        "option.max_rolling_batch_size": 16,
-        "option.rolling_batch": "auto",
         "option.output_formatter": "jsonlines",
     },
     "llama2-7b-smoothquant": {
@@ -901,6 +893,35 @@ trtllm_handler_list = {
         "option.dtype": "fp16",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
+    }
+}
+
+correctness_model_list = {
+    "trtllm-llama3-1-8b": {
+        "engine": "Python",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.rolling_batch": "trtllm",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32
+    },
+    "lmi-dist-llama3-1-8b": {
+        "engine": "MPI",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.rolling_batch": "lmi-dist",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32
+    },
+    "neuronx-llama3-1-8b": {
+        "engine": "Python",
+        "option.entryPoint": "djl_python.transformers_neuronx",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 1024,
+        "option.rolling_batch": 'vllm',
+        "option.max_rolling_batch_size": 32
     }
 }
 
@@ -1072,6 +1093,18 @@ def build_trtllm_handler_model(model):
     write_model_artifacts(options)
 
 
+def build_correctness_model(model):
+    if model in correctness_model_list.keys():
+        options = correctness_model_list[model]
+    else:
+        options = {"option.task": "text-generation", "option.model_id": model}
+    options["option.predict_timeout"] = 240
+    engine = options.get('engine')
+    if engine is None:
+        raise ValueError("Need to provide engine for performance benchmark")
+    write_model_artifacts(options)
+
+
 supported_handler = {
     'huggingface': build_hf_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
@@ -1082,6 +1115,7 @@ supported_handler = {
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
     'trtllm': build_trtllm_handler_model,
+    'correctness': build_correctness_model,
 }
 
 if __name__ == '__main__':

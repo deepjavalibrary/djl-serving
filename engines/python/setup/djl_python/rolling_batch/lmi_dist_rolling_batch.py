@@ -62,6 +62,8 @@ class LmiDistRollingBatch(RollingBatch):
         engine_args = VllmEngineArgs(
             model=self.lmi_dist_config.model_id_or_path,
             tensor_parallel_size=self.lmi_dist_config.tensor_parallel_degree,
+            pipeline_parallel_size=self.lmi_dist_config.
+            pipeline_parallel_degree,
             dtype=DTYPE_MAPPER[self.lmi_dist_config.dtype],
             seed=0,
             max_model_len=self.lmi_dist_config.max_model_len,
@@ -82,6 +84,8 @@ class LmiDistRollingBatch(RollingBatch):
             **engine_kwargs)
 
         kwargs = {}
+        logging.info(f"engine_args: {engine_args}, kwargs: {kwargs}")
+
         if self.lmi_dist_config.max_rolling_batch_prefill_tokens is None:
             kwargs["warmup_prefill_tokens"] = _WARMUP_PREFILL_TOKENS
         self.engine = engine_from_args(engine_args, **kwargs)

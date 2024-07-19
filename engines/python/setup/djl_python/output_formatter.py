@@ -51,39 +51,38 @@ def get_sequence_details(request_output: RequestOutput,
 
 def _json_output_formatter_best_of(request_output: RequestOutput):
     """When multiple sequences are generated, then we hold off sending the result until the generation is finished.
-    The is because, in case of best_of or beam_search, we would know the best sequence only at the end of the
-    generation of a request.
+    This is because, in case of best_of or beam_search, we would know the best sequence only at the end of generation.
     """
-    json_encoded_str = ""
-    if request_output.finished:
-        parameters = request_output.input.parameters
-        best_sequence = request_output.sequences[
-            request_output.best_sequence_index]
-        result = {
-            "generated_text": get_generated_text(best_sequence, request_output)
-        }
-        details = {"inputs": request_output.input.input_text}
-        details.update(
-            get_sequence_details(request_output,
-                                 request_output.best_sequence_index))
+    if not request_output.finished:
+        return ""
 
-        # other sequences indicate, all other sequences except the best/chosen sequence.
-        other_sequences = []
-        for index in request_output.other_sequences_indices:
-            sequence = request_output.sequences[index]
-            generated_text = get_generated_text(sequence, request_output)
-            sequence_details = get_sequence_details(request_output, index)
-            sequence_details["generated_text"] = generated_text
-            other_sequences.append(sequence_details)
+    parameters = request_output.input.parameters
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    result = {
+        "generated_text": get_generated_text(best_sequence, request_output)
+    }
+    details = {"inputs": request_output.input.input_text}
+    details.update(
+        get_sequence_details(request_output,
+                             request_output.best_sequence_index))
 
-        if other_sequences:
-            if wait_till_generation_finished(parameters):
-                details["best_of_sequences"] = other_sequences
-        result["details"] = details
-        json_encoded_str = json.dumps(result, ensure_ascii=False)
-        if request_output.input.tgi_compat:
-            json_encoded_str = f"[{json_encoded_str}]"
-    return json_encoded_str
+    # other sequences indicate, all other sequences except the best/chosen sequence.
+    other_sequences = []
+    for index in request_output.other_sequences_indices:
+        sequence = request_output.sequences[index]
+        generated_text = get_generated_text(sequence, request_output)
+        sequence_details = get_sequence_details(request_output, index)
+        sequence_details["generated_text"] = generated_text
+        other_sequences.append(sequence_details)
+
+    if other_sequences:
+        if wait_till_generation_finished(parameters):
+            details["best_of_sequences"] = other_sequences
+    result["details"] = details
+    if request_output.input.tgi_compat:
+        result = [result]
+    return json.dumps(result, ensure_ascii=False)
 
 
 def _json_output_formatter(request_output: RequestOutput):
@@ -93,74 +92,88 @@ def _json_output_formatter(request_output: RequestOutput):
     :return: formatted output
     """
 
-    parameters = request_output.input.parameters
-    if wait_till_generation_finished(parameters):
+    if wait_till_generation_finished(request_output.input.parameters):
         return _json_output_formatter_best_of(request_output)
 
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
-    generated_text = ""
-    if parameters.get("return_full_text"):
-        generated_text = request_output.input.input_text
-    next_token, first_token, last_token = best_sequence.get_next_token()
-    json_encoded_str = f"{{\"generated_text\": \"{generated_text}" if first_token else ""
-    tgi_compat = request_output.input.tgi_compat
-    if first_token and tgi_compat:
-        json_encoded_str = f"[{json_encoded_str}"
-    json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
-    if last_token:
-        details_dict = get_details_dict(request_output, include_tokens=True)
-        if details_dict:
-            details_str = f"\"details\": {json.dumps(details_dict, ensure_ascii=False)}"
-            json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
-        else:
-            json_encoded_str = f"{json_encoded_str}\"}}"
-        if tgi_compat:
-            json_encoded_str = f"{json_encoded_str}]"
-    return json_encoded_str
+    # TODO: Fix this so it is not required. Right now, this call is needed to
+    # advance the token iterator, which is needed for rolling batch to work properly
+    next_token, _, _ = best_sequence.get_next_token()
+    if not request_output.finished:
+        return ""
+    details = get_details_dict(request_output, include_tokens=True)
+    if details.get("finish_reason") == "error":
+        final_token = best_sequence.get_last_token()
+        # In non-streaming, request either succeeds or fails so do not provide the
+        # partial generation response that may exist
+        result = {
+            "generated_text": None,
+            "error": final_token.error_msg,
+            "code": 400,
+            "details": details,
+        }
+        return json.dumps(result, ensure_ascii=False)
+    generated_text = get_generated_text(best_sequence, request_output)
+    result = {
+        "generated_text": generated_text,
+    }
+    if details:
+        result["details"] = details
+    if request_output.input.tgi_compat:
+        result = [result]
+    return json.dumps(result, ensure_ascii=False)
 
 
 def _json_3p_output_formatter(request_output: RequestOutput):
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
+    # TODO: Fix this so it is not required. Right now, this call is needed to
+    # advance the token iterator, which is needed for rolling batch to work properly
     next_token, first_token, last_token = best_sequence.get_next_token()
-    json_encoded_str = f"{{\"body\": {{\"generation\": \"{request_output.input.input_text}" if first_token else ""
-    json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
-    if last_token:
-        details_dict = get_details_dict(request_output, include_tokens=True)
-        num_prompt_tokens = len(request_output.input.input_ids)
-        num_output_tokens = details_dict["generated_tokens"]
-        finish_reason = details_dict["finish_reason"]
-        details = {
-            "prompt_token_count": num_prompt_tokens,
-            "generation_token_count": num_output_tokens,
-            "stop_reason": finish_reason,
-        }
-        metering = {
-            "metering": {
-                "inputTokenCount": num_prompt_tokens,
-                "outputTokenCount": num_output_tokens,
+    if not request_output.finished:
+        return ""
+
+    details_dict = get_details_dict(request_output, include_tokens=True)
+    generated_text = get_generated_text(best_sequence, request_output)
+    num_prompt_tokens = len(request_output.input.input_ids)
+    num_output_tokens = details_dict["generated_tokens"]
+    finish_reason = details_dict["finish_reason"]
+    body = {
+        "generation": generated_text,
+        "prompt_token_count": num_prompt_tokens,
+        "generation_token_count": num_output_tokens,
+        "stop_reason": finish_reason,
+    }
+    error = None
+    if finish_reason == "error":
+        body["generation"] = None
+        body["prompt_token_count"] = 0
+        body["generation_token_count"] = 0
+        body["stop_reason"] = "error"
+        error = {
+            "error": {
+                "error_code": 400,
+                "error_msg": next_token.error_msg
             }
         }
-        details_str = f"{json.dumps(details, ensure_ascii=False)[1:-1]}"
-        metering_str = f"{json.dumps(metering, ensure_ascii=False)[1:-1]}"
-        json_encoded_str = f"{json_encoded_str}\", {details_str}}}"
-        json_encoded_str = f"{json_encoded_str}, {metering_str}"
-        if finish_reason == "error":
-            error = {
-                "error": {
-                    "error_code": 400,
-                    "error_msg": next_token.error_msg
-                }
-            }
-            error_str = f"{json.dumps(error, ensure_ascii=False)[1:-1]}"
-            json_encoded_str = f"{json_encoded_str}, {error_str}"
-        json_encoded_str = f"{json_encoded_str}, \"content_type\": \"application/json\"}}"
-    return json_encoded_str
+
+    metering = {
+        "inputTokenCount": num_prompt_tokens,
+        "outputTokenCount": num_output_tokens,
+    }
+    result = {
+        "body": body,
+        "metering": metering,
+        "content_type": "application/json",  # TODO: sort out multimodal here
+    }
+    if error:
+        result["error"] = error
+    return json.dumps(result, ensure_ascii=False)
 
 
 def get_details_dict(request_output: RequestOutput,
-                     include_tokens: bool = True) -> Optional[Dict]:
+                     include_tokens: bool = True) -> Dict:
     parameters = request_output.input.parameters
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
@@ -184,7 +197,7 @@ def get_details_dict(request_output: RequestOutput,
     elif best_sequence.finish_reason == "error":
         return {"finish_reason": best_sequence.finish_reason}
     else:
-        return None
+        return {}
 
 
 def _jsonlines_output_formatter(request_output: RequestOutput):
@@ -239,7 +252,6 @@ def _jsonlines_3p_output_formatter(request_output: RequestOutput):
             "error_code": 400,
             "error_msg": token_details["error_msg"]
         }
-
     json_encoded_str = json.dumps(final_dict, ensure_ascii=False) + "\n"
     return json_encoded_str
 
@@ -253,60 +265,58 @@ def _json_chat_output_formatter(request_output: RequestOutput):
     parameters = request_output.input.parameters
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
-    generated_text = request_output.input.input_text if parameters.get(
-        "return_full_text") else ""
-    next_token, first_token, last_token = best_sequence.get_next_token()
+    generated_text = get_generated_text(best_sequence, request_output)
+    best_sequence.get_next_token()
+    if not request_output.finished:
+        return ""
 
     created = int(time.time())
-    choice1 = {
+    choice = {
         "index": 0,
         "message": {
             "role": "assistant",
-            "content": generated_text
-        }
+            "content": generated_text,
+        },
+        "finish_reason": best_sequence.finish_reason,
     }
     response1 = {
         "id": f"chatcmpl-{id}",
         "object": "chat.completion",
         "created": created,
-        "choices": [choice1]  # Currently only support 1 choice
     }
-    json_encoded_str = f"{json.dumps(response1, ensure_ascii=False)[:-5]}" if first_token else ""
-    json_encoded_str = f"{json_encoded_str}{json.dumps(next_token.text, ensure_ascii=False)[1:-1]}"
-    if last_token:
-        logprobs = None
-        if parameters.get("logprobs"):
-            logprobs = {
-                "content": [{
+    if parameters.get("logprobs"):
+        logprobs = {
+            "content": [
+                {
                     "token": t.text,
                     "logprob": t.log_prob,
                     "bytes": (b := [ord(c)
-                               for c in t.text] if t.text else None),
+                                    for c in t.text] if t.text else None),
                     "top_logprobs":  # Currently only support 1 top_logprobs
-                        [{
-                            "token": t.text,
-                            "logprob": t.log_prob,
-                            "bytes": b
-                        }]
+                    [{
+                        "token": t.text,
+                        "logprob": t.log_prob,
+                        "bytes": b
+                    }]
                 } for t in best_sequence.tokens
-                ]
-            }
-        choice2 = {
-            "logprobs": logprobs,
-            "finish_reason": best_sequence.finish_reason
+            ]
         }
-        prompt_tokens = len(request_output.input.input_ids)
-        completion_tokens = len(best_sequence.tokens)
-        response2 = {
-            "choices": [choice2],
-            "usage": {
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": (prompt_tokens + completion_tokens)
-            }
-        }
-        json_encoded_str = f"{json_encoded_str}\"}}, {json.dumps(response2, ensure_ascii=False)[14:]}"
-    return json_encoded_str
+        choice["logprobs"] = logprobs
+    prompt_tokens = len(request_output.input.input_ids)
+    completion_tokens = len(best_sequence.tokens)
+    usage = {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": (prompt_tokens + completion_tokens)
+    }
+    result = {
+        "id": f"chatcmpl-{id}",
+        "object": "chat.completion",
+        "created": created,
+        "choices": [choice],
+        "usage": usage,
+    }
+    return json.dumps(result, ensure_ascii=False)
 
 
 def _jsonlines_chat_output_formatter(request_output: RequestOutput):

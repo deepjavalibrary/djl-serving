@@ -35,6 +35,7 @@ class LmiDistRbProperties(Properties):
     load_format: Optional[str] = "auto"
     quantize: Optional[LmiDistQuantizeMethods] = None
     tensor_parallel_degree: Optional[int] = None
+    pipeline_parallel_degree: Optional[int] = None
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
@@ -55,7 +56,7 @@ class LmiDistRbProperties(Properties):
     max_lora_rank: Optional[int] = 16
     lora_extra_vocab_size: Optional[int] = 256
     max_cpu_loras: Optional[int] = None
-    max_logprobs: Optional[int] = 5
+    max_logprobs: Optional[int] = 20
     enable_chunked_prefill: Optional[bool] = False
 
     @model_validator(mode='after')

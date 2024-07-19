@@ -127,9 +127,13 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
                              input_map: Dict, **kwargs):
     invoke_type = input_item.get_property("X-Amzn-SageMaker-Forwarded-Api")
     tokenizer = kwargs.get("tokenizer")
+    image_token = kwargs.get("image_placeholder_token")
     if is_chat_completions_request(input_map):
         inputs, param = parse_chat_completions_request(
-            input_map, kwargs.get("is_rolling_batch"), tokenizer)
+            input_map,
+            kwargs.get("is_rolling_batch"),
+            tokenizer,
+            image_token=image_token)
     elif is_3p_request(invoke_type):
         inputs, param = parse_3p_request(input_map,
                                          kwargs.get("is_rolling_batch"),

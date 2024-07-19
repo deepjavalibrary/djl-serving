@@ -130,6 +130,13 @@ public class PyModel extends BaseModel {
                             pyEnv.setTensorParallelDegree(Integer.parseInt(value));
                         }
                         break;
+                    case "pipeline_parallel_degree":
+                        if (value != null) {
+                            pyEnv.setPipelineParallelDegree(Integer.parseInt(value));
+                        } else {
+                            pyEnv.setPipelineParallelDegree(1);
+                        }
+                        break;
                     case "handler":
                         pyEnv.setHandler(value);
                         break;

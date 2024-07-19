@@ -81,7 +81,6 @@ class Message(BaseModel):
 
         prompt_text = '\n'.join(texts)
         if len(images) > 0:
-            # TODO: Find a reliable way to get the image token from tokenizer
             prompt_text = f"{image_token}\n{prompt_text}"
         return {
             "role": self.role,
