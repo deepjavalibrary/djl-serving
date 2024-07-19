@@ -23,7 +23,8 @@ from vllm import SamplingParams
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
-    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER)
+    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER,
+    get_prompt_inputs)
 from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
@@ -159,6 +160,7 @@ class LmiDistRollingBatch(RollingBatch):
         # step 0: register new requests to engine
         for request in new_requests:
             request_id = str(request.id)
+            llm_input = get_prompt_inputs(request)
             params = self.translate_lmi_dist_params(request.parameters)
             request_params = RequestParams(**params)
             lora_request_params = get_lora_request_params(
@@ -166,7 +168,8 @@ class LmiDistRollingBatch(RollingBatch):
             # Constructing Request in lmi-dist library
             lmi_dist_request = Request(
                 id=request_id,
-                prompt=request.input_text,
+                prompt=llm_input.get("prompt"),
+                multi_modal_input=llm_input.get("multi_modal_data"),
                 params=request_params,
                 lora_request=lora_request_params["lora_request"]
                 if lora_request_params else None)

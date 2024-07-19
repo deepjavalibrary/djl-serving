@@ -33,7 +33,10 @@ def parse_chat_completions_request(input_map: Dict,
             f"Cannot provide chat completion for tokenizer: {tokenizer.__class__}, "
             f"please ensure that your tokenizer supports chat templates.")
     chat_params = ChatProperties(**input_map)
-    param = chat_params.model_dump(by_alias=True, exclude_none=True)
+    exclude = {"messages"}
+    param = chat_params.model_dump(by_alias=True,
+                                   exclude_none=True,
+                                   exclude=exclude)
     messages = chat_params.messages
     images = []
     tokenizer_inputs = []
