@@ -59,7 +59,7 @@ class Runner:
             esc_test_name = self.test_name.replace("/", "-")
             os.system(f"mkdir -p all_logs/{esc_test_name}")
             os.system(
-                f"cp client_logs/{self.test_name}_client.log all_logs/{esc_test_name}/"
+                f"cp client_logs/{esc_test_name}_client.log all_logs/{esc_test_name}/ || true"
             )
             os.system(f"cp -r logs all_logs/{esc_test_name}")
         subprocess.run(["./remove_container.sh"], check=True)
@@ -83,8 +83,10 @@ class Runner:
 
         model_dir = os.path.join(os.getcwd(), 'models')
         os.makedirs("client_logs", exist_ok=True)
-        self.client_file_handler = client.add_file_handler_to_logger(
-            f"client_logs/{self.test_name}_client.log")
+        if self.test_name:
+            esc_test_name = self.test_name.replace("/", "-")
+            self.client_file_handler = client.add_file_handler_to_logger(
+                f"client_logs/{esc_test_name}_client.log")
         return subprocess.run(
             f'./launch_container.sh {self.image} {model_dir} {container} {cmd}'
             .split(),
