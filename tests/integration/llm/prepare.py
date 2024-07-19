@@ -872,6 +872,35 @@ trtllm_handler_list = {
     }
 }
 
+correctness_model_list = {
+    "trtllm-llama3-1-8b": {
+        "engine": "Python",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.rolling_batch": "trtllm",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32
+    },
+    "lmi-dist-llama3-1-8b": {
+        "engine": "MPI",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.rolling_batch": "lmi-dist",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32
+    },
+    "neuronx-llama3-1-8b": {
+        "engine": "Python",
+        "option.entryPoint": "djl_python.transformers_neuronx",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 1024,
+        "option.rolling_batch": 'vllm',
+        "option.max_rolling_batch_size": 32
+    }
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -1040,6 +1069,18 @@ def build_trtllm_handler_model(model):
     write_model_artifacts(options)
 
 
+def build_correctness_model(model):
+    if model in correctness_model_list.keys():
+        options = correctness_model_list[model]
+    else:
+        options = {"option.task": "text-generation", "option.model_id": model}
+    options["option.predict_timeout"] = 240
+    engine = options.get('engine')
+    if engine is None:
+        raise ValueError("Need to provide engine for performance benchmark")
+    write_model_artifacts(options)
+
+
 supported_handler = {
     'huggingface': build_hf_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
@@ -1050,6 +1091,7 @@ supported_handler = {
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
     'trtllm': build_trtllm_handler_model,
+    'correctness': build_correctness_model,
 }
 
 if __name__ == '__main__':
