@@ -874,13 +874,43 @@ trtllm_handler_list = {
 }
 
 correctness_model_list = {
+    "trtllm-codellama-13b": {
+        "engine": "Python",
+        "option.task": "text-generation",
+        "option.model_id": "codellama/CodeLlama-13b-hf",
+        "option.rolling_batch": "trtllm",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "json"
+    },
+    "lmi-dist-codellama-13b": {
+        "engine": "MPI",
+        "option.task": "text-generation",
+        "option.model_id": "codellama/CodeLlama-13b-hf",
+        "option.rolling_batch": "lmi-dist",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "json"
+    },
+    "neuronx-codellama-13b": {
+        "engine": "Python",
+        "option.entryPoint": "djl_python.transformers_neuronx",
+        "option.task": "text-generation",
+        "option.model_id": "codellama/CodeLlama-13b-hf",
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 1024,
+        "option.rolling_batch": 'vllm',
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "json"
+    },
     "trtllm-llama3-1-8b": {
         "engine": "Python",
         "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.rolling_batch": "trtllm",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 32
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "json"
     },
     "lmi-dist-llama3-1-8b": {
         "engine": "MPI",
@@ -888,7 +918,8 @@ correctness_model_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.rolling_batch": "lmi-dist",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 32
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "json"
     },
     "neuronx-llama3-1-8b": {
         "engine": "Python",
@@ -898,7 +929,8 @@ correctness_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 1024,
         "option.rolling_batch": 'vllm',
-        "option.max_rolling_batch_size": 32
+        "option.max_rolling_batch_size": 32,
+        "option.output_formatter": "json"
     }
 }
 
