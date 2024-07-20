@@ -13,11 +13,9 @@ import numpy as np
 from datetime import datetime
 from io import BytesIO
 import urllib
-import tqdm
 
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from llm.correctness.execution import check_correctness
 
 from PIL import Image
 
@@ -737,6 +735,7 @@ def check_worker_number(desired):
 
 
 def validate_correctness(tasks, expected):
+    from llm.correctness.execution import check_correctness
     responses = []
     output_dir = os.path.join(os.path.curdir, "outputs")
     for file in os.listdir(output_dir):
@@ -763,7 +762,7 @@ def validate_correctness(tasks, expected):
                 completion_id[task_id] += 1
             logging.info(f"Running test suites {count}...")
             count += 1
-            for future in tqdm.tqdm(as_completed(futures), total=len(futures)):
+            for future in as_completed(futures):
                 result = future.result()
                 if result['passed']:
                     results[result["task_id"]].append(
