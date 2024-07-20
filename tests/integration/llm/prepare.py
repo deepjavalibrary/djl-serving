@@ -47,6 +47,7 @@ hf_handler_list = {
     "gpt4all-lora": {
         "option.model_id": "s3://djl-llm/gpt4all-lora/",
         "option.tensor_parallel_degree": 4,
+        "option.device_map": "auto",
         "option.task": "text-generation",
         "option.dtype": "fp16"
     }
