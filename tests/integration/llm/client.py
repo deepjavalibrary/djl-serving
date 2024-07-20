@@ -17,7 +17,6 @@ import tqdm
 
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from llm.correctness.execution import check_correctness
 
 from PIL import Image
 
@@ -737,6 +736,7 @@ def check_worker_number(desired):
 
 
 def validate_correctness(tasks, expected):
+    from llm.correctness.execution import check_correctness
     responses = []
     output_dir = os.path.join(os.path.curdir, "outputs")
     for file in os.listdir(output_dir):
