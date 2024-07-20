@@ -49,7 +49,7 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests "numpy<2"
+        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub tqdm
       - name: Build container name
         run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
       - name: Download models and dockers
