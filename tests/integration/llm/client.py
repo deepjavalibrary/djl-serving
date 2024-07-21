@@ -16,8 +16,6 @@ import urllib
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from PIL import Image
-
 FAILED_DEPENDENCY_CODE = 424
 TIMEOUT = 3.0
 N_WORKERS = 8
@@ -1312,6 +1310,7 @@ def test_performance():
 
 
 def test_neuron_sd_handler(model, model_spec):
+    from PIL import Image
     modelspec_checker(model, model_spec)
     spec = neuron_sd_model_spec[model]
     for step in spec["num_inference_steps"]:
