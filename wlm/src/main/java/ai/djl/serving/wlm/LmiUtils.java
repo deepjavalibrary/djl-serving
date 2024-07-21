@@ -282,7 +282,7 @@ public final class LmiUtils {
         }
         for (String configFile : possibleConfigFiles) {
             URI configUri =
-                    URI.create("https://huggingface.co/" + modelId + "/raw/main/" + configFile);
+                    URI.create("https://huggingface.co/" + modelId + "/resolve/main/" + configFile);
             try (InputStream is = Utils.openUrl(configUri.toURL(), headers)) {
                 is.transferTo(OutputStream.nullOutputStream());
                 return configUri;
