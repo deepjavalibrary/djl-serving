@@ -62,6 +62,7 @@ class Properties(BaseModel):
     waiting_steps: Optional[int] = None
     mpi_mode: bool = False
     tgi_compat: Optional[bool] = False
+    bedrock_compat: Optional[bool] = False
 
     # Spec_dec
     draft_model_id: Optional[str] = None
