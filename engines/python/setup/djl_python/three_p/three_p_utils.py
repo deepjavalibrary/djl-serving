@@ -10,13 +10,6 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-from typing import Optional
-
-
-def is_3p_request(invoke_type: Optional[str]) -> bool:
-    # TODO, not sure if this is reliable
-    # We might want to just use an env var since in the 3p env will will only run in 1 way
-    return invoke_type == "InvokeEndpoint" or invoke_type == "InvokeEndpointWithResponseStream"
 
 
 def parse_3p_request(input_map: dict, is_rolling_batch: bool, tokenizer,

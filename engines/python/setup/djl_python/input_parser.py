@@ -21,7 +21,7 @@ from djl_python.encode_decode import decode
 from djl_python.properties_manager.properties import is_rolling_batch_enabled
 from djl_python.request import Request
 from djl_python.request_io import TextInput, RequestInput
-from djl_python.three_p.three_p_utils import is_3p_request, parse_3p_request
+from djl_python.three_p.three_p_utils import parse_3p_request
 
 
 def input_formatter(function):
@@ -128,13 +128,17 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     invoke_type = input_item.get_property("X-Amzn-SageMaker-Forwarded-Api")
     tokenizer = kwargs.get("tokenizer")
     image_token = kwargs.get("image_placeholder_token")
+    configs = kwargs.get("configs")
+    is_bedrock = False
+    if configs is not None:
+        is_bedrock = configs.bedrock_compat
     if is_chat_completions_request(input_map):
         inputs, param = parse_chat_completions_request(
             input_map,
             kwargs.get("is_rolling_batch"),
             tokenizer,
             image_token=image_token)
-    elif is_3p_request(invoke_type):
+    elif is_bedrock:
         inputs, param = parse_3p_request(input_map,
                                          kwargs.get("is_rolling_batch"),
                                          tokenizer, invoke_type)
