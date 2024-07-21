@@ -9,16 +9,10 @@ import signal
 import tempfile
 
 
-def check_correctness(problem: Dict,
-                      completion: str,
-                      timeout: float,
-                      completion_id: Optional[int] = None) -> Dict:
+def check_correctness(problem: Dict, completion: str, timeout: float) -> Dict:
     """
     Evaluates the functional correctness of a completion by running the test
     suite provided in the problem. 
-
-    :param completion_id: an optional completion ID so we can match
-        the results later even if execution finishes asynchronously.
     """
 
     def unsafe_execute():
@@ -36,8 +30,7 @@ def check_correctness(problem: Dict,
             reliability_guard()
 
             # Construct the check program and run it.
-            check_program = (problem["prompt"] + completion + "\n" +
-                             problem["test"] + "\n" +
+            check_program = (completion + "\n" + problem["test"] + "\n" +
                              f"check({problem['entry_point']})")
 
             try:
@@ -82,7 +75,6 @@ def check_correctness(problem: Dict,
         task_id=problem["task_id"],
         passed=result[0] == "passed",
         result=result[0],
-        completion_id=completion_id,
     )
 
 

@@ -87,7 +87,7 @@ jobs:
       - name: Install awscurl
         working-directory: tests/integration
         run: |
-          curl -OL https://publish.djl.ai/awscurl/0.28.0/awscurl
+          curl -OL https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
       - name: Test

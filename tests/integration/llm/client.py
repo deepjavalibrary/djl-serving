@@ -14,7 +14,6 @@ from datetime import datetime
 from io import BytesIO
 import urllib
 
-from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from PIL import Image
@@ -679,23 +678,47 @@ no_code_rolling_batch_spec = {
 }
 
 correctness_model_spec = {
-    "trtllm-llama3-1-8b": {
+    "trtllm-codellama-13b": {
         "batch_size": [32],
         "seq_length": [256],
+        "tokenizer": "codellama/CodeLlama-13b-hf",
+        "dataset": "humaneval",
+        "score": 0.25
+    },
+    "lmi-dist-codellama-13b": {
+        "batch_size": [32],
+        "seq_length": [256],
+        "tokenizer": "codellama/CodeLlama-13b-hf",
+        "dataset": "humaneval",
+        "score": 0.25
+    },
+    "neuronx-codellama-13b": {
+        "batch_size": [32],
+        "seq_length": [256],
+        "tokenizer": "codellama/CodeLlama-13b-hf",
+        "dataset": "humaneval",
+        "score": 0.25
+    },
+    "trtllm-llama3-1-8b": {
+        "batch_size": [32],
+        "seq_length": [1],
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
-        "correctness": 0.25
+        "dataset": "mmlu",
+        "score": 0.6
     },
     "lmi-dist-llama3-1-8b": {
         "batch_size": [32],
-        "seq_length": [256],
+        "seq_length": [1],
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
-        "correctness": 0.25
+        "dataset": "mmlu",
+        "score": 0.6
     },
     "neuronx-llama3-1-8b": {
         "batch_size": [32],
-        "seq_length": [256],
+        "seq_length": [1],
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
-        "correctness": 0.25
+        "dataset": "mmlu",
+        "score": 0.6
     }
 }
 
@@ -734,42 +757,45 @@ def check_worker_number(desired):
         raise AssertionError(msg)
 
 
-def validate_correctness(tasks, expected):
+def validate_correctness(type, tasks, expected):
     from llm.correctness.execution import check_correctness
-    responses = []
+
+    inputs = []
+    outputs = []
     output_dir = os.path.join(os.path.curdir, "outputs")
     for file in os.listdir(output_dir):
         with open(os.path.join(output_dir, file), 'r+') as f:
             for line in f:
                 if line and not line == '\n':
-                    timestamp, json_data = line.split(':', 1)
-                    responses.append(json.loads(json_data.strip()))
+                    k, v = line.split(':', 1)
+                    if k == "input":
+                        inputs.append(json.loads(v.strip())["inputs"])
+                    elif k == "output":
+                        outputs.append(json.loads(v.strip()))
 
-    total_pass = set()
-    count = 0
-    for response in responses:
-        completion_id = Counter()
+    total_pass = 0
 
+    if type == "humaneval":
         with ThreadPoolExecutor(max_workers=N_WORKERS) as executor:
             futures = []
-            results = defaultdict(list)
-            for task in tasks:
-                task_id = task['task_id']
-                completion = response.get('generated_text', '')
-                args = (task, completion, TIMEOUT, completion_id[task_id])
+            for i, out in enumerate(outputs):
+                task = tasks[inputs[i]]
+                completion = out.get('generated_text', '')
+                args = (task, completion, TIMEOUT)
                 future = executor.submit(check_correctness, *args)
                 futures.append(future)
-                completion_id[task_id] += 1
-            logging.info(f"Running test suites {count}...")
-            count += 1
             for future in as_completed(futures):
                 result = future.result()
                 if result['passed']:
-                    results[result["task_id"]].append(
-                        (result["completion_id"], result))
-                    total_pass.add(result["task_id"])
+                    total_pass += 1
+    elif type == "mmlu":
+        for i, out in enumerate(outputs):
+            task = tasks[inputs[i]]
+            completion = out.get('generated_text', '')
+            if completion.strip() == task["answer"]:
+                total_pass += 1
 
-    score = len(total_pass) / len(responses)
+    score = total_pass / len(outputs)
     logging.info(f'Correctness: {score}')
     assert score >= expected
 
@@ -994,13 +1020,19 @@ def t5_batch_generation(batch_size):
     return input_sentences[:batch_size]
 
 
-def load_dataset(dataset):
-    data = []
+def load_dataset(dataset, key):
+    res = {}
     if dataset == "humaneval":
         url = "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/humaneval.jsonl"
-        for line in urllib.request.urlopen(url):
-            data.append(json.loads(line.decode('utf-8')))
-    return data
+    elif dataset == "mmlu":
+        url = "https://djl-ai.s3.amazonaws.com/resources/benchmark/datasets/mmlu_djlserving.jsonl"
+    else:
+        raise ValueError(f"Unsupported dataset: {dataset}")
+
+    for line in urllib.request.urlopen(url):
+        data = json.loads(line.decode('utf-8'))
+        res[data[key]] = data
+    return res
 
 
 def get_total_memory(memory_snapshot):
@@ -1323,24 +1355,31 @@ def test_correctness(model, model_spec):
             f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
         )
     spec = model_spec[args.model]
-    correctness = int(spec.get("correctness", 0.4))
-    tasks = load_dataset("humaneval")
+    score = int(spec.get("score", 0.4))
+    dataset = spec.get("dataset", "humaneval")
+    parameters = {}
+    if dataset == "humaneval":
+        data = load_dataset(dataset, "prompt")
+        parameters["return_full_text"] = True
+    elif dataset == "mmlu":
+        data = load_dataset(dataset, "inputs")
+
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
             logging.info(
                 f"Correctness testing: concurrency {batch_size} seq_len {seq_length}"
             )
-            parameters = {"max_new_tokens": seq_length}
+            parameters["max_new_tokens"] = seq_length
             reqs = [{
-                "inputs": task["prompt"],
+                "inputs": prompt,
                 "parameters": parameters
-            } for task in tasks]
+            } for prompt in data.keys()]
             awscurl_run(reqs,
                         spec.get("tokenizer", None),
                         batch_size,
                         dataset=True,
                         output=True)
-            validate_correctness(tasks, correctness)
+            validate_correctness(dataset, data, score)
 
 
 def run(raw_args):
