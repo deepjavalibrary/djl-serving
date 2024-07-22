@@ -82,6 +82,7 @@ class LmiDistRollingBatch(RollingBatch):
             max_cpu_loras=self.lmi_dist_config.max_cpu_loras,
             revision=self.lmi_dist_config.revision,
             enable_chunked_prefill=self.lmi_dist_config.enable_chunked_prefill,
+            cpu_offload_gb=self.lmi_dist_config.cpu_offload_gb_per_gpu,
             **engine_kwargs)
 
         kwargs = {}

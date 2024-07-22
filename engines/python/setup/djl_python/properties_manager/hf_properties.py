@@ -24,8 +24,10 @@ class HFQuantizeMethods(str, Enum):
     awq = 'awq'
     deepspeedfp = 'deepspeedfp'
     fp8 = 'fp8'
+    fbgemm_fp8 = 'fbgemm_fp8'
     gptq_marlin = 'gptq_marlin'
     gptq_marlin_24 = 'gptq_marlin_24'
+    awq_marlin = 'awq_marlin'
     marlin = 'marlin'
     squeezellm = 'squeezellm'
 
