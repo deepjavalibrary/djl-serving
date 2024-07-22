@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       test:
-        description: 'Which test to run as a pytest keyword expression. Should be a class in tests.py or TestClass::test_fun_name'
+        description: 'Which test to run as a pytest keyword expression. Can be a class in tests.py or "TestClass and test_fun_name"'
         required: false
         default: ""
       mark:
@@ -38,6 +38,8 @@ jobs:
       mode: temp
   create-runners:
     runs-on: [self-hosted, scheduler]
+    if: |
+      always() && (needs.build-temp.result == 'success' || needs.build-temp.result == 'skipped')
     needs: [build-temp]
     steps:
       - name: Create new instance
@@ -56,6 +58,9 @@ jobs:
     runs-on: [ self-hosted, "${{ needs.create-runners.outputs.label }}"]
     timeout-minutes: 60
     needs: [create-runners, build-temp]
+    if: |
+      always() && needs.create-runners.result == 'success' &&
+      (needs.build-temp.result == 'success' || needs.build-temp.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -98,7 +103,7 @@ jobs:
       - name: Install awscurl
         working-directory: tests/integration
         run: |
-          curl -OL https://github.com/frankfliu/junkyard/releases/download/v0.2.2/awscurl
+          wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
       - name: Test

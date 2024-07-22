@@ -151,7 +151,7 @@ jobs:
       - name: Install awscurl
         working-directory: tests/integration
         run: |
-          curl -OL https://github.com/frankfliu/junkyard/releases/download/v0.2.2/awscurl
+          wget https://publish.djl.ai/awscurl/awscurl
           chmod +x awscurl
           mkdir outputs
       - name: Test
