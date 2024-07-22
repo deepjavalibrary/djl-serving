@@ -82,7 +82,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
                             ctx,
                             new StatusResponse(
                                     "Error: ssh private key unavailable. Please call /sshpublickey"
-                                        + " first."));
+                                            + " first."));
                 }
                 return;
             case "models":
