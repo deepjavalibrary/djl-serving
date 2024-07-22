@@ -156,20 +156,21 @@ class TextInput(RequestInput):
     input_text: Union[str, List[str]] = None
     adapters: Optional[Any] = None
     tokenizer: Optional[Any] = None
-    _input_ids: Optional[List[int]] = None
+    input_ids: Optional[List[int]] = None
 
     def prompt_tokens_length(self) -> int:
+        if self.input_ids == None:
+            self.compute_input_ids()
         return len(self.input_ids)
 
-    @property
-    def input_ids(self):
-        if not self._input_ids:
+    def compute_input_ids(self):
+        if not self.input_ids:
             if self.tokenizer:
                 text = self.input_text
                 if isinstance(self.input_text, list):
                     text = ''.join(self.input_text)
-                self._input_ids = self.tokenizer.encode(text)
-        return self._input_ids
+                self.input_ids = self.tokenizer.encode(text)
+        return self.input_ids
 
 
 @dataclass

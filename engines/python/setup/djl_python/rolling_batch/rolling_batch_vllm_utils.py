@@ -43,7 +43,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     cache = request_cache[request_id]
     request_output = cache["request_output"]
 
-    # sets  prompt token details if not set
+    # sets prompt token details if not set
     if vllm_request_output.prompt_logprobs and not request_output.prompt_tokens_details:
         # TODO: Temp check adding the check fo T5.
         if isinstance(vllm_request_output.prompt_token_ids, list):
@@ -51,7 +51,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
                     vllm_request_output.prompt_token_ids):
                 prompt_token = Token(
                     id=prompt_token_id,
-                    text=tokenizer.decode([prompt_token_id]),
+                    text=None,
                     log_prob=None if index == 0 else vllm_request_output.
                     prompt_logprobs[index][prompt_token_id].logprob)
                 request_output.prompt_tokens_details.append(prompt_token)
@@ -142,12 +142,16 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
                 is_last_token = i == (len(new_token_ids) -
                                       1) and finish_reason is not None
                 request_output.sequences[sequence_index].set_next_token(
-                    token, is_last_token)
+                    token,
+                    is_last_token,
+                    prompt_tokens_details=request_output.prompt_tokens_details)
         else:
             token = Token(id=-1, text="")
             is_last_token = finish_reason is not None
             request_output.sequences[sequence_index].set_next_token(
-                token, is_last_token)
+                token,
+                is_last_token,
+                prompt_tokens_details=request_output.prompt_tokens_details)
             top_tokens.append(token)
 
         request_output.sequences[sequence_index].set_next_top_tokens(
