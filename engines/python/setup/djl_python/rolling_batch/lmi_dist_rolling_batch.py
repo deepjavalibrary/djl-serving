@@ -81,6 +81,7 @@ class LmiDistRollingBatch(RollingBatch):
             lora_extra_vocab_size=self.lmi_dist_config.lora_extra_vocab_size,
             max_cpu_loras=self.lmi_dist_config.max_cpu_loras,
             revision=self.lmi_dist_config.revision,
+            enable_chunked_prefill=self.lmi_dist_config.enable_chunked_prefill,
             **engine_kwargs)
 
         kwargs = {}

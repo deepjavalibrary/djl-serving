@@ -227,7 +227,8 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             lora_extra_vocab_size=config.lora_extra_vocab_size,
             max_cpu_loras=config.max_cpu_loras,
             revision=config.revision,
-            max_logprobs=config.max_logprobs)
+            max_logprobs=config.max_logprobs,
+            enable_chunked_prefill=config.enable_chunked_prefill)
 
 
 def get_multi_modal_data(request: Request) -> dict:

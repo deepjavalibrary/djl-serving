@@ -52,6 +52,7 @@ class VllmRbProperties(Properties):
     device: Optional[str] = None
     preloaded_model: Optional[Any] = None
     max_logprobs: Optional[int] = 20
+    enable_chunked_prefill: Optional[bool] = False
 
     @field_validator('engine')
     def validate_engine(cls, engine):
