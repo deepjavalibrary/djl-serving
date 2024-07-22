@@ -142,16 +142,12 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
                 is_last_token = i == (len(new_token_ids) -
                                       1) and finish_reason is not None
                 request_output.sequences[sequence_index].set_next_token(
-                    token,
-                    is_last_token,
-                    prompt_tokens_details=request_output.prompt_tokens_details)
+                    token, is_last_token)
         else:
             token = Token(id=-1, text="")
             is_last_token = finish_reason is not None
             request_output.sequences[sequence_index].set_next_token(
-                token,
-                is_last_token,
-                prompt_tokens_details=request_output.prompt_tokens_details)
+                token, is_last_token)
             top_tokens.append(token)
 
         request_output.sequences[sequence_index].set_next_top_tokens(

@@ -104,14 +104,6 @@ class Request(object):
         self.last_token = last_token
         if last_token:
             self.request_output.finished = True
-        # add input_ids if provided from output
-        if isinstance(self.request_input,
-                      TextInput) and self.request_input.input_ids == None:
-            if prompt_tokens_details:
-                input_ids = []
-                for token in prompt_tokens_details:
-                    input_ids.append(token.id)
-                self.request_output.input_ids = input_ids
 
     def get_next_token(self) -> str:
         """
