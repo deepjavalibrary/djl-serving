@@ -101,7 +101,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
+    auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 retrying \
     opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} \
     tokenizers==${tokenizers_version} pydantic==${pydantic_version} \
     # TODO: installing optimum here due to version conflict.
@@ -122,6 +122,25 @@ RUN scripts/patch_oss_dlc.sh python \
     && rm -rf scripts \
     && pip3 cache purge \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Install OpenSSH for MPI to communicate between containers, allow OpenSSH to talk to containers without asking for confirmation
+RUN apt-get update \
+    && apt-get install -y  --allow-downgrades --allow-change-held-packages --no-install-recommends \
+    && apt-get install -y --no-install-recommends openssh-client openssh-server iproute2 \
+    && mkdir -p /var/run/sshd \
+    && cat /etc/ssh/ssh_config | grep -v StrictHostKeyChecking > /etc/ssh/ssh_config.new \
+    && echo "    StrictHostKeyChecking no" >> /etc/ssh/ssh_config.new \
+    && mv /etc/ssh/ssh_config.new /etc/ssh/ssh_config \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Configure OpenSSH so that nodes can communicate with each other
+RUN mkdir -p /var/run/sshd && \
+    mkdir -p /root/.ssh && \
+    sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+RUN  bash -c "printf \"Port 2022\n\" >> /etc/ssh/sshd_config" \
+  && bash -c "printf \"Port 2022\n\" >> /root/.ssh/config" 
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"

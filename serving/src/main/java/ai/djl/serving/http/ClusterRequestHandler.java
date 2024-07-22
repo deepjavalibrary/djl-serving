@@ -64,14 +64,26 @@ public class ClusterRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String[] segments)
             throws ModelException {
+        Path home = Paths.get(System.getProperty("user.home")).resolve(".ssh");
         switch (segments[2]) {
-            case "sshkey":
-                Path home = Paths.get(System.getProperty("user.home")).resolve(".ssh");
-                Path file = home.resolve("id_rsa.pub");
-                if (Files.notExists(file)) {
+            case "sshpublickey":
+                Path public_file = home.resolve("id_rsa.pub");
+                if (Files.notExists(public_file)) {
                     sshkeygen(home.resolve("id_rsa").toString());
                 }
-                NettyUtils.sendFile(ctx, file, false);
+                NettyUtils.sendFile(ctx, public_file, false);
+                return;
+            case "sshprivatekey":
+                Path private_file = home.resolve("id_rsa");
+                if (Files.notExists(private_file)) {
+                    NettyUtils.sendFile(ctx, private_file, false);
+                } else {
+                    NettyUtils.sendJsonResponse(
+                            ctx,
+                            new StatusResponse(
+                                    "Error: ssh private key unavailable. Please call /sshpublickey"
+                                        + " first."));
+                }
                 return;
             case "models":
                 ModelStore modelStore = ModelStore.getInstance();
