@@ -17,7 +17,6 @@ def parse_3p_request(input_map: dict, is_rolling_batch: bool, tokenizer,
     _inputs = input_map.pop("prompt")
     _param = {
         "details": True,
-        "decoder_input_details": True,
         "temperature": input_map.pop("temperature", 0.5),
         "top_p": input_map.pop("top_p", 0.9),
         "max_new_tokens": input_map.pop("max_gen_len", 512),
