@@ -132,15 +132,6 @@ jobs:
           serve
           python3 llm/client.py no_code mixtral-8x7b
           ./remove_container.sh
-      - name: Falcon-40b lmi container
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          echo -en "HF_MODEL_ID=s3://djl-llm/falcon-40b/" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
-          serve
-          python3 llm/client.py no_code falcon-40b 
-          ./remove_container.sh
       - name: DBRX lmi container
         working-directory: tests/integration
         if: ${{ matrix.container == 'lmi' }}
