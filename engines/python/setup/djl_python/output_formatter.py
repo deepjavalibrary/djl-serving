@@ -13,11 +13,11 @@
 import json
 import logging
 import time
-from typing import Union, Callable, Optional, Dict
+from typing import Union, Callable, Dict
 
 from typing_extensions import deprecated
 
-from djl_python.request_io import TextGenerationOutput, RequestOutput
+from djl_python.request_io import TextGenerationOutput
 from djl_python.utils import wait_till_generation_finished
 
 
@@ -30,7 +30,7 @@ def get_generated_text(sequence, request_output):
     return generated_text
 
 
-def get_sequence_details(request_output: RequestOutput,
+def get_sequence_details(request_output: TextGenerationOutput,
                          sequence_index: int) -> dict:
     sequence = request_output.sequences[sequence_index]
     parameters = request_output.input.parameters
@@ -49,7 +49,7 @@ def get_sequence_details(request_output: RequestOutput,
     return sequence_details
 
 
-def _json_output_formatter_best_of(request_output: RequestOutput):
+def _json_output_formatter_best_of(request_output: TextGenerationOutput):
     """When multiple sequences are generated, then we hold off sending the result until the generation is finished.
     This is because, in case of best_of or beam_search, we would know the best sequence only at the end of generation.
     """
@@ -85,7 +85,7 @@ def _json_output_formatter_best_of(request_output: RequestOutput):
     return json.dumps(result, ensure_ascii=False)
 
 
-def _json_output_formatter(request_output: RequestOutput):
+def _json_output_formatter(request_output: TextGenerationOutput):
     """
     json output formatter
 
@@ -125,7 +125,7 @@ def _json_output_formatter(request_output: RequestOutput):
     return json.dumps(result, ensure_ascii=False)
 
 
-def _json_3p_output_formatter(request_output: RequestOutput):
+def _json_3p_output_formatter(request_output: TextGenerationOutput):
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
     # TODO: Fix this so it is not required. Right now, this call is needed to
@@ -136,7 +136,7 @@ def _json_3p_output_formatter(request_output: RequestOutput):
 
     details_dict = get_details_dict(request_output, include_tokens=True)
     generated_text = get_generated_text(best_sequence, request_output)
-    num_prompt_tokens = len(request_output.input.input_ids)
+    num_prompt_tokens = len(request_output.prompt_tokens_details)
     num_output_tokens = details_dict["generated_tokens"]
     finish_reason = details_dict["finish_reason"]
     body = {
@@ -172,7 +172,7 @@ def _json_3p_output_formatter(request_output: RequestOutput):
     return json.dumps(result, ensure_ascii=False)
 
 
-def get_details_dict(request_output: RequestOutput,
+def get_details_dict(request_output: TextGenerationOutput,
                      include_tokens: bool = True) -> Dict:
     parameters = request_output.input.parameters
     best_sequence = request_output.sequences[
@@ -200,7 +200,7 @@ def get_details_dict(request_output: RequestOutput,
         return {}
 
 
-def _jsonlines_output_formatter(request_output: RequestOutput):
+def _jsonlines_output_formatter(request_output: TextGenerationOutput):
     """
     jsonlines output formatter
 
@@ -224,14 +224,14 @@ def _jsonlines_output_formatter(request_output: RequestOutput):
     return json_encoded_str
 
 
-def _jsonlines_3p_output_formatter(request_output: RequestOutput):
+def _jsonlines_3p_output_formatter(request_output: TextGenerationOutput):
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
     next_token, first_token, last_token = best_sequence.get_next_token()
     token_details = next_token.as_dict()
     body = {"generation": token_details["text"]}
-    num_prompt_tokens = request_output.input.prompt_tokens_length(
-    ) if first_token else None
+    num_prompt_tokens = len(
+        request_output.prompt_tokens_details) if first_token else None
     current_token_count = len(best_sequence.tokens)
     finish_reason = best_sequence.finish_reason if last_token else None
     body["prompt_token_count"] = num_prompt_tokens
@@ -256,7 +256,7 @@ def _jsonlines_3p_output_formatter(request_output: RequestOutput):
     return json_encoded_str
 
 
-def _json_chat_output_formatter(request_output: RequestOutput):
+def _json_chat_output_formatter(request_output: TextGenerationOutput):
     """
     json output formatter for chat completions API
 
@@ -298,7 +298,7 @@ def _json_chat_output_formatter(request_output: RequestOutput):
             ]
         }
         choice["logprobs"] = logprobs
-    prompt_tokens = len(request_output.input.input_ids)
+    prompt_tokens = len(request_output.prompt_tokens_details)
     completion_tokens = len(best_sequence.tokens)
     usage = {
         "prompt_tokens": prompt_tokens,
@@ -315,7 +315,7 @@ def _json_chat_output_formatter(request_output: RequestOutput):
     return json.dumps(result, ensure_ascii=False)
 
 
-def _jsonlines_chat_output_formatter(request_output: RequestOutput):
+def _jsonlines_chat_output_formatter(request_output: TextGenerationOutput):
     """
     jsonlines output formatter for chat completions API
 
@@ -363,7 +363,7 @@ def _jsonlines_chat_output_formatter(request_output: RequestOutput):
     return json_encoded_str
 
 
-def sse_response_formatter(request_output: RequestOutput):
+def sse_response_formatter(request_output: TextGenerationOutput):
     """
     Decorator that used to form as SSE
     """
@@ -394,7 +394,8 @@ def adapt_legacy_output_formatter(request_output: TextGenerationOutput) -> str:
             details_dict["generated_tokens"] = len(best_sequence.tokens)
             details_dict["inputs"] = input_text
             details_dict["parameters"] = parameters
-            details_dict["prompt_tokens"] = len(request_output.input.input_ids)
+            details_dict["prompt_tokens"] = len(
+                request_output.prompt_tokens_details)
         # Special handling for error case
         elif best_sequence.finish_reason == "error":
             details_dict["finish_reason"] = best_sequence.finish_reason

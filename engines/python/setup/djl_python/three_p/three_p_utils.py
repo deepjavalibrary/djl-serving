@@ -15,11 +15,14 @@
 def parse_3p_request(input_map: dict, is_rolling_batch: bool, tokenizer,
                      invoke_type: str):
     _inputs = input_map.pop("prompt")
-    _param = {"details": True}
-    _param["temperature"] = input_map.pop("temperature", 0.5)
-    _param["top_p"] = input_map.pop("top_p", 0.9)
-    _param["max_new_tokens"] = input_map.pop("max_gen_len", 512)
-    _param["return_full_text"] = True
+    _param = {
+        "details": True,
+        "decoder_input_details": True,
+        "temperature": input_map.pop("temperature", 0.5),
+        "top_p": input_map.pop("top_p", 0.9),
+        "max_new_tokens": input_map.pop("max_gen_len", 512),
+        "return_full_text": True
+    }
     if _param["temperature"] > 0:
         _param["do_sample"] = True
     if invoke_type == "InvokeEndpointWithResponseStream":

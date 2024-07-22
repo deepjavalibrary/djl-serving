@@ -51,7 +51,7 @@ def update_request_cache_with_output(request_cache: OrderedDict,
                     vllm_request_output.prompt_token_ids):
                 prompt_token = Token(
                     id=prompt_token_id,
-                    text=None,
+                    text=tokenizer.convert_ids_to_tokens(prompt_token_id),
                     log_prob=None if index == 0 else vllm_request_output.
                     prompt_logprobs[index][prompt_token_id].logprob)
                 request_output.prompt_tokens_details.append(prompt_token)

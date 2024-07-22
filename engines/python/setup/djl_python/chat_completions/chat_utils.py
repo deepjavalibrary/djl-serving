@@ -48,6 +48,7 @@ def parse_chat_completions_request(input_map: Dict,
     param[
         "do_sample"] = chat_params.temperature is not None and chat_params.temperature > 0.0
     param["details"] = True  # Enable details for chat completions
+    param["decoder_input_details"] = True
     param[
         "output_formatter"] = "jsonlines_chat" if chat_params.stream else "json_chat"
 

@@ -80,8 +80,7 @@ class Request(object):
     def set_next_token(self,
                        next_token: Union[Token, str],
                        last_token: bool = False,
-                       finish_reason: str = None,
-                       prompt_tokens_details: List[Token] = None):
+                       finish_reason: str = None):
         """
         Sets the newly generated token.
         If the function is called for multiple times, we will append tokens to the token string.
@@ -92,7 +91,6 @@ class Request(object):
             length: end because max_output_token size reached
             eos_token: End of sequence token found
             stop_sequence: Preset stop sequence token found
-        :param prompt_tokens_details: prompt tokens details when parameter decoder_input_details is true.
         """
         if isinstance(next_token, str):
             next_token = Token(-1, next_token)
@@ -100,7 +98,6 @@ class Request(object):
         self.request_output.set_next_token(next_token,
                                            is_last_token=last_token,
                                            finish_reason=finish_reason)
-        self.request_output.prompt_tokens_details = prompt_tokens_details
         self.last_token = last_token
         if last_token:
             self.request_output.finished = True
