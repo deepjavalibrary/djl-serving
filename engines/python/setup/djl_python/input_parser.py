@@ -148,10 +148,6 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
 
     request_input.input_text = inputs
     request_input.parameters = param
-    # assigns input_ids
-    # TODO: for dynamic batching, or HF pipeline, tokenizer is applied differently.
-    if kwargs.get("tokenizer") and kwargs.get("is_rolling_batch"):
-        request_input.input_ids = tokenizer.encode(request_input.input_text)
 
     # TODO: Instead of modifying user parameters, maintain this in server_parameters.
     #  Added here for backward compatibility
