@@ -22,9 +22,11 @@ class LmiDistQuantizeMethods(str, Enum):
     awq = 'awq'
     deepspeedfp = 'deepspeedfp'
     fp8 = 'fp8'
+    fbgemm_fp8 = 'fbgemm_fp8'
     gptq = 'gptq'
     gptq_marlin = 'gptq_marlin'
     gptq_marlin_24 = 'gptq_marlin_24'
+    awq_marlin = 'awq_marlin'
     marlin = 'marlin'
     squeezellm = 'squeezellm'
 
@@ -58,6 +60,7 @@ class LmiDistRbProperties(Properties):
     max_cpu_loras: Optional[int] = None
     max_logprobs: Optional[int] = 20
     enable_chunked_prefill: Optional[bool] = False
+    cpu_offload_gb_per_gpu: Optional[int] = 0
 
     @model_validator(mode='after')
     def validate_mpi(self):
