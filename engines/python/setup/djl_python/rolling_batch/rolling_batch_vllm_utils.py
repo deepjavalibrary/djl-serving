@@ -43,17 +43,20 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     cache = request_cache[request_id]
     request_output = cache["request_output"]
 
-    # sets  prompt token details if not set
-    if vllm_request_output.prompt_logprobs and not request_output.prompt_tokens_details:
+    # sets prompt token details if not set
+    if not request_output.prompt_tokens_details:
         # TODO: Temp check adding the check fo T5.
         if isinstance(vllm_request_output.prompt_token_ids, list):
             for index, prompt_token_id in enumerate(
                     vllm_request_output.prompt_token_ids):
+                log_prob = None
+                if vllm_request_output.prompt_logprobs and index > 0:
+                    log_prob = vllm_request_output.prompt_logprobs[index][
+                        prompt_token_id].logprob
                 prompt_token = Token(
                     id=prompt_token_id,
-                    text=tokenizer.decode([prompt_token_id]),
-                    log_prob=None if index == 0 else vllm_request_output.
-                    prompt_logprobs[index][prompt_token_id].logprob)
+                    text=tokenizer.convert_ids_to_tokens(prompt_token_id),
+                    log_prob=log_prob)
                 request_output.prompt_tokens_details.append(prompt_token)
 
     # sets the details of all sequences

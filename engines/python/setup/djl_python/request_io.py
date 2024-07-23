@@ -154,12 +154,8 @@ class TextInput(RequestInput):
         tokenizer: tokenizer used for the request.
     """
     input_text: Union[str, List[str]] = None
-    input_ids: List[int] = field(default_factory=lambda: [])
     adapters: Optional[Any] = None
     tokenizer: Optional[Any] = None
-
-    def prompt_tokens_length(self) -> int:
-        return len(self.input_ids)
 
 
 @dataclass
