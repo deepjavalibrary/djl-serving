@@ -446,11 +446,11 @@ class TestLmiDist1:
                 "lmi_dist llama3-8b-chunked-prefill --in_tokens 1200".split())
 
     def test_falcon_11b_chunked_prefill(self):
-        with Runner('lmi', 'falcon_11b-chunked-prefill') as r:
-            prepare.build_lmi_dist_model("falcon_11b-chunked-prefill")
+        with Runner('lmi', 'falcon-11b-chunked-prefill') as r:
+            prepare.build_lmi_dist_model("falcon-11b-chunked-prefill")
             r.launch()
             client.run(
-                "lmi_dist falcon_11b-chunked-prefill --in_tokens 1200".split())
+                "lmi_dist falcon-11b-chunked-prefill --in_tokens 1200".split())
 
 
 @pytest.mark.lmi_dist
@@ -568,11 +568,11 @@ class TestVllm1:
                 "vllm llama3-8b-chunked-prefill --in_tokens 1200".split())
 
     def test_falcon_11b_chunked_prefill(self):
-        with Runner('lmi', 'falcon_11b-chunked-prefill') as r:
-            prepare.build_vllm_model("falcon_11b-chunked-prefill")
+        with Runner('lmi', 'falcon-11b-chunked-prefill') as r:
+            prepare.build_vllm_model("falcon-11b-chunked-prefill")
             r.launch()
             client.run(
-                "vllm falcon_11b-chunked-prefill --in_tokens 1200".split())
+                "vllm falcon-11b-chunked-prefill --in_tokens 1200".split())
 
 
 @pytest.mark.vllm
