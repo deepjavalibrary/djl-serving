@@ -48,7 +48,7 @@ jobs:
 
   test:
     runs-on: [ "${{ matrix.test.instance }}" ]
-    timeout-minutes: 60
+    timeout-minutes: 90
     needs: create-runners
     strategy:
       fail-fast: false
@@ -95,7 +95,7 @@ jobs:
         env:
           TEST_DJL_VERSION: ${{ inputs.djl-version }}
         run: |
-          python -m pytest --capture=tee-sys -vv -k ${{ matrix.test.test }} tests.py
+          python -m pytest -k ${{ matrix.test.test }} tests.py
       - name: Cleanup
         working-directory: tests/integration
         run: |

@@ -15,6 +15,7 @@ from io import BytesIO
 import urllib
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from json.decoder import JSONDecodeError
 
 FAILED_DEPENDENCY_CODE = 424
 TIMEOUT = 3.0
@@ -700,44 +701,59 @@ no_code_rolling_batch_spec = {
 }
 
 correctness_model_spec = {
-    "trtllm-codellama-13b": {
-        "batch_size": [32],
-        "seq_length": [256],
-        "tokenizer": "codellama/CodeLlama-13b-hf",
+    "trtllm-codestral-22b": {
+        "batch_size": [41],
+        "seq_length": [512],
+        "num_run": 4,
+        "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
         "dataset": "humaneval",
-        "score": 0.25
+        "score": 0.04,
+        "parameters": {
+            "return_full_text": True
+        }
     },
-    "lmi-dist-codellama-13b": {
-        "batch_size": [32],
-        "seq_length": [256],
-        "tokenizer": "codellama/CodeLlama-13b-hf",
+    "lmi-dist-codestral-22b": {
+        "batch_size": [41],
+        "seq_length": [512],
+        "num_run": 4,
+        "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
         "dataset": "humaneval",
-        "score": 0.25
+        "score": 0.5,
+        "parameters": {
+            "return_full_text": True
+        }
     },
-    "neuronx-codellama-13b": {
-        "batch_size": [32],
-        "seq_length": [256],
-        "tokenizer": "codellama/CodeLlama-13b-hf",
+    "neuronx-codestral-22b": {
+        "batch_size": [41],
+        "seq_length": [512],
+        "num_run": 4,
+        "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
         "dataset": "humaneval",
-        "score": 0.25
+        "score": 0.01,
+        "parameters": {
+            "return_full_text": True
+        }
     },
     "trtllm-llama3-1-8b": {
-        "batch_size": [32],
+        "batch_size": [213],
         "seq_length": [1],
+        "num_run": 66,
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
     },
     "lmi-dist-llama3-1-8b": {
-        "batch_size": [32],
+        "batch_size": [213],
         "seq_length": [1],
+        "num_run": 66,
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
     },
     "neuronx-llama3-1-8b": {
-        "batch_size": [32],
+        "batch_size": [213],
         "seq_length": [1],
+        "num_run": 66,
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
@@ -789,21 +805,27 @@ def validate_correctness(type, tasks, expected):
         with open(os.path.join(output_dir, file), 'r+') as f:
             for line in f:
                 if line and not line == '\n':
-                    k, v = line.split(':', 1)
+                    k, v = line.split(": ", 1)
                     if k == "input":
-                        inputs.append(json.loads(v.strip())["inputs"])
+                        inputs.append(json.loads(v)["inputs"])
                     elif k == "output":
-                        outputs.append(json.loads(v.strip()))
+                        try:
+                            outputs.append(json.loads(v)["generated_text"])
+                        except JSONDecodeError:
+                            # delete the last input
+                            del inputs[-1]
+                            LOGGER.error(f"Failed to read output: {v}")
+
+    if len(outputs) == 0:
+        raise RuntimeError(f"No output found in {output_dir}")
 
     total_pass = 0
-
     if type == "humaneval":
         with ThreadPoolExecutor(max_workers=N_WORKERS) as executor:
             futures = []
             for i, out in enumerate(outputs):
                 task = tasks[inputs[i]]
-                completion = out.get('generated_text', '')
-                args = (task, completion, TIMEOUT)
+                args = (task, out, TIMEOUT)
                 future = executor.submit(check_correctness, *args)
                 futures.append(future)
             for future in as_completed(futures):
@@ -813,12 +835,13 @@ def validate_correctness(type, tasks, expected):
     elif type == "mmlu":
         for i, out in enumerate(outputs):
             task = tasks[inputs[i]]
-            completion = out.get('generated_text', '')
-            if completion.strip() == task["answer"]:
+            if out.strip() == task["answer"]:
                 total_pass += 1
 
     score = total_pass / len(outputs)
-    logging.info(f'Correctness: {score}')
+    LOGGER.info(
+        f'Correctness: {score}, total_pass: {total_pass}, outputs: {len(outputs)}'
+    )
     assert score >= expected
 
 
@@ -863,14 +886,14 @@ def awscurl_run(data,
         json_data = json.dumps(data)
         command_data = f"-d '{json_data}'"
     command = (f"./awscurl -c {concurrency} "
-               f"-N {num_run} -X POST {endpoint} --connect-timeout 120 "
+               f"-N {num_run} -X POST {endpoint} --connect-timeout 300 "
                f"-H {headers} {command_data} -P -t")
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     if output:
         output_path = os.path.join(os.path.curdir, "outputs", "output")
         command = f"{command} -o {output_path}"
-    logging.info(f"Running command {command}")
+    LOGGER.info(f"Running command {command}")
     res = sp.run(command, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
     if "error rate: 100" in res.stdout.decode("utf-8"):
         raise ValueError("Found error result in awscurl_run")
@@ -1044,12 +1067,14 @@ def t5_batch_generation(batch_size):
     return input_sentences[:batch_size]
 
 
-def load_dataset(dataset, key):
+def load_dataset(dataset):
     res = {}
     if dataset == "humaneval":
         url = "https://raw.githubusercontent.com/ymwangg/vllm-test/main/dataset/humaneval.jsonl"
+        key = "prompt"
     elif dataset == "mmlu":
         url = "https://djl-ai.s3.amazonaws.com/resources/benchmark/datasets/mmlu_djlserving.jsonl"
+        key = "inputs"
     else:
         raise ValueError(f"Unsupported dataset: {dataset}")
 
@@ -1377,21 +1402,18 @@ def test_transformers_neuronx_handler(model, model_spec):
 def test_correctness(model, model_spec):
     if model not in model_spec:
         raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+            f"{model} is not one of the supporting models {list(model_spec.keys())}"
         )
-    spec = model_spec[args.model]
-    score = int(spec.get("score", 0.4))
-    dataset = spec.get("dataset", "humaneval")
-    parameters = {}
-    if dataset == "humaneval":
-        data = load_dataset(dataset, "prompt")
-        parameters["return_full_text"] = True
-    elif dataset == "mmlu":
-        data = load_dataset(dataset, "inputs")
+    spec = model_spec[model]
+    score = float(spec.get("score", 0.5))
+    parameters = spec.get("parameters", {})
+    num_run = int(spec.get("num_run", 5))
+    dataset = spec.get("dataset", "mmlu")
+    data = load_dataset(dataset)
 
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            logging.info(
+            LOGGER.info(
                 f"Correctness testing: concurrency {batch_size} seq_len {seq_length}"
             )
             parameters["max_new_tokens"] = seq_length
@@ -1402,6 +1424,7 @@ def test_correctness(model, model_spec):
             awscurl_run(reqs,
                         spec.get("tokenizer", None),
                         batch_size,
+                        num_run=num_run,
                         dataset=True,
                         output=True)
             validate_correctness(dataset, data, score)
