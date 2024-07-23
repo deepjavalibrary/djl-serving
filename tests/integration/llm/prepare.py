@@ -898,34 +898,31 @@ trtllm_handler_list = {
 }
 
 correctness_model_list = {
-    "trtllm-codellama-13b": {
+    "trtllm-codestral-22b": {
         "engine": "Python",
         "option.task": "text-generation",
-        "option.model_id": "codellama/CodeLlama-13b-hf",
+        "option.model_id": "bullerwins/Codestral-22B-v0.1-hf",
         "option.rolling_batch": "trtllm",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "json"
+        "option.max_rolling_batch_size": 41
     },
-    "lmi-dist-codellama-13b": {
+    "lmi-dist-codestral-22b": {
         "engine": "MPI",
         "option.task": "text-generation",
-        "option.model_id": "codellama/CodeLlama-13b-hf",
+        "option.model_id": "bullerwins/Codestral-22B-v0.1-hf",
         "option.rolling_batch": "lmi-dist",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "json"
+        "option.max_rolling_batch_size": 41
     },
-    "neuronx-codellama-13b": {
+    "neuronx-codestral-22b": {
         "engine": "Python",
         "option.entryPoint": "djl_python.transformers_neuronx",
-        "option.task": "text-generation",
-        "option.model_id": "codellama/CodeLlama-13b-hf",
+        "option.model_id": "bullerwins/Codestral-22B-v0.1-hf",
         "option.tensor_parallel_degree": 4,
-        "option.n_positions": 1024,
-        "option.rolling_batch": 'vllm',
-        "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "json"
+        "option.n_positions": 256,
+        "option.rolling_batch": "auto",
+        "option.max_rolling_batch_size": 41,
+        "option.model_loading_timeout": 1800
     },
     "trtllm-llama3-1-8b": {
         "engine": "Python",
@@ -933,8 +930,7 @@ correctness_model_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.rolling_batch": "trtllm",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "json"
+        "option.max_rolling_batch_size": 213
     },
     "lmi-dist-llama3-1-8b": {
         "engine": "MPI",
@@ -942,19 +938,17 @@ correctness_model_list = {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.rolling_batch": "lmi-dist",
         "option.tensor_parallel_degree": 4,
-        "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "json"
+        "option.max_rolling_batch_size": 213
     },
     "neuronx-llama3-1-8b": {
         "engine": "Python",
         "option.entryPoint": "djl_python.transformers_neuronx",
-        "option.task": "text-generation",
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": 4,
-        "option.n_positions": 1024,
-        "option.rolling_batch": 'vllm',
-        "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "json"
+        "option.n_positions": 768,
+        "option.rolling_batch": "auto",
+        "option.max_rolling_batch_size": 213,
+        "option.model_loading_timeout": 1800
     }
 }
 
@@ -1127,14 +1121,12 @@ def build_trtllm_handler_model(model):
 
 
 def build_correctness_model(model):
-    if model in correctness_model_list.keys():
-        options = correctness_model_list[model]
-    else:
-        options = {"option.task": "text-generation", "option.model_id": model}
-    options["option.predict_timeout"] = 240
-    engine = options.get('engine')
-    if engine is None:
-        raise ValueError("Need to provide engine for performance benchmark")
+    if model not in correctness_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(correctness_model_list.keys())}"
+        )
+    options = correctness_model_list[model]
+    options["option.output_formatter"] = "json"
     write_model_artifacts(options)
 
 

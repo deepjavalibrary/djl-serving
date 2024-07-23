@@ -837,11 +837,11 @@ class TestNeuronxRollingBatch:
 @pytest.mark.gpu_4
 class TestCorrectnessTrtLlm:
 
-    def test_codellama_13b(self):
-        with Runner('tensorrt-llm', 'codellama-13b') as r:
-            prepare.build_correctness_model("trtllm-codellama-13b")
+    def test_codestral_22b(self):
+        with Runner('tensorrt-llm', 'codestral-22b') as r:
+            prepare.build_correctness_model("trtllm-codestral-22b")
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("correctness trtllm-codellama-13b".split())
+            client.run("correctness trtllm-codestral-22b".split())
 
     def test_llama3_1_8b(self):
         with Runner('tensorrt-llm', 'llama3-1-8b') as r:
@@ -855,11 +855,11 @@ class TestCorrectnessTrtLlm:
 @pytest.mark.gpu_4
 class TestCorrectnessLmiDist:
 
-    def test_codellama_13b(self):
-        with Runner('lmi', 'codellama-13b') as r:
-            prepare.build_correctness_model("lmi-dist-codellama-13b")
+    def test_codestral_22b(self):
+        with Runner('lmi', 'codestral-22b') as r:
+            prepare.build_correctness_model("lmi-dist-codestral-22b")
             r.launch()
-            client.run("correctness lmi-dist-codellama-13b".split())
+            client.run("correctness lmi-dist-codestral-22b".split())
 
     def test_llama3_1_8b(self):
         with Runner('lmi', 'llama3-1-8b') as r:
@@ -872,11 +872,11 @@ class TestCorrectnessLmiDist:
 @pytest.mark.inf
 class TestCorrectnessNeuronx:
 
-    def test_codellama_13b(self):
-        with Runner('pytorch-inf2', 'codellama-13b') as r:
-            prepare.build_correctness_model("neuronx-codellama-13b")
-            r.launch()
-            client.run("correctness neuronx-codellama-13b".split())
+    def test_codestral_22b(self):
+        with Runner('pytorch-inf2', 'codestral-22b') as r:
+            prepare.build_correctness_model("neuronx-codestral-22b")
+            r.launch(container='pytorch-inf2-2')
+            client.run("correctness neuronx-codestral-22b".split())
 
     def test_llama3_1_8b(self):
         with Runner('pytorch-inf2', 'llama3-1-8b') as r:
