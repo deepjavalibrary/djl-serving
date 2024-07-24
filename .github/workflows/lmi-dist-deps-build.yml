@@ -46,7 +46,7 @@ jobs:
           . ./venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install "numpy<2" cmake awscli packaging wheel setuptools ninja git-remote-codecommit \
-                                torch==2.3.0 --extra-index-url https://download.pytorch.org/whl/cu121
+                                torch==2.3.1 --extra-index-url https://download.pytorch.org/whl/cu121
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -60,10 +60,10 @@ jobs:
           cd flash-attention-v2
           pip wheel . --no-deps
           cp flash_attn-*.whl ../build_artifacts
-      - name: Build vllm 0.4.2 LoRA TP fix
+      - name: Build vllm 0.5.3.post1 Hanging Fix
         run: |
           . ./venv/bin/activate
-          git clone https://github.com/rohithkrn/vllm -b 0.4.2-lora-tp-fix
+          git clone https://github.com/davidthomas426/vllm -b lmi_v11
           cd vllm
           export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
           export VLLM_INSTALL_PUNICA_KERNELS=1
@@ -90,9 +90,8 @@ jobs:
         with:
             name: build-artifacts
       - name: upload to S3
-        run: |
-          aws s3 cp flash_attn-2*.whl s3://djl-ai-staging/publish/flash_attn/cu124-pt230/
-          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu124-pt230/
+        run: | 
+          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu124-pt231/
 
   stop-runners-p4d:
     if: always()
