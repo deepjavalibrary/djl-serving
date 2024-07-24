@@ -23,7 +23,7 @@ ARG pydantic_version=2.8.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.43.1
+ARG transformers_version=4.43.2
 ARG accelerate_version=0.32.1
 ARG bitsandbytes_version=0.43.1
 ARG optimum_version=1.21.2
