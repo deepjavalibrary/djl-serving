@@ -21,7 +21,9 @@ from djl_python.request import Request
 from djl_python.transformers_neuronx_scheduler.utils import Generation, FinishReason, GeneratedText, TokenDecoder
 
 GENERATION_PARAMS = list(GenerationConfig().__dict__.keys())
-TOKEN_SELECTION_PARAMS = ["seed", "ignore_eos", "stop_token_ids"]
+TOKEN_SELECTION_PARAMS = [
+    "seed", "ignore_eos", "stop_token_ids", "return_full_text"
+]
 NEURON_GENERATION_PARAMS = set(GENERATION_PARAMS + TOKEN_SELECTION_PARAMS)
 
 
@@ -147,7 +149,11 @@ class Slot:
             "repetition_penalty", 1.0)
         self._generation_config.max_new_tokens = param.get(
             "max_new_tokens", 30)
+        self._generation_config._eos_token_tensor = None
         self._generation_config.eos_token_id = self.build_eos_token_ids(param)
+        if self._generation_config.eos_token_id is not None:
+            self._generation_config._eos_token_tensor = torch.LongTensor(
+                self._generation_config.eos_token_id)
         self._token_decoder = TokenDecoder(tokenizer)
         self._ignore_eos_id = param.pop("ignore_eos", False)
         filter_unused_generation_params(param,
