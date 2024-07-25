@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2023 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Copyright 2024 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file
 # except in compliance with the License. A copy of the License is located at
@@ -11,36 +11,31 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 # The below code is heavily inspired from Optimum Neuron under the following link:
-# https://github.com/huggingface/optimum-neuron/blob/974f34336bb36b1b64890c191c558a1575372be7/optimum/neuron/generation/token_selector.py
+# https://github.com/huggingface/optimum-neuron/blob/main/optimum/neuron/generation/token_selector.py
 
 import copy
-from typing import Optional, Union, List
+import logging
+from typing import TYPE_CHECKING, List, Optional
+
 import torch
 from transformers.generation import (
     GenerationConfig,
     GenerationMixin,
     LogitsProcessorList,
     StoppingCriteriaList,
-    TopKLogitsWarper,
 )
 from transformers.generation.utils import GenerationMode
-from transformers.generation import LogitsWarper
+
+from optimum.neuron.generation import FusedLogitsWarper
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizer
+
+logger = logging.getLogger(__name__)
 
 
-class FastTopKLogitsWarper(LogitsWarper):
-    """Returns [batch_size, top_k] scores and indices instead of [batch_size, vocab_size] scores."""
-
-    def __init__(self, top_k: int):
-        self.top_k = top_k
-
-    def __call__(self, input_ids: torch.LongTensor,
-                 scores: torch.FloatTensor) -> torch.FloatTensor:
-        top_k = min(self.top_k, scores.size(-1))  # Safety check
-        # Remove all tokens with a probability less than the last token of the top-k
-        return torch.topk(scores, top_k)
-
-
-class TokenSelector:
+# TODO: This is a temporary solution to avoid Optimum's dependency on transformers<4.42.
+class OptimumTokenSelector:
     """Implements the token selection logic corresponding to a generation configuration.
 
     This class combines and uses the logits processors and stopping criterias implemented in
@@ -64,7 +59,7 @@ class TokenSelector:
         mode: GenerationMode,
         logits_processor: LogitsProcessorList,
         stopping_criteria: StoppingCriteriaList,
-        eos_token_id: Union[List[int], int],
+        eos_token_ids: List[int],
         pad_token_id: int,
         logits_warper: Optional[LogitsProcessorList] = None,
         seed: Optional[int] = 0,
@@ -72,19 +67,11 @@ class TokenSelector:
         self.mode = mode
         self.logits_processor = logits_processor
         self.stopping_criteria = stopping_criteria
-        self.eos_token_id = eos_token_id
+        self.eos_token_ids = eos_token_ids
         self.pad_token_id = pad_token_id
+        self.logits_warper = logits_warper
         self.generator = torch.Generator()
         self.generator.manual_seed(seed)
-        self.logits_warper = logits_warper
-        if self.mode == GenerationMode.SAMPLE:
-            assert len(self.logits_warper) > 0
-            last_warper = self.logits_warper[-1]
-            self.fast_topk = isinstance(last_warper, TopKLogitsWarper)
-            if self.fast_topk:
-                # Replace the last warping operation by a faster alternative
-                self.logits_warper[-1] = FastTopKLogitsWarper(
-                    last_warper.top_k)
 
     @classmethod
     def create(
@@ -94,8 +81,9 @@ class TokenSelector:
         model: GenerationMixin,
         max_seq_length: int,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
+        tokenizer: Optional["PreTrainedTokenizer"] = None,
         seed: Optional[int] = 0,
-    ) -> "TokenSelector":
+    ) -> "OptimumTokenSelector":
         r"""Creates the `TokenSelector` for a specific generation configuration.
 
         Args:
@@ -109,7 +97,9 @@ class TokenSelector:
                 The maximum number of input + generated tokens for this model. It depends on the model compilation parameters.
             stopping_criteria (`Optional[transformers.generation.StoppingCriteriaList], defaults to `None`):
                 Custom stopping criteria that complement the default stopping criteria built from arguments and a
-                generation config.
+                generation config
+            tokenizer (`Optional[transformers.PreTrainedTokenizer]`, default to `None`):
+                A tokenizer used when stop strings are passed to generate.
             seed(`Optional[int]`):
                 The optional seed for sampling. Defaults to zero.
         Return:
@@ -129,6 +119,12 @@ class TokenSelector:
                 raise ValueError("{flag} is not supported for generation.")
 
         if generation_config.max_new_tokens is not None:
+            logger.warning(
+                f"Both `max_new_tokens` (={generation_config.max_new_tokens}) and `max_length`(="
+                f"{generation_config.max_length}) seem to have been set. `max_new_tokens` will take precedence. "
+                "Please refer to the documentation for more information. "
+                "(https://huggingface.co/docs/transformers/main/en/main_classes/text_generation)"
+            )
             generation_config.max_length = generation_config.max_new_tokens + input_ids.shape[
                 -1]
 
@@ -139,7 +135,24 @@ class TokenSelector:
             )
         max_length = generation_config.max_length
         if max_length > max_seq_length:
+            logger.warning(
+                f"Adjusting the maximum generation length ({max_length}) to the model maximum sequence length ({max_seq_length})"
+            )
             generation_config.max_length = max_seq_length
+
+        # This is not supposed to happen for any of the models we support
+        eos_token_id = generation_config.eos_token_id
+        assert eos_token_id is not None
+        # The generation requires special tokens
+        eos_token_ids = eos_token_id if isinstance(eos_token_id,
+                                                   list) else [eos_token_id]
+        generation_config._eos_token_tensor = torch.tensor(
+            eos_token_ids, device=input_ids.device)
+        if generation_config.pad_token_id is None:
+            logger.warning(
+                f"Setting `pad_token_id` to `eos_token_id`:{eos_token_ids[0]} for open-ended generation."
+            )
+            generation_config.pad_token_id = eos_token_ids[0]
 
         # Instantiate transformers library processors and criterias
         logits_processor = model._get_logits_processor(
@@ -152,14 +165,9 @@ class TokenSelector:
         if stopping_criteria is None:
             stopping_criteria = StoppingCriteriaList()
         stopping_criteria = model._get_stopping_criteria(
-            generation_config, stopping_criteria=stopping_criteria)
-
-        # The generation requires special tokens
-        eos_token_id = generation_config.eos_token_id
-        # This is not supposed to happen for any of the models we support
-        if generation_config.pad_token_id is None:
-            generation_config.pad_token_id = eos_token_id if isinstance(
-                eos_token_id, int) else eos_token_id[0]
+            generation_config,
+            stopping_criteria=stopping_criteria,
+            tokenizer=tokenizer)
 
         generation_mode = generation_config.get_generation_mode()
         if generation_mode not in [
@@ -169,21 +177,20 @@ class TokenSelector:
 
         logits_warper = None
         if generation_mode == GenerationMode.SAMPLE:
-            logits_warper = model._get_logits_warper(generation_config,
-                                                     device=model.device)
-            if len(logits_warper) == 0:
-                generation_mode = GenerationMode.GREEDY_SEARCH
+            logits_warper = FusedLogitsWarper.from_config(generation_config)
 
-        return cls(mode=generation_mode,
-                   logits_processor=logits_processor,
-                   stopping_criteria=stopping_criteria,
-                   logits_warper=logits_warper,
-                   eos_token_id=eos_token_id,
-                   pad_token_id=generation_config.pad_token_id,
-                   seed=seed)
+        return cls(
+            mode=generation_mode,
+            logits_processor=logits_processor,
+            stopping_criteria=stopping_criteria,
+            logits_warper=logits_warper,
+            eos_token_ids=eos_token_ids,
+            pad_token_id=generation_config.pad_token_id,
+            seed=seed,
+        )
 
     def select(self, input_ids: torch.LongTensor,
-               logits: torch.Tensor) -> (torch.LongTensor, torch.Tensor):
+               logits: torch.Tensor) -> torch.LongTensor:
         """Select the next tokens from the candidate logits.
 
         Args:
@@ -195,28 +202,21 @@ class TokenSelector:
         Return:
             `torch.LongTensor`: A `torch.LongTensor` containing the selected tokens.
         """
-        # Cast to int64 for Repetition Penalty logit processor support
-        scores = self.logits_processor(input_ids.to(torch.int64), logits)
-        logprobs = torch.log_softmax(scores, -1)
+        scores = self.logits_processor(input_ids, logits)
         if self.mode == GenerationMode.SAMPLE:
-            next_ids = self._sample(scores)
+            return self._sample(scores)
         else:
-            next_ids = torch.argmax(scores, dim=-1)
-        next_logprobs = torch.gather(logprobs, 1, next_ids.view(-1,
-                                                                1)).view(-1)
-        return next_ids, next_logprobs
+            return torch.argmax(scores, dim=-1)
 
     def _sample(self, scores: torch.Tensor) -> torch.LongTensor:
-        if self.fast_topk:
-            # Get [batch_size, top_k] scores and indices instead of [batch_size, vocab_size] scores
-            scores, next_token_indices = self.logits_warper(None, scores)
-        else:
-            scores = self.logits_warper(None, scores)
+        # Get [batch_size, kept] scores and indices instead of [batch_size, vocab_size] scores
+        scores, next_token_indices = self.logits_warper(scores)
 
         # sample
         probs = torch.nn.functional.softmax(scores, dim=-1)
-        next_tokens = torch.multinomial(probs, num_samples=1)
-        if self.fast_topk:
-            # Convert the topk relative tokens to actual vocabulary tokens
-            next_tokens = torch.gather(next_token_indices, 1, next_tokens)
+        next_tokens = torch.multinomial(probs,
+                                        num_samples=1,
+                                        generator=self.generator)
+        # Convert the filtered tokens to actual vocabulary tokens
+        next_tokens = torch.gather(next_token_indices, 1, next_tokens)
         return next_tokens.squeeze(1)
