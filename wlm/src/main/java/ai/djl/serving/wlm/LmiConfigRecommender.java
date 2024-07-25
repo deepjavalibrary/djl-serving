@@ -145,9 +145,16 @@ public final class LmiConfigRecommender {
         }
         String tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
         if ("max".equals(tpDegree)) {
-            tpDegree = String.valueOf(CudaUtils.getGpuCount());
+            int numGpus = CudaUtils.getGpuCount();
+            if (numGpus > 0) {
+                tpDegree = String.valueOf(numGpus);
+            } else {
+                tpDegree = null;
+            }
         }
-        lmiProperties.setProperty("option.tensor_parallel_degree", tpDegree);
+        if (tpDegree != null) {
+            lmiProperties.setProperty("option.tensor_parallel_degree", tpDegree);
+        }
     }
 
     private static void setPipelineParallelDegree(Properties lmiProperties) {

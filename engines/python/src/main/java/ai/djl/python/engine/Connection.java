@@ -131,9 +131,7 @@ class Connection {
         String recommendedEntryPoint = pyEnv.getRecommendedEntryPoint();
 
         if (PyEnv.isMultiNode()) {
-
             int worldSize = tensorParallelDegree * pipelineParallelDegree;
-
             if (tensorParallelDegree * pipelineParallelDegree % clusterSize != 0) {
                 throw new IllegalArgumentException(
                         "Error: Cannot use cluster size: "
@@ -211,9 +209,7 @@ class Connection {
             args[46] = "--recommended-entry-point";
             args[47] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
             return args;
-        }
-
-        if (pyEnv.isMpiMode()) {
+        } else if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
             String[] args = new String[42];

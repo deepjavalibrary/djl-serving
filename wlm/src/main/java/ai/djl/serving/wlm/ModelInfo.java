@@ -36,6 +36,7 @@ import ai.djl.repository.zoo.ZooModel;
 import ai.djl.serving.wlm.util.EventManager;
 import ai.djl.serving.wlm.util.WlmConfigManager;
 import ai.djl.serving.wlm.util.WlmOutOfMemoryException;
+import ai.djl.translate.NoopServingTranslatorFactory;
 import ai.djl.translate.TranslateException;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
@@ -261,6 +262,9 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             if (downloadDir != null) {
                 // override model_id
                 builder.optOption("model_id", downloadDir.toAbsolutePath().toString());
+            }
+            if (translator == null && translatorFactory == null && "Python".equals(engineName)) {
+                builder.optTranslatorFactory(new NoopServingTranslatorFactory());
             }
             ZooModel<I, O> m = builder.build().loadModel();
             m.setProperty("metric_dimension", id);
