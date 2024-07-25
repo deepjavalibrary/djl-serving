@@ -68,7 +68,10 @@ public final class LmiConfigRecommender {
                     Map.entry("llava", "lmi-dist"),
                     Map.entry("llava_next", "lmi-dist"),
                     Map.entry("paligemma", "lmi-dist"),
-                    Map.entry("phi3_v", "lmi-dist"));
+                    Map.entry("phi3_v", "lmi-dist"),
+                    // vllm 0.5.3
+                    Map.entry("chameleon", "lmi-dist"),
+                    Map.entry("fuyu", "lmi-dist"));
 
     private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =
             Set.of("ForCausalLM", "LMHeadModel", "ForConditionalGeneration");
