@@ -24,7 +24,6 @@ from transformers import PreTrainedTokenizerBase
 from dataclasses import dataclass
 
 from djl_python.transformers_neuronx_scheduler.slot import Slot
-from djl_python.rolling_batch.rolling_batch import filter_unused_generation_params
 from djl_python.request import Request
 from djl_python.transformers_neuronx_scheduler.token_selector import TokenSelector
 from djl_python.transformers_neuronx_scheduler.speculation import (

@@ -25,7 +25,7 @@ from tempfile import TemporaryDirectory
 from transformers import PretrainedConfig
 from transformers_neuronx import bucket
 from transformers_neuronx.constants import LAYOUT_BSH, LAYOUT_HSB
-from optimum.neuron.generation import TokenSelector
+from djl_python.transformers_neuronx_scheduler.optimum_token_selector import OptimumTokenSelector
 from optimum.neuron.utils.version_utils import check_compiler_compatibility, get_neuronxcc_version
 from optimum.modeling_base import OptimizedModel
 from transformers.generation import StoppingCriteriaList
@@ -238,11 +238,12 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
         self._validate_model_kwargs(model_kwargs)
 
         # Instantiate a TokenSelector for the specified configuration
-        selector = TokenSelector.create(input_ids,
-                                        generation_config,
-                                        self,
-                                        self.max_length,
-                                        stopping_criteria=stopping_criteria)
+        selector = OptimumTokenSelector.create(
+            input_ids,
+            generation_config,
+            self,
+            self.max_length,
+            stopping_criteria=stopping_criteria)
 
         # Verify that the inputs are compatible with the model static input dimensions
         batch_size, sequence_length = input_ids.shape
@@ -280,7 +281,7 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
     def generate_tokens(
         self,
         input_ids: torch.LongTensor,
-        selector: TokenSelector,
+        selector: OptimumTokenSelector,
         batch_size: int,
         attention_mask: Optional[torch.Tensor] = None,
         **model_kwargs,
@@ -291,7 +292,7 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
         Args:
             input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
-            selector (`TokenSelector`):
+            selector (`OptimumTokenSelector`):
                 The object implementing the generation logic based on transformers processors and stopping criterias.
             batch_size (`int`):
                 The actual input batch size. Used to avoid generating tokens for padded inputs.
