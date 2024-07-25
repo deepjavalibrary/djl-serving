@@ -760,6 +760,18 @@ correctness_model_spec = {
     }
 }
 
+multi_modal_spec = {
+    "llava_v1.6-mistral": {
+        "batch_size": [1, 4]
+    },
+    "paligemma-3b-mix-448": {
+        "batch_size": [1, 4],
+    },
+    "phi-3-vision-128k-instruct": {
+        "batch_size": [1, 4],
+    }
+}
+
 
 def add_file_handler_to_logger(file_path: str):
     handler = logging.FileHandler(file_path, mode='w')
@@ -1430,6 +1442,42 @@ def test_correctness(model, model_spec):
             validate_correctness(dataset, data, score)
 
 
+def get_multimodal_prompt():
+    messages = [{
+        "role":
+        "user",
+        "content": [{
+            "type": "text",
+            "text": "What is this an image of?",
+        }, {
+            "type": "image_url",
+            "image_url": {
+                "url": "https://resources.djl.ai/images/dog_bike_car.jpg",
+            }
+        }]
+    }]
+    return {
+        "messages": messages,
+        "temperature": 0.9,
+        "top_p": 0.6,
+        "max_new_tokens": 512,
+    }
+
+
+def test_multimodal(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{model} is not currently supported {list(model_spec.keys())}")
+    spec = model_spec[model]
+    messages = get_multimodal_prompt()
+    for i, batch_size in enumerate(spec["batch_size"]):
+        awscurl_run(messages,
+                    spec.get("tokenizer", None),
+                    batch_size,
+                    num_run=5,
+                    output=True)
+
+
 def run(raw_args):
     parser = argparse.ArgumentParser(description="Build the LLM configs")
     parser.add_argument("handler", help="the handler used in the model")
@@ -1507,6 +1555,8 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
     elif args.handler == "correctness":
         test_correctness(args.model, correctness_model_spec)
+    elif args.handler == "multimodal":
+        test_multimodal(args.model, multi_modal_spec)
 
     else:
         raise ValueError(

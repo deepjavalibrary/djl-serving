@@ -574,6 +574,16 @@ lmi_dist_model_list = {
         "option.model_id": "s3://djl-llm/llama-2-tiny/",
         "option.quantize": "awq",
         "option.tensor_parallel_degree": 4
+    },
+    "llava_v1.6-mistral": {
+        "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
+    },
+    "paligemma-3b-mix-448": {
+        "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/"
+    },
+    "phi-3-vision-128k-instruct": {
+        "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
+        "option.trust_remote_code": True,
     }
 }
 
@@ -784,7 +794,7 @@ vllm_model_list = {
         "option.dtype": "fp16",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
-    }
+    },
 }
 
 lmi_dist_aiccl_model_list = {
