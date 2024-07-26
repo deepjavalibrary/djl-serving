@@ -191,6 +191,7 @@ class NeoNeuronPartitionService():
         # in the partition argparser. PropertiesManager expects these attributes to be defined.
         self.args.model_id = None
         self.args.tensor_parallel_degree = None
+        self.args.pipeline_parallel_degree = None
         self.args.quantize = None
 
     def parse_neo_compiler_flags(self):

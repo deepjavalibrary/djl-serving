@@ -55,6 +55,7 @@ class NeoQuantizationService():
         num_gpus = torch.cuda.device_count()
         self.args.tensor_parallel_degree = num_gpus
         self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
+        self.args.pipeline_parallel_degree = None
         self.args.model_id = None
         self.args.quantize = None
         self.args.skip_copy = None
