@@ -122,6 +122,8 @@ jobs:
             instance: inf2
           - test: TestNeuronxRollingBatch
             instance: inf2
+          - test: TestMultiModal
+            instance: g6
     steps:
       - uses: actions/checkout@v4
       - name: Clean env

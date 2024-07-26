@@ -883,3 +883,24 @@ class TestCorrectnessNeuronx:
             prepare.build_correctness_model("neuronx-llama3-1-8b")
             r.launch(container='pytorch-inf2-2')
             client.run("correctness neuronx-llama3-1-8b".split())
+
+
+class TestMultiModalLmiDist:
+
+    def test_llava_next(self):
+        with Runner('lmi', 'llava_v1.6-mistral') as r:
+            prepare.build_lmi_dist_model('llava_v1.6-mistral')
+            r.launch()
+            client.run("multimodal llava_v1.6-mistral".split())
+
+    def test_paligemma(self):
+        with Runner('lmi', 'paligemma-3b-mix-448') as r:
+            prepare.build_lmi_dist_model('paligemma-3b-mix-448')
+            r.launch()
+            client.run("multimodal paligemma-3b-mix-448".split())
+
+    def test_phi3_v(self):
+        with Runner('lmi', 'phi-3-vision-128k-instruct') as r:
+            prepare.build_lmi_dist_model('phi-3-vision-128k-instruct')
+            r.launch()
+            client.run("multimodal phi-3-vision-128k-instruct".split())
