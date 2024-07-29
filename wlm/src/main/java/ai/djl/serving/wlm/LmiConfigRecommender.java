@@ -83,7 +83,6 @@ public final class LmiConfigRecommender {
             Properties lmiProperties,
             LmiUtils.HuggingFaceModelConfig modelConfig) {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
-        setDynamicBatch(lmiProperties, modelConfig, modelInfo, features);
         setRollingBatch(lmiProperties, modelConfig, features);
         setMpiMode(lmiProperties, modelConfig, features);
         setTensorParallelDegree(lmiProperties);
@@ -136,10 +135,6 @@ public final class LmiConfigRecommender {
         if ("lmi-dist".equals(rollingBatch) || "trtllm".equals(rollingBatch)) {
             lmiProperties.setProperty("option.mpi_mode", "true");
         }
-        //  TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
-        if (isT5TrtLlm(modelConfig, features)) {
-            lmiProperties.setProperty("option.mpi_mode", "true");
-        }
     }
 
     private static void setTensorParallelDegree(Properties lmiProperties) {
@@ -166,25 +161,6 @@ public final class LmiConfigRecommender {
         }
         String ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
         lmiProperties.setProperty("option.pipeline_parallel_degree", ppDegree);
-    }
-
-    private static void setDynamicBatch(
-            Properties lmiProperties,
-            LmiUtils.HuggingFaceModelConfig modelConfig,
-            ModelInfo<?, ?> modelInfo,
-            String features) {
-        // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
-        if (isT5TrtLlm(modelConfig, features)) {
-            // To do runtime compilation for TensorRT-LLM T5 model.
-            lmiProperties.setProperty("trtllm_python_backend", String.valueOf(true));
-            lmiProperties.setProperty("option.rolling_batch", "disable");
-
-            // We set batch_size only when customer did not provide it.
-            if (Integer.parseInt(lmiProperties.getProperty("batch_size", "0")) == 0) {
-                modelInfo.batchSize = 32;
-                lmiProperties.setProperty("batch_size", String.valueOf(32));
-            }
-        }
     }
 
     private static void setRollingBatchSize(Properties lmiProperties) {
@@ -222,11 +198,6 @@ public final class LmiConfigRecommender {
 
     private static boolean isTnxEnabled(String features) {
         return features != null && features.contains("tnx");
-    }
-
-    private static boolean isT5TrtLlm(
-            LmiUtils.HuggingFaceModelConfig modelConfig, String features) {
-        return isTrtLlmEnabled(features) && "t5".equals(modelConfig.getModelType());
     }
 
     private static boolean isTextGenerationModel(LmiUtils.HuggingFaceModelConfig modelConfig) {
