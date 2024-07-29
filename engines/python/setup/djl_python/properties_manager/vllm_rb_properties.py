@@ -56,6 +56,7 @@ class VllmRbProperties(Properties):
     max_logprobs: Optional[int] = 20
     enable_chunked_prefill: Optional[bool] = False
     cpu_offload_gb_per_gpu: Optional[int] = 0
+    enable_prefix_caching: Optional[bool] = False
 
     @field_validator('engine')
     def validate_engine(cls, engine):
