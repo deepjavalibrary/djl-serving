@@ -101,12 +101,11 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    # TODO: not installing due to version conflict. Install later for optimum update
-    # optimum==${optimum_version}  \
     auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
     opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} \
     tokenizers==${tokenizers_version} pydantic==${pydantic_version} \
-    && pip3 install ${djl_converter_wheel} --no-deps \
+    # TODO: installing optimum here due to version conflict.
+    && pip3 install ${djl_converter_wheel} optimum==${optimum_version} --no-deps \
     && git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
     && pip3 cache purge
 
