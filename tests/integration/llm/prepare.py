@@ -579,7 +579,8 @@ lmi_dist_model_list = {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
     },
     "paligemma-3b-mix-448": {
-        "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/"
+        "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
+        "option.tensor_parallel_degree": 1,
     },
     "phi-3-vision-128k-instruct": {
         "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
