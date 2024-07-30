@@ -178,15 +178,14 @@ final class HttpClient {
                         handleServerSentEvent(is, requestTime, begin, jq, tokens, request, ps);
                     } else if ("application/vnd.amazon.eventstream".equals(contentType)) {
                         Header header = resp.getFirstHeader("X-Amzn-SageMaker-Content-Type");
-                        String realContentType = header == null ? null : header.getValue();
+                        String realContentType = null;
+                        if (header != null) {
+                            String[] parts = header.getValue().split(";");
+                            realContentType = parts[0];
+                        }
                         handleEventStream(
                                 is, ps, realContentType, requestTime, begin, jq, tokens, request);
                     }
-                } else if ("application/vnd.amazon.eventstream".equals(contentType)) {
-                    String realContentType =
-                            resp.getFirstHeader("X-Amzn-SageMaker-Content-Type").getValue();
-                    handleEventStream(
-                            is, ps, realContentType, requestTime, begin, jq, null, request);
                 } else {
                     is.transferTo(ps);
                     ps.flush();
