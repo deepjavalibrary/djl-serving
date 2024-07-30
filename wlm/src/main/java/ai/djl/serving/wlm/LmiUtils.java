@@ -143,7 +143,7 @@ public final class LmiUtils {
 
     static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
         String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
-        if (Files.isRegularFile(info.modelDir)
+        if (Files.isDirectory(info.modelDir)
                 || Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
                 || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
             return;
@@ -220,6 +220,66 @@ public final class LmiUtils {
             return repoDir;
         } catch (InterruptedException e) {
             throw new IOException("Failed to build Onnx artifacts", e);
+        } finally {
+            if (!success) {
+                Utils.deleteQuietly(repoDir);
+            }
+        }
+    }
+
+    static boolean rustNeedConvert(ModelInfo<?, ?> info) {
+        return !Files.isRegularFile(info.modelDir.resolve("model.safetensors"))
+                && (info.downloadDir == null
+                        || !Files.isRegularFile(info.downloadDir.resolve("model.safetensors")));
+    }
+
+    static void convertRustModel(ModelInfo<?, ?> info) throws IOException {
+        String modelId = info.prop.getProperty("option.model_id");
+        if (modelId == null) {
+            logger.info("model_id must exist to convert rust artifacts");
+            return;
+        }
+
+        logger.info("Converting model to rust artifacts");
+        String hash = Utils.hash(modelId);
+        String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
+        Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
+        Path repoDir = parent.resolve("rust").resolve(hash);
+        if (Files.exists(repoDir)) {
+            logger.info("Rust artifacts already converted: {}", repoDir);
+            info.resolvedModelUrl = repoDir.toUri().toURL().toString();
+            return;
+        }
+
+        String[] cmd = {
+            "djl-convert",
+            "--output-dir",
+            repoDir.toAbsolutePath().toString(),
+            "--output-format",
+            "Rust",
+            "-m",
+            modelId
+        };
+        boolean success = false;
+        try {
+            Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            try (BufferedReader reader =
+                    new BufferedReader(
+                            new InputStreamReader(exec.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.debug("convert: {}", line);
+                }
+            }
+            int exitCode = exec.waitFor();
+            if (0 != exitCode) {
+                throw new EngineException("Model conversion process failed!");
+            }
+            success = true;
+            logger.info("Rust artifacts built successfully");
+            info.resolvedModelUrl = repoDir.toUri().toURL().toString();
+        } catch (InterruptedException e) {
+            throw new IOException("Failed to build Rust artifacts", e);
         } finally {
             if (!success) {
                 Utils.deleteQuietly(repoDir);
