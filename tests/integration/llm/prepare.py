@@ -905,6 +905,10 @@ trtllm_handler_list = {
         "option.dtype": "fp16",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
+    },
+    "flan-t5-xl": {
+        "option.model_id": "s3://djl-llm/flan-t5-xl/",
+        "option.dtype": "bf16"
     }
 }
 
