@@ -67,9 +67,8 @@ class NeoQuantizationService():
         given serving.properties
         """
         # Default to awq quantization
-        # TODO: update this when new quantization methods are added,
-        # since envvar overrides customer serving.properties
-        os.environ['OPTION_QUANTIZE'] = 'awq'
+        if not os.environ.get('OPTION_QUANTIZE'):
+            os.environ['OPTION_QUANTIZE'] = 'awq'
         logging.debug("Constructing PropertiesManager from "
                       f"serving.properties\nargs:{self.args}\n")
         self.properties_manager = PropertiesManager(self.args)
@@ -109,7 +108,7 @@ class NeoQuantizationService():
                 "option.tensor_parallel_degree"] = user_tensor_parallel_degree
         else:
             logging.info(
-                "User did not passs tensor_parallel_degree. Outputted serving.properties"
+                "User did not passs tensor_parallel_degree. Outputted serving.properties "
                 "will not include this field.")
             del output_properties["option.tensor_parallel_degree"]
 
