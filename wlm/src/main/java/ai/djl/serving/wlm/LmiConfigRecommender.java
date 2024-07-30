@@ -84,7 +84,7 @@ public final class LmiConfigRecommender {
             LmiUtils.HuggingFaceModelConfig modelConfig) {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         setRollingBatch(lmiProperties, modelConfig, features);
-        setMpiMode(lmiProperties, modelConfig, features);
+        setMpiMode(lmiProperties);
         setTensorParallelDegree(lmiProperties);
         setPipelineParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
@@ -127,10 +127,7 @@ public final class LmiConfigRecommender {
         lmiProperties.setProperty("option.rolling_batch", rollingBatch);
     }
 
-    private static void setMpiMode(
-            Properties lmiProperties,
-            LmiUtils.HuggingFaceModelConfig modelConfig,
-            String features) {
+    private static void setMpiMode(Properties lmiProperties) {
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch");
         if ("lmi-dist".equals(rollingBatch) || "trtllm".equals(rollingBatch)) {
             lmiProperties.setProperty("option.mpi_mode", "true");
