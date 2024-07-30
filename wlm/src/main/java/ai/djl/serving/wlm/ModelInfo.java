@@ -554,6 +554,14 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             metric = new Metric("ConvertOnnx", duration, Unit.MICROSECONDS, dimension);
             MODEL_METRIC.info("{}", metric);
             eventManager.onModelConverted(this, "onnx");
+        } else if ("Rust".equals(getEngineName()) && LmiUtils.rustNeedConvert(this)) {
+            eventManager.onModelConverting(this, "rust");
+            begin = System.nanoTime();
+            LmiUtils.convertRustModel(this);
+            duration = (System.nanoTime() - begin) / 1000;
+            metric = new Metric("ConvertRust", duration, Unit.MICROSECONDS, dimension);
+            MODEL_METRIC.info("{}", metric);
+            eventManager.onModelConverted(this, "rust");
         }
 
         // override prop keys are not write to serving.properties,

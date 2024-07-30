@@ -83,6 +83,7 @@ class LmiDistRollingBatch(RollingBatch):
             revision=self.lmi_dist_config.revision,
             enable_chunked_prefill=self.lmi_dist_config.enable_chunked_prefill,
             cpu_offload_gb=self.lmi_dist_config.cpu_offload_gb_per_gpu,
+            enable_prefix_caching=self.lmi_dist_config.enable_prefix_caching,
             **engine_kwargs)
 
         kwargs = {}

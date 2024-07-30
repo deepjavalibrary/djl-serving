@@ -599,6 +599,11 @@ trtllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
+    },
+    "flan-t5-xl": {
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "google/flan-t5-xl",
     }
 }
 

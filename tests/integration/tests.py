@@ -341,6 +341,12 @@ class TestTrtLlmHandler2:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm_chat llama2-7b-chat".split())
 
+    def test_flan_t5_xl(self):
+        with Runner('tensorrt-llm', "flan-t5-xl") as r:
+            prepare.build_trtllm_handler_model("flan-t5-xl")
+            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
+            client.run("trtllm flan-t5-xl".split())
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.gpu_4
