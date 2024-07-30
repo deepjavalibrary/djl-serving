@@ -654,30 +654,18 @@ trtllm_chat_model_spec = {
 
 
 trtllm_neo_model_spec = {
-    "llama2-13b": {
+    "llama3-8b": {
         "max_memory_per_gpu": [22.0],
         "batch_size": [1, 4],
         "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "tokenizer": "NousResearch/Meta-Llama-3-8B"
     },
-    "falcon-7b": {
-        "max_memory_per_gpu": [22.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-7b"
-    },
-    "llama2-70b": {
+    "llama3-70b": {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "mistral-7b": {
-        "max_memory_per_gpu": [22.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "mistralai/Mistral-7B-v0.1"
-    },
+        "tokenizer": "NousResearch/Meta-Llama-3-70B"
+    }
 }
 
 

@@ -976,37 +976,60 @@ correctness_model_list = {
 }
 
 trtllm_neo_list = {
-    "llama2-13b": {
-        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
-        "option.tensor_parallel_degree": 4,
-        "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
-    },
-    "llama2-13b-smoothquant-tp4": {
-        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
-        "option.tensor_parallel_degree": 4,
-        "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
-        "option.quantize": "smoothquant",
-    },
-    "falcon-7b": {
-        "option.model_id": "s3://djl-llm/falcon-7b-updated/",
+    "llama3-8b-tp1-fp16": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.tensor_parallel_degree": 1,
-        "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
-    },
-    "llama2-70b": {
-        "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
-        "option.tensor_parallel_degree": 8,
-        "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
-    },
-    "mistral-7b": {
-        "option.model_id": "s3://djl-llm/mistral-7b/",
-        "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines"
     },
+    "llama3-8b-tp1-awq": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 1,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "awq"
+    },
+    "llama3-8b-tp1-fp8": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 1,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "fp8"
+    },
+    "llama3-8b-tp1-smoothquant": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 1,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "smoothquant"
+    },
+    "llama3-70b-tp8-fp16": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines"
+    },
+    "llama3-70b-tp8-awq": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "awq"
+    },
+    "llama3-70b-tp8-fp8": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "fp8"
+    },
+    "llama3-70b-tp8-smoothquant": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "smoothquant"
+    }
 }
 
 transformers_neuronx_neo_list = {
