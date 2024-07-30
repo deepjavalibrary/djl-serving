@@ -65,6 +65,9 @@ import javax.net.ssl.SSLContext;
 @SuppressWarnings("PMD.SystemPrintln")
 final class HttpClient {
 
+    private static final String DEFAULT_CONTENT_TYPE =
+            Utils.getEnvOrSystemProperty("DEFAULT_CONTENT_TYPE");
+
     private HttpClient() {}
 
     public static HttpResponse sendRequest(
@@ -122,7 +125,7 @@ final class HttpClient {
             }
 
             Header[] headers = resp.getHeaders("Content-Type");
-            String contentType = null;
+            String contentType = DEFAULT_CONTENT_TYPE;
             if (headers != null) {
                 for (Header header : headers) {
                     String[] parts = header.getValue().split(";");
@@ -270,6 +273,11 @@ final class HttpClient {
 
         byte[] bytes = bos.toByteArray();
         InputStream bis = new ByteArrayInputStream(bytes);
+        if (realContentType != null) {
+            realContentType = realContentType.split(";")[0];
+        } else {
+            realContentType = DEFAULT_CONTENT_TYPE;
+        }
         if ("text/event-stream".equalsIgnoreCase(realContentType)) {
             handleServerSentEvent(bis, requestTime, begin, jq, tokens, request, ps);
             return;
