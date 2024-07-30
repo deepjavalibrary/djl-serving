@@ -99,7 +99,7 @@ if $is_sm_neo_context; then
   docker run \
     -t \
     --rm \
-    --network="none" \
+    --network="host" \
     ${model_path:+-v ${model_path}/uncompiled:/opt/ml/model/input} \
     ${model_path:+-v ${model_path}/compiled:/opt/ml/model/compiled} \
     ${model_path:+-v ${model_path}/errors.json:/opt/ml/compilation/errors/errors.json} \
@@ -113,7 +113,7 @@ if $is_sm_neo_context; then
     -e SM_NEO_COMPILED_MODEL_DIR=/opt/ml/model/compiled \
     -e SM_NEO_COMPILATION_ERROR_FILE=/opt/ml/compilation/errors/errors.json \
     -e SM_NEO_CACHE_DIR=/opt/ml/compilation/cache \
-    $(if [[ "$platform" == *"lmi"* ]]; then echo "-e SM_NEO_HF_CACHE_DIR=/opt/ml/compilation/cache"; else echo ""; fi) \
+    -e SM_NEO_HF_CACHE_DIR=/opt/ml/compilation/cache \
     -e COMPILER_OPTIONS={} \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
