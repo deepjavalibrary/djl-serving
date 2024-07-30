@@ -71,6 +71,8 @@ public final class LmiConfigRecommender {
                     Map.entry("phi3_v", "lmi-dist"),
                     // vllm 0.5.3
                     Map.entry("chameleon", "lmi-dist"),
+                    Map.entry("deepseek", "lmi-dist"),
+                    Map.entry("deepseek_v2", "lmi-dist"),
                     Map.entry("fuyu", "lmi-dist"));
 
     private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =

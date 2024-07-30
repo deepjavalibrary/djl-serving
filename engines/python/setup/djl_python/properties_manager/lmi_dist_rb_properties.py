@@ -61,6 +61,7 @@ class LmiDistRbProperties(Properties):
     max_logprobs: Optional[int] = 20
     enable_chunked_prefill: Optional[bool] = False
     cpu_offload_gb_per_gpu: Optional[int] = 0
+    enable_prefix_caching: Optional[bool] = False
 
     @model_validator(mode='after')
     def validate_mpi(self):
