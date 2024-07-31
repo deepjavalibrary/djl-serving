@@ -1591,7 +1591,8 @@ def run(raw_args):
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_neo_model_spec)
     elif args.handler == "transformers_neuronx_neo_rolling_batch":
-        test_handler_rolling_batch(args.model, transformers_neuronx_neo_model_spec)
+        test_handler_rolling_batch(args.model,
+                                   transformers_neuronx_neo_model_spec)
     elif args.handler == "lmi_dist":
         test_handler_rolling_batch(args.model, lmi_dist_model_spec)
     elif args.handler == "lmi_dist_adapters":

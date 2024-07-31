@@ -1073,6 +1073,7 @@ transformers_neuronx_neo_list = {
     }
 }
 
+
 def write_model_artifacts(properties,
                           requirements=None,
                           adapter_ids=[],
@@ -1106,13 +1107,15 @@ def write_model_artifacts(properties,
                                   local_dir=dir)
                 adapter_cache[adapter_id] = dir
 
+
 def create_neo_input_model(properties):
     model_path = "models"
     model_download_path = os.path.join(model_path, "uncompiled")
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
     os.makedirs(model_download_path, exist_ok=True)
-    with open(os.path.join(model_download_path, "serving.properties"), "w") as f:
+    with open(os.path.join(model_download_path, "serving.properties"),
+              "w") as f:
         for key, value in properties.items():
             if key != "option.model_id":
                 f.write(f"{key}={value}\n")
@@ -1126,10 +1129,10 @@ def create_neo_input_model(properties):
     model_s3_uri = properties.get("option.model_id")
     if os.path.isfile("/opt/djl/bin/s5cmd"):
         if not model_s3_uri.endswith("*"):
-                if model_s3_uri.endswith("/"):
-                    model_s3_uri += '*'
-                else:
-                    model_s3_uri += '/*'
+            if model_s3_uri.endswith("/"):
+                model_s3_uri += '*'
+            else:
+                model_s3_uri += '/*'
 
         cmd = ["/opt/djl/bin/s5cmd", "sync", model_s3_uri, model_download_path]
     else:
@@ -1278,6 +1281,7 @@ def build_trtllm_handler_model(model):
     options["model_loading_timeout"] = "1800"
     write_model_artifacts(options)
 
+
 def build_trtllm_neo_model(model):
     if model not in trtllm_neo_list:
         raise ValueError(
@@ -1289,6 +1293,7 @@ def build_trtllm_neo_model(model):
     # Download model to local in addition to generating serving.properties
     create_neo_input_model(options)
 
+
 def build_transformers_neuronx_neo_model(model):
     if model not in transformers_neuronx_neo_list:
         raise ValueError(
@@ -1296,6 +1301,7 @@ def build_transformers_neuronx_neo_model(model):
         )
     options = transformers_neuronx_neo_list[model]
     create_neo_input_model(options)
+
 
 def build_correctness_model(model):
     if model not in correctness_model_list:
