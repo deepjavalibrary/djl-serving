@@ -1,0 +1,21 @@
+name: Inferentia2 integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      djl-version:
+        description: 'The released version of DJL'
+        required: false
+        default: ''
+
+
+jobs:
+  fast-fail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if run on master branch
+        id: fast_fail
+        if: github.ref == 'refs/heads/master'
+        run: |
+          echo "Fast fail"
+          exit 1
