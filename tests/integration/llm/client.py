@@ -652,7 +652,6 @@ trtllm_chat_model_spec = {
     }
 }
 
-
 trtllm_neo_model_spec = {
     "llama3-8b": {
         "max_memory_per_gpu": [22.0],
@@ -666,22 +665,6 @@ trtllm_neo_model_spec = {
         "seq_length": [256],
         "tokenizer": "NousResearch/Meta-Llama-3-70B"
     }
-}
-
-
-trtllm_neo_model_spec = {
-    "llama2-13b": {
-        "max_memory_per_gpu": [22.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
-    },
-    "falcon-7b": {
-        "max_memory_per_gpu": [22.0],
-        "batch_size": [1, 4],
-        "seq_length": [256],
-        "tokenizer": "tiiuae/falcon-7b"
-    },
 }
 
 no_code_rolling_batch_spec = {
@@ -1631,7 +1614,7 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "trtllm_chat":
         test_handler_rolling_batch_chat(args.model, trtllm_chat_model_spec)
-    elif args.handler == "trtllm-neo":
+    elif args.handler == "trtllm_neo":
         test_handler_rolling_batch(args.model, trtllm_neo_model_spec)
     elif args.handler == "no_code":
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
