@@ -3,7 +3,7 @@
 This document provides the schema of the output formatter, with which you can write your own custom output formatter. 
 
 
-## Signature of your own output_formatter
+## Signature of your own output formatter
 
 To write your own custom output formatter, follow the signature below:
 ```
