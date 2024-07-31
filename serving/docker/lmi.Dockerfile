@@ -12,7 +12,7 @@
 ARG version=12.4.1-cudnn-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
-ARG djl_version=0.29.0~SNAPSHOT
+ARG djl_version=0.30.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.3.1
@@ -126,7 +126,7 @@ RUN scripts/patch_oss_dlc.sh python \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.lmi="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
