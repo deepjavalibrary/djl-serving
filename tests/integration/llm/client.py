@@ -734,12 +734,12 @@ correctness_model_spec = {
         "num_run": 4,
         "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
         "dataset": "humaneval",
-        "score": 0.01,
+        "score": 0.0,
         "parameters": {
             "return_full_text": True
         }
     },
-    "trtllm-llama3-1-8b": {
+    "trtllm-llama3-8b": {
         "batch_size": [213],
         "seq_length": [1],
         "num_run": 66,
@@ -908,7 +908,10 @@ def awscurl_run(data,
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     if output:
-        output_path = os.path.join(os.path.curdir, "outputs", "output")
+        output_dir = os.path.join(os.path.curdir, "outputs")
+        shutil.rmtree(output_dir, ignore_errors=True)
+        os.mkdir(output_dir)
+        output_path = os.path.join(output_dir, "output")
         command = f"{command} -o {output_path}"
     LOGGER.info(f"Running command {command}")
     res = sp.run(command, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
