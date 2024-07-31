@@ -56,6 +56,8 @@ class PythonEngine(object):
         self.cluster_size = args.cluster_size
         self.entry_point = args.entry_point
         self.recommended_entry_point = args.recommended_entry_point
+        self.output_formatter = get_annotated_function(args.model_dir,
+                                                       "is_output_formatter")
         self.input_formatter = get_annotated_function(args.model_dir,
                                                       "is_input_formatter")
 
@@ -130,10 +132,15 @@ class PythonEngine(object):
             if self.cluster_size:
                 prop["cluster_size"] = self.cluster_size
             prop["device_id"] = self.device_id
-            if "output_formatter" in prop and hasattr(
-                    self.service, prop["output_formatter"]):
-                prop["output_formatter"] = getattr(self.service,
-                                                   prop["output_formatter"])
+
+            if "output_formatter" in prop:
+                if hasattr(self.service, prop["output_formatter"]):
+                    # TODO: custom output_formatter in serving.properties is deprecated. Remove users are migrated.
+                    prop["output_formatter"] = getattr(
+                        self.service, prop["output_formatter"])
+            elif self.output_formatter:
+                prop["output_formatter"] = self.output_formatter
+
             if self.input_formatter:
                 prop["input_formatter"] = self.input_formatter
             function_name = inputs.get_function_name()
