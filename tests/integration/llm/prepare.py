@@ -939,10 +939,10 @@ correctness_model_list = {
         "option.max_rolling_batch_size": 41,
         "option.model_loading_timeout": 1800
     },
-    "trtllm-llama3-1-8b": {
+    "trtllm-llama3-8b": {
         "engine": "Python",
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.rolling_batch": "trtllm",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 213

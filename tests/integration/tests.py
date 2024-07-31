@@ -849,11 +849,11 @@ class TestCorrectnessTrtLlm:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("correctness trtllm-codestral-22b".split())
 
-    def test_llama3_1_8b(self):
-        with Runner('tensorrt-llm', 'llama3-1-8b') as r:
-            prepare.build_correctness_model("trtllm-llama3-1-8b")
+    def test_llama3_8b(self):
+        with Runner('tensorrt-llm', 'llama3-8b') as r:
+            prepare.build_correctness_model("trtllm-llama3-8b")
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("correctness trtllm-llama3-1-8b".split())
+            client.run("correctness trtllm-llama3-8b".split())
 
 
 @pytest.mark.correctness
