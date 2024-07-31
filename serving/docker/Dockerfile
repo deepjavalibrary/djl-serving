@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04 AS base
-ARG djl_version=0.29.0~SNAPSHOT
+ARG djl_version=0.30.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
@@ -76,5 +76,5 @@ RUN scripts/install_python.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.cpu-full="true"
 LABEL torch-version=$torch_version

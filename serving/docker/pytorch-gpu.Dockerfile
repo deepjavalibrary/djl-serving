@@ -13,7 +13,7 @@ ARG version=12.4.1-cudnn-devel-ubuntu22.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.29.0~SNAPSHOT
+ARG djl_version=0.30.0~SNAPSHOT
 ARG cuda_version=cu124
 ARG torch_version=2.3.1
 ARG torch_vision_version=0.18.1
@@ -75,7 +75,7 @@ CMD ["serve"]
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-gpu="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.pytorch-cu121="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.pytorch-cu121="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
