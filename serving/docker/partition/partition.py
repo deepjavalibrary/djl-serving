@@ -28,9 +28,8 @@ from auto_fp8 import AutoFP8ForCausalLM, BaseQuantizeConfig
 from datasets import load_dataset
 
 from utils import (get_partition_cmd, extract_python_jar,
-                   get_python_executable, get_download_dir,
-                   read_hf_model_config, init_hf_tokenizer,
-                   remove_option_from_properties)
+                   get_python_executable, get_download_dir, init_hf_tokenizer,
+                   remove_option_from_properties, load_hf_config_and_tokenizer)
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -255,15 +254,7 @@ class PartitionService(object):
         """
         Quantizes model using AutoAWQ. Saves output to save_mp_checkpoint_path.
         """
-        sys.path.append(PYTHON_CACHE_DIR)
-        from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-
-        logging.info(f"Properties: {self.properties}")
-        properties = remove_option_from_properties(self.properties)
-        hf_configs = HuggingFaceProperties(**properties)
-        model_config = read_hf_model_config(hf_configs.model_id_or_path,
-                                            hf_configs)
-        tokenizer = init_hf_tokenizer(hf_configs.model_id_or_path, hf_configs)
+        hf_configs, tokenizer = load_hf_config_and_tokenizer(self.properties)
 
         # Hard-coding these options for now. If vLLM continues to prioritize
         # AutoAWQ we will expose these options to customers in the future.
@@ -284,13 +275,7 @@ class PartitionService(object):
         tokenizer.save_pretrained(output_path)
 
     def autofp8_quantize(self):
-        sys.path.append(PYTHON_CACHE_DIR)
-        from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-
-        output_path = self.properties['option.save_mp_checkpoint_path']
-        properties = remove_option_from_properties(self.properties)
-        hf_configs = HuggingFaceProperties(**properties)
-        tokenizer = init_hf_tokenizer(hf_configs.model_id_or_path, hf_configs)
+        hf_configs, tokenizer = load_hf_config_and_tokenizer(self.properties)
         if not tokenizer.pad_token:
             tokenizer.pad_token = tokenizer.eos_token
 
@@ -310,6 +295,7 @@ class PartitionService(object):
                                                    quantize_config,
                                                    **hf_configs.kwargs)
         model.quantize(examples)
+        output_path = self.properties['option.save_mp_checkpoint_path']
         logging.info(f"Quantization complete. Saving model to: {output_path}")
         model.save_quantized(output_path)
 

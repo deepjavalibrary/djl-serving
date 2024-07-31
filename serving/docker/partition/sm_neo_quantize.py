@@ -108,7 +108,7 @@ class NeoQuantizationService():
                 "option.tensor_parallel_degree"] = user_tensor_parallel_degree
         else:
             logging.info(
-                "User did not passs tensor_parallel_degree. Outputted serving.properties "
+                "User did not pass tensor_parallel_degree. Outputted serving.properties "
                 "will not include this field.")
             del output_properties["option.tensor_parallel_degree"]
 
