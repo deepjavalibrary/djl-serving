@@ -64,14 +64,14 @@ public class ClusterRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String[] segments)
             throws ModelException {
+        Path sshDir = Paths.get(System.getProperty("user.home")).resolve(".ssh");
         switch (segments[2]) {
-            case "sshkey":
-                Path home = Paths.get(System.getProperty("user.home")).resolve(".ssh");
-                Path file = home.resolve("id_rsa.pub");
-                if (Files.notExists(file)) {
-                    sshkeygen(home.resolve("id_rsa").toString());
+            case "sshpublickey":
+                Path publicKeyFile = sshDir.resolve("id_rsa.pub");
+                if (Files.notExists(publicKeyFile)) {
+                    sshkeygen(sshDir.resolve("id_rsa").toString());
                 }
-                NettyUtils.sendFile(ctx, file, false);
+                NettyUtils.sendFile(ctx, publicKeyFile, false);
                 return;
             case "models":
                 ModelStore modelStore = ModelStore.getInstance();
@@ -103,7 +103,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void sshkeygen(String rsaFile) {
         try {
-            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "''", "-f", rsaFile};
+            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile};
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
