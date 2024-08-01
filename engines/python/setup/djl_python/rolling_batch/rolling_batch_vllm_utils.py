@@ -102,19 +102,16 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
             prev_len:
             cur_len] if prev_len < cur_len else completion_output.token_ids
 
-        # get the newly generated token texts
-        curr_length = cache[f"sequence_index_{sequence_index}"]["curr_length"]
-        text = completion_output.text[curr_length:]
+        # get the newly generated token texts for speculative decoding
         output_token_texts = []
         if hasattr(completion_output, "output_token_texts"):
             output_token_texts = completion_output.output_token_texts[
                 prev_len:
                 cur_len] if prev_len < cur_len else completion_output.output_token_texts
-        output_token_texts = [text] * len(
-            new_token_ids) if not output_token_texts else output_token_texts
 
         top_tokens = []
-        # calculate log probs
+        token_texts = []
+        # calculate log probs and token_texts
         if completion_output.logprobs:
             new_logprobs_list = completion_output.logprobs[
                 prev_len:
@@ -122,6 +119,7 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
             new_logprobs = []
             for token_id, logprobs in zip(new_token_ids, new_logprobs_list):
                 new_logprobs.append(logprobs[token_id].logprob)
+                token_texts.append(logprobs[token_id].decoded_token)
                 for token_id_key, logprob in logprobs.items():
                     top_tokens.append(
                         Token(id=token_id_key,
@@ -129,7 +127,19 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
                               log_prob=logprob.logprob))
 
         else:
+            # TODO: Test and remove this. logprobs is always set 1. This case should never happen.
             new_logprobs = [None] * len(new_token_ids)
+            curr_length = cache[f"sequence_index_{sequence_index}"][
+                "curr_length"]
+            token_texts.append(completion_output.text[curr_length:])
+
+        if not output_token_texts:
+            if len(token_texts) != len(new_token_ids):
+                raise RuntimeError(
+                    f"Mismatch in the number of token_ids and its token texts generated."
+                    f"new token_ids: {new_token_ids}"
+                    f"new token_texts: {token_texts}")
+            output_token_texts = token_texts
 
         # set finish reason for the generation
         finish_reason = FINISH_REASON_MAPPER.get(
