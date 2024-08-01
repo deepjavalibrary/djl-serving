@@ -127,7 +127,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void restartSshServer() {
         try {
-            String[] commands = { "service", "ssh", "restart" };
+            String[] commands = {"service", "ssh", "restart"};
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
@@ -148,7 +148,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void sshkeygen(String rsaFile) {
         try {
-            String[] commands = { "ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile };
+            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile};
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {

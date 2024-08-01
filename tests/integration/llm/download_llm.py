@@ -9,8 +9,7 @@ def llm_download(model_id, token, allow_patterns):
     if not allow_patterns:
         # Only download pytorch checkpoint files
         allow_patterns = [
-            "*.json", "*.pt", "*.safetensors", "*.txt", "*.model",
-            "*.tiktoken", "*.py"
+            "*.json", "*.pt", "*.safetensors", "*.txt", "*.model", "*.tiktoken"
         ]
 
     ignore_patterns = [".git*"]
