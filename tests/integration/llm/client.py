@@ -777,6 +777,20 @@ multi_modal_spec = {
     }
 }
 
+text_embedding_model_spec = {
+    "bge-base": {
+        "max_memory_per_gpu": [2.0, 2.0, 2.0, 2.0],
+        "batch_size": [1, 2, 4, 8],
+    }
+}
+
+reranking_model_spec = {
+    "bge-reranker": {
+        "max_memory_per_gpu": [5.0, 5.0, 5.0, 5.0],
+        "batch_size": [1, 2, 4, 8],
+    }
+}
+
 
 def add_file_handler_to_logger(file_path: str):
     handler = logging.FileHandler(file_path, mode='w')
@@ -1074,6 +1088,31 @@ def batch_generation_chat(batch_size):
         # dynamically extend to support larger bs by repetition
         messages *= math.ceil(batch_size / len(messages))
     return messages[:batch_size]
+
+
+def batch_generation_pair(batch_size):
+    data = [{
+        "key": "what is panda?",
+        "value": "hi"
+    }, {
+        "key":
+        "what is panda?",
+        "value":
+        "The giant panda (Ailuropoda melanoleuca), sometimes called a panda bear or simply panda, is a bear species endemic to China."
+    }, {
+        "key":
+        "What is Deep Learning?",
+        "value":
+        "Deep learning is a subset of machine learning that utilizes multi-layered neural networks to learn from large amounts of data and perform complex tasks such as image recognition and natural language processing."
+    }, {
+        "key": "What is Deep Learning?",
+        "value": "Deep learning is not"
+    }]
+
+    if batch_size > len(data):
+        # dynamically extend to support larger bs by repetition
+        data *= math.ceil(batch_size / len(data))
+    return data[:batch_size]
 
 
 def t5_batch_generation(batch_size):
@@ -1486,6 +1525,49 @@ def test_multimodal(model, model_spec):
                     output=True)
 
 
+def test_text_embedding_model(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for i, batch_size in enumerate(spec["batch_size"]):
+        req = {"inputs": batch_generation(batch_size)}
+        logging.info(f"req {req}")
+        res = send_json(req).json()
+        logging.info(f"res: {res}")
+        assert len(res) == batch_size
+        if "max_memory_per_gpu" in spec:
+            validate_memory_usage(spec["max_memory_per_gpu"][i])
+
+        # awscurl little benchmark phase
+        logging.info(f"Little benchmark: concurrency {batch_size}")
+        awscurl_run(req, spec.get("tokenizer"), batch_size)
+
+
+def test_reranking_model(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for i, batch_size in enumerate(spec["batch_size"]):
+        req = batch_generation_pair(batch_size)
+        logging.info(f"req {req}")
+        res = send_json(req).json()
+        logging.info(f"res: {res}")
+        if "max_memory_per_gpu" in spec:
+            validate_memory_usage(spec["max_memory_per_gpu"][i])
+
+        # awscurl little benchmark phase
+        logging.info(f"Little benchmark: concurrency {batch_size}")
+        awscurl_run(req, spec.get("tokenizer"), batch_size)
+
+
 def run(raw_args):
     parser = argparse.ArgumentParser(description="Build the LLM configs")
     parser.add_argument("handler", help="the handler used in the model")
@@ -1565,6 +1647,10 @@ def run(raw_args):
         test_correctness(args.model, correctness_model_spec)
     elif args.handler == "multimodal":
         test_multimodal(args.model, multi_modal_spec)
+    elif args.handler == "text_embedding":
+        test_text_embedding_model(args.model, text_embedding_model_spec)
+    elif args.handler == "reranking":
+        test_reranking_model(args.model, reranking_model_spec)
 
     else:
         raise ValueError(
