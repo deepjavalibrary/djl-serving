@@ -281,6 +281,7 @@ final class HttpClient {
         }
         if ("text/event-stream".equalsIgnoreCase(realContentType)) {
             handleServerSentEvent(bis, requestTime, begin, jq, tokens, request, ps);
+            requestTime[1] = -1; // rely on FirstByteCounterInputStream
             return;
         }
         List<StringBuilder> list = new ArrayList<>();
