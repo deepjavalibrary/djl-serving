@@ -86,12 +86,13 @@ public class ClusterRequestHandler extends HttpRequestHandler {
                     Files.setPosixFilePermissions(
                             publicKeyFile, PosixFilePermissions.fromString("rw-r--r--"));
                     Files.setPosixFilePermissions(
-                            sshDir,
-                            PosixFilePermissions.fromString("rwx------"));
+                            sshDir, PosixFilePermissions.fromString("rwx------"));
                 } catch (IOException e) {
-                    logger.error("Error writing public key content to authorized_keys" + e.getMessage());
+                    logger.error(
+                            "Error writing public key content to authorized_keys" + e.getMessage());
                     NettyUtils.sendJsonResponse(
-                            ctx, new StatusResponse("Error writing to authorized_keys on leader node."));
+                            ctx,
+                            new StatusResponse("Error writing to authorized_keys on leader node."));
                     return;
                 }
 
@@ -130,7 +131,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void restartSshServer() {
         try {
-            String[] commands = { "service", "ssh", "restart" };
+            String[] commands = {"service", "ssh", "restart"};
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
@@ -151,7 +152,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void sshkeygen(String rsaFile) {
         try {
-            String[] commands = { "ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile };
+            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile};
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
