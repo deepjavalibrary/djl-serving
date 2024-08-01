@@ -791,6 +791,14 @@ reranking_model_spec = {
     }
 }
 
+handler_performance_model_spec = {
+    "tiny-llama-model": {
+        "batch_size": [1, 512],
+        "seq_length": [256],
+        "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    }
+}
+
 
 def add_file_handler_to_logger(file_path: str):
     handler = logging.FileHandler(file_path, mode='w')
@@ -902,7 +910,9 @@ def awscurl_run(data,
                 concurrency,
                 num_run=5,
                 dataset=False,
-                output=False):
+                output=False,
+                json_results=False,
+                random_delay=False):
     find_awscurl()
     headers = "Content-type: application/json"
     endpoint = f"http://127.0.0.1:8080/invocations"
@@ -916,9 +926,18 @@ def awscurl_run(data,
     else:
         json_data = json.dumps(data)
         command_data = f"-d '{json_data}'"
+
+    json_output = ""
+    if json_results:
+        json_output = "--json-path benchmark.json"
+
+    delay = ""
+    if random_delay:
+        delay = '--delay "rand(0,1000)"'
+
     command = (f"./awscurl -c {concurrency} "
                f"-N {num_run} -X POST {endpoint} --connect-timeout 300 "
-               f"-H {headers} {command_data} -P -t")
+               f"-H {headers} {command_data} {delay} {json_output} -P -t")
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     if output:
@@ -1403,6 +1422,88 @@ def test_handler(model, model_spec):
                 awscurl_run(req, spec.get("tokenizer"), batch_size)
 
 
+def log_awscurl_benchmark(metric_name: str,
+                          benchmark_name: str = "benchmark.json") -> None:
+    with open(benchmark_name, "r") as f:
+        raw_metrics = json.load(f)
+        metrics = list()
+        metrics.append({
+            "MetricName": f"{metric_name}_p50Latency",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p50Latency"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_p90Latency",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p90Latency"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_p50TimeToFirstByte",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p50TimeToFirstByte"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_p90TimeToFirstByte",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p90TimeToFirstByte"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_tokenThroughput",
+            "Unit": "Count/Second",
+            "Value": raw_metrics["tokenThroughput"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_tps",
+            "Unit": "Count/Second",
+            "Value": raw_metrics["tps"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_tokenPerRequest",
+            "Unit": "Count",
+            "Value": raw_metrics["tokenPerRequest"]
+        })
+        LOGGER.info(f"{metric_name}")
+        LOGGER.info(f"raw metrics: {raw_metrics}")
+        command = f'aws cloudwatch put-metric-data --namespace "serving_handler" ' \
+                  f'--region "us-east-1" --metric-data \'{json.dumps(metrics)}\''
+        LOGGER.info(command)
+        sp.call(command, shell=True)
+
+
+def run_rb_handler_performance(benchmark_name, model_spec, req):
+    for batch_size in model_spec["batch_size"]:
+        metric_name = f"{benchmark_name}-batch-{batch_size:03}"
+        num_run = max(
+            100 // batch_size,
+            10)  # minimum total runs is 100, minimum runs per request is 10
+        awscurl_run(req,
+                    model_spec.get("tokenizer", None),
+                    batch_size,
+                    num_run=num_run,
+                    json_results=True,
+                    random_delay=True)
+        log_awscurl_benchmark(metric_name)
+
+
+def test_handler_performance(benchmark_name, model_spec):
+    modelspec_checker("tiny-llama-model", model_spec)
+    spec = model_spec["tiny-llama-model"]
+
+    inputs_request = {"inputs": batch_generation(1)[0]}
+    inputs_request["max_new_tokens"] = spec["seq_length"][0]
+    LOGGER.info(f"{benchmark_name} req {inputs_request}")
+
+    run_rb_handler_performance(f"{benchmark_name}-handler", spec,
+                               inputs_request)
+
+    chat_request = {"messages": batch_generation_chat(1)[0]}
+    chat_request["max_tokens"] = spec["seq_length"][0]
+    LOGGER.info(f"{benchmark_name}-chat req {chat_request}")
+
+    run_rb_handler_performance(f"{benchmark_name}-handler-chat", spec,
+                               chat_request)
+
+
 def test_performance():
     response_times = []
     for i in range(args.count):
@@ -1633,6 +1734,8 @@ def run(raw_args):
         test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
+    elif args.handler == "handler_performance":
+        test_handler_performance(args.model, handler_performance_model_spec)
     elif args.handler == "performance":
         test_performance()
     elif args.handler == "lmi_dist_aiccl":
