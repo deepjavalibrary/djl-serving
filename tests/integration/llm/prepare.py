@@ -967,6 +967,20 @@ correctness_model_list = {
     }
 }
 
+text_embedding_model_list = {
+    "bge-base": {
+        "option.model_id": "BAAI/bge-base-en-v1.5",
+        "batch_size": 32,
+    },
+    "bge-reranker": {
+        "option.model_id": "BAAI/bge-reranker-base",
+        "reranking": True,
+        "includeTokenTypes": True,
+        "sigmoid": False,
+        "batch_size": 32,
+    }
+}
+
 
 def write_model_artifacts(properties,
                           requirements=None,
@@ -1145,6 +1159,18 @@ def build_correctness_model(model):
     write_model_artifacts(options)
 
 
+def build_text_embedding_model(model):
+    if model not in text_embedding_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(onnx_list.keys())}"
+        )
+    options = text_embedding_model_list[model]
+    options["engine"] = "Rust"
+    options["option.task"] = "text_embedding"
+    options["normalize"] = False
+    write_model_artifacts(options)
+
+
 supported_handler = {
     'huggingface': build_hf_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
@@ -1156,6 +1182,7 @@ supported_handler = {
     'vllm': build_vllm_model,
     'trtllm': build_trtllm_handler_model,
     'correctness': build_correctness_model,
+    'text_embedding': build_text_embedding_model,
 }
 
 if __name__ == '__main__':

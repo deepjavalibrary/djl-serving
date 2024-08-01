@@ -15,7 +15,7 @@ jobs:
   create-runners:
     runs-on: [self-hosted, scheduler]
     steps:
-      - name: Create new GPU instance
+      - name: Create new G5 instance
         id: create_gpu
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
@@ -23,14 +23,20 @@ jobs:
           https://api.github.com/repos/deepjavalibrary/djl-serving/actions/runners/registration-token \
           --fail \
           | jq '.token' | tr -d '"' )
-          ./start_instance.sh action_gpu $token djl-serving
+          ./start_instance.sh action_g5 $token djl-serving
     outputs:
-      gpu_instance_id: ${{ steps.create_gpu.outputs.action_gpu_instance_id }}
+      gpu_instance_id: ${{ steps.create_gpu.outputs.action_g5_instance_id }}
 
-  gpu-test:
-    runs-on: [ self-hosted, gpu ]
+  test:
+    runs-on: [ "${{ matrix.test.instance }}" ]
     timeout-minutes: 30
     needs: create-runners
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test: TestTextEmbedding
+            instance: g5
     steps:
       - uses: actions/checkout@v4
       - name: Clean env
@@ -44,47 +50,48 @@ jobs:
         with:
           python-version: '3.10.x'
       - name: Install pip dependencies
-        run: pip3 install requests huggingface_hub
-      - name: Build container name
-        run: ./serving/docker/scripts/docker_name_builder.sh lmi ${{ github.event.inputs.djl-version }}
-      - name: Download models and dockers
+        run: pip3 install pytest requests "numpy<2" pillow huggingface_hub
+      - name: Install torch
+        # Use torch to get cuda capability of current device to selectively run tests
+        # Torch version doesn't really matter that much
+        run: |
+          pip3 install torch==2.3.0
+      - name: Install awscurl
         working-directory: tests/integration
         run: |
-          docker pull deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG
-          mkdir logs
-      - name: Test bge model
+          curl -OL https://publish.djl.ai/awscurl/awscurl
+          chmod +x awscurl
+          mkdir outputs
+      - name: Test
+        working-directory: tests/integration
+        env:
+          TEST_DJL_VERSION: ${{ inputs.djl-version }}
+        run: |
+          python -m pytest -k ${{ matrix.test.test }} tests.py
+      - name: Cleanup
         working-directory: tests/integration
         run: |
-          rm -rf models
-          python3 embedding/prepare.py onnxruntime bge-base-en-v1.5
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
-          serve -m test=file:/opt/ml/model/test/
-          python3 embedding/client.py onnxruntime bge-base-en-v1.5
-          docker rm -f $(docker ps -aq)
-      - name: Test bge-reranker model
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          python3 embedding/prepare.py onnxruntime bge-reranker
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models lmi \
-          serve -m test=file:/opt/ml/model/test/
-          python3 embedding/client.py onnxruntime bge-reranker
-          docker rm -f $(docker ps -aq)
-      - name: On fail step
+          rm -rf outputs
+          rm awscurl
+      - name: On Failure
         if: ${{ failure() }}
         working-directory: tests/integration
         run: |
-          cat logs/serving.log
+          for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          sudo rm -rf outputs && sudo rm -rf models
+          rm awscurl
+          docker rm -f $(docker ps -aq) || true
       - name: Upload test logs
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: gpu-logs
-          path: tests/integration/logs/
+          name: test-${{ matrix.test.test }}-logs
+          path: tests/integration/all_logs/
 
   stop-runners:
     if: always()
     runs-on: [ self-hosted, scheduler ]
-    needs: [ create-runners, gpu-test ]
+    needs: [ create-runners, test ]
     steps:
       - name: Stop all instances
         run: |
