@@ -21,6 +21,17 @@ from djl_python.request_io import TextGenerationOutput
 from djl_python.utils import wait_till_generation_finished
 
 
+def output_formatter(function):
+    """
+    Decorator for output_formatter. User just need to annotate @output_formatter for their custom defined function.
+    :param function:  Decorator takes in the function and adds an attribute.
+    :return:
+    """
+    # adding an attribute to the function, which is used to find the decorated function.
+    function.is_output_formatter = True
+    return function
+
+
 def get_generated_text(sequence, request_output):
     parameters = request_output.input.parameters
     generated_text = request_output.input.input_text if parameters.get(
@@ -31,7 +42,7 @@ def get_generated_text(sequence, request_output):
 
 
 def get_sequence_details(request_output: TextGenerationOutput,
-                         sequence_index: int) -> dict:
+                         sequence_index: int) -> Dict:
     sequence = request_output.sequences[sequence_index]
     parameters = request_output.input.parameters
 

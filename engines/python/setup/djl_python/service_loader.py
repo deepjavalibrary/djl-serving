@@ -102,10 +102,10 @@ def get_annotated_function(model_dir: str,
     """
     try:
         service = load_model_service(model_dir, "model.py", -1)
-        input_formatter_function = find_decorated_function(
-            service.module, decorator_attribute)
-        if input_formatter_function:
-            return input_formatter_function
+        annotated_function = find_decorated_function(service.module,
+                                                     decorator_attribute)
+        if annotated_function:
+            return annotated_function
     except ValueError:
         # No model.py is found, we default to our default input formatter
         pass
