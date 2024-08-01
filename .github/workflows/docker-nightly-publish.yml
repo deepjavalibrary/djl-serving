@@ -132,6 +132,7 @@ jobs:
       - name: install awscli
         run: |
           sudo apt-get update
+          sudo dpkg --configure -a
           sudo apt-get install awscli -y
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
