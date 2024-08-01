@@ -881,13 +881,13 @@ class TestCorrectnessNeuronx:
     def test_codestral_22b(self):
         with Runner('pytorch-inf2', 'codestral-22b') as r:
             prepare.build_correctness_model("neuronx-codestral-22b")
-            r.launch(container='pytorch-inf2-2')
+            r.launch(container='pytorch-inf2-6')
             client.run("correctness neuronx-codestral-22b".split())
 
     def test_llama3_1_8b(self):
         with Runner('pytorch-inf2', 'llama3-1-8b') as r:
             prepare.build_correctness_model("neuronx-llama3-1-8b")
-            r.launch(container='pytorch-inf2-2')
+            r.launch(container='pytorch-inf2-6')
             client.run("correctness neuronx-llama3-1-8b".split())
 
 
