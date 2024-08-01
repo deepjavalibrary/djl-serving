@@ -910,3 +910,19 @@ class TestMultiModalLmiDist:
             prepare.build_lmi_dist_model('phi-3-vision-128k-instruct')
             r.launch()
             client.run("multimodal phi-3-vision-128k-instruct".split())
+
+
+@pytest.mark.gpu
+class TestTextEmbedding:
+
+    def test_bge_base(self):
+        with Runner('lmi', 'bge-base') as r:
+            prepare.build_text_embedding_model("bge-base")
+            r.launch()
+            client.run("text_embedding bge-base".split())
+
+    def test_bge_reranker(self):
+        with Runner('lmi', 'bge-reranker') as r:
+            prepare.build_text_embedding_model("bge-reranker")
+            r.launch()
+            client.run("reranking bge-reranker".split())
