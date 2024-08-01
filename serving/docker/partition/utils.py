@@ -52,7 +52,6 @@ def get_engine_configs(properties):
 
 
 def extract_python_jar(target_dir):
-    print(f"extracting to target_dir: {target_dir}")
     os.makedirs(target_dir, exist_ok=True)
     jar_files = glob.glob('/usr/local/djl-serving-*/lib/python-*.jar')
 
@@ -67,7 +66,7 @@ def get_djl_version_from_lib():
             version = filename.replace("djl-serving-", "")
 
     if not version:
-        raise ValueError(f"Cannot retrieve version from lib files")
+        raise ValueError(f"Cannot retrieve version from lib file name.")
     return version
 
 
