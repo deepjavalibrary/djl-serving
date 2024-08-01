@@ -52,11 +52,23 @@ def get_engine_configs(properties):
 
 
 def extract_python_jar(target_dir):
+    print(f"extracting to target_dir: {target_dir}")
     os.makedirs(target_dir, exist_ok=True)
     jar_files = glob.glob('/usr/local/djl-serving-*/lib/python-*.jar')
 
     with zipfile.ZipFile(jar_files[0], 'r') as zip:
         zip.extractall(target_dir)
+
+
+def get_djl_version_from_lib():
+    version = ""
+    for filename in os.listdir("/usr/local/"):
+        if filename.startswith("djl-serving-"):
+            version = filename.replace("djl-serving-", "")
+
+    if not version:
+        raise ValueError(f"Cannot retrieve version from lib files")
+    return version
 
 
 def is_engine_mpi_mode(engine):

@@ -26,17 +26,7 @@ from huggingface_hub import snapshot_download
 
 from retrying import retry
 
-from utils import (
-    get_partition_cmd,
-    extract_python_jar,
-    get_python_executable,
-    get_download_dir,
-    read_hf_model_config,
-    init_hf_tokenizer,
-    load_properties,
-    remove_option_from_properties,
-    update_kwargs_with_env_vars,
-)
+from utils import extract_python_jar, get_download_dir, load_properties, get_djl_version_from_lib
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -111,8 +101,6 @@ class MultiNodeSetupHandler:
                             model_url = properties["option.model_id"]
                         elif "OPTION_MODEL_ID" in os.environ:
                             model_url = os.environ.get("OPTION_MODEL_ID")
-                    if not model_url.endswith("/"):
-                        model_url = model_url + "/"
                     self.download_model_from_s3(model_id, model_url)
                     return True
             else:
@@ -126,6 +114,7 @@ class MultiNodeSetupHandler:
         Downloads model from s3 given s3 URL using s5cmd
         """
         logger.info("Downloading model...")
+
         if not model_url or not model_url.startswith("s3://"):
             logger.warn(
                 f"Model {model_id} to be downloaded is not s3. Will attempt to download from HF hub."
@@ -181,53 +170,21 @@ class MultiNodeSetupHandler:
                 ssh_dir = home_dir / ".ssh"
                 ssh_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
-                id_rsa_pub_path = ssh_dir / "id_rsa.pub"
-
-                with open(id_rsa_pub_path, "wb") as file:
-                    file.write(file_data)
-
-                id_rsa_pub_path.chmod(0o644)
-
                 authorized_keys_path = ssh_dir / "authorized_keys"
 
                 with open(authorized_keys_path, "wb") as file:
                     file.write(file_data)
 
-                authorized_keys_path.chmod(0o644)
-
-                logger.info(f"SSH key written to {id_rsa_pub_path}")
-                logger.info(f"SSH key written to {authorized_keys_path}")
-            else:
-                logger.info("Failed to fetch data from the endpoint.")
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
-
-        endpoint_url = self.endpoint_url + "sshprivatekey"
-
-        try:
-            response = requests.get(endpoint_url)
-
-            if response.status_code == 200:
-                file_data = response.content
-
-                home_dir = Path.home()
-                ssh_dir = home_dir / ".ssh"
-                ssh_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-
-                id_rsa_path = ssh_dir / "id_rsa"
-
-                with open(id_rsa_path, "wb") as file:
-                    file.write(file_data)
-
                 authorized_keys_path.chmod(0o600)
 
-                logger.info(f"SSH key written to {id_rsa_path}")
+                logger.info(
+                    f"SSH key written to {authorized_keys_path}. Restarting ssh server."
+                )
+                os.system(f"service ssh restart")
             else:
                 logger.info("Failed to fetch data from the endpoint.")
         except Exception as e:
             logger.error(f"An error occurred: {e}")
-
-        return True
 
     @retry(stop_max_delay=60000, wait_fixed=2000)
     def report_status_to_leader_node(self):
@@ -257,8 +214,10 @@ def main():
     multi_node_setup_handler = MultiNodeSetupHandler()
 
     multi_node_setup_handler.get_model_info_and_download_model()
-    extract_python_jar(target_dir=os.path.join(
-        multi_node_setup_handler.get_cache_dir(), "python"))
+
+    extract_python_jar(
+        target_dir=os.path.join(multi_node_setup_handler.get_cache_dir(),
+                                "python", get_djl_version_from_lib()))
     multi_node_setup_handler.get_and_write_cluster_ssh_key()
     multi_node_setup_handler.report_status_to_leader_node()
 

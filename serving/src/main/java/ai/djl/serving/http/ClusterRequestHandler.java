@@ -35,6 +35,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -65,25 +67,69 @@ public class ClusterRequestHandler extends HttpRequestHandler {
             String[] segments)
             throws ModelException {
         Path home = Paths.get(System.getProperty("user.home")).resolve(".ssh");
+        logger.info("home path: " + home);
+        Path authorizedKeysFilePath = home.resolve("authorized_keys");
         switch (segments[2]) {
+            case "uploadsshpublickey":
+                List<String> message = decoder.parameters().get("data");
+                if (message.size() != 1) {
+                    NettyUtils.sendJsonResponse(ctx, new StatusResponse("Invalid request"));
+                    return;
+                }
+                try {
+                    logger.info("public key contents received: " + message.get(0));
+
+                    logger.info(
+                            "Writing public key content from worker node to authorized_keys on"
+                                    + " leader node");
+                    Files.createDirectories(authorizedKeysFilePath.getParent());
+                    Files.createFile(authorizedKeysFilePath);
+                    Files.write(
+                            authorizedKeysFilePath,
+                            message.get(0).getBytes(),
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.APPEND);
+                    logger.info("Wrote file contents");
+                    Files.setPosixFilePermissions(
+                            authorizedKeysFilePath, PosixFilePermissions.fromString("rw-------"));
+                    logger.info("Changed file perms");
+                    NettyUtils.sendJsonResponse(ctx, new StatusResponse("OK"));
+                } catch (IOException e) {
+                    logger.error(
+                            "Error writing public key content from worker node to authorized_keys"
+                                    + " on this node");
+                    NettyUtils.sendJsonResponse(
+                            ctx, new StatusResponse("Error writing to authorized_keys."));
+                }
+                break;
             case "sshpublickey":
-                Path public_file = home.resolve("id_rsa.pub");
-                if (Files.notExists(public_file)) {
+                Path publicKeyFile = home.resolve("id_rsa.pub");
+                if (Files.notExists(publicKeyFile)) {
                     sshkeygen(home.resolve("id_rsa").toString());
                 }
-                NettyUtils.sendFile(ctx, public_file, false);
-                return;
-            case "sshprivatekey":
-                Path private_file = home.resolve("id_rsa");
-                if (Files.notExists(private_file)) {
-                    NettyUtils.sendFile(ctx, private_file, false);
-                } else {
+                try {
+                    Files.write(
+                            authorizedKeysFilePath,
+                            Files.readAllBytes(publicKeyFile),
+                            StandardOpenOption.APPEND);
+                    logger.info("Writing public key content to authorized_keys on leader node");
+                    Files.setPosixFilePermissions(
+                            authorizedKeysFilePath, PosixFilePermissions.fromString("rw-------"));
+                    Files.setPosixFilePermissions(
+                            publicKeyFile, PosixFilePermissions.fromString("rw-r--r--"));
+                    Files.setPosixFilePermissions(
+                            publicKeyFile.getParent(),
+                            PosixFilePermissions.fromString("rwx------"));
+                } catch (IOException e) {
+                    logger.error("Error writing public key content to authorized_keys");
                     NettyUtils.sendJsonResponse(
-                            ctx,
-                            new StatusResponse(
-                                    "Error: ssh private key unavailable. Please call /sshpublickey"
-                                            + " first."));
+                            ctx, new StatusResponse("Error writing to authorized_keys."));
                 }
+
+                restartSshServer();
+
+                NettyUtils.sendFile(ctx, publicKeyFile, false);
+
                 return;
             case "models":
                 ModelStore modelStore = ModelStore.getInstance();
@@ -113,9 +159,30 @@ public class ClusterRequestHandler extends HttpRequestHandler {
         }
     }
 
+    private void restartSshServer() {
+        try {
+            String[] commands = {"service", "ssh", "restart"};
+            Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
+            String logOutput;
+            try (InputStream is = exec.getInputStream()) {
+                logOutput = Utils.toString(is);
+            }
+            int exitCode = exec.waitFor();
+            if (0 != exitCode) {
+                logger.error("Restarting ssh server failed: {}", logOutput);
+                config.setError(logOutput);
+                throw new IllegalStateException("Ssh server restart failed.");
+            } else {
+                logger.debug(logOutput);
+            }
+        } catch (IOException | InterruptedException e) {
+            logger.error("Error executing command: " + e.getMessage());
+        }
+    }
+
     private void sshkeygen(String rsaFile) {
         try {
-            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "''", "-f", rsaFile};
+            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile};
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
