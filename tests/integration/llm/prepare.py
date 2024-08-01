@@ -982,23 +982,23 @@ trtllm_neo_list = {
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines"
     },
-    "llama3-8b-tp1-awq": {
+    "llama3-8b-tp2-awq": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 1,
+        "option.tensor_parallel_degree": 2,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
         "option.quantize": "awq"
     },
-    "llama3-8b-tp1-fp8": {
+    "llama3-8b-tp2-fp8": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 1,
+        "option.tensor_parallel_degree": 2,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
         "option.quantize": "fp8"
     },
-    "llama3-8b-tp1-smoothquant": {
+    "llama3-8b-tp2-smoothquant": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 1,
+        "option.tensor_parallel_degree": 2,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
         "option.quantize": "smoothquant"
