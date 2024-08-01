@@ -66,29 +66,32 @@ public class ClusterRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String[] segments)
             throws ModelException {
-        Path home = Paths.get(System.getProperty("user.home")).resolve(".ssh");
-        logger.info("home path: " + home);
-        Path authorizedKeysFilePath = home.resolve("authorized_keys");
+        Path sshDir = Paths.get(System.getProperty("user.home")).resolve(".ssh");
+        Path authorizedKeysFilePath = sshDir.resolve("authorized_keys");
         switch (segments[2]) {
             case "sshpublickey":
-                Path publicKeyFile = home.resolve("id_rsa.pub");
+                Path publicKeyFile = sshDir.resolve("id_rsa.pub");
                 if (Files.notExists(publicKeyFile)) {
-                    sshkeygen(home.resolve("id_rsa").toString());
+                    sshkeygen(sshDir.resolve("id_rsa").toString());
                 }
                 try {
                     Files.write(
                             authorizedKeysFilePath,
                             Files.readAllBytes(publicKeyFile),
+                            StandardOpenOption.CREATE,
                             StandardOpenOption.APPEND);
                     logger.info("Writing public key content to authorized_keys on leader node");
                     Files.setPosixFilePermissions(
                             authorizedKeysFilePath, PosixFilePermissions.fromString("rw-------"));
                     Files.setPosixFilePermissions(
                             publicKeyFile, PosixFilePermissions.fromString("rw-r--r--"));
+                    Files.setPosixFilePermissions(
+                            sshDir,
+                            PosixFilePermissions.fromString("rwx------"));
                 } catch (IOException e) {
-                    logger.error("Error writing public key content to authorized_keys");
+                    logger.error("Error writing public key content to authorized_keys" + e.getMessage());
                     NettyUtils.sendJsonResponse(
-                            ctx, new StatusResponse("Error writing to authorized_keys."));
+                            ctx, new StatusResponse("Error writing to authorized_keys on leader node."));
                     return;
                 }
 
@@ -127,7 +130,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void restartSshServer() {
         try {
-            String[] commands = {"service", "ssh", "restart"};
+            String[] commands = { "service", "ssh", "restart" };
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
@@ -148,7 +151,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void sshkeygen(String rsaFile) {
         try {
-            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile};
+            String[] commands = { "ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile };
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
