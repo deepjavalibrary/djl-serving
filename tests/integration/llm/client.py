@@ -1057,49 +1057,59 @@ def batch_generation_chat(batch_size):
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Who won the world series in 2020?"
+        }, {
+            "role": "assistant",
+            "content": "The Los Angeles Dodgers won the World Series in 2020."
+        }, {
+            "role": "user",
+            "content": "Where was it played?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "How do I build a car from cardboard and paper clips?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Hello!"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Who are you?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Hello world!"
+        }],
+        [{
+            "role":
+            "system",
+            "content":
+            "You're a helpful assistant! Answer the users question best you can."
+        }, {
+            "role": "user",
+            "content": "What is the weather like in Brooklyn, New York?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
-            "role": "user",
-            "content": "What is deep learning?"
-        }],
-        [{
-            "role": "system",
-            "content": "You are a helpful assistant."
-        }, {
-            "role": "user",
-            "content": "What is deep learning?"
+            "role":
+            "user",
+            "content":
+            "What's the weather like the next 3 days in San Francisco, CA?"
         }],
     ]
 
