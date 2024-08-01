@@ -116,19 +116,21 @@ def test_concurrent_with_same_reqs(model, test_spec, spec_name):
         "parameters": spec.get("parameters", {})
     }
     output_file = f"outputs/{model}-{spec_name}-output.txt"
-
+    concurrent_clients = spec.get("concurrent_clients", 1)
     process = send_json(data=data,
                         output_file=output_file,
-                        concurrent_clients=spec.get("concurrent_clients"))
+                        concurrent_clients=concurrent_clients)
     process.wait()
     if process.returncode != 0:
         raise Exception("Prediction request failed.")
 
     if "expected_word_count" in spec:
         expected_word_count = spec["expected_word_count"]
-        if count_words_in_file(output_file) < expected_word_count:
-            raise AssertionError(
-                "Did not produce the expected number of words")
+        for i in range(concurrent_clients):
+            client_output_file = output_file + "." + str(i)
+            if count_words_in_file(client_output_file) < expected_word_count:
+                raise AssertionError(
+                    "Did not produce the expected number of words")
 
 
 # sends multiple requests with different data json concurrently
@@ -156,14 +158,14 @@ def test_concurrent_with_mul_reqs(model, test_spec, spec_name):
 
     if "expected_outputs" in spec:
         for index, expected_output in enumerate(spec["expected_outputs"]):
-            output_file = f"outputs/{model}-{spec_name}-output{index}.txt"
+            output_file = f"outputs/{model}-{spec_name}-output{index}.txt.0"
             if not compare_output_in_file(output_file, expected_output):
                 return AssertionError("Expected output was not matched.")
 
     if "expected_word_count" in spec:
         for index, expected_word_count in enumerate(
                 spec["expected_word_count"]):
-            output_file = f"outputs/{model}-output{index}.txt"
+            output_file = f"outputs/{model}-output{index}.txt.0"
             if count_words_in_file(output_file) < expected_word_count:
                 raise AssertionError(
                     "Did not produce the expected number of words")
