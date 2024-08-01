@@ -926,3 +926,26 @@ class TestTextEmbedding:
             prepare.build_text_embedding_model("bge-reranker")
             r.launch()
             client.run("reranking bge-reranker".split())
+
+
+@pytest.mark.gpu
+@pytest.mark.handler_performance
+class TestGPUHandlerPerformance:
+
+    def test_lmi_dist(self):
+        with Runner('lmi', 'handler-performance-lmi-dist') as r:
+            prepare.build_handler_performance_model("tiny-llama-lmi")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance lmi".split())
+
+    def test_vllm(self):
+        with Runner('lmi', 'handler-performance-vllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-vllm")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance vllm".split())
+
+    def test_trtllm(self):
+        with Runner('tensorrt-llm', 'handler-performance-trtllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-trtllm")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance trtllm".split())
