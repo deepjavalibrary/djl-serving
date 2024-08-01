@@ -70,38 +70,6 @@ public class ClusterRequestHandler extends HttpRequestHandler {
         logger.info("home path: " + home);
         Path authorizedKeysFilePath = home.resolve("authorized_keys");
         switch (segments[2]) {
-            case "uploadsshpublickey":
-                List<String> message = decoder.parameters().get("data");
-                if (message.size() != 1) {
-                    NettyUtils.sendJsonResponse(ctx, new StatusResponse("Invalid request"));
-                    return;
-                }
-                try {
-                    logger.info("public key contents received: " + message.get(0));
-
-                    logger.info(
-                            "Writing public key content from worker node to authorized_keys on"
-                                    + " leader node");
-                    Files.createDirectories(authorizedKeysFilePath.getParent());
-                    Files.createFile(authorizedKeysFilePath);
-                    Files.write(
-                            authorizedKeysFilePath,
-                            message.get(0).getBytes(),
-                            StandardOpenOption.CREATE,
-                            StandardOpenOption.APPEND);
-                    logger.info("Wrote file contents");
-                    Files.setPosixFilePermissions(
-                            authorizedKeysFilePath, PosixFilePermissions.fromString("rw-------"));
-                    logger.info("Changed file perms");
-                    NettyUtils.sendJsonResponse(ctx, new StatusResponse("OK"));
-                } catch (IOException e) {
-                    logger.error(
-                            "Error writing public key content from worker node to authorized_keys"
-                                    + " on this node");
-                    NettyUtils.sendJsonResponse(
-                            ctx, new StatusResponse("Error writing to authorized_keys."));
-                }
-                break;
             case "sshpublickey":
                 Path publicKeyFile = home.resolve("id_rsa.pub");
                 if (Files.notExists(publicKeyFile)) {
@@ -117,13 +85,11 @@ public class ClusterRequestHandler extends HttpRequestHandler {
                             authorizedKeysFilePath, PosixFilePermissions.fromString("rw-------"));
                     Files.setPosixFilePermissions(
                             publicKeyFile, PosixFilePermissions.fromString("rw-r--r--"));
-                    Files.setPosixFilePermissions(
-                            publicKeyFile.getParent(),
-                            PosixFilePermissions.fromString("rwx------"));
                 } catch (IOException e) {
                     logger.error("Error writing public key content to authorized_keys");
                     NettyUtils.sendJsonResponse(
                             ctx, new StatusResponse("Error writing to authorized_keys."));
+                    return;
                 }
 
                 restartSshServer();
@@ -161,7 +127,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void restartSshServer() {
         try {
-            String[] commands = {"service", "ssh", "restart"};
+            String[] commands = { "service", "ssh", "restart" };
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
@@ -182,7 +148,7 @@ public class ClusterRequestHandler extends HttpRequestHandler {
 
     private void sshkeygen(String rsaFile) {
         try {
-            String[] commands = {"ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile};
+            String[] commands = { "ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", rsaFile };
             Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
             String logOutput;
             try (InputStream is = exec.getInputStream()) {
