@@ -20,7 +20,7 @@ ARG torch_vision_version=0.18.1
 ARG onnx_version=1.18.0
 ARG onnxruntime_wheel="https://publish.djl.ai/onnxruntime/1.18.0/onnxruntime_gpu-1.18.0-cp310-cp310-linux_x86_64.whl"
 ARG pydantic_version=2.8.2
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.43.2
