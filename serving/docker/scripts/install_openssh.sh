@@ -18,5 +18,5 @@ mkdir -p /var/run/sshd
 mkdir -p /root/.ssh
 sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 
-printf \"Port 2022\n\" >>/etc/ssh/sshd_config
-printf \"Port 2022\n\" >>/root/.ssh/config
+echo -e "\nPort 2022" >>/etc/ssh/sshd_config
+echo -e "\nPort 2022" >>/root/.ssh/config

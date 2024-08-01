@@ -176,11 +176,6 @@ class MultiNodeSetupHandler:
                     file.write(file_data)
 
                 authorized_keys_path.chmod(0o600)
-
-                logger.info(
-                    f"SSH key written to {authorized_keys_path}. Restarting ssh server."
-                )
-                os.system(f"service ssh restart")
             else:
                 logger.info("Failed to fetch data from the endpoint.")
         except Exception as e:

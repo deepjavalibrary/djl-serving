@@ -35,8 +35,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,39 +65,13 @@ public class ClusterRequestHandler extends HttpRequestHandler {
             String[] segments)
             throws ModelException {
         Path sshDir = Paths.get(System.getProperty("user.home")).resolve(".ssh");
-        Path authorizedKeysFilePath = sshDir.resolve("authorized_keys");
         switch (segments[2]) {
             case "sshpublickey":
                 Path publicKeyFile = sshDir.resolve("id_rsa.pub");
                 if (Files.notExists(publicKeyFile)) {
                     sshkeygen(sshDir.resolve("id_rsa").toString());
                 }
-                try {
-                    Files.write(
-                            authorizedKeysFilePath,
-                            Files.readAllBytes(publicKeyFile),
-                            StandardOpenOption.CREATE,
-                            StandardOpenOption.APPEND);
-                    logger.info("Writing public key content to authorized_keys on leader node");
-                    Files.setPosixFilePermissions(
-                            authorizedKeysFilePath, PosixFilePermissions.fromString("rw-------"));
-                    Files.setPosixFilePermissions(
-                            publicKeyFile, PosixFilePermissions.fromString("rw-r--r--"));
-                    Files.setPosixFilePermissions(
-                            sshDir, PosixFilePermissions.fromString("rwx------"));
-                } catch (IOException e) {
-                    logger.error(
-                            "Error writing public key content to authorized_keys" + e.getMessage());
-                    NettyUtils.sendJsonResponse(
-                            ctx,
-                            new StatusResponse("Error writing to authorized_keys on leader node."));
-                    return;
-                }
-
-                restartSshServer();
-
                 NettyUtils.sendFile(ctx, publicKeyFile, false);
-
                 return;
             case "models":
                 ModelStore modelStore = ModelStore.getInstance();
@@ -126,27 +98,6 @@ public class ClusterRequestHandler extends HttpRequestHandler {
                 return;
             default:
                 throw new ResourceNotFoundException();
-        }
-    }
-
-    private void restartSshServer() {
-        try {
-            String[] commands = {"service", "ssh", "restart"};
-            Process exec = new ProcessBuilder(commands).redirectErrorStream(true).start();
-            String logOutput;
-            try (InputStream is = exec.getInputStream()) {
-                logOutput = Utils.toString(is);
-            }
-            int exitCode = exec.waitFor();
-            if (0 != exitCode) {
-                logger.error("Restarting ssh server failed: {}", logOutput);
-                config.setError(logOutput);
-                throw new IllegalStateException("Ssh server restart failed.");
-            } else {
-                logger.debug(logOutput);
-            }
-        } catch (IOException | InterruptedException e) {
-            logger.error("Error executing command: " + e.getMessage());
         }
     }
 
