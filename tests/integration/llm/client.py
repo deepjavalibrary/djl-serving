@@ -734,7 +734,7 @@ correctness_model_spec = {
         "num_run": 4,
         "tokenizer": "bullerwins/Codestral-22B-v0.1-hf",
         "dataset": "humaneval",
-        "score": 0.0,
+        "score": 0.01,
         "parameters": {
             "return_full_text": True
         }
