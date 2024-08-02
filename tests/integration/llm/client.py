@@ -781,6 +781,10 @@ text_embedding_model_spec = {
     "bge-base": {
         "max_memory_per_gpu": [2.0, 2.0, 2.0, 2.0],
         "batch_size": [1, 2, 4, 8],
+    },
+    "camembert-base": {
+        "max_memory_per_gpu": [2.0, 2.0, 2.0, 2.0],
+        "batch_size": [1, 2, 4, 8],
     }
 }
 
@@ -1671,6 +1675,7 @@ def test_reranking_model(model, model_spec):
         logging.info(f"req {req}")
         res = send_json(req).json()
         logging.info(f"res: {res}")
+        assert len(res) == batch_size
         if "max_memory_per_gpu" in spec:
             validate_memory_usage(spec["max_memory_per_gpu"][i])
 

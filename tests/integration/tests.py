@@ -921,6 +921,12 @@ class TestTextEmbedding:
             r.launch()
             client.run("text_embedding bge-base".split())
 
+    def test_camembert_base(self):
+        with Runner('lmi', 'camembert-base') as r:
+            prepare.build_text_embedding_model("camembert-base")
+            r.launch()
+            client.run("text_embedding camembert-base".split())
+
     def test_bge_reranker(self):
         with Runner('lmi', 'bge-reranker') as r:
             prepare.build_text_embedding_model("bge-reranker")

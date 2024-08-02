@@ -972,6 +972,10 @@ text_embedding_model_list = {
         "option.model_id": "BAAI/bge-base-en-v1.5",
         "batch_size": 32,
     },
+    "camembert-base": {
+        "option.model_id": "almanach/camembert-base",
+        "batch_size": 32,
+    },
     "bge-reranker": {
         "option.model_id": "BAAI/bge-reranker-base",
         "reranking": True,
