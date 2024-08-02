@@ -563,7 +563,8 @@ lmi_dist_model_list = {
     "llama-2-tiny": {
         "option.model_id": "s3://djl-llm/llama-2-tiny/",
         "option.quantize": "awq",
-        "option.tensor_parallel_degree": 4
+        "option.tensor_parallel_degree": 4,
+        "option.device_map": "auto"
     },
     "llava_v1.6-mistral": {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
