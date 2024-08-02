@@ -136,6 +136,10 @@ def get_input_details(requests, errors, batch):
             raise ValueError(
                 "In order to enable dynamic batching, all input batches must have the same parameters"
             )
+
+        if not isinstance(request_input.input_text, list):
+            request_input.input_text = [request_input.input_text]
+            
         input_data.extend(request_input.input_text)
         input_size.append(len(request_input.input_text))
 
