@@ -1405,9 +1405,10 @@ def test_handler_adapters(model, model_spec):
     ) == FAILED_DEPENDENCY_CODE, "Calling deleted adapter should not work with new adapters"
 
     if len(reqs) > 1:
-        res = send_json(reqs[1]).content.decode("utf-8")
+        res = requests.post(endpoint, headers=headers,
+                            json=reqs[1]).content.decode("utf-8")
         LOGGER.info(f"call valid adapter after deletion {res}")
-        if "error" in res:
+        if json.loads(res).get("code") != 200:
             msg = f"Deleting adapter should not break inference for remaining adapters"
             LOGGER.error(msg)
             raise RuntimeError(msg)
