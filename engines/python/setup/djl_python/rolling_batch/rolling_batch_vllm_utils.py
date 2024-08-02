@@ -21,6 +21,7 @@ from vllm.inputs import PromptInputs
 from djl_python.request_io import Token, Sequence
 from djl_python.request import Request
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
+from djl_python.utils import is_beam_search
 
 DTYPE_MAPPER = {
     "fp32": "float32",
@@ -42,6 +43,13 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     request_id = vllm_request_output.request_id
     cache = request_cache[request_id]
     request_output = cache["request_output"]
+
+    # For beam search, vllm and lmi-dist produces entirely different sequences at the same index
+    # after a certain step, despite tracking previous outputs. This leads to garbage output, so we wait till
+    # entire generation finishes.
+    parameters = request_output.input.parameters
+    if is_beam_search(parameters) and not vllm_request_output.finished:
+        return request_cache
 
     # sets prompt token details if not set
     if not request_output.prompt_tokens_details:
