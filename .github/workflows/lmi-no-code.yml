@@ -249,7 +249,7 @@ jobs:
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "HF_MODEL_ID=s3://djl-llm/phi-2/" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/phi-2/\nTENSOR_PARALLEL_DEGREE=1" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code phi-2
