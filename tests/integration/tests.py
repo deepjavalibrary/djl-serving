@@ -759,8 +759,7 @@ class TestNeuronx2:
         with Runner('pytorch-inf2', 'mixtral-8x7b') as r:
             prepare.build_transformers_neuronx_handler_model("mixtral-8x7b")
             r.launch(container='pytorch-inf2-4')
-            client.run(
-                "transformers_neuronx_rolling_batch mixtral-8x7b".split())
+            client.run("transformers_neuronx mixtral-8x7b".split())
 
     def test_stable_diffusion_1_5(self):
         with Runner('pytorch-inf2', 'stable-diffusion-1.5-neuron') as r:
@@ -817,7 +816,8 @@ class TestNeuronxRollingBatch:
         with Runner('pytorch-inf2', 'mistral-7b-rb') as r:
             prepare.build_transformers_neuronx_handler_model("mistral-7b-rb")
             r.launch(container='pytorch-inf2-2')
-            client.run("transformers_neuronx mistral-7b-rb".split())
+            client.run(
+                "transformers_neuronx_rolling_batch mistral-7b-rb".split())
 
     def test_llama_speculative(self):
         with Runner('pytorch-inf2', 'llama-speculative-rb') as r:
