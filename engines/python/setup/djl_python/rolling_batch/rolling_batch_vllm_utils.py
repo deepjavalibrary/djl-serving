@@ -134,7 +134,7 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
                               text=logprob.decoded_token,
                               log_prob=logprob.logprob))
 
-        else:
+        elif new_token_ids:
             # TODO: Test and remove this. logprobs is always set 1. This case should never happen.
             new_logprobs = [None] * len(new_token_ids)
             curr_length = cache[f"sequence_index_{sequence_index}"][
