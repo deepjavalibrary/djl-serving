@@ -15,6 +15,7 @@ The goal of this document is for the user to be able to:
 
 * LLaMA (since LMI V7 0.25.0)
 * Mistral (since LMI V8 0.26.0)
+* Mixtral (since LMI V8 0.29.0)
 * GPT-NeoX (since LMI V5 0.23.0)
 * GPT-J (since LMI V5 0.23.0)
 * GPT2 (since LMI V5 0.23.0)
@@ -60,7 +61,6 @@ option.tensor_parallel_degree=24
 option.n_positions=512
 option.rolling_batch=auto
 option.max_rolling_batch_size=8
-option.enable_mixed_precision_accumulation=true
 option.model_loading_timeout=12000
 option.save_mp_checkpoint_path=/opt/ml/input/data/training/partition-test
 ```
@@ -153,6 +153,5 @@ option.tensor_parallel_degree=24
 option.n_positions=512
 option.rolling_batch=auto
 option.max_rolling_batch_size=8
-option.enable_mixed_precision_accumulation=true
 option.model_loading_timeout=3600
 ```

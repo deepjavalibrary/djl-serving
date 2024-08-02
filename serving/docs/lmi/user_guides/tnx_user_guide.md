@@ -38,6 +38,11 @@ The model architectures that are tested daily for LMI Transformers-NeuronX (in C
 - Mixtral (`mistralai/Mixtral-8x7B-Instruct-v0.1`)
 - OPT (`facebook/opt-66b`, `facebook/opt-iml-max-30b`, etc.)
 
+#### Models supporting Transformers NeuronX continuous batching
+
+- LLaMA, LLaMA-2, LLaMA-3 (`meta-llama/Llama-2-70b-hf`, `lmsys/vicuna-13b-v1.3`, `meta-llama/Meta-Llama-3-70B`, `openlm-research/open_llama_13b`, etc.)
+- Mistral v2 (`mistralai/Mistral-7B-v0.2`, `mistralai/Mistral-7B-Instruct-v0.2`, etc.)
+
 We will add more model support for the future versions to have them tested. Please feel free to [file us an issue](https://github.com/deepjavalibrary/djl-serving/issues/new/choose) for more model coverage in CI.
 
 ## Quick Start Configurations
@@ -107,5 +112,5 @@ In that situation, there is nothing LMI can do until the issue is fixed in the b
 
 ## Advanced Multi-Model Inference Considerations
 
-When using the LMI Transformers-NeuronX for multimodel inference endpoints you may need to limit the number of threads available to each model.
+When using the LMI Transformers-NeuronX for multiple model inference endpoints you may need to limit the number of threads available to each model.
 Follow this [guide](https://awsdocs-neuron.readthedocs-hosted.com/en/latest/libraries/transformers-neuronx/transformers-neuronx-developer-guide.html?highlight=omp_num#running-inference-with-multiple-models) when setting the correct number of threads to avoid race conditions. LMI Transformers-NeuronX in its standard configuration will set threads equal to two times the tensor parallel degree as the `OMP_NUM_THREADS` values. 
