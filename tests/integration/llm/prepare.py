@@ -982,23 +982,23 @@ trtllm_neo_list = {
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines"
     },
-    "llama3-8b-tp2-awq": {
+    "llama3-8b-tp4-awq": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 2,
+        "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
         "option.quantize": "awq"
     },
-    "llama3-8b-tp2-fp8": {
+    "llama3-8b-tp4-fp8": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 2,
+        "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
         "option.quantize": "fp8"
     },
-    "llama3-8b-tp2-smoothquant": {
+    "llama3-8b-tp4-smoothquant": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 2,
+        "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
         "option.output_formatter": "jsonlines",
         "option.quantize": "smoothquant"
@@ -1288,8 +1288,8 @@ def build_trtllm_neo_model(model):
             f"{model} is not one of the supporting handler {list(trtllm_neo_list.keys())}"
         )
     options = trtllm_neo_list[model]
-    # 30 minute waiting for conversion timeout
-    options["model_loading_timeout"] = "1800"
+    # 60 min timeout for compilation/quantization
+    options["model_loading_timeout"] = "3600"
     # Download model to local in addition to generating serving.properties
     create_neo_input_model(options)
 
