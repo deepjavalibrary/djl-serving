@@ -1408,7 +1408,8 @@ def test_handler_adapters(model, model_spec):
         res = requests.post(endpoint, headers=headers,
                             json=reqs[1]).content.decode("utf-8")
         LOGGER.info(f"call valid adapter after deletion {res}")
-        if json.loads(res).get("code") != 200:
+        final_json = json.loads(res.splitlines()[-1])
+        if final_json.get("details", {}).get("finish_reason", "error") == "error":
             msg = f"Deleting adapter should not break inference for remaining adapters"
             LOGGER.error(msg)
             raise RuntimeError(msg)
