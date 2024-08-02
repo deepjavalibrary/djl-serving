@@ -216,11 +216,13 @@ jobs:
           serve
           python3 llm/client.py no_code llama-13b
           ./remove_container.sh
-      - name: Gemma-7b lmi container
+      - name: Gemma-2b lmi container
         working-directory: tests/integration
         run: |
           rm -rf models
-          echo -en "HF_MODEL_ID=s3://djl-llm/gemma-7b/" > docker_env
+          # TODO: Fix tp back to gemma 7b once TRTLLM problem
+          # https://github.com/NVIDIA/TensorRT-LLM/issues/2058 fixed
+          echo -en "HF_MODEL_ID=s3://djl-llm/gemma-2b/\nTENSOR_PARALLEL_DEGREE=1" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code gemma-7b
