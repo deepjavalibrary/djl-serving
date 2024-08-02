@@ -139,20 +139,15 @@ transformers_neuronx_model_spec = {
         "batch_size": [2],
         "stream_output": True,
     },
-    "mistral-7b": {
-        "worker": 1,
-        "seq_length": [128, 256],
+    "mixtral-8x7b": {
         "batch_size": [4],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "mistral-7b-rb": {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "mixtral-8x7b-rb": {
-        "batch_size": [4],
-        "seq_length": [256],
-        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "llama-7b-rb": {
         "batch_size": [1, 4],
