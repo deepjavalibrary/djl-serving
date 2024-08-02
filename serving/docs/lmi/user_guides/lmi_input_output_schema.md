@@ -285,7 +285,9 @@ LmiDistRollingBatchParameters : {
     'min_p': float (default = 0.0),
     'presence_penalty': float (default = 0.0),
     'frequency_penalty' : float (default = 0.0),
-    'num_beams': integer (default = 1), (set this greater than 1 to enable beam search)
+    'n': integer (default = 1), (set this greater than 1 to get mutliple sequences. only works with non-streaming case) 
+    'best_of': integer (default = 1)
+    'num_beams': integer (default = 1), (set this greater than 1 to enable beam search. only works with non-streaming case)
     'length_penalty' : float (default = 1.0),
     'early_stopping' : boolean (default = false),
     'stop_token_ids': list (default = None),
@@ -309,7 +311,9 @@ vLLMRollingBatchParameters : {
     'min_p': float (default = 0.0),
     'presence_penalty': float (default = 0.0),
     'frequency_penalty' : float (default = 0.0),
-    'num_beams': integer (default = 1), (set this greater than 1 to enable beam search)
+    'n': integer (default = 1), (set this greater than 1 to get mutliple sequences. only works with non-streaming case) 
+    'best_of': integer (default = 1)
+    'num_beams': integer (default = 1), (set this greater than 1 to enable beam search. only works with non-streaming case)
     'length_penalty' : float (default = 1.0),
     'early_stopping' : boolean (default = false),
     'stop_token_ids': list (default = None),
@@ -380,13 +384,14 @@ Example:
 Additional details relevant to the generation. This is only available when using continuous batching.
 You must specify `details=true` in the input `parameters`.
 
-| Field Name         | Type                      | Description                                                                                       | Example                                |
-|--------------------|---------------------------|---------------------------------------------------------------------------------------------------|----------------------------------------|
-| `finish_reason`    | string enum               | the reason for concluding generation                                                              | `length`, `eos_token`, `stop_sequence` |
-| `generated_tokens` | number                    | the number of tokens generated                                                                    | 128                                    |
-| `inputs`           | string                    | the input/prompt used to start generation                                                         | "Deep Learning is"                     |
-| `tokens`           | array of [Tokens](#token) | An array of token objects, one for each token generated. Only returned in non-streaming use-cases | See the [Tokens](#token) documentation |
-| `prefill`          | array of [Tokens](#token) | An array of token objects, one for each prompt token.                                             | See the [Tokens](#token) documentation |
+| Field Name          | Type                                       | Description                                                                                             | Example                                                 |
+|---------------------|--------------------------------------------|---------------------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| `finish_reason`     | string enum                                | the reason for concluding generation                                                                    | `length`, `eos_token`, `stop_sequence`                  |
+| `generated_tokens`  | number                                     | the number of tokens generated                                                                          | 128                                                     |
+| `inputs`            | string                                     | the input/prompt used to start generation                                                               | "Deep Learning is"                                      |
+| `tokens`            | array of [Tokens](#token)                  | An array of token objects, one for each token generated. Only returned in non-streaming use-cases       | See the [Tokens](#token) documentation                  |
+| `prefill`           | array of [Tokens](#token)                  | An array of token objects, one for each prompt token.                                                   | See the [Tokens](#token) documentation                  |
+| `best_of_sequences` | array of [BestOfSequence](#bestofsequence) | An array of BestOfSequence objects, one for each best of sequence. When either best_of or num_beams > 1 | See the [BestOfSequence](#bestofsequence) documentation |
 
 
 Example:
@@ -400,8 +405,22 @@ Example:
 }
 ```
 
-## Custom Pre and Post Processing
+### BestOfSequence
 
-If you wish to create your own pre-processing and post-processing for our handlers, an example can be found here. [here](https://docs.djl.ai/docs/demos/aws/sagemaker/large-model-inference/sample-llm/rollingbatch_llama_7b_customized_preprocessing.html).
+Generated text and its details is the one with the highest log probability. Others sequences are returned as best_of_sequences. You can enable this with n > 1. It is also returned when beam search is enabled with the option num_beams > 1. 
+
+Note that best_of_sequences will only work with non-streaming case.
+
+| Field Name         | Type                      | Description                                                | Example                                |
+|--------------------|---------------------------|------------------------------------------------------------|----------------------------------------|
+| `finish_reason`    | string enum               | the reason for concluding generation                       | `length`, `eos_token`, `stop_sequence` |
+| `generated_tokens` | number                    | the number of tokens generated                             | 128                                    |
+| `tokens`           | array of [Tokens](#token) | An array of token objects, one for each token generated.   | See the [Tokens](#token) documentation |
+| `generated_text`   | string                    | The result of this sequence generation                     | `Haus ist wunderbar`                   |
+
+
+## Custom pre- and post-processing
+
+If you wish to create your own pre-processing and post-processing for our handlers, check out these guides [Custom input format schema guide](input_formatter_schema.md) and [Custom output format schema guide](output_formatter_schema.md).
 
 This is not an officially supported use-case. The API signature, as well as implementation, is subject to change at any time.
