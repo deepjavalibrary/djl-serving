@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04
-ARG djl_version=0.29.0~SNAPSHOT
+ARG djl_version=0.30.0~SNAPSHOT
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.10
@@ -89,7 +89,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.inf2="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.inf2="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

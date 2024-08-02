@@ -59,6 +59,17 @@ def extract_python_jar(target_dir):
         zip.extractall(target_dir)
 
 
+def get_djl_version_from_lib():
+    version = ""
+    for filename in os.listdir("/usr/local/"):
+        if filename.startswith("djl-serving-"):
+            version = filename.replace("djl-serving-", "")
+
+    if not version:
+        raise ValueError(f"Cannot retrieve version from lib file name.")
+    return version
+
+
 def is_engine_mpi_mode(engine):
     if engine == 'DeepSpeed':
         return True

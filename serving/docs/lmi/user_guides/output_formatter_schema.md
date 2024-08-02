@@ -3,15 +3,18 @@
 This document provides the schema of the output formatter, with which you can write your own custom output formatter. 
 
 
-## Signature of your own output_formatter
+## Signature of your own output formatter
 
 To write your own custom output formatter, follow the signature below:
 ```
-from djl_python.output_formatter import RequestOutput
+from djl_python.output_formatter import RequestOutput, output_formatter
 
+@output_formatter
 def custom_output_formatter(request_output: RequestOutput) -> str:
     #your implementation here
 ```
+
+You can write this function in your model.py. You don't need to write the handle function in your entry point Python file. DJLServing will search for the `@output_formatter` annotation and apply the annotated function as the output formatter.
 
 ## RequestOutput schema
 The RequestOutput class is designed to encapsulate the output of a request in a structured format. Here is an in-depth look at its structure and the related classes:
@@ -82,9 +85,10 @@ It's crucial to understand how your custom output formatter will be called befor
 ## Example
 Here is an example of a custom output formatter:
 ```python
-from djl_python.output_formatter import TextGenerationOutput
+from djl_python.output_formatter import TextGenerationOutput, output_formatter
 import json
 
+@output_formatter
 def custom_output_formatter(request_output: TextGenerationOutput) -> str:
     """
     Replace this function with your custom output formatter.

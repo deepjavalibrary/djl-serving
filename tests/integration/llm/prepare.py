@@ -941,16 +941,16 @@ correctness_model_list = {
         "engine": "Python",
         "option.entryPoint": "djl_python.transformers_neuronx",
         "option.model_id": "bullerwins/Codestral-22B-v0.1-hf",
-        "option.tensor_parallel_degree": 4,
-        "option.n_positions": 256,
+        "option.tensor_parallel_degree": 12,
+        "option.n_positions": 1024,
         "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 41,
         "option.model_loading_timeout": 1800
     },
-    "trtllm-llama3-1-8b": {
+    "trtllm-llama3-8b": {
         "engine": "Python",
         "option.task": "text-generation",
-        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.rolling_batch": "trtllm",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 213
@@ -967,7 +967,7 @@ correctness_model_list = {
         "engine": "Python",
         "option.entryPoint": "djl_python.transformers_neuronx",
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
-        "option.tensor_parallel_degree": 4,
+        "option.tensor_parallel_degree": 12,
         "option.n_positions": 768,
         "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 213,
@@ -1071,6 +1071,43 @@ transformers_neuronx_neo_list = {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.tensor_parallel_degree": 8
     }
+}
+
+text_embedding_model_list = {
+    "bge-base": {
+        "option.model_id": "BAAI/bge-base-en-v1.5",
+        "batch_size": 32,
+    },
+    "bge-reranker": {
+        "option.model_id": "BAAI/bge-reranker-base",
+        "reranking": True,
+        "includeTokenTypes": True,
+        "sigmoid": False,
+        "batch_size": 32,
+    }
+}
+
+handler_performance_model_list = {
+    "tiny-llama-lmi": {
+        "engine": "MPI",
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.rolling_batch": "lmi-dist",
+        "option.max_rolling_batch_size": 512,
+    },
+    "tiny-llama-vllm": {
+        "engine": "Python",
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.task": "text-generation",
+        "option.rolling_batch": "vllm",
+        "option.gpu_memory_utilization": "0.9",
+        "option.max_rolling_batch_size": 512,
+    },
+    "tiny-llama-trtllm": {
+        "engine": "Python",
+        "option.model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "option.rolling_batch": "trtllm",
+        "option.max_rolling_batch_size": 512,
+    },
 }
 
 
@@ -1313,11 +1350,33 @@ def build_correctness_model(model):
     write_model_artifacts(options)
 
 
+def build_handler_performance_model(model):
+    if model not in handler_performance_model_list.keys():
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(handler_performance_model_list.keys())}"
+        )
+    options = handler_performance_model_list[model]
+    write_model_artifacts(options)
+
+
+def build_text_embedding_model(model):
+    if model not in text_embedding_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(onnx_list.keys())}"
+        )
+    options = text_embedding_model_list[model]
+    options["engine"] = "Rust"
+    options["option.task"] = "text_embedding"
+    options["normalize"] = False
+    write_model_artifacts(options)
+
+
 supported_handler = {
     'huggingface': build_hf_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
     'transformers_neuronx_aot': build_transformers_neuronx_aot_handler_model,
     'performance': build_performance_model,
+    'handler_performance': build_handler_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
     'lmi_dist': build_lmi_dist_model,
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
@@ -1327,6 +1386,7 @@ supported_handler = {
     'trtllm_neo': build_trtllm_neo_model,
     'transformers_neuronx_neo': build_transformers_neuronx_neo_model,
     'correctness': build_correctness_model,
+    'text_embedding': build_text_embedding_model,
 }
 
 if __name__ == '__main__':

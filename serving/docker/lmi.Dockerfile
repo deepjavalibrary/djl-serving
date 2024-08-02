@@ -12,7 +12,7 @@
 ARG version=12.4.1-cudnn-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
-ARG djl_version=0.29.0~SNAPSHOT
+ARG djl_version=0.30.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.3.1
@@ -20,7 +20,7 @@ ARG torch_vision_version=0.18.1
 ARG onnx_version=1.18.0
 ARG onnxruntime_wheel="https://publish.djl.ai/onnxruntime/1.18.0/onnxruntime_gpu-1.18.0-cp310-cp310-linux_x86_64.whl"
 ARG pydantic_version=2.8.2
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.28.0-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.43.2
@@ -86,6 +86,7 @@ COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ \
+    && scripts/install_openssh.sh \
     && scripts/install_djl_serving.sh $djl_version \
     && scripts/install_djl_serving.sh $djl_version ${torch_version} \
     && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
@@ -101,7 +102,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
-    auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 \
+    auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 retrying \
     opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} \
     tokenizers==${tokenizers_version} pydantic==${pydantic_version} \
     # TODO: installing optimum here due to version conflict.
@@ -126,7 +127,7 @@ RUN scripts/patch_oss_dlc.sh python \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-29-0.lmi="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

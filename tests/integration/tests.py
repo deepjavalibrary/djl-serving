@@ -849,11 +849,11 @@ class TestCorrectnessTrtLlm:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("correctness trtllm-codestral-22b".split())
 
-    def test_llama3_1_8b(self):
-        with Runner('tensorrt-llm', 'llama3-1-8b') as r:
-            prepare.build_correctness_model("trtllm-llama3-1-8b")
+    def test_llama3_8b(self):
+        with Runner('tensorrt-llm', 'llama3-8b') as r:
+            prepare.build_correctness_model("trtllm-llama3-8b")
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
-            client.run("correctness trtllm-llama3-1-8b".split())
+            client.run("correctness trtllm-llama3-8b".split())
 
 
 @pytest.mark.correctness
@@ -881,13 +881,13 @@ class TestCorrectnessNeuronx:
     def test_codestral_22b(self):
         with Runner('pytorch-inf2', 'codestral-22b') as r:
             prepare.build_correctness_model("neuronx-codestral-22b")
-            r.launch(container='pytorch-inf2-2')
+            r.launch(container='pytorch-inf2-6')
             client.run("correctness neuronx-codestral-22b".split())
 
     def test_llama3_1_8b(self):
         with Runner('pytorch-inf2', 'llama3-1-8b') as r:
             prepare.build_correctness_model("neuronx-llama3-1-8b")
-            r.launch(container='pytorch-inf2-2')
+            r.launch(container='pytorch-inf2-6')
             client.run("correctness neuronx-llama3-1-8b".split())
 
 
@@ -910,3 +910,42 @@ class TestMultiModalLmiDist:
             prepare.build_lmi_dist_model('phi-3-vision-128k-instruct')
             r.launch()
             client.run("multimodal phi-3-vision-128k-instruct".split())
+
+
+@pytest.mark.gpu
+class TestTextEmbedding:
+
+    def test_bge_base(self):
+        with Runner('lmi', 'bge-base') as r:
+            prepare.build_text_embedding_model("bge-base")
+            r.launch()
+            client.run("text_embedding bge-base".split())
+
+    def test_bge_reranker(self):
+        with Runner('lmi', 'bge-reranker') as r:
+            prepare.build_text_embedding_model("bge-reranker")
+            r.launch()
+            client.run("reranking bge-reranker".split())
+
+
+@pytest.mark.gpu
+@pytest.mark.handler_performance
+class TestGPUHandlerPerformance:
+
+    def test_lmi_dist(self):
+        with Runner('lmi', 'handler-performance-lmi-dist') as r:
+            prepare.build_handler_performance_model("tiny-llama-lmi")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance lmi".split())
+
+    def test_vllm(self):
+        with Runner('lmi', 'handler-performance-vllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-vllm")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance vllm".split())
+
+    def test_trtllm(self):
+        with Runner('tensorrt-llm', 'handler-performance-trtllm') as r:
+            prepare.build_handler_performance_model("tiny-llama-trtllm")
+            r.launch("CUDA_VISIBLE_DEVICES=0")
+            client.run("handler_performance trtllm".split())
