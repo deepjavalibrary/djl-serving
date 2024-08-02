@@ -1,5 +1,6 @@
 import argparse
 import os
+import subprocess
 import shutil
 
 hf_handler_list = {
@@ -798,6 +799,13 @@ vllm_model_list = {
     },
 }
 
+vllm_neo_model_list = {
+    "llama-3-8b": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 4
+    }
+}
+
 lmi_dist_aiccl_model_list = {
     "llama-2-70b-aiccl": {
         "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
@@ -967,6 +975,104 @@ correctness_model_list = {
     }
 }
 
+trtllm_neo_list = {
+    "llama3-8b-tp1-fp16": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 1,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines"
+    },
+    "llama3-8b-tp4-awq": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "awq"
+    },
+    "llama3-8b-tp4-fp8": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "fp8"
+    },
+    "llama3-8b-tp4-smoothquant": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 4,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "smoothquant"
+    },
+    "llama3-70b-tp8-fp16": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines"
+    },
+    "llama3-70b-tp8-awq": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "awq"
+    },
+    "llama3-70b-tp8-fp8": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "fp8"
+    },
+    "llama3-70b-tp8-smoothquant": {
+        "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.rolling_batch": "trtllm",
+        "option.output_formatter": "jsonlines",
+        "option.quantize": "smoothquant"
+    }
+}
+
+transformers_neuronx_neo_list = {
+    "llama-2-13b-rb": {
+        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 1024,
+        "option.rolling_batch": "auto",
+        "option.max_rolling_batch_size": 4,
+        "option.dtype": "fp16",
+        "option.model_loading_timeout": 3600,
+    },
+    "mixtral-8x22b": {
+        "option.model_id": "s3://djl-llm/mixtral-8x22b/",
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 512,
+        "option.rolling_batch": "disable",
+        "option.batch_size": 2,
+        "option.model_loading_timeout": 3600,
+    },
+    "codellama-34b": {
+        "option.model_id": "s3://djl-llm/codellama-34b/",
+        "option.tensor_parallel_degree": 8,
+        "option.n_positions": 256,
+        "option.rolling_batch": "disable",
+        "option.batch_size": 4,
+        "option.model_loading_timeout": 3600,
+    },
+    "mistral-7b": {
+        "option.model_id": "s3://djl-llm/mistral-7b/",
+        "option.tensor_parallel_degree": 4,
+        "option.n_positions": 512,
+        "option.rolling_batch": "disable",
+        "option.batch_size": 2,
+        "option.dtype": "fp16",
+        "option.model_loading_timeout": 3600,
+    },
+    "llama-3-8b": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.tensor_parallel_degree": 8
+    }
+}
+
 text_embedding_model_list = {
     "bge-base": {
         "option.model_id": "BAAI/bge-base-en-v1.5",
@@ -1037,6 +1143,38 @@ def write_model_artifacts(properties,
                                   local_dir_use_symlinks=False,
                                   local_dir=dir)
                 adapter_cache[adapter_id] = dir
+
+
+def create_neo_input_model(properties):
+    model_path = "models"
+    model_download_path = os.path.join(model_path, "uncompiled")
+    if os.path.exists(model_path):
+        shutil.rmtree(model_path)
+    os.makedirs(model_download_path, exist_ok=True)
+    with open(os.path.join(model_download_path, "serving.properties"),
+              "w") as f:
+        for key, value in properties.items():
+            if key != "option.model_id":
+                f.write(f"{key}={value}\n")
+
+    # create Neo files/dirs
+    open(os.path.join(model_path, "errors.json"), "w").close()
+    os.makedirs(os.path.join(model_path, "cache"), exist_ok=True)
+    os.makedirs(os.path.join(model_path, "compiled"), exist_ok=True)
+
+    # Download the model checkpoint from S3 to local path
+    model_s3_uri = properties.get("option.model_id")
+    if os.path.isfile("/opt/djl/bin/s5cmd"):
+        if not model_s3_uri.endswith("*"):
+            if model_s3_uri.endswith("/"):
+                model_s3_uri += '*'
+            else:
+                model_s3_uri += '/*'
+
+        cmd = ["/opt/djl/bin/s5cmd", "sync", model_s3_uri, model_download_path]
+    else:
+        cmd = ["aws", "s3", "sync", model_s3_uri, model_download_path]
+    subprocess.check_call(cmd)
 
 
 def build_hf_handler_model(model):
@@ -1146,6 +1284,15 @@ def build_vllm_model(model):
                           adapter_names=adapter_names)
 
 
+def build_vllm_neo_model(model):
+    if model not in vllm_neo_model_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(transformers_neuronx_neo_list.keys())}"
+        )
+    options = vllm_neo_model_list[model]
+    create_neo_input_model(options)
+
+
 def build_lmi_dist_aiccl_model(model):
     if model not in lmi_dist_aiccl_model_list.keys():
         raise ValueError(
@@ -1170,6 +1317,27 @@ def build_trtllm_handler_model(model):
     # 30 minute waiting for conversion timeout
     options["model_loading_timeout"] = "1800"
     write_model_artifacts(options)
+
+
+def build_trtllm_neo_model(model):
+    if model not in trtllm_neo_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(trtllm_neo_list.keys())}"
+        )
+    options = trtllm_neo_list[model]
+    # 60 min timeout for compilation/quantization
+    options["model_loading_timeout"] = "3600"
+    # Download model to local in addition to generating serving.properties
+    create_neo_input_model(options)
+
+
+def build_transformers_neuronx_neo_model(model):
+    if model not in transformers_neuronx_neo_list:
+        raise ValueError(
+            f"{model} is not one of the supporting handler {list(transformers_neuronx_neo_list.keys())}"
+        )
+    options = transformers_neuronx_neo_list[model]
+    create_neo_input_model(options)
 
 
 def build_correctness_model(model):
@@ -1213,7 +1381,10 @@ supported_handler = {
     'lmi_dist': build_lmi_dist_model,
     'lmi_dist_aiccl': build_lmi_dist_aiccl_model,
     'vllm': build_vllm_model,
+    'vllm_neo': build_vllm_neo_model,
     'trtllm': build_trtllm_handler_model,
+    'trtllm_neo': build_trtllm_neo_model,
+    'transformers_neuronx_neo': build_transformers_neuronx_neo_model,
     'correctness': build_correctness_model,
     'text_embedding': build_text_embedding_model,
 }

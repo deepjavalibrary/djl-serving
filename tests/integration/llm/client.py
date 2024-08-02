@@ -192,6 +192,34 @@ transformers_neuronx_aot_model_spec = {
     },
 }
 
+transformers_neuronx_neo_model_spec = {
+    "llama-2-13b-rb": {
+        "seq_length": [1024],
+        "batch_size": [1, 4],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mixtral-8x22b": {
+        "workers": 1,
+        "seq_length": [512],
+        "batch_size": [2]
+    },
+    "codellama-34b": {
+        "workers": 1,
+        "seq_length": [256],
+        "batch_size": [4]
+    },
+    "mistral-7b": {
+        "workers": 1,
+        "seq_length": [512],
+        "batch_size": [2]
+    },
+    "llama-3-8b": {
+        "workers": 1,
+        "seq_length": [128],
+        "batch_size": [1]
+    }
+}
+
 lmi_dist_model_spec = {
     "gpt-neox-20b": {
         "max_memory_per_gpu": [25.0],
@@ -493,6 +521,14 @@ vllm_model_spec = {
     },
 }
 
+vllm_neo_model_spec = {
+    "llama-3-8b": {
+        "batch_size": [1],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3-8B"
+    }
+}
+
 vllm_chat_model_spec = {
     "llama2-7b-chat": {
         "max_memory_per_gpu": [25.0],
@@ -613,6 +649,21 @@ trtllm_chat_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
+    }
+}
+
+trtllm_neo_model_spec = {
+    "llama3-8b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3-8B"
+    },
+    "llama3-70b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3-70B"
     }
 }
 
@@ -1732,6 +1783,12 @@ def run(raw_args):
     elif args.handler == "transformers_neuronx-aot":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_aot_model_spec)
+    elif args.handler == "transformers_neuronx_neo":
+        test_transformers_neuronx_handler(args.model,
+                                          transformers_neuronx_neo_model_spec)
+    elif args.handler == "transformers_neuronx_neo_rolling_batch":
+        test_handler_rolling_batch(args.model,
+                                   transformers_neuronx_neo_model_spec)
     elif args.handler == "lmi_dist":
         test_handler_rolling_batch(args.model, lmi_dist_model_spec)
     elif args.handler == "lmi_dist_adapters":
@@ -1744,6 +1801,8 @@ def run(raw_args):
         test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
+    elif args.handler == "vllm_neo":
+        test_handler_rolling_batch(args.model, vllm_neo_model_spec)
     elif args.handler == "handler_performance":
         test_handler_performance(args.model, handler_performance_model_spec)
     elif args.handler == "performance":
@@ -1754,6 +1813,8 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "trtllm_chat":
         test_handler_rolling_batch_chat(args.model, trtllm_chat_model_spec)
+    elif args.handler == "trtllm_neo":
+        test_handler_rolling_batch(args.model, trtllm_neo_model_spec)
     elif args.handler == "no_code":
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
     elif args.handler == "correctness":
