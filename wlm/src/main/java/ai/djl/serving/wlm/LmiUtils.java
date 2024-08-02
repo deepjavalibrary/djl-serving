@@ -127,8 +127,7 @@ public final class LmiUtils {
         // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
         info.prop.put("option.rolling_batch", "trtllm");
         if (!isValidTrtLlmModelRepo(trtRepo)) {
-            info.downloadDir =
-                    buildTrtLlmArtifacts(info.modelDir, info.prop, modelId, tpDegree, ppDegree);
+            info.downloadDir = buildTrtLlmArtifacts(info.prop, modelId, tpDegree, ppDegree);
         }
     }
 
@@ -366,8 +365,7 @@ public final class LmiUtils {
     }
 
     private static Path buildTrtLlmArtifacts(
-            Path modelDir, Properties prop, String modelId, String tpDegree, String ppDegree)
-            throws IOException {
+            Properties prop, String modelId, String tpDegree, String ppDegree) throws IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
         String hash = Utils.hash(modelId + tpDegree);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
