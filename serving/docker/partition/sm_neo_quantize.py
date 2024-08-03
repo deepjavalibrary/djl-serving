@@ -43,6 +43,8 @@ class NeoQuantizationService():
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
         self.HF_CACHE_LOCATION: Final[str] = env[5]
 
+        self.customer_properties: dict = load_properties(
+            self.INPUT_MODEL_DIRECTORY)
         self.autofp8_config = None
 
     def initialize_partition_args_namespace(self):
@@ -59,9 +61,13 @@ class NeoQuantizationService():
         num_gpus = torch.cuda.device_count()
         self.args.tensor_parallel_degree = num_gpus
         self.args.properties_dir = self.INPUT_MODEL_DIRECTORY
+        self.args.quantize = None
+        if not os.environ.get(
+                'OPTION_QUANTIZE') and not self.customer_properties.get(
+                    "option.quantize"):
+            self.args.quantize = 'awq'
         self.args.pipeline_parallel_degree = None
         self.args.model_id = None
-        self.args.quantize = None
         self.args.skip_copy = None
         self.args.engine = None
 
@@ -70,9 +76,6 @@ class NeoQuantizationService():
         Factory method used to construct a QuantizationPropertiesManager from
         given serving.properties
         """
-        # Default to awq quantization
-        if not os.environ.get('OPTION_QUANTIZE'):
-            os.environ['OPTION_QUANTIZE'] = 'awq'
         logging.debug("Constructing PropertiesManager from "
                       f"serving.properties\nargs:{self.args}\n")
         self.properties_manager = PropertiesManager(self.args)
@@ -108,8 +111,7 @@ class NeoQuantizationService():
         Otherwise, tensor_parallel_degree is not outputted so that it can be defined
         during serving.
         """
-        customer_properties = load_properties(self.INPUT_MODEL_DIRECTORY)
-        user_tensor_parallel_degree = customer_properties.get(
+        user_tensor_parallel_degree = self.customer_properties.get(
             "option.tensor_parallel_degree")
         if os.environ.get("OPTION_TENSOR_PARALLEL_DEGREE"):
             user_tensor_parallel_degree = os.environ.get(
