@@ -17,15 +17,17 @@ import os
 from types import SimpleNamespace
 from typing import Final
 import torch
+import json
 
-from sm_neo_utils import (CompilationFatalError, write_error_to_file,
-                          get_neo_env_vars)
+from sm_neo_utils import (CompilationFatalError, InputConfiguration,
+                          write_error_to_file, get_neo_env_vars)
 from utils import (extract_python_jar, load_properties,
                    update_dataset_cache_location)
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
+AUTOFP8_CONFIG_ENVVAR = 'AUTOFP8_CONFIG'
 
 
 class NeoQuantizationService():
@@ -40,6 +42,8 @@ class NeoQuantizationService():
         self.OUTPUT_MODEL_DIRECTORY: Final[str] = env[2]
         self.COMPILATION_ERROR_FILE: Final[str] = env[3]
         self.HF_CACHE_LOCATION: Final[str] = env[5]
+
+        self.autofp8_config = None
 
     def initialize_partition_args_namespace(self):
         """
@@ -67,12 +71,23 @@ class NeoQuantizationService():
         given serving.properties
         """
         # Default to awq quantization
-        # TODO: update this when new quantization methods are added,
-        # since envvar overrides customer serving.properties
-        os.environ['OPTION_QUANTIZE'] = 'awq'
+        if not os.environ.get('OPTION_QUANTIZE'):
+            os.environ['OPTION_QUANTIZE'] = 'awq'
         logging.debug("Constructing PropertiesManager from "
                       f"serving.properties\nargs:{self.args}\n")
         self.properties_manager = PropertiesManager(self.args)
+
+    def parse_autofp8_config(self) -> dict:
+        autofp8_config = os.environ.get(AUTOFP8_CONFIG_ENVVAR, {})
+        if autofp8_config:
+            try:
+                autofp8_config = json.loads(autofp8_config)
+                if not isinstance(autofp8_config, dict):
+                    raise ValueError("Parsed JSON is not a dictionary")
+                self.autofp8_config = autofp8_config
+            except Exception as exc:
+                raise InputConfiguration(
+                    f"Failed to parse AutoFP8 configuration: {exc}")
 
     def run_quantization(self) -> str:
         """
@@ -81,7 +96,7 @@ class NeoQuantizationService():
         partition_service = PartitionService(self.properties_manager)
         extract_python_jar(PYTHON_CACHE_DIR)
         try:
-            return partition_service.run_quantization()
+            return partition_service.run_quantization(self.autofp8_config)
         except Exception as exc:
             raise CompilationFatalError(
                 f"Encountered an error during quantization: {exc}")
@@ -109,7 +124,7 @@ class NeoQuantizationService():
                 "option.tensor_parallel_degree"] = user_tensor_parallel_degree
         else:
             logging.info(
-                "User did not passs tensor_parallel_degree. Outputted serving.properties"
+                "User did not pass tensor_parallel_degree. Outputted serving.properties "
                 "will not include this field.")
             del output_properties["option.tensor_parallel_degree"]
 
@@ -120,6 +135,7 @@ class NeoQuantizationService():
         update_dataset_cache_location(self.HF_CACHE_LOCATION)
         self.initialize_partition_args_namespace()
         self.construct_properties_manager()
+        self.parse_autofp8_config()
         self.run_quantization()
         self.write_properties()
 
