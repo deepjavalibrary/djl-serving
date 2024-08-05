@@ -36,7 +36,7 @@ ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt231/vllm-0.5.3.post1%2Bcu124
 ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.5.9.post1/vllm_flash_attn-2.5.9.post1-cp310-cp310-manylinux1_x86_64.whl"
 ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.0.9/flashinfer-0.0.9+cu121torch2.3-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
-ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
+ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_version=0.11.1
 

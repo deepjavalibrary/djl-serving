@@ -19,7 +19,7 @@ ARG transformers_version=4.42.4
 ARG accelerate_version=0.32.1
 ARG tensorrtlibs_version=10.1.0
 # %2B is the url escape for the '+' character
-ARG trtllm_toolkit_version=0.11.0%2Bnightly
+ARG trtllm_toolkit_version=0.11.0
 ARG trtllm_version=v0.11.0
 ARG cuda_python_version=12.4
 ARG peft_version=0.10.0
