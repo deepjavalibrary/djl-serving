@@ -118,7 +118,7 @@ jobs:
         if: ${{ matrix.container == 'lmi' }}
         run: |
           rm -rf models
-          echo -en "HF_MODEL_ID=codellama/CodeLlama-34b-hf" > docker_env
+          echo -en "HF_MODEL_ID=s3://djl-llm/CodeLlama-34b-Instruct-hf/" > docker_env
           ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
           serve
           python3 llm/client.py no_code codellama
