@@ -808,6 +808,14 @@ correctness_model_spec = {
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
+    },
+    "trtllm-meta-llama3-8b-fp8": {
+        "batch_size": [213],
+        "seq_length": [1],
+        "num_run": 66,
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "dataset": "mmlu",
+        "score": 0.6
     }
 }
 
