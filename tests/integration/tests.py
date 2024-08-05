@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import logging
 import pytest
 import llm.prepare as prepare
 import llm.client as client
@@ -62,7 +63,9 @@ class Runner:
                 f"cp client_logs/{esc_test_name}_client.log all_logs/{esc_test_name}/ || true"
             )
             os.system(f"cp -r logs all_logs/{esc_test_name}")
-        subprocess.run(["./remove_container.sh"], check=True)
+        subprocess.run(["./remove_container.sh"],
+                       check=True,
+                       capture_output=True)
         os.system("cat logs/serving.log")
 
     def launch(self, env_vars=None, container=None, cmd=None):
@@ -715,34 +718,23 @@ class TestNeuronx1:
             r.launch(container='pytorch-inf2-2')
             client.run("transformers_neuronx bloom-7b1".split())
 
-    @pytest.mark.parametrize("model", ["gpt2", "gpt2-quantize"])
+    @pytest.mark.parametrize("model",
+                             ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant"])
     def test_partition(self, model):
-        try:
-            with Runner('pytorch-inf2', f'partition-{model}') as r:
+        with Runner('pytorch-inf2', f'partition-{model}') as r:
+            try:
                 prepare.build_transformers_neuronx_handler_model(model)
-                with open("models/test/requirements.txt", "a") as f:
-                    f.write("dummy_test")
-                partition_output = r.launch(
+                r.launch(
                     container="pytorch-inf2-1",
                     cmd=
-                    'partition --model-dir /opt/ml/input/data/training/ --save-mp-checkpoint-path /opt/ml/input/data/training/partition --skip-copy'
+                    "partition --model-dir /opt/ml/input/data/training --save-mp-checkpoint-path /opt/ml/input/data/training/aot --skip-copy"
                 )
-
-                # Check if neff files are generated
-                if len([
-                        fn
-                        for fn in os.listdir("models/test/partition/compiled")
-                        if fn.endswith(".neff")
-                ]) == 0:
-                    raise Exception("Failed to generate any .neff files")
-
-                # Check whether requirements.txt download is sufficient
-                if 'pip install requirements succeed!' not in partition_output.stdout.decode(
-                        "utf-8"):
-                    raise Exception(
-                        "Requirements.txt not installed successfully")
-        finally:
-            os.system('sudo rm -rf models')
+                r.launch(container="pytorch-inf2-1",
+                         cmd="serve -m test=file:/opt/ml/model/test/aot")
+                client.run(
+                    "transformers_neuronx_rolling_batch tiny-llama-rb".split())
+            finally:
+                os.system('sudo rm -rf models')
 
 
 @pytest.mark.inf

@@ -24,8 +24,6 @@ from pathlib import Path
 import utils
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
-from awq import AutoAWQForCausalLM
-from auto_fp8 import AutoFP8ForCausalLM, BaseQuantizeConfig
 from datasets import load_dataset
 
 from utils import (get_partition_cmd, extract_python_jar,
@@ -266,14 +264,21 @@ class PartitionService(object):
             "version": "GEMM"
         }
         logging.info(f"Model loading kwargs: {hf_configs.kwargs}")
-        awq_model = AutoAWQForCausalLM.from_pretrained(
-            hf_configs.model_id_or_path, **hf_configs.kwargs)
-        awq_model.quantize(tokenizer, quant_config=quant_config)
+        try:
+            from awq import AutoAWQForCausalLM
+            awq_model = AutoAWQForCausalLM.from_pretrained(
+                hf_configs.model_id_or_path, **hf_configs.kwargs)
+            awq_model.quantize(tokenizer, quant_config=quant_config)
 
-        output_path = self.properties['option.save_mp_checkpoint_path']
-        logging.info(f"Saving model and tokenizer to: {output_path}")
-        awq_model.save_quantized(output_path)
-        tokenizer.save_pretrained(output_path)
+            output_path = self.properties['option.save_mp_checkpoint_path']
+            logging.info(f"Saving model and tokenizer to: {output_path}")
+            awq_model.save_quantized(output_path)
+            tokenizer.save_pretrained(output_path)
+        except ImportError:
+            logging.error(
+                "AutoAWQ is not installed. Failing during quantization.")
+            raise ImportError(
+                "AutoAWQ is not installed. Failing during quantization.")
 
     def autofp8_quantize(self, config: Optional[dict] = None):
         """
@@ -304,17 +309,25 @@ class PartitionService(object):
                                  truncation=True,
                                  return_tensors="pt").to("cuda")
 
-        quantize_config = BaseQuantizeConfig(**config)
-        logging.info(
-            f"Using the following configurations for fp8 quantization: {vars(quantize_config)}"
-        )
-        model = AutoFP8ForCausalLM.from_pretrained(hf_configs.model_id_or_path,
-                                                   quantize_config,
-                                                   **hf_configs.kwargs)
-        model.quantize(examples)
-        output_path = self.properties['option.save_mp_checkpoint_path']
-        logging.info(f"Quantization complete. Saving model to: {output_path}")
-        model.save_quantized(output_path)
+        try:
+            from auto_fp8 import AutoFP8ForCausalLM, BaseQuantizeConfig
+            quantize_config = BaseQuantizeConfig(**config)
+            logging.info(
+                f"Using the following configurations for fp8 quantization: {vars(quantize_config)}"
+            )
+            model = AutoFP8ForCausalLM.from_pretrained(
+                hf_configs.model_id_or_path, quantize_config,
+                **hf_configs.kwargs)
+            model.quantize(examples)
+            output_path = self.properties['option.save_mp_checkpoint_path']
+            logging.info(
+                f"Quantization complete. Saving model to: {output_path}")
+            model.save_quantized(output_path)
+        except ImportError:
+            logging.error(
+                "AutoFP8 is not installed. Failing during quantization.")
+            raise ImportError(
+                "AutoFP8 is not installed. Failing during quantization.")
 
 
 def main():
