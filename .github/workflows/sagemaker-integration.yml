@@ -83,21 +83,26 @@ jobs:
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test mistral-7b
-        if: success() || failure()
+        if: ${{ always() }}
         working-directory: tests/integration
         run: |
           python3 llm/sagemaker-endpoint-tests.py mistral-7b sme ${image_type} ${{ matrix.container}} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
       - name: Test phi-2
-        if: success() || failure()
+        if: ${{ always() }}
         working-directory: tests/integration
         run: |
           python3 llm/sagemaker-endpoint-tests.py phi-2 sme ${image_type} ${{ matrix.container}} ${run_benchmark}
           echo "sleep 30 seconds to allow endpoint deletion"
           sleep 30
+      - name: Test llava-v1.6
+        if: ${{ always() && matrix.container == 'lmi' }}
+        working-directory: tests/integration
+        run: |
+          python3 llm/sagemaker-endpoint-tests.py llava-v1.6 sme ${image_type} ${{ matrix.container }} ${run_benchmark}
       - name: Test Multi Model Endpoint
-        if: success() || failure()
+        if: ${{ always() }}
         working-directory: tests/integration
         run: |
           python3 llm/sagemaker-endpoint-tests.py mme_common mme ${image_type} ${{ matrix.container}} ${run_benchmark}
