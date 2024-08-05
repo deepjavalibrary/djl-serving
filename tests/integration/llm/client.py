@@ -808,6 +808,30 @@ correctness_model_spec = {
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
+    },
+    "trtllm-meta-llama-3-8b-fp8": {
+        "batch_size": [213],
+        "seq_length": [1],
+        "num_run": 66,
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "dataset": "mmlu",
+        "score": 0.6
+    },
+    "trtllm-mistral-b-instruct-v0.3-fp8": {
+        "batch_size": [213],
+        "seq_length": [1],
+        "num_run": 66,
+        "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
+        "dataset": "mmlu",
+        "score": 0.6
+    },
+    "trtllm-meta-llama3-8b-fp8": {
+        "batch_size": [213],
+        "seq_length": [1],
+        "num_run": 66,
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "dataset": "mmlu",
+        "score": 0.6
     }
 }
 
@@ -861,7 +885,7 @@ def remove_file_handler_from_logger(handler):
 
 def modelspec_checker(model: str, model_spec: dict):
     if model not in model_spec:
-        msg = f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        msg = f"{args.model} 4 is not one of the supporting models {list(model_spec.keys())}"
         LOGGER.error(msg)
         raise ValueError(msg)
 
@@ -964,7 +988,7 @@ def awscurl_run(data,
     endpoint = f"http://127.0.0.1:8080/invocations"
     if dataset:
         dataset_dir = os.path.join(os.path.curdir, "dataset")
-        os.mkdir(dataset_dir)
+        os.makedirs(dataset_dir, exist_ok=True)
         for i, d in enumerate(data):
             with open(os.path.join(dataset_dir, f"prompt{i}.txt"), "w") as f:
                 f.write(json.dumps(d))
@@ -1621,7 +1645,7 @@ def test_transformers_neuronx_handler(model, model_spec):
 def test_correctness(model, model_spec):
     if model not in model_spec:
         raise ValueError(
-            f"{model} is not one of the supporting models {list(model_spec.keys())}"
+            f"{model} 5 is not one of the supporting models {list(model_spec.keys())}"
         )
     spec = model_spec[model]
     score = float(spec.get("score", 0.5))

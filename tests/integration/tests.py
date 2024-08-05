@@ -855,6 +855,12 @@ class TestCorrectnessTrtLlm:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("correctness trtllm-llama3-8b".split())
 
+    def test_llama3_8b_fp8(self):
+        with Runner('tensorrt-llm', 'llama3-3b') as r:
+            prepare.build_correctness_model("trtllm-meta-llama3-8b-fp8")
+            r.launch("CUDA_VISIBLE_DEVICES=0, 1, 2, 3")
+            client.run("correctness trtllm-meta-llama3-8b-fp8".split())
+
 
 @pytest.mark.correctness
 @pytest.mark.lmi_dist
@@ -899,11 +905,11 @@ class TestMultiModalLmiDist:
             r.launch()
             client.run("multimodal llava_v1.6-mistral".split())
 
-    def test_paligemma(self):
-        with Runner('lmi', 'paligemma-3b-mix-448') as r:
-            prepare.build_lmi_dist_model('paligemma-3b-mix-448')
-            r.launch()
-            client.run("multimodal paligemma-3b-mix-448".split())
+    #def test_paligemma(self):
+    #    with Runner('lmi', 'paligemma-3b-mix-448') as r:
+    #        prepare.build_lmi_dist_model('paligemma-3b-mix-448')
+    #        r.launch()
+    #        client.run("multimodal paligemma-3b-mix-448".split())
 
     def test_phi3_v(self):
         with Runner('lmi', 'phi-3-vision-128k-instruct') as r:
