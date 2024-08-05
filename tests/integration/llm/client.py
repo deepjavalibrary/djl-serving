@@ -139,20 +139,15 @@ transformers_neuronx_model_spec = {
         "batch_size": [2],
         "stream_output": True,
     },
-    "mistral-7b": {
-        "worker": 1,
-        "seq_length": [128, 256],
+    "mixtral-8x7b": {
         "batch_size": [4],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "mistral-7b-rb": {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k"
-    },
-    "mixtral-8x7b-rb": {
-        "batch_size": [4],
-        "seq_length": [256],
-        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "llama-7b-rb": {
         "batch_size": [1, 4],
@@ -190,6 +185,34 @@ transformers_neuronx_aot_model_spec = {
         "seq_length": [512],
         "batch_size": [4]
     },
+}
+
+transformers_neuronx_neo_model_spec = {
+    "llama-2-13b-rb": {
+        "seq_length": [1024],
+        "batch_size": [1, 4],
+        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "mixtral-8x22b": {
+        "workers": 1,
+        "seq_length": [512],
+        "batch_size": [2]
+    },
+    "codellama-34b": {
+        "workers": 1,
+        "seq_length": [256],
+        "batch_size": [4]
+    },
+    "mistral-7b": {
+        "workers": 1,
+        "seq_length": [512],
+        "batch_size": [2]
+    },
+    "llama-3-8b": {
+        "workers": 1,
+        "seq_length": [128],
+        "batch_size": [1]
+    }
 }
 
 lmi_dist_model_spec = {
@@ -493,6 +516,14 @@ vllm_model_spec = {
     },
 }
 
+vllm_neo_model_spec = {
+    "llama-3-8b": {
+        "batch_size": [1],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3-8B"
+    }
+}
+
 vllm_chat_model_spec = {
     "llama2-7b-chat": {
         "max_memory_per_gpu": [25.0],
@@ -613,6 +644,21 @@ trtllm_chat_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-7B-Chat-fp16"
+    }
+}
+
+trtllm_neo_model_spec = {
+    "llama3-8b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3-8B"
+    },
+    "llama3-70b": {
+        "max_memory_per_gpu": [40.0],
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3-70B"
     }
 }
 
@@ -739,7 +785,7 @@ correctness_model_spec = {
             "return_full_text": True
         }
     },
-    "trtllm-llama3-1-8b": {
+    "trtllm-llama3-8b": {
         "batch_size": [213],
         "seq_length": [1],
         "num_run": 66,
@@ -774,6 +820,28 @@ multi_modal_spec = {
     },
     "phi-3-vision-128k-instruct": {
         "batch_size": [1, 4],
+    }
+}
+
+text_embedding_model_spec = {
+    "bge-base": {
+        "max_memory_per_gpu": [2.0, 2.0, 2.0, 2.0],
+        "batch_size": [1, 2, 4, 8],
+    }
+}
+
+reranking_model_spec = {
+    "bge-reranker": {
+        "max_memory_per_gpu": [5.0, 5.0, 5.0, 5.0],
+        "batch_size": [1, 2, 4, 8],
+    }
+}
+
+handler_performance_model_spec = {
+    "tiny-llama-model": {
+        "batch_size": [1, 512],
+        "seq_length": [256],
+        "tokenizer": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     }
 }
 
@@ -888,7 +956,9 @@ def awscurl_run(data,
                 concurrency,
                 num_run=5,
                 dataset=False,
-                output=False):
+                output=False,
+                json_results=False,
+                random_delay=False):
     find_awscurl()
     headers = "Content-type: application/json"
     endpoint = f"http://127.0.0.1:8080/invocations"
@@ -902,13 +972,25 @@ def awscurl_run(data,
     else:
         json_data = json.dumps(data)
         command_data = f"-d '{json_data}'"
+
+    json_output = ""
+    if json_results:
+        json_output = "--json-path benchmark.json"
+
+    delay = ""
+    if random_delay:
+        delay = '--delay "rand(0,1000)"'
+
     command = (f"./awscurl -c {concurrency} "
                f"-N {num_run} -X POST {endpoint} --connect-timeout 300 "
-               f"-H {headers} {command_data} -P -t")
+               f"-H {headers} {command_data} {delay} {json_output} -P -t")
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     if output:
-        output_path = os.path.join(os.path.curdir, "outputs", "output")
+        output_dir = os.path.join(os.path.curdir, "outputs")
+        shutil.rmtree(output_dir, ignore_errors=True)
+        os.mkdir(output_dir)
+        output_path = os.path.join(output_dir, "output")
         command = f"{command} -o {output_path}"
     LOGGER.info(f"Running command {command}")
     res = sp.run(command, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
@@ -1021,49 +1103,59 @@ def batch_generation_chat(batch_size):
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Who won the world series in 2020?"
+        }, {
+            "role": "assistant",
+            "content": "The Los Angeles Dodgers won the World Series in 2020."
+        }, {
+            "role": "user",
+            "content": "Where was it played?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "How do I build a car from cardboard and paper clips?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Hello!"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Who are you?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
             "role": "user",
-            "content": "What is deep learning?"
+            "content": "Hello world!"
+        }],
+        [{
+            "role":
+            "system",
+            "content":
+            "You're a helpful assistant! Answer the users question best you can."
+        }, {
+            "role": "user",
+            "content": "What is the weather like in Brooklyn, New York?"
         }],
         [{
             "role": "system",
             "content": "You are a helpful assistant."
         }, {
-            "role": "user",
-            "content": "What is deep learning?"
-        }],
-        [{
-            "role": "system",
-            "content": "You are a helpful assistant."
-        }, {
-            "role": "user",
-            "content": "What is deep learning?"
+            "role":
+            "user",
+            "content":
+            "What's the weather like the next 3 days in San Francisco, CA?"
         }],
     ]
 
@@ -1071,6 +1163,31 @@ def batch_generation_chat(batch_size):
         # dynamically extend to support larger bs by repetition
         messages *= math.ceil(batch_size / len(messages))
     return messages[:batch_size]
+
+
+def batch_generation_pair(batch_size):
+    data = [{
+        "key": "what is panda?",
+        "value": "hi"
+    }, {
+        "key":
+        "what is panda?",
+        "value":
+        "The giant panda (Ailuropoda melanoleuca), sometimes called a panda bear or simply panda, is a bear species endemic to China."
+    }, {
+        "key":
+        "What is Deep Learning?",
+        "value":
+        "Deep learning is a subset of machine learning that utilizes multi-layered neural networks to learn from large amounts of data and perform complex tasks such as image recognition and natural language processing."
+    }, {
+        "key": "What is Deep Learning?",
+        "value": "Deep learning is not"
+    }]
+
+    if batch_size > len(data):
+        # dynamically extend to support larger bs by repetition
+        data *= math.ceil(batch_size / len(data))
+    return data[:batch_size]
 
 
 def t5_batch_generation(batch_size):
@@ -1288,9 +1405,12 @@ def test_handler_adapters(model, model_spec):
     ) == FAILED_DEPENDENCY_CODE, "Calling deleted adapter should not work with new adapters"
 
     if len(reqs) > 1:
-        res = send_json(reqs[1]).content.decode("utf-8")
+        res = requests.post(endpoint, headers=headers,
+                            json=reqs[1]).content.decode("utf-8")
         LOGGER.info(f"call valid adapter after deletion {res}")
-        if "error" in res:
+        final_json = json.loads(res.splitlines()[-1])
+        if final_json.get("details", {}).get("finish_reason",
+                                             "error") == "error":
             msg = f"Deleting adapter should not break inference for remaining adapters"
             LOGGER.error(msg)
             raise RuntimeError(msg)
@@ -1359,6 +1479,88 @@ def test_handler(model, model_spec):
                 validate_memory_usage(spec["max_memory_per_gpu"][i])
             if "tokenizer" in spec:
                 awscurl_run(req, spec.get("tokenizer"), batch_size)
+
+
+def log_awscurl_benchmark(metric_name: str,
+                          benchmark_name: str = "benchmark.json") -> None:
+    with open(benchmark_name, "r") as f:
+        raw_metrics = json.load(f)
+        metrics = list()
+        metrics.append({
+            "MetricName": f"{metric_name}_p50Latency",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p50Latency"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_p90Latency",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p90Latency"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_p50TimeToFirstByte",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p50TimeToFirstByte"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_p90TimeToFirstByte",
+            "Unit": "Milliseconds",
+            "Value": raw_metrics["p90TimeToFirstByte"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_tokenThroughput",
+            "Unit": "Count/Second",
+            "Value": raw_metrics["tokenThroughput"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_tps",
+            "Unit": "Count/Second",
+            "Value": raw_metrics["tps"]
+        })
+        metrics.append({
+            "MetricName": f"{metric_name}_tokenPerRequest",
+            "Unit": "Count",
+            "Value": raw_metrics["tokenPerRequest"]
+        })
+        LOGGER.info(f"{metric_name}")
+        LOGGER.info(f"raw metrics: {raw_metrics}")
+        command = f'aws cloudwatch put-metric-data --namespace "serving_handler" ' \
+                  f'--region "us-east-1" --metric-data \'{json.dumps(metrics)}\''
+        LOGGER.info(command)
+        sp.call(command, shell=True)
+
+
+def run_rb_handler_performance(benchmark_name, model_spec, req):
+    for batch_size in model_spec["batch_size"]:
+        metric_name = f"{benchmark_name}-batch-{batch_size:03}"
+        num_run = max(
+            100 // batch_size,
+            10)  # minimum total runs is 100, minimum runs per request is 10
+        awscurl_run(req,
+                    model_spec.get("tokenizer", None),
+                    batch_size,
+                    num_run=num_run,
+                    json_results=True,
+                    random_delay=True)
+        log_awscurl_benchmark(metric_name)
+
+
+def test_handler_performance(benchmark_name, model_spec):
+    modelspec_checker("tiny-llama-model", model_spec)
+    spec = model_spec["tiny-llama-model"]
+
+    inputs_request = {"inputs": batch_generation(1)[0]}
+    inputs_request["max_new_tokens"] = spec["seq_length"][0]
+    LOGGER.info(f"{benchmark_name} req {inputs_request}")
+
+    run_rb_handler_performance(f"{benchmark_name}-handler", spec,
+                               inputs_request)
+
+    chat_request = {"messages": batch_generation_chat(1)[0]}
+    chat_request["max_tokens"] = spec["seq_length"][0]
+    LOGGER.info(f"{benchmark_name}-chat req {chat_request}")
+
+    run_rb_handler_performance(f"{benchmark_name}-handler-chat", spec,
+                               chat_request)
 
 
 def test_performance():
@@ -1483,6 +1685,49 @@ def test_multimodal(model, model_spec):
                     output=True)
 
 
+def test_text_embedding_model(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for i, batch_size in enumerate(spec["batch_size"]):
+        req = {"inputs": batch_generation(batch_size)}
+        logging.info(f"req {req}")
+        res = send_json(req).json()
+        logging.info(f"res: {res}")
+        assert len(res) == batch_size
+        if "max_memory_per_gpu" in spec:
+            validate_memory_usage(spec["max_memory_per_gpu"][i])
+
+        # awscurl little benchmark phase
+        logging.info(f"Little benchmark: concurrency {batch_size}")
+        awscurl_run(req, spec.get("tokenizer"), batch_size)
+
+
+def test_reranking_model(model, model_spec):
+    if model not in model_spec:
+        raise ValueError(
+            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
+        )
+    spec = model_spec[args.model]
+    if "worker" in spec:
+        check_worker_number(spec["worker"])
+    for i, batch_size in enumerate(spec["batch_size"]):
+        req = batch_generation_pair(batch_size)
+        logging.info(f"req {req}")
+        res = send_json(req).json()
+        logging.info(f"res: {res}")
+        if "max_memory_per_gpu" in spec:
+            validate_memory_usage(spec["max_memory_per_gpu"][i])
+
+        # awscurl little benchmark phase
+        logging.info(f"Little benchmark: concurrency {batch_size}")
+        awscurl_run(req, spec.get("tokenizer"), batch_size)
+
+
 def run(raw_args):
     parser = argparse.ArgumentParser(description="Build the LLM configs")
     parser.add_argument("handler", help="the handler used in the model")
@@ -1536,6 +1781,12 @@ def run(raw_args):
     elif args.handler == "transformers_neuronx-aot":
         test_transformers_neuronx_handler(args.model,
                                           transformers_neuronx_aot_model_spec)
+    elif args.handler == "transformers_neuronx_neo":
+        test_transformers_neuronx_handler(args.model,
+                                          transformers_neuronx_neo_model_spec)
+    elif args.handler == "transformers_neuronx_neo_rolling_batch":
+        test_handler_rolling_batch(args.model,
+                                   transformers_neuronx_neo_model_spec)
     elif args.handler == "lmi_dist":
         test_handler_rolling_batch(args.model, lmi_dist_model_spec)
     elif args.handler == "lmi_dist_adapters":
@@ -1548,6 +1799,10 @@ def run(raw_args):
         test_handler_rolling_batch_chat(args.model, lmi_dist_chat_model_spec)
     elif args.handler == "vllm_chat":
         test_handler_rolling_batch_chat(args.model, vllm_chat_model_spec)
+    elif args.handler == "vllm_neo":
+        test_handler_rolling_batch(args.model, vllm_neo_model_spec)
+    elif args.handler == "handler_performance":
+        test_handler_performance(args.model, handler_performance_model_spec)
     elif args.handler == "performance":
         test_performance()
     elif args.handler == "lmi_dist_aiccl":
@@ -1556,12 +1811,18 @@ def run(raw_args):
         test_handler_rolling_batch(args.model, trtllm_model_spec)
     elif args.handler == "trtllm_chat":
         test_handler_rolling_batch_chat(args.model, trtllm_chat_model_spec)
+    elif args.handler == "trtllm_neo":
+        test_handler_rolling_batch(args.model, trtllm_neo_model_spec)
     elif args.handler == "no_code":
         test_handler_rolling_batch(args.model, no_code_rolling_batch_spec)
     elif args.handler == "correctness":
         test_correctness(args.model, correctness_model_spec)
     elif args.handler == "multimodal":
         test_multimodal(args.model, multi_modal_spec)
+    elif args.handler == "text_embedding":
+        test_text_embedding_model(args.model, text_embedding_model_spec)
+    elif args.handler == "reranking":
+        test_reranking_model(args.model, reranking_model_spec)
 
     else:
         raise ValueError(

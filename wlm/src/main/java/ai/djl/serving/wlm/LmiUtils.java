@@ -127,7 +127,7 @@ public final class LmiUtils {
         // TODO TrtLLM python backend: Change it once TrtLLM supports T5 with inflight batching.
         info.prop.put("option.rolling_batch", "trtllm");
         if (!isValidTrtLlmModelRepo(trtRepo)) {
-            info.downloadDir = buildTrtLlmArtifacts(info.modelDir, modelId, tpDegree, ppDegree);
+            info.downloadDir = buildTrtLlmArtifacts(info.prop, modelId, tpDegree, ppDegree);
         }
     }
 
@@ -365,7 +365,7 @@ public final class LmiUtils {
     }
 
     private static Path buildTrtLlmArtifacts(
-            Path modelDir, String modelId, String tpDegree, String ppDegree) throws IOException {
+            Properties prop, String modelId, String tpDegree, String ppDegree) throws IOException {
         logger.info("Converting model to TensorRT-LLM artifacts");
         String hash = Utils.hash(modelId + tpDegree);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
@@ -376,11 +376,17 @@ public final class LmiUtils {
             return trtLlmRepoDir;
         }
 
+        Path tempDir = Files.createTempDirectory("trtllm");
+        logger.info("Writing temp properties to {}", tempDir.toAbsolutePath());
+        try (OutputStream os = Files.newOutputStream(tempDir.resolve("serving.properties"))) {
+            prop.store(os, "");
+        }
+
         String[] cmd = {
             "python",
             "/opt/djl/partition/trt_llm_partition.py",
             "--properties_dir",
-            modelDir.toAbsolutePath().toString(),
+            tempDir.toAbsolutePath().toString(),
             "--trt_llm_model_repo",
             trtLlmRepoDir.toString(),
             "--tensor_parallel_degree",

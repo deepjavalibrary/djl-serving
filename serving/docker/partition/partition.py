@@ -18,16 +18,19 @@ import logging
 import argparse
 import subprocess
 
+from typing import Optional
 from pathlib import Path
 
 import utils
 from properties_manager import PropertiesManager
 from huggingface_hub import snapshot_download
+from awq import AutoAWQForCausalLM
+from auto_fp8 import AutoFP8ForCausalLM, BaseQuantizeConfig
+from datasets import load_dataset
 
 from utils import (get_partition_cmd, extract_python_jar,
-                   get_python_executable, get_download_dir,
-                   read_hf_model_config, init_hf_tokenizer,
-                   remove_option_from_properties)
+                   get_python_executable, get_download_dir, init_hf_tokenizer,
+                   remove_option_from_properties, load_hf_config_and_tokenizer)
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -233,11 +236,16 @@ class PartitionService(object):
             if entry_point_file:
                 os.remove(os.path.join(saved_checkpoints_dir, 'model.py'))
 
-    def run_quantization(self):
+    def run_quantization(self, autofp8_config: Optional[dict] = None):
         quant_method = self.properties['option.quantize']
         if quant_method == 'awq':
             logging.info("Running AutoAWQ quantization")
             self.autoawq_quantize()
+            self.properties_manager.generate_properties_file()
+            self.upload_checkpoints_to_s3()
+        elif quant_method == 'fp8':
+            logging.info("Running AutoFP8 quantization")
+            self.autofp8_quantize(autofp8_config)
             self.properties_manager.generate_properties_file()
             self.upload_checkpoints_to_s3()
         else:
@@ -247,16 +255,7 @@ class PartitionService(object):
         """
         Quantizes model using AutoAWQ. Saves output to save_mp_checkpoint_path.
         """
-        from awq import AutoAWQForCausalLM
-        sys.path.append(PYTHON_CACHE_DIR)
-        from djl_python.properties_manager.hf_properties import HuggingFaceProperties
-
-        logging.info(f"Properties: {self.properties}")
-        properties = remove_option_from_properties(self.properties)
-        hf_configs = HuggingFaceProperties(**properties)
-        model_config = read_hf_model_config(hf_configs.model_id_or_path,
-                                            hf_configs)
-        tokenizer = init_hf_tokenizer(hf_configs.model_id_or_path, hf_configs)
+        hf_configs, tokenizer = load_hf_config_and_tokenizer(self.properties)
 
         # Hard-coding these options for now. If vLLM continues to prioritize
         # AutoAWQ we will expose these options to customers in the future.
@@ -275,6 +274,47 @@ class PartitionService(object):
         logging.info(f"Saving model and tokenizer to: {output_path}")
         awq_model.save_quantized(output_path)
         tokenizer.save_pretrained(output_path)
+
+    def autofp8_quantize(self, config: Optional[dict] = None):
+        """
+        Quantizes model using AutoFP8.
+
+        :param config: Dictionary containing values to construct auto_fp8.BaseQuantizeConfig
+        """
+        hf_configs, tokenizer = load_hf_config_and_tokenizer(self.properties)
+        if not tokenizer.pad_token:
+            tokenizer.pad_token = tokenizer.eos_token
+
+        config = {
+            k: v
+            for k, v in config.items() if v is not None
+        } if config else {}
+        if config.get("activation_scheme") == "dynamic":
+            # If using dynamic activation scales, a calibration dataset is not required
+            examples = []
+        else:
+            # Tokenize dataset for calibrating static activation scales
+            ds = load_dataset("abisee/cnn_dailymail",
+                              "3.0.0",
+                              split="validation").shuffle(seed=42).select(
+                                  range(512))
+            examples = [batch["article"] for batch in ds]
+            examples = tokenizer(examples,
+                                 padding=True,
+                                 truncation=True,
+                                 return_tensors="pt").to("cuda")
+
+        quantize_config = BaseQuantizeConfig(**config)
+        logging.info(
+            f"Using the following configurations for fp8 quantization: {vars(quantize_config)}"
+        )
+        model = AutoFP8ForCausalLM.from_pretrained(hf_configs.model_id_or_path,
+                                                   quantize_config,
+                                                   **hf_configs.kwargs)
+        model.quantize(examples)
+        output_path = self.properties['option.save_mp_checkpoint_path']
+        logging.info(f"Quantization complete. Saving model to: {output_path}")
+        model.save_quantized(output_path)
 
 
 def main():
@@ -315,10 +355,11 @@ def main():
         help=
         'toggle to skip copying associated tokenizer and config files from source model'
     )
-    parser.add_argument('--quantization',
-                        type=str,
-                        dest='quantize',
-                        help="the quantization technique to use. options: awq")
+    parser.add_argument(
+        '--quantization',
+        type=str,
+        dest='quantize',
+        help="the quantization technique to use. options: awq, fp8")
 
     args = parser.parse_args()
 

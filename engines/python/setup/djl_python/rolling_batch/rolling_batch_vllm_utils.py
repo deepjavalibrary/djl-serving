@@ -21,6 +21,7 @@ from vllm.inputs import PromptInputs
 from djl_python.request_io import Token, Sequence
 from djl_python.request import Request
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
+from djl_python.utils import is_beam_search
 
 DTYPE_MAPPER = {
     "fp32": "float32",
@@ -42,6 +43,13 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     request_id = vllm_request_output.request_id
     cache = request_cache[request_id]
     request_output = cache["request_output"]
+
+    # For beam search, vllm and lmi-dist produces entirely different sequences at the same index
+    # after a certain step, despite tracking previous outputs. This leads to garbage output, so we wait till
+    # entire generation finishes.
+    parameters = request_output.input.parameters
+    if is_beam_search(parameters) and not vllm_request_output.finished:
+        return request_cache
 
     # sets prompt token details if not set
     if not request_output.prompt_tokens_details:
@@ -102,19 +110,16 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
             prev_len:
             cur_len] if prev_len < cur_len else completion_output.token_ids
 
-        # get the newly generated token texts
-        curr_length = cache[f"sequence_index_{sequence_index}"]["curr_length"]
-        text = completion_output.text[curr_length:]
+        # get the newly generated token texts for speculative decoding
         output_token_texts = []
         if hasattr(completion_output, "output_token_texts"):
             output_token_texts = completion_output.output_token_texts[
                 prev_len:
                 cur_len] if prev_len < cur_len else completion_output.output_token_texts
-        output_token_texts = [text] * len(
-            new_token_ids) if not output_token_texts else output_token_texts
 
         top_tokens = []
-        # calculate log probs
+        token_texts = []
+        # calculate log probs and token_texts
         if completion_output.logprobs:
             new_logprobs_list = completion_output.logprobs[
                 prev_len:
@@ -122,14 +127,27 @@ def update_multiple_sequences(cache, request_output, vllm_request_output):
             new_logprobs = []
             for token_id, logprobs in zip(new_token_ids, new_logprobs_list):
                 new_logprobs.append(logprobs[token_id].logprob)
+                token_texts.append(logprobs[token_id].decoded_token)
                 for token_id_key, logprob in logprobs.items():
                     top_tokens.append(
                         Token(id=token_id_key,
                               text=logprob.decoded_token,
                               log_prob=logprob.logprob))
 
-        else:
+        elif new_token_ids:
+            # TODO: Test and remove this. logprobs is always set 1. This case should never happen.
             new_logprobs = [None] * len(new_token_ids)
+            curr_length = cache[f"sequence_index_{sequence_index}"][
+                "curr_length"]
+            token_texts.append(completion_output.text[curr_length:])
+
+        if not output_token_texts:
+            if len(token_texts) != len(new_token_ids):
+                raise RuntimeError(
+                    f"Mismatch in the number of token_ids and its token texts generated."
+                    f"new token_ids: {new_token_ids}"
+                    f"new token_texts: {token_texts}")
+            output_token_texts = token_texts
 
         # set finish reason for the generation
         finish_reason = FINISH_REASON_MAPPER.get(

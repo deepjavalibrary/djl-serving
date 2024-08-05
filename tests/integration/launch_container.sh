@@ -11,6 +11,14 @@ model_path=$2   #required
 platform=$3     #required
 args=${@:4}     #optional
 
+is_sm_neo_context=false
+if [[ $4 == "sm_neo_context" ]]; then
+  is_sm_neo_context=true
+  if [[ $5 == "jumpstart_integration" ]]; then
+      jumpstart_integration=true
+  fi
+fi
+
 is_partition=false
 if [[ $4 == "partition" ]] || [[ $4 == "train" ]]; then
   is_partition=true
@@ -87,7 +95,34 @@ mkdir logs
 set -x
 # start the docker container
 
-if $is_partition; then
+if $is_sm_neo_context; then
+  docker run \
+    -t \
+    --rm \
+    --network="host" \
+    ${model_path:+-v ${model_path}/uncompiled:/opt/ml/model/input} \
+    ${model_path:+-v ${model_path}/compiled:/opt/ml/model/compiled} \
+    ${model_path:+-v ${model_path}/errors.json:/opt/ml/compilation/errors/errors.json} \
+    ${model_path:+-v ${model_path}/cache:/opt/ml/compilation/cache} \
+    -v ${PWD}/logs:/opt/djl/logs \
+    -v ~/.aws:/root/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    ${jumpstart_integration:+-e SM_CACHE_JUMPSTART_FORMAT=true} \
+    -e SM_NEO_EXECUTION_CONTEXT=1 \
+    -e SM_NEO_INPUT_MODEL_DIR=/opt/ml/model/input \
+    -e SM_NEO_COMPILED_MODEL_DIR=/opt/ml/model/compiled \
+    -e SM_NEO_COMPILATION_ERROR_FILE=/opt/ml/compilation/errors/errors.json \
+    -e SM_NEO_CACHE_DIR=/opt/ml/compilation/cache \
+    -e SM_NEO_HF_CACHE_DIR=/opt/ml/compilation/cache \
+    -e COMPILER_OPTIONS={} \
+    ${env_file} \
+    ${runtime:+--runtime="${runtime}"} \
+    ${shm:+--shm-size="${shm}"} \
+    ${host_device:+ ${host_device}} \
+    "${docker_image}"
+
+  exit $?
+elif $is_partition; then
   docker run \
     -t \
     --rm \

@@ -4,6 +4,7 @@ import glob
 import zipfile
 import tempfile
 import logging
+import sys
 
 MASTER_ADDR = "127.0.0.1"
 MASTER_PORT = 29761
@@ -57,6 +58,17 @@ def extract_python_jar(target_dir):
 
     with zipfile.ZipFile(jar_files[0], 'r') as zip:
         zip.extractall(target_dir)
+
+
+def get_djl_version_from_lib():
+    version = ""
+    for filename in os.listdir("/usr/local/"):
+        if filename.startswith("djl-serving-"):
+            version = filename.replace("djl-serving-", "")
+
+    if not version:
+        raise ValueError(f"Cannot retrieve version from lib file name.")
+    return version
 
 
 def is_engine_mpi_mode(engine):
@@ -113,20 +125,6 @@ def remove_option_from_properties(properties: dict):
     return output
 
 
-def read_hf_model_config(model_config_path: str, hf_configs):
-    try:
-        model_config = AutoConfig.from_pretrained(
-            model_config_path,
-            trust_remote_code=hf_configs.trust_remote_code,
-            revision=hf_configs.revision)
-        return model_config
-    except Exception as e:
-        logging.error(
-            f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
-            f"This is required for loading huggingface models")
-        raise e
-
-
 def init_hf_tokenizer(model_id_or_path: str, hf_configs):
     tokenizer = AutoTokenizer.from_pretrained(
         model_id_or_path,
@@ -135,6 +133,19 @@ def init_hf_tokenizer(model_id_or_path: str, hf_configs):
         revision=hf_configs.revision,
     )
     return tokenizer
+
+
+def load_hf_config_and_tokenizer(properties: dict):
+    from partition import PYTHON_CACHE_DIR
+    sys.path.append(PYTHON_CACHE_DIR)
+    from djl_python.properties_manager.hf_properties import HuggingFaceProperties
+
+    logging.info(f"Properties: {properties}")
+    properties = remove_option_from_properties(properties)
+    hf_configs = HuggingFaceProperties(**properties)
+    tokenizer = init_hf_tokenizer(hf_configs.model_id_or_path, hf_configs)
+
+    return hf_configs, tokenizer
 
 
 def update_dataset_cache_location(hf_cache_location):

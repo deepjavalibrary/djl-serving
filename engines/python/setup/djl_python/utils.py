@@ -71,6 +71,15 @@ def is_best_of(parameters: dict) -> bool:
     return "best_of" in parameters.keys() and parameters.get("best_of") > 1
 
 
+def is_beam_search(parameters: dict) -> bool:
+    """
+    Returns whether parameters indicate beam search should be applied.
+    :param parameters: parameters dictionary
+    :return: boolean
+    """
+    return "num_beams" in parameters.keys() and parameters.get("num_beams") > 1
+
+
 def is_multiple_sequences(parameters: dict) -> bool:
     """
     Returns whether the parameters indicate number of output sequences to return is more than 1.
@@ -82,7 +91,8 @@ def is_multiple_sequences(parameters: dict) -> bool:
 
 
 def wait_till_generation_finished(parameters):
-    return is_best_of(parameters) or is_multiple_sequences(parameters)
+    return is_best_of(parameters) or is_multiple_sequences(
+        parameters) or is_beam_search(parameters)
 
 
 def rolling_batch_inference(parsed_input, inputs: Input, outputs: Output,
@@ -126,6 +136,10 @@ def get_input_details(requests, errors, batch):
             raise ValueError(
                 "In order to enable dynamic batching, all input batches must have the same parameters"
             )
+
+        if not isinstance(request_input.input_text, list):
+            request_input.input_text = [request_input.input_text]
+
         input_data.extend(request_input.input_text)
         input_size.append(len(request_input.input_text))
 

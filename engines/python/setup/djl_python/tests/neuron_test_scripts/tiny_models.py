@@ -118,13 +118,30 @@ def opt():
     )
 
 
-def build_tiny_tokenizer(model_type: str):
+def build_tiny_tokenizer(model_type: str) -> PreTrainedTokenizer:
+    """
+    Builds a new tokenizer for a given model type.
+
+    Args:
+        model_type (str): The type of the model.
+
+    Returns:
+        PreTrainedTokenizer: The new tokenizer.
+
+    Raises:
+        AssertionError: If the tokenizer is not a fast tokenizer.
+
+    """
     models = tokenizer_from_config()
     model_name = models[model_type]
     vocab_keep_items = 4096
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    # Check if the tokenizer is a fast tokenizer
     assert tokenizer.is_fast, "This only works for fast tokenizers."
     vocab = tokenizer.get_vocab()
+
+    # Create a new vocabulary dictionary with the first vocab_keep_items - 1 items
     if "gpt2" in model_name:
         new_vocab = {
             token: i
@@ -136,21 +153,20 @@ def build_tiny_tokenizer(model_type: str):
             token: i
             for token, i in vocab.items() if i < vocab_keep_items
         }
+
+    # Create a training corpus with the new vocabulary keys
     training_corpus = [new_vocab.keys()]
+
+    # Train a new tokenizer from the training corpus
     new_tokenizer = tokenizer.train_new_from_iterator(
         training_corpus, vocab_size=vocab_keep_items)
+
     return new_tokenizer
 
 
 def config_classes() -> Dict[str, Callable]:
     """
     A map from the config class to a function which builds a tiny config.
-
-    Arguments:
-        old: Whether to include old-style classes (GPT-J, GPTNeoX). This
-            argument is useful because many tests are only applicable to
-            classes which have been updated to use the primary TNx base
-            class.
 
     Returns:
         configs: A mapping from config class to config instance builder
@@ -174,12 +190,6 @@ def config_classes() -> Dict[str, Callable]:
 def tokenizer_from_config() -> Dict[str, str]:
     """
     A map from the config class to a function which builds a tiny config.
-
-    Arguments:
-        old: Whether to include old-style classes (GPT-J, GPTNeoX). This
-            argument is useful because many tests are only applicable to
-            classes which have been updated to use the primary TNx base
-            class.
 
     Returns:
         configs: A mapping from config class to config instance builder
