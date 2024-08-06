@@ -938,6 +938,14 @@ correctness_model_list = {
         "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 213,
         "option.model_loading_timeout": 1800
+    },
+    "trtllm-meta-llama3-8b-fp8": {
+        "engine": "Python",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.rolling_batch": "trtllm",
+        "option.tensor_parallel_degree": 4,
+        "option.quantize": "fp8"
     }
 }
 

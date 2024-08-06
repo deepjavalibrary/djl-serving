@@ -799,6 +799,14 @@ correctness_model_spec = {
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
+    },
+    "trtllm-meta-llama3-8b-fp8": {
+        "batch_size": [213],
+        "seq_length": [1],
+        "num_run": 66,
+        "tokenizer": "TheBloke/Llama-2-7B-fp16",
+        "dataset": "mmlu",
+        "score": 0.6
     }
 }
 
@@ -955,7 +963,7 @@ def awscurl_run(data,
     endpoint = f"http://127.0.0.1:8080/invocations"
     if dataset:
         dataset_dir = os.path.join(os.path.curdir, "dataset")
-        os.mkdir(dataset_dir)
+        os.makedirs(dataset_dir, exist_ok=True)
         for i, d in enumerate(data):
             with open(os.path.join(dataset_dir, f"prompt{i}.txt"), "w") as f:
                 f.write(json.dumps(d))
