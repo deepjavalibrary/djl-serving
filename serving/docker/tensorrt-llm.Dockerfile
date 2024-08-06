@@ -9,9 +9,9 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.2.2-cudnn8-devel-ubuntu22.04
+ARG version=12.3.2-devel-ubuntu22.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu122
+ARG cuda_version=cu123
 ARG python_version=3.10
 ARG TORCH_VERSION=2.2.1
 ARG djl_version=0.28.0~SNAPSHOT
@@ -110,7 +110,7 @@ RUN scripts/install_djl_serving.sh $djl_version && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Add CUDA-Compat
-RUN apt-get update && apt-get install -y cuda-compat-12-2 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cuda-compat-12-3 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
