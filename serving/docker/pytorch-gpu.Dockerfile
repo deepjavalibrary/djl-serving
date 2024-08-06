@@ -9,14 +9,14 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.4.1-cudnn-devel-ubuntu22.04
+ARG version=12.4.1-devel-ubuntu22.04
 
 FROM nvidia/cuda:$version as base
 
 ARG djl_version=0.30.0~SNAPSHOT
 ARG cuda_version=cu124
-ARG torch_version=2.3.1
-ARG torch_vision_version=0.18.1
+ARG torch_version=2.4.0
+ARG torch_vision_version=0.19.0
 ARG onnx_version=1.18.0
 ARG python_version=3.10
 ARG numpy_version=1.26.4
@@ -33,10 +33,12 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 ENV HF_HOME=/tmp/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
+# set cudnn9 library path
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
-ENV PYTORCH_FLAVOR=cu121-precxx11
+ENV PYTORCH_FLAVOR=cu124-precxx11
 # TODO: remove TORCH_CUDNN_V8_API_DISABLED once PyTorch bug is fixed
 ENV TORCH_CUDNN_V8_API_DISABLED=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
@@ -75,7 +77,7 @@ CMD ["serve"]
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-gpu="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.pytorch-cu121="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.pytorch-cu124="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
