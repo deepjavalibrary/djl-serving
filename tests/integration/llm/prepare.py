@@ -76,50 +76,9 @@ performance_test_list = {
     }
 }
 
-transformers_neuronx_aot_handler_list = {
-    "gpt2": {
-        "option.model_id":
-        "gpt2",
-        "option.batch_size":
-        4,
-        "option.tensor_parallel_degree":
-        2,
-        "option.n_positions":
-        512,
-        "option.dtype":
-        "fp16",
-        "option.model_loading_timeout":
-        600,
-        "option.enable_streaming":
-        False,
-        "option.save_mp_checkpoint_path":
-        "/opt/ml/input/data/training/partition-test"
-    },
-    "gpt2-quantize": {
-        "option.model_id":
-        "gpt2",
-        "option.batch_size":
-        4,
-        "option.tensor_parallel_degree":
-        2,
-        "option.n_positions":
-        512,
-        "option.dtype":
-        "fp16",
-        "option.model_loading_timeout":
-        600,
-        "option.quantize":
-        "static_int8",
-        "option.enable_streaming":
-        False,
-        "option.save_mp_checkpoint_path":
-        "/opt/ml/input/data/training/partition-test"
-    },
-}
-
 transformers_neuronx_handler_list = {
     "gpt2": {
-        "option.model_id": "gpt2",
+        "option.model_id": "s3://djl-llm/gpt2/",
         "max_dynamic_batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
@@ -127,7 +86,7 @@ transformers_neuronx_handler_list = {
         "option.model_loading_timeout": 600
     },
     "gpt2-quantize": {
-        "option.model_id": "gpt2",
+        "option.model_id": "s3://djl-llm/gpt2/",
         "batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
@@ -276,6 +235,23 @@ transformers_neuronx_handler_list = {
         "option.max_rolling_batch_size": 1,
         "option.model_loading_timeout": 3600,
         "option.output_formatter": "jsonlines"
+    },
+    "tiny-llama-rb-aot": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
+        "option.n_positions": 1024,
+        "option.max_rolling_batch_size": 4,
+        "option.rolling_batch": 'auto',
+        "option.model_loading_timeout": 1200,
+    },
+    "tiny-llama-rb-aot-quant": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.quantize": "static_int8",
+        "option.tensor_parallel_degree": 2,
+        "option.n_positions": 1024,
+        "option.max_rolling_batch_size": 4,
+        "option.rolling_batch": 'auto',
+        "option.model_loading_timeout": 1200,
     }
 }
 
@@ -1225,17 +1201,6 @@ def build_transformers_neuronx_handler_model(model):
     write_model_artifacts(options)
 
 
-def build_transformers_neuronx_aot_handler_model(model):
-    if model not in transformers_neuronx_aot_handler_list.keys():
-        raise ValueError(
-            f"{model} is not one of the supporting handler {list(transformers_neuronx_aot_handler_list.keys())}"
-        )
-    options = transformers_neuronx_aot_handler_list[model]
-    options["engine"] = "Python"
-    options["option.entryPoint"] = "djl_python.transformers_neuronx"
-    write_model_artifacts(options)
-
-
 def build_rolling_batch_model(model):
     if model not in rolling_batch_model_list.keys():
         raise ValueError(
@@ -1372,7 +1337,6 @@ def build_text_embedding_model(model):
 supported_handler = {
     'huggingface': build_hf_handler_model,
     'transformers_neuronx': build_transformers_neuronx_handler_model,
-    'transformers_neuronx_aot': build_transformers_neuronx_aot_handler_model,
     'performance': build_performance_model,
     'handler_performance': build_handler_performance_model,
     'rolling_batch_scheduler': build_rolling_batch_model,
