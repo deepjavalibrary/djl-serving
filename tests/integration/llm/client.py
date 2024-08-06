@@ -816,8 +816,7 @@ correctness_model_spec = {
         "tokenizer": "TheBloke/Llama-2-7B-fp16",
         "dataset": "mmlu",
         "score": 0.6
-    },
-
+    }
 }
 
 multi_modal_spec = {

@@ -858,7 +858,7 @@ class TestCorrectnessTrtLlm:
     def test_llama3_8b_fp8(self):
         with Runner('tensorrt-llm', 'llama3-3b') as r:
             prepare.build_correctness_model("trtllm-meta-llama3-8b-fp8")
-            r.launch("CUDA_VISIBLE_DEVICES=0, 1, 2, 3")
+            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("correctness trtllm-meta-llama3-8b-fp8".split())
 
 
