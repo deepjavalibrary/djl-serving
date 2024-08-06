@@ -67,9 +67,6 @@ COPY partition /opt/djl/partition
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-# Install CUDNN 8
-RUN apt-get update && apt-get install -y --no-install-recommends libcudnn9-cuda-12 && rm -rf /var/lib/apt/lists/*
-
 # Install OpenMPI and other deps
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y g++ wget unzip openmpi-bin libopenmpi-dev libffi-dev git-lfs rapidjson-dev graphviz && \
