@@ -30,41 +30,21 @@ def write_error_to_file(error_message, error_file):
 def get_neo_env_vars():
     """
     Get environment variables required by the SageMaker Neo interface
-
-    TODO: Update the return type to a dictionary to allow for easier changes
     """
+    neo_environ = {}
     try:
-        compiler_options = os.environ.get("COMPILER_OPTIONS")
-        input_model_directory = os.environ["SM_NEO_INPUT_MODEL_DIR"]
-        compiled_model_directory = os.environ["SM_NEO_COMPILED_MODEL_DIR"]
-        compilation_error_file = os.environ["SM_NEO_COMPILATION_ERROR_FILE"]
-        neo_cache_dir = os.environ.get("SM_NEO_CACHE_DIR")
-        neo_hf_cache_dir = os.environ.get("SM_NEO_HF_CACHE_DIR")
-        return (compiler_options, input_model_directory,
-                compiled_model_directory, compilation_error_file,
-                neo_cache_dir, neo_hf_cache_dir)
+        neo_environ["SM_NEO_INPUT_MODEL_DIR"] = os.environ["SM_NEO_INPUT_MODEL_DIR"]
+        neo_environ["SM_NEO_COMPILED_MODEL_DIR"] = os.environ["SM_NEO_COMPILED_MODEL_DIR"]
+        neo_environ["SM_NEO_COMPILATION_ERROR_FILE"] = os.environ["SM_NEO_COMPILATION_ERROR_FILE"]
+        neo_environ["SM_NEO_CACHE_DIR"] = os.environ.get("SM_NEO_CACHE_DIR")
+        neo_environ["SM_NEO_HF_CACHE_DIR"] = os.environ.get("SM_NEO_HF_CACHE_DIR")
+        return neo_environ
     except KeyError as exc:
         raise InputConfiguration(
             f"SageMaker Neo environment variable '{exc.args[0]}' expected but not found"
-            f" \nRequired env vars are: 'COMPILER_OPTIONS', 'SM_NEO_INPUT_MODEL_DIR',"
-            f" 'SM_NEO_COMPILED_MODEL_DIR', 'SM_NEO_COMPILATION_ERROR_FILE', 'SM_NEO_CACHE_DIR'"
+            f"\nRequired env vars are: 'SM_NEO_INPUT_MODEL_DIR', 'SM_NEO_COMPILED_MODEL_DIR',"
+            f" 'SM_NEO_COMPILATION_ERROR_FILE'"
         )
-
-
-def get_neo_compiler_flags(compiler_options):
-    """
-    Get SageMaker Neo compiler_flags from the CompilerOptions field
-    """
-    try:
-        # CompilerOptions JSON will always be present, but compiler_flags key is optional
-        compiler_options = json.loads(compiler_options)
-        logging.info(f"Parsing CompilerOptions: {compiler_options}")
-        if not isinstance(compiler_options, dict):
-            raise ValueError("Parsed JSON is not a dictionary")
-        return compiler_options.get("compiler_flags")
-    except Exception as exc:
-        raise InputConfiguration(
-            f"Failed to parse SageMaker Neo CompilerOptions: {exc}")
 
 
 def load_jumpstart_metadata(path: str) -> dict:
@@ -87,3 +67,13 @@ def load_jumpstart_metadata(path: str) -> dict:
             js_metadata["script_info"] = json.load(file)
 
     return js_metadata
+
+
+def update_dataset_cache_location(hf_cache_location):
+    logging.info(
+        f"Updating HuggingFace Datasets cache directory to: {hf_cache_location}"
+    )
+    if not os.path.isdir(hf_cache_location):
+        raise InputConfiguration("Provided HF cache directory is invalid")
+    os.environ['HF_DATASETS_CACHE'] = hf_cache_location
+    #os.environ['HF_DATASETS_OFFLINE'] = "1"
