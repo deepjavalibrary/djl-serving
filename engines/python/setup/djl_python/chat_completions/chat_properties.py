@@ -114,6 +114,7 @@ class ChatProperties(BaseModel):
     temperature: Optional[float] = 1.0
     top_p: Optional[float] = 1.0
     user: Optional[str] = Field(default=None, exclude=True)
+    ignore_eos: bool = False
 
     @field_validator('frequency_penalty', mode='before')
     def validate_frequency_penalty(

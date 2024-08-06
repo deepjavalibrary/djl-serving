@@ -10,11 +10,27 @@ from argparse import ArgumentParser
 import numpy as np
 
 ROLE = "arn:aws:iam::185921645874:role/AmazonSageMaker-ExeuctionRole-IntegrationTests"
-DEFAULT_SME_INSTANCE_TYPE = "ml.g5.12xlarge"
+DEFAULT_SME_INSTANCE_TYPE = "ml.g6.12xlarge"
+# TODO: change to g6 once quota increase approved
 DEFAULT_MME_INSTANCE_TYPE = "ml.g5.8xlarge"
 DEFAULT_PAYLOAD = {"inputs": "Deep Learning is"}
 DEFAULT_BUCKET = "sm-integration-tests-rubikon-usw2"
 REGION = "us-west-2"
+DEFAULT_MULTIMODAL_PAYLOAD = {
+    "messages": [{
+        "role":
+        "user",
+        "content": [{
+            "type": "text",
+            "text": "What is this image of?"
+        }, {
+            "type": "image_url",
+            "image_url": {
+                "url": "https://resources.djl.ai/images/dog_bike_car.jpg"
+            }
+        }]
+    }]
+}
 
 NIGHTLY_IMAGES = {
     "lmi":
@@ -52,8 +68,18 @@ SINGLE_MODEL_ENDPOINT_CONFIGS = {
     "phi-2": {
         "model_name": "phi2",
         "env": {
-            "HF_MODEL_ID": "microsoft/phi-2"
+            "HF_MODEL_ID": "microsoft/phi-2",
+            "TENSOR_PARALLEL_DEGREE": "1",
         }
+    },
+    # This test validates VLM support with OpenAI Chat Completions Schema
+    "llava-v1.6": {
+        "model_name": "llava-1.6",
+        "env": {
+            "HF_MODEL_ID":
+            "s3://djl-llm-sm-endpoint-tests/llava-v1.6-mistral-7b-hf/"
+        },
+        "payload": DEFAULT_MULTIMODAL_PAYLOAD,
     }
 }
 

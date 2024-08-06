@@ -34,6 +34,7 @@ Request Body Fields:
 | `temperature`       | float                        | no       | Float number between 0.0 and 2.0.         |
 | `top_p`             | float                        | no       | Float number.                             |
 | `user`              | string                       | no       | example: "test"                           |
+| `ignore_eos`        | boolean                      | no       | `true`, `false` (default)                 |
 
 Example request using curl
 
