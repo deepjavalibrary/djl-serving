@@ -89,7 +89,7 @@ public final class LmiUtils {
         return false;
     }
 
-    static boolean needConvert(ModelInfo<?, ?> info) {
+    static boolean needConvertTrtLLM(ModelInfo<?, ?> info) {
         Properties properties = info.getProperties();
         return isTrtLlmRollingBatch(properties);
     }
@@ -131,14 +131,16 @@ public final class LmiUtils {
         }
     }
 
-    static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
+    static boolean needConvertOnnx(ModelInfo<?, ?> info) {
         String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
-        if (Files.isDirectory(info.modelDir)
-                || Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
-                || Files.isRegularFile(info.modelDir.resolve("model.onnx"))) {
-            return;
-        }
+        // modelDir could be file:///model.onnx
+        return !Files.isRegularFile(info.modelDir)
+                && !prefix.endsWith(".onnx")
+                && !Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
+                && !Files.isRegularFile(info.modelDir.resolve("model.onnx"));
+    }
 
+    static void convertOnnxModel(ModelInfo<?, ?> info) throws IOException {
         Path repo;
         String modelId = null;
         if (info.downloadDir != null) {
@@ -159,7 +161,6 @@ public final class LmiUtils {
     }
 
     private static Path convertOnnx(String modelId, String optimization) throws IOException {
-        logger.info("Converting model to onnx artifacts");
         String hash = Utils.hash(modelId);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
@@ -169,8 +170,7 @@ public final class LmiUtils {
             return repoDir;
         }
 
-        Engine onnx = Engine.getEngine("OnnxRuntime");
-        boolean hasCuda = onnx.getGpuCount() > 0;
+        boolean hasCuda = CudaUtils.getGpuCount() > 0;
         if (optimization == null || optimization.isBlank()) {
             optimization = hasCuda ? "O4" : "O2";
         } else if (!optimization.matches("O\\d")) {
@@ -192,6 +192,8 @@ public final class LmiUtils {
         };
         boolean success = false;
         try {
+            logger.info("Converting model to onnx artifacts: {}", (Object) cmd);
+
             Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
             try (BufferedReader reader =
                     new BufferedReader(
@@ -217,7 +219,7 @@ public final class LmiUtils {
         }
     }
 
-    static boolean rustNeedConvert(ModelInfo<?, ?> info) {
+    static boolean needConvertRust(ModelInfo<?, ?> info) {
         return !Files.isRegularFile(info.modelDir.resolve("model.safetensors"))
                 && (info.downloadDir == null
                         || !Files.isRegularFile(info.downloadDir.resolve("model.safetensors")));
@@ -226,11 +228,10 @@ public final class LmiUtils {
     static void convertRustModel(ModelInfo<?, ?> info) throws IOException {
         String modelId = info.prop.getProperty("option.model_id");
         if (modelId == null) {
-            logger.info("model_id must exist to convert rust artifacts");
+            logger.info("model_id not defined, skip rust model conversion.");
             return;
         }
 
-        logger.info("Converting model to rust artifacts");
         String hash = Utils.hash(modelId);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
@@ -252,6 +253,8 @@ public final class LmiUtils {
         };
         boolean success = false;
         try {
+            logger.info("Converting model to rust artifacts: {}", (Object) cmd);
+
             Process exec = new ProcessBuilder(cmd).redirectErrorStream(true).start();
             try (BufferedReader reader =
                     new BufferedReader(
