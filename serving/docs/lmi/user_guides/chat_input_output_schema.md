@@ -1,12 +1,16 @@
 # Chat Completions API Schema
 
 This document describes the API schema for the chat completions endpoints (`v1/chat/completions`) when using the built-in inference handlers in LMI containers.
-This schema is applicable to our latest release, v0.28.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
-Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.27.0-dlc).
+This schema is applicable to our latest release, v0.29.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
+Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.28.0-dlc).
 
 On SageMaker, Chat Completions API schema is supported with the `/invocations` endpoint without additional configurations.
 If the request contains the "messages" field, LMI will treat the request as a chat completions style request, and respond
 back with the chat completions response style.
+
+When using the Chat Completions Schema, you should make sure that the model you are serving has a chat template.
+The chat template ensures that the messages object is tokenized appropriately for your model.
+See [the HuggingFace documentation on chat templates](https://huggingface.co/docs/transformers/main/en/chat_templating) for more information.
 
 This processing happens per request, meaning that you can support our [standard schema](lmi_input_output_schema.md),
 as well as chat completions schema in the same endpoint.
@@ -139,6 +143,8 @@ Example:
     "content":"You are a helpful assistant."
 }
 ```
+
+#### Vision/Image Support
 
 Starting in v0.29.0, we have added experimental support for vision language models. 
 You can specify an image as part of the content when using a vision language model.

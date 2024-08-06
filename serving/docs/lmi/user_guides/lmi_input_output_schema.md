@@ -103,10 +103,21 @@ data:{
 
 #### Error Responses
 
-When rolling batch is enabled, errors are returned with HTTP response code 200.
-Error details are returned in the response content.
+Errors can typically happen in 2 places:
 
-If the request is poorly formatted (i.e. invalid json in the request body), the response content will be:
+- Before inference has started
+- During token generation (in the middle of inference)
+
+For both streaming and non-streaming responses, errors that occur before inference has started will return the appropriate 4XX or 5XX HTTP status code.
+
+If an error occurs during inference, then the behavior differs between streaming and non-streaming use-cases:
+
+- streaming responses will return an HTTP status code of 200 upon the first token generated and returned to the client
+- non-streaming responses will return the appropriate 4XX or 5XX HTTP status code
+
+The response payload for errors is described for various scenarios.
+
+If there is an issue with payload validation, then the response details are:
 
 ```
 {

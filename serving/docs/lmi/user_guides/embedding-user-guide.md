@@ -71,46 +71,34 @@ This example will use the [BAAI/bge-base-en-v1.5](https://huggingface.co/BAAI/bg
 ```python
 # Assumes SageMaker Python SDK is installed. For example: "pip install sagemaker"
 import sagemaker
-from sagemaker import Model, image_uris, serializers, deserializers
+from sagemaker.djl_inference import DJLModel
 
 # Setup role and sagemaker session
 role = sagemaker.get_execution_role()  # execution role for the endpoint
 session = sagemaker.session.Session()  # sagemaker session for interacting with different AWS APIs
 
-# Fetch the uri of the LMI container
-image_uri = image_uris.retrieve(
-    framework="djl-lmi",
-    region=session.boto_session.region_name,
-    version="0.28.0"
-)
-
 # Create the SageMaker Model object.
 model_id = "BAAI/bge-base-en-v1.5"
 
 env = {
-    "HF_MODEL_ID": model_id,
-    "OPTION_ENGINE": "OnnxRuntime",
     "SERVING_MIN_WORKERS": "1", # make sure min and max Workers are equals when deploy model on GPU
     "SERVING_MAX_WORKERS": "1",
 }
 
-model = Model(image_uri=image_uri, env=env, role=role)
+model = DJLModel(
+    model_id=model_id,
+    task="text-embedding",
+    env=env,
+)
 
 # Deploy your model to a SageMaker Endpoint and create a Predictor to make inference requests
 instance_type = "ml.g4dn.2xlarge"
 endpoint_name = sagemaker.utils.name_from_base("lmi-text-embedding")
 
-model.deploy(initial_instance_count=1,
+predictor = model.deploy(initial_instance_count=1,
              instance_type=instance_type,
              endpoint_name=endpoint_name,
              )
-
-predictor = sagemaker.Predictor(
-    endpoint_name=endpoint_name,
-    sagemaker_session=session,
-    serializer=serializers.JSONSerializer(),
-    deserializer=deserializers.JSONDeserializer(),
-)
 
 # Make an inference request against the endpoint
 predictor.predict(
