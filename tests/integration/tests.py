@@ -853,6 +853,20 @@ class TestCorrectnessTrtLlm:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("correctness trtllm-meta-llama3-8b-fp8".split())
 
+    def test_mistral_7b(self):
+        with Runner('tensorrt-llm', 'mistral-7b') as r:
+            prepare.build_correctness_model("trtllm-mistral-7b-instruct-v0.3")
+            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
+            client.run("correctness trtllm-mistral-7b-instruct-v0.3".split())
+
+    def test_mistral_7b_fp8(self):
+        with Runner('tensorrt-llm', 'mistral-7b') as r:
+            prepare.build_correctness_model(
+                "trtllm-mistral-7b-instruct-v0.3-fp8")
+            r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
+            client.run(
+                "correctness trtllm-mistral-7b-instruct-v0.3-fp8".split())
+
 
 @pytest.mark.correctness
 @pytest.mark.lmi_dist

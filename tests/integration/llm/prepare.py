@@ -946,6 +946,21 @@ correctness_model_list = {
         "option.rolling_batch": "trtllm",
         "option.tensor_parallel_degree": 4,
         "option.quantize": "fp8"
+    },
+    "trtllm-mistral-7b-instruct-v0.3": {
+        "engine": "Python",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
+        "option.rolling_batch": "trtllm",
+        "option.tensor_parallel_degree": 4
+    },
+    "trtllm-mistral-7b-instruct-v0.3-fp8": {
+        "engine": "Python",
+        "option.task": "text-generation",
+        "option.model_id": "s3://djl-llm/mistral-7b-instruct-v03/",
+        "option.rolling_batch": "trtllm",
+        "option.tensor_parallel_degree": 4,
+        "option.quantize": "fp8"
     }
 }
 
