@@ -19,7 +19,7 @@ from typing import Final
 from utils import (update_kwargs_with_env_vars, load_properties,
                    remove_option_from_properties)
 from sm_neo_utils import (CompilationFatalError, write_error_to_file,
-                   update_dataset_cache_location, get_neo_env_vars)
+                          update_dataset_cache_location, get_neo_env_vars)
 from tensorrt_llm_toolkit import create_model_repo
 
 
@@ -29,10 +29,14 @@ class NeoTRTLLMPartitionService():
         self.properties: dict = {}
 
         neo_environ = get_neo_env_vars()
-        self.INPUT_MODEL_DIRECTORY: Final[str] = neo_environ["SM_NEO_INPUT_MODEL_DIR"]
-        self.OUTPUT_MODEL_DIRECTORY: Final[str] = neo_environ["SM_NEO_COMPILED_MODEL_DIR"]
-        self.COMPILATION_ERROR_FILE: Final[str] = neo_environ["SM_NEO_COMPILATION_ERROR_FILE"]
-        self.COMPILER_CACHE_LOCATION: Final[str] = neo_environ["SM_NEO_CACHE_DIR"]
+        self.INPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_INPUT_MODEL_DIR"]
+        self.OUTPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_COMPILED_MODEL_DIR"]
+        self.COMPILATION_ERROR_FILE: Final[str] = neo_environ[
+            "SM_NEO_COMPILATION_ERROR_FILE"]
+        self.COMPILER_CACHE_LOCATION: Final[str] = neo_environ[
+            "SM_NEO_CACHE_DIR"]
         self.HF_CACHE_LOCATION: Final[str] = neo_environ["SM_NEO_HF_CACHE_DIR"]
 
     def run_partition(self):

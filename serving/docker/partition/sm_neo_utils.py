@@ -33,18 +33,21 @@ def get_neo_env_vars():
     """
     neo_environ = {}
     try:
-        neo_environ["SM_NEO_INPUT_MODEL_DIR"] = os.environ["SM_NEO_INPUT_MODEL_DIR"]
-        neo_environ["SM_NEO_COMPILED_MODEL_DIR"] = os.environ["SM_NEO_COMPILED_MODEL_DIR"]
-        neo_environ["SM_NEO_COMPILATION_ERROR_FILE"] = os.environ["SM_NEO_COMPILATION_ERROR_FILE"]
+        neo_environ["SM_NEO_INPUT_MODEL_DIR"] = os.environ[
+            "SM_NEO_INPUT_MODEL_DIR"]
+        neo_environ["SM_NEO_COMPILED_MODEL_DIR"] = os.environ[
+            "SM_NEO_COMPILED_MODEL_DIR"]
+        neo_environ["SM_NEO_COMPILATION_ERROR_FILE"] = os.environ[
+            "SM_NEO_COMPILATION_ERROR_FILE"]
         neo_environ["SM_NEO_CACHE_DIR"] = os.environ.get("SM_NEO_CACHE_DIR")
-        neo_environ["SM_NEO_HF_CACHE_DIR"] = os.environ.get("SM_NEO_HF_CACHE_DIR")
+        neo_environ["SM_NEO_HF_CACHE_DIR"] = os.environ.get(
+            "SM_NEO_HF_CACHE_DIR")
         return neo_environ
     except KeyError as exc:
         raise InputConfiguration(
             f"SageMaker Neo environment variable '{exc.args[0]}' expected but not found"
             f"\nRequired env vars are: 'SM_NEO_INPUT_MODEL_DIR', 'SM_NEO_COMPILED_MODEL_DIR',"
-            f" 'SM_NEO_COMPILATION_ERROR_FILE'"
-        )
+            f" 'SM_NEO_COMPILATION_ERROR_FILE'")
 
 
 def load_jumpstart_metadata(path: str) -> dict:

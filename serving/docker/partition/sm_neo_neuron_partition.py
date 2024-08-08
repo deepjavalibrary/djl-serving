@@ -155,10 +155,14 @@ class NeoNeuronPartitionService():
         self.compiler_interface: str = None
 
         neo_environ = get_neo_env_vars()
-        self.INPUT_MODEL_DIRECTORY: Final[str] = neo_environ["SM_NEO_INPUT_MODEL_DIR"]
-        self.OUTPUT_MODEL_DIRECTORY: Final[str] = neo_environ["SM_NEO_COMPILED_MODEL_DIR"]
-        self.COMPILATION_ERROR_FILE: Final[str] = neo_environ["SM_NEO_COMPILATION_ERROR_FILE"]
-        self.COMPILER_CACHE_LOCATION: Final[str] = neo_environ["SM_NEO_CACHE_DIR"]
+        self.INPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_INPUT_MODEL_DIR"]
+        self.OUTPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_COMPILED_MODEL_DIR"]
+        self.COMPILATION_ERROR_FILE: Final[str] = neo_environ[
+            "SM_NEO_COMPILATION_ERROR_FILE"]
+        self.COMPILER_CACHE_LOCATION: Final[str] = neo_environ[
+            "SM_NEO_CACHE_DIR"]
         # Specific to Neuron compilation
         self.CACHE_JUMPSTART_FORMAT: Final[str] = os.environ.get(
             "SM_CACHE_JUMPSTART_FORMAT", "false")
@@ -281,7 +285,8 @@ class NeoNeuronPartitionService():
     def neo_partition(self):
         self.update_neuron_cache_location()
         self.initialize_partition_args_namespace()
-        logging.info("Reading compiler options from provided serving.properties file")
+        logging.info(
+            "Reading compiler options from provided serving.properties file")
         self.construct_properties_manager_from_serving_properties()
         logging.info(f"Model options: {self.properties_manager.properties}")
         partition_output = self.run_partition()

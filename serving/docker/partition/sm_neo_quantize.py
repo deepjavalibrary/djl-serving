@@ -20,7 +20,8 @@ import torch
 import json
 
 from sm_neo_utils import (CompilationFatalError, InputConfiguration,
-                          write_error_to_file, get_neo_env_vars, update_dataset_cache_location)
+                          write_error_to_file, get_neo_env_vars,
+                          update_dataset_cache_location)
 from utils import (extract_python_jar, load_properties)
 from properties_manager import PropertiesManager
 from partition import PartitionService
@@ -37,9 +38,12 @@ class NeoQuantizationService():
         self.compiler_flags: dict = None
 
         neo_environ = get_neo_env_vars()
-        self.INPUT_MODEL_DIRECTORY: Final[str] = neo_environ["SM_NEO_INPUT_MODEL_DIR"]
-        self.OUTPUT_MODEL_DIRECTORY: Final[str] = neo_environ["SM_NEO_COMPILED_MODEL_DIR"]
-        self.COMPILATION_ERROR_FILE: Final[str] = neo_environ["SM_NEO_COMPILATION_ERROR_FILE"]
+        self.INPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_INPUT_MODEL_DIR"]
+        self.OUTPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_COMPILED_MODEL_DIR"]
+        self.COMPILATION_ERROR_FILE: Final[str] = neo_environ[
+            "SM_NEO_COMPILATION_ERROR_FILE"]
         self.HF_CACHE_LOCATION: Final[str] = neo_environ["SM_NEO_HF_CACHE_DIR"]
 
         self.customer_properties: dict = load_properties(

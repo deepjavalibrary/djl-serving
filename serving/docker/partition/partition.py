@@ -27,7 +27,8 @@ from huggingface_hub import snapshot_download
 from datasets import load_dataset
 
 from utils import (get_partition_cmd, extract_python_jar,
-                   get_python_executable, get_download_dir, load_hf_config_and_tokenizer)
+                   get_python_executable, get_download_dir,
+                   load_hf_config_and_tokenizer)
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -207,7 +208,8 @@ class PartitionService(object):
             self.cleanup()
             return partition_stdout
         else:
-            logging.error(f"Partitioning was not successful: {partition_stderr}")
+            logging.error(
+                f"Partitioning was not successful: {partition_stderr}")
             raise Exception(partition_stderr)
 
     def load_the_generated_checkpoints(self):
