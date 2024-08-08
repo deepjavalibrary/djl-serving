@@ -41,6 +41,9 @@ class Token(object):
         self.request_id = None
         self.error_msg = error_msg
 
+    def __repr__(self):
+        return f"Token({self.as_dict()})"
+
     def as_dict(self):
         output = {"id": self.id, "text": self.text, "log_prob": self.log_prob}
         if self.special_token:
@@ -60,6 +63,9 @@ class Iterator:
 
     def __init__(self):
         self._index = 0
+
+    def __repr__(self):
+        return f"Iterator(_index={self._index})"
 
     def get_index(self):
         return self._index
