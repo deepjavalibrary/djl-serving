@@ -124,7 +124,7 @@ class NeoNeuronCacheManager():
         /neuronxcc-2.13.68.0+6dfecc895/<Module folders>
         """
         try:
-            jumpstart_model_id = jumpstart_metadata["model_info"]["model_id"]
+            jumpstart_model_id = jumpstart_metadata["model_info"]["ModelId"]
             jumpstart_model_scope = jumpstart_metadata["script_info"]["Scope"]
         except KeyError as key:
             logging.warning(
@@ -264,7 +264,10 @@ class NeoNeuronPartitionService():
 
     def copy_input_files_to_output(self):
         """
-        Copies inputted files to output so that custom entrypoints or requirements files are preserved.
+        Copies input model files to output directory. Compilation outputs are
+        saved in a subdirectory of the output directory, and the generated
+        serving.properties sets the model location to the subdirectory.
+        This is done so that that custom entrypoints or requirements.txt files are preserved.
 
         TODO: Avoid making redundant copies of model weights.
         """
@@ -291,6 +294,8 @@ class NeoNeuronPartitionService():
         logging.info(f"Model options: {self.properties_manager.properties}")
         partition_output = self.run_partition()
 
+        self.copy_input_files_to_output()
+
         if self.CACHE_JUMPSTART_FORMAT.lower() == 'true':
             logging.info("JumpStart cache environment variable is set")
             if self.jumpstart_metadata:
@@ -303,8 +308,6 @@ class NeoNeuronPartitionService():
                     self.OUTPUT_MODEL_DIRECTORY)
                 cache_manager.create_jumpstart_neuron_cache_in_cache_dir(
                     self.jumpstart_metadata)
-
-        self.copy_input_files_to_output()
 
 
 def main():
