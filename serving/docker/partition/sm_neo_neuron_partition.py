@@ -219,9 +219,7 @@ class NeoNeuronPartitionService():
         try:
             return partition_service.run_partition()
         except Exception as exc:
-            raise CompilationFatalError(
-                f"Encountered an error during Transformers-NeuronX compilation: {exc}"
-            )
+            raise CompilationFatalError(str(exc))
 
     def write_properties(self) -> str:
         """

@@ -27,8 +27,7 @@ from huggingface_hub import snapshot_download
 from datasets import load_dataset
 
 from utils import (get_partition_cmd, extract_python_jar,
-                   get_python_executable, get_download_dir, init_hf_tokenizer,
-                   remove_option_from_properties, load_hf_config_and_tokenizer)
+                   get_python_executable, get_download_dir, load_hf_config_and_tokenizer)
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
 
@@ -181,14 +180,20 @@ class PartitionService(object):
         logging.info(f"cmd: {commands}")
         self.set_environmental_vars()
         partition_stdout = ""
+        partition_stderr = ""
         # Use Popen to capture stdout without delaying terminal output
         with subprocess.Popen(commands,
                               stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
                               bufsize=1,
-                              universal_newlines=True) as proc:
+                              text=True) as proc:
             for line in proc.stdout:
                 partition_stdout += line
                 print(line, end='')
+            # Exception is the last line of stderr
+            for line in proc.stderr:
+                pass
+            partition_stderr = line
         logging.info(proc)
         if proc.returncode == 0:
             logging.info("Partitioning done.")
@@ -202,7 +207,8 @@ class PartitionService(object):
             self.cleanup()
             return partition_stdout
         else:
-            raise Exception("Partitioning was not successful.")
+            logging.error(f"Partitioning was not successful: {partition_stderr}")
+            raise Exception(partition_stderr)
 
     def load_the_generated_checkpoints(self):
         if self.properties['engine'] == 'DeepSpeed':
