@@ -13,8 +13,6 @@ import djl_python
 from djl_python.output_formatter import _json_output_formatter
 from djl_python.request import Request
 from djl_python.request_io import TextGenerationOutput, TextInput, Sequence, Token, RequestInput
-import djl_python.rolling_batch
-
 '''These Mock classes are in compliance with vllm RequestOutput version 0.5.3.post1'''
 
 
