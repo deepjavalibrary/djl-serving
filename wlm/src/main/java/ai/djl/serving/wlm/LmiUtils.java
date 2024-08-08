@@ -340,7 +340,11 @@ public final class LmiUtils {
                 is.transferTo(OutputStream.nullOutputStream());
                 return configUri;
             } catch (IOException e) {
-                logger.warn("Hub config file {} does not exist for model {}.", configFile, modelId);
+                logger.warn(
+                        "Failed to get config file {} for model {}, {}",
+                        configFile,
+                        modelId,
+                        e.getMessage());
             }
         }
         return null;
