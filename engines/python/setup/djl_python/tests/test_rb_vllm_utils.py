@@ -603,13 +603,13 @@ class TestVllmUtils(unittest.TestCase):
                             token, actual_sequence.top_tokens[top_tokens_index]
                             [token_index]))
 
-    @mock.patch(
-        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
-        new=MockRequestOutput)
     @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
     def test_chunked_prefill_prompt_logprobs(self):
         tokenizer = AutoTokenizer.from_pretrained("gpt2")
         parameters = {
@@ -657,13 +657,13 @@ class TestVllmUtils(unittest.TestCase):
         self.assertEqual(repr(expected_sequences),
                          repr(req.request_output.sequences))
 
-    @mock.patch(
-        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
-        new=MockRequestOutput)
     @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
     @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
     def test_chunked_prefill(self):
         tokenizer = AutoTokenizer.from_pretrained("gpt2")
         parameters = {
