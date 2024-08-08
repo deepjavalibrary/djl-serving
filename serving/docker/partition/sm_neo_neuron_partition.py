@@ -18,6 +18,7 @@ from types import SimpleNamespace
 from typing import Final, Optional
 import re
 import shutil
+import json
 
 from sm_neo_utils import (InputConfiguration, CompilationFatalError,
                           write_error_to_file, get_neo_env_vars,
@@ -280,9 +281,36 @@ class NeoNeuronPartitionService():
                 if os.path.abspath(entry.path) != optimized_model_dir:
                     shutil.move(entry.path, optimized_model_dir)
 
+        # use safetensors index to determine which weights to skip copying
+        ignore_fun = None
+        try:
+            safetensors_index_file = os.path.join(
+                self.INPUT_MODEL_DIRECTORY, "model.safetensors.index.json")
+            # build the set of weight files to ignore
+            weight_files = set()
+            with open(safetensors_index_file) as f:
+                index = json.load(f)
+                for k, v in index["weight_map"].items():
+                    weight_files.add(v)
+            # function passed to copytree that ignores all matching weight files in the
+            # root input directory
+            def _ignore_fun(directory, files):
+                ignore = []
+                if os.path.abspath(directory) == os.path.abspath(
+                        self.INPUT_MODEL_DIRECTORY):
+                    ignore = [f for f in files if f in weight_files]
+                return ignore
+
+            ignore_fun = _ignore_fun
+        except OSError:
+            logging.info(
+                "model.safetensors.index.json not found. Full model weights will be copied to output."
+            )
+
         shutil.copytree(self.INPUT_MODEL_DIRECTORY,
                         self.OUTPUT_MODEL_DIRECTORY,
-                        dirs_exist_ok=True)
+                        dirs_exist_ok=True,
+                        ignore=ignore_fun)
         self.write_properties()
 
     def neo_partition(self):
