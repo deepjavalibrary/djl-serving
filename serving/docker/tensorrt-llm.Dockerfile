@@ -93,7 +93,7 @@ RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     curl -o /opt/tritonserver/lib/libtritonserver.so https://publish.djl.ai/tritonserver/${triton_version}/libtritonserver.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm.so && \
     curl -o /opt/tritonserver/backends/tensorrtllm/libtriton_tensorrtllm_common.so https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libtriton_tensorrtllm_common.so && \
-    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.9 https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libnvinfer_plugin_tensorrt_llm.so.9 && \
+    curl -o /opt/tritonserver/lib/libnvinfer_plugin_tensorrt_llm.so.10 https://publish.djl.ai/tensorrt-llm/${trtllm_version}/libnvinfer_plugin_tensorrt_llm.so.10 && \
     pip3 cache purge && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
