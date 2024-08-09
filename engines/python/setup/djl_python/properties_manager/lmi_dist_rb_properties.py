@@ -36,8 +36,8 @@ class LmiDistRbProperties(Properties):
     dtype: Optional[str] = "auto"
     load_format: Optional[str] = "auto"
     quantize: Optional[LmiDistQuantizeMethods] = None
-    tensor_parallel_degree: Optional[int] = None
-    pipeline_parallel_degree: Optional[int] = None
+    tensor_parallel_degree: int = 1
+    pipeline_parallel_degree: int = 1
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
