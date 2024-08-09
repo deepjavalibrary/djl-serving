@@ -11,8 +11,8 @@ class InputConfiguration(Exception):
     """Raise when SageMaker Neo interface expectation is not met"""
 
 
-class CompilationFatalError(Exception):
-    """Raise for errors encountered during the TensorRT-LLM build process"""
+class OptimizationFatalError(Exception):
+    """Raise for errors encountered during Neo model optimization jobs"""
 
 
 def write_error_to_file(error_message, error_file):

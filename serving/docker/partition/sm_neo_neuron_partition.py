@@ -20,7 +20,7 @@ import re
 import shutil
 import json
 
-from sm_neo_utils import (InputConfiguration, CompilationFatalError,
+from sm_neo_utils import (InputConfiguration, OptimizationFatalError,
                           write_error_to_file, get_neo_env_vars,
                           load_jumpstart_metadata)
 from utils import extract_python_jar, load_properties
@@ -224,7 +224,7 @@ class NeoNeuronPartitionService():
         try:
             return partition_service.run_partition()
         except Exception as exc:
-            raise CompilationFatalError(str(exc))
+            raise OptimizationFatalError(str(exc))
 
     def write_properties(self) -> str:
         """

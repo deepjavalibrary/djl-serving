@@ -19,7 +19,7 @@ from typing import Final
 import torch
 import json
 
-from sm_neo_utils import (CompilationFatalError, InputConfiguration,
+from sm_neo_utils import (OptimizationFatalError, InputConfiguration,
                           write_error_to_file, get_neo_env_vars,
                           update_dataset_cache_location)
 from utils import (extract_python_jar, load_properties)
@@ -104,7 +104,7 @@ class NeoQuantizationService():
         try:
             return partition_service.run_quantization(self.autofp8_config)
         except Exception as exc:
-            raise CompilationFatalError(
+            raise OptimizationFatalError(
                 f"Encountered an error during quantization: {exc}")
 
     def write_properties(self):

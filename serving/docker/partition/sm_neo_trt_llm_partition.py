@@ -18,7 +18,7 @@ from typing import Final
 
 from utils import (update_kwargs_with_env_vars, load_properties,
                    remove_option_from_properties)
-from sm_neo_utils import (CompilationFatalError, write_error_to_file,
+from sm_neo_utils import (OptimizationFatalError, write_error_to_file,
                           update_dataset_cache_location, get_neo_env_vars)
 from tensorrt_llm_toolkit import create_model_repo
 
@@ -48,7 +48,7 @@ class NeoTRTLLMPartitionService():
         try:
             create_model_repo(self.INPUT_MODEL_DIRECTORY, **kwargs)
         except Exception as exc:
-            raise CompilationFatalError(
+            raise OptimizationFatalError(
                 f"Encountered an error during TRT-LLM compilation: {exc}")
 
     def get_properties(self):
