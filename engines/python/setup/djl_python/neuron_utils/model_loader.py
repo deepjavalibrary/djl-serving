@@ -139,8 +139,11 @@ class TNXModelLoader(ModelLoader):
         self._neuronx_class = self.set_neuronx_class()
 
     def set_neuronx_class(self):
-        module_name, class_name = self.MODEL_TYPE_TO_CLS_LOADER[
-            self.model_config.model_type].rsplit(".", maxsplit=1)
+        try:
+            module_name, class_name = self.MODEL_TYPE_TO_CLS_LOADER[
+                self.model_config.model_type].rsplit(".", maxsplit=1)
+        except KeyError as exc:
+            raise KeyError(f"Unsupported model: {str(exc)}")
         module = importlib.import_module(f"transformers_neuronx.{module_name}")
         neuronx_class = getattr(module, class_name, None)
         if neuronx_class is None:

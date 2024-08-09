@@ -37,8 +37,8 @@ def invoke_partition(properties):
                                            properties['entryPoint'], None)
         model_service.invoke_handler(handler, inputs)
     except Exception as e:
-        logging.exception(f"Partitioning failed {str(e)}")
-        raise Exception("Partitioning failed.")
+        logging.exception(f"Partitioning failed: {str(e)}")
+        raise e
 
 
 def main():
