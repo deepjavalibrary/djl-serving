@@ -51,6 +51,12 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     if is_beam_search(parameters) and not vllm_request_output.finished:
         return request_cache
 
+    # Prefill is complete if any of the outputs have token_ids set
+    prefill_is_complete = any(
+        (output.token_ids for output in vllm_request_output.outputs))
+    if not prefill_is_complete:
+        return request_cache
+
     # sets prompt token details if not set
     if not request_output.prompt_tokens_details:
         # TODO: Temp check adding the check fo T5.

@@ -13,7 +13,7 @@ import djl_python
 from djl_python.output_formatter import _json_output_formatter
 from djl_python.request import Request
 from djl_python.request_io import TextGenerationOutput, TextInput, Sequence, Token, RequestInput
-'''These Mock classes are in compliance with vllm RequestOutput version 0.4.2'''
+'''These Mock classes are in compliance with vllm RequestOutput version 0.5.3.post1'''
 
 
 @dataclass
@@ -339,6 +339,51 @@ example_request_output = [
         finished=True)
 ]
 
+example_chunked_prefill_prompt_logprobs_request_output = [
+    MockRequestOutput(request_id="test_chunked_request_id",
+                      prompt="I am a",
+                      prompt_token_ids=[1, 315, 837, 264],
+                      prompt_logprobs=[
+                          None, {
+                              315:
+                              MockLogprob(logprob=-4.37,
+                                          rank=8,
+                                          decoded_token='I'),
+                              422:
+                              MockLogprob(logprob=-1.25,
+                                          rank=1,
+                                          decoded_token='#')
+                          }
+                      ],
+                      outputs=[
+                          MockCompletionOutput(index=0,
+                                               text='',
+                                               token_ids=[],
+                                               cumulative_logprob=0.0,
+                                               logprobs=[],
+                                               finish_reason=None,
+                                               stop_reason=None)
+                      ],
+                      finished=False),
+]
+
+example_chunked_prefill_request_output = [
+    MockRequestOutput(request_id="test_chunked_request_id",
+                      prompt="I am a",
+                      prompt_token_ids=[1, 315, 837, 264],
+                      prompt_logprobs=None,
+                      outputs=[
+                          MockCompletionOutput(index=0,
+                                               text='',
+                                               token_ids=[],
+                                               cumulative_logprob=0.0,
+                                               logprobs=[],
+                                               finish_reason=None,
+                                               stop_reason=None)
+                      ],
+                      finished=False),
+]
+
 
 def _compare_tokens(expected_token, actual_token):
     return expected_token.id == actual_token.id and expected_token.text == actual_token.text and \
@@ -348,14 +393,13 @@ def _compare_tokens(expected_token, actual_token):
 
 class TestVllmUtils(unittest.TestCase):
 
-    def setUp(self):
-        sys.modules['vllm'] = MagicMock()
-        sys.modules['vllm.outputs'] = MagicMock()
-        sys.modules['vllm.lora.request'] = MagicMock()
-
     @mock.patch(
         'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
         new=MockRequestOutput)
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
     def test_multiple_sequences(self):
         tokenizer = AutoTokenizer.from_pretrained("gpt2")
         parameters = {
@@ -366,6 +410,8 @@ class TestVllmUtils(unittest.TestCase):
             "n": 2,
             "top_n_tokens": 3
         }
+        server_parameters = parameters.copy()
+        server_parameters.pop("details")
 
         request_input = TextInput(request_id=0,
                                   input_text="I am a",
@@ -374,15 +420,19 @@ class TestVllmUtils(unittest.TestCase):
         # 1. Creates the request
         req = Request(request_input)
         self.assertEqual(
-            TextGenerationOutput(request_id=0,
-                                 input=TextInput(
-                                     request_id=0,
-                                     input_text="I am a",
-                                     parameters=parameters,
-                                     output_formatter=_json_output_formatter,
-                                     tokenizer=tokenizer),
-                                 sequences={},
-                                 finished=False), req.request_output)
+            repr(
+                TextGenerationOutput(
+                    request_id=0,
+                    input=TextInput(
+                        request_id=0,
+                        input_text="I am a",
+                        parameters=parameters,
+                        server_parameters=server_parameters,
+                        output_formatter=_json_output_formatter,
+                        tokenizer=tokenizer,
+                    ),
+                    sequences={},
+                    finished=False)), repr(req.request_output))
 
         # 2. Creates the request cache
         mock_request_cache = OrderedDict(
@@ -550,3 +600,113 @@ class TestVllmUtils(unittest.TestCase):
                         _compare_tokens(
                             token, actual_sequence.top_tokens[top_tokens_index]
                             [token_index]))
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
+    def test_chunked_prefill_prompt_logprobs(self):
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        parameters = {
+            "max_new_tokens": 3,
+            "details": True,
+            "decoder_input_details": True,
+        }
+        server_parameters = parameters.copy()
+        server_parameters.pop("details", None)
+
+        request_input = TextInput(request_id=0,
+                                  input_text="I am a",
+                                  parameters=parameters.copy(),
+                                  tokenizer=tokenizer)
+        # 1. Creates the request
+        req = Request(request_input)
+        self.assertEqual(
+            repr(
+                TextGenerationOutput(
+                    request_id=0,
+                    input=TextInput(
+                        request_id=0,
+                        input_text="I am a",
+                        parameters=parameters,
+                        server_parameters=server_parameters,
+                        output_formatter=_json_output_formatter,
+                        tokenizer=tokenizer,
+                    ),
+                    sequences={},
+                    finished=False)), repr(req.request_output))
+
+        # 2. Creates the request cache
+        mock_request_cache = OrderedDict({
+            "test_chunked_request_id": {
+                "request_output": req.request_output
+            }
+        })
+
+        # Test update_request_cache_with_output
+        for vllm_request_output in example_chunked_prefill_prompt_logprobs_request_output:
+            djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
+                mock_request_cache, vllm_request_output, tokenizer)
+
+        expected_sequences = {0: Sequence()}
+        self.assertEqual(repr(expected_sequences),
+                         repr(req.request_output.sequences))
+
+    @mock.patch.dict(sys.modules, {'vllm': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.inputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.outputs': MagicMock()})
+    @mock.patch.dict(sys.modules, {'vllm.lora.request': MagicMock()})
+    @mock.patch(
+        'djl_python.rolling_batch.rolling_batch_vllm_utils.vLLMRequestOutput',
+        new=MockRequestOutput)
+    def test_chunked_prefill(self):
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        parameters = {
+            "max_new_tokens": 3,
+        }
+        server_parameters = parameters.copy()
+        server_parameters.pop("details", None)
+
+        request_input = TextInput(request_id=0,
+                                  input_text="I am a",
+                                  parameters=parameters.copy(),
+                                  tokenizer=tokenizer)
+        # 1. Creates the request
+        req = Request(request_input)
+        self.assertEqual(
+            repr(
+                TextGenerationOutput(
+                    request_id=0,
+                    input=TextInput(
+                        request_id=0,
+                        input_text="I am a",
+                        parameters=parameters,
+                        server_parameters=server_parameters,
+                        output_formatter=_json_output_formatter,
+                        tokenizer=tokenizer,
+                    ),
+                    sequences={},
+                    finished=False)), repr(req.request_output))
+
+        # 2. Creates the request cache
+        mock_request_cache = OrderedDict({
+            "test_chunked_request_id": {
+                "request_output": req.request_output
+            }
+        })
+
+        # Test update_request_cache_with_output
+        for vllm_request_output in example_chunked_prefill_request_output:
+            djl_python.rolling_batch.rolling_batch_vllm_utils.update_request_cache_with_output(
+                mock_request_cache, vllm_request_output, tokenizer)
+
+        expected_sequences = {0: Sequence()}
+        self.assertEqual(repr(expected_sequences),
+                         repr(req.request_output.sequences))
+
+
+if __name__ == '__main__':
+    unittest.main()
