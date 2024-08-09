@@ -94,11 +94,13 @@ final class SecureModeUtils {
         }
 
         Set<String> controls = new HashSet<>(Arrays.asList(securityControls.split("\\s*,\\s*")));
-        String[] untrustedPathList = untrustedChannels.split(",");
 
         validateProperties(modelInfo, SecureModeAllowList.PROPERTIES_ALLOWLIST);
         checkOptions(modelInfo, controls);
-        scanForbiddenFiles(untrustedPathList, controls);
+        if (!untrustedChannels.isEmpty()) {
+            String[] untrustedPathList = untrustedChannels.split(",");
+            scanForbiddenFiles(untrustedPathList, controls);
+        }
     }
 
     /**
