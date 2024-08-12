@@ -15,7 +15,7 @@ As part of the startup, you are able to specify several different categories of 
 
 ## Engine
 
-DJL Serving is powered by [DeepJavaLibrary](djl.ai) and most of the functionality exists through the use of [DJL engines](http://docs.djl.ai/docs/engine.html).
+DJL Serving is powered by [DeepJavaLibrary](http://djl.ai) and most of the functionality exists through the use of [DJL engines](http://docs.djl.ai/docs/engine.html).
 As part of this, many of the engines along with DJL itself can be configured through the use of environment variables and system properties.
 
 The [engine configuration](configurations.md) document lists these configurations.
@@ -44,4 +44,4 @@ The primary way is through the [DJL Model](https://javadoc.io/doc/ai.djl/api/lat
 These settings are ultimately dependent on the individual model.
 But, here are some documented applications that have additional configurations:
 
-- [Large Language Model Configurations](lmi/configurations_large_model_inference_containers.md)
+- [Large Language Model Configurations](lmi/deployment_guide/configurations.md)
