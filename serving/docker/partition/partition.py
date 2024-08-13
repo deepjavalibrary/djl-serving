@@ -191,10 +191,9 @@ class PartitionService(object):
             for line in proc.stdout:
                 partition_stdout += line
                 print(line, end='')
-            # Exception is the last line of stderr
+            # Exception details are in the last line of stderr
             for line in proc.stderr:
-                pass
-            partition_stderr = line
+                partition_stderr = line
         logging.info(proc)
         if proc.returncode == 0:
             logging.info("Partitioning done.")
@@ -210,7 +209,9 @@ class PartitionService(object):
         else:
             logging.error(
                 f"Partitioning was not successful: {partition_stderr}")
-            raise Exception(partition_stderr)
+            raise Exception(
+                f"Partitioning exited with return code: {proc.returncode}. Details: {partition_stderr}"
+            )
 
     def load_the_generated_checkpoints(self):
         if self.properties['engine'] == 'DeepSpeed':

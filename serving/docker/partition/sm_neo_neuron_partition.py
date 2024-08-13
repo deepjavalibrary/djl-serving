@@ -288,6 +288,7 @@ class NeoNeuronPartitionService():
                 self.INPUT_MODEL_DIRECTORY, "model.safetensors.index.json")
             # build the set of weight files to ignore
             weight_files = set()
+            weight_files.add(os.path.basename(safetensors_index_file))
             with open(safetensors_index_file) as f:
                 index = json.load(f)
                 for k, v in index["weight_map"].items():

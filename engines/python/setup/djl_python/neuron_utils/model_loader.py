@@ -143,7 +143,9 @@ class TNXModelLoader(ModelLoader):
             module_name, class_name = self.MODEL_TYPE_TO_CLS_LOADER[
                 self.model_config.model_type].rsplit(".", maxsplit=1)
         except KeyError as exc:
-            raise KeyError(f"Unsupported model: {str(exc)}")
+            raise KeyError(
+                f"Unsupported model: {str(exc)}. Supported architectures: {list(self.MODEL_TYPE_TO_CLS_LOADER.keys())}"
+            )
         module = importlib.import_module(f"transformers_neuronx.{module_name}")
         neuronx_class = getattr(module, class_name, None)
         if neuronx_class is None:
