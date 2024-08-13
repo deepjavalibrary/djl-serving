@@ -391,10 +391,11 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                             "{}: exceed retry threshold: {}, mark model as failed.",
                             uid,
                             threshold);
-                    boolean isFailFastEnabled = Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_FAIL_FAST"));
+                    boolean isFailFastEnabled =
+                            Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_FAIL_FAST"));
                     if (isFailFastEnabled) {
                         // SIGKILL (9 + 128)
-                        System.exit(137);  // NOPMD
+                        System.exit(137); // NOPMD
                     }
 
                     return Status.FAILED;
