@@ -279,7 +279,8 @@ class NeoNeuronPartitionService():
         with os.scandir(self.OUTPUT_MODEL_DIRECTORY) as it:
             for entry in it:
                 if os.path.abspath(entry.path) != optimized_model_dir:
-                    shutil.move(entry.path, optimized_model_dir)
+                    if entry.name != "serving.properties":
+                        shutil.move(entry.path, optimized_model_dir)
 
         # use safetensors index to determine which weights to skip copying
         ignore_fun = None
