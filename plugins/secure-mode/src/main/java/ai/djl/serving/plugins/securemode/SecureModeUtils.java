@@ -76,10 +76,6 @@ final class SecureModeUtils {
     public static void validateSecurity(ModelInfo<?, ?> modelInfo) throws IOException {
         String securityControls = Utils.getenv(SECURITY_CONTROLS_ENV_VAR);
         String untrustedChannels = Utils.getenv(UNTRUSTED_CHANNELS_ENV_VAR);
-        if (untrustedChannels == null) {
-            throw new IllegalConfigurationException(
-                    "Untrusted Channels environment variable is not set.");
-        }
         if (securityControls == null) {
             throw new IllegalConfigurationException(
                     "Security Controls environment variable is not set.");
@@ -97,7 +93,7 @@ final class SecureModeUtils {
 
         validateProperties(modelInfo, SecureModeAllowList.PROPERTIES_ALLOWLIST);
         checkOptions(modelInfo, controls);
-        if (!untrustedChannels.isEmpty()) {
+        if (untrustedChannels != null) {
             String[] untrustedPathList = untrustedChannels.split(",");
             scanForbiddenFiles(untrustedPathList, controls);
         }

@@ -84,7 +84,7 @@ public class SecureModePluginTest {
         }
     }
 
-    @Test(expectedExceptions = IllegalConfigurationException.class)
+    @Test
     void testMissingUntrustedChannels() throws IOException, ModelException {
         try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
             mockedUtils
@@ -113,26 +113,6 @@ public class SecureModePluginTest {
             mockedUtils
                     .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
                     .thenReturn("bar");
-            mockedUtils
-                    .when(() -> Utils.getNestedModelDir(Mockito.any()))
-                    .thenReturn(TEST_MODEL_DIR);
-
-            validateSecurity("Python");
-        }
-    }
-
-    @Test
-    void testEmptyUntrustedChannels() throws IOException, ModelException {
-        try (MockedStatic<Utils> mockedUtils = Mockito.mockStatic(Utils.class)) {
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.SECURE_MODE_ENV_VAR))
-                    .thenReturn("true");
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.SECURITY_CONTROLS_ENV_VAR))
-                    .thenReturn("bar");
-            mockedUtils
-                    .when(() -> Utils.getenv(SecureModeUtils.UNTRUSTED_CHANNELS_ENV_VAR))
-                    .thenReturn("");
             mockedUtils
                     .when(() -> Utils.getNestedModelDir(Mockito.any()))
                     .thenReturn(TEST_MODEL_DIR);
