@@ -66,7 +66,7 @@ public final class LmiUtils {
             return;
         }
 
-        LmiConfigRecommender.configure(modelInfo, prop, modelConfig);
+        LmiConfigRecommender.configure(prop, modelConfig);
         logger.info(
                 "Detected mpi_mode: {}, rolling_batch: {}, tensor_parallel_degree: {}, for"
                         + " modelType: {}",
