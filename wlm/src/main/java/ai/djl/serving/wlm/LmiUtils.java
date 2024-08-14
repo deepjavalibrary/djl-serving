@@ -37,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -134,7 +135,7 @@ public final class LmiUtils {
     static boolean needConvertOnnx(ModelInfo<?, ?> info) {
         String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
         // modelDir could be file:///model.onnx
-        return !Files.isDirectory(info.modelDir)
+        return !Files.isRegularFile(info.modelDir)
                 && !prefix.endsWith(".onnx")
                 && !Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
                 && !Files.isRegularFile(info.modelDir.resolve("model.onnx"));
@@ -157,12 +158,12 @@ public final class LmiUtils {
             modelId = repo.toString();
         }
         String optimization = info.prop.getProperty("option.optimization");
-        String trust_remote_code = info.prop.getProperty("option.trust_remote_code", "false");
+        boolean trustRemoteCode = "true".equals(info.prop.getProperty("option.trust_remote_code"));
         info.resolvedModelUrl =
-                convertOnnx(modelId, optimization, trust_remote_code).toUri().toURL().toString();
+                convertOnnx(modelId, optimization, trustRemoteCode).toUri().toURL().toString();
     }
 
-    private static Path convertOnnx(String modelId, String optimization, String trust_remote_code)
+    private static Path convertOnnx(String modelId, String optimization, boolean trustRemoteCode)
             throws IOException {
         logger.info("Converting model to onnx artifacts");
         String hash = Utils.hash(modelId);
@@ -181,21 +182,24 @@ public final class LmiUtils {
             throw new IllegalArgumentException("Unsupported optimization level: " + optimization);
         }
 
-        String[] cmd = {
-            "djl-convert",
-            "--output-dir",
-            repoDir.toAbsolutePath().toString(),
-            "--output-format",
-            "OnnxRuntime",
-            "-m",
-            modelId,
-            "--optimize",
-            optimization,
-            "--device",
-            hasCuda ? "cuda" : "cpu",
-            "--trust-remote-code",
-            trust_remote_code
-        };
+        List<String> cmd =
+                Arrays.asList(
+                        "djl-convert",
+                        "--output-dir",
+                        repoDir.toAbsolutePath().toString(),
+                        "--output-format",
+                        "OnnxRuntime",
+                        "-m",
+                        modelId,
+                        "--optimize",
+                        optimization,
+                        "--device",
+                        hasCuda ? "cuda" : "cpu");
+        if (trustRemoteCode) {
+            cmd.add("--trust-remote-code");
+            cmd.add(String.valueOf(trustRemoteCode));
+        }
+
         boolean success = false;
         try {
             logger.info("Converting model to onnx artifacts: {}", (Object) cmd);
@@ -233,7 +237,7 @@ public final class LmiUtils {
 
     static void convertRustModel(ModelInfo<?, ?> info) throws IOException {
         String modelId = info.prop.getProperty("option.model_id");
-        String trust_remote_code = info.prop.getProperty("option.trust_remote_code", "false");
+        boolean trustRemoteCode = "true".equals(info.prop.getProperty("option.trust_remote_code"));
         if (modelId == null) {
             logger.info("model_id not defined, skip rust model conversion.");
             return;
@@ -249,17 +253,20 @@ public final class LmiUtils {
             return;
         }
 
-        String[] cmd = {
-            "djl-convert",
-            "--output-dir",
-            repoDir.toAbsolutePath().toString(),
-            "--output-format",
-            "Rust",
-            "-m",
-            modelId,
-            "--trust-remote-code",
-            trust_remote_code
-        };
+        List<String> cmd =
+                Arrays.asList(
+                        "djl-convert",
+                        "--output-dir",
+                        repoDir.toAbsolutePath().toString(),
+                        "--output-format",
+                        "Rust",
+                        "-m",
+                        modelId);
+        if (trustRemoteCode) {
+            cmd.add("--trust-remote-code");
+            cmd.add(String.valueOf(trustRemoteCode));
+        }
+
         boolean success = false;
         try {
             logger.info("Converting model to rust artifacts: {}", (Object) cmd);
