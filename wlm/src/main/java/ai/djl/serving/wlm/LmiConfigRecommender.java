@@ -80,10 +80,7 @@ public final class LmiConfigRecommender {
 
     private LmiConfigRecommender() {}
 
-    static void configure(
-            ModelInfo<?, ?> modelInfo,
-            Properties lmiProperties,
-            LmiUtils.HuggingFaceModelConfig modelConfig) {
+    static void configure(Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
         String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
         setRollingBatch(lmiProperties, modelConfig, features);
         setMpiMode(lmiProperties);
