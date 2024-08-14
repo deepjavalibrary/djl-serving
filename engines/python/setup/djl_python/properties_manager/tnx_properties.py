@@ -88,7 +88,7 @@ class TransformerNeuronXProperties(Properties):
     enable_mixed_precision_accumulation: Optional[bool] = None
     enable_saturate_infinity: Optional[bool] = None
     dtype: Dtype = Dtype.f16
-    n_positions: int = 128
+    n_positions: Optional[int] = None
     unroll: Optional[str] = None
     load_in_8bit: Optional[bool] = None
     low_cpu_mem_usage: bool = False
