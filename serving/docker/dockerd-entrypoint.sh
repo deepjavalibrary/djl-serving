@@ -17,9 +17,12 @@ if [[ "$1" = "serve" ]]; then
         /usr/bin/djl-serving "$@"
         code=$?
     done
+    exit $code
 elif [[ "$1" = "partition" ]] || [[ "$1" = "train" ]]; then
+    set -e
     shift 1
     /usr/bin/python3 /opt/djl/partition/partition.py "$@"
 else
+    set -e
     eval "$@"
 fi
