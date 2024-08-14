@@ -134,7 +134,7 @@ public final class LmiUtils {
     static boolean needConvertOnnx(ModelInfo<?, ?> info) {
         String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
         // modelDir could be file:///model.onnx
-        return !Files.isRegularFile(info.modelDir)
+        return !Files.isDirectory(info.modelDir)
                 && !prefix.endsWith(".onnx")
                 && !Files.isRegularFile(info.modelDir.resolve(prefix + ".onnx"))
                 && !Files.isRegularFile(info.modelDir.resolve("model.onnx"));
@@ -157,10 +157,14 @@ public final class LmiUtils {
             modelId = repo.toString();
         }
         String optimization = info.prop.getProperty("option.optimization");
-        info.resolvedModelUrl = convertOnnx(modelId, optimization).toUri().toURL().toString();
+        String trust_remote_code = info.prop.getProperty("option.trust_remote_code", "false");
+        info.resolvedModelUrl =
+                convertOnnx(modelId, optimization, trust_remote_code).toUri().toURL().toString();
     }
 
-    private static Path convertOnnx(String modelId, String optimization) throws IOException {
+    private static Path convertOnnx(String modelId, String optimization, String trust_remote_code)
+            throws IOException {
+        logger.info("Converting model to onnx artifacts");
         String hash = Utils.hash(modelId);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
@@ -188,7 +192,9 @@ public final class LmiUtils {
             "--optimize",
             optimization,
             "--device",
-            hasCuda ? "cuda" : "cpu"
+            hasCuda ? "cuda" : "cpu",
+            "--trust-remote-code",
+            trust_remote_code
         };
         boolean success = false;
         try {
@@ -227,6 +233,7 @@ public final class LmiUtils {
 
     static void convertRustModel(ModelInfo<?, ?> info) throws IOException {
         String modelId = info.prop.getProperty("option.model_id");
+        String trust_remote_code = info.prop.getProperty("option.trust_remote_code", "false");
         if (modelId == null) {
             logger.info("model_id not defined, skip rust model conversion.");
             return;
@@ -249,7 +256,9 @@ public final class LmiUtils {
             "--output-format",
             "Rust",
             "-m",
-            modelId
+            modelId,
+            "--trust-remote-code",
+            trust_remote_code
         };
         boolean success = false;
         try {
