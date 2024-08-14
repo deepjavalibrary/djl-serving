@@ -209,6 +209,30 @@ class TestTransformerNeuronXService(unittest.TestCase):
                          self.service.config.save_mp_checkpoint_path)
         self.assertTrue(self.service.initialized)
 
+    @parameters([{
+        "initial_value": 512,
+        "smart_default": 512
+    }, {
+        "initial_value": 8192,
+        "smart_default": 4096
+    }])
+    def test_smart_defaults(self, params):
+        # Setup
+        self.default_properties.pop('n_positions')
+        test_properties = self.default_properties
+        self.service.config = self.config_builder(test_properties)
+        self.service.model_config = AutoConfig.from_pretrained(
+            test_properties['model_id'])
+        self.service.model_config.max_position_embeddings = params[
+            'initial_value']
+
+        # Test
+        self.service.set_max_position_embeddings()
+
+        # Evaluate
+        self.assertEqual(self.service.config.n_positions,
+                         params['smart_default'])
+
     def tearDown(self):
         del self.service
         del self.default_properties
