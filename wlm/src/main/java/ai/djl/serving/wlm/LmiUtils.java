@@ -37,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -157,10 +158,14 @@ public final class LmiUtils {
             modelId = repo.toString();
         }
         String optimization = info.prop.getProperty("option.optimization");
-        info.resolvedModelUrl = convertOnnx(modelId, optimization).toUri().toURL().toString();
+        boolean trustRemoteCode = "true".equals(info.prop.getProperty("option.trust_remote_code"));
+        info.resolvedModelUrl =
+                convertOnnx(modelId, optimization, trustRemoteCode).toUri().toURL().toString();
     }
 
-    private static Path convertOnnx(String modelId, String optimization) throws IOException {
+    private static Path convertOnnx(String modelId, String optimization, boolean trustRemoteCode)
+            throws IOException {
+        logger.info("Converting model to onnx artifacts");
         String hash = Utils.hash(modelId);
         String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
         Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
@@ -177,19 +182,22 @@ public final class LmiUtils {
             throw new IllegalArgumentException("Unsupported optimization level: " + optimization);
         }
 
-        String[] cmd = {
-            "djl-convert",
-            "--output-dir",
-            repoDir.toAbsolutePath().toString(),
-            "--output-format",
-            "OnnxRuntime",
-            "-m",
-            modelId,
-            "--optimize",
-            optimization,
-            "--device",
-            hasCuda ? "cuda" : "cpu"
-        };
+        List<String> cmd = new ArrayList<>();
+        cmd.add("djl-convert");
+        cmd.add("--output-dir");
+        cmd.add(repoDir.toAbsolutePath().toString());
+        cmd.add("--output-format");
+        cmd.add("OnnxRuntime");
+        cmd.add("-m");
+        cmd.add(modelId);
+        cmd.add("--optimize");
+        cmd.add(optimization);
+        cmd.add("--device");
+        cmd.add(hasCuda ? "cuda" : "cpu");
+        if (trustRemoteCode) {
+            cmd.add("--trust-remote-code");
+        }
+
         boolean success = false;
         try {
             logger.info("Converting model to onnx artifacts: {}", (Object) cmd);
@@ -227,6 +235,7 @@ public final class LmiUtils {
 
     static void convertRustModel(ModelInfo<?, ?> info) throws IOException {
         String modelId = info.prop.getProperty("option.model_id");
+        boolean trustRemoteCode = "true".equals(info.prop.getProperty("option.trust_remote_code"));
         if (modelId == null) {
             logger.info("model_id not defined, skip rust model conversion.");
             return;
@@ -242,15 +251,18 @@ public final class LmiUtils {
             return;
         }
 
-        String[] cmd = {
-            "djl-convert",
-            "--output-dir",
-            repoDir.toAbsolutePath().toString(),
-            "--output-format",
-            "Rust",
-            "-m",
-            modelId
-        };
+        List<String> cmd = new ArrayList<>();
+        cmd.add("djl-convert");
+        cmd.add("--output-dir");
+        cmd.add(repoDir.toAbsolutePath().toString());
+        cmd.add("--output-format");
+        cmd.add("Rust");
+        cmd.add("-m");
+        cmd.add(modelId);
+        if (trustRemoteCode) {
+            cmd.add("--trust-remote-code");
+        }
+
         boolean success = false;
         try {
             logger.info("Converting model to rust artifacts: {}", (Object) cmd);
