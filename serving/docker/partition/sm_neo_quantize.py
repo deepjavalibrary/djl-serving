@@ -19,10 +19,10 @@ from typing import Final
 import torch
 import json
 
-from sm_neo_utils import (CompilationFatalError, InputConfiguration,
-                          write_error_to_file, get_neo_env_vars)
-from utils import (extract_python_jar, load_properties,
-                   update_dataset_cache_location)
+from sm_neo_utils import (OptimizationFatalError, InputConfiguration,
+                          write_error_to_file, get_neo_env_vars,
+                          update_dataset_cache_location)
+from utils import (extract_python_jar, load_properties)
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
@@ -37,11 +37,14 @@ class NeoQuantizationService():
         self.properties_manager: PropertiesManager = None
         self.compiler_flags: dict = None
 
-        env = get_neo_env_vars()
-        self.INPUT_MODEL_DIRECTORY: Final[str] = env[1]
-        self.OUTPUT_MODEL_DIRECTORY: Final[str] = env[2]
-        self.COMPILATION_ERROR_FILE: Final[str] = env[3]
-        self.HF_CACHE_LOCATION: Final[str] = env[5]
+        neo_environ = get_neo_env_vars()
+        self.INPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_INPUT_MODEL_DIR"]
+        self.OUTPUT_MODEL_DIRECTORY: Final[str] = neo_environ[
+            "SM_NEO_COMPILED_MODEL_DIR"]
+        self.COMPILATION_ERROR_FILE: Final[str] = neo_environ[
+            "SM_NEO_COMPILATION_ERROR_FILE"]
+        self.HF_CACHE_LOCATION: Final[str] = neo_environ["SM_NEO_HF_CACHE_DIR"]
 
         self.customer_properties: dict = load_properties(
             self.INPUT_MODEL_DIRECTORY)
@@ -101,7 +104,7 @@ class NeoQuantizationService():
         try:
             return partition_service.run_quantization(self.autofp8_config)
         except Exception as exc:
-            raise CompilationFatalError(
+            raise OptimizationFatalError(
                 f"Encountered an error during quantization: {exc}")
 
     def write_properties(self):
