@@ -13,7 +13,7 @@
 
 import copy
 import torch
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, List
 from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
 from optimum.exporters.neuron.model_configs import *
 from optimum.exporters.tasks import TasksManager
@@ -44,6 +44,8 @@ TNX_ONLY_PROPERTIES = [
     "attention_layout", "collectives_layout", "cache_layout",
     "partition_schema", "all_reduce_dtype", "cast_logits_dtype"
 ]
+
+INITIAL_BUCKET_SIZE = 1024
 
 _neuronxcc_version: Optional[str] = None
 
@@ -92,6 +94,28 @@ def build_vllm_rb_properties(properties: dict) -> dict:
             del vllm_properties[tnx_only_property]
 
     return vllm_properties
+
+
+def build_context_length_estimates(max_position_embeddings: int) -> List[int]:
+    """
+    Builds an estimate of context lengths for a given maximum position embedding.
+
+    Args:
+        max_position_embeddings (int): The maximum position embedding.
+
+    Returns:
+        List[int]: A list of estimated context lengths.
+    """
+    if max_position_embeddings <= 128:
+        return [max_position_embeddings]
+
+    context_estimates = [128]
+    bucket_size = INITIAL_BUCKET_SIZE
+    while max_position_embeddings > bucket_size:
+        context_estimates.append(bucket_size)
+        bucket_size *= 2
+    context_estimates.append(max_position_embeddings)
+    return context_estimates
 
 
 class NeuronXModelAdapter(OptimumModelForCausalLM):
