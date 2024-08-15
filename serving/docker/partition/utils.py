@@ -6,10 +6,10 @@ import tempfile
 import logging
 import sys
 
+from transformers import AutoTokenizer
+
 MASTER_ADDR = "127.0.0.1"
 MASTER_PORT = 29761
-
-from transformers import AutoConfig, AutoTokenizer
 
 
 def get_python_executable():
@@ -67,7 +67,7 @@ def get_djl_version_from_lib():
             version = filename.replace("djl-serving-", "")
 
     if not version:
-        raise ValueError(f"Cannot retrieve version from lib file name.")
+        raise ValueError("Cannot retrieve version from lib file name.")
     return version
 
 
@@ -146,11 +146,3 @@ def load_hf_config_and_tokenizer(properties: dict):
     tokenizer = init_hf_tokenizer(hf_configs.model_id_or_path, hf_configs)
 
     return hf_configs, tokenizer
-
-
-def update_dataset_cache_location(hf_cache_location):
-    logging.info(
-        f"Updating HuggingFace Datasets cache directory to: {hf_cache_location}"
-    )
-    os.environ['HF_DATASETS_CACHE'] = hf_cache_location
-    #os.environ['HF_DATASETS_OFFLINE'] = "1"
