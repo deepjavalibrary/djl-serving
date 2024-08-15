@@ -24,7 +24,7 @@ ARG transformers_version=4.43.1
 ARG accelerate_version=0.29.2
 ARG diffusers_version=0.28.2
 ARG pydantic_version=2.6.1
-ARG optimum_neuron_version=0.0.23
+ARG optimum_neuron_version=0.0.24
 # %2B is the url escape for the '+' character
 ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.5.0%2Bnightly-py3-none-any.whl"
 EXPOSE 8080
