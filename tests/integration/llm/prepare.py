@@ -1065,14 +1065,37 @@ transformers_neuronx_neo_list = {
 text_embedding_model_list = {
     "bge-base": {
         "option.model_id": "BAAI/bge-base-en-v1.5",
-        "batch_size": 32,
+        "batch_size": 8,
+    },
+    "e5-base-v2": {
+        "option.model_id": "intfloat/e5-base-v2",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "sentence-camembert-large": {
+        "option.model_id": "dangvantuan/sentence-camembert-large",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "roberta-base": {
+        "option.model_id": "relbert/relbert-roberta-base-nce-conceptnet",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "msmarco-distilbert-base-v4": {
+        "option.model_id": "sentence-transformers/msmarco-distilbert-base-v4",
+        "pooling": "cls",
+        "batch_size": 8,
     },
     "bge-reranker": {
         "option.model_id": "BAAI/bge-reranker-base",
         "reranking": True,
         "includeTokenTypes": True,
-        "sigmoid": False,
-        "batch_size": 32,
+        "batch_size": 8,
+    },
+    "e5-mistral-7b": {
+        "option.model_id": "intfloat/e5-mistral-7b-instruct",
+        "batch_size": 8,
     }
 }
 
