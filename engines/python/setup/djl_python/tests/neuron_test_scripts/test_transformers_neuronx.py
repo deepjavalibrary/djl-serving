@@ -21,6 +21,7 @@ try:
     from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy
     from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
     from djl_python.rolling_batch.neuron_rolling_batch import NeuronRollingBatch
+    from djl_python.neuron_utils.utils import build_context_length_estimates
     SKIP_TEST = False
 except ImportError:
     SKIP_TEST = True
@@ -236,6 +237,29 @@ class TestTransformerNeuronXService(unittest.TestCase):
     def tearDown(self):
         del self.service
         del self.default_properties
+
+
+@parameterized
+@unittest.skipIf(SKIP_TEST, "Neuron dependencies are not available")
+class TestTransformersNeuronXUtils(unittest.TestCase):
+
+    @parameters([{
+        "initial_value": 64,
+        "smart_default": [64]
+    }, {
+        "initial_value": 512,
+        "smart_default": [128, 512]
+    }, {
+        "initial_value": 8192,
+        "smart_default": [128, 1024, 2048, 4096, 8192]
+    }])
+    def test_build_context_length_estimate(self, params):
+        # Setup
+        # Test
+        output = build_context_length_estimates(params['initial_value'])
+
+        # Evaluate
+        self.assertListEqual(output, params['smart_default'])
 
 
 if __name__ == '__main__':

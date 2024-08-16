@@ -25,7 +25,7 @@ from transformers_neuronx import NeuronAutoModelForCausalLM
 from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig, GenerationConfig as NeuronGenerationConfig
 from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema, TnXMemoryLayout
 from transformers_neuronx.module import save_pretrained_split
-from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version
+from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version, build_context_length_estimates
 from huggingface_hub import hf_hub_download
 
 # Temporary Fix: These loggers are disabled during vLLM import.
@@ -227,13 +227,19 @@ class TNXModelLoader(ModelLoader):
         # Continuous batching requires positions and estimates as lists instead of int
         if self.use_continuous_batching:
             model_kwargs["n_positions"] = [self.config.n_positions]
-            if self.config.context_length_estimate is None:
+            if self.config.context_length_estimate is None and self.config.cache_layout == TnXMemoryLayout.LAYOUT_BSH:
                 model_kwargs["context_length_estimate"] = [
                     self.config.n_positions
                 ]
-            elif self.config.context_length_estimate != [
-                    self.config.n_positions
-            ] and self.config.cache_layout == TnXMemoryLayout.LAYOUT_BSH:
+            elif self.config.context_length_estimate is None:
+                model_kwargs[
+                    "context_length_estimate"] = build_context_length_estimates(
+                        self.config.n_positions)
+                logging.info(
+                    f"Setting context_length_estimate to {model_kwargs['context_length_estimate']}"
+                )
+            elif self.config.context_length_estimate is not None and self.config.context_length_estimate[
+                    0] != self.config.n_positions and self.config.cache_layout == TnXMemoryLayout.LAYOUT_BSH:
                 raise RuntimeError(
                     f"context_length_estimate {self.config.context_length_estimate}"
                     f" need to be the same as n_positions {self.config.n_positions}"
