@@ -13,17 +13,22 @@
 from typing import Dict, Optional
 
 from djl_python.chat_completions.chat_properties import ChatProperties
+from djl_python.properties_manager.properties import Properties
 
 
 def is_chat_completions_request(inputs: Dict) -> bool:
     return "messages" in inputs
 
 
-def parse_chat_completions_request(input_map: Dict,
-                                   is_rolling_batch: bool,
-                                   tokenizer,
-                                   image_token: Optional[str] = None):
-    if not is_rolling_batch:
+def parse_chat_completions_request(
+    input_map: Dict,
+    is_rolling_batch: bool,
+    tokenizer,
+    image_token: Optional[str] = None,
+    configs: Properties = None,
+):
+    # Chat completions can either be a rolling batch or no-batching .
+    if not (is_rolling_batch or configs.batch_size == 1):
         raise ValueError(
             "chat completions support is not currently available for dynamic batching. "
             "You must enable rolling batch to use the chat completions format."

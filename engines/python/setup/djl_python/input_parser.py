@@ -137,7 +137,8 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
             input_map,
             kwargs.get("is_rolling_batch"),
             tokenizer,
-            image_token=image_token)
+            image_token=image_token,
+            configs=configs)
     elif is_bedrock:
         inputs, param = parse_3p_request(input_map,
                                          kwargs.get("is_rolling_batch"),

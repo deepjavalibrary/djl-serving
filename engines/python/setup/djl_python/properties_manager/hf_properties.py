@@ -7,7 +7,7 @@ import torch
 
 from pydantic import field_validator, model_validator
 
-from djl_python.properties_manager.properties import Properties, RollingBatchEnum
+from djl_python.properties_manager.properties import Properties, RollingBatchEnum, is_rolling_batch_enabled
 
 
 class HFQuantizeMethods(str, Enum):
@@ -125,7 +125,8 @@ class HuggingFaceProperties(Properties):
         elif self.tensor_parallel_degree > 0 \
                 and self.pipeline_parallel_degree > 0 \
                 and self.cluster_size > 0 \
-                and torch.cuda.device_count() > 0:
+                and torch.cuda.device_count() > 0\
+                and is_rolling_batch_enabled(self.rolling_batch):
             self.kwargs["device_map"] = "auto"
             self.device = None
             world_size = torch.cuda.device_count() * self.cluster_size
