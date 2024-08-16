@@ -1,6 +1,8 @@
 import os
 import json
 import unittest
+from unittest import mock
+
 from djl_python.properties_manager.properties import Properties
 from djl_python.properties_manager.tnx_properties import (
     TransformerNeuronXProperties, TnXGenerationStrategy, TnXModelSchema,
@@ -310,6 +312,22 @@ class TestConfigManager(unittest.TestCase):
                 "waiting_steps": 12,
                 "torch_dtype": torch.bfloat16
             })
+
+    @mock.patch("torch.cuda.device_count")
+    def test_hf_device_map(self, mock_device_count):
+        mock_device_count.return_value = 4
+        properties = {
+            "model_id": "model_id",
+            "tensor_parallel_degree": 4,
+            "pipeline_parallel_degree": 1,
+            "cluster_size": 1,
+        }
+
+        hf_configs = HuggingFaceProperties(**properties, rolling_batch="auto")
+        self.assertEqual(hf_configs.kwargs.get("device_map"), "auto")
+
+        hf_configs = HuggingFaceProperties(**properties)
+        self.assertIsNone(hf_configs.kwargs.get("device_map"))
 
     def test_hf_quantize(self):
         properties = {
