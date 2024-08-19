@@ -1176,6 +1176,7 @@ def build_hf_handler_model(model):
     options["option.entryPoint"] = "djl_python.huggingface"
     options["option.predict_timeout"] = 240
     options["option.rolling_batch"] = "disable"
+    options["option.device_map"] = "auto"
 
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])
