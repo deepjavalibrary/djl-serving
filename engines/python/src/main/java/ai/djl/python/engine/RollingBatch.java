@@ -27,8 +27,6 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
 
-import com.google.gson.JsonObject;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -306,29 +304,6 @@ class RollingBatch implements Runnable {
                 output.getProperties().putAll(properties);
             }
             ++count;
-            if (json[0] == '{') {
-                logger.warn(
-                        "Customizing the parse_input method of the huggingface inference handler is"
-                            + " no longer supported.This functionality will be removed in an"
-                            + " upcoming version. For custom input parsing, please migrate to using"
-                            + " the custom input formatter support");
-                // TODO: backward compatible for 0.23.0 release in case user
-                // customize huggingface.parse_input()
-                String s = new String(json, StandardCharsets.UTF_8);
-                JsonObject element = JsonUtils.GSON.fromJson(s, JsonObject.class);
-                last = element.get("last").getAsBoolean();
-                nextToken = element.get("data").getAsString();
-                try {
-                    JsonObject content = JsonUtils.GSON.fromJson(nextToken, JsonObject.class);
-                    output.setCode(content.get("code").getAsInt());
-                    output.setMessage(content.get("error").getAsString());
-                } catch (Throwable ignore) {
-                    // ignore
-                }
-
-                data.appendContent(nextToken.getBytes(StandardCharsets.UTF_8), last);
-                return;
-            }
             ByteBuf buf = Unpooled.wrappedBuffer(json);
             int size = buf.readShort();
             String code = null;
