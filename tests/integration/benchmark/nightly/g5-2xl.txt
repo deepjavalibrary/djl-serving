@@ -12,7 +12,7 @@ option.model_id=NousResearch/Hermes-2-Pro-Mistral-7B
 option.tensor_parallel_degree=max
 option.max_model_len=8192
 [aws_curl]
-TOKENIZER=TheBloke/Mistral-7B-Instruct-v0.2-AWQ ./awscurl -c 32 -N $CONCURRENCY \
+TOKENIZER=TheBloke/Mistral-7B-Instruct-v0.2-AWQ ./awscurl -c $CONCURRENCY -N 10 \
 -X POST http://127.0.0.1:8080/invocations   \
 --connect-timeout 60   -H "Content-type: application/json"   \
 --json-path benchmark_result.json \
