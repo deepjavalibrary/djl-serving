@@ -384,7 +384,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         for (Model m : getModels().values()) {
             int failures = m.intProperty("failed", 0);
             if (failures > 0) {
-                int def = Integer.parseInt(Utils.getenv("SERVING_RETRY_THRESHOLD", "10"));
+                int def = Integer.parseInt(Utils.getenv("SERVING_RETRY_THRESHOLD", "0"));
                 int threshold = m.intProperty("retry_threshold", def);
                 if (failures > threshold) {
                     logger.info(
