@@ -520,6 +520,15 @@ class TestLmiDist2:
             r.launch()
             client.run("lmi_dist_chat llama2-7b-chat".split())
 
+    def test_speculative_llama_secure(self):
+        with Runner('lmi', 'speculative-llama-13b') as r:
+            prepare.build_lmi_dist_model("speculative-llama-13b")
+            envs = [
+                "SAGEMAKER_SECURE_MODE=True",
+                "SAGEMAKER_SECURITY_CONTROLS=DISALLOW_PICKLE_FILES"
+            ]
+            r.launch("\n".join(envs))
+            client.run("lmi_dist speculative-llama-13b".split())
 
 @pytest.mark.vllm
 @pytest.mark.gpu_4
