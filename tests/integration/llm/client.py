@@ -975,7 +975,7 @@ def awscurl_run(data,
                 json_results=False,
                 random_delay=False):
     find_awscurl()
-    headers = "Content-type: application/json"
+    headers = "Content-type:application/json"
     endpoint = f"http://127.0.0.1:8080/invocations"
     if dataset:
         dataset_dir = os.path.join(os.path.curdir, "dataset")
