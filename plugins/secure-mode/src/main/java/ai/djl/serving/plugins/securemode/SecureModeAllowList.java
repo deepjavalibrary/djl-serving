@@ -104,5 +104,7 @@ interface SecureModeAllowList {
                     "option.use_fp8_context_fmha",
                     "option.enable_chunked_prefill",
                     "option.cpu_offload_gb_per_gpu",
-                    "option.enable_prefix_caching");
+                    "option.enable_prefix_caching",
+                    "option.enable_streaming",
+                    "option.tgi_compat");
 }
