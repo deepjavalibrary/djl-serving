@@ -490,10 +490,12 @@ public final class LmiUtils {
         return isValid.get();
     }
 
-    // This represents  the config of huggingface models NLP models as well
-    // as the config of diffusers models. The config is different for both, but for
-    // now we can leverage a single class since we don't need too much information from the config.
-    static final class HuggingFaceModelConfig {
+    /**
+     * This represents the config of huggingface models NLP models as well as the config of
+     * diffusers models. The config is different for both, but for now we can leverage a single
+     * class since we don't need too much information from the config.
+     */
+    public static final class HuggingFaceModelConfig {
 
         @SerializedName("model_type")
         private String modelType;
@@ -507,8 +509,38 @@ public final class LmiUtils {
         @SerializedName("_diffusers_version")
         private String diffusersVersion;
 
+        @SerializedName("hidden_size")
+        private int hiddenSize;
+
+        @SerializedName("intermediate_size")
+        private int intermediateSize;
+
+        @SerializedName("max_position_embeddings")
+        private int maxPositionEmbeddings;
+
+        @SerializedName("num_attention_heads")
+        private int numAttentionHeads;
+
+        @SerializedName("num_hidden_layers")
+        private int numHiddenLayers;
+
+        @SerializedName("num_key_value_heads")
+        private int numKeyValueHeads;
+
+        @SerializedName("vocab_size")
+        private int vocabSize;
+
         private Set<String> allArchitectures;
 
+        /**
+         * Returns the model type of this HuggingFace model.
+         *
+         * <p>If the model type is not explicitly set, it returns "stable-diffusion" if the
+         * diffusers version is set (i.e. it is a diffusers model), or returns null if not (i.e. it
+         * is a transformers model).
+         *
+         * @return the model type
+         */
         public String getModelType() {
             if (modelType == null) {
                 return diffusersVersion == null ? null : "stable-diffusion";
@@ -516,6 +548,14 @@ public final class LmiUtils {
             return modelType;
         }
 
+        /**
+         * Returns the set of all supported architectures for this model.
+         *
+         * <p>This function will download the model configuration from the HuggingFace Hub the first
+         * time it is called, and then cache the result for future invocations.
+         *
+         * @return the set of all supported architectures
+         */
         public Set<String> getArchitectures() {
             if (allArchitectures == null) {
                 determineAllArchitectures();
@@ -523,6 +563,92 @@ public final class LmiUtils {
             return allArchitectures;
         }
 
+        /**
+         * Returns the default value for the n_positions model configuration. For models that do not
+         * have a pre-defined value for n_positions, this function returns the minimum of
+         * max_position_embeddings and 4096. If both max_position_embeddings and 4096 are not
+         * available, this function returns 0.
+         *
+         * @return the default value for n_positions
+         */
+        public int getDefaultNPositions() {
+            return Math.min(maxPositionEmbeddings, 4096);
+        }
+
+        /**
+         * Calculates the number of parameters in a model that is similar to LLaMA. This function
+         * takes into account the hidden size, intermediate size, maximum position embeddings,
+         * number of hidden layers, vocabulary size, and number of attention heads and key-value
+         * heads to calculate the total parameter count.
+         *
+         * @return the total parameter count for the model
+         */
+        private long getLlamaLikeParameterCount() {
+            long headDim = (long) numAttentionHeads * numKeyValueHeads;
+            long embeddings = (long) vocabSize * hiddenSize;
+            long qkvProjection = headDim * hiddenSize * numKeyValueHeads * 3;
+            long oProjection = (long) hiddenSize * hiddenSize;
+            long gateProjection = (long) hiddenSize * intermediateSize * 3;
+            return embeddings
+                    + numHiddenLayers
+                            * (qkvProjection
+                                    + oProjection
+                                    + gateProjection
+                                    + hiddenSize
+                                    + hiddenSize)
+                    + hiddenSize
+                    + embeddings;
+        }
+
+        /**
+         * Calculates the default parameter count for a model (GPT-2-like).
+         *
+         * <p>This function takes into account the hidden size, maximum position embeddings, number
+         * of hidden layers, vocabulary size, and number of attention heads to calculate the total
+         * parameter count.
+         *
+         * @return the total parameter count for the model
+         */
+        private long getDefaultParameterCount() {
+            long embeddingLayerTotal = (long) (vocabSize + maxPositionEmbeddings) * hiddenSize;
+            long attentionTotal = 4L * hiddenSize * hiddenSize;
+            long feedForwardTotal = 8L * hiddenSize * hiddenSize;
+            long layerNormTotal = 4L * hiddenSize;
+            long transformerBlockTotal =
+                    (attentionTotal + feedForwardTotal + layerNormTotal) * numHiddenLayers;
+            long finalLayerTotal = (long) hiddenSize * vocabSize;
+            return embeddingLayerTotal + transformerBlockTotal + finalLayerTotal;
+        }
+
+        /**
+         * Calculates the total parameter count for the model.
+         *
+         * @return the total parameter count for the model
+         */
+        public long getModelParameters() {
+            if ("llama".equals(modelType) || "mistral".equals(modelType)) {
+                return getLlamaLikeParameterCount();
+            }
+            return getDefaultParameterCount();
+        }
+
+        /**
+         * Returns the memory required to store a single batch of sequence data.
+         *
+         * <p>The memory required is calculated as the product of the sequence length, hidden size,
+         * number of hidden layers, and weight in bytes.
+         *
+         * @param sequenceLength the length in tokens of the sequence
+         * @param weightBytes the weight in bytes
+         * @return the memory required to store a single batch of sequence data
+         */
+        public long getApproxMemoryForSingleSequence(int sequenceLength, int weightBytes) {
+            return (long) sequenceLength * hiddenSize * numHiddenLayers * weightBytes;
+        }
+
+        /**
+         * Determines all architectures by combining the configured architectures and the auto-map.
+         */
         private void determineAllArchitectures() {
             allArchitectures = new HashSet<>();
             if (configArchitectures != null) {
