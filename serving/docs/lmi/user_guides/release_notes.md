@@ -45,3 +45,4 @@ Check out our latest [Large Model Inference Containers](https://github.com/aws/d
 
 ### Known Issues
 * Running Gemma and Phi models with TensorRT-LLM is only viable currently at TP=1 because of an issue in TensorRT-LLM where one engine is built even when TP > 1.
+* When using LMI-dist, in the rare case that the machine has a broken cuda driver, it causes hanging. In that case, set LMI_USE_VLLM_GPU_P2P_CHECK=1 to prompt LMI to use a fallback option compatible with the broken cuda driver.
