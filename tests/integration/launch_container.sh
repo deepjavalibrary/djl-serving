@@ -131,16 +131,16 @@ get_aws_credentials() {
   ROLE_NAME=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -GET http://169.254.169.254/latest/meta-data/iam/security-credentials/)
   CREDENTIALS=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -GET http://169.254.169.254/latest/meta-data/iam/security-credentials/$ROLE_NAME)
 
-  AWS_ACCESS_KEY_ID=$(echo "$CREDENTIALS" | grep AccessKeyId | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
-  AWS_SECRET_ACCESS_KEY=$(echo "$CREDENTIALS" | grep SecretAccessKey | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
-  AWS_SESSION_TOKEN=$(echo "$CREDENTIALS" | grep Token | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
+  export AWS_ACCESS_KEY_ID=$(echo "$CREDENTIALS" | grep AccessKeyId | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
+  export AWS_SECRET_ACCESS_KEY=$(echo "$CREDENTIALS" | grep SecretAccessKey | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
+  export AWS_SESSION_TOKEN=$(echo "$CREDENTIALS" | grep Token | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
 
-  cat << EOF > ~/.aws/config
-[default]
-aws_access_key_id = $AWS_ACCESS_KEY_ID
-aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
-aws_session_token = $AWS_SESSION_TOKEN
-EOF
+#   cat << EOF > ~/.aws/config
+# [default]
+# aws_access_key_id = $AWS_ACCESS_KEY_ID
+# aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+# aws_session_token = $AWS_SESSION_TOKEN
+# EOF
 }
 
 # start the docker container
@@ -164,6 +164,9 @@ if $is_multi_node; then
     -v ${PWD}/logs:/opt/djl/logs \
     -v ~/.aws:/root/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     -e MASTER_ADDR=${leader_hostname} \
     -e LWS_NAME=${LWS_NAME} \
     -e GROUP_INDEX=${GROUP_INDEX} \
@@ -190,6 +193,9 @@ if $is_multi_node; then
     -v ~/.aws:/root/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     -e DJL_LEADER_ADDR=${leader_hostname} \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
