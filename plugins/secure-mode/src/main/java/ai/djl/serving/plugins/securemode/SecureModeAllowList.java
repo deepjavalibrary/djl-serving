@@ -107,6 +107,5 @@ interface SecureModeAllowList {
                     "option.enable_prefix_caching",
                     "option.disable_sliding_window",
                     "option.enable_streaming",
-                    "option.disable_"
                     "option.tgi_compat");
 }
