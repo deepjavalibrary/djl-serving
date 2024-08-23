@@ -263,7 +263,9 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             max_logprobs=config.max_logprobs,
             enable_chunked_prefill=config.enable_chunked_prefill,
             cpu_offload_gb=config.cpu_offload_gb_per_gpu,
-            enable_prefix_caching=config.enable_prefix_caching)
+            enable_prefix_caching=config.enable_prefix_caching,
+            disable_sliding_window=config.disable_sliding_window,
+        )
 
 
 def get_multi_modal_data(request: Request) -> dict:
