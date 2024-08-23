@@ -1,6 +1,7 @@
 name: Simulated multi-node integration test
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       djl-version:
