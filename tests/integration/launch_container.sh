@@ -134,6 +134,13 @@ get_aws_credentials() {
   AWS_ACCESS_KEY_ID=$(echo "$CREDENTIALS" | grep AccessKeyId | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
   AWS_SECRET_ACCESS_KEY=$(echo "$CREDENTIALS" | grep SecretAccessKey | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
   AWS_SESSION_TOKEN=$(echo "$CREDENTIALS" | grep Token | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
+
+  cat << EOF > ~/.aws/config
+[default]
+aws_access_key_id = $AWS_ACCESS_KEY_ID
+aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+aws_session_token = $AWS_SESSION_TOKEN
+EOF
 }
 
 # start the docker container
@@ -144,7 +151,6 @@ if $is_multi_node; then
   LWS_NAME=lmi
   GROUP_INDEX=0
   NAMESPACE=default
- 
   docker run \
     -t \
     -d \
@@ -165,9 +171,6 @@ if $is_multi_node; then
     -e DJL_CLUSTER_SIZE=2 \
     -e DJL_LEADER_ADDR=${leader_hostname} \
     -e DJL_WORKER_ADDR_FORMAT="${LWS_NAME}-${GROUP_INDEX}-%d.${LWS_NAME}.${NAMESPACE}" \
-    -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-    -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-    -e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
@@ -187,9 +190,6 @@ if $is_multi_node; then
     -v ~/.aws:/root/.aws \
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     -e DJL_LEADER_ADDR=${leader_hostname} \
-    -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-    -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-    -e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
