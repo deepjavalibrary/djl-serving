@@ -200,7 +200,7 @@ if $is_multi_node; then
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
-    "${docker_image}" "service ssh start; /usr/bin/python3 /opt/djl/partition/run_multi_node_setup.py 2>&1 | tee /tmp/lmi.log; tail -f";
+    "${docker_image}" "service ssh start; /usr/bin/python3 /opt/djl/partition/run_multi_node_setup.py 2>&1 | tee /opt/djl/logs/lmi-worker.log; tail -f";
 elif $is_sm_neo_context; then
   docker run \
     -t \
