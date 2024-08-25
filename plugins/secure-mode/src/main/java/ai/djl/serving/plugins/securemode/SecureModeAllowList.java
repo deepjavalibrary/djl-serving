@@ -105,6 +105,7 @@ interface SecureModeAllowList {
                     "option.enable_chunked_prefill",
                     "option.cpu_offload_gb_per_gpu",
                     "option.enable_prefix_caching",
+                    "option.disable_sliding_window",
                     "option.enable_streaming",
                     "option.tgi_compat");
 }
