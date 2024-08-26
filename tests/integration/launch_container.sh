@@ -134,13 +134,6 @@ get_aws_credentials() {
   export AWS_ACCESS_KEY_ID=$(echo "$CREDENTIALS" | grep AccessKeyId | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
   export AWS_SECRET_ACCESS_KEY=$(echo "$CREDENTIALS" | grep SecretAccessKey | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
   export AWS_SESSION_TOKEN=$(echo "$CREDENTIALS" | grep Token | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
-
-#   cat << EOF > ~/.aws/config
-# [default]
-# aws_access_key_id = $AWS_ACCESS_KEY_ID
-# aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
-# aws_session_token = $AWS_SESSION_TOKEN
-# EOF
 }
 
 # start the docker container
@@ -178,7 +171,7 @@ if $is_multi_node; then
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
-    "${docker_image}" "service ssh start; djl-serving 2>&1 | tee /tmp/djl.log";
+    "${docker_image}" "service ssh start; djl-serving";
   
   docker run \
     -t \
