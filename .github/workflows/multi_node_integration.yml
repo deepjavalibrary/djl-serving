@@ -86,6 +86,8 @@ jobs:
         working-directory: tests/integration
         run: |
           for file in outputs/*; do if [ -f "$file" ]; then echo "Contents of $file:"; cat "$file"; echo; fi; done
+          echo "Printing lmi worker log"
+          cat tests/integration/all_logs/llama3-8b/lmi-worker.log
           sudo rm -rf outputs && sudo rm -rf models
           rm awscurl
           ./remove_container.sh
