@@ -34,21 +34,21 @@ if [[ $4 == "multi_node" ]]; then
 fi
 
 start_docker_network() {
-    local subnet="$1"
-    local name="$2"
+  local subnet="$1"
+  local name="$2"
 
-    if [ $(docker network ls --format '{{.Name}}' | grep -q "$name") -eq 0 ]; then
-        echo "Network '$name' already exists."
-        return 0
-    fi
+  if [ $(docker network ls --format '{{.Name}}' | grep -q "$name") -eq 0 ]; then
+    echo "Network '$name' already exists."
+    return 0
+  fi
 
-    docker network create --subnet="$subnet" "$name"
-    if [ $? -eq 0 ]; then
-        echo "Network '$name' created successfully."
-    else
-        echo "Failed to create network '$name'."
-        return 1
-    fi
+  docker network create --subnet="$subnet" "$name"
+  if [ $? -eq 0 ]; then
+    echo "Network '$name' created successfully."
+  else
+    echo "Failed to create network '$name'."
+    return 1
+  fi
 }
 
 
