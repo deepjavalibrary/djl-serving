@@ -372,6 +372,12 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256]
+    },
+    "llama3-8b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
     }
 }
 
@@ -417,6 +423,12 @@ vllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama3-8b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
     "mixtral-8x7b": {
         "max_memory_per_gpu": [40.0],

@@ -28,6 +28,30 @@ if [[ "$model_path" == "no_code" ]]; then
   unset model_path
 fi
 
+is_multi_node=false
+if [[ $4 == "multi_node" ]]; then
+  is_multi_node=true
+fi
+
+start_docker_network() {
+  local subnet="$1"
+  local name="$2"
+
+  if [ $(docker network ls --format '{{.Name}}' | grep -q "$name") -eq 0 ]; then
+    echo "Network '$name' already exists."
+    return 0
+  fi
+
+  docker network create --subnet="$subnet" "$name"
+  if [ $? -eq 0 ]; then
+    echo "Network '$name' created successfully."
+  else
+    echo "Failed to create network '$name'."
+    return 1
+  fi
+}
+
+
 get_instance_type() {
   local token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
   local instance_type=$(curl -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.instanceType')
@@ -64,7 +88,7 @@ if [[ "$platform" == *"-gpu"* ]]; then # if the platform has cuda capabilities
 elif [[ "$platform" == *"lmi"* || "$platform" == *"trtllm"* || "$platform" == *"tensorrt-llm"* ]]; then # Runs multi-gpu
   runtime="nvidia"
   is_llm=true
-  if [[ "$(is_p4d_or_p5)" == *"true"* ]]; then
+  if [[ "$(is_p4d_or_p5)" == *"true"* || $is_multi_node ]]; then
     shm="20gb"
   else
     shm="12gb"
@@ -93,9 +117,84 @@ rm -rf logs
 mkdir logs
 
 set -x
-# start the docker container
 
-if $is_sm_neo_context; then
+subnet="192.168.10.0/24"
+network_name="docker-net"
+
+leader_ip="192.168.10.2"
+leader_hostname="lmi-0.lmi.default"
+worker_ip="192.168.10.3"
+worker_hostname="lmi-0-1.lmi.default"
+
+get_aws_credentials() {
+  TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+  ROLE_NAME=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -GET http://169.254.169.254/latest/meta-data/iam/security-credentials/)
+  CREDENTIALS=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -GET http://169.254.169.254/latest/meta-data/iam/security-credentials/$ROLE_NAME)
+
+  export AWS_ACCESS_KEY_ID=$(echo "$CREDENTIALS" | grep AccessKeyId | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
+  export AWS_SECRET_ACCESS_KEY=$(echo "$CREDENTIALS" | grep SecretAccessKey | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
+  export AWS_SESSION_TOKEN=$(echo "$CREDENTIALS" | grep Token | cut -d':' -f2 | tr -d ' ",' | sed 's/^"//' | sed 's/"$//')
+}
+
+# start the docker container
+if $is_multi_node; then
+  get_aws_credentials
+  start_docker_network $subnet $network_name
+
+  LWS_NAME=lmi
+  GROUP_INDEX=0
+  NAMESPACE=default
+  docker run \
+    -t \
+    -d \
+    --rm \
+    --gpus '"device=0,1"' \
+    -p 8080:8080 \
+    --network=${network_name} \
+    --ip=${leader_ip} \
+    --hostname=${leader_hostname} \
+    ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
+    -v ${PWD}/logs:/opt/djl/logs \
+    -v ~/.aws:/root/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
+    -e MASTER_ADDR=${leader_hostname} \
+    -e LWS_NAME=${LWS_NAME} \
+    -e GROUP_INDEX=${GROUP_INDEX} \
+    -e NAMESPACE=${NAMESPACE} \
+    -e DJL_CLUSTER_SIZE=2 \
+    -e DJL_LEADER_ADDR=${leader_hostname} \
+    -e DJL_WORKER_ADDR_FORMAT="${LWS_NAME}-${GROUP_INDEX}-%d.${LWS_NAME}.${NAMESPACE}" \
+    ${env_file} \
+    ${runtime:+--runtime="${runtime}"} \
+    ${shm:+--shm-size="${shm}"} \
+    ${host_device:+ ${host_device}} \
+    "${docker_image}" "service ssh start; djl-serving";
+  
+  docker run \
+    -t \
+    -d \
+    --rm \
+    --gpus '"device=2,3"' \
+    --network=${network_name} \
+    --ip=${worker_ip} \
+    --hostname=${worker_hostname} \
+    ${model_path:+-v ${model_path}:/opt/ml/model:ro} \
+    -v ${PWD}/logs:/opt/djl/logs \
+    -v ~/.aws:/root/.aws \
+    -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
+    -e DJL_LEADER_ADDR=${leader_hostname} \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
+    ${env_file} \
+    ${runtime:+--runtime="${runtime}"} \
+    ${shm:+--shm-size="${shm}"} \
+    ${host_device:+ ${host_device}} \
+    "${docker_image}" "service ssh start; /usr/bin/python3 /opt/djl/partition/run_multi_node_setup.py 2>&1 | tee /opt/djl/logs/lmi-worker.log; tail -f";
+elif $is_sm_neo_context; then
   docker run \
     -t \
     --rm \

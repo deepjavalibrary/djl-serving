@@ -399,6 +399,11 @@ lmi_dist_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
     },
+    "llama3-8b": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+    },
     "llama3-8b-chunked-prefill": {
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
         "option.task": "text-generation",

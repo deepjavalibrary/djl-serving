@@ -521,6 +521,17 @@ class TestLmiDist2:
             client.run("lmi_dist_chat llama2-7b-chat".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu_4
+class TestLmiDistMultiNode:
+
+    def test_llama3_8b(self):
+        with Runner('lmi', 'llama3-8b') as r:
+            prepare.build_lmi_dist_model("llama3-8b")
+            r.launch(cmd="multi_node")
+            client.run("lmi_dist llama3-8b --in_tokens 1200".split())
+
+
 @pytest.mark.vllm
 @pytest.mark.gpu_4
 class TestVllm1:

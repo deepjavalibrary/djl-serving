@@ -41,6 +41,11 @@ class MultiNodeSetupHandler:
                 f"Hostname for DJL_LEADER_ADDR unavailable. Cannot obtain model info. Multi-node setup will not proceed."
             )
 
+        if os.environ.get("LWS_LEADER_ADDR"):
+            # In LWS env, make sure leader address has suffix svc.cluster.local
+            if not leader_hostname.endswith("svc.cluster.local"):
+                leader_hostname = f"{leader_hostname.rstrip('.')}.svc.cluster.local"
+
         self.cluster_leader_hostname = leader_hostname
         self.cluster_management_port = 8888
 
@@ -96,7 +101,8 @@ class MultiNodeSetupHandler:
 
                     if not model_url.startswith("s3://"):
                         # A path to serving.properties is returned
-                        properties = load_properties(model_url)
+                        properties = load_properties(model_url.lstrip("file:"))
+                        logger.info(f"properties: {properties}")
                         if "option.model_id" in properties:
                             model_url = properties["option.model_id"]
                         elif "OPTION_MODEL_ID" in os.environ:
@@ -117,7 +123,7 @@ class MultiNodeSetupHandler:
 
         if not model_url or not model_url.startswith("s3://"):
             logger.warn(
-                f"Model {model_id} to be downloaded is not s3. Will attempt to download from HF hub."
+                f"Model {model_id} with URL {model_url} to be downloaded is not s3. Will attempt to download from HF hub."
             )
             return
 
