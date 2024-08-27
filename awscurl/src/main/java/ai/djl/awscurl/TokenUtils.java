@@ -79,6 +79,10 @@ final class TokenUtils {
                 builder.optTokenizerName(name);
             }
             try {
+                String maxLength = Utils.getEnvOrSystemProperty("MAX_LENGTH");
+                if (maxLength != null) {
+                    builder.optMaxLength(Integer.parseInt(maxLength));
+                }
                 return builder.optAddSpecialTokens(false).build();
             } catch (Exception e) {
                 AwsCurl.logger.warn("", e);
