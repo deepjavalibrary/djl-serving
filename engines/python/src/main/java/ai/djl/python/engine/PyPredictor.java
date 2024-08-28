@@ -14,6 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.Device;
 import ai.djl.Model;
+import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -66,6 +67,9 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         if (!process.isReady()) {
             // TODO: wait for restart
             throw new TranslateException("Backend Python process is stopped.");
+        }
+        if (process.isModelUnrecoverable()) {
+            throw new EngineException("Backend Python process is unrecoverable.");
         }
         Object first = inputs.get(0);
         if (first instanceof Input) {

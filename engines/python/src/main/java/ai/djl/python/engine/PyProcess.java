@@ -48,6 +48,7 @@ class PyProcess {
     private CountDownLatch latch;
     private volatile boolean started; // NOPMD
     private volatile boolean modelLoaded; // NOPMD
+    private volatile boolean modelUnrecoverable; // NOPMD
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
     private boolean trtLlmMode;
@@ -124,6 +125,8 @@ class PyProcess {
             if (!initialLoad) {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
+            } else {
+                modelUnrecoverable = true;
             }
             if (e instanceof EngineException) {
                 throw (EngineException) e;
@@ -238,6 +241,10 @@ class PyProcess {
 
     boolean isReady() {
         return started && modelLoaded;
+    }
+
+    boolean isModelUnrecoverable() {
+        return modelUnrecoverable;
     }
 
     static final class ReaderThread extends Thread {
