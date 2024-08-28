@@ -47,6 +47,7 @@ class PyProcess {
     private List<Connection> connections;
     private CountDownLatch latch;
     private volatile boolean started; // NOPMD
+    private volatile boolean modelLoaded; // NOPMD
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
     private boolean trtLlmMode;
@@ -133,6 +134,7 @@ class PyProcess {
 
     synchronized void startPythonProcess() {
         try {
+            modelLoaded = false;
             int id = restartCount.get();
             int port = connections.get(0).getPort();
             logger.info("Start process: {} - retry: {}", port, id);
@@ -168,6 +170,7 @@ class PyProcess {
             Input init = new Input();
             init.setProperties(pyEnv.getInitParameters());
             predict(init, pyEnv.getModelLoadingTimeout(), true);
+            modelLoaded = true;
         } catch (EngineException e) {
             started = false;
             throw e;
@@ -233,8 +236,8 @@ class PyProcess {
         }
     }
 
-    boolean isStopped() {
-        return !started;
+    boolean isReady() {
+        return started && modelLoaded;
     }
 
     static final class ReaderThread extends Thread {
