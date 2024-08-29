@@ -1,0 +1,20 @@
+{
+  "architectures": [
+    "DefaultForCausalLM"
+  ],
+  "attention_bias": false,
+  "bos_token_id": 1,
+  "eos_token_id": 2,
+  "hidden_act": "silu",
+  "initializer_range": 0.02,
+  "max_position_embeddings": 1,
+  "model_type": "default",
+  "pretraining_tp": 1,
+  "rms_norm_eps": 1e-05,
+  "rope_scaling": null,
+  "rope_theta": 10000.0,
+  "tie_word_embeddings": false,
+  "torch_dtype": "bfloat16",
+  "transformers_version": "4.35.0",
+  "use_cache": true
+}
