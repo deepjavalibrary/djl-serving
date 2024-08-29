@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -78,7 +79,8 @@ public class RequestParser {
                         contentType)) {
             int sizeLimit = ConfigManager.getInstance().getMaxRequestSize();
             HttpDataFactory factory = new DefaultHttpDataFactory(sizeLimit);
-            HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
+            HttpPostRequestDecoder form =
+                    new HttpPostRequestDecoder(factory, req, StandardCharsets.UTF_8, -1, -1);
             try {
                 while (form.hasNext()) {
                     NettyUtils.addFormData(form.next(), input);

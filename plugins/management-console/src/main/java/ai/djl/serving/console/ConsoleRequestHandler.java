@@ -239,8 +239,10 @@ public class ConsoleRequestHandler implements RequestHandler<Void> {
     }
 
     private void addDependency(ChannelHandlerContext ctx, FullHttpRequest req) {
-        HttpDataFactory factory = new DefaultHttpDataFactory();
-        HttpPostRequestDecoder form = new HttpPostRequestDecoder(factory, req);
+        int sizeLimit = ConfigManager.getInstance().getMaxRequestSize();
+        HttpDataFactory factory = new DefaultHttpDataFactory(sizeLimit);
+        HttpPostRequestDecoder form =
+                new HttpPostRequestDecoder(factory, req, StandardCharsets.UTF_8, -1, -1);
         DependencyManager dm = DependencyManager.getInstance();
         try {
             List<FileUpload> fileList = new ArrayList<>();
