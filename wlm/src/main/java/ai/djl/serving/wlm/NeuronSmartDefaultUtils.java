@@ -47,6 +47,10 @@ public class NeuronSmartDefaultUtils {
      */
     public void applySmartDefaults(Properties prop, HuggingFaceModelConfig modelConfig) {
         if (!prop.containsKey("option.n_positions")) {
+            if (modelConfig.getDefaultNPositions() <= 0) {
+                // If n positions cannot be determined skip smart defaults
+                return;
+            }
             prop.setProperty(
                     "option.n_positions", String.valueOf(modelConfig.getDefaultNPositions()));
         }
@@ -157,6 +161,7 @@ public class NeuronSmartDefaultUtils {
      * @return the largest power of 2 less than or equal to n
      */
     private int getMaxPowerOf2(int n) {
+        n = Math.min(n, MAX_ROLLING_BATCH);
         if (n != 0 && (n & (n - 1)) == 0) {
             return n;
         }

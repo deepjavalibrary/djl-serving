@@ -50,6 +50,13 @@ public class NeuronSmartDefaultUtilsTest {
     }
 
     @Test
+    public void testModelConfigParametersGPT2() throws IOException {
+        LmiUtils.HuggingFaceModelConfig modelConfig = getGPT2HuggingFaceModelConfig();
+        Assert.assertEquals(modelConfig.getDefaultNPositions(), 0);
+        Assert.assertEquals(modelConfig.getModelParameters(), 0L);
+    }
+
+    @Test
     public void testModelConfigParametersNoParameters() throws IOException {
         LmiUtils.HuggingFaceModelConfig modelConfig = getNoParametersHuggingFaceModelConfig();
         Assert.assertEquals(modelConfig.getDefaultNPositions(), 1);
@@ -57,6 +64,20 @@ public class NeuronSmartDefaultUtilsTest {
     }
 
     // Standard use tests on without Neuron device available
+    @Test
+    public void testApplySmartDefaultsGPT2Model() throws IOException {
+        Properties prop = new Properties();
+        LmiUtils.HuggingFaceModelConfig modelConfig = getGPT2HuggingFaceModelConfig();
+        try (MockedStatic<NeuronUtils> mockedStatic = Mockito.mockStatic(NeuronUtils.class)) {
+            mockedStatic.when(NeuronUtils::hasNeuron).thenReturn(false);
+            NeuronSmartDefaultUtils smartDefaultUtils = new NeuronSmartDefaultUtils();
+            smartDefaultUtils.applySmartDefaults(prop, modelConfig);
+        }
+        Assert.assertFalse(prop.containsKey("option.n_positions"));
+        Assert.assertFalse(prop.containsKey("option.tensor_parallel_degree"));
+        Assert.assertFalse(prop.containsKey("option.max_rolling_batch_size"));
+    }
+
     @Test
     public void testApplySmartDefaults70BModel() throws IOException {
         Properties prop = new Properties();
@@ -188,6 +209,14 @@ public class NeuronSmartDefaultUtilsTest {
     }
 
     // Helper methods
+    public HuggingFaceModelConfig getGPT2HuggingFaceModelConfig() throws IOException {
+        try (Reader reader =
+                Files.newBufferedReader(
+                        Paths.get("src/test/resources/smart-default-model/gpt2/config.json"))) {
+            return JsonUtils.GSON.fromJson(reader, HuggingFaceModelConfig.class);
+        }
+    }
+
     public HuggingFaceModelConfig get2BLlamaHuggingFaceModelConfig() throws IOException {
         try (Reader reader =
                 Files.newBufferedReader(
