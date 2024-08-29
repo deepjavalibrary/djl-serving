@@ -15,8 +15,8 @@ ARG cuda_version=cu124
 ARG djl_version=0.30.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
-ARG torch_version=2.3.1
-ARG torch_vision_version=0.18.1
+ARG torch_version=2.4.0
+ARG torch_vision_version=0.19.0
 ARG onnx_version=1.18.0
 ARG onnxruntime_wheel="https://publish.djl.ai/onnxruntime/1.18.0/onnxruntime_gpu-1.18.0-cp310-cp310-linux_x86_64.whl"
 ARG pydantic_version=2.8.2
@@ -33,8 +33,8 @@ ARG autoawq_version=0.2.5
 ARG tokenizers_version=0.19.1
 # LMI-Dist Deps
 ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.5.4/vllm-0.5.4-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.5.9.post1/vllm_flash_attn-2.5.9.post1-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.0.9/flashinfer-0.0.9+cu121torch2.3-cp310-cp310-linux_x86_64.whl"
+ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
+ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.2/flashinfer-0.1.2+cu121torch2.4-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
