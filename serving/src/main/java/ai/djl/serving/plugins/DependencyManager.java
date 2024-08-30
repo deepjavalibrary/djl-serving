@@ -130,10 +130,7 @@ public final class DependencyManager {
             logger.info("Found existing dependency: {}", name);
         } else {
             String link;
-            if ("onnxruntime_gpu".equals(artifactId)) {
-                // TODO: Remove this hack when OnnxRuntime support cudnn9
-                link = "https://publish.djl.ai/onnxruntime/" + version + '/' + name;
-            } else if (version.endsWith("-SNAPSHOT")) {
+            if (version.endsWith("-SNAPSHOT")) {
                 link = getSnapshotUrl(groupId, artifactId, version) + ".jar";
             } else {
                 String maven = "https://search.maven.org/remotecontent?filepath=";

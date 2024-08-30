@@ -9,7 +9,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.4.1-cudnn-devel-ubuntu22.04
+ARG version=12.4.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
 ARG djl_version=0.30.0~SNAPSHOT
@@ -17,8 +17,7 @@ ARG djl_version=0.30.0~SNAPSHOT
 ARG python_version=3.10
 ARG torch_version=2.4.0
 ARG torch_vision_version=0.19.0
-ARG onnx_version=1.18.0
-ARG onnxruntime_wheel="https://publish.djl.ai/onnxruntime/1.18.0/onnxruntime_gpu-1.18.0-cp310-cp310-linux_x86_64.whl"
+ARG onnx_version=1.19.0
 ARG pydantic_version=2.8.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
@@ -52,6 +51,8 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
+# set cudnn9 library path
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
@@ -103,7 +104,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 retrying \
-    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} \
+    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers onnxruntime autoawq==${autoawq_version} \
     tokenizers==${tokenizers_version} pydantic==${pydantic_version} \
     # TODO: installing optimum here due to version conflict.
     && pip3 install ${djl_converter_wheel} optimum==${optimum_version} --no-deps \
