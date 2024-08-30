@@ -286,30 +286,30 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 }
                 for (Path parentDir : possibleAdapterDirs) {
                     if (Files.isDirectory(parentDir.resolve("adapters"))) {
-                        Files.list(parentDir.resolve("adapters"))
-                                .forEach(
-                                        adapterDir -> {
-                                            eventManager.onAdapterLoading(this, adapterDir);
-                                            long start = System.nanoTime();
-                                            String adapterName =
-                                                    adapterDir.getFileName().toString();
-                                            Adapter adapter =
-                                                    Adapter.newInstance(
-                                                            this,
-                                                            adapterName,
-                                                            adapterDir.toAbsolutePath().toString(),
-                                                            Collections.emptyMap());
-                                            registerAdapter(adapter);
-                                            long d = (System.nanoTime() - start) / 1000;
-                                            Metric me =
-                                                    new Metric(
-                                                            "LoadAdapter",
-                                                            d,
-                                                            Unit.MICROSECONDS,
-                                                            dimension);
-                                            MODEL_METRIC.info("{}", me);
-                                            eventManager.onAdapterLoaded(this, adapter);
-                                        });
+                        try (Stream<Path> stream = Files.list(parentDir.resolve("adapters"))) {
+                            stream.forEach(
+                                    adapterDir -> {
+                                        eventManager.onAdapterLoading(this, adapterDir);
+                                        long start = System.nanoTime();
+                                        String adapterName = adapterDir.getFileName().toString();
+                                        Adapter adapter =
+                                                Adapter.newInstance(
+                                                        this,
+                                                        adapterName,
+                                                        adapterDir.toAbsolutePath().toString(),
+                                                        Collections.emptyMap());
+                                        registerAdapter(adapter);
+                                        long d = (System.nanoTime() - start) / 1000;
+                                        Metric me =
+                                                new Metric(
+                                                        "LoadAdapter",
+                                                        d,
+                                                        Unit.MICROSECONDS,
+                                                        dimension);
+                                        MODEL_METRIC.info("{}", me);
+                                        eventManager.onAdapterLoaded(this, adapter);
+                                    });
+                        }
                     }
                 }
             }

@@ -328,7 +328,7 @@ class PyProcess {
                 try {
                     is.close();
                 } catch (IOException e) {
-                    logger.warn("Failed to close stream for thread - " + getName(), e);
+                    logger.warn("Failed to close stream for thread - {}", getName(), e);
                 }
             }
         }
