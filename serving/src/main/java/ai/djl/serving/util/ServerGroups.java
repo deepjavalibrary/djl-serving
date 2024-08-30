@@ -131,7 +131,7 @@ public class ServerGroups {
             if (!future.isSuccess()) {
                 for (ChannelFuture cf : future) {
                     if (!cf.isSuccess()) {
-                        logger.info("Unable to close channel: " + cf.channel(), cf.cause());
+                        logger.info("Unable to close channel: {}", cf.channel(), cf.cause());
                     }
                 }
             }

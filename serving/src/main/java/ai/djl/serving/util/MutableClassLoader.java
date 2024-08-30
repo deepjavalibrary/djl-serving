@@ -62,7 +62,7 @@ public class MutableClassLoader extends URLClassLoader {
                                 try {
                                     addURL(p.toUri().toURL());
                                 } catch (MalformedURLException e) {
-                                    logger.warn("Invalid file system path: " + p, e);
+                                    logger.warn("Invalid file system path: {}", p, e);
                                 }
                             }
                         });
