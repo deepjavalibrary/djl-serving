@@ -396,7 +396,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                             Boolean.parseBoolean(
                                     Utils.getEnvOrSystemProperty("SERVING_HEALTH_CHECK_OVERRIDE"));
                     if (isHealthCheckOverrideEnabled) {
-                        logger.error(
+                        logger.info(
                                 "SERVING_HEALTH_CHECK_OVERRIDE is enabled. At least 1 model worker"
                                     + " has exhausted all retries. Not marking model as failed");
                         return Status.READY;
