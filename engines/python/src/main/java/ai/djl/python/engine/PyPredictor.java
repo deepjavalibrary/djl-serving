@@ -64,12 +64,12 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     @Override
     @SuppressWarnings("unchecked")
     public List<O> batchPredict(List<I> inputs) throws TranslateException {
+        if (process.isModelUnrecoverable()) {
+            throw new EngineException("Backend Python process is unrecoverable.");
+        }
         if (!process.isReady()) {
             // TODO: wait for restart
             throw new TranslateException("Backend Python process is stopped.");
-        }
-        if (process.isModelUnrecoverable()) {
-            throw new EngineException("Backend Python process is unrecoverable.");
         }
         Object first = inputs.get(0);
         if (first instanceof Input) {
