@@ -15,7 +15,7 @@ is_sm_neo_context=false
 if [[ $4 == "sm_neo_context" ]]; then
   is_sm_neo_context=true
   if [[ $5 == "jumpstart_integration" ]]; then
-      jumpstart_integration=true
+    jumpstart_integration=true
   fi
 fi
 
@@ -50,7 +50,6 @@ start_docker_network() {
     return 1
   fi
 }
-
 
 get_instance_type() {
   local token=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
@@ -171,8 +170,8 @@ if $is_multi_node; then
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
-    "${docker_image}" "service ssh start; djl-serving";
-  
+    "${docker_image}" "service ssh start; djl-serving"
+
   docker run \
     -t \
     -d \
@@ -193,7 +192,7 @@ if $is_multi_node; then
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
-    "${docker_image}" "service ssh start; /usr/bin/python3 /opt/djl/partition/run_multi_node_setup.py 2>&1 | tee /opt/djl/logs/lmi-worker.log; tail -f";
+    "${docker_image}" "service ssh start; /usr/bin/python3 /opt/djl/partition/run_multi_node_setup.py 2>&1 | tee /opt/djl/logs/lmi-worker.log; tail -f"
 elif $is_sm_neo_context; then
   docker run \
     -t \
