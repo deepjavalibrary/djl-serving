@@ -580,6 +580,7 @@ public final class ConfigManager {
                     || key.startsWith("OPTION_")
                     || key.contains("SAGEMAKER")
                     || "TENSOR_PARALLEL_DEGREE".equals(key)
+                    || "PIPELINE_PARALLEL_DEGREE".equals(key)
                     || "OMP_NUM_THREADS".equals(key)
                     || "CUDA_VISIBLE_DEVICES".equals(key)) {
                 sb.append("\n    ").append(key).append(": ").append(entry.getValue());
