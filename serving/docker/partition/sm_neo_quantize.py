@@ -81,7 +81,11 @@ class NeoQuantizationService():
         """
         logging.debug("Constructing PropertiesManager from "
                       f"serving.properties\nargs:{self.args}\n")
-        self.properties_manager = PropertiesManager(self.args)
+
+        # Always quantize with device_map=auto to avoid errors caused by tensors loaded on different devices
+        addl_properties = {"option.device_map": "auto"}
+        self.properties_manager = PropertiesManager(
+            self.args, addl_properties=addl_properties)
 
     def parse_autofp8_config(self) -> dict:
         autofp8_config = os.environ.get(AUTOFP8_CONFIG_ENVVAR, {})
@@ -110,28 +114,34 @@ class NeoQuantizationService():
     def write_properties(self):
         """
         Updates outputted serving.properties.
-        If a user passes in tensor_parallel_degree, it is passed through to the output.
-        Otherwise, tensor_parallel_degree is not outputted so that it can be defined
-        during serving.
+
+        We set option.tensor_parallel_degree & option.device_map for quantization.
+        This function passes through these values to the outputted serving.properties if received from the customer.
+        Otherwise, nothing is outputted for these values.
         """
-        user_tensor_parallel_degree = self.customer_properties.get(
-            "option.tensor_parallel_degree")
-        if os.environ.get("OPTION_TENSOR_PARALLEL_DEGREE"):
-            user_tensor_parallel_degree = os.environ.get(
-                "OPTION_TENSOR_PARALLEL_DEGREE")
+        passthrough_properties = {}
+        passthrough_properties[
+            "option.tensor_parallel_degree"] = os.environ.get(
+                "OPTION_TENSOR_PARALLEL_DEGREE") if os.environ.get(
+                    "OPTION_TENSOR_PARALLEL_DEGREE"
+                ) else self.customer_properties.get(
+                    "option.tensor_parallel_degree")
+        passthrough_properties["option.device_map"] = os.environ.get(
+            "OPTION_DEVICE_MAP") if os.environ.get(
+                "OPTION_DEVICE_MAP") else self.customer_properties.get(
+                    "option.device_map")
 
         output_properties = self.properties_manager.properties
-        if user_tensor_parallel_degree:
-            logging.info(
-                f"User passed tensor_parallel_degree={user_tensor_parallel_degree}"
-            )
-            output_properties[
-                "option.tensor_parallel_degree"] = user_tensor_parallel_degree
-        else:
-            logging.info(
-                "User did not pass tensor_parallel_degree. Outputted serving.properties "
-                "will not include this field.")
-            del output_properties["option.tensor_parallel_degree"]
+        for k, v in passthrough_properties.items():
+            if v:
+                logging.info(
+                    f"User passed {k}={v}. Outputting in serving.properties")
+                output_properties[k] = v
+            else:
+                output_properties.pop(k, None)
+                logging.info(
+                    f"User did not pass {k}. Outputted serving.properties "
+                    "will not include this field.")
 
         self.properties_manager.properties = output_properties
         self.properties_manager.generate_properties_file()
