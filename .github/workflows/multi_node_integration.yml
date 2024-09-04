@@ -106,3 +106,4 @@ jobs:
         run: |
           cd /home/ubuntu/djl_benchmark_script/scripts
           instance_id=${{ needs.create-runners.outputs.gpu_instance_id_1 }}
+          ./stop_instance.sh $instance_id
