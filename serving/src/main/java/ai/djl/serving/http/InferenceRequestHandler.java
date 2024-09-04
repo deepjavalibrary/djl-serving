@@ -186,6 +186,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             version = null;
         }
         Input input = requestParser.parseRequest(req, decoder);
+        String requestId = NettyUtils.getRequestId(ctx.channel());
+        input.addProperty("requestId", requestId);
         predict(ctx, req, input, modelName, version);
     }
 
@@ -196,6 +198,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             String modelName)
             throws ModelNotFoundException {
         Input input = requestParser.parseRequest(req, decoder);
+        String requestId = NettyUtils.getRequestId(ctx.channel());
+        input.addProperty("requestId", requestId);
         if (modelName == null) {
             modelName = NettyUtils.getParameter(decoder, "model_name", null);
         }
@@ -470,12 +474,17 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     void onException(Throwable t, ChannelHandlerContext ctx) {
         int code;
+        String requestIdLogPrefix = "";
+        if (ctx != null) {
+            String requestId = NettyUtils.getRequestId(ctx.channel());
+            requestIdLogPrefix = "RequestId=[" + requestId + "]: ";
+        }
         if (t instanceof TranslateException || t instanceof BadRequestException) {
-            logger.debug(t.getMessage(), t);
+            logger.debug("{}{}", requestIdLogPrefix, t.getMessage(), t);
             SERVER_METRIC.info("{}", RESPONSE_4_XX);
             code = config.getBadRequestErrorHttpCode();
         } else if (t instanceof WlmException) {
-            logger.warn(t.getMessage(), t);
+            logger.warn("{}{}", requestIdLogPrefix, t.getMessage(), t);
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", WLM_ERROR);
             if (t instanceof WlmCapacityException) {
@@ -487,7 +496,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 exceedErrorRate = true;
             }
         } else {
-            logger.warn("Unexpected error", t);
+            logger.warn("{} Unexpected error", requestIdLogPrefix, t);
             SERVER_METRIC.info("{}", RESPONSE_5_XX);
             SERVER_METRIC.info("{}", SERVER_ERROR);
             code = config.getServerErrorHttpCode();

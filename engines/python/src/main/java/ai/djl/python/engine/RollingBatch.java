@@ -221,11 +221,20 @@ class RollingBatch implements Runnable {
         try {
             lock.lock();
             if (list.size() >= maxRollingBatchSize) {
-                logger.debug("exceed max_rolling_batch_size: {}", maxRollingBatchSize);
+                // Input always reflects a single request here
+                String requestId = input.getProperty("requestId", "");
+                String requestIdLogPrefix = "RequestId=[" + requestId + "]";
+                logger.debug(
+                        "{} exceed max_rolling_batch_size: {}",
+                        requestIdLogPrefix,
+                        maxRollingBatchSize);
                 if (!canAdd.await(timeout, TimeUnit.SECONDS)) {
                     Metric metric =
                             new Metric("RollingBatchTimeout", list.size(), Unit.COUNT, dimension);
                     MODEL_METRIC.info("{}", metric);
+                    logger.warn(
+                            "{} Batch is full, cannot process request at this time",
+                            requestIdLogPrefix);
                     throw new TranslateException("Time out in: " + timeout);
                 }
             }
