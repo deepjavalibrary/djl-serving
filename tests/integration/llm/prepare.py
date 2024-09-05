@@ -561,6 +561,12 @@ lmi_dist_model_list = {
     "phi-3-vision-128k-instruct": {
         "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
         "option.trust_remote_code": True,
+    },
+    "llama-3.1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
+        "option.max_rolling_batch_size": 4
     }
 }
 

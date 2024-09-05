@@ -520,6 +520,16 @@ class TestLmiDist2:
             r.launch()
             client.run("lmi_dist_chat llama2-7b-chat".split())
 
+    def test_llama31_8b_secure(self):
+        with Runner('lmi', 'llama-3.1-8b') as r:
+            prepare.build_lmi_dist_model("llama-3.1-8b")
+            envs = [
+                "SAGEMAKER_SECURE_MODE=True",
+                "SAGEMAKER_SECURITY_CONTROLS=DISALLOW_CUSTOM_INFERENCE_SCRIPTS"
+            ]
+            r.launch(env_vars=envs)
+            client.run("lmi_dist llama-3.1-8b".split())
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.gpu_4
