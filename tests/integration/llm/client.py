@@ -372,6 +372,12 @@ lmi_dist_model_spec = {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
         "seq_length": [256]
+    },
+    "llama-3.1-8b": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Hermes-3-Llama-3.1-8B"
     }
 }
 

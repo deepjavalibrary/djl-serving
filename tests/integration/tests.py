@@ -520,15 +520,15 @@ class TestLmiDist2:
             r.launch()
             client.run("lmi_dist_chat llama2-7b-chat".split())
 
-    def test_speculative_llama_secure(self):
-        with Runner('lmi', 'speculative-llama-13b') as r:
-            prepare.build_lmi_dist_model("speculative-llama-13b")
+    def test_llama31_8b_secure(self):
+        with Runner('lmi', 'llama-3.1-8b') as r:
+            prepare.build_lmi_dist_model("llama-3.1-8b")
             envs = [
                 "SAGEMAKER_SECURE_MODE=True",
                 "SAGEMAKER_SECURITY_CONTROLS=DISALLOW_CUSTOM_INFERENCE_SCRIPTS"
             ]
             r.launch(env_vars=envs)
-            client.run("lmi_dist speculative-llama-13b".split())
+            client.run("lmi_dist llama-3.1-8b".split())
 
 
 @pytest.mark.vllm
@@ -838,19 +838,6 @@ class TestNeuronxRollingBatch:
             client.run(
                 "transformers_neuronx_rolling_batch llama-speculative-compiled-rb"
                 .split())
-
-    def test_llama_speculative_secure(self):
-        with Runner('pytorch-inf2', 'llama-speculative-rb') as r:
-            prepare.build_transformers_neuronx_handler_model(
-                "llama-speculative-rb")
-            envs = [
-                "SAGEMAKER_SECURE_MODE=True",
-                "SAGEMAKER_SECURITY_CONTROLS=DISALLOW_CUSTOM_INFERENCE_SCRIPTS"
-            ]
-            r.launch(env_vars=envs, container='pytorch-inf2-6')
-            client.run(
-                "transformers_neuronx_rolling_batch llama-speculative-rb".
-                split())
 
 
 @pytest.mark.correctness
