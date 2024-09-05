@@ -4,61 +4,45 @@ This document will contain the latest releases of our LMI containers. For detail
 
 ## Release Notes
 
-### Release date: June 6, 2024
+### Release date: August 16, 2024
 
 Check out our latest [Large Model Inference Containers](https://github.com/aws/deep-learning-containers/blob/master/available_images.md#large-model-inference-containers).
 
 ### Key Features
 
-#### LMI container
+#### DJL Serving Changes (applicable to all containers)
+* Allows configuring health checks to fail based on various types of error rates
+* When not streaming responses, all invocation errors will respond with the appropriate 4xx or 5xx HTTP response code
+  * Previously, for some inference backends (vllm, lmi-dist, tensorrt-llm) the behavior was to return 2xx HTTP responses when errors occurred during inference
+* HTTP Response Codes are now configurable if you require a specific 4xx or 5xx status to be returned in certain situations
+* Introduced annotations `@input_formatter` and `@output_formatter` to bring your own script for pre- and post-postprocessing.
 
-- Provided general performance optimization.
-- **Added text embedding support**
-  - Our solution for text embedding is 5% faster than HF TEI solution.
-- Multi-LoRA feature now supports LLama3 and AWS models
 
-#### TensorRT-LLM container
+#### LMI Container (vllm, lmi-dist)
+* vLLM updated to version 0.5.3.post1
+* Added MultiModal Support for Vision Language Models using the OpenAI Chat Completions Schema.
+  * More details available [here](https://github.com/deepjavalibrary/djl-serving/blob/v0.29.0/serving/docs/lmi/user_guides/vision_language_models.md)
+* Supports Llama 3.1 models
+* Supports beam search, `best_of` and `n` with non streaming output. 
+* Supports chunked prefill support in both vllm and lmi-dist.
 
-- Upgraded to TensorRT-LLM 0.9.0
-- AWQ, FP8 support for Llama3 models on G6/P5 machines
-- Now, default max_new_tokens=16384
-- Bugfix for critical memory leaks on long run. 
-- Bugfix for model hanging issues.
 
-#### Transformers NeuronX container
+#### TensorRT-LLM Container
+* TensorRT-LLM updated to version 0.11.0
+* **[Breaking change]** Flan-T5 is now supported with C++ triton backend. Removed Flan-T5 support for TRTLLM python backend.
 
-- Upgraded to Transformers NeuronX 2.18.2
 
-#### DeepSpeed container (deprecated)
+#### Transformers NeuronX Container
+* Upgraded to Transformers NeuronX 2.19.1
 
-- We have removed support for deepspeed and renamed our deepspeed container to lmi. The lmi container contains lmi-dist and vllm, and all existing workloads with deepspeed can be easily migrated to one of these backends. See https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/announcements/deepspeed-deprecation.md for steps on how to migrate your workload.
 
-### CX Usability Enhancements/Changes
+#### Text Embedding (using the LMI container)
+* Various performance improvements
 
-- Model loading CX:
-    - SERVING_LOAD_MODELS env is deprecated, use HF_MODEL_ID instead.
-- Inference CX:
-    - Input/Output schema changes:
-      - Speculative decoding now in streaming, returns multiple jsonlines tokens at each generation step
-      - Standardized the output formatter signature:
-        - We reduced the parameters of output_formatter by introducing RequestOutput class.
-        - RequestOutput contains all input information such as text, token_ids and parameters and also output information such as output tokens, log probabilities, and other details like finish reason. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/lmi_input_output_schema.md#generationparameters) to know more.
-        - Introduced prompt details in the `details` of the response for vLLM and lmi-dist rolling batch options. These prompt details contains the prompt token_ids and their corresponding text and log probability. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/output_formatter_schema.md#custom-output-formatter-schema) to know more.
-      - New error handling mechanism:
-        - Improved our error handling for container responses for rolling batch. Check this [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/lmi_input_output_schema.md#error-responses) to know more
-      -New CX capability:
-        - We introduce OPTION_TGI_COMPAT env which enables you to get the same response format as TGI. [doc](https://github.com/deepjavalibrary/djl-serving/blob/024780ee8393fe8c20830845175af8566c369cd1/serving/docs/lmi/user_guides/lmi_input_output_schema.md#response-with-tgi-compatibility)
-        - We also now support SSE text/event-stream data format. [doc](https://github.com/deepjavalibrary/djl-serving/blob/0.28.0-dlc/serving/docs/lmi/user_guides/lmi_input_output_schema.md#response-schema)
 
 ### Breaking Changes
-
-- Inference CX for rolling batch:
-  - Token id changed from list into integer in rolling batch response.
-  - Error handling: In the previous  release if any error happens, without sending any response back, the process hangs and request client gets timeout. Now, instead of timeout, you will receive the end jsonline of “finish_reason: error” during rolling batch inference. 
-- DeepSpeed container has been deprecated, functionality is generally available in the LMI container now.
+* In the TensorRT-LLM container, Flan-T5 is now supported with C++ triton backend. Removed Flan-T5 support for TRTLLM python backend.
 
 ### Known Issues
-We will be addressing these issues in the upcoming release. 
-- LMI-TensorRT-LLM container
-  - TensorRT-LLM periodically crashes during model compilation. 
-  - TensorRT-LLM AWQ runtime quantization currently crashes due to an internal error. 
+* Running Gemma and Phi models with TensorRT-LLM is only viable currently at TP=1 because of an issue in TensorRT-LLM where one engine is built even when TP > 1.
+* When using LMI-dist, in the rare case that the machine has a broken cuda driver, it causes hanging. In that case, set LMI_USE_VLLM_GPU_P2P_CHECK=1 to prompt LMI to use a fallback option compatible with the broken cuda driver.

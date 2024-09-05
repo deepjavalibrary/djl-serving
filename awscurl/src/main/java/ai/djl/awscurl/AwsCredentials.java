@@ -18,6 +18,7 @@ import ai.djl.util.Utils;
 import com.google.gson.annotations.SerializedName;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -155,11 +156,32 @@ public class AwsCredentials {
 
         String cred =
                 Ec2Utils.readMetadata("identity-credentials/ec2/security-credentials/ec2-instance");
+        if (cred == null) {
+            cred = loadFromEksMetadata();
+        }
         if (cred != null && !cred.isEmpty()) {
             return JsonUtils.GSON.fromJson(cred, AwsCredentials.class);
         }
 
         return loadFromProfile(getDefaultProfileName());
+    }
+
+    private static String loadFromEksMetadata() {
+        String url = Utils.getenv("AWS_CONTAINER_CREDENTIALS_FULL_URI");
+        if (url == null) {
+            url = Utils.getenv("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI");
+            if (url != null) {
+                url = "http://169.254.170.2" + url;
+            }
+        }
+        if (url != null) {
+            try (InputStream is = Utils.openUrl(url)) {
+                return Utils.toString(is);
+            } catch (IOException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private static AwsCredentials loadFromProfile(String profile) {

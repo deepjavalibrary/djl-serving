@@ -82,6 +82,7 @@ transformers_neuronx_handler_list = {
         "max_dynamic_batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
+        "option.rolling_batch": "disable",
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600
     },
@@ -90,6 +91,7 @@ transformers_neuronx_handler_list = {
         "batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
+        "option.rolling_batch": "disable",
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600,
         "option.quantize": "static_int8"
@@ -99,6 +101,7 @@ transformers_neuronx_handler_list = {
         "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
+        "option.rolling_batch": "disable",
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600
     },
@@ -107,6 +110,7 @@ transformers_neuronx_handler_list = {
         "batch_size": 4,
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 512,
+        "option.rolling_batch": "disable",
         "option.dtype": "fp32",
         "option.model_loading_timeout": 2400
     },
@@ -115,6 +119,7 @@ transformers_neuronx_handler_list = {
         "batch_size": 4,
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 512,
+        "option.rolling_batch": "disable",
         "option.dtype": "fp16",
         "option.model_loading_timeout": 900
     },
@@ -123,6 +128,7 @@ transformers_neuronx_handler_list = {
         "batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 256,
+        "option.rolling_batch": "disable",
         "option.dtype": "fp16",
         "option.model_loading_timeout": 1200
     },
@@ -130,6 +136,7 @@ transformers_neuronx_handler_list = {
         "option.model_id": "s3://djl-llm/mixtral-8x7b/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
+        "option.rolling_batch": "disable",
         "batch_size": 4,
         "option.model_loading_timeout": 3600,
     },
@@ -138,6 +145,7 @@ transformers_neuronx_handler_list = {
         "batch_size": 2,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
+        "option.rolling_batch": "disable",
         "option.dtype": "fp16",
         "option.model_loading_timeout": 600,
         "option.enable_streaming": True,
@@ -180,7 +188,6 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 512,
         "option.max_rolling_batch_size": 4,
-        "option.rolling_batch": 'auto',
         "option.model_loading_timeout": 2400,
         "option.load_split_model": True,
         "option.output_formatter": "jsonlines"
@@ -206,7 +213,6 @@ transformers_neuronx_handler_list = {
     },
     "mistral-7b-rb": {
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v02/",
-        "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 4,
         "option.tensor_parallel_degree": 4,
         "option.n_positions": 1024,
@@ -217,7 +223,6 @@ transformers_neuronx_handler_list = {
         "option.speculative_draft_model": "s3://djl-llm/llama-2-tiny/",
         "option.speculative_length": 7,
         "option.tensor_parallel_degree": 12,
-        "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 1,
         "option.model_loading_timeout": 3600,
         "option.output_formatter": "jsonlines"
@@ -231,26 +236,25 @@ transformers_neuronx_handler_list = {
         "s3://djl-llm/inf2-compiled-graphs/llama-2-tiny/",
         "option.speculative_length": 4,
         "option.tensor_parallel_degree": 12,
-        "option.rolling_batch": "auto",
         "option.max_rolling_batch_size": 1,
         "option.model_loading_timeout": 3600,
         "option.output_formatter": "jsonlines"
     },
     "tiny-llama-rb-aot": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.rolling_batch": "auto",
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 1024,
         "option.max_rolling_batch_size": 4,
-        "option.rolling_batch": 'auto',
         "option.model_loading_timeout": 1200,
     },
     "tiny-llama-rb-aot-quant": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.quantize": "static_int8",
+        "option.rolling_batch": "auto",
         "option.tensor_parallel_degree": 2,
         "option.n_positions": 1024,
         "option.max_rolling_batch_size": 4,
-        "option.rolling_batch": 'auto',
         "option.model_loading_timeout": 1200,
     }
 }
@@ -398,6 +402,11 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
+    },
+    "llama3-8b": {
+        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+        "option.task": "text-generation",
+        "option.tensor_parallel_degree": 4,
     },
     "llama3-8b-chunked-prefill": {
         "option.model_id": "s3://djl-llm/llama-3-8b-instruct-hf/",
@@ -1071,14 +1080,53 @@ transformers_neuronx_neo_list = {
 text_embedding_model_list = {
     "bge-base": {
         "option.model_id": "BAAI/bge-base-en-v1.5",
-        "batch_size": 32,
+        "batch_size": 8,
+    },
+    "e5-base-v2": {
+        "option.model_id": "intfloat/e5-base-v2",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "sentence-camembert-large": {
+        "option.model_id": "dangvantuan/sentence-camembert-large",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "roberta-base": {
+        "option.model_id": "relbert/relbert-roberta-base-nce-conceptnet",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "msmarco-distilbert-base-v4": {
+        "option.model_id": "sentence-transformers/msmarco-distilbert-base-v4",
+        "pooling": "cls",
+        "batch_size": 8,
     },
     "bge-reranker": {
         "option.model_id": "BAAI/bge-reranker-base",
         "reranking": True,
-        "includeTokenTypes": True,
-        "sigmoid": False,
-        "batch_size": 32,
+        "batch_size": 8,
+    },
+    "e5-mistral-7b": {
+        "option.model_id": "intfloat/e5-mistral-7b-instruct",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "gte-qwen2-7b": {
+        "option.model_id": "Alibaba-NLP/gte-Qwen2-7B-instruct",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "gte-large": {
+        "option.model_id": "Alibaba-NLP/gte-large-en-v1.5",
+        "option.trust_remote_code": "true",
+        "pooling": "cls",
+        "batch_size": 8,
+    },
+    "bge-multilingual-gemma2": {
+        "option.model_id": "BAAI/bge-multilingual-gemma2",
+        "pooling": "cls",
+        "batch_size": 8,
     }
 }
 

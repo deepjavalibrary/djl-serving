@@ -9,16 +9,15 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.4.1-cudnn-devel-ubuntu22.04
+ARG version=12.4.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
 ARG djl_version=0.30.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
-ARG torch_version=2.3.1
-ARG torch_vision_version=0.18.1
-ARG onnx_version=1.18.0
-ARG onnxruntime_wheel="https://publish.djl.ai/onnxruntime/1.18.0/onnxruntime_gpu-1.18.0-cp310-cp310-linux_x86_64.whl"
+ARG torch_version=2.4.0
+ARG torch_vision_version=0.19.0
+ARG onnx_version=1.19.0
 ARG pydantic_version=2.8.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
@@ -32,9 +31,9 @@ ARG datasets_version=2.20.0
 ARG autoawq_version=0.2.5
 ARG tokenizers_version=0.19.1
 # LMI-Dist Deps
-ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt231/vllm-0.5.3.post1%2Bcu124-cp310-cp310-linux_x86_64.whl"
-ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.5.9.post1/vllm_flash_attn-2.5.9.post1-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.0.9/flashinfer-0.0.9+cu121torch2.3-cp310-cp310-linux_x86_64.whl"
+ARG vllm_wheel="https://github.com/vllm-project/vllm/releases/download/v0.5.4/vllm-0.5.4-cp310-cp310-manylinux1_x86_64.whl"
+ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
+ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.2/flashinfer-0.1.2+cu121torch2.4-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
@@ -52,6 +51,8 @@ ENV MODEL_SERVER_HOME=/opt/djl
 ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
+# set cudnn9 library path
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
@@ -67,7 +68,7 @@ ENV USE_AICCL_BACKEND=true
 ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV SAFETENSORS_FAST_GPU=1
 ENV TORCH_NCCL_BLOCKING_WAIT=0
-ENV NCCL_ASYNC_ERROR_HANDLING=1
+ENV TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 ENV TORCH_NCCL_AVOID_RECORD_STREAMS=1
 ENV SERVING_FEATURES=vllm,lmi-dist
 
@@ -103,7 +104,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 retrying \
-    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers ${onnxruntime_wheel} autoawq==${autoawq_version} \
+    opencv-contrib-python-headless safetensors scipy onnx sentence_transformers onnxruntime autoawq==${autoawq_version} \
     tokenizers==${tokenizers_version} pydantic==${pydantic_version} \
     # TODO: installing optimum here due to version conflict.
     && pip3 install ${djl_converter_wheel} optimum==${optimum_version} --no-deps \

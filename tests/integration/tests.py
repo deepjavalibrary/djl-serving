@@ -531,6 +531,17 @@ class TestLmiDist2:
             client.run("lmi_dist llama-3.1-8b".split())
 
 
+@pytest.mark.lmi_dist
+@pytest.mark.gpu_4
+class TestLmiDistMultiNode:
+
+    def test_llama3_8b(self):
+        with Runner('lmi', 'llama3-8b') as r:
+            prepare.build_lmi_dist_model("llama3-8b")
+            r.launch(cmd="multi_node")
+            client.run("lmi_dist llama3-8b --in_tokens 1200".split())
+
+
 @pytest.mark.vllm
 @pytest.mark.gpu_4
 class TestVllm1:
@@ -943,11 +954,59 @@ class TestTextEmbedding:
             r.launch()
             client.run("text_embedding bge-base".split())
 
+    def test_e5_base_v2(self):
+        with Runner('lmi', 'e5-base-v2') as r:
+            prepare.build_text_embedding_model("e5-base-v2")
+            r.launch()
+            client.run("text_embedding e5-base-v2".split())
+
+    def test_sentence_camembert_large(self):
+        with Runner('lmi', 'sentence-camembert-large') as r:
+            prepare.build_text_embedding_model("sentence-camembert-large")
+            r.launch()
+            client.run("text_embedding sentence-camembert-large".split())
+
+    def test_roberta_base(self):
+        with Runner('lmi', 'roberta-base') as r:
+            prepare.build_text_embedding_model("roberta-base")
+            r.launch()
+            client.run("text_embedding roberta-base".split())
+
+    def test_msmarco_distilbert_base_v4(self):
+        with Runner('lmi', 'msmarco-distilbert-base-v4') as r:
+            prepare.build_text_embedding_model("msmarco-distilbert-base-v4")
+            r.launch()
+            client.run("text_embedding msmarco-distilbert-base-v4".split())
+
     def test_bge_reranker(self):
         with Runner('lmi', 'bge-reranker') as r:
             prepare.build_text_embedding_model("bge-reranker")
             r.launch()
-            client.run("reranking bge-reranker".split())
+            client.run("text_embedding bge-reranker".split())
+
+    def test_e5_mistral_7b(self):
+        with Runner('lmi', 'e5-mistral-7b') as r:
+            prepare.build_text_embedding_model("e5-mistral-7b")
+            r.launch()
+            client.run("text_embedding e5-mistral-7b".split())
+
+    def test_gte_qwen2_7b(self):
+        with Runner('lmi', 'gte-qwen2-7b') as r:
+            prepare.build_text_embedding_model("gte-qwen2-7b")
+            r.launch()
+            client.run("text_embedding gte-qwen2-7b".split())
+
+    def test_gte_large(self):
+        with Runner('lmi', 'gte-large') as r:
+            prepare.build_text_embedding_model("gte-large")
+            r.launch()
+            client.run("text_embedding gte-large".split())
+
+    def test_bge_multilingual_gemma2(self):
+        with Runner('lmi', 'bge-multilingual-gemma2') as r:
+            prepare.build_text_embedding_model("bge-multilingual-gemma2")
+            r.launch()
+            client.run("text_embedding bge-multilingual-gemma2".split())
 
 
 @pytest.mark.gpu

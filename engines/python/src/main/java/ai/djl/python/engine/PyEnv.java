@@ -392,7 +392,7 @@ public class PyEnv {
     }
 
     int getMpiWorkers() {
-        int gpuCount = CudaUtils.getGpuCount() * clusterSize;
+        int gpuCount = CudaUtils.getGpuCount();
         String visibleDevices = Utils.getenv("CUDA_VISIBLE_DEVICES");
         if (gpuCount > 0 && visibleDevices != null) {
             int visibleCount = visibleDevices.split(",").length;
@@ -401,7 +401,7 @@ public class PyEnv {
             }
             gpuCount = visibleCount;
         }
-        return gpuCount / (getTensorParallelDegree() * getPipelineParallelDegree());
+        return gpuCount * clusterSize / (getTensorParallelDegree() * getPipelineParallelDegree());
     }
 
     /**

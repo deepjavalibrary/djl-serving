@@ -373,6 +373,12 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256]
     },
+    "llama3-8b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
+    },
     "llama-3.1-8b": {
         "max_memory_per_gpu": [23.0],
         "batch_size": [1, 4],
@@ -423,6 +429,12 @@ vllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-2-13B-fp16"
+    },
+    "llama3-8b": {
+        "max_memory_per_gpu": [22.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
     "mixtral-8x7b": {
         "max_memory_per_gpu": [40.0],
@@ -846,15 +858,45 @@ multi_modal_spec = {
 
 text_embedding_model_spec = {
     "bge-base": {
-        "max_memory_per_gpu": [2.0, 2.0, 2.0, 2.0],
-        "batch_size": [1, 2, 4, 8],
-    }
-}
-
-reranking_model_spec = {
+        "max_memory_per_gpu": [2.0, 2.0],
+        "batch_size": [1, 8],
+    },
+    "e5-base-v2": {
+        "max_memory_per_gpu": [2.0, 2.0],
+        "batch_size": [1, 8],
+    },
+    "sentence-camembert-large": {
+        "max_memory_per_gpu": [3.0, 3.0],
+        "batch_size": [1, 8],
+    },
+    "roberta-base": {
+        "max_memory_per_gpu": [2.0, 2.0],
+        "batch_size": [1, 8],
+    },
+    "msmarco-distilbert-base-v4": {
+        "max_memory_per_gpu": [2.0, 2.0],
+        "batch_size": [1, 8],
+    },
     "bge-reranker": {
-        "max_memory_per_gpu": [5.0, 5.0, 5.0, 5.0],
-        "batch_size": [1, 2, 4, 8],
+        "max_memory_per_gpu": [3.0, 3.0],
+        "batch_size": [1, 8],
+        "reranking": True,
+    },
+    "e5-mistral-7b": {
+        "max_memory_per_gpu": [18.0, 18.0],
+        "batch_size": [1, 8],
+    },
+    "gte-qwen2-7b": {
+        "max_memory_per_gpu": [18.0, 18.0],
+        "batch_size": [1, 8],
+    },
+    "gte-large": {
+        "max_memory_per_gpu": [3.0, 3.0],
+        "batch_size": [1, 8],
+    },
+    "bge-multilingual-gemma2": {
+        "max_memory_per_gpu": [20.0, 20.0],
+        "batch_size": [1, 8],
     }
 }
 
@@ -958,7 +1000,7 @@ def send_json(data):
 
     if resp.status_code >= 300:
         LOGGER.exception(f"HTTP error: {resp}")
-        raise ValueError("Failed to send reqeust to model server")
+        raise ValueError("Failed to send request to model server")
     return resp
 
 
@@ -981,7 +1023,7 @@ def awscurl_run(data,
                 json_results=False,
                 random_delay=False):
     find_awscurl()
-    headers = "Content-type: application/json"
+    headers = "'Content-type: application/json'"
     endpoint = f"http://127.0.0.1:8080/invocations"
     if dataset:
         dataset_dir = os.path.join(os.path.curdir, "dataset")
@@ -1031,7 +1073,7 @@ def send_image_json(img_url, data):
 
     if resp.status_code >= 300:
         LOGGER.exception(f"HTTP error: {resp}")
-        raise ValueError("Failed to send reqeust to model server")
+        raise ValueError("Failed to send request to model server")
     return resp
 
 
@@ -1714,33 +1756,16 @@ def test_text_embedding_model(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    reranking = spec.get("reranking", False)
     for i, batch_size in enumerate(spec["batch_size"]):
-        req = {"inputs": batch_generation(batch_size)}
+        if reranking:
+            req = batch_generation_pair(batch_size)
+        else:
+            req = {"inputs": batch_generation(batch_size)}
         logging.info(f"req {req}")
         res = send_json(req).json()
         logging.info(f"res: {res}")
         assert len(res) == batch_size
-        if "max_memory_per_gpu" in spec:
-            validate_memory_usage(spec["max_memory_per_gpu"][i])
-
-        # awscurl little benchmark phase
-        logging.info(f"Little benchmark: concurrency {batch_size}")
-        awscurl_run(req, spec.get("tokenizer"), batch_size)
-
-
-def test_reranking_model(model, model_spec):
-    if model not in model_spec:
-        raise ValueError(
-            f"{args.model} is not one of the supporting models {list(model_spec.keys())}"
-        )
-    spec = model_spec[args.model]
-    if "worker" in spec:
-        check_worker_number(spec["worker"])
-    for i, batch_size in enumerate(spec["batch_size"]):
-        req = batch_generation_pair(batch_size)
-        logging.info(f"req {req}")
-        res = send_json(req).json()
-        logging.info(f"res: {res}")
         if "max_memory_per_gpu" in spec:
             validate_memory_usage(spec["max_memory_per_gpu"][i])
 
@@ -1839,8 +1864,6 @@ def run(raw_args):
         test_multimodal(args.model, multi_modal_spec)
     elif args.handler == "text_embedding":
         test_text_embedding_model(args.model, text_embedding_model_spec)
-    elif args.handler == "reranking":
-        test_reranking_model(args.model, reranking_model_spec)
 
     else:
         raise ValueError(
