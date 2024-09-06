@@ -316,7 +316,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: [pytorch-inf2-2]
+        container: [pytorch-inf2]
         machine: [inf2]
     steps:
       - uses: actions/checkout@v4
@@ -346,7 +346,7 @@ jobs:
         run: |
           rm -rf models
           echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-7b-hf/\nOPTION_TGI_COMPAT=true" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }}-2 \
           serve
           python3 llm/tgi_client.py
           ./remove_container.sh
@@ -355,7 +355,7 @@ jobs:
         run: |
           rm -rf models
           echo -en "HF_MODEL_ID=s3://djl-llm/llama-3-8b-hf/" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }}-2 \
           serve
           python3 llm/client.py no_code llama-7b
           ./remove_container.sh
@@ -364,7 +364,7 @@ jobs:
         run: |
           rm -rf models
           echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-13b-hf/" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }}-2 \
           serve
           python3 llm/client.py no_code llama-13b
           ./remove_container.sh
@@ -373,7 +373,7 @@ jobs:
         run: |
           rm -rf models
           echo -en "HF_MODEL_ID=s3://djl-llm/mistral-7b/" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }} \
+          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }}-2 \
           serve
           python3 llm/client.py no_code mistral-7b
           ./remove_container.sh
