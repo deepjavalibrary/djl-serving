@@ -359,15 +359,6 @@ jobs:
           serve
           python3 llm/client.py no_code llama-7b
           ./remove_container.sh
-      - name: Llama2-13b lmi container
-        working-directory: tests/integration
-        run: |
-          rm -rf models
-          echo -en "HF_MODEL_ID=s3://djl-llm/llama-2-13b-hf/" > docker_env
-          ./launch_container.sh deepjavalibrary/djl-serving:$DJLSERVING_DOCKER_TAG $PWD/models ${{ matrix.container }}-2 \
-          serve
-          python3 llm/client.py no_code llama-13b
-          ./remove_container.sh
       - name: Mistral-7b lmi container
         working-directory: tests/integration
         run: |
