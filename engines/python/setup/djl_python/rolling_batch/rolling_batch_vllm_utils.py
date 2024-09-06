@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+import json
 from collections import OrderedDict
 from typing import Any
 
@@ -279,7 +280,9 @@ def get_multi_modal_data(request: Request) -> dict:
 
 
 def get_prompt_inputs(request: Request):
-    prompt_inputs: PromptInputs = {"prompt": request.request_input.input_text}
+    prompt_inputs: PromptInputs = {
+        "prompt": json.dumps(request.request_input.input_text)
+    }
     multi_modal_data = get_multi_modal_data(request)
     if multi_modal_data:
         prompt_inputs["multi_modal_data"] = multi_modal_data
