@@ -336,6 +336,7 @@ public final class AwsCurl {
                     ret.setTotalTokens(totalTokens);
                     ret.setTokenPerRequest(totalTokens / totalRequests);
                     ret.setTokenThroughput(totalTokens * 1000000000d / totalTime * clients);
+                    ret.setAverageTokenLatency(totalTime / 1000000d * clients / totalTokens);
                 }
             }
             if (!firstTokens.isEmpty()) {
