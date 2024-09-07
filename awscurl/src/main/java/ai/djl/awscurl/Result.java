@@ -36,6 +36,7 @@ class Result {
     private int totalTokens;
     private int tokenPerRequest;
     private Double averageLatency;
+    private Double averageTokenLatency;
     private Double p50Latency;
     private Double p90Latency;
     private Double p99Latency;
@@ -140,6 +141,14 @@ class Result {
         this.averageLatency = round(averageLatency);
     }
 
+    public Double getAverageTokenLatency() {
+        return averageTokenLatency;
+    }
+
+    public void setAverageTokenLatency(Double averageTokenLatency) {
+        this.averageTokenLatency = round(averageTokenLatency);
+    }
+
     public Double getP50Latency() {
         return p50Latency;
     }
@@ -217,6 +226,7 @@ class Result {
         System.out.println("Total requests: " + getTotalRequests());
         if (getTps() != null) {
             System.out.printf("TPS: %.2f/s%n", getTps());
+            System.out.printf("Average Token Latency: %.2f ms.%n", getAverageTokenLatency());
             System.out.printf("Average Latency: %.2f ms.%n", getAverageLatency());
             System.out.printf("P50: %.2f ms.%n", getP50Latency());
             System.out.printf("P90: %.2f ms.%n", getP90Latency());
