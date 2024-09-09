@@ -110,8 +110,8 @@ def _json_output_formatter(request_output: TextGenerationOutput):
         request_output.best_sequence_index]
     # TODO: Fix this so it is not required. Right now, this call is needed to
     # advance the token iterator, which is needed for rolling batch to work properly
-    next_token, _, _ = best_sequence.get_next_token()
-    if not request_output.finished:
+    next_token, _, is_last_token = best_sequence.get_next_token()
+    if not is_last_token:
         return ""
     details = get_details_dict(request_output, include_tokens=True)
     if details.get("finish_reason") == "error":
