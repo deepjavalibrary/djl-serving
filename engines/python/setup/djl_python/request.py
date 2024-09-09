@@ -15,7 +15,7 @@ from typing import Union, Callable, Any, List, Dict, Optional
 
 from djl_python.output_formatter import get_output_formatter, adapt_legacy_output_formatter
 from djl_python.request_io import Token, TextGenerationOutput, TextInput, RequestOutput, RequestInput
-from djl_python.utils import wait_till_generation_finished
+from djl_python.utils import is_streaming
 
 
 class Request(object):
@@ -113,9 +113,8 @@ class Request(object):
         if self.legacy_formatter:
             self.next_token_str = adapt_legacy_output_formatter(
                 self.request_output)
-        elif wait_till_generation_finished(
-                self.request_output.input.parameters):
-            # there is no need for iterators for best_of and num_beams.
+        elif not is_streaming(self.request_output.input.parameters):
+            # there is no need for iterators in non-streaming use-cases
             self.next_token_str = self.output_formatter(self.request_output)
         else:
             best_sequence = self.request_output.sequences[
