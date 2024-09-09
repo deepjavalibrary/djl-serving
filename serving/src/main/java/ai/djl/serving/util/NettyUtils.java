@@ -250,35 +250,37 @@ public final class NettyUtils {
      * @param t the exception to be send
      */
     public static void sendError(ChannelHandlerContext ctx, Throwable t) {
+        String requestId = NettyUtils.getRequestId(ctx.channel());
+        String requestIdLogPrefix = "RequestId=[" + requestId + "]";
         if (t instanceof ResourceNotFoundException || t instanceof ModelNotFoundException) {
-            logger.debug("", t);
+            logger.debug(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.NOT_FOUND, t);
         } else if (t instanceof BadRequestException) {
-            logger.debug("", t);
+            logger.debug(requestIdLogPrefix, t);
             BadRequestException e = (BadRequestException) t;
             HttpResponseStatus status = HttpResponseStatus.valueOf(e.getCode(), e.getMessage());
             NettyUtils.sendError(ctx, status, t);
         } else if (t instanceof EngineException) {
             if ("OOM".equals(t.getMessage())) {
-                logger.warn("CUDA out of memory", t);
+                logger.warn("{}: CUDA out of memory", requestIdLogPrefix, t);
                 NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
             }
-            logger.error("", t);
+            logger.error(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
         } else if (t instanceof WlmOutOfMemoryException) {
-            logger.warn("", t);
+            logger.warn(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.INSUFFICIENT_STORAGE, t);
         } else if (t instanceof ModelException || t instanceof IllegalConfigurationException) {
-            logger.debug("", t);
+            logger.debug(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.BAD_REQUEST, t);
         } else if (t instanceof MethodNotAllowedException) {
-            logger.debug("", t);
+            logger.debug(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED, t);
         } else if (t instanceof ServiceUnavailableException || t instanceof WlmException) {
-            logger.warn("", t);
+            logger.warn(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, t);
         } else {
-            logger.error("", t);
+            logger.error(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
         }
     }
@@ -337,12 +339,14 @@ public final class NettyUtils {
         Channel channel = ctx.channel();
         Session session = channel.attr(SESSION_KEY).getAndSet(null);
         HttpHeaders headers = resp.headers();
+        String requestId = NettyUtils.getRequestId(channel);
+        String requestIdLogPrefix = "RequestId=[" + requestId + "]: ";
 
         ConfigManager configManager = ConfigManager.getInstance();
         HttpResponseStatus status = resp.status();
         int code = status.code();
         if (code != 200) {
-            logger.debug("HTTP {}", status);
+            logger.debug("{} HTTP {}", requestIdLogPrefix, status);
         }
         if (session != null) {
             // session might be recycled if channel is closed already.
@@ -392,14 +396,14 @@ public final class NettyUtils {
                 ChannelFuture f = channel.writeAndFlush(resp);
                 f.addListener(ChannelFutureListener.CLOSE);
             } else {
-                logger.warn("Channel is closed by peer.");
+                logger.warn("{} Channel is closed by peer.", requestIdLogPrefix);
             }
         } else {
             headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             if (channel.isActive()) {
                 channel.writeAndFlush(resp);
             } else {
-                logger.warn("Channel is closed by peer.");
+                logger.warn("{} Channel is closed by peer.", requestIdLogPrefix);
             }
         }
     }

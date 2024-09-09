@@ -13,6 +13,7 @@
 package ai.djl.serving.http;
 
 import ai.djl.modality.Input;
+import ai.djl.serving.util.ConfigManager;
 
 import io.netty.handler.codec.http.HttpRequest;
 
@@ -46,7 +47,11 @@ public class Session {
             method = "GET";
             protocol = "HTTP/1.1";
         }
-        requestId = UUID.randomUUID().toString();
+        String requestIdHeaderKey = ConfigManager.getInstance().getRequestIdHeaderKey();
+        requestId = request.headers().get(requestIdHeaderKey);
+        if (requestId == null) {
+            requestId = UUID.randomUUID().toString();
+        }
         startTime = System.currentTimeMillis();
     }
 

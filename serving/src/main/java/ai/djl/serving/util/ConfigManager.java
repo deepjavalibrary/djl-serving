@@ -14,6 +14,7 @@ package ai.djl.serving.util;
 
 import ai.djl.serving.Arguments;
 import ai.djl.serving.wlm.util.WlmConfigManager;
+import ai.djl.util.Ec2Utils;
 import ai.djl.util.NeuronUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
@@ -90,6 +91,7 @@ public final class ConfigManager {
     private static final String THROTTLE_ERROR_HTTP_CODE = "throttle_error_http_code";
     private static final String TIMEOUT_ERROR_HTTP_CODE = "timeout_http_code";
     private static final String SERVER_ERROR_HTTP_CODE = "server_error_http_code";
+    private static final String REQUEST_ID_HEADER_KEY = "request_id_header_key";
 
     // Configuration which are not documented or enabled through environment variables
     private static final String USE_NATIVE_IO = "use_native_io";
@@ -136,6 +138,10 @@ public final class ConfigManager {
             if (key.startsWith("error_rate_")) {
                 limiters.put(key, RateLimiter.parse(entry.getValue().toString()));
             }
+        }
+        if (!prop.containsKey(REQUEST_ID_HEADER_KEY) && Ec2Utils.isSageMaker()) {
+            // SageMaker populates requestId in this header
+            prop.setProperty(REQUEST_ID_HEADER_KEY, "X-Amzn-SageMaker-Inference-Id");
         }
     }
 
@@ -500,6 +506,15 @@ public final class ConfigManager {
      */
     public int getServerErrorHttpCode() {
         return getIntProperty(SERVER_ERROR_HTTP_CODE, 500);
+    }
+
+    /**
+     * Returns the http header key used to parse the requestId.
+     *
+     * @return the http header key used to parse the requestId
+     */
+    public String getRequestIdHeaderKey() {
+        return getProperty(REQUEST_ID_HEADER_KEY, "x-request-id");
     }
 
     /**

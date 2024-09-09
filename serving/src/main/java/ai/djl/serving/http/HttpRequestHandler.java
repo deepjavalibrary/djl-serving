@@ -15,6 +15,7 @@ package ai.djl.serving.http;
 import ai.djl.ModelException;
 import ai.djl.serving.util.NettyUtils;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -33,8 +34,11 @@ public abstract class HttpRequestHandler extends SimpleChannelInboundHandler<Ful
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) {
         try {
-            NettyUtils.requestReceived(ctx.channel(), req);
+            Channel channel = ctx.channel();
+            NettyUtils.requestReceived(channel, req);
             if (!req.decoderResult().isSuccess()) {
+                String requestId = NettyUtils.getRequestId(channel);
+                logger.debug("RequestId[{}]: Invalid HTTP message", requestId);
                 throw new BadRequestException("Invalid HTTP message.");
             }
 
@@ -55,7 +59,8 @@ public abstract class HttpRequestHandler extends SimpleChannelInboundHandler<Ful
     /** {@inheritDoc} */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        logger.error("", cause);
+        String requestId = NettyUtils.getRequestId(ctx.channel());
+        logger.error("RequestId[{}]", requestId, cause);
         ctx.close();
     }
 
