@@ -90,6 +90,15 @@ def is_multiple_sequences(parameters: dict) -> bool:
     return "n" in parameters.keys() and parameters.get("n") > 1
 
 
+def is_streaming(parameters: dict) -> bool:
+    """
+    Returns whether token streaming is enabled for the request
+    :param parameters: parameters dictionary
+    :return: boolean
+    """
+    return "stream" in parameters.keys() and parameters.get("stream")
+
+
 def wait_till_generation_finished(parameters):
     return is_best_of(parameters) or is_multiple_sequences(
         parameters) or is_beam_search(parameters)
