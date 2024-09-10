@@ -23,7 +23,10 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
 from typing import List
 
-VLLM_GENERATION_PARAMS = set(SamplingParams().__dict__.keys())
+# FIXME: Once all vllm versions are past 0.6.0 we can move to just struct_fields
+VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__) if hasattr(
+    SamplingParams(), "__struct_fields__") else set(
+        SamplingParams().__dict__.keys())
 
 
 class VLLMRollingBatch(RollingBatch):
