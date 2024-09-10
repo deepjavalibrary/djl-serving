@@ -2,7 +2,7 @@
 
 This document describes the API schema for the chat completions endpoints (`v1/chat/completions`) when using the built-in inference handlers in LMI containers.
 This schema is applicable to our latest release, v0.29.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
-Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.28.0-dlc).
+Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.30.0-dlc).
 
 On SageMaker, Chat Completions API schema is supported with the `/invocations` endpoint without additional configurations.
 If the request contains the "messages" field, LMI will treat the request as a chat completions style request, and respond
