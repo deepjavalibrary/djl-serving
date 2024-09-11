@@ -13,4 +13,7 @@
     <Match>
         <Bug pattern="MS_FINAL_PKGPROTECT,MS_PKGPROTECT,NM_METHOD_NAMING_CONVENTION,SF_SWITCH_NO_DEFAULT,DC_DOUBLECHECK,IS2_INCONSISTENT_SYNC,CT_CONSTRUCTOR_THROW"/>
     </Match>
+    <Match>
+        <Class name="~ai\.djl\.serving\.grpc\.proto\..*"/>
+    </Match>
 </FindBugsFilter>

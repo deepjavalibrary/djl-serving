@@ -53,12 +53,12 @@ Once you enabled prometheus metrics, you can use [get metric management REST API
 Per request metrics is disabled by default, set the following option to enable per request metric:
 
 ```
-option.log_request_metric=true
+log_request_metric=true
 ```
 
 By default, per request metrics will be aggregated every `1000` requests. You can change
 aggregated with the following:
 
 ```
-option.metrics_aggregation=100
+metrics_aggregation=100
 ```
