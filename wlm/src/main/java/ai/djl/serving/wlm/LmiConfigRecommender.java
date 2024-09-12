@@ -109,7 +109,12 @@ public final class LmiConfigRecommender {
             // Non text-generation use-cases are not compatible with rolling batch
             rollingBatch = "disable";
         } else if (isTnxEnabled(features)) {
-            rollingBatch = "tnx";
+            if (Integer.parseInt(lmiProperties.getProperty("option.max_rolling_batch_size", "1"))
+                    >= 12) {
+                rollingBatch = "vllm";
+            } else {
+                rollingBatch = "tnx";
+            }
         } else if (isLmiDistEnabled(features)
                 && "lmi-dist".equals(MODEL_TO_ROLLING_BATCH.get(modelType))) {
             rollingBatch = "lmi-dist";
