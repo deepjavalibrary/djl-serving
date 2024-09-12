@@ -15,6 +15,9 @@ package ai.djl.serving.wlm;
 import ai.djl.serving.wlm.LmiUtils.HuggingFaceModelConfig;
 import ai.djl.util.NeuronUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -23,13 +26,16 @@ import java.util.Properties;
 public class NeuronSmartDefaultUtils {
 
     private static final float BILLION = 1_000_000_000.0F;
-    private static final int MAX_ROLLING_BATCH = 128; // Current cap for NeuronSDK 2.19.1
+    private static final int MAX_ROLLING_BATCH =
+            32; // Current best throughput and latency balance batch size
     private static final float MEMORY_PER_CORE =
             16.0F; // Currently there is only one config w/ 16 gb per core
 
     private int availableCores;
     private float modelSizeInGb;
     private float sequenceSizeInGb;
+
+    private static final Logger logger = LoggerFactory.getLogger(NeuronSmartDefaultUtils.class);
 
     /**
      * Applies smart defaults for Neuron models.
@@ -53,6 +59,7 @@ public class NeuronSmartDefaultUtils {
             }
             prop.setProperty(
                     "option.n_positions", String.valueOf(modelConfig.getDefaultNPositions()));
+            logger.info("[Smart Default] N_POSITIONS: {}.", prop.getProperty("option.n_positions"));
         }
         setInternalSettings(prop, modelConfig);
         setHeuristicNeuronTPDegree(prop);
@@ -77,6 +84,7 @@ public class NeuronSmartDefaultUtils {
         modelSizeInGb = (paramBytes * modelConfig.getModelParameters()) / BILLION;
         sequenceSizeInGb =
                 modelConfig.getApproxMemoryForSingleSequence(nPositions, paramBytes)
+                        * 0.95F
                         / (1024.0F * 1024.0F * 1024.0F);
     }
 
@@ -119,6 +127,9 @@ public class NeuronSmartDefaultUtils {
         if (prop.containsKey("option.tensor_parallel_degree")
                 && "max".equals(prop.getProperty("option.tensor_parallel_degree"))) {
             prop.setProperty("option.tensor_parallel_degree", String.valueOf(availableCores));
+            logger.info(
+                    "[Smart Default] TENSOR_PARALLEL_DEGREE:" + " {}.",
+                    prop.getProperty("option.tensor_parallel_degree"));
             return;
         }
 
@@ -130,13 +141,17 @@ public class NeuronSmartDefaultUtils {
             int totalInstanceConcurrency = getMaxConcurrency(totalMemory, tpDegree);
             for (int coreConfig : coreConfigs) {
                 float maxMemory = coreConfig * MEMORY_PER_CORE;
-                int maxConcurrency = getMaxConcurrency(maxMemory, coreConfig);
+                int maxConcurrency =
+                        getMaxConcurrency(maxMemory, coreConfig) * (availableCores / coreConfig);
                 if (maxConcurrency >= totalInstanceConcurrency && coreConfig <= tpDegree) {
                     tpDegree = coreConfig;
                     totalInstanceConcurrency = maxConcurrency;
                 }
             }
             prop.setProperty("option.tensor_parallel_degree", String.valueOf(tpDegree));
+            logger.info(
+                    "[Smart Default] TENSOR_PARALLEL_DEGREE:" + " {}.",
+                    prop.getProperty("option.tensor_parallel_degree"));
         } else if (!prop.containsKey("option.tensor_parallel_degree")) {
             // Set tensor parallel degree by minimizing TP degree that supports fixed batch size
             int batchSize = Integer.parseInt(prop.getProperty("option.max_rolling_batch_size"));
@@ -144,13 +159,18 @@ public class NeuronSmartDefaultUtils {
                     getMaxConcurrencyWithBatch(totalMemory, tpDegree, batchSize);
             for (int coreConfig : coreConfigs) {
                 float maxMemory = coreConfig * MEMORY_PER_CORE;
-                int maxConcurrency = getMaxConcurrencyWithBatch(maxMemory, coreConfig, batchSize);
+                int maxConcurrency =
+                        getMaxConcurrencyWithBatch(maxMemory, coreConfig, batchSize)
+                                * (availableCores / coreConfig);
                 if (maxConcurrency >= totalInstanceConcurrency && coreConfig <= tpDegree) {
                     tpDegree = coreConfig;
                     totalInstanceConcurrency = maxConcurrency;
                 }
             }
             prop.setProperty("option.tensor_parallel_degree", String.valueOf(tpDegree));
+            logger.info(
+                    "[Smart Default] TENSOR_PARALLEL_DEGREE: {}.",
+                    prop.getProperty("option.tensor_parallel_degree"));
         }
     }
 
@@ -222,9 +242,9 @@ public class NeuronSmartDefaultUtils {
     private List<Integer> availableCoreConfigs() {
         List<Integer> coreConfigs = new ArrayList<>();
         List<Integer> availableCoreConfigs = buildCoreConfigs(availableCores);
-        int coresPerModel = (int) Math.ceil(modelSizeInGb / MEMORY_PER_CORE);
+        int coresPerModel = (int) Math.ceil(1.1F * modelSizeInGb / MEMORY_PER_CORE);
         for (int coreConfig : availableCoreConfigs) {
-            if (coresPerModel >= coreConfig) {
+            if (coresPerModel <= coreConfig) {
                 coreConfigs.add(coreConfig);
             }
         }
@@ -250,8 +270,10 @@ public class NeuronSmartDefaultUtils {
                 coreConfigs.add(i);
             }
         }
-        // Add the given number of cores to the list
-        coreConfigs.add(nCores);
+        // Add the given number of cores to the list if not already added
+        if (nCores > 8) {
+            coreConfigs.add(nCores);
+        }
         return coreConfigs;
     }
 
@@ -274,6 +296,9 @@ public class NeuronSmartDefaultUtils {
             if (maxRollingBatchSize > 0) {
                 prop.setProperty(
                         "option.max_rolling_batch_size", String.valueOf(maxRollingBatchSize));
+                logger.info(
+                        "[Smart Default] MAX_ROLLING_BATCH_SIZE: {}.",
+                        prop.getProperty("option.max_rolling_batch_size"));
             }
         }
     }

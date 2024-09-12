@@ -161,11 +161,10 @@ class TNXModelLoader(ModelLoader):
 
         :return: bool indicating if continuous batching can be used
         """
-        use_continuous_batching = (self.config.rolling_batch != "disable"
-                                   and self.config.rolling_batch_strategy
-                                   == TnXGenerationStrategy.continuous_batching
-                                   and self.config.max_rolling_batch_size
-                                   > 1) or self.config.rolling_batch == "vllm"
+        use_continuous_batching = (
+            self.config.rolling_batch != "disable"
+            and self.config.rolling_batch_strategy
+            == TnXGenerationStrategy.continuous_batching)
         return use_continuous_batching
 
     def set_neuron_config(self) -> None:

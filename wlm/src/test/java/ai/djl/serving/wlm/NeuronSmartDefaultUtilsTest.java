@@ -104,7 +104,7 @@ public class NeuronSmartDefaultUtilsTest {
         }
         Assert.assertEquals(prop.getProperty("option.n_positions"), "4096");
         Assert.assertEquals(prop.getProperty("option.tensor_parallel_degree"), "1");
-        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "8");
+        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "16");
     }
 
     @Test
@@ -118,7 +118,7 @@ public class NeuronSmartDefaultUtilsTest {
         }
         Assert.assertEquals(prop.getProperty("option.n_positions"), "2048");
         Assert.assertEquals(prop.getProperty("option.tensor_parallel_degree"), "1");
-        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "64");
+        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "32");
     }
 
     @Test
@@ -133,7 +133,7 @@ public class NeuronSmartDefaultUtilsTest {
         }
         Assert.assertEquals(prop.getProperty("option.n_positions"), "2048");
         Assert.assertEquals(prop.getProperty("option.tensor_parallel_degree"), "1");
-        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "128");
+        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "32");
     }
 
     @Test
@@ -147,7 +147,7 @@ public class NeuronSmartDefaultUtilsTest {
             smartDefaultUtils.applySmartDefaults(prop, modelConfig);
         }
         Assert.assertEquals(prop.getProperty("option.tensor_parallel_degree"), "1");
-        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "128");
+        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "32");
     }
 
     @Test
@@ -161,7 +161,7 @@ public class NeuronSmartDefaultUtilsTest {
             smartDefaultUtils.applySmartDefaults(prop, modelConfig);
         }
         Assert.assertEquals(prop.getProperty("option.n_positions"), "2048");
-        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "64");
+        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "32");
     }
 
     @Test
@@ -190,11 +190,26 @@ public class NeuronSmartDefaultUtilsTest {
         }
         Assert.assertEquals(prop.getProperty("option.n_positions"), "2048");
         Assert.assertEquals(prop.getProperty("option.tensor_parallel_degree"), "1");
-        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "64");
+        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "32");
     }
 
     @Test
-    public void testApplySmartDefaultsWithNeuron() throws IOException {
+    public void testApplySmartDefaultsWithNeuron8bModel() throws IOException {
+        Properties prop = new Properties();
+        LmiUtils.HuggingFaceModelConfig modelConfig = get8BLlamaHuggingFaceModelConfig();
+        try (MockedStatic<NeuronUtils> mockedStatic = Mockito.mockStatic(NeuronUtils.class)) {
+            mockedStatic.when(NeuronUtils::hasNeuron).thenReturn(true);
+            mockedStatic.when(NeuronUtils::getNeuronCores).thenReturn(32);
+            NeuronSmartDefaultUtils smartDefaultUtils = new NeuronSmartDefaultUtils();
+            smartDefaultUtils.applySmartDefaults(prop, modelConfig);
+        }
+        Assert.assertEquals(prop.getProperty("option.n_positions"), "4096");
+        Assert.assertEquals(prop.getProperty("option.tensor_parallel_degree"), "2");
+        Assert.assertEquals(prop.getProperty("option.max_rolling_batch_size"), "16");
+    }
+
+    @Test
+    public void testApplySmartDefaultsWithNeuron70bModel() throws IOException {
         Properties prop = new Properties();
         LmiUtils.HuggingFaceModelConfig modelConfig = get70BLlamaHuggingFaceModelConfig();
         try (MockedStatic<NeuronUtils> mockedStatic = Mockito.mockStatic(NeuronUtils.class)) {
