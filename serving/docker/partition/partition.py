@@ -18,7 +18,6 @@ import logging
 import argparse
 import subprocess
 
-from typing import Optional
 from pathlib import Path
 
 import utils
@@ -243,7 +242,7 @@ class PartitionService(object):
             if entry_point_file:
                 os.remove(os.path.join(saved_checkpoints_dir, 'model.py'))
 
-    def run_quantization(self, autofp8_config: Optional[dict] = None):
+    def run_quantization(self):
         quant_method = self.properties['option.quantize']
         if quant_method == 'awq':
             logging.info("Running AutoAWQ quantization")
@@ -252,7 +251,7 @@ class PartitionService(object):
             self.upload_checkpoints_to_s3()
         elif quant_method == 'fp8':
             logging.info("Running AutoFP8 quantization")
-            self.autofp8_quantize(autofp8_config)
+            self.autofp8_quantize()
             self.properties_manager.generate_properties_file()
             self.upload_checkpoints_to_s3()
         else:
@@ -263,16 +262,27 @@ class PartitionService(object):
         Quantizes model using AutoAWQ. Saves output to save_mp_checkpoint_path.
         """
         hf_configs, tokenizer = load_hf_config_and_tokenizer(self.properties)
-
-        # Hard-coding these options for now. If vLLM continues to prioritize
-        # AutoAWQ we will expose these options to customers in the future.
-        quant_config = {
-            "zero_point": True,
-            "q_group_size": 128,
-            "w_bit": 4,
-            "version": "GEMM"
-        }
         logging.info(f"Model loading kwargs: {hf_configs.kwargs}")
+
+        quant_config = {
+            "zero_point":
+            self.properties.get("option.awq_zero_point",
+                                "true").lower() == 'true',
+            "q_group_size":
+            int(self.properties.get("option.awq_block_size", "128")),
+            "w_bit":
+            int(self.properties.get("option.awq_weight_bit_width", "4")),
+            "version":
+            self.properties.get("option.awq_mm_version", "GEMM")
+        }
+        if self.properties.get("option.awq_ignore_layers"):
+            quant_config["modules_to_not_convert"] = [
+                s.strip() for s in self.properties.get(
+                    "option.awq_ignore_layers").split(',')
+            ]
+        logging.info(
+            f"Using the following configurations for AWQ quantization: {quant_config}"
+        )
         try:
             from awq import AutoAWQForCausalLM
             awq_model = AutoAWQForCausalLM.from_pretrained(
@@ -289,38 +299,51 @@ class PartitionService(object):
             raise ImportError(
                 "AutoAWQ is not installed. Failing during quantization.")
 
-    def autofp8_quantize(self, config: Optional[dict] = None):
+    def autofp8_quantize(self):
         """
         Quantizes model using AutoFP8.
-
-        :param config: Dictionary containing values to construct auto_fp8.BaseQuantizeConfig
         """
+        # initialize configs
         hf_configs, tokenizer = load_hf_config_and_tokenizer(self.properties)
         if not tokenizer.pad_token:
             tokenizer.pad_token = tokenizer.eos_token
 
-        config = {
-            k: v
-            for k, v in config.items() if v is not None
-        } if config else {}
-        if config.get("activation_scheme") == "dynamic":
+        quant_config = {
+            "activation_scheme":
+            self.properties.get("option.fp8_activation_scheme", "static"),
+        }
+        if self.properties.get("option.fp8_kv_cache_quant_targets"):
+            quant_config["kv_cache_quant_targets"] = tuple([
+                s.strip() for s in self.properties.get(
+                    "option.fp8_kv_cache_quant_targets").split(',')
+            ])
+        if self.properties.get("option.fp8_ignore_patterns"):
+            quant_config["ignore_patterns"] = [
+                s.strip() for s in self.properties.get(
+                    "option.fp8_ignore_patterns").split(',')
+            ]
+
+        # create samples for calibrating scaling factors
+        if quant_config["activation_scheme"] == "dynamic":
             # If using dynamic activation scales, a calibration dataset is not required
             examples = []
         else:
+            calib_size = self.properties.get("option.calib_size", 512)
             # Tokenize dataset for calibrating static activation scales
             ds = load_dataset("abisee/cnn_dailymail",
                               "3.0.0",
                               split="validation").shuffle(seed=42).select(
-                                  range(512))
+                                  range(calib_size))
             examples = [batch["article"] for batch in ds]
             examples = tokenizer(examples,
                                  padding=True,
                                  truncation=True,
                                  return_tensors="pt").to("cuda")
 
+        # quantization
         try:
             from auto_fp8 import AutoFP8ForCausalLM, BaseQuantizeConfig
-            quantize_config = BaseQuantizeConfig(**config)
+            quantize_config = BaseQuantizeConfig(**quant_config)
             logging.info(
                 f"Using the following configurations for fp8 quantization: {vars(quantize_config)}"
             )
