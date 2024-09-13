@@ -17,17 +17,14 @@ import os
 from types import SimpleNamespace
 from typing import Final
 import torch
-import json
 
-from sm_neo_utils import (OptimizationFatalError, InputConfiguration,
-                          write_error_to_file, get_neo_env_vars,
-                          update_dataset_cache_location)
+from sm_neo_utils import (OptimizationFatalError, write_error_to_file,
+                          get_neo_env_vars, update_dataset_cache_location)
 from utils import (extract_python_jar, load_properties)
 from properties_manager import PropertiesManager
 from partition import PartitionService
 
 PYTHON_CACHE_DIR = '/tmp/djlserving/cache'
-AUTOFP8_CONFIG_ENVVAR = 'AUTOFP8_CONFIG'
 
 
 class NeoQuantizationService():
@@ -48,7 +45,6 @@ class NeoQuantizationService():
 
         self.customer_properties: dict = load_properties(
             self.INPUT_MODEL_DIRECTORY)
-        self.autofp8_config = None
 
     def initialize_partition_args_namespace(self):
         """
@@ -87,18 +83,6 @@ class NeoQuantizationService():
         self.properties_manager = PropertiesManager(
             self.args, addl_properties=addl_properties)
 
-    def parse_autofp8_config(self) -> dict:
-        autofp8_config = os.environ.get(AUTOFP8_CONFIG_ENVVAR, {})
-        if autofp8_config:
-            try:
-                autofp8_config = json.loads(autofp8_config)
-                if not isinstance(autofp8_config, dict):
-                    raise ValueError("Parsed JSON is not a dictionary")
-                self.autofp8_config = autofp8_config
-            except Exception as exc:
-                raise InputConfiguration(
-                    f"Failed to parse AutoFP8 configuration: {exc}")
-
     def run_quantization(self) -> str:
         """
         :return: the output of the partition command captured from stdout
@@ -106,7 +90,7 @@ class NeoQuantizationService():
         partition_service = PartitionService(self.properties_manager)
         extract_python_jar(PYTHON_CACHE_DIR)
         try:
-            return partition_service.run_quantization(self.autofp8_config)
+            return partition_service.run_quantization()
         except Exception as exc:
             raise OptimizationFatalError(
                 f"Encountered an error during quantization: {exc}")
@@ -150,7 +134,6 @@ class NeoQuantizationService():
         update_dataset_cache_location(self.HF_CACHE_LOCATION)
         self.initialize_partition_args_namespace()
         self.construct_properties_manager()
-        self.parse_autofp8_config()
         self.run_quantization()
         self.write_properties()
 
