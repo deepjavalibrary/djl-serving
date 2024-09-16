@@ -12,6 +12,9 @@
 # the specific language governing permissions and limitations under the License.
 
 import copy
+import logging
+import os
+
 import torch
 from typing import TYPE_CHECKING, Optional, Union, List
 from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
@@ -116,6 +119,26 @@ def build_context_length_estimates(max_position_embeddings: int) -> List[int]:
         bucket_size *= 2
     context_estimates.append(max_position_embeddings)
     return context_estimates
+
+
+def get_generation_config(model_id_or_path, load_path) -> GenerationConfig:
+    if load_path and os.path.isfile(
+            os.path.join(load_path, "generation_config.json")):
+        return GenerationConfig.from_pretrained(
+            load_path)
+    elif os.path.isfile(
+            os.path.join(model_id_or_path,
+                         "generation_config.json")):
+        return GenerationConfig.from_pretrained(
+            load_path)
+    else:
+        try:
+            return GenerationConfig.from_pretrained(
+                model_id_or_path)
+        except OSError:
+            logging.info(
+                "Unable to load generation config - defaulting to generation config from the models config.json"
+            )
 
 
 class NeuronXModelAdapter(OptimumModelForCausalLM):

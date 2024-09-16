@@ -25,7 +25,8 @@ from transformers_neuronx import NeuronAutoModelForCausalLM
 from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig, GenerationConfig as NeuronGenerationConfig
 from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema, TnXMemoryLayout
 from transformers_neuronx.module import save_pretrained_split
-from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version, build_context_length_estimates
+from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version, build_context_length_estimates, \
+    get_generation_config
 from huggingface_hub import hf_hub_download
 
 # Temporary Fix: These loggers are disabled during vLLM import.
@@ -308,23 +309,8 @@ class TNXModelLoader(ModelLoader):
             self.safetensors_format = self.is_safetensors(model_path)
 
     def load_generation_config(self):
-        if os.path.isfile(
-                os.path.join(self.load_path, "generation_config.json")):
-            self.generation_config = GenerationConfig.from_pretrained(
-                self.load_path)
-        elif os.path.isfile(
-                os.path.join(self.config.model_id_or_path,
-                             "generation_config.json")):
-            self.generation_config = GenerationConfig.from_pretrained(
-                self.load_path)
-        else:
-            try:
-                self.generation_config = GenerationConfig.from_pretrained(
-                    self.config.model_id_or_path)
-            except OSError:
-                logging.info(
-                    "Unable to load generation config - defaulting to generation config from the models config.json"
-                )
+        self.generation_config = get_generation_config(model_id_or_path=self.config.model_id_or_path,
+                                                       load_path=self.load_path)
 
     def set_neuron_model(self) -> None:
         """

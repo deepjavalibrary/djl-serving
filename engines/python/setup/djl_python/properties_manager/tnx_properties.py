@@ -56,6 +56,7 @@ class TnXModelLoaders(str, Enum):
     tnx = "tnx"
     optimum = "optimum"
     vllm = "vllm"
+    nxd = "nxd"
 
 
 class TnXModelSchema(str, Enum):
@@ -239,6 +240,8 @@ class TransformerNeuronXProperties(Properties):
             self.model_loader = TnXModelLoaders.optimum
         if self.partition_schema and self.partition_schema != TnXModelSchema.optimum and self.model_loader is None:
             self.model_loader = TnXModelLoaders.tnx
+        if self.model_loader and self.model_loader.value == TnXModelLoaders.nxd.value:
+            self.model_loader = TnXModelLoaders.nxd
         return self
 
     @model_validator(mode='before')
