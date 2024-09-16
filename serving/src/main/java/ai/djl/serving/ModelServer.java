@@ -77,6 +77,8 @@ public class ModelServer {
 
     private FolderScanPluginManager pluginManager;
 
+    private GrpcServer grpc;
+
     /**
      * Creates a new {@code ModelServer} instance.
      *
@@ -86,6 +88,7 @@ public class ModelServer {
         this.configManager = configManager;
         this.pluginManager = new FolderScanPluginManager(configManager);
         serverGroups = new ServerGroups(configManager);
+        grpc = GrpcServer.newInstance();
     }
 
     /**
@@ -158,6 +161,9 @@ public class ModelServer {
             channelFutures.get(0).sync();
         } finally {
             serverGroups.shutdown(true);
+            if (grpc != null) {
+                grpc.stop();
+            }
             logger.info("Model server stopped.");
         }
     }
@@ -220,6 +226,10 @@ public class ModelServer {
             futures.add(initializeServer(managementConnector, serverGroup, workerGroup));
         }
 
+        if (grpc != null) {
+            grpc.start();
+        }
+
         long duration = (System.nanoTime() - begin) / 1000;
         Metric metric = new Metric("StartupLatency", duration, Unit.MICROSECONDS);
         SERVER_METRIC.info("{}", metric);
@@ -261,6 +271,9 @@ public class ModelServer {
         }
         serverGroups.shutdown(true);
         serverGroups.reset();
+        if (grpc != null) {
+            grpc.stop();
+        }
     }
 
     private void initMultiNode(List<Workflow> workflows)

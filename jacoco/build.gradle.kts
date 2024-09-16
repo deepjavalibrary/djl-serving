@@ -13,6 +13,7 @@ dependencies {
     jacocoAggregation(project(":benchmark"))
     jacocoAggregation(project(":engines:python"))
     jacocoAggregation(project(":plugins:cache"))
+    jacocoAggregation(project(":plugins:grpc"))
     jacocoAggregation(project(":plugins:kserve"))
     // jacocoAggregation(project(":plugins:management-console"))
     jacocoAggregation(project(":plugins:plugin-management-plugin"))
@@ -33,6 +34,15 @@ tasks {
         }
     }
 
+    val testCodeCoverageReport by getting(JacocoReport::class) {
+        classDirectories.setFrom(files(classDirectories.files.map {
+            fileTree(it) {
+                exclude(
+                    "ai/djl/serving/grpc/proto/**"
+                )
+            }
+        }))
+    }
     check {
         dependsOn("testCodeCoverageReport")
     }

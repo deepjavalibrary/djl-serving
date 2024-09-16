@@ -11,7 +11,7 @@ tasks {
             val formatter = Main(PrintWriter(System.out, true), PrintWriter(System.err, true), System.`in`)
             for (item in project.sourceSets)
                 for (file in item.allSource) {
-                    if (!file.name.endsWith(".java") || "generated-src" in file.absolutePath)
+                    if (!file.name.endsWith(".java") || "generated" in file.absolutePath)
                         continue
                     if (formatter.format("-a", "-i", file.absolutePath) != 0)
                         throw GradleException("Format java failed: " + file.absolutePath)
@@ -28,7 +28,7 @@ tasks {
             val formatter = Main(PrintWriter(System.out, true), PrintWriter(System.err, true), System.`in`)
             for (item in project.sourceSets)
                 for (file in item.allSource) {
-                    if (!file.name.endsWith(".java") || "generated-src" in file.absolutePath)
+                    if (!file.name.endsWith(".java") || "generated" in file.absolutePath)
                         continue
                     if (formatter.format("-a", "-n", "--set-exit-if-changed", file.absolutePath) != 0)
                         throw GradleException(

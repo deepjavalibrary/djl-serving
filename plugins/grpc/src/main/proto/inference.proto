@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package ai.djl.serving.grpc.proto;
+
+import "google/protobuf/empty.proto";
+
+option java_multiple_files = true;
+
+message InferenceRequest {
+    // Name of model.
+    string model_name = 1;
+
+    // Version of model to run prediction on.
+    optional string model_version = 2;
+
+    // Input headers
+    map<string, bytes> headers = 4;
+
+    // Input data
+    bytes input = 5;
+}
+
+message InferenceResponse {
+    int32 code = 1;
+
+    // Output headers
+    map<string, bytes> headers = 2;
+
+    // Output data
+    bytes output = 3;
+}
+
+message PingResponse {
+    int32 code = 1;
+    map<string, string> model_status = 2;
+}
+
+service Inference {
+    // ping method
+    rpc Ping (google.protobuf.Empty) returns (PingResponse) {}
+
+    // prediction method
+    rpc Predict (InferenceRequest) returns (stream InferenceResponse) {}
+}

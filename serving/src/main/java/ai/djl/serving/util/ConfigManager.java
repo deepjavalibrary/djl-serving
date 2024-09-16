@@ -385,8 +385,10 @@ public final class ConfigManager {
         String appHome = Utils.getenv("APP_HOME");
         if (appHome != null) {
             Path path = Paths.get(appHome, "plugins");
-            if (!Files.isSameFile(path, plugin)) {
-                list.add(path);
+            if (Files.exists(path)) {
+                if (!Files.exists(plugin) || !Files.isSameFile(path, plugin)) {
+                    list.add(path);
+                }
             }
         }
         return list;
@@ -631,7 +633,14 @@ public final class ConfigManager {
         return getIntProperty(MAX_REQUEST_SIZE, DEF_MAX_REQUEST_SIZE);
     }
 
-    private int getIntProperty(String key, int def) {
+    /**
+     * Returns the integer property.
+     *
+     * @param key the property key
+     * @param def the default value
+     * @return the integer property
+     */
+    public int getIntProperty(String key, int def) {
         String value = prop.getProperty(key);
         if (value == null) {
             return def;

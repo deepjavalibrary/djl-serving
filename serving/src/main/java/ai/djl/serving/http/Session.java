@@ -56,6 +56,21 @@ public class Session {
     }
 
     /**
+     * Constructs a new {@code Session} instance.
+     *
+     * @param remoteIp the remote IP address
+     * @param service the gPRC service name
+     */
+    public Session(String remoteIp, String service) {
+        this.remoteIp = remoteIp;
+        method = "gRPC";
+        protocol = "HTTP/2.0";
+        uri = service;
+        requestId = UUID.randomUUID().toString();
+        startTime = System.currentTimeMillis();
+    }
+
+    /**
      * Returns the current input.
      *
      * @return the current input
