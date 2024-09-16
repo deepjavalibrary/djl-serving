@@ -25,7 +25,7 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
     TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
-from djl_python.neuron_utils.model_loader.nxd_loader import NxDModelLoader
+from djl_python.neuron_utils.nxd_loader import NxDModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter
@@ -317,6 +317,8 @@ class TransformersNeuronXService(object):
         if self.config.rolling_batch == "vllm" and self.config.model_loader == "vllm":
             """Model loading is being deferred to vLLMs model loader"""
             return
+        elif self.config.model_loader == "nxd":
+            self.model = self.model_loader.load_model()
         elif self.config.rolling_batch == "vllm":
             self.model = self.model_loader.load_unwrapped_model()
         else:

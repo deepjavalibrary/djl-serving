@@ -28,10 +28,10 @@ class NxDModelLoader(ModelLoader):
 
         # Compile only if necessary
         logging.info(f"LLM sharding and compiling for NxD started...")
-        self.compiled_graph_path = os.path.join(self.get_load_path(),
-                                                "compiled")
-
-        self.partition(self.compiled_graph_path, **kwargs)
+        # self.compiled_graph_path = os.path.join(self.get_load_path(),
+        #                                         "compiled")
+        #
+        # self.partition(self.compiled_graph_path, **kwargs)
         # load the model
         self.model = load_neuron_model(self.compiled_graph_path)
         return self.model
@@ -49,8 +49,8 @@ class NxDModelLoader(ModelLoader):
             neuron_config=None,
             tp_degree=self.config.tensor_parallel_degree,
             batch_size=self.config.max_rolling_batch_size,
-            max_prompt_length=self.config.max_prompt_length,
-            sequence_length=self.config.sequence_length,
+            max_prompt_length=self.config.n_positions//2,
+            sequence_length=self.config.n_positions,
             enable_bucketing=True,
             **kwargs
         )

@@ -115,6 +115,7 @@ class TransformerNeuronXProperties(Properties):
     all_reduce_dtype: Optional[TnXDtypeName] = None
     cast_logits_dtype: Optional[TnXDtypeName] = None
     on_device_embedding_config: Optional[Any] = Field(default_factory=dict)
+    max_model_len: Optional[int] = None
 
     @field_validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):

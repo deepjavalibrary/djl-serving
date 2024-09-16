@@ -20,11 +20,12 @@ from typing import TYPE_CHECKING, Optional, Union, List
 from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
 from optimum.exporters.neuron.model_configs import *
 from optimum.exporters.tasks import TasksManager
+from transformers import GenerationConfig, PretrainedConfig
 
 if TYPE_CHECKING:
     from pathlib import Path
     from tempfile import TemporaryDirectory
-    from transformers import GenerationConfig, PretrainedConfig
+
 
 ARCHITECTURES_2_TASK = {
     "ForQuestionAnswering": "question-answering",
