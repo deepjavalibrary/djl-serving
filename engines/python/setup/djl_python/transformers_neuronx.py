@@ -25,6 +25,7 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
     TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
+from djl_python.neuron_utils.model_loader.nxd_loader import NxDModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter
@@ -137,6 +138,9 @@ class TransformersNeuronXService(object):
                     f"VllmModelLoader does not support this config: {self.config}"
                 )
 
+        if self.config.model_loader == "nxd":
+            self._model_loader_class = NxDModelLoader
+
     def set_max_position_embeddings(self) -> None:
         """
         Sets the maximum position embeddings for the model configuration.
@@ -188,6 +192,7 @@ class TransformersNeuronXService(object):
 
         logging.info(f"Model loading properties: {self.config}")
         self.set_model_loader_class()
+        logging.info(f"ATTN: model loader class {self._model_loader_class}")
         if not self.config.task:
             self.config.task = task_from_config(self.model_config)
 

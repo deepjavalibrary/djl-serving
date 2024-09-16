@@ -121,7 +121,7 @@ def build_context_length_estimates(max_position_embeddings: int) -> List[int]:
     return context_estimates
 
 
-def get_generation_config(model_id_or_path, load_path) -> GenerationConfig:
+def get_generation_config(model_id_or_path, load_path) -> "GenerationConfig":
     if load_path and os.path.isfile(
             os.path.join(load_path, "generation_config.json")):
         return GenerationConfig.from_pretrained(
