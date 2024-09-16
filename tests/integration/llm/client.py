@@ -949,7 +949,8 @@ def awscurl_run(data,
                 dataset=False,
                 output=False,
                 json_results=False,
-                random_delay=False):
+                random_delay=False,
+                jsonquery=None):
     find_awscurl()
     headers = "Content-type: application/json"
     endpoint = f"http://127.0.0.1:8080/invocations"
@@ -972,9 +973,13 @@ def awscurl_run(data,
     if random_delay:
         delay = '--delay "rand(0,1000)"'
 
+    jq = ""
+    if jsonquery is not None:
+        jq = f'-j "{jsonquery}"'
+
     command = (f"./awscurl -c {concurrency} "
                f"-N {num_run} -X POST {endpoint} --connect-timeout 300 "
-               f"-H {headers} {command_data} {delay} {json_output} -P -t")
+               f"-H {headers} {command_data} {delay} {json_output} {jq} -P -t")
     if tokenizer:
         command = f"TOKENIZER={tokenizer} {command}"
     if output:
@@ -1520,7 +1525,10 @@ def log_awscurl_benchmark(metric_name: str,
         sp.call(command, shell=True)
 
 
-def run_rb_handler_performance(benchmark_name, model_spec, req):
+def run_rb_handler_performance(benchmark_name,
+                               model_spec,
+                               req,
+                               jsonquery=None):
     for batch_size in model_spec["batch_size"]:
         metric_name = f"{benchmark_name}-batch-{batch_size:03}"
         num_run = max(
@@ -1531,7 +1539,8 @@ def run_rb_handler_performance(benchmark_name, model_spec, req):
                     batch_size,
                     num_run=num_run,
                     json_results=True,
-                    random_delay=True)
+                    random_delay=True,
+                    jsonquery=jsonquery)
         log_awscurl_benchmark(metric_name)
 
 
@@ -1550,8 +1559,10 @@ def test_handler_performance(benchmark_name, model_spec):
     chat_request["max_tokens"] = spec["seq_length"][0]
     LOGGER.info(f"{benchmark_name}-chat req {chat_request}")
 
-    run_rb_handler_performance(f"{benchmark_name}-handler-chat", spec,
-                               chat_request)
+    run_rb_handler_performance(f"{benchmark_name}-handler-chat",
+                               spec,
+                               chat_request,
+                               jsonquery="choices/message/content")
 
 
 def test_performance():
