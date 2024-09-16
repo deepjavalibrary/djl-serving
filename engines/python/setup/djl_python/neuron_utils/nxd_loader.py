@@ -13,7 +13,7 @@ class NxDModelLoader(ModelLoader):
         self.model = None
         self.generation_config = get_generation_config(
             model_id_or_path=self.config.model_id_or_path,
-            load_path=None
+            load_path=self.config.model_id_or_path
         )
         self.compiled_graph_path = None
 
