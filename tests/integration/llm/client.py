@@ -526,10 +526,10 @@ vllm_model_spec = {
 }
 
 vllm_neo_model_spec = {
-    "llama-3-8b": {
+    "llama-3.1-8b": {
         "batch_size": [1],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Meta-Llama-3-8B"
+        "tokenizer": "NousResearch/Meta-Llama-3.1-8B"
     }
 }
 

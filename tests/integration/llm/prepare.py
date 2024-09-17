@@ -781,9 +781,8 @@ vllm_model_list = {
 }
 
 vllm_neo_model_list = {
-    "llama-3-8b": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 4
+    "llama-3.1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
     }
 }
 
