@@ -240,7 +240,8 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
                           max_num_seqs=config.max_rolling_batch_size,
                           block_size=config.max_model_len,
                           trust_remote_code=config.trust_remote_code,
-                          revision=config.revision)
+                          revision=config.revision,
+                          device="neuron")
     else:
         return EngineArgs(
             model=config.model_id_or_path,
