@@ -30,7 +30,7 @@ from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProper
 
 _WARMUP_PREFILL_TOKENS = 4096
 LMI_DIST_GENERATION_PARAMS = set(RequestParams().__dict__.keys()).union(
-    set(SamplingParams().__dict__.keys()))
+    set(SamplingParams().__struct_fields__))
 
 
 class LmiDistRollingBatch(RollingBatch):
