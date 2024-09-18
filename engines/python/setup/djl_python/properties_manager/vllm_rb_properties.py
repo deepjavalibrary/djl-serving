@@ -58,6 +58,7 @@ class VllmRbProperties(Properties):
     cpu_offload_gb_per_gpu: Optional[int] = 0
     enable_prefix_caching: Optional[bool] = False
     disable_sliding_window: Optional[bool] = False
+    use_nxd: bool = False
 
     @field_validator('engine')
     def validate_engine(cls, engine):
