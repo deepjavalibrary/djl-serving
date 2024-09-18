@@ -328,7 +328,7 @@ class PartitionService(object):
             # If using dynamic activation scales, a calibration dataset is not required
             examples = []
         else:
-            calib_size = self.properties.get("option.calib_size", 512)
+            calib_size = int(self.properties.get("option.calib_size", 512))
             # Tokenize dataset for calibrating static activation scales
             ds = load_dataset("abisee/cnn_dailymail",
                               "3.0.0",
