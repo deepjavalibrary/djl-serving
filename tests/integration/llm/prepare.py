@@ -783,6 +783,18 @@ vllm_model_list = {
 vllm_neo_model_list = {
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+    },
+    "llama-3.1-8b-awq-options": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.tensor_parallel_degree": "4",
+        "option.max_rolling_batch_size": "4",
+        "option.awq_block_size": "256"
+    },
+    "llama-3.1-8b-fp8-options": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.quantize": "fp8",
+        "option.tensor_parallel_degree": "4",
+        "option.fp8_activation_scheme": "dynamic"
     }
 }
 
