@@ -241,7 +241,8 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
                           block_size=config.max_model_len,
                           trust_remote_code=config.trust_remote_code,
                           revision=config.revision,
-                          device="neuron")
+                          device="neuron",
+                          use_nxd=config.use_nxd)
     else:
         return EngineArgs(
             model=config.model_id_or_path,
