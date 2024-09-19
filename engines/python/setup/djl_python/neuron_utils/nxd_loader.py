@@ -33,11 +33,7 @@ class NxDModelLoader(ModelLoader):
         #
         # self.partition(self.compiled_graph_path, **kwargs)
         # load the model
-        self.model = load_neuron_model(self.config.model_id_or_path,
-                                       tp_degree=self.config.tensor_parallel_degree,
-                                       max_model_len=self.config.max_model_len,
-                                       batch_size=self.config.batch_size
-                                       )
+        self.model = load_neuron_model(self.config.model_id_or_path)
         return self.model
 
     def partition(self, save_path, **kwargs):

@@ -226,7 +226,7 @@ class TransformersNeuronXService(object):
         """
         if self.config.rolling_batch == "vllm":
             if self.config.model_loader == TnXModelLoaders.nxd.value:
-                properties["use_vllm"] = True
+                properties["use_nxd"] = True
             self.rolling_batch_config = build_vllm_rb_properties(properties)
             if self.model:
                 self.rolling_batch_config["preloaded_model"] = self.model
