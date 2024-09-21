@@ -31,7 +31,7 @@ ARG datasets_version=2.20.0
 ARG autoawq_version=0.2.5
 ARG tokenizers_version=0.19.1
 # LMI-Dist Deps
-ARG vllm_version=0.5.5
+ARG vllm_version=0.6.1.post2
 ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
 ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.2/flashinfer-0.1.2+cu121torch2.4-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
