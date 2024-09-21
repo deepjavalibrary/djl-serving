@@ -15,7 +15,7 @@ ARG cuda_version=cu124
 ARG python_version=3.10
 ARG TORCH_VERSION=2.3.1
 ARG djl_version=0.30.0~SNAPSHOT
-ARG transformers_version=4.42.4
+ARG transformers_version=4.44.2
 ARG accelerate_version=0.32.1
 ARG tensorrtlibs_version=10.1.0
 # %2B is the url escape for the '+' character
