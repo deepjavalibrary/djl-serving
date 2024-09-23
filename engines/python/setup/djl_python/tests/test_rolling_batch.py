@@ -47,7 +47,6 @@ class TestRollingBatch(unittest.TestCase):
         req = Request(req_input)
         req.request_output = TextGenerationOutput(request_id=0,
                                                   input=req_input)
-        req.request_output.finished = True
         req.request_output.set_next_token(Token(244, "He", -0.334532))
         req.request_output.set_next_token(Token(576, "llo", -0.123123))
         req.request_output.set_next_token(Token(4558, " world", -0.567854,
@@ -56,7 +55,7 @@ class TestRollingBatch(unittest.TestCase):
                                           finish_reason='length')
 
         self.assertEqual(req.get_next_token(), "")
-        self.assertEqual(req.get_next_token(), "")
+        req.request_output.finished = True
         self.assertEqual(req.get_next_token(),
                          json.dumps({"generated_text": "Hello world"}))
 
