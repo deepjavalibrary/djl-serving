@@ -1048,8 +1048,8 @@ trtllm_neo_list = {
 }
 
 transformers_neuronx_neo_list = {
-    "llama-2-13b-rb": {
-        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+    "llama-3.1-8b-rb": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
         "option.rolling_batch": "auto",
@@ -1057,8 +1057,8 @@ transformers_neuronx_neo_list = {
         "option.dtype": "fp16",
         "option.model_loading_timeout": 3600,
     },
-    "mixtral-8x22b": {
-        "option.model_id": "s3://djl-llm/mixtral-8x22b/",
+    "mixtral-8x7b": {
+        "option.model_id": "s3://djl-llm/mixtral-8x7b/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 512,
         "option.rolling_batch": "disable",
@@ -1082,8 +1082,8 @@ transformers_neuronx_neo_list = {
         "option.dtype": "fp16",
         "option.model_loading_timeout": 3600,
     },
-    "llama-3-8b": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+    "llama-3.1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": 8
     }
 }
