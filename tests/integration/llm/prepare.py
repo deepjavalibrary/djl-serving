@@ -1089,6 +1089,7 @@ transformers_neuronx_neo_list = {
     "llama-2-tiny-speculative": {
         "option.model_id": "s3://djl-llm/llama-2-tiny/",
         "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
         "option.max_rolling_batch_size": 1
     }
 }
