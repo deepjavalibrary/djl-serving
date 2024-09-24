@@ -189,7 +189,7 @@ transformers_neuronx_neo_model_spec = {
         "seq_length": [512],
         "batch_size": [2]
     },
-    "codellama-34b": {
+    "codellama-7b-instruct": {
         "workers": 1,
         "seq_length": [256],
         "batch_size": [4]
@@ -441,11 +441,11 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
-    "mixtral-8x7b": {
+    "mixtral-random-tiny": {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
+        "tokenizer": "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ"
     },
     "qwen2-7b-fp8": {
         "max_memory_per_gpu": [23.0],

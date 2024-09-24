@@ -1057,16 +1057,16 @@ transformers_neuronx_neo_list = {
         "option.dtype": "fp16",
         "option.model_loading_timeout": 3600,
     },
-    "mixtral-8x7b": {
-        "option.model_id": "s3://djl-llm/mixtral-8x7b/",
+    "mixtral-random-tiny": {
+        "option.model_id": "s3://djl-llm/mixtral-random-tiny/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 512,
         "option.rolling_batch": "disable",
         "option.batch_size": 2,
         "option.model_loading_timeout": 3600,
     },
-    "codellama-34b": {
-        "option.model_id": "s3://djl-llm/codellama-34b/",
+    "codellama-7b-instruct": {
+        "option.model_id": "s3://djl-llm/CodeLlama-7b-Instruct-hf/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 256,
         "option.rolling_batch": "disable",
