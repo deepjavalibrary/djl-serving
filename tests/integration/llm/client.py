@@ -61,14 +61,14 @@ hf_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
-        "stream_output": True,
+        "stream": [True],
     },
     "t5-large": {
         "max_memory_per_gpu": [5.0],
         "batch_size": [1],
         "seq_length": [32],
         "worker": 1,
-        "stream_output": True,
+        "stream": [True],
     },
     "gpt4all-lora": {
         "max_memory_per_gpu": [10.0, 12.0],
@@ -1396,6 +1396,7 @@ def test_handler_rolling_batch(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     # dryrun phase
     req = {"inputs": batch_generation(1)[0]}
     seq_length = 100
@@ -1405,20 +1406,25 @@ def test_handler_rolling_batch(model, model_spec):
         req["parameters"].update(spec["parameters"])
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
-    LOGGER.info(f"req {req}")
-    res = send_json(req)
-    message = res.content.decode("utf-8")
-    LOGGER.info(f"res: {message}")
-    response_checker(res, message)
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        message = res.content.decode("utf-8")
+        LOGGER.info(f"res: {message}")
+        response_checker(res, message)
 
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            LOGGER.info(
-                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
-            )
-            req["parameters"]["max_new_tokens"] = seq_length
-            awscurl_run(req, spec.get("tokenizer", None), batch_size)
+            for stream in stream_values:
+                req["stream"] = stream
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                req["parameters"]["max_new_tokens"] = seq_length
+                awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
 def test_handler_adapters(model, model_spec):
@@ -1426,6 +1432,7 @@ def test_handler_adapters(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     # dryrun phase
     reqs = []
     inputs = batch_generation(len(spec.get("adapters")))
@@ -1440,24 +1447,28 @@ def test_handler_adapters(model, model_spec):
         req["parameters"] = params
         req["adapters"] = adapter
         reqs.append(req)
-    LOGGER.info(f"reqs {reqs}")
     for req in reqs:
-        res = send_json(req)
-        message = res.content.decode("utf-8")
-        LOGGER.info(f"res: {message}")
-        response_checker(res, message)
+        for stream in stream_values:
+            req["stream"] = stream
+            LOGGER.info(f"req: {req}")
+            res = send_json(req)
+            message = res.content.decode("utf-8")
+            LOGGER.info(f"res: {message}")
+            response_checker(res, message)
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            LOGGER.info(
-                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
-            )
-            for req in reqs:
-                req["parameters"]["max_new_tokens"] = seq_length
-            awscurl_run(reqs,
-                        spec.get("tokenizer", None),
-                        batch_size,
-                        dataset=True)
+            for stream in stream_values:
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                for req in reqs:
+                    req["parameters"]["max_new_tokens"] = seq_length
+                    req["stream"] = stream
+                awscurl_run(reqs,
+                            spec.get("tokenizer", None),
+                            batch_size,
+                            dataset=True)
     # Test removing and querying invalid/removed adapter
     del_adapter = spec.get("adapters")[0]
     res = requests.delete(
@@ -1489,6 +1500,7 @@ def test_handler_rolling_batch_chat(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     # dryrun phase
     req = {"messages": batch_generation_chat(1)[0]}
     seq_length = 100
@@ -1497,17 +1509,20 @@ def test_handler_rolling_batch_chat(model, model_spec):
     req["top_logprobs"] = 1
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
-    LOGGER.info(f"req {req}")
-    res = send_json(req)
-    LOGGER.info(f"res: {res.content}")
-    # awscurl little benchmark phase
-    for i, batch_size in enumerate(spec["batch_size"]):
-        for seq_length in spec["seq_length"]:
-            LOGGER.info(
-                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
-            )
-            req["max_tokens"] = seq_length
-            awscurl_run(req, spec.get("tokenizer", None), batch_size)
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        LOGGER.info(f"res: {res.content}")
+        # awscurl little benchmark phase
+        for i, batch_size in enumerate(spec["batch_size"]):
+            for seq_length in spec["seq_length"]:
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                req["max_tokens"] = seq_length
+                awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
 def test_handler(model, model_spec):
@@ -1515,38 +1530,41 @@ def test_handler(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            if "t5" in model:
-                req = {"inputs": t5_batch_generation(batch_size)}
-            else:
-                req = {"inputs": batch_generation(batch_size)}
-            if spec.get("adapters", []):
-                req["adapters"] = spec.get("adapters")
-            params = {"max_new_tokens": seq_length}
-            if spec.get("details", False):
-                params["details"] = True
-            req["parameters"] = params
-            LOGGER.info(f"req {req}")
-            res = send_json(req)
-            if spec.get("stream_output", False):
-                LOGGER.info(f"res: {res.content}")
-                result = res.content.decode().split("\n")[:-1]
-                assert len(
-                    result
-                ) <= seq_length, "generated more tokens than max_new_tokens"
-            else:
-                res = res.json()
-                LOGGER.info(f"res {res}")
-                if isinstance(res, list):
-                    result = [item['generated_text'] for item in res]
-                    assert len(result) == batch_size
-                elif isinstance(res, dict):
-                    assert 1 == batch_size
-            if "max_memory_per_gpu" in spec:
-                validate_memory_usage(spec["max_memory_per_gpu"][i])
-            if "tokenizer" in spec:
-                awscurl_run(req, spec.get("tokenizer"), batch_size)
+            for stream in stream_values:
+                if "t5" in model:
+                    req = {"inputs": t5_batch_generation(batch_size)}
+                else:
+                    req = {"inputs": batch_generation(batch_size)}
+                if spec.get("adapters", []):
+                    req["adapters"] = spec.get("adapters")
+                params = {"max_new_tokens": seq_length}
+                if spec.get("details", False):
+                    params["details"] = True
+                req["parameters"] = params
+                req["stream"] = stream
+                LOGGER.info(f"req {req}")
+                res = send_json(req)
+                if stream:
+                    LOGGER.info(f"res: {res.content}")
+                    result = res.content.decode().split("\n")[:-1]
+                    assert len(
+                        result
+                    ) <= seq_length, "generated more tokens than max_new_tokens"
+                else:
+                    res = res.json()
+                    LOGGER.info(f"res {res}")
+                    if isinstance(res, list):
+                        result = [item['generated_text'] for item in res]
+                        assert len(result) == batch_size
+                    elif isinstance(res, dict):
+                        assert 1 == batch_size
+                if "max_memory_per_gpu" in spec:
+                    validate_memory_usage(spec["max_memory_per_gpu"][i])
+                if "tokenizer" in spec:
+                    awscurl_run(req, spec.get("tokenizer"), batch_size)
 
 
 def log_awscurl_benchmark(metric_name: str,
