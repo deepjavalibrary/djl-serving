@@ -203,6 +203,11 @@ transformers_neuronx_neo_model_spec = {
         "workers": 1,
         "seq_length": [128],
         "batch_size": [1]
+    },
+    "llama-2-tiny-speculative": {
+        "workers": 1,
+        "seq_length": [128],
+        "batch_size": [1]
     }
 }
 

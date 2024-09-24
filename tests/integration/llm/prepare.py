@@ -1085,6 +1085,11 @@ transformers_neuronx_neo_list = {
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": 8
+    },
+    "llama-2-tiny-speculative": {
+        "option.model_id": "s3://djl-llm/llama-2-tiny/",
+        "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.max_rolling_batch_size": 1
     }
 }
 
