@@ -184,7 +184,7 @@ transformers_neuronx_neo_model_spec = {
         "batch_size": [1, 4],
         "tokenizer": "NousResearch/Meta-Llama-3.1-8B"
     },
-    "mixtral-8x7b": {
+    "mixtral-random-tiny": {
         "workers": 1,
         "seq_length": [512],
         "batch_size": [2]
@@ -441,11 +441,11 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "TheBloke/Llama-3-8B-fp16"
     },
-    "mixtral-random-tiny": {
+    "mixtral-8x7b": {
         "max_memory_per_gpu": [40.0],
         "batch_size": [1, 8],
         "seq_length": [256],
-        "tokenizer": "TheBloke/Mixtral-8x7B-Instruct-v0.1-GPTQ"
+        "tokenizer": "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO"
     },
     "qwen2-7b-fp8": {
         "max_memory_per_gpu": [23.0],
