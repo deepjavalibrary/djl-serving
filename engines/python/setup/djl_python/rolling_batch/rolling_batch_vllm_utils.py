@@ -265,6 +265,7 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             cpu_offload_gb=config.cpu_offload_gb_per_gpu,
             enable_prefix_caching=config.enable_prefix_caching,
             disable_sliding_window=config.disable_sliding_window,
+            max_num_seqs=config.max_rolling_batch_size,
         )
 
 
