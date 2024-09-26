@@ -32,7 +32,7 @@ permissions:
 jobs:
   build-temp:
     if: ${{ inputs.djl-version == 'temp' }}
-    uses: ./.github/workflows/docker-nightly-publish.yml
+    uses: ./.github/workflows/docker_build.yml
     secrets: inherit
     with:
       mode: temp
