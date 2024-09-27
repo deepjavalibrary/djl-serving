@@ -6,11 +6,11 @@ on:
       trtllm_branch:
         description: 'The interal branch of trtllm'
         required: true
-        default: 'lmi_v0.11.0'
+        default: 'v0.12.0'
       release_tag:
         description: 'The released tag version of trtllm'
         required: true
-        default: 'v0.11.0'
+        default: 'v0.12.0'
       python_version:
         description: 'The python version of release'
         required: false
@@ -50,7 +50,7 @@ jobs:
     container:
       image: nvidia/cuda:12.4.1-devel-ubuntu22.04
       options: --gpus all --runtime=nvidia --shm-size 12g
-    timeout-minutes: 90
+    timeout-minutes: 200
     needs: create-runners
     steps:
       - uses: actions/checkout@v4
