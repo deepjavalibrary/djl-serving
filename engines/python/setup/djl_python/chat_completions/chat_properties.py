@@ -10,6 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
+from collections import defaultdict
 from typing import Optional, Union, List, Dict, Any, Tuple
 from pydantic import BaseModel, Field, field_validator, ValidationInfo, ConfigDict
 from PIL.Image import Image
@@ -81,7 +82,8 @@ class Message(BaseModel):
 
         prompt_text = '\n'.join(texts)
         if len(images) > 0:
-            prompt_text = f"{image_token}\n{prompt_text}"
+            prompt_text = self._build_multimodal_text_prompt(
+                prompt_text, images, image_token)
         return {
             "role": self.role,
             "content": prompt_text,
@@ -89,6 +91,29 @@ class Message(BaseModel):
 
     def get_images(self) -> List[Image]:
         return [i.image for i in self.content if isinstance(i, ImageInput)]
+
+    def _build_multimodal_text_prompt(self, text_prompt: str,
+                                      images: List[str],
+                                      image_token: str) -> str:
+        placeholder_counts: Dict[str, int] = defaultdict(lambda: 0)
+        for i in range(1, len(images) + 1):
+            if image_token:
+                placeholder = image_token.format(i)
+                placeholder_counts[placeholder] += 1
+
+        placeholders: List[str] = []
+        for placeholder in placeholder_counts:
+            # Adjust placeholder counts based on existing placeholders in text prompt
+            placeholder_counts[placeholder] -= text_prompt.count(placeholder)
+
+            if placeholder_counts[placeholder] < 0:
+                raise ValueError(
+                    f"Found more instances of '{placeholder}' placeholders in the input prompt than "
+                    "corresponding multimodal data items.")
+
+            placeholders.extend([placeholder] *
+                                placeholder_counts[placeholder])
+        return "\n".join(placeholders + [text_prompt])
 
 
 class ChatProperties(BaseModel):

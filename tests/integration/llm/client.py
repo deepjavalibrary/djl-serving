@@ -846,13 +846,18 @@ correctness_model_spec = {
 
 multi_modal_spec = {
     "llava_v1.6-mistral": {
-        "batch_size": [1, 4]
+        "max_memory_per_gpu": [25.0, 25.0],
+        "batch_size": [1, 4],
+        "tokenizer": "llava-hf/llava-v1.6-mistral-7b-hf"
     },
     "paligemma-3b-mix-448": {
-        "batch_size": [1, 4],
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1]
     },
     "phi-3-vision-128k-instruct": {
+        "max_memory_per_gpu": [25.0, 25.0],
         "batch_size": [1, 4],
+        "tokenizer": "microsoft/Phi-3-vision-128k-instruct"
     }
 }
 
@@ -1741,19 +1746,40 @@ def test_correctness(model, model_spec):
             validate_correctness(dataset, data, score)
 
 
-def get_multimodal_prompt():
+def get_multimodal_prompt(batch_size):
+    image_urls = [{
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/dog_bike_car.jpg",
+        }
+    }, {
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/kitten.jpg",
+        }
+    }, {
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/kitten_small.jpg",
+        }
+    }, {
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/truck.jpg",
+        }
+    }]
+
+    if batch_size > len(image_urls):
+        # dynamically extend to support larger bs by repetition
+        image_urls *= math.ceil(batch_size / len(image_urls))
+
     messages = [{
         "role":
         "user",
         "content": [{
             "type": "text",
             "text": "What is this an image of?",
-        }, {
-            "type": "image_url",
-            "image_url": {
-                "url": "https://resources.djl.ai/images/dog_bike_car.jpg",
-            }
-        }]
+        }, *image_urls[:batch_size]]
     }]
     return {
         "messages": messages,
@@ -1768,9 +1794,16 @@ def test_multimodal(model, model_spec):
         raise ValueError(
             f"{model} is not currently supported {list(model_spec.keys())}")
     spec = model_spec[model]
-    messages = get_multimodal_prompt()
     for i, batch_size in enumerate(spec["batch_size"]):
-        awscurl_run(messages,
+        req = get_multimodal_prompt(batch_size)
+        logging.info(f"req {req}")
+        res = send_json(req).json()
+        logging.info(f"res: {res}")
+        if "max_memory_per_gpu" in spec:
+            validate_memory_usage(spec["max_memory_per_gpu"][i])
+
+        # awscurl little benchmark phase
+        awscurl_run(req,
                     spec.get("tokenizer", None),
                     batch_size,
                     num_run=5,

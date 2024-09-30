@@ -274,8 +274,7 @@ def get_multi_modal_data(request: Request) -> dict:
     images = parameters.pop("images", None)
     multi_modal_data = None
     if images:
-        # vLLM only supports one image per request.
-        multi_modal_data = {"image": images[0]}
+        multi_modal_data = {"image": images}
     return multi_modal_data
 
 

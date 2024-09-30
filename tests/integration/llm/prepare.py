@@ -548,6 +548,7 @@ lmi_dist_model_list = {
     },
     "llava_v1.6-mistral": {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
+        "option.limit_mm_per_prompt": "image=4",
     },
     "paligemma-3b-mix-448": {
         "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
@@ -555,6 +556,7 @@ lmi_dist_model_list = {
     },
     "phi-3-vision-128k-instruct": {
         "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
+        "option.limit_mm_per_prompt": "image=4",
         "option.trust_remote_code": True,
     },
     "llama-3.1-8b": {

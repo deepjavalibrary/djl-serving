@@ -462,22 +462,24 @@ class HuggingFaceService(object):
             raise e
 
     def get_image_token(self):
-        if self.hf_configs.image_placeholder_token:
-            return self.hf_configs.image_placeholder_token
-
-        logging.warning(
-            "image_placeholder_token is not explicitly set. It is highly recommended to explicitly"
-            "set the image_placeholder_token as it differs between models, and is not easy to infer from the model or tokenizer"
-        )
-
-        # TODO: Improve. We hardcode these for know model architectures as it is the most accurate and quickest way to set
-        # This is less than ideal, but until there is a good way to obtain this from the tokenizer/model, it's the best way to do so
         model_type = self.model_config.model_type
         if model_type == "phi3_v":
-            # phi3_v does support multiple images, but vllm/lmi-dist can only support 1 per request
-            return "<|image_1|>"
-        if model_type in {"llava", "llava_next", "paligemma"}:
+            return "<|image_{}|>"
+        if model_type == "minicpmv":
+            return "(<image>./</image>)"
+        if model_type in ("blip-2", "chatglm", "fuyu", "paligemma", "pixtral"):
+            # These models do not use image tokens in the prompt
+            return None
+        if model_type == "qwen":
+            return "Picture {}: <img></img>"
+        if model_type.startswith("llava"):
             return "<image>"
+        if model_type in ("chameleon", "internvl_chat"):
+            return "<image>"
+        if model_type == "mllama":
+            return "<|image|>"
+        if model_type == "qwen2_vl":
+            return "<|vision_start|><|image_pad|><|vision_end|>"
 
         logging.warning(
             "could not infer image token from the model artifacts. Using <image> as default."

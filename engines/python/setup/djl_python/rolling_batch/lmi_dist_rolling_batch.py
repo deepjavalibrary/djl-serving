@@ -85,6 +85,7 @@ class LmiDistRollingBatch(RollingBatch):
             cpu_offload_gb=self.lmi_dist_config.cpu_offload_gb_per_gpu,
             enable_prefix_caching=self.lmi_dist_config.enable_prefix_caching,
             disable_sliding_window=self.lmi_dist_config.disable_sliding_window,
+            limit_mm_per_prompt=self.lmi_dist_config.limit_mm_per_prompt,
             **engine_kwargs)
 
         kwargs = {}
