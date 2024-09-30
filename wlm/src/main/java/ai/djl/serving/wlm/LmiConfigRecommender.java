@@ -20,7 +20,6 @@ import ai.djl.util.cuda.CudaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -28,53 +27,6 @@ import java.util.Set;
 public final class LmiConfigRecommender {
 
     private static final Logger logger = LoggerFactory.getLogger(LmiConfigRecommender.class);
-    // TODO: model list is up to date with vLLM 0.5.1
-    private static final Map<String, String> MODEL_TO_ROLLING_BATCH =
-            Map.ofEntries(
-                    Map.entry("falcon", "lmi-dist"),
-                    Map.entry("gpt-neox", "lmi-dist"),
-                    Map.entry("t5", "lmi-dist"),
-                    Map.entry("llama", "lmi-dist"),
-                    Map.entry("mpt", "lmi-dist"),
-                    Map.entry("gpt-bigcode", "lmi-dist"),
-                    Map.entry("aquila", "lmi-dist"),
-                    Map.entry("baichuan", "lmi-dist"),
-                    Map.entry("bloom", "lmi-dist"),
-                    Map.entry("chatglm", "lmi-dist"),
-                    Map.entry("cohere", "lmi-dist"),
-                    Map.entry("dbrx", "lmi-dist"),
-                    Map.entry("deci", "lmi-dist"),
-                    Map.entry("gemma", "lmi-dist"),
-                    Map.entry("gpt2", "lmi-dist"),
-                    Map.entry("gptj", "lmi-dist"),
-                    Map.entry("internlm", "lmi-dist"),
-                    Map.entry("internlm2", "lmi-dist"),
-                    Map.entry("jais", "lmi-dist"),
-                    Map.entry("mistral", "lmi-dist"),
-                    Map.entry("mixtral", "lmi-dist"),
-                    Map.entry("opt", "lmi-dist"),
-                    Map.entry("phi", "lmi-dist"),
-                    Map.entry("phi3", "lmi-dist"),
-                    Map.entry("qwen", "lmi-dist"),
-                    Map.entry("qwen2", "lmi-dist"),
-                    Map.entry("qwen2_moe", "lmi-dist"),
-                    Map.entry("stablelm", "lmi-dist"),
-                    Map.entry("xverse", "lmi-dist"),
-                    Map.entry("starcoder2", "lmi-dist"),
-                    // vllm 0.5.1
-                    Map.entry("arctic", "lmi-dist"),
-                    Map.entry("gemma2", "lmi-dist"),
-                    Map.entry("jamba", "lmi-dist"),
-                    Map.entry("phi3small", "lmi-dist"),
-                    Map.entry("llava", "lmi-dist"),
-                    Map.entry("llava_next", "lmi-dist"),
-                    Map.entry("paligemma", "lmi-dist"),
-                    Map.entry("phi3_v", "lmi-dist"),
-                    // vllm 0.5.3
-                    Map.entry("chameleon", "lmi-dist"),
-                    Map.entry("deepseek", "lmi-dist"),
-                    Map.entry("deepseek_v2", "lmi-dist"),
-                    Map.entry("fuyu", "lmi-dist"));
 
     private static final Set<String> OPTIMIZED_TASK_ARCHITECTURES =
             Set.of("ForCausalLM", "LMHeadModel", "ForConditionalGeneration");
@@ -102,7 +54,6 @@ public final class LmiConfigRecommender {
         }
 
         String rollingBatch = lmiProperties.getProperty("option.rolling_batch", "auto");
-        String modelType = modelConfig.getModelType();
         if (!"auto".equals(rollingBatch)) {
             return;
         } else if (!isTextGenerationModel(modelConfig)) {
@@ -115,11 +66,9 @@ public final class LmiConfigRecommender {
             } else {
                 rollingBatch = "tnx";
             }
-        } else if (isLmiDistEnabled(features)
-                && "lmi-dist".equals(MODEL_TO_ROLLING_BATCH.get(modelType))) {
+        } else if (isLmiDistEnabled(features)) {
             rollingBatch = "lmi-dist";
-        } else if (isVllmEnabled(features)
-                && "vllm".equals(MODEL_TO_ROLLING_BATCH.get(modelType))) {
+        } else if (isVllmEnabled(features)) {
             rollingBatch = "vllm";
         } else if (isTrtLlmEnabled(features)) {
             rollingBatch = "trtllm";
