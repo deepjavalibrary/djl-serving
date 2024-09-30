@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from enum import Enum
-from typing import Optional, Any
+from typing import Optional, Any, Mapping
 
 from pydantic import field_validator
 
@@ -58,6 +58,7 @@ class VllmRbProperties(Properties):
     cpu_offload_gb_per_gpu: Optional[int] = 0
     enable_prefix_caching: Optional[bool] = False
     disable_sliding_window: Optional[bool] = False
+    limit_mm_per_prompt: Optional[Mapping[str, int]] = None
 
     @field_validator('engine')
     def validate_engine(cls, engine):
@@ -65,3 +66,24 @@ class VllmRbProperties(Properties):
             raise AssertionError(
                 f"Need python engine to start vLLM RollingBatcher")
         return engine
+
+    @field_validator('limit_mm_per_prompt', mode="before")
+    def validate_limit_mm_per_prompt(cls, val) -> Mapping[str, int]:
+        out_dict: Dict[str, int] = {}
+        for item in val.split(","):
+            kv_parts = [part.lower().strip() for part in item.split("=")]
+            if len(kv_parts) != 2:
+                raise ValueError("Each item should be in the form key=value")
+            key, value = kv_parts
+
+            try:
+                parsed_value = int(value)
+            except ValueError as e:
+                raise ValueError(
+                    f"Failed to parse value of item {key}={value}") from e
+
+            if key in out_dict and out_dict[key] != parsed_value:
+                raise ValueError(
+                    f"Conflicting values specified for key: {key}")
+            out_dict[key] = parsed_value
+        return out_dict
