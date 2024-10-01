@@ -9,26 +9,26 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-ARG version=12.4.1-devel-ubuntu22.04
+ARG version=12.5.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
-ARG cuda_version=cu124
+ARG cuda_version=cu125
 ARG python_version=3.10
-ARG TORCH_VERSION=2.3.1
+ARG TORCH_VERSION=2.4.0
 ARG djl_version=0.30.0~SNAPSHOT
 ARG transformers_version=4.44.2
 ARG accelerate_version=0.32.1
 ARG tensorrtlibs_version=10.1.0
 # %2B is the url escape for the '+' character
-ARG trtllm_toolkit_version=0.11.0%2Bnightly
-ARG trtllm_version=v0.11.0
-ARG cuda_python_version=12.4
+ARG trtllm_toolkit_version=0.12.0%2Bnightly
+ARG trtllm_version=v0.12.0
+ARG cuda_python_version=12.5
 ARG peft_version=0.10.0
 ARG triton_version=r24.04
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://publish.djl.ai/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.11.0-cp310-cp310-linux_x86_64.whl"
+ARG trtllm_wheel="https://publish.djl.ai/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.12.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/${triton_version}/tritontoolkit-24.4-py310-none-any.whl"
 ARG pydantic_version=2.6.1
-ARG modelopt_version=0.13.1
+ARG modelopt_version=0.15.0
 ARG janus_version=1.0.0
 ARG pynvml_verison=11.5.0
 ARG numpy_version=1.26.4
