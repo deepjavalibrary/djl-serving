@@ -13,7 +13,7 @@
 from enum import Enum
 from typing import Optional, Any, Mapping
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 from djl_python.properties_manager.properties import Properties
 
@@ -103,3 +103,11 @@ class VllmRbProperties(Properties):
                     f"Conflicting values specified for key: {key}")
             out_dict[key] = parsed_value
         return out_dict
+
+    @model_validator(mode='after')
+    def validate_speculative_model(self):
+        if self.speculative_model is not None and not self.use_v2_block_manager:
+            raise ValueError(
+                "Speculative decoding requires usage of the V2 block manager. Enable it with option.use_v2_block_manager=true."
+            )
+        return self
