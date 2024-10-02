@@ -59,6 +59,22 @@ class VllmRbProperties(Properties):
     enable_prefix_caching: Optional[bool] = False
     disable_sliding_window: Optional[bool] = False
     limit_mm_per_prompt: Optional[Mapping[str, int]] = None
+    use_v2_block_manager: bool = False
+
+    # Speculative decoding configuration.
+    speculative_model: Optional[str] = None
+    speculative_model_quantization: Optional[str] = None
+    speculative_draft_tensor_parallel_size: Optional[int] = None
+    num_speculative_tokens: Optional[int] = None
+    speculative_max_model_len: Optional[int] = None
+    speculative_disable_by_batch_size: Optional[int] = None
+    ngram_prompt_lookup_max: Optional[int] = None
+    ngram_prompt_lookup_min: Optional[int] = None
+    spec_decoding_acceptance_method: str = 'rejection_sampler'
+    typical_acceptance_sampler_posterior_threshold: Optional[float] = None
+    typical_acceptance_sampler_posterior_alpha: Optional[float] = None
+    qlora_adapter_name_or_path: Optional[str] = None
+    disable_logprobs_during_spec_decoding: Optional[bool] = None
 
     @field_validator('engine')
     def validate_engine(cls, engine):

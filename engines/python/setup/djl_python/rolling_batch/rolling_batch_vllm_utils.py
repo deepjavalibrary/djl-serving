@@ -266,6 +266,27 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             enable_prefix_caching=config.enable_prefix_caching,
             disable_sliding_window=config.disable_sliding_window,
             max_num_seqs=config.max_rolling_batch_size,
+            use_v2_block_manager=config.use_v2_block_manager,
+            speculative_model=config.speculative_model,
+            speculative_model_quantization=config.
+            speculative_model_quantization,
+            speculative_draft_tensor_parallel_size=config.
+            speculative_draft_tensor_parallel_size,
+            num_speculative_tokens=config.num_speculative_tokens,
+            speculative_max_model_len=config.speculative_max_model_len,
+            speculative_disable_by_batch_size=config.
+            speculative_disable_by_batch_size,
+            ngram_prompt_lookup_max=config.ngram_prompt_lookup_max,
+            ngram_prompt_lookup_min=config.ngram_prompt_lookup_min,
+            spec_decoding_acceptance_method=config.
+            spec_decoding_acceptance_method,
+            typical_acceptance_sampler_posterior_threshold=config.
+            typical_acceptance_sampler_posterior_threshold,
+            typical_acceptance_sampler_posterior_alpha=config.
+            typical_acceptance_sampler_posterior_alpha,
+            qlora_adapter_name_or_path=config.qlora_adapter_name_or_path,
+            disable_logprobs_during_spec_decoding=config.
+            disable_logprobs_during_spec_decoding,
         )
 
 

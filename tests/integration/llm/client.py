@@ -463,6 +463,18 @@ vllm_model_spec = {
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-11B"
     },
+    "llama-68m-speculative-medusa": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "JackFram/llama-68m"
+    },
+    "llama-68m-speculative-eagle": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "JackFram/llama-68m"
+    },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],
         "batch_size": [3],
