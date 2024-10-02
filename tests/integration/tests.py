@@ -604,6 +604,18 @@ class TestVllm1:
             client.run(
                 "vllm falcon-11b-chunked-prefill --in_tokens 1200".split())
 
+    def test_llama_68m_speculative_medusa(self):
+        with Runner('lmi', 'llama-68m-speculative-medusa') as r:
+            prepare.build_vllm_model("llama-68m-speculative-medusa")
+            r.launch()
+            client.run("vllm llama-68m-speculative-medusa".split())
+
+    def test_llama_68m_speculative_eagle(self):
+        with Runner('lmi', 'llama-68m-speculative-eagle') as r:
+            prepare.build_vllm_model("llama-68m-speculative-eagle")
+            r.launch()
+            client.run("vllm llama-68m-speculative-eagle".split())
+
 
 @pytest.mark.vllm
 @pytest.mark.lora
