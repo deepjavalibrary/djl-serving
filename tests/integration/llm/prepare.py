@@ -628,7 +628,7 @@ vllm_model_list = {
     "llama-68m-speculative-medusa": {
         "option.model_id": "s3://djl-llm/llama-68m/",
         "option.task": "text-generation",
-        "option.speculative_model": "s3://djl-llm/llama-2-tiny/",
+        "option.speculative_model": "abhigoyal/vllm-medusa-llama-68m-random",
         "option.num_speculative_tokens": 4,
         "option.use_v2_block_manager": True,
         "option.tensor_parallel_degree": 1,
