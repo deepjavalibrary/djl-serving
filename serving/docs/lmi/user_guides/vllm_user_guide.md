@@ -6,7 +6,7 @@ vLLM expects the model artifacts to be in the [standard HuggingFace format](../d
 
 ## Supported Model architecture
 
-LMI is shipping vLLM 0.4.2 with 0.28.0 containers, 
+LMI is shipping vLLM 0.5.4 with 0.30.0 containers, 
 so technically we support all LLM that [vLLM 0.4.2 support](https://github.com/vllm-project/vllm/tree/v0.4.2?tab=readme-ov-file#about).
 
 The model architecture that we carefully tested for vLLM (in CI):
