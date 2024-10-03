@@ -69,7 +69,7 @@ RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
-    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.18.0 && \
+    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.19.0 && \
     scripts/patch_oss_dlc.sh python && \
     echo "${djl_serving_version} cpufull" > /opt/djl/bin/telemetry && \
     rm -rf /opt/djl/logs && \
@@ -78,5 +78,5 @@ RUN scripts/install_python.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.cpu-full="true"
 LABEL torch-version=$torch_version
