@@ -24,8 +24,7 @@ from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, \
     TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
-from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
-from djl_python.neuron_utils.nxd_loader import NxDModelLoader
+from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader, NxDModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter

@@ -28,6 +28,7 @@ from transformers_neuronx.module import save_pretrained_split
 from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version, build_context_length_estimates, \
     get_generation_config
 from huggingface_hub import hf_hub_download
+from vllm.worker.neuron_llama3_mm_runner import trace, load_neuron_model
 
 # Temporary Fix: These loggers are disabled during vLLM import.
 # Remove when fixed in vLLM
@@ -773,3 +774,52 @@ class OptimumStableDiffusionLoader(ModelLoader):
         self.load_pipeline(**kwargs)
         self.save_pipeline(save_path)
         return self.pipeline
+
+
+class NxDModelLoader(ModelLoader):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.model = None
+        self.generation_config = get_generation_config(
+            model_id_or_path=self.config.model_id_or_path,
+            load_path=self.config.model_id_or_path
+        )
+        self.compiled_graph_path = None
+
+        # self.model_loader = InferenceRunner(
+        #     model_path=self.config.model_id_or_path,
+        #     tokenizer=kwargs.get("tokenizer"),
+        #     generation_config=self.generation_config,
+        # )
+
+    def load_model(self, **kwargs):
+        # TODO TNX: Determine whether partition is required or not
+
+        # Compile only if necessary
+        logging.info(f"LLM sharding and compiling for NxD started...")
+        # self.compiled_graph_path = os.path.join(self.get_load_path(),
+        #                                         "compiled")
+        #
+        # self.partition(self.compiled_graph_path, **kwargs)
+        # load the model
+        self.model = load_neuron_model(self.config.model_id_or_path)
+        return self.model
+
+    def partition(self, save_path, **kwargs):
+        logging.info("Compiling model to NeuronX Distributed format")
+
+        # TODO: change max_prompt_length and sequence_length
+        # TODO: Figure out what are the other kwargs
+        trace(
+            traced_model_path=save_path,
+            model_path=self.config.model_id_or_path,
+            hf_config=None,
+            tokenizer=None,
+            neuron_config=None,
+            tp_degree=self.config.tensor_parallel_degree,
+            batch_size=self.config.max_rolling_batch_size,
+            max_prompt_length=self.config.n_positions//2,
+            sequence_length=self.config.n_positions,
+            enable_bucketing=True,
+            **kwargs
+        )
