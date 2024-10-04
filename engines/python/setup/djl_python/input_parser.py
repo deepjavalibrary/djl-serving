@@ -129,6 +129,7 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     tokenizer = kwargs.get("tokenizer")
     image_token = kwargs.get("image_placeholder_token")
     configs = kwargs.get("configs")
+    is_rolling_batch = kwargs.get("is_rolling_batch", False)
     is_bedrock = False
     if configs is not None:
         is_bedrock = configs.bedrock_compat
@@ -143,6 +144,8 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
         inputs, param = parse_3p_request(input_map,
                                          kwargs.get("is_rolling_batch"),
                                          tokenizer, invoke_type)
+    elif is_rolling_batch:
+        inputs, param = parse_lmi_default_request_rolling_batch(input_map)
     else:
         inputs = input_map.pop("inputs", input_map)
         param = input_map.pop("parameters", {})
@@ -153,9 +156,6 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     # TODO: Instead of modifying user parameters, maintain this in server_parameters.
     #  Added here for backward compatibility
     # re-organize the parameters
-    if kwargs.get("is_rolling_batch"):
-        if "stream" in input_map:
-            request_input.parameters["stream"] = input_map.pop("stream")
     if "cached_prompt" in input_map:
         request_input.parameters["cached_prompt"] = input_map.pop(
             "cached_prompt")
@@ -240,3 +240,25 @@ def _validate_adapters(adapters_per_item, adapter_registry):
     for adapter_name in adapters_per_item:
         if adapter_name and adapter_name not in adapter_registry:
             raise ValueError(f"Adapter {adapter_name} is not registered")
+
+
+def parse_lmi_default_request_rolling_batch(payload):
+    if not isinstance(payload, dict):
+        raise ValueError(
+            f"Invalid request payload. Request payload should be a json object specifying the 'inputs' field. Received payload {payload}"
+        )
+
+    inputs = payload.get("inputs", None)
+    if inputs is None:
+        raise ValueError(
+            f"Invalid request payload. Request payload should be a json object specifying the 'inputs' field. Received payload {payload}"
+        )
+
+    parameters = payload.get("parameters", {})
+    if not isinstance(parameters, dict):
+        raise ValueError(
+            f"Invalid request payload. 'parameters' must be provided as an object of key-value pairs. Received payload {payload}"
+        )
+
+    parameters["stream"] = payload.get("stream", False)
+    return inputs, parameters
