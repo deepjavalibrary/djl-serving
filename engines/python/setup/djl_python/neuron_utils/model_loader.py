@@ -317,7 +317,13 @@ class TNXModelLoader(ModelLoader):
         """
         Sets the path to which to load artifacts and loads the model - based on specified format
         """
-        if "neuron" in self.model_config.to_dict(
+        if self.config.speculative_draft_model:
+            from vllm.model_executor.models.neuron.llama import load_weights_spec
+            self.model = load_weights_spec(model_name_or_path=self.config.model_id_or_path,
+                                           load_format="auto",
+                                           draft_model_name_or_path=self.config.speculative_draft_model,
+                                           speculative_length=self.config.speculative_length)
+        elif "neuron" in self.model_config.to_dict(
         ) and not self.safetensors_format:
             self.split_model_path = os.path.join(self.get_load_path(),
                                                  "checkpoint")
