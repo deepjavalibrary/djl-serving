@@ -20,8 +20,6 @@ from typing_extensions import deprecated
 from djl_python.request_io import TextGenerationOutput
 from djl_python.utils import wait_till_generation_finished
 
-ERR_MSG = "Inference error occurred. Check CloudWatch metrics or model server logs for more details."
-
 
 def output_formatter(function):
     """
@@ -122,7 +120,7 @@ def _json_output_formatter(request_output: TextGenerationOutput):
         # partial generation response that may exist
         result = {
             "generated_text": None,
-            "error": final_token.error_msg if final_token else ERR_MSG,
+            "error": final_token.error_msg,
             "code": 400,
             "details": details,
         }
