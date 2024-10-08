@@ -16,6 +16,7 @@ if [ -z "$PYTORCH_JNI" ]; then
     jq \
     unzip \
     ca-certificates \
+    fontconfig \
     vim
   # add corretto https://docs.aws.amazon.com/corretto/latest/corretto-17-ug/generic-linux-install.html
   wget -O - https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto-keyring.gpg &&
