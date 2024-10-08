@@ -12,14 +12,14 @@
 ARG version=12.4.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version=0.31.0~SNAPSHOT
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.4.0
 ARG torch_vision_version=0.19.0
 ARG onnx_version=1.19.0
 ARG pydantic_version=2.8.2
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
 ARG transformers_version=4.43.2
@@ -128,7 +128,7 @@ RUN scripts/patch_oss_dlc.sh python \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.lmi="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version

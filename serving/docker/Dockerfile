@@ -10,7 +10,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04 AS base
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version=0.31.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
@@ -67,7 +67,7 @@ RUN scripts/install_python.sh && \
     scripts/install_djl_serving.sh $djl_version $torch_version && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
-    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.18.0 && \
+    djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.19.0 && \
     scripts/patch_oss_dlc.sh python && \
     echo "${djl_version} cpufull" > /opt/djl/bin/telemetry && \
     rm -rf /opt/djl/logs && \
@@ -76,5 +76,5 @@ RUN scripts/install_python.sh && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* \
 
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu-full="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.cpu-full="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.cpu-full="true"
 LABEL torch-version=$torch_version
