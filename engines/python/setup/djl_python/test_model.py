@@ -266,7 +266,9 @@ class TestHandler:
         else:
             self.service = ModelService(entry_point, model_dir)
             # Prevent pre-initialized class objects in unit tests
-            getattr(self.service.module, "_service").initialized = False
+            service_module = getattr(self.service.module, "_service")
+            if service_module is not None:
+                service_module.initialized = False
 
     def inference(self, inputs: Input) -> Output:
         function_name = inputs.get_function_name() if inputs.get_function_name(
