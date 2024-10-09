@@ -122,7 +122,7 @@ class Sequence:
         return None, False, False
 
     def get_last_token(self) -> Optional[Token]:
-        if self._last_token_index:
+        if self._last_token_index is not None:
             return self.tokens[self._last_token_index]
         return None
 
