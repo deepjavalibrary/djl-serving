@@ -17,6 +17,7 @@ from unittest import mock
 
 from djl_python.test_model import TestHandler
 from djl_python import huggingface
+from djl_python import huggingface_rolling_batch
 
 
 def override_rolling_batch(rolling_batch_type: str):
@@ -33,7 +34,7 @@ class TestTestModel(unittest.TestCase):
 
     def test_all_code(self):
         model_id = "NousResearch/Nous-Hermes-Llama2-13b"
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        huggingface_rolling_batch.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         inputs = [{
             "inputs": "The winner of oscar this year is",
@@ -65,7 +66,7 @@ class TestTestModel(unittest.TestCase):
         }
         for key, value in envs.items():
             os.environ[key] = value
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        huggingface_rolling_batch.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
@@ -101,7 +102,7 @@ class TestTestModel(unittest.TestCase):
         }
         for key, value in envs.items():
             os.environ[key] = value
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        huggingface_rolling_batch.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
@@ -129,7 +130,7 @@ class TestTestModel(unittest.TestCase):
 
     def test_all_code_chat(self):
         model_id = "TheBloke/Llama-2-7B-Chat-fp16"
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        huggingface_rolling_batch.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         inputs = [{
             "inputs":
@@ -160,7 +161,7 @@ class TestTestModel(unittest.TestCase):
         }
         for key, value in envs.items():
             os.environ[key] = value
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        huggingface_rolling_batch.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
@@ -186,7 +187,7 @@ class TestTestModel(unittest.TestCase):
             os.environ[key] = ""
 
     def test_exception_handling(self):
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch_with_exception
+        huggingface_rolling_batch.get_rolling_batch_class_from_str = override_rolling_batch_with_exception
         model_id = "NousResearch/Nous-Hermes-Llama2-13b"
         handler = TestHandler(huggingface)
         inputs = [{
@@ -246,7 +247,7 @@ class TestTestModel(unittest.TestCase):
 
         for key, value in envs.items():
             os.environ[key] = value
-        huggingface.get_rolling_batch_class_from_str = override_rolling_batch
+        huggingface_rolling_batch.get_rolling_batch_class_from_str = override_rolling_batch
         handler = TestHandler(huggingface)
         self.assertEqual(handler.serving_properties["rolling_batch"],
                          envs["OPTION_ROLLING_BATCH"])
