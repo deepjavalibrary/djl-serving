@@ -22,22 +22,22 @@ ARG pydantic_version=2.8.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.43.2
-ARG accelerate_version=0.32.1
-ARG bitsandbytes_version=0.43.1
-ARG optimum_version=1.21.2
+ARG transformers_version=4.45.2
+ARG accelerate_version=1.0.0
+ARG bitsandbytes_version=0.44.1
+ARG optimum_version=1.23.0
 ARG auto_gptq_version=0.7.1
-ARG datasets_version=2.20.0
+ARG datasets_version=3.0.1
 ARG autoawq_version=0.2.5
-ARG tokenizers_version=0.19.1
+ARG tokenizers_version=0.20.1
 # LMI-Dist Deps
 ARG vllm_version=0.6.1.post2
 ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.2/flashinfer-0.1.2+cu121torch2.4-cp310-cp310-linux_x86_64.whl"
+ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
-ARG peft_version=0.11.1
+ARG peft_version=0.13.1
 
 EXPOSE 8080
 
@@ -133,5 +133,5 @@ LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL cuda-version=$cuda_version
-# To use the 535 CUDA driver, CUDA 12.1 can work on this one too
-LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
+# To use the 535 CUDA driver, CUDA 12.4 can work on this one too
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.4
