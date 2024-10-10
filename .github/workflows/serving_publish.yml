@@ -3,6 +3,12 @@ name: Serving publish
 on:
   schedule:
     - cron: '0 12 * * *'
+  pull_request:
+    branches:
+      - serving-publish  # No need to include the repository name, just the branch name
+  push:
+    branches:
+      - serving-publish  # Trigger on push events to the serving-publish branch
   workflow_dispatch:
     inputs:
       mode:
