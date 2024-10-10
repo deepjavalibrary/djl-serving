@@ -1,0 +1,25 @@
+name: Test OIDC Authentication
+
+on:
+  pull_request:
+    branches:
+      - serving-publish  
+  push:
+    branches:
+      - serving-publish 
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::425969335547:role/djl-ci-publish-role
+          aws-region: us-east-2
+
+      - run: |
+          aws s3 ls s3://djl-ai/publish/
