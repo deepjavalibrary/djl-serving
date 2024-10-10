@@ -3,15 +3,9 @@ from huggingface_hub import snapshot_download
 from pathlib import Path
 
 
-def llm_download(model_id, token, allow_patterns):
-    local_model_path = Path("./model")
+def llm_download(model_id, token, allow_patterns, download_dir):
+    local_model_path = Path(download_dir)
     local_model_path.mkdir(exist_ok=True)
-    if not allow_patterns:
-        # Only download pytorch checkpoint files
-        allow_patterns = [
-            "*.json", "*.pt", "*.safetensors", "*.txt", "*.model", "*.tiktoken"
-        ]
-
     ignore_patterns = [".git*"]
     snapshot_download(repo_id=model_id,
                       local_dir=local_model_path,
@@ -27,10 +21,17 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='The HuggingFace token have access to the model')
-    parser.add_argument('--allow-patterns',
+    parser.add_argument(
+        '--allow-patterns',
+        required=False,
+        type=str,
+        default='*.json,*.pt,*.safetensors,*.txt,*.model,*.tiktoken',
+        help='The components to download')
+    parser.add_argument('--download-dir',
                         required=False,
                         type=str,
-                        help='The components to download')
+                        default='./model',
+                        help='directory to download model artifacts to')
     args = parser.parse_args()
     allow_patterns = args.allow_patterns.replace(" ", "").split(",")
-    llm_download(args.model_id, args.token, allow_patterns)
+    llm_download(args.model_id, args.token, allow_patterns, args.download_dir)
