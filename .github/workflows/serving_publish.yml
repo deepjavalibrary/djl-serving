@@ -3,6 +3,13 @@ name: Serving publish
 on:
   schedule:
     - cron: '0 12 * * *'
+    # Add pull request and push triggers for the publish-serving branch
+  pull_request:
+    branches:
+      - publish-serving  # Trigger on pull requests to/from this branch
+  push:
+    branches:
+      - publish-serving  # Trigger on pushes to this branch
   workflow_dispatch:
     inputs:
       mode:
