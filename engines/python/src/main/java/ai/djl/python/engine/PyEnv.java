@@ -537,6 +537,18 @@ public class PyEnv {
         this.modelLoadingTimeout = modelLoadingTimeout;
     }
 
+    /**
+     * Returns the log level to use in the djl_python logger.
+     *
+     * @return the log level to use.
+     */
+    public String getPythonLogLevel() {
+        if (logger.isDebugEnabled()) {
+            return "debug";
+        }
+        return "info";
+    }
+
     String[] getEnvironmentVars(Model model) {
         ArrayList<String> envList = new ArrayList<>();
         StringBuilder pythonPath = new StringBuilder();

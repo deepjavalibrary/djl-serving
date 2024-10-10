@@ -187,13 +187,13 @@ def main():
 
     # noinspection PyBroadException
     try:
+        args = ArgParser.python_engine_args().parse_args()
         logging.basicConfig(stream=sys.stdout,
-                            format="%(message)s",
-                            level=logging.INFO)
+                            format="%(levelname)s::%(message)s",
+                            level=args.log_level.upper())
         configure_sm_logging()
         logging.info(
             f"{pid} - djl_python_engine started with args: {sys.argv[1:]}")
-        args = ArgParser.python_engine_args().parse_args()
         rank = os.environ.get("OMPI_COMM_WORLD_RANK")
         sock_type = args.sock_type
         sock_name = args.sock_name if rank is None else f"{args.sock_name}.{rank}"
