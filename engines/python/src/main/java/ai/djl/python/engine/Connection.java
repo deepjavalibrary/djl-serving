@@ -129,6 +129,7 @@ class Connection {
         int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
         String entryPoint = pyEnv.getEntryPoint();
         String recommendedEntryPoint = pyEnv.getRecommendedEntryPoint();
+        String pythonLogLevel = pyEnv.getPythonLogLevel();
 
         if (PyEnv.isMultiNode()) {
             int worldSize = tensorParallelDegree * pipelineParallelDegree;
@@ -159,7 +160,7 @@ class Connection {
                 }
                 sb.append(host).append(':').append(localSize);
             }
-            String[] args = new String[48];
+            String[] args = new String[50];
             args[0] = "mpirun";
             args[1] = "-np";
             args[2] = String.valueOf(worldSize);
@@ -208,11 +209,13 @@ class Connection {
             args[45] = String.valueOf(clusterSize);
             args[46] = "--recommended-entry-point";
             args[47] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+            args[48] = "--log-level";
+            args[49] = pythonLogLevel;
             return args;
         } else if (pyEnv.isMpiMode()) {
             String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            String[] args = new String[42];
+            String[] args = new String[44];
             args[0] = "mpirun";
             args[1] = "-np";
             args[2] = String.valueOf(tensorParallelDegree);
@@ -255,6 +258,8 @@ class Connection {
             args[39] = String.valueOf(tensorParallelDegree);
             args[40] = "--recommended-entry-point";
             args[41] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+            args[42] = "--log-level";
+            args[43] = pythonLogLevel;
             return args;
         }
 
@@ -276,7 +281,7 @@ class Connection {
             logger.info("Set OMP_NUM_THREADS={}", neuronThreads);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
-        String[] args = new String[16];
+        String[] args = new String[18];
         args[0] = pyEnv.getPythonExecutable();
         args[1] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
         args[2] = "--sock-type";
@@ -293,6 +298,8 @@ class Connection {
         args[13] = String.valueOf(clusterSize);
         args[14] = "--recommended-entry-point";
         args[15] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+        args[16] = "--log-level";
+        args[17] = pythonLogLevel;
         return args;
     }
 
