@@ -14,12 +14,13 @@ ARG djl_version=0.30.0~SNAPSHOT
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.10
-ARG neuronsdk_version=2.19.1
-ARG torch_neuronx_version=2.1.2.2.2.0
-ARG transformers_neuronx_version=0.11.351
-ARG neuronx_distributed_version=0.8.0
-ARG neuronx_cc_version=2.14.227.0
-ARG protobuf_version=3.19.6
+ARG neuronsdk_version=2.20.0
+ARG torch_neuronx_version=2.1.2.2.3.0
+ARG transformers_neuronx_version=0.12.313
+ARG neuronx_distributed_version=0.9.0
+ARG neuronx_cc_version=2.15.128.0
+ARG neuronx_cc_stubs_version=2.15.128.0
+ARG torch_xla_version=2.1.4
 ARG transformers_version=4.43.2
 ARG accelerate_version=0.29.2
 ARG diffusers_version=0.28.2
@@ -75,7 +76,8 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_inferentia2.sh && \
     pip install accelerate==${accelerate_version} safetensors torchvision==${torchvision_version} \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
-    neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece jinja2 \
+    torch_xla==${torch_xla_version} neuronx-cc-stubs==${neuronx_cc_stubs_version} \
+    neuronx_distributed==${neuronx_distributed_version} protobuf sentencepiece jinja2 \
     diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
     pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile && \
     pip install transformers==${transformers_version} ${vllm_wheel} && \
