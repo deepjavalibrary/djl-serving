@@ -1,5 +1,4 @@
 name: Serving publish
-
 on:
   schedule:
     - cron: '0 12 * * *'
@@ -17,16 +16,13 @@ on:
         description: 'staging repository id for djl api packages'
         required: false
         default: ''
-
 permissions:
   id-token: write
   contents: read
-
 jobs:
   publish:
     if: github.repository == 'deepjavalibrary/djl-serving'
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
