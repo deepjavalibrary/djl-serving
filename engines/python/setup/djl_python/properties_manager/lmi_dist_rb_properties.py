@@ -49,7 +49,7 @@ class LmiDistRbProperties(Properties):
     gpu_memory_utilization: Optional[float] = 0.9
     # TODO: speculative decoding changes
     speculative_draft_model: Optional[str] = None
-    speculative_length: int = 5
+    speculative_length: int = 4
     draft_model_tp_size: int = 1
     record_acceptance_rate: Optional[bool] = False
     speculative_telemetry: Optional[bool] = True
