@@ -171,6 +171,7 @@ class LmiDistRollingBatch(RollingBatch):
         """
         self.add_new_requests(new_requests)
         # step 0: register new requests to engine
+        new_lmi_dist_requests = []
         for request in new_requests:
             request_id = str(request.id)
             llm_input = get_prompt_inputs(request)
@@ -186,10 +187,13 @@ class LmiDistRollingBatch(RollingBatch):
                 params=request_params,
                 lora_request=lora_request_params["lora_request"]
                 if lora_request_params else None)
-            self.engine.add_request(lmi_dist_request)
+            new_lmi_dist_requests.append(lmi_dist_request)
             self.request_cache[request_id] = {
                 "request_output": request.request_output
             }
+        if new_lmi_dist_requests:
+            self.engine.add_requests(new_lmi_dist_requests)
+
         request_outputs = self.engine.step()
 
         # step 1: put result to cache
