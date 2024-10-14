@@ -68,6 +68,7 @@ class LmiDistRollingBatch(RollingBatch):
             dtype=DTYPE_MAPPER[self.lmi_dist_config.dtype],
             seed=0,
             max_model_len=self.lmi_dist_config.max_model_len,
+            max_num_seqs=self.lmi_dist_config.max_rolling_batch_size,
             enforce_eager=self.lmi_dist_config.enforce_eager,
             gpu_memory_utilization=self.lmi_dist_config.gpu_memory_utilization,
             max_num_batched_tokens=self.lmi_dist_config.
