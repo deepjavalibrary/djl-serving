@@ -25,7 +25,7 @@ from dataclasses import dataclass
 
 from djl_python.transformers_neuronx_scheduler.slot import Slot
 from djl_python.request import Request
-from djl_python.transformers_neuronx_scheduler.token_selector import TokenSelector
+from djl_python.transformers_neuronx_scheduler.optimum_token_selector import OptimumTokenSelector
 from djl_python.transformers_neuronx_scheduler.speculation import (
     LMIDraftModelForSpeculation, LMIGreedyTokenAcceptor)
 from djl_python.transformers_neuronx_scheduler.utils import (
@@ -140,7 +140,8 @@ class NeuronGenerator(ABC):
         return {
             "input_ids": inputs.input_ids,
             "cache_ids": inputs.cache_ids,
-            "start_ids": inputs.seq_ids
+            "start_ids": inputs.seq_ids,
+            "attention_mask": inputs.attention_mask
         }
 
     def make_generations(
@@ -176,7 +177,8 @@ class NeuronGenerator(ABC):
             slot_request.slot.clear()
         return generation, finish_reason
 
-    def _generate_token(self, inputs: GenerationInputs) -> List[Generation]:
+    def _generate_token(self, inputs: GenerationInputs,
+                        prefill: Optional[bool]) -> List[Generation]:
         """Prepare inputs for batching strategy
         Args:
             inputs (GenerationInputs): inputs tokenized tensor values
@@ -184,7 +186,14 @@ class NeuronGenerator(ABC):
         Return:
             A list of `Generation` for each request.
         """
-        model_inputs = self.prepare_model_inputs(inputs)
+        if prefill:
+            model_inputs = self.model.prepare_inputs_for_prefill(
+                inputs.input_ids, inputs.attention_mask, inputs.seq_ids)
+        elif prefill is None:
+            model_inputs = self.prepare_model_inputs(inputs)
+        else:
+            model_inputs = self.model.prepare_inputs_for_decode(
+                inputs.input_ids, inputs.attention_mask, inputs.seq_ids)
         outputs = self.model(
             **model_inputs,
             return_dict=True,
@@ -305,11 +314,11 @@ class ContinuousBatchingNeuronGenerator(NeuronGenerator):
         for i, slot in enumerate(prefill_slots):
             slot_input_ids = input_ids[i:i + 1, :]
             # Padded input ids are also required to set logits processors and stopping criterion
-            selector = TokenSelector.create(slot_input_ids,
-                                            slot.generation_config,
-                                            self.model,
-                                            self.n_positions,
-                                            seed=slot.seed)
+            selector = OptimumTokenSelector.create(slot_input_ids,
+                                                   slot.generation_config,
+                                                   self.model,
+                                                   self.n_positions,
+                                                   seed=slot.seed)
             slot_input_ids = slot_input_ids.squeeze().type(torch.int32)
             slot_attention_mask = attention_mask[i]
             slot_cache_ids = cache_ids[i]
@@ -428,15 +437,14 @@ class NaiveRollingBatchNeuronGenerator(NeuronGenerator):
             if slot.state != slot.state.EMPTY:
                 slot_input_ids = input_ids[i:i + 1, :]
                 # Padded input ids are also required to set logits processors and stopping criterias
-                selector = TokenSelector.create(slot_input_ids,
-                                                slot.generation_config,
-                                                self.model, self.n_positions)
+                selector = OptimumTokenSelector.create(slot_input_ids,
+                                                       slot.generation_config,
+                                                       self.model,
+                                                       self.n_positions)
                 slot_input_ids = slot_input_ids.squeeze().type(torch.int64)
                 slot_attention_mask = attention_mask[i]
                 slot.reset(slot_input_ids, slot_attention_mask, selector,
                            torch.LongTensor([0]))
-        # Clear KV cache
-        self.model.reset_generation()
         return GenerationInputs(input_ids=input_ids,
                                 attention_mask=attention_mask)
 
@@ -453,7 +461,7 @@ class NaiveRollingBatchNeuronGenerator(NeuronGenerator):
         # have already been generated and sent back in the last decode.
         for slot in active_slots:
             slot.pause()
-        generation = self.prefill_generate(prefill_inputs)
+        generation = self.prefill_generate(prefill_inputs, True)
         # Reactivate previously active slots for the next decode.
         for slot in active_slots:
             slot.resume()
@@ -489,6 +497,15 @@ class NaiveRollingBatchNeuronGenerator(NeuronGenerator):
         return GenerationInputs(input_ids=input_ids,
                                 attention_mask=attention_mask)
 
+    def decode(self) -> List[Generation]:
+        """Decode the specified prefilled requests.
+
+        Return:
+            A list of `Generation` for each request.
+        """
+        inputs = self._preprocess_decode()
+        return self.decode_generate(inputs, False)
+
     def set_speculative_generation_methods(self):
         self.prefill_generate = self._draft_target_generate
         self.decode_generate = self._speculative_generate_token
@@ -502,7 +519,9 @@ class NaiveRollingBatchNeuronGenerator(NeuronGenerator):
         return True
 
     def _speculative_generate_token(
-            self, inputs: GenerationInputs) -> List[Generation]:
+            self,
+            inputs: GenerationInputs,
+            prefill: Optional[bool] = None) -> List[Generation]:
         generations = []
         request_ids = []
         active_slots = self.get_slots_by_state(Slot.State.READY)
@@ -583,10 +602,11 @@ class NaiveRollingBatchNeuronGenerator(NeuronGenerator):
         return generations
 
     def _draft_target_generate(
-        self,
-        inputs: GenerationInputs,
-    ) -> List[Generation]:
-        model_inputs = self.prepare_model_inputs(inputs)
+            self,
+            inputs: GenerationInputs,
+            prefill: Optional[bool] = None) -> List[Generation]:
+        model_inputs = self.model.prepare_inputs_for_prefill(
+            inputs.input_ids, inputs.attention_mask, inputs.seq_ids)
 
         def generate_draft(_model_inputs):
             _, _ = self.draft_model(_model_inputs["input_ids"], 1, None,
