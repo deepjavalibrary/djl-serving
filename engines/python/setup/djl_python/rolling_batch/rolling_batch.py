@@ -149,7 +149,4 @@ class RollingBatch(ABC):
             req for req in self.active_requests if not req.is_last_token()
         ]
 
-        if len(self.active_requests) == 0:
-            self.req_id_counter.reset()
-
         return results

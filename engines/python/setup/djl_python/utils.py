@@ -17,6 +17,7 @@ from djl_python.inputs import Input
 
 
 class IdCounter:
+    MAX_ID = 999999
 
     def __init__(self):
         self.id = 0
@@ -26,7 +27,7 @@ class IdCounter:
 
     def next_id(self):
         current_id = self.id
-        self.id += 1
+        self.id = (self.id + 1) % self.MAX_ID
         return current_id
 
     def reset(self):
