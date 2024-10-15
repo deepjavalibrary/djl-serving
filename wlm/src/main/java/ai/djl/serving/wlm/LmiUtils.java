@@ -300,64 +300,72 @@ public final class LmiUtils {
      * @return the Huggingface config.json file URI
      */
     public static URI generateHuggingFaceConfigUri(ModelInfo<?, ?> modelInfo, String modelId) {
+        String[] possibleConfigFiles = {"config.json", "adapter_config.json", "model_index.json"};
+        URI configUri;
+        for (String configFile : possibleConfigFiles) {
+            configUri = findHuggingFaceConfigUriForConfigFile(modelInfo, modelId, configFile);
+            if (configUri != null) {
+                return configUri;
+            }
+        }
+        logger.debug("Did not find huggingface config file for model");
+        return null;
+    }
+
+    private static URI findHuggingFaceConfigUriForConfigFile(
+            ModelInfo<?, ?> modelInfo, String modelId, String configFile) {
         Path modelDir = modelInfo.modelDir;
-        if (Files.isRegularFile(modelDir.resolve("config.json"))) {
-            return modelDir.resolve("config.json").toUri();
-        } else if (Files.isRegularFile(modelDir.resolve("model_index.json"))) {
-            return modelDir.resolve("model_index.json").toUri();
+        Path downloadDir = modelInfo.downloadDir;
+        if (Files.isRegularFile(modelDir.resolve(configFile))) {
+            logger.debug("Found config file: {} in modelDir {}", configFile, modelDir);
+            return modelDir.resolve(configFile).toUri();
         }
         if (modelId == null || modelId.startsWith("djl://")) {
             // djl model should be covered by local file in modelDir case
             return null;
-        } else if (modelId.startsWith("s3://")) {
+        }
+        if (modelId.startsWith("s3://")) {
             // HF_MODEL_ID=s3:// should not reach here, this is OPTION_MODEL_ID case.
-            Path downloadDir = modelInfo.downloadDir;
-            if (Files.isRegularFile(downloadDir.resolve("config.json"))) {
-                return downloadDir.resolve("config.json").toUri();
-            } else if (Files.isRegularFile(downloadDir.resolve("model_index.json"))) {
-                return downloadDir.resolve("model_index.json").toUri();
+            if (Files.isRegularFile(downloadDir.resolve(configFile))) {
+                logger.debug("Found config file: {} in downloadDir {}", configFile, downloadDir);
+                return downloadDir.resolve(configFile).toUri();
             }
             return null;
-        } else {
-            modelInfo.prop.setProperty("option.model_id", modelId);
-            Path dir = Paths.get(modelId);
-            if (Files.isDirectory(dir)) {
-                Path configFile = dir.resolve("config.json");
-                if (Files.isRegularFile(configFile)) {
-                    return configFile.toUri();
-                }
-                // stable diffusion models have a different file name with the config...
-                configFile = dir.resolve("model_index.json");
-                if (Files.isRegularFile(configFile)) {
-                    return configFile.toUri();
-                }
-                return null;
-            }
-            return getHuggingFaceHubConfigUri(modelId);
         }
+        Path maybeModelDir = Paths.get(modelId);
+        if (Files.isDirectory(maybeModelDir)) {
+            Path configFilePath = maybeModelDir.resolve(configFile);
+            if (Files.isRegularFile(configFilePath)) {
+                logger.debug(
+                        "Found config file: {} in dir specified by modelId {}",
+                        configFile,
+                        maybeModelDir);
+                return configFilePath.toUri();
+            }
+            return null;
+        }
+        return getHuggingFaceHubConfigUriFromHub(modelId, configFile);
     }
 
-    private static URI getHuggingFaceHubConfigUri(String modelId) {
-        String[] possibleConfigFiles = {"config.json", "model_index.json"};
+    private static URI getHuggingFaceHubConfigUriFromHub(String modelId, String configFile) {
         String hubToken = Utils.getEnvOrSystemProperty("HF_TOKEN");
         Map<String, String> headers = new ConcurrentHashMap<>();
         headers.put("User-Agent", "DJL/" + Engine.getDjlVersion());
         if (hubToken != null) {
             headers.put("Authorization", "Bearer " + hubToken);
         }
-        for (String configFile : possibleConfigFiles) {
-            URI configUri =
-                    URI.create("https://huggingface.co/" + modelId + "/resolve/main/" + configFile);
-            try (InputStream is = Utils.openUrl(configUri.toURL(), headers)) {
-                is.transferTo(OutputStream.nullOutputStream());
-                return configUri;
-            } catch (IOException e) {
-                logger.warn(
-                        "Failed to get config file {} for model {}, {}",
-                        configFile,
-                        modelId,
-                        e.getMessage());
-            }
+        URI configUri =
+                URI.create("https://huggingface.co/" + modelId + "/resolve/main/" + configFile);
+        try (InputStream is = Utils.openUrl(configUri.toURL(), headers)) {
+            is.transferTo(OutputStream.nullOutputStream());
+            logger.debug("Found config file {} in hub", configFile);
+            return configUri;
+        } catch (IOException e) {
+            logger.debug(
+                    "Failed to get config file {} for model {}, {}",
+                    configFile,
+                    modelId,
+                    e.getMessage());
         }
         return null;
     }
@@ -530,6 +538,9 @@ public final class LmiUtils {
         @SerializedName("vocab_size")
         private int vocabSize;
 
+        @SerializedName("peft_type")
+        private String peftType;
+
         private Set<String> allArchitectures;
 
         /**
@@ -644,6 +655,20 @@ public final class LmiUtils {
          */
         public long getApproxMemoryForSingleSequence(int sequenceLength, int weightBytes) {
             return (long) sequenceLength * hiddenSize * numHiddenLayers * weightBytes;
+        }
+
+        /**
+         * Returns true if the huggingface model id points to a Peft/Lora config.
+         *
+         * @return whether the huggingface model id points to Peft/Lora model artifacts.
+         */
+        public boolean isPeftModel() {
+            // TODO: refactor and make this better
+            // Peft Configs are very different than regular configs and ideally shouldn't be clubbed
+            // into this class.
+            // This method works now, as the only info we need for the peft model is whether it is
+            // peft
+            return peftType != null;
         }
 
         /**

@@ -126,7 +126,8 @@ class HuggingFaceService(object):
 
     def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
-        self._read_model_config(self.hf_configs.model_id_or_path)
+        self._read_model_config(self.hf_configs.model_id_or_path,
+                                self.hf_configs.is_peft_model)
 
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             _rolling_batch_cls = get_rolling_batch_class_from_str(
@@ -438,28 +439,16 @@ class HuggingFaceService(object):
             )
         return task
 
-    def _read_model_config(self, model_config_path: str):
-        try:
-            self.model_config = AutoConfig.from_pretrained(
-                model_config_path,
-                trust_remote_code=self.hf_configs.trust_remote_code,
-                revision=self.hf_configs.revision)
-        except OSError:
-            logging.warning(
-                f"config.json not found for {model_config_path}. Attempting to load with peft"
-            )
+    def _read_model_config(self, model_config_path: str, is_peft_model: bool):
+        base_model_id = model_config_path
+        if is_peft_model:
             self.peft_config = PeftConfig.from_pretrained(model_config_path)
-            self.model_config = AutoConfig.from_pretrained(
-                self.peft_config.base_model_name_or_path,
-                trust_remote_code=self.hf_configs.trust_remote_code,
-                revision=self.hf_configs.revision,
-            )
-        except Exception as e:
-            logging.error(
-                f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
-                f"This is required for loading huggingface models",
-                exc_info=True)
-            raise e
+            base_model_id = self.peft_config.base_model_name_or_path
+        self.model_config = AutoConfig.from_pretrained(
+            base_model_id,
+            trust_remote_code=self.hf_configs.trust_remote_code,
+            revision=self.hf_configs.revision,
+        )
 
     def get_image_token(self):
         model_type = self.model_config.model_type
