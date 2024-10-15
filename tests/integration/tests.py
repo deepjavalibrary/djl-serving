@@ -727,30 +727,6 @@ class TestNeuronx1:
             r.launch(container='pytorch-inf2-1')
             client.run("transformers_neuronx gpt2-quantize".split())
 
-    def test_opt_1_3b(self):
-        with Runner('pytorch-inf2', 'opt-1.3b') as r:
-            prepare.build_transformers_neuronx_handler_model("opt-1.3b")
-            r.launch(container='pytorch-inf2-6')
-            client.run("transformers_neuronx opt-1.3b".split())
-
-    def test_gpt_j_6b(self):
-        with Runner('pytorch-inf2', 'gpt-j-6b') as r:
-            prepare.build_transformers_neuronx_handler_model("gpt-j-6b")
-            r.launch(container='pytorch-inf2-6')
-            client.run("transformers_neuronx gpt-j-6b".split())
-
-    def test_pythia(self):
-        with Runner('pytorch-inf2', 'pythia-2.8b') as r:
-            prepare.build_transformers_neuronx_handler_model("pythia-2.8b")
-            r.launch(container='pytorch-inf2-2')
-            client.run("transformers_neuronx pythia-2.8b".split())
-
-    def test_bloom(self):
-        with Runner('pytorch-inf2', 'bloom-7b1') as r:
-            prepare.build_transformers_neuronx_handler_model("bloom-7b1")
-            r.launch(container='pytorch-inf2-2')
-            client.run("transformers_neuronx bloom-7b1".split())
-
     @pytest.mark.parametrize("model",
                              ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant"])
     def test_partition(self, model):

@@ -141,7 +141,7 @@ class Slot:
         if self._generation_config.do_sample:
             self._generation_config.temperature = param.get("temperature", 0.9)
             self._generation_config.top_k = param.get("top_k", 0)
-            self._generation_config.top_p = param.get("top_p", 1.0)
+            self._generation_config.top_p = param.get("top_p", 0.9)
             self._generation_config.typical_p = param.get("typical_p", 1.0)
             self.seed = int(param.get("seed", 0))
 

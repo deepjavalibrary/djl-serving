@@ -177,8 +177,9 @@ class NeuronGenerator(ABC):
             slot_request.slot.clear()
         return generation, finish_reason
 
-    def _generate_token(self, inputs: GenerationInputs,
-                        prefill: Optional[bool]) -> List[Generation]:
+    def _generate_token(self,
+                        inputs: GenerationInputs,
+                        prefill: Optional[bool] = None) -> List[Generation]:
         """Prepare inputs for batching strategy
         Args:
             inputs (GenerationInputs): inputs tokenized tensor values
