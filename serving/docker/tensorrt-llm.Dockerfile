@@ -14,7 +14,8 @@ FROM nvidia/cuda:$version
 ARG cuda_version=cu125
 ARG python_version=3.10
 ARG TORCH_VERSION=2.4.0
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 ARG transformers_version=4.44.2
 ARG accelerate_version=0.32.1
 ARG tensorrtlibs_version=10.1.0
@@ -98,12 +99,12 @@ RUN pip install ${triton_toolkit_wheel} ${trtllm_toolkit_wheel} && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Final steps
-RUN scripts/install_djl_serving.sh $djl_version && \
+RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
     scripts/install_s5cmd.sh x64 && \
     scripts/security_patch.sh trtllm && \
     scripts/patch_oss_dlc.sh python && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} tensorrtllm" > /opt/djl/bin/telemetry && \
+    echo "${djl_serving_version} tensorrtllm" > /opt/djl/bin/telemetry && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && \
@@ -121,6 +122,7 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.tensorrtllm="
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL trtllm-version=$trtllm_version
 LABEL cuda-version=$cuda_version
 # To use the 535 CUDA driver

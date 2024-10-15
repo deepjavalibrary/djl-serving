@@ -10,7 +10,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.10
@@ -69,16 +70,16 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/
 COPY partition /opt/djl/partition
 RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
+    echo "${djl_serving_version} inf2" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh && \
-    scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} && \
     scripts/install_inferentia2.sh && \
     pip install accelerate==${accelerate_version} safetensors torchvision==${torchvision_version} \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
     torch_xla==${torch_xla_version} neuronx-cc-stubs==${neuronx_cc_stubs_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf sentencepiece jinja2 \
-    diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
+    diffusers==${diffusers_version} opencv-contrib-python-headless Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
     pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile && \
     pip install transformers==${transformers_version} ${vllm_wheel} && \
     echo y | pip uninstall triton && \
@@ -96,4 +97,5 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL neuronsdk-version=$neuronsdk_version
