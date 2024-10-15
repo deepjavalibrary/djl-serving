@@ -10,7 +10,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04 AS base
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \
@@ -20,10 +21,10 @@ COPY config.properties /opt/djl/conf/
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-RUN scripts/install_djl_serving.sh $djl_version && \
+RUN scripts/install_djl_serving.sh $djl_serving_version $djl_version && \
     scripts/install_s5cmd.sh x64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} cpu" > /opt/djl/bin/telemetry && \
+    echo "${djl_serving_version} cpu" > /opt/djl/bin/telemetry && \
     scripts/security_patch.sh cpu && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/* && \
     rm -rf scripts
@@ -55,7 +56,7 @@ LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.cpu="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
-LABEL djl-version=$djl_version
+LABEL djl-version=$djl_serving_version
 
 
 FROM base AS cpu-full
@@ -64,7 +65,7 @@ ARG torch_version=2.4.0
 
 COPY scripts scripts/
 RUN scripts/install_python.sh && \
-    scripts/install_djl_serving.sh $djl_version $torch_version && \
+    scripts/install_djl_serving.sh $djl_serving_version $djl_version $torch_version && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu:$torch_version:linux-x86_64 && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime:1.18.0 && \
