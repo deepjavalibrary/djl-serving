@@ -25,7 +25,7 @@ from transformers_neuronx import NeuronAutoModelForCausalLM
 from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig, GenerationConfig as NeuronGenerationConfig
 from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema, TnXMemoryLayout
 from transformers_neuronx.module import save_pretrained_split
-from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version, build_context_length_estimates
+from djl_python.neuron_utils.utils import NeuronXRollingBatchModelAdapter, NeuronXDynamicBatchModelAdapter, get_neuronxcc_version, build_context_length_estimates
 from huggingface_hub import hf_hub_download
 
 # Temporary Fix: These loggers are disabled during vLLM import.
@@ -137,6 +137,7 @@ class TNXModelLoader(ModelLoader):
 
         # Workaround for issue with NeuronAuto gpt model class, and split model loading
         self._neuronx_class = self.set_neuronx_class()
+        self._adapter_class = self.set_adapter_class()
 
     def set_neuronx_class(self):
         try:
@@ -153,6 +154,11 @@ class TNXModelLoader(ModelLoader):
                 f"{class_name} not found in {module_name}. Please check transformers-neuronx version."
             )
         return neuronx_class
+
+    def set_adapter_class(self):
+        if self.config.rolling_batch != "disable":
+            return NeuronXRollingBatchModelAdapter
+        return NeuronXDynamicBatchModelAdapter
 
     def can_use_continuous_batching(self) -> bool:
         """
@@ -401,18 +407,18 @@ class TNXModelLoader(ModelLoader):
 
         os.chdir(path)
 
-    def load_model(self, **kwargs) -> NeuronXModelAdapter:
+    def load_model(self, **kwargs) -> "PretrainedModel":
         """
         Builds the NeuronX model.
 
-        :return: model (NeuronXModelAdapter)
+        :return: model (NeuronXRollingBatchModelAdapter)
         """
         self.set_model_format()
         self.set_neuron_model()
         self.maybe_compile_model()
         self.update_model_config_to_neuron()
         self.load_generation_config()
-        self.model = NeuronXModelAdapter(self.model, self.model_config,
+        self.model = self._adapter_class(self.model, self.model_config,
                                          self.load_path,
                                          self.generation_config)
         return self.model
@@ -473,7 +479,7 @@ class TNXModelLoader(ModelLoader):
 
         :param save_path: Path to which to save the compiled model.
 
-        :return: model (NeuronXModelAdapter)
+        :return: model (NeuronXRollingBatchModelAdapter)
         """
         tokenizer = kwargs.get("tokenizer")
         model_schema = kwargs.get("model_schema")
@@ -508,7 +514,7 @@ class TNXModelLoader(ModelLoader):
             if tokenizer:
                 tokenizer.save_pretrained(save_path)
 
-        self.model = NeuronXModelAdapter(self.model, self.model_config,
+        self.model = self._adapter_class(self.model, self.model_config,
                                          save_path)
         return self.model
 
@@ -571,8 +577,9 @@ class OptimumModelLoader(ModelLoader):
         if hasattr(self.model.generation_config, "max_length"):
             self.model.generation_config.max_length = self.config.n_positions
 
-    def load_optimum_model(self, compiler_args: dict,
-                           input_shapes: dict) -> NeuronXModelAdapter:
+    def load_optimum_model(
+            self, compiler_args: dict,
+            input_shapes: dict) -> NeuronXRollingBatchModelAdapter:
         """
         Helper function to load the model
 
@@ -599,7 +606,7 @@ class OptimumModelLoader(ModelLoader):
         if self.compile_model:
             self.model_config = self.model.config
         self.set_generation_config()
-        self.model = NeuronXModelAdapter(
+        self.model = NeuronXRollingBatchModelAdapter(
             self.model.model,
             self.model_config,
             self.get_load_path(),
@@ -627,7 +634,7 @@ class OptimumModelLoader(ModelLoader):
         self.model.save_pretrained(save_path)
         if tokenizer:
             tokenizer.save_pretrained(save_path)
-        self.model = NeuronXModelAdapter(
+        self.model = NeuronXRollingBatchModelAdapter(
             self.model.model,
             self.model_config,
             self.get_load_path(),

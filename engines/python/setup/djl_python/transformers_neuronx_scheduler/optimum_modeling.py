@@ -15,7 +15,7 @@
 
 import copy
 import torch
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, List
 from transformers import AutoModelForCausalLM, AutoConfig
 from transformers.utils import ModelOutput
 from transformers import GenerationConfig
@@ -25,8 +25,8 @@ from tempfile import TemporaryDirectory
 from transformers import PretrainedConfig
 from transformers_neuronx import bucket
 from transformers_neuronx.constants import LAYOUT_BSH, LAYOUT_HSB
-from djl_python.transformers_neuronx_scheduler.optimum_token_selector import OptimumTokenSelector
 from optimum.neuron.utils.version_utils import check_compiler_compatibility, get_neuronxcc_version
+from djl_python.transformers_neuronx_scheduler.optimum_token_selector import OptimumTokenSelector
 from optimum.modeling_base import OptimizedModel
 from transformers.generation import StoppingCriteriaList
 
@@ -71,8 +71,7 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
         self.device = torch.device("cpu")
 
     def reset_generation(self) -> None:
-        self.cur_len = 0
-        self.model.reset()
+        pass
 
     def _save_pretrained(self, save_directory):
         """
@@ -96,95 +95,65 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
             return ModelOutput([("logits", out_logits)])
         return (out_logits, )
 
-    def _speculative_forward(self,
-                             input_ids,
-                             cache_ids=None,
-                             start_ids=None,
-                             speculation_length=None):
-        """The following is an accuracy correction for llama models, remove with 2.19.0 Neuron SDK"""
-        if self.model.neuron_config and self.model.neuron_config.continuous_batching:
-            inputs, *args = self.model._preprocess(input_ids,
-                                                   start_ids=start_ids,
-                                                   cache_ids=cache_ids)
-        else:
-            batch_size, *_ = input_ids.shape
-            if start_ids is None:
-                start_ids = torch.zeros(batch_size, dtype=torch.int32)
-            if cache_ids is None:
-                batch_size, context_length = input_ids.shape
-                cache_ids = torch.arange(context_length, dtype=torch.int32)
-                if self.model.neuron_config.use_2d_cache_ids:
-                    cache_ids = cache_ids.unsqueeze(0).expand(
-                        batch_size, context_length)
-
-            inputs, *args = input_ids, cache_ids, start_ids
-
-        batch_size, seq_len = input_ids.shape
-        if speculation_length is None:
-            model = self.model.decoder_lm_head
-        elif speculation_length not in self.model.decoder_lm_head_for_speculation.keys(
-        ):
-            # auto-infer speculation bucket, if needed
-            speculation_buckets = [
-                k for (k, batch_size
-                       ) in self.model.decoder_lm_head_for_speculation.keys()
-            ]
-            speculation_length = bucket.find(speculation_buckets, seq_len)
-            model = self.model.decoder_lm_head_for_speculation[
-                speculation_length, batch_size]
-            if input_ids.shape[-1] > speculation_length:
-                input_ids = input_ids[:, :speculation_length]
-        else:
-            model = self.model.decoder_lm_head_for_speculation[
-                speculation_length, batch_size]
-
-        if not self.model.neuron_config.on_device_embedding:
-            inputs = self.model.chkpt_model.model.embed_tokens(inputs)
-            if self.model.neuron_config.attention_layout == LAYOUT_HSB:
-                inputs = inputs.transpose(0, -1).contiguous()
-        with torch.inference_mode():
-            logits = model(inputs, *args)
-        logits = self.model._cast_logits(logits)
-        logits = logits[:self.model.config.vocab_size, -speculation_length:, :]
-        logits = logits.transpose(0, 1)
-        return logits
-
     def speculative_forward(self, *args, **kwargs):
         if hasattr(self.model, "speculative_forward"):
             # Workaround until model.speculative_forward accuracy is fixed for llama
-            return self._speculative_forward(*args, **kwargs)
+            return self.model.speculative_forward(*args, **kwargs)
         else:
             raise NotImplementedError(
                 "Model does not support speculative forward")
 
-    def prepare_inputs_for_generation(self,
-                                      input_ids: torch.Tensor,
-                                      attention_mask: Optional[
-                                          torch.Tensor] = None,
-                                      **kwargs) -> Dict[str, torch.Tensor]:
-        # convert attention_mask to start_ids
+    def get_start_ids(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        seq_ids: Optional[torch.Tensor] = None,
+    ):
+        # The start_ids parameter has different meanings:
+        # - for static batching it corresponds to the start of the padded sequence.
         start_ids = None
         if attention_mask is not None:
             _, start_ids = attention_mask.max(axis=1)
+        return start_ids
 
-        if self.cur_len > 0:
-            # Only pass the last tokens of each sample
-            input_ids = input_ids[:, -1:]
-            # Specify the single index at which the new keys and values need to be stored
-            cache_ids = torch.as_tensor([self.cur_len], dtype=torch.int32)
-        else:
-            # cache_ids will be set directly by the parallel context encoding code
-            cache_ids = None
+    def get_cache_ids(self, attention_mask: torch.tensor, prefill: bool):
+        cache_n, cache_len = attention_mask.shape
+        # Static batching
+        return None if prefill else torch.tensor([cache_len - 1],
+                                                 dtype=torch.int32)
 
-        # Increment the current cache index
-        self.cur_len += input_ids.shape[-1]
-        model_inputs = {
+    def prepare_inputs_for_prefill(
+            self,
+            input_ids: torch.Tensor,
+            attention_mask: torch.Tensor,
+            seq_ids: Optional[List[int]] = None) -> Dict[str, torch.Tensor]:
+        start_ids = self.get_start_ids(input_ids,
+                                       attention_mask,
+                                       seq_ids=seq_ids)
+        cache_ids = self.get_cache_ids(attention_mask, prefill=True)
+        return {
             "input_ids": input_ids,
             "cache_ids": cache_ids,
             "start_ids": start_ids,
         }
 
-        return model_inputs
+    def prepare_inputs_for_decode(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: torch.Tensor,
+        seq_ids: Optional[List[int]] = None,
+    ) -> Dict[str, torch.Tensor]:
+        start_ids = self.get_start_ids(input_ids,
+                                       attention_mask,
+                                       seq_ids=seq_ids)
+        cache_ids = self.get_cache_ids(attention_mask, prefill=False)
+        # Only pass the last tokens of each sample
+        input_ids = input_ids[:, -1:]
+        return {
+            "input_ids": input_ids,
+            "cache_ids": cache_ids,
+            "start_ids": start_ids,
+        }
 
     def can_generate(self) -> bool:
         """Returns True to validate the check made in `GenerationMixin.generate()`."""
@@ -232,6 +201,8 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
         generation_config = copy.deepcopy(
             self.generation_config if generation_config is
             None else generation_config)
+        # Extract tokenizer if any (used only for stop strings)
+        tokenizer = kwargs.pop("tokenizer", None)
         model_kwargs = generation_config.update(
             **kwargs)  # All unused kwargs must be model kwargs
         # Check model kwargs are actually used by either prepare_inputs_for_generation or forward
@@ -243,7 +214,9 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
             generation_config,
             self,
             self.max_length,
-            stopping_criteria=stopping_criteria)
+            stopping_criteria=stopping_criteria,
+            tokenizer=tokenizer,
+        )
 
         # Verify that the inputs are compatible with the model static input dimensions
         batch_size, sequence_length = input_ids.shape
@@ -252,28 +225,35 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
                 f"The input sequence length ({sequence_length}) exceeds the model static sequence length ({self.max_length})"
             )
         padded_input_ids = input_ids
-        padded_attention_mask = attention_mask
+        padded_attention_mask = torch.ones_like(
+            input_ids) if attention_mask is None else attention_mask
         if batch_size > self.batch_size:
             raise ValueError(
                 f"The specified batch_size ({batch_size}) exceeds the model static batch size ({self.batch_size})"
             )
         elif batch_size < self.batch_size:
+            logger.warning(
+                "Inputs will be padded to match the model static batch size. This will increase latency."
+            )
             padding_shape = [self.batch_size - batch_size, sequence_length]
+            pad_token_id = generation_config.pad_token_id
+            if pad_token_id is None:
+                if isinstance(self.config.eos_token_id, list):
+                    pad_token_id = self.config.eos_token_id[0]
+                else:
+                    pad_token_id = self.config.eos_token_id
             padding = torch.full(padding_shape,
-                                 fill_value=self.config.eos_token_id,
+                                 fill_value=pad_token_id,
                                  dtype=torch.int64)
-            padded_input_ids = torch.cat([input_ids, padding])
-            if attention_mask is not None:
-                padding = torch.zeros(padding_shape, dtype=torch.int64)
-                padded_attention_mask = torch.cat([attention_mask, padding])
-        # Drop the current generation context and clear the Key/Value cache
-        self.reset_generation()
+            padded_input_ids = torch.cat([padded_input_ids, padding])
+            padding = torch.zeros(padding_shape, dtype=torch.int64)
+            padded_attention_mask = torch.cat([padded_attention_mask, padding])
 
         output_ids = self.generate_tokens(
             padded_input_ids,
             selector,
             batch_size,
-            attention_mask=padded_attention_mask,
+            padded_attention_mask,
             **model_kwargs,
         )
         return output_ids[:batch_size, :]
@@ -311,18 +291,16 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
                                            device=input_ids.device)
         unfinished_sequences[:batch_size] = 1
 
+        # Prefill and obtain the first token
+        model_inputs = self.prepare_inputs_for_prefill(input_ids,
+                                                       attention_mask)
+        outputs = self.model(
+            **model_inputs,
+            return_dict=True,
+        )
+
         # auto-regressive generation
         while True:
-            # prepare model inputs
-            model_inputs = self.prepare_inputs_for_generation(
-                input_ids, attention_mask, **model_kwargs)
-
-            # forward pass to get next token
-            outputs = self(
-                **model_inputs,
-                return_dict=True,
-            )
-
             next_token_logits = outputs.logits[:, -1, :]
 
             next_tokens = selector.select(input_ids, next_token_logits)
@@ -333,18 +311,24 @@ class OptimumModelForCausalLM(OptimizedModel, GenerationMixin):
 
             # update inputs for the next step
             input_ids = torch.cat([input_ids, next_tokens[:, None]], dim=-1)
-            if attention_mask is not None:
-                attention_mask = torch.cat([
-                    attention_mask,
-                    attention_mask.new_ones((attention_mask.shape[0], 1))
-                ],
-                                           dim=-1)
+            attention_mask = torch.cat([
+                attention_mask,
+                attention_mask.new_ones((attention_mask.shape[0], 1))
+            ],
+                                       dim=-1)
 
             unfinished_sequences = unfinished_sequences & ~selector.stopping_criteria(
                 input_ids, None)
 
-            # stop when each sentence is finished
             if unfinished_sequences.max() == 0:
                 break
+
+            # forward pass to get next token
+            model_inputs = self.prepare_inputs_for_decode(
+                input_ids, attention_mask)
+            outputs = self.model(
+                **model_inputs,
+                return_dict=True,
+            )
 
         return input_ids

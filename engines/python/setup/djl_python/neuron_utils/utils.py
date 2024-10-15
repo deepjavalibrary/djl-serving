@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Optional, Union, List
 from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
 from optimum.exporters.neuron.model_configs import *
 from optimum.exporters.tasks import TasksManager
+from transformers_neuronx.generation_utils import HuggingFaceGenerationModelAdapter
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -118,14 +119,28 @@ def build_context_length_estimates(max_position_embeddings: int) -> List[int]:
     return context_estimates
 
 
-class NeuronXModelAdapter(OptimumModelForCausalLM):
+class NeuronXRollingBatchModelAdapter(OptimumModelForCausalLM):
 
     def __init__(self,
                  model: torch.nn.Module,
                  config: "PretrainedConfig",
                  model_path: Union[str, "Path", "TemporaryDirectory"],
-                 generation_config: Optional["GenerationConfig"] = None):
-        super().__init__(model, config, model_path, generation_config)
+                 generation_config: Optional["GenerationConfig"] = None,
+                 **kwargs):
+        super().__init__(model, config, model_path, generation_config,
+                         **kwargs)
+        self.model_type = config.model_type
+        self.cur_len = 0
+
+    def save(self, path):
+        return self.model.save(path)
+
+
+class NeuronXDynamicBatchModelAdapter(HuggingFaceGenerationModelAdapter):
+
+    def __init__(self, model: torch.nn.Module, config: "PretrainedConfig",
+                 *args, **kwargs):
+        super().__init__(config, model)
         self.model_type = config.model_type
         self.sample_options = ["start_ids", "top_k"]
         self.cur_len = 0
@@ -137,9 +152,6 @@ class NeuronXModelAdapter(OptimumModelForCausalLM):
     def neuron_sample(self, *args, **kwargs):
         sample_kwargs = self.simple_sample_parser(**kwargs)
         return self.model.sample(*args, **sample_kwargs)
-
-    def save(self, path):
-        return self.model.save(path)
 
     def simple_sample_parser(self, **kwargs):
         parsed_kwargs = dict()

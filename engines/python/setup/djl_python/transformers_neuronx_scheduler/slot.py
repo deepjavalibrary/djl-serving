@@ -231,7 +231,8 @@ class Slot:
         Return:
             `torch.LongTensor`: A scalar torch.LongTensor` containing the selected token.
         """
-        next_ids, next_log_probs = self._selector.select(input_ids, logits)
+        next_ids, next_log_probs = self._selector.select_with_logprobs(
+            input_ids, logits)
         return next_ids[0], next_log_probs
 
     def increment_cache_id(self):
