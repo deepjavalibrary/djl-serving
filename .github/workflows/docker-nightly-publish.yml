@@ -58,6 +58,13 @@ jobs:
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+      - name: Extract DJL and DJL Serving versions from TOML
+        id: get-versions
+        run: |
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
+          SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
+          echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
+          echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
       - name: Build serving package for nightly
         if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         run: |
@@ -66,17 +73,21 @@ jobs:
         if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT ${{ matrix.arch }}
+          docker compose build --no-cache \
+          --build-arg djl_version=${{ env.DJL_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
       - name: Build and push temp image
         if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT ${{ matrix.arch }}
+          docker compose build --no-cache \
+          --build-arg djl_version=${{ env.DJL_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          ${{ matrix.arch }}
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
@@ -86,17 +97,18 @@ jobs:
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
-          export BASE_RELEASE_VERSION="${DJL_VERSION}"
-          export RELEASE_VERSION="${DJL_VERSION}-"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} ${{ matrix.arch }}
+          export BASE_RELEASE_VERSION="${{ env.SERVING_VERSION }}"
+          export RELEASE_VERSION="${{ env.SERVING_VERSION }}-"
+          docker compose build --no-cache \
+          --build-arg djl_version=${{ env.DJL_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
       - name: Retag image for release
         if: ${{ matrix.arch == 'cpu' && inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
-          docker tag deepjavalibrary/djl-serving:${DJL_VERSION} deepjavalibrary/djl-serving:latest
+          docker tag deepjavalibrary/djl-serving:${{ env.SERVING_VERSION }} deepjavalibrary/djl-serving:latest
           docker push deepjavalibrary/djl-serving:latest
 
   create-runner:
@@ -147,6 +159,13 @@ jobs:
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+      - name: Extract DJL and DJL Serving versions from TOML
+        id: get-versions
+        run: |
+          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
+          SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
+          echo "DJL_VERSION=$DJL_VERSION" >> $GITHUB_ENV
+          echo "SERVING_VERSION=$SERVING_VERSION" >> $GITHUB_ENV
       - name: Build serving package for nightly
         if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         run: |
@@ -155,17 +174,21 @@ jobs:
         if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT aarch64
+          docker compose build --no-cache \
+          --build-arg djl_version=${{ env.DJL_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          aarch64
           docker compose push aarch64
       - name: Build and push temp image
         if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
           export NIGHTLY="-nightly"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION}-SNAPSHOT aarch64
+          docker compose build --no-cache \
+          --build-arg djl_version=${{ env.DJL_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          aarch64
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:aarch64-${GITHUB_SHA}"
@@ -175,10 +198,12 @@ jobs:
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
-          DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' ../../gradle/libs.versions.toml)
-          export BASE_RELEASE_VERSION="${DJL_VERSION}"
-          export RELEASE_VERSION="${DJL_VERSION}-"
-          docker compose build --no-cache --build-arg djl_version=${DJL_VERSION} aarch64
+          export BASE_RELEASE_VERSION="${{ env.SERVING_VERSION }}"
+          export RELEASE_VERSION="${{ env.SERVING_VERSION }}-"
+          docker compose build --no-cache \
+          --build-arg djl_version=${{ env.DJL_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          aarch64
           docker compose push aarch64
 
 

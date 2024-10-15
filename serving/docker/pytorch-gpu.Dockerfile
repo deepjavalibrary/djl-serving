@@ -13,7 +13,8 @@ ARG version=12.4.1-devel-ubuntu22.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 ARG cuda_version=cu124
 ARG torch_version=2.4.0
 ARG torch_vision_version=0.19.0
@@ -52,8 +53,8 @@ RUN mv *.deb djl-serving_all.deb || true
 COPY scripts scripts/
 SHELL ["/bin/bash", "-c"]
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
-    scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version && \
     scripts/install_python.sh ${python_version} && \
@@ -62,7 +63,7 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-gpu && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} pytorchgpu" > /opt/djl/bin/telemetry && \
+    echo "${djl_serving_version} pytorchgpu" > /opt/djl/bin/telemetry && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
@@ -81,6 +82,7 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.pytorch-cu124
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
 LABEL torch-version=$torch_version
 # To use the 535 CUDA driver

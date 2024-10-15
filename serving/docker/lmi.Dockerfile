@@ -12,7 +12,8 @@
 ARG version=12.4.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.4.0
@@ -88,14 +89,14 @@ RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ \
     && scripts/install_openssh.sh \
-    && scripts/install_djl_serving.sh $djl_version \
-    && scripts/install_djl_serving.sh $djl_version ${torch_version} \
+    && scripts/install_djl_serving.sh $djl_version $djl_serving_version \
+    && scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} \
     && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
     && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version \
     && scripts/install_python.sh ${python_version} \
     && scripts/install_s5cmd.sh x64 \
     && mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin \
-    && echo "${djl_version} lmi" > /opt/djl/bin/telemetry \
+    && echo "${djl_serving_version} lmi" > /opt/djl/bin/telemetry \
     && pip3 cache purge \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
@@ -132,6 +133,7 @@ LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
 # To use the 535 CUDA driver, CUDA 12.4 can work on this one too
 LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.4
