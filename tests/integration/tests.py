@@ -227,7 +227,7 @@ class TestAarch64:
 class TestHfHandler:
 
     def test_gpt_neo(self):
-        with Runner('lmi', 'test_gpt4all_lora') as r:
+        with Runner('lmi', 'test_gpt_neo_2.7b') as r:
             prepare.build_hf_handler_model("gpt-neo-2.7b")
             r.launch()
             client.run("huggingface gpt-neo-2.7b".split())
@@ -250,11 +250,11 @@ class TestHfHandler:
             r.launch()
             client.run("huggingface gpt-j-6b".split())
 
-    def test_gpt4all_lora(self):
-        with Runner('lmi', 'gpt4all-lora') as r:
-            prepare.build_hf_handler_model("gpt4all-lora")
+    def test_llama3_lora(self):
+        with Runner('lmi', 'llama3-tiny-random-lora') as r:
+            prepare.build_hf_handler_model("llama3-tiny-random-lora")
             r.launch()
-            client.run("huggingface gpt4all-lora".split())
+            client.run("huggingface llama3-tiny-random-lora".split())
 
     def test_streaming_bigscience_bloom_3b(self):
         with Runner('lmi', 'bigscience/bloom-3b') as r:

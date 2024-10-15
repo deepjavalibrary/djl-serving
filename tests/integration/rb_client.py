@@ -3,6 +3,7 @@ import argparse
 import json
 import subprocess as sp
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 
@@ -115,6 +116,7 @@ def test_concurrent_with_same_reqs(model, test_spec, spec_name):
         "inputs": spec["input_texts"],
         "parameters": spec.get("parameters", {})
     }
+    os.makedirs("outputs/", exist_ok=True)
     output_file = f"outputs/{model}-{spec_name}-output.txt"
     concurrent_clients = spec.get("concurrent_clients", 1)
     process = send_json(data=data,
@@ -142,6 +144,7 @@ def test_concurrent_with_mul_reqs(model, test_spec, spec_name):
 
     processes = []
     spec = test_spec[model]
+    os.makedirs("outputs/", exist_ok=True)
     for index in range(len(spec.get("input_texts"))):
         input_text = spec["input_texts"][index]
         parameter = spec.get("parameters", [{}])[index]

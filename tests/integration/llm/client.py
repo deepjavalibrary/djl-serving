@@ -70,7 +70,7 @@ hf_model_spec = {
         "worker": 1,
         "stream": [True],
     },
-    "gpt4all-lora": {
+    "llama3-tiny-random-lora": {
         "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],

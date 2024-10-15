@@ -41,6 +41,7 @@ public final class LmiConfigRecommender {
         setTensorParallelDegree(lmiProperties);
         setPipelineParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
+        setIsPeftModel(lmiProperties, modelConfig);
     }
 
     private static void setRollingBatch(
@@ -137,6 +138,13 @@ public final class LmiConfigRecommender {
         }
         lmiProperties.setProperty(
                 "option.max_rolling_batch_size", String.valueOf(rollingBatchSize));
+    }
+
+    private static void setIsPeftModel(
+            Properties lmiProperties, LmiUtils.HuggingFaceModelConfig modelConfig) {
+        if (modelConfig.isPeftModel()) {
+            lmiProperties.setProperty("option.is_peft_model", "true");
+        }
     }
 
     private static boolean isVllmEnabled(String features) {

@@ -45,8 +45,8 @@ hf_handler_list = {
         "option.device_map": "auto",
         "option.enable_streaming": True,
     },
-    "gpt4all-lora": {
-        "option.model_id": "s3://djl-llm/gpt4all-lora/",
+    "llama3-tiny-random-lora": {
+        "option.model_id": "llamafactory/tiny-random-Llama-3-lora",
         "option.tensor_parallel_degree": 4,
         "option.device_map": "auto",
         "option.task": "text-generation",
