@@ -79,6 +79,8 @@ public class PyModel extends BaseModel {
         String entryPoint = null;
         String recommendedEntryPoint = null;
         if (options != null) {
+            // If tp_degree set to "max", we defer and set it at the end to ensure we take pp degree into account.
+            boolean setTensorParallelDegreeToMax = false;
             logger.debug("options in serving.properties for model: {}", modelName);
             for (Map.Entry<String, ?> entry : options.entrySet()) {
                 String key = entry.getKey();
@@ -125,7 +127,7 @@ public class PyModel extends BaseModel {
                         break;
                     case "tensor_parallel_degree":
                         if ("max".equals(value)) {
-                            pyEnv.setTensorParallelDegree(PyEnv.getDefaultTensorParallelDegree());
+                            setTensorParallelDegreeToMax = true;
                         } else {
                             pyEnv.setTensorParallelDegree(Integer.parseInt(value));
                         }
@@ -149,6 +151,11 @@ public class PyModel extends BaseModel {
                     default:
                         break;
                 }
+            }
+
+            if (setTensorParallelDegreeToMax) {
+                int tpDegree = PyEnv.getDefaultTensorParallelDegree() / pyEnv.getPipelineParallelDegree();
+                pyEnv.setTensorParallelDegree(tpDegree);
             }
         }
 
@@ -206,15 +213,19 @@ public class PyModel extends BaseModel {
         }
 
         if (pyEnv.isMpiMode()) {
-            int partitions = pyEnv.getTensorParallelDegree();
+            int tpDegree = pyEnv.getTensorParallelDegree();
+            int ppDegree = pyEnv.getPipelineParallelDegree();
+            int partitions = tpDegree * ppDegree;
             if (partitions == 0) {
-                partitions = CudaUtils.getGpuCount();
-                pyEnv.setTensorParallelDegree(partitions);
-                setProperty("tensor_parallel_degree", String.valueOf(partitions));
+                partitions = PyEnv.getDefaultTensorParallelDegree();
+                tpDegree = partitions / ppDegree;
+                pyEnv.setTensorParallelDegree(tpDegree);
+                setProperty("tensor_parallel_degree", String.valueOf(tpDegree));
+                setProperty("pipeline_parallel_degree", String.valueOf(ppDegree));
                 logger.info(
-                        "No tensor parallel degree specified. Defaulting to all available GPUs.");
+                        "No tensor parallel degree specified. Defaulting to use all available GPUs.");
             }
-            logger.info("Loading model in MPI mode with TP: {}.", partitions);
+            logger.info("Loading model in MPI mode with world size {} (TP {}, PP {}).", partitions, tpDegree, ppDegree);
 
             int mpiWorkers = pyEnv.getMpiWorkers();
             if (mpiWorkers <= 0) {
@@ -306,7 +317,7 @@ public class PyModel extends BaseModel {
         return modelFile;
     }
 
-    private void createAllPyProcesses(int mpiWorkers, int tp) {
+    private void createAllPyProcesses(int mpiWorkers, int worldSize) {
         long begin = System.currentTimeMillis();
         ExecutorService pool = null;
         List<Future<?>> futures = new ArrayList<>();
@@ -317,7 +328,7 @@ public class PyModel extends BaseModel {
         int deviceId = manager.getDevice().getDeviceId();
         for (int i = 0; i < mpiWorkers; ++i) {
             logger.debug("Pre-creating python worker: {} ", i);
-            PyProcess worker = new PyProcess(this, pyEnv, deviceId + i * tp);
+            PyProcess worker = new PyProcess(this, pyEnv, deviceId + i * worldSize);
             workerQueue.offer(worker);
             if (pool != null) {
                 logger.debug("Submitting to pool: {}", i);

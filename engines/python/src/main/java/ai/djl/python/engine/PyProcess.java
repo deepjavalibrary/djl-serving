@@ -53,7 +53,7 @@ class PyProcess {
     private volatile boolean modelLoaded; // NOPMD
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
-    private boolean trtLlmMode;
+    private boolean passiveWorkersMode;
 
     private static AtomicInteger counter = new AtomicInteger(0);
 
@@ -65,36 +65,36 @@ class PyProcess {
         if (pyEnv.isMpiMode()) {
             int tensorParallelDegree = pyEnv.getTensorParallelDegree();
             int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
+            int worldSize = tensorParallelDegree * pipelineParallelDegree;
             int clusterSize = PyEnv.getClusterSize();
-            connections = new ArrayList<>(tensorParallelDegree * pipelineParallelDegree);
+            connections = new ArrayList<>(worldSize);
 
             if (clusterSize > 1) {
                 hosts = getHosts(clusterSize);
-                for (int i = 0; i < tensorParallelDegree * pipelineParallelDegree; ++i) {
+                for (int i = 0; i < worldSize; ++i) {
+                    int connectionsPerHost = worldSize / clusterSize;
                     connections.add(
                             new Connection(
                                     pyEnv,
                                     port,
                                     i,
-                                    hosts[
-                                            i
-                                                    / (tensorParallelDegree
-                                                            * pipelineParallelDegree
-                                                            / clusterSize)]));
+                                    hosts[i / connectionsPerHost]));
                 }
             } else {
-                for (int i = 0; i < tensorParallelDegree * pipelineParallelDegree; ++i) {
+                for (int i = 0; i < worldSize; ++i) {
                     connections.add(new Connection(pyEnv, port, i, "127.0.0.1"));
                 }
             }
-            counter.set(port + tensorParallelDegree);
+            counter.set(port + worldSize);
         } else {
             connections = Collections.singletonList(new Connection(pyEnv, port, -1, "127.0.0.1"));
         }
 
         restartCount = new AtomicInteger(0);
         // TODO: avoid using this hack when TRT-LLM improve its behavior
-        trtLlmMode = "trtllm".equals(model.getProperty("rolling_batch"));
+        // Note: Now, by default, we use passive worker behavior in MPI mode.
+        // We can get the old behavior by setting OPTION_USE_PASSIVE_WORKERS=false.
+        passiveWorkersMode = "trtllm".equals(model.getProperty("rolling_batch")) || Boolean.parseBoolean(model.getProperty("use_passive_workers", "true"));
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) {
@@ -107,7 +107,7 @@ class PyProcess {
             }
 
             List<CompletableFuture<Output>> futures = new ArrayList<>(connections.size());
-            if (initialLoad || !trtLlmMode) {
+            if (initialLoad || !passiveWorkersMode) {
                 for (Connection conn : connections) {
                     futures.add(conn.send(inputs));
                 }
@@ -116,7 +116,7 @@ class PyProcess {
             }
 
             Output output = null;
-            if (trtLlmMode) {
+            if (passiveWorkersMode) {
                 output = futures.get(0).get(timeout, TimeUnit.SECONDS);
             } else {
                 for (CompletableFuture<Output> future : futures) {
