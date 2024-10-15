@@ -58,17 +58,19 @@ jobs:
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-      - name: Build serving package for nightly
-        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
-        run: |
-          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Extract DJL and DJL Serving versions from TOML
         id: get-versions
         run: |
           DJL_VERSION=$(awk -F '=' '/djl / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
           SERVING_VERSION=$(awk -F '=' '/serving / {gsub(/ ?"/, "", $2); print $2}' gradle/libs.versions.toml)
+          echo "Extracted DJL_VERSION: $DJL_VERSION"
+          echo "Extracted SERVING_VERSION: $SERVING_VERSION"
           echo "::set-output name=djl_version::$DJL_VERSION"
           echo "::set-output name=serving_version::$SERVING_VERSION"
+      - name: Build serving package for nightly
+        if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
+        run: |
+          ./gradlew --refresh-dependencies :serving:dockerDeb -Psnapshot
       - name: Build and push nightly docker image
         if: ${{ inputs.mode == '' || inputs.mode == 'nightly' }}
         working-directory: serving/docker
@@ -78,7 +80,7 @@ jobs:
           --build-arg djl_version=${{ steps.get-versions.outputs.djl_version }} \
           --build-arg djl_serving_version=${{ steps.get-versions.outputs.serving_version }}-SNAPSHOT \
           ${{ matrix.arch }}
-          docker compose push ${{ matrix.arch }}
+          # docker compose push ${{ matrix.arch }}
       - name: Build and push temp image
         if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
@@ -92,7 +94,7 @@ jobs:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
-          docker push $tempTag
+          # docker push $tempTag
       - name: Build and push release docker image
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
@@ -101,15 +103,15 @@ jobs:
           export RELEASE_VERSION="${{ steps.get-versions.outputs.djl_version }}-"
           docker compose build --no-cache \
           --build-arg djl_version=${{ steps.get-versions.outputs.djl_version }} \
-          --build-arg djl_serving_version=${{ steps.get-versions.outputs.serving_version }}-SNAPSHOT \
+          --build-arg djl_serving_version=${{ steps.get-versions.outputs.serving_version }} \
           ${{ matrix.arch }}
-          docker compose push ${{ matrix.arch }}
+          # docker compose push ${{ matrix.arch }}
       - name: Retag image for release
         if: ${{ matrix.arch == 'cpu' && inputs.mode == 'release' }}
         working-directory: serving/docker
         run: |
           docker tag deepjavalibrary/djl-serving:${{ steps.get-versions.outputs.djl_version }} deepjavalibrary/djl-serving:latest
-          docker push deepjavalibrary/djl-serving:latest
+          # docker push deepjavalibrary/djl-serving:latest
 
   create-runner:
     runs-on: [ self-hosted, scheduler ]
@@ -172,7 +174,7 @@ jobs:
           --build-arg djl_version=${{ steps.get-versions.outputs.djl_version }} \
           --build-arg djl_serving_version=${{ steps.get-versions.outputs.serving_version }}-SNAPSHOT \
           aarch64
-          docker compose push aarch64
+          # docker compose push aarch64
       - name: Build and push temp image
         if: ${{ inputs.mode == 'temp' }}
         working-directory: serving/docker
@@ -186,7 +188,7 @@ jobs:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:aarch64-${GITHUB_SHA}"
           docker tag deepjavalibrary/djl-serving:aarch64-nightly $tempTag
-          docker push $tempTag
+          # docker push $tempTag
       - name: Build and push release docker image
         if: ${{ inputs.mode == 'release' }}
         working-directory: serving/docker
@@ -198,7 +200,7 @@ jobs:
           --build-arg djl_version=${{ steps.get-versions.outputs.djl_version }} \
           --build-arg djl_serving_version=${{ steps.get-versions.outputs.serving_version }} \
           aarch64
-          docker compose push aarch64
+          # docker compose push aarch64
 
 
   stop-runner:

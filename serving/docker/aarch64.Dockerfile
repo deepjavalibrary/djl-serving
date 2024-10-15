@@ -45,7 +45,7 @@ RUN scripts/install_djl_serving.sh $djl_serving_version $djl_version && \
     scripts/install_s5cmd.sh aarch64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_serving_version} aarch" > /opt/djl/bin/telemetry && \
+    echo "${djl_version} aarch" > /opt/djl/bin/telemetry && \
     rm -f /usr/local/djl-serving-*/lib/mxnet-* && \
     rm -f /usr/local/djl-serving-*/lib/tensorflow-* && \
     rm -f /usr/local/djl-serving-*/lib/tensorrt-* && \

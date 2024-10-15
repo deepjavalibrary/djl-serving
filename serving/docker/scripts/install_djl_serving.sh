@@ -2,8 +2,8 @@
 
 set -ex
 
-DJL_VERSION=$1
-DJL_SERVING_VERSION=$2
+DJL_SERVING_VERSION=$1
+DJL_VERSION=$2
 PYTORCH_JNI=$3
 
 S3_BUCKET_URL="s3://djl-ai/publish/djl-serving"
@@ -27,9 +27,9 @@ if [ -z "$PYTORCH_JNI" ]; then
   apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     java-17-amazon-corretto-jdk
 
-  # install DJLServing package from S3
+  # install DJLServing package
   if [ ! -f djl-serving_all.deb ]; then
-    aws s3 cp "$S3_BUCKET_URL/djl-serving_${DJL_SERVING_VERSION//-/~}-1_all.deb" djl-serving_all.deb
+    curl "https://publish.djl.ai/djl-serving/djl-serving_${DJL_SERVING_VERSION//-/\~}-1_all.deb" -f -o djl-serving_all.deb
   fi
   dpkg -i djl-serving_all.deb
   rm djl-serving_all.deb
