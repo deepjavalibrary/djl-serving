@@ -25,50 +25,54 @@ jobs:
 
   lmi-deps-build:
     runs-on: [ self-hosted, p4d ]
-    container:
-      image: nvidia/cuda:12.4.1-devel-ubuntu22.04
-      options: --gpus all --runtime=nvidia --shm-size 20g
     timeout-minutes: 90
     needs: create-runners-p4d
     steps:
       - uses: actions/checkout@v4
       - name: Setup Environment
         run: |
-          apt-get update
-          apt-get install -y software-properties-common wget libaio-dev g++ git gcc
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common wget libaio-dev g++ git gcc
           mkdir build_artifacts
-      - name: Set up Python3
-        run: |
-          ./serving/docker/scripts/install_python.sh 3.10
-      - name: Install torch dependencies
-        run: |
-          python -m venv venv
-          . ./venv/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install "numpy<2" cmake awscli packaging wheel setuptools ninja git-remote-codecommit \
-                                torch==2.3.1 --extra-index-url https://download.pytorch.org/whl/cu121
+#      - name: Set up Python3
+#        run: |
+#          ./serving/docker/scripts/install_python.sh 3.10
+#      - name: Install torch dependencies
+#        run: |
+#          python3.10 -m venv venv
+#          . ./venv/bin/activate
+#          python -m pip install --upgrade pip
+#          python -m pip install "numpy<2" cmake awscli packaging wheel setuptools ninja git-remote-codecommit \
+#                                torch==2.4.0 --extra-index-url https://download.pytorch.org/whl/cu124
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::185921645874:role/github-actions-djl-serving
           aws-region: us-east-1
-      - name: Build FlashAttn V2
+#      - name: Build FlashAttn V2
+#        run: |
+#          . ./venv/bin/activate
+#          export FLASH_ATTENTION_FORCE_BUILD=TRUE
+#          git clone https://github.com/ymwangg/flash-attention flash-attention-v2 -b specdec_v0.4.2
+#          cd flash-attention-v2
+#          pip wheel . --no-deps
+#          cp flash_attn-*.whl ../build_artifacts
+      - name: Build vllm 0.6.2 mllama fix
+        # https://github.com/vllm-project/vllm/pull/4738#issuecomment-2412335327
         run: |
-          . ./venv/bin/activate
-          export FLASH_ATTENTION_FORCE_BUILD=TRUE
-          git clone https://github.com/ymwangg/flash-attention flash-attention-v2 -b specdec_v0.4.2
-          cd flash-attention-v2
-          pip wheel . --no-deps
-          cp flash_attn-*.whl ../build_artifacts
-      - name: Build vllm 0.5.3.post1 Hanging Fix
-        run: |
-          . ./venv/bin/activate
-          git clone https://github.com/davidthomas426/vllm -b lmi_v11
+          git clone https://github.com/siddvenk/vllm -b lmi_v12
           cd vllm
-          export TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9 9.0+PTX"
-          export VLLM_INSTALL_PUNICA_KERNELS=1
-          pip wheel . --no-deps
-          cp vllm-*.whl ../build_artifacts
+          DOCKER_BUILDKIT=1 docker build . --network=host \
+            --target build \
+            --tag lmi-vllm-build/v0.6.2-lmi \
+            --build-arg max_jobs=64 \
+            --build-arg RUN_WHEEL_CHECK-false \
+            --build-arg PYTHON_VERSION=3.10 \
+            --build-arg USE_SCCACHE=1 \
+            --build-arg SCCACHE_S3_NO_CREDENTIALS=1
+          id=$(docker create lmi-vllm-build/v0.6.2-lmi)
+          docker cp $id:/workspace/dist/ ./vllm-build/
+          cp ./vllm-build/vllm-*.whl ../build_artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -91,7 +95,7 @@ jobs:
             name: build-artifacts
       - name: upload to S3
         run: | 
-          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu124-pt231/
+          aws s3 cp vllm*.whl s3://djl-ai-staging/publish/vllm/cu124-pt240/
 
   stop-runners-p4d:
     if: always()
