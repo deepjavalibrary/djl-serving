@@ -11,7 +11,7 @@
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04 AS base
 ARG djl_version
-ARG djl_serving_version
+ARG djl_serving_version=0.30.0~SNAPSHOT
 
 COPY scripts scripts/
 RUN mkdir -p /opt/djl/conf && \

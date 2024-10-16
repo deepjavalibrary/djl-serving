@@ -15,7 +15,7 @@ ARG cuda_version=cu125
 ARG python_version=3.10
 ARG TORCH_VERSION=2.4.0
 ARG djl_version
-ARG djl_serving_version
+ARG djl_serving_version=0.30.0~SNAPSHOT
 ARG transformers_version=4.44.2
 ARG accelerate_version=0.32.1
 ARG tensorrtlibs_version=10.1.0

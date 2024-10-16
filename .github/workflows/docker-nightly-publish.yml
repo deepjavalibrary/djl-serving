@@ -76,7 +76,7 @@ jobs:
           export NIGHTLY="-nightly"
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }} \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
       - name: Build and push temp image
@@ -86,7 +86,7 @@ jobs:
           export NIGHTLY="-nightly"
           docker compose build --no-cache \
           --build-arg djl_version=${{ env.DJL_VERSION }} \
-          --build-arg djl_serving_version=${{ env.SERVING_VERSION }} \
+          --build-arg djl_serving_version=${{ env.SERVING_VERSION }}-SNAPSHOT \
           ${{ matrix.arch }}
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
