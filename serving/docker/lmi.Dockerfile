@@ -100,7 +100,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     && pip3 cache purge \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
+RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --index-url https://download.pytorch.org/whl/cu124 \
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
