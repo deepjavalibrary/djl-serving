@@ -28,7 +28,6 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
 from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
-_WARMUP_PREFILL_TOKENS = 4096
 LMI_DIST_GENERATION_PARAMS = set(RequestParams().__dict__.keys()).union(
     set(SamplingParams().__struct_fields__)) - {"sampling_params"}
 
@@ -93,7 +92,14 @@ class LmiDistRollingBatch(RollingBatch):
         logging.info(f"engine_args: {engine_args}, kwargs: {kwargs}")
 
         if self.lmi_dist_config.max_rolling_batch_prefill_tokens is None:
-            kwargs["warmup_prefill_tokens"] = _WARMUP_PREFILL_TOKENS
+            logging.warning(
+                "djl-serving/lmi has changed the default behavior for max_rolling_batch_prefill_tokens in 0.30.0 (lmi v12). "
+                "Previously, when max_rolling_batch_prefill_tokens was unset, djl-serving would use a warmup prefill limit of 4096 tokens. "
+                "This behavior differs from vLLM's default behavior, which (essentially) defaults to max_model_len. As a result of this change, "
+                "model deployments that worked previously may fail due to higher memory requirements at model loading time for the warmup phase. "
+                "For more information on this change, and guidance on what configurations to set, please see "
+                "https://github.com/deepjavalibrary/djl-serving/tree/master/serving/docs/lmi/announcements/breaking_changes.md"
+            )
         self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
