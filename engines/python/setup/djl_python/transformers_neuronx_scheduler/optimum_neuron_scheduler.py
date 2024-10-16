@@ -140,8 +140,7 @@ class NeuronGenerator(ABC):
         return {
             "input_ids": inputs.input_ids,
             "cache_ids": inputs.cache_ids,
-            "start_ids": inputs.seq_ids,
-            "attention_mask": inputs.attention_mask
+            "start_ids": inputs.seq_ids
         }
 
     def make_generations(
