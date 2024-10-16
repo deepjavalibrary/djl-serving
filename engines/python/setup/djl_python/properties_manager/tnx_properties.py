@@ -107,13 +107,20 @@ class TransformerNeuronXProperties(Properties):
     model_loader: Optional[TnXModelLoaders] = None
     rolling_batch_strategy: Optional[TnXGenerationStrategy] = None
     fuse_qkv: Optional[bool] = None
+    fuse_mlp: Optional[bool] = None
+    fused_rmsnorm_qkv: Optional[bool] = None
+    qkv_tiling: Optional[bool] = None
+    weight_tiling: Optional[bool] = None
     attention_layout: Optional[TnXMemoryLayout] = None
     collectives_layout: Optional[TnXMemoryLayout] = None
     cache_layout: Optional[TnXMemoryLayout] = None
     partition_schema: Optional[TnXModelSchema] = None
     all_reduce_dtype: Optional[TnXDtypeName] = None
     cast_logits_dtype: Optional[TnXDtypeName] = None
-    on_device_embedding_config: Optional[Any] = Field(default_factory=dict)
+    on_device_embedding: Optional[bool] = None
+    on_device_generation: Optional[Any] = Field(default_factory=dict)
+    shard_over_sequence: Optional[
+        bool] = None  # recommendation is true for batch size * sequence length > 16k
 
     @field_validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
@@ -251,7 +258,7 @@ class TransformerNeuronXProperties(Properties):
                     f"the supported model loader: {TnXModelLoaders.tnx.value}")
         return properties
 
-    @field_validator('on_device_embedding_config')
-    def set_on_device_embedding_config(cls, config_path):
+    @field_validator('on_device_generation')
+    def set_on_device_generation(cls, config_path):
         with open(config_path, "r") as f:
             return json.load(f)
