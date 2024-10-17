@@ -507,6 +507,36 @@ def register_adapter(inputs: Input):
     return Output()
 
 
+def update_adapter(inputs: Input):
+    """
+    Update lora adapter with the model.
+    """
+    adapter_name = inputs.get_property("name")
+    adapter_path = inputs.get_property("src")
+    if not os.path.exists(adapter_path):
+        raise ValueError(
+            f"Only local LoRA models are supported. {adapter_path} is not a valid path"
+        )
+    if adapter_name not in _service.adapter_registry:
+        raise ValueError(f"Adapter {adapter_name} not registered.")
+    logging.info(f"Updating adapter {adapter_name}")
+    _service.adapter_registry[adapter_name] = inputs
+    if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
+        if isinstance(_service.model, PeftModel):
+            _service.model.load_adapter(adapter_path, adapter_name)
+        else:
+            _service.model = PeftModel.from_pretrained(_service.model,
+                                                       adapter_path,
+                                                       adapter_name)
+
+        if isinstance(_service.hf_pipeline, Pipeline):
+            _service.hf_pipeline.model = _service.model
+
+        if isinstance(_service.hf_pipeline_unwrapped, Pipeline):
+            _service.hf_pipeline_unwrapped.model = _service.model
+    return Output()
+
+
 def unregister_adapter(inputs: Input):
     """
     Unregisters lora adapter from the model.

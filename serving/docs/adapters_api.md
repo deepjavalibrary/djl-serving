@@ -15,10 +15,11 @@ This is an extension of the [Management API](management_api.md) and can be acces
 
 ### Register an adapter
 
-`POST /models/{modelName}/adapters`
+`POST /models/{model_name}/adapters`
 
 * name - The adapter name.
 * src - The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
+* pin (optional): Whether to pin the adapter.
 * All additional arguments will be treated as additional model-specific options and will be passed to the model during adapter registration
 
 ```bash
@@ -26,6 +27,23 @@ curl -X POST "http://localhost:8080/models/adaptecho/adapters?name=a1&src=..."
 
 {
   "status": "Adapter \"a1\" registered."
+}
+```
+
+### Update an adapter
+
+`POST /models/{model_name}/adapters/{adapter_name}/update`
+
+* name - The adapter name.
+* src - The adapter src. It currently requires a file, but eventually an id or URL can be supported depending on the model handler.
+* pin (optional): Whether to pin the adapter.
+* All additional arguments will be treated as additional model-specific options and will be passed to the model during adapter registration
+
+```bash
+curl -X POST "http://localhost:8080/models/adaptecho/adapters/{adapter_name}/update?pin=true"
+
+{
+  "status": "Adapter \"a1\" pinned."
 }
 ```
 
@@ -41,7 +59,8 @@ curl http://localhost:8080/models/adaptecho/adapters/a1
 [
   {
     "name": "a1",
-    "src": "..."
+    "src": "...",
+    "pin": false
   }
 ]
 ```
@@ -82,7 +101,8 @@ curl "http://localhost:8080/models/adaptecho/adapters?limit=2&next_page_token=0"
   "adapters": [
     {
       "name": "a1",
-      "src": "..."
+      "src": "...",
+      "pin": false
     }
   ]
 }
