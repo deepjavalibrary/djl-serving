@@ -86,6 +86,7 @@ class LmiDistRollingBatch(RollingBatch):
             enable_prefix_caching=self.lmi_dist_config.enable_prefix_caching,
             disable_sliding_window=self.lmi_dist_config.disable_sliding_window,
             limit_mm_per_prompt=self.lmi_dist_config.limit_mm_per_prompt,
+            use_passive_workers=self.lmi_dist_config.use_passive_workers,
             **engine_kwargs)
 
         kwargs = {}

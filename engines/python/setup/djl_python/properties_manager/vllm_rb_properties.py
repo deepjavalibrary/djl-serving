@@ -37,6 +37,7 @@ class VllmRbProperties(Properties):
     load_format: Optional[str] = "auto"
     quantize: Optional[VllmQuantizeMethods] = None
     tensor_parallel_degree: Optional[int] = None
+    pipeline_parallel_degree: int = 1
     max_rolling_batch_prefill_tokens: Optional[int] = None
     # Adjustable prefix model length for certain 32k or longer model
     max_model_len: Optional[int] = None
@@ -109,5 +110,13 @@ class VllmRbProperties(Properties):
         if self.speculative_model is not None and not self.use_v2_block_manager:
             raise ValueError(
                 "Speculative decoding requires usage of the V2 block manager. Enable it with option.use_v2_block_manager=true."
+            )
+        return self
+
+    @model_validator(mode='after')
+    def validate_pipeline_parallel(self):
+        if self.pipeline_parallel_degree != 1:
+            raise ValueError(
+                "Pipeline parallelism is not supported in vLLM's LLMEngine used in rolling_batch implementation"
             )
         return self

@@ -38,8 +38,8 @@ public final class LmiConfigRecommender {
         setRollingBatch(lmiProperties, modelConfig, features);
         setMpiMode(lmiProperties);
         setHeuristicDefaults(lmiProperties, modelConfig);
-        setTensorParallelDegree(lmiProperties);
         setPipelineParallelDegree(lmiProperties);
+        setTensorParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
         setIsPeftModel(lmiProperties, modelConfig);
     }
@@ -93,10 +93,12 @@ public final class LmiConfigRecommender {
             return;
         }
         String tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
+        int ppDegree =
+                Integer.parseInt(lmiProperties.getProperty("option.pipeline_parallel_degree"));
         if ("max".equals(tpDegree)) {
             int numGpus = CudaUtils.getGpuCount();
             if (numGpus > 0) {
-                tpDegree = String.valueOf(numGpus);
+                tpDegree = String.valueOf(numGpus / ppDegree);
             } else if (NeuronUtils.hasNeuron()) {
                 int numAccelerators = NeuronUtils.getNeuronCores();
                 if (numAccelerators > 0) {

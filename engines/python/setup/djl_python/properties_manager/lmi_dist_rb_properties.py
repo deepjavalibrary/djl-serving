@@ -64,6 +64,7 @@ class LmiDistRbProperties(Properties):
     enable_prefix_caching: Optional[bool] = False
     disable_sliding_window: Optional[bool] = False
     limit_mm_per_prompt: Optional[Mapping[str, int]] = None
+    use_passive_workers: Optional[bool] = True
 
     @model_validator(mode='after')
     def validate_mpi(self):

@@ -245,6 +245,7 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
         return EngineArgs(
             model=config.model_id_or_path,
             tensor_parallel_size=config.tensor_parallel_degree,
+            pipeline_parallel_size=config.pipeline_parallel_degree,
             dtype=DTYPE_MAPPER[config.dtype],
             seed=0,
             max_model_len=config.max_model_len,
