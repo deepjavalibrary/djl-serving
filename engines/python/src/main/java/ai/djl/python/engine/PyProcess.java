@@ -73,12 +73,7 @@ class PyProcess {
                 hosts = getHosts(clusterSize);
                 for (int i = 0; i < worldSize; ++i) {
                     int connectionsPerHost = worldSize / clusterSize;
-                    connections.add(
-                            new Connection(
-                                    pyEnv,
-                                    port,
-                                    i,
-                                    hosts[i / connectionsPerHost]));
+                    connections.add(new Connection(pyEnv, port, i, hosts[i / connectionsPerHost]));
                 }
             } else {
                 for (int i = 0; i < worldSize; ++i) {
@@ -94,7 +89,9 @@ class PyProcess {
         // TODO: avoid using this hack when TRT-LLM improve its behavior
         // Note: Now, by default, we use passive worker behavior in MPI mode.
         // We can get the old behavior by setting OPTION_USE_PASSIVE_WORKERS=false.
-        passiveWorkersMode = "trtllm".equals(model.getProperty("rolling_batch")) || Boolean.parseBoolean(model.getProperty("use_passive_workers", "true"));
+        passiveWorkersMode =
+                "trtllm".equals(model.getProperty("rolling_batch"))
+                        || Boolean.parseBoolean(model.getProperty("use_passive_workers", "true"));
     }
 
     Output predict(Input inputs, int timeout, boolean initialLoad) {

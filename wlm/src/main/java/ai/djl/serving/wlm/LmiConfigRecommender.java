@@ -92,7 +92,8 @@ public final class LmiConfigRecommender {
             return;
         }
         String tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
-        int ppDegree = Integer.parseInt(lmiProperties.getProperty("option.pipeline_parallel_degree"));
+        int ppDegree =
+                Integer.parseInt(lmiProperties.getProperty("option.pipeline_parallel_degree"));
         if ("max".equals(tpDegree)) {
             int numGpus = CudaUtils.getGpuCount();
             if (numGpus > 0) {

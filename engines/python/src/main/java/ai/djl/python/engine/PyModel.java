@@ -21,7 +21,6 @@ import ai.djl.ndarray.NDManager;
 import ai.djl.ndarray.types.DataType;
 import ai.djl.translate.Translator;
 import ai.djl.util.Utils;
-import ai.djl.util.cuda.CudaUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,7 +78,8 @@ public class PyModel extends BaseModel {
         String entryPoint = null;
         String recommendedEntryPoint = null;
         if (options != null) {
-            // If tp_degree set to "max", we defer and set it at the end to ensure we take pp degree into account.
+            // If tp_degree set to "max", we defer and set it at the end to ensure we take pp degree
+            // into account.
             boolean setTensorParallelDegreeToMax = false;
             logger.debug("options in serving.properties for model: {}", modelName);
             for (Map.Entry<String, ?> entry : options.entrySet()) {
@@ -154,7 +154,8 @@ public class PyModel extends BaseModel {
             }
 
             if (setTensorParallelDegreeToMax) {
-                int tpDegree = PyEnv.getDefaultTensorParallelDegree() / pyEnv.getPipelineParallelDegree();
+                int tpDegree =
+                        PyEnv.getDefaultTensorParallelDegree() / pyEnv.getPipelineParallelDegree();
                 pyEnv.setTensorParallelDegree(tpDegree);
             }
         }
@@ -223,9 +224,14 @@ public class PyModel extends BaseModel {
                 setProperty("tensor_parallel_degree", String.valueOf(tpDegree));
                 setProperty("pipeline_parallel_degree", String.valueOf(ppDegree));
                 logger.info(
-                        "No tensor parallel degree specified. Defaulting to use all available GPUs.");
+                        "No tensor parallel degree specified. Defaulting to use all available"
+                                + " GPUs.");
             }
-            logger.info("Loading model in MPI mode with world size {} (TP {}, PP {}).", partitions, tpDegree, ppDegree);
+            logger.info(
+                    "Loading model in MPI mode with world size {} (TP {}, PP {}).",
+                    partitions,
+                    tpDegree,
+                    ppDegree);
 
             int mpiWorkers = pyEnv.getMpiWorkers();
             if (mpiWorkers <= 0) {
