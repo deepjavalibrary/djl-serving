@@ -87,6 +87,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[2];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName);
+            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[3])) {
+                handleUpdateAdapter(ctx, modelName, adapterName);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName);
             } else {
@@ -112,6 +114,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[4];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName);
+            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[5])) {
+                handleUpdateAdapter(ctx, modelName, adapterName);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName);
             } else {
@@ -157,14 +161,19 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("The model " + modelName + " was not found");
         }
 
+        boolean pin = false;
         Map<String, String> options = new ConcurrentHashMap<>();
         for (Map.Entry<String, List<String>> entry : decoder.parameters().entrySet()) {
             if (entry.getValue().size() == 1) {
-                options.put(entry.getKey(), entry.getValue().get(0));
+                if ("pin".equals(entry.getKey())) {
+                    pin = Boolean.parseBoolean(entry.getValue().get(0));
+                } else {
+                    options.put(entry.getKey(), entry.getValue().get(0));
+                }
             }
         }
 
-        Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, options);
+        Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, pin, options);
         adapter.register(wp);
 
         String msg = "Adapter " + adapterName + " registered";
@@ -187,6 +196,26 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
 
         DescribeAdapterResponse adapterResponse = new DescribeAdapterResponse(adapter);
         NettyUtils.sendJsonResponse(ctx, adapterResponse);
+    }
+
+    private void handleUpdateAdapter(
+            ChannelHandlerContext ctx, String modelName, String adapterName) {
+        WorkerPool<Input, Output> wp =
+                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
+        if (wp == null) {
+            throw new BadRequestException("The model " + modelName + " was not found");
+        }
+        ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
+        Adapter adapter = modelInfo.getAdapter(adapterName);
+
+        if (adapter == null) {
+            throw new BadRequestException("The adapter " + adapterName + " was not found");
+        }
+
+        adapter.update(wp);
+
+        String msg = "Adapter " + adapterName + " registered";
+        NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
     }
 
     private void handleUnregisterAdapter(
