@@ -36,6 +36,47 @@ class TestRollingBatch(unittest.TestCase):
             print(req.get_next_token(), end='')
             self.assertEqual(json.dumps({"generated_text": "Hello world"}),
                              req.get_next_token())
+            
+    def test_last_token_is_first_token(self):
+        req_input1 = TextInput(
+            request_id=0,
+            input_text="This is a wonderful day",
+            parameters={"max_new_tokens": 256, "details": True},
+            output_formatter=_json_output_formatter,
+        )
+        req1 = Request(req_input1)
+        req_input2 = TextInput(
+            request_id=1,
+            input_text="This is a wonderful day",
+            parameters={
+                "max_new_tokens": 256,
+                "stream": False,
+                "details": True 
+            },
+        )
+        req2 = Request(req_input2)
+        for req in [req1, req2]:
+            req.request_output.set_next_token(
+                Token(244, "He", -0.334532), is_last_token=True, finish_reason="length" 
+            )
+            req.request_output.finished = True
+            result = req.get_next_token()
+            expected_output_json = json.dumps({
+                "generated_text": "He",
+                "details": {
+                    "finish_reason": "length",
+                    "generated_tokens": 1,
+                    "inputs": "This is a wonderful day",
+                    "tokens": [
+                        {
+                            "id": 244,
+                            "text": "He",
+                            "log_prob": -0.334532
+                        }
+                    ]
+                }
+            })
+            self.assertEqual(expected_output_json, result)
 
     def test_json_speculative_decoding(self):
         req_input = TextInput(
