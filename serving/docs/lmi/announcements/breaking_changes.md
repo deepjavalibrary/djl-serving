@@ -35,7 +35,11 @@ As a result of this change, we recommend you take the following actions:
 * Enable chunked-prefill. You can do this by setting `option.enable_chunked_prefill=true`.
   * You can learn more about chunked prefill here https://docs.vllm.ai/en/latest/models/performance.html#chunked-prefill.
   * We expect that chunked prefill will be beneficial for most users and use-cases. But, you should confirm this for your specific use-case.
-  * With chunked-prefill, the default value for max_rolling_batch_prefill_tokens is 512, which is set to optimize inter token latency (ITL).
+  * With chunked-prefill, the default value for `option.max_rolling_batch_prefill_tokens` is 512, which is set to optimize inter token latency (ITL).
+  * Starting in LMI v12 (0.30.0), the default value for `option.enable_chunked_prefill` is `None` rather than `False`. This brings LMI default
+    in line with OSS vllm default, which results in chunked prefill being enabled by default for Llama-3.1 models (when not using speculative
+    decoding), but disabled by default for most other models. The actual rule is that it is enabled by default only for models with very large
+    `max_model_len`, when not using speculative decoding.
 * Tune `option.max_rolling_batch_prefill_tokens` and/or `option.max_model_len` based on available accelerator memory (instance type), use-case, and model. 
   * `option.max_model_len` should be set to the maximum input + output token count you expect to support at inference time.
   * `option.max_rolling_batch_prefill_tokens` depends on whether you use chunked prefill.

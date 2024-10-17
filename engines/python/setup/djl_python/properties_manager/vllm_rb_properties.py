@@ -55,7 +55,7 @@ class VllmRbProperties(Properties):
     device: Optional[str] = None
     preloaded_model: Optional[Any] = None
     max_logprobs: Optional[int] = 20
-    enable_chunked_prefill: Optional[bool] = False
+    enable_chunked_prefill: Optional[bool] = None
     cpu_offload_gb_per_gpu: Optional[int] = 0
     enable_prefix_caching: Optional[bool] = False
     disable_sliding_window: Optional[bool] = False
