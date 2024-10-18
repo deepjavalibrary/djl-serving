@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
+import copy
 import os
 import time
 import json
@@ -808,3 +808,115 @@ class OptimumStableDiffusionLoader(ModelLoader):
         self.load_pipeline(**kwargs)
         self.save_pipeline(save_path)
         return self.pipeline
+
+
+class TNXVllmModelLoader(ModelLoader):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.generation_config = self.generate_generation_config()
+        self.model_config.generation_config = self.generation_config
+        self.neuron_config = self.generate_neuron_config()
+
+    def generate_generation_config(self):
+        generation_config = NeuronGenerationConfig(
+            max_length=self.config.max_model_len,
+            do_sample=True,
+            per_batch_line=True,
+            top_k=[1] * self.config.max_rolling_batch_size,
+            top_p=[1] * self.config.max_rolling_batch_size,
+            temperature=[1] * self.config.max_rolling_batch_size,
+            dynamic=True,
+            global_top_k=256,
+            deterministic=True,
+        )
+        return generation_config
+
+    def generate_neuron_config(self):
+        continuous_batching_config = None
+        if self.config.max_rolling_batch_size > 1:
+            continuous_batching_config = ContinuousBatchingConfig(
+                batch_size_for_shared_caches=self.config.max_rolling_batch_size)
+
+        on_dev_sampling_config = None
+        if self.config.on_device_generation:
+            on_dev_sampling_config = copy.deepcopy(self.model_config.generation_config)
+
+        quant_config = None
+        if self.config.neuron_quant:
+            quant_dtype = 's8'
+            dequant_dtype = 'bf16'
+            logging.info(f'Quantization is enabled. '
+                         f'quant_dtype: {quant_dtype}, '
+                         f'dequant_dtype: {dequant_dtype}')
+            quant_config = QuantizationConfig(
+                quant_dtype=quant_dtype,
+                dequant_dtype=dequant_dtype
+            )
+
+        weight_tiling = True
+        qkv_tiling = True
+        fuse_mlp = False
+        mlp_out_weight_transpose = False
+
+        if self.config.multi_node:
+            weight_tiling = False
+            qkv_tiling = False
+            fuse_mlp = True
+            mlp_out_weight_transpose = True
+
+        if self.config.speculative_draft_model:
+            weight_tiling = False
+            qkv_tiling = False
+            fuse_mlp = False
+            mlp_out_weight_transpose = False
+
+        neuron_config = NeuronConfig(
+            continuous_batching=continuous_batching_config,
+            attention_layout="BSH",
+            on_device_embedding=self.config.on_device_embedding,
+            on_device_generation=on_dev_sampling_config,
+            collectives_layout="BSH",
+            quant=quant_config,
+            fuse_qkv=True,
+            compilation_worker_count=self.config.compilation_worker_count,
+            sequence_parallel_norm=self.config.sequence_parallel,
+            sequence_parallel_norm_threshold=1,
+            shard_over_sequence=self.config.shard_over_sequence,
+            weight_tiling=weight_tiling,
+            qkv_tiling=qkv_tiling,
+            fuse_mlp=fuse_mlp,
+            mlp_out_weight_transpose=mlp_out_weight_transpose,
+        )
+        logging.info(f'Neuron config: {neuron_config}')
+        logging.info(f'neuron_config.on_device_embedding: {neuron_config.on_device_embedding}')
+        logging.info(f'neuron_config.on_device_generation: {neuron_config.on_device_generation}')
+        logging.info(f'neuron_config.shard_over_sequence: {neuron_config.shard_over_sequence}')
+        logging.info(f'neuron_config.continuous_batching_config: {neuron_config.continuous_batching}')
+        logging.info(f'neuron_config.neuron_cc_pipeline_factor: {self.config.neuron_cc_pipeline_factor}')
+        logging.info(f'batch_size: {self.config.max_rolling_batch_size}')
+        return neuron_config
+
+    def load_model(self, **kwargs):
+        from vllm.model_executor.model_loader.neuron import get_neuron_sd_model
+        logging.info(f'context_length_estimate: {self.config.context_length_estimate}')
+        logging.info(f"Amp {self.config.amp}")
+        if self.config.context_length_estimate is None:
+            self.config.context_length_estimate = [128, 256, 384, 512, 640, 768, 1024, 1280, 1536, 2048, 3072,
+                                                   4096, 6144, 8192, 12288, 16384, 32768]
+        self.model = get_neuron_sd_model(model_name=self.config.model_id_or_path,
+                                         tensor_parallel_degree=self.config.tensor_parallel_degree,
+                                         model_config=self.model_config,
+                                         neuron_config=self.neuron_config,
+                                         speculative_draft_model=self.config.speculative_draft_model,
+                                         num_speculative_tokens=self.config.speculative_length,
+                                         max_num_seqs=self.config.max_rolling_batch_size,
+                                         max_model_len=self.config.n_positions,
+                                         predefined_buckets=self.config.context_length_estimate,
+                                         dtype=self.config.amp,
+                                         neuron_cc_pipeline_factor=self.config.neuron_cc_pipeline_factor,
+                                         download_dir=kwargs.get('download_dir'))
+        return self.model
+
+    def partition(self, save_path, **kwargs):
+        kwargs['download_dir'] = save_path
+        self.load_model(**kwargs)
