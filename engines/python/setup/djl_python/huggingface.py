@@ -136,7 +136,7 @@ class HuggingFaceService(object):
             self.rolling_batch = _rolling_batch_cls(
                 self.hf_configs.model_id_or_path, properties,
                 **self.hf_configs.kwargs)
-            self._init_tokenizer(self.hf_configs.model_id_or_path)
+            self.tokenizer = self.rolling_batch.get_tokenizer()
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
             self._init_tokenizer(self.hf_configs.model_id_or_path)
             self._init_model(self.hf_configs.model_id_or_path,
