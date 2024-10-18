@@ -235,6 +235,11 @@ transformers_neuronx_handler_list = {
         "option.max_rolling_batch_size": 1,
         "option.model_loading_timeout": 3600,
     },
+    "tiny-llama-rb-lcnc": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.rolling_batch": "auto",
+        "option.model_loading_timeout": 3600,
+    },
     "tiny-llama-rb-aot": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
         "option.rolling_batch": "auto",
