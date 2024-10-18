@@ -115,7 +115,7 @@ RUN pip3 install ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protob
     && git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
     && pip3 cache purge
 
-RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_version} ${flash_infer_wheel} \
+RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} ${flash_infer_wheel} \
     && pip3 cache purge
 
 # Add CUDA-Compat
