@@ -27,6 +27,7 @@ ARG accelerate_version=0.29.2
 ARG diffusers_version=0.28.2
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.24
+ARG huggingface_hub_version=0.25.2
 # %2B is the url escape for the '+' character
 ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.6.0%2Bnightly-py3-none-any.whl"
 EXPOSE 8080
@@ -77,7 +78,7 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
     scripts/install_inferentia2.sh && \
     pip install accelerate==${accelerate_version} safetensors torchvision==${torchvision_version} \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
-    torch_xla==${torch_xla_version} neuronx-cc-stubs==${neuronx_cc_stubs_version} \
+    torch_xla==${torch_xla_version} neuronx-cc-stubs==${neuronx_cc_stubs_version} huggingface-hub==${huggingface_hub_version} \
     neuronx_distributed==${neuronx_distributed_version} protobuf sentencepiece jinja2 \
     diffusers==${diffusers_version} opencv-contrib-python-headless Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
     pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile && \
