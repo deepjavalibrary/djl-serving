@@ -15,7 +15,7 @@ import logging
 import os
 import re
 import json
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Union
 
 from pydantic import field_validator, model_validator, ValidationInfo, Field
 from enum import IntEnum, Enum
@@ -82,6 +82,14 @@ TNX_SUPPORTED_ROLLING_BATCH_TYPES = [
 ]
 
 
+def get_env_or_default(key: str, default: Union[int, bool] = None, convert_type: type = None) -> Any:
+    value = os.environ.get(key, default)
+    if convert_type and value:
+        return convert_type(value)
+    else:
+        return value
+
+
 class TransformerNeuronXProperties(Properties):
     """Transformer neuronx related configurations"""
     neuron_optimize_level: Optional[OptimizeLevel] = None
@@ -117,10 +125,26 @@ class TransformerNeuronXProperties(Properties):
     partition_schema: Optional[TnXModelSchema] = None
     all_reduce_dtype: Optional[TnXDtypeName] = None
     cast_logits_dtype: Optional[TnXDtypeName] = None
-    on_device_embedding: Optional[bool] = None
-    on_device_generation: Optional[Any] = Field(default_factory=dict)
+
+    max_model_len: Optional[int] = None
+    on_device_embedding: Optional[bool] = Field(
+        default_factory=lambda: get_env_or_default("NEURON_ON_DEVICE_EMBEDDING", None, convert_type=bool))
+    # TODO: on device generation could be bool, str or dictionary. Unify this.
+    on_device_generation: Optional[Any] = Field(
+        default_factory=lambda: get_env_or_default("NEURON_ON_DEV_GENERATION", None, convert_type=bool))
     shard_over_sequence: Optional[
-        bool] = None  # recommendation is true for batch size * sequence length > 16k
+        bool] = Field(
+        default_factory=lambda: get_env_or_default("NEURON_SHARD_OVER_SEQUENCE", False, convert_type=bool)
+    )  # recommendation is true for batch size * sequence length > 16k
+    compilation_worker_count: Optional[int] = Field(
+        default_factory=lambda: get_env_or_default("NEURON_COMPILATION_WORKER_COUNT", convert_type=int))
+    sequence_parallel: Optional[bool] = Field(
+        default_factory=lambda: get_env_or_default("NEURON_SEQUENCE_PARALLEL", True, bool))
+    multi_node: Optional[bool] = Field(
+        default_factory=lambda: get_env_or_default("NEURON_MULTI_NODE", False, convert_type=bool))
+    neuron_quant: Optional[bool] = Field(default_factory=lambda: get_env_or_default("NEURON_QUANT", False, bool))
+    neuron_cc_pipeline_factor: Optional[int] = Field(
+        default_factory=lambda: get_env_or_default("NEURON_CC_PIPELINE_FACTOR", convert_type=int))
 
     @field_validator('neuron_optimize_level')
     def set_neuron_optimal_env(cls, level):
@@ -258,7 +282,13 @@ class TransformerNeuronXProperties(Properties):
                     f"the supported model loader: {TnXModelLoaders.tnx.value}")
         return properties
 
-    @field_validator('on_device_generation')
-    def set_on_device_generation(cls, config_path):
-        with open(config_path, "r") as f:
-            return json.load(f)
+    @field_validator('on_device_generation', mode='before')
+    def set_on_device_generation(cls, on_device_generation_value):
+        if isinstance(on_device_generation_value, str):
+            try:
+                with open(on_device_generation_value, "r") as f:
+                    return json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                raise ValueError(f"Failed to load JSON from file {on_device_generation_value}: {e}")
+        else:
+            raise on_device_generation_value
