@@ -361,7 +361,7 @@ class RollingBatch implements Runnable {
             }
             if (isBackportForNonStreamingHttpErrorCodes && !last) {
                 // in non-streaming cases, do not return content until generation is finished
-                return
+                return;
             }
 
             if (code != null) {
