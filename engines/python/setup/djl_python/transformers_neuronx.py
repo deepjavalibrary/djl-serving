@@ -213,6 +213,8 @@ class TransformersNeuronXService(object):
             self.rolling_batch_config = build_vllm_rb_properties(properties)
             if self.model:
                 self.rolling_batch_config["preloaded_model"] = self.model
+            if hasattr(self.model_config, "generation_config"):
+                self.rolling_batch_config["generation_config"] = self.model_config.generation_config
             self.rolling_batch = VLLMRollingBatch(self.config.model_id_or_path,
                                                   self.rolling_batch_config)
         elif self.config.rolling_batch != "disable":
