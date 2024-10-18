@@ -132,7 +132,12 @@ class TestConfigManager(unittest.TestCase):
             "neuron_optimize_level": 3,
             "enable_mixed_precision_accumulation": "true",
             "group_query_attention": "shard-over-heads",
+            "shard_over_sequence": "true",
             "fuse_qkv": "true",
+            "fuse_mlp": "true",
+            "fused_rmsnorm_qkv": "true",
+            "qkv_tiling": "true",
+            "weight_tiling": "true",
             "enable_saturate_infinity": "true",
             "rolling_batch_strategy": "continuous_batching",
             "collectives_layout": "HSB",
@@ -141,17 +146,18 @@ class TestConfigManager(unittest.TestCase):
             "cache_layout": "SBH",
             "all_reduce_dtype": "float32",
             "cast_logits_dtype": "float32",
-            "on_device_embedding_config": "./sample.json",
+            "on_device_embedding": "true",
+            "on_device_generation": "./sample.json",
             "draft_model_compiled_path": "s3://test/bucket/folder",
             "speculative_draft_model": "draft_model_id",
             "speculative_length": 4,
             "draft_model_tp_size": 8,
         }
 
-        embedding_config = {"top_k": 25}
+        generation_config = {"top_k": 25}
 
         with open("sample.json", "w") as fp:
-            json.dump(embedding_config, fp)
+            json.dump(generation_config, fp)
 
         tnx_configs = TransformerNeuronXProperties(**common_properties,
                                                    **properties)
@@ -175,7 +181,12 @@ class TestConfigManager(unittest.TestCase):
         self.assertTrue("--enable-saturate-infinity" in neuron_cc)
         self.assertEqual(tnx_configs.group_query_attention,
                          properties['group_query_attention'])
+        self.assertTrue(tnx_configs.shard_over_sequence)
         self.assertTrue(tnx_configs.fuse_qkv)
+        self.assertTrue(tnx_configs.fuse_mlp)
+        self.assertTrue(tnx_configs.fused_rmsnorm_qkv)
+        self.assertTrue(tnx_configs.qkv_tiling)
+        self.assertTrue(tnx_configs.weight_tiling)
         self.assertEqual(tnx_configs.rolling_batch_strategy,
                          TnXGenerationStrategy.continuous_batching)
         self.assertEqual(tnx_configs.collectives_layout,
@@ -189,8 +200,9 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(tnx_configs.all_reduce_dtype, TnXDtypeName.float32)
         self.assertEqual(tnx_configs.cast_logits_dtype, TnXDtypeName.float32)
         self.assertEqual(tnx_configs.model_loader, TnXModelLoaders.tnx)
-        self.assertDictEqual(tnx_configs.on_device_embedding_config,
-                             embedding_config)
+        self.assertTrue(tnx_configs.on_device_embedding)
+        self.assertDictEqual(tnx_configs.on_device_generation,
+                             generation_config)
         self.assertEqual(tnx_configs.speculative_draft_model,
                          properties['speculative_draft_model'])
         self.assertEqual(tnx_configs.speculative_length,

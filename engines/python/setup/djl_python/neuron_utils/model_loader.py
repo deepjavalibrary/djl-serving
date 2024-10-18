@@ -188,8 +188,19 @@ class TNXModelLoader(ModelLoader):
         if self.config.group_query_attention is not None:
             neuron_config[
                 "group_query_attention"] = self.config.group_query_attention
+        if self.config.shard_over_sequence:
+            neuron_config[
+                "shard_over_sequence"] = self.config.shard_over_sequence
         if self.config.fuse_qkv:
             neuron_config["fuse_qkv"] = self.config.fuse_qkv
+        if self.config.fuse_mlp:
+            neuron_config["fuse_mlp"] = self.config.fuse_mlp
+        if self.config.fused_rmsnorm_qkv:
+            neuron_config["fused_rmsnorm_qkv"] = self.config.fused_rmsnorm_qkv
+        if self.config.qkv_tiling:
+            neuron_config["qkv_tiling"] = self.config.qkv_tiling
+        if self.config.weight_tiling:
+            neuron_config["weight_tiling"] = self.config.weight_tiling
         if self.config.collectives_layout:
             neuron_config[
                 "collectives_layout"] = self.config.collectives_layout
@@ -201,9 +212,12 @@ class TNXModelLoader(ModelLoader):
             neuron_config["all_reduce_dtype"] = self.config.all_reduce_dtype
         if self.config.cast_logits_dtype:
             neuron_config["cast_logits_dtype"] = self.config.cast_logits_dtype
-        if self.config.on_device_embedding_config:
-            if len(self.config.on_device_embedding_config.keys()) > 0:
-                neuron_config["on_device_embedding"] = NeuronGenerationConfig(
+        if self.config.on_device_embedding:
+            neuron_config[
+                "on_device_embedding"] = self.config.on_device_generation
+        if self.config.on_device_generation:
+            if len(self.config.on_device_generation.keys()) > 0:
+                neuron_config["on_device_generation"] = NeuronGenerationConfig(
                     **self.config.on_device_embedding_config)
         self.neuron_config = NeuronConfig(**neuron_config)
 
@@ -400,7 +414,7 @@ class TNXModelLoader(ModelLoader):
         path = os.getcwd()
         os.chdir("/tmp")
         self.model.to_neuron()
-        self.model.save(save_path)
+        self.model.save(save_path, sharded_weights=True)
 
         with open(os.path.join(save_path, "VERSION"), "w+") as version_file:
             version_file.write(f"{get_neuronxcc_version()}")
