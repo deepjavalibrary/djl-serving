@@ -76,6 +76,8 @@ class RollingBatch implements Runnable {
     private Metrics metrics;
     private Dimension dimension;
 
+    private boolean isBackportForNonStreamingHttpErrorCodes;
+
     RollingBatch(PyProcess process, Model model, int timeout) {
         this.process = process;
         this.timeout = timeout;
@@ -96,6 +98,15 @@ class RollingBatch implements Runnable {
                         MODEL_METRIC.info("{}", m.percentile(s, 50));
                         MODEL_METRIC.info("{}", m.percentile(s, 90));
                     });
+        }
+        // Option the allows non-streaming requests to return non-200 error code on error
+        isBackportForNonStreamingHttpErrorCodes =
+                Boolean.parseBoolean(
+                        Utils.getEnvOrSystemProperty("SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES"));
+        if (isBackportForNonStreamingHttpErrorCodes) {
+            logger.info(
+                    "SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES is enabled."
+                        + " See https://github.com/deepjavalibrary/djl-serving/pull/2173");
         }
     }
 
@@ -348,6 +359,11 @@ class RollingBatch implements Runnable {
                         break;
                 }
             }
+            if (isBackportForNonStreamingHttpErrorCodes && !last) {
+                // in non-streaming cases, do not return content until generation is finished
+                return
+            }
+
             if (code != null) {
                 Map<String, Object> map = new ConcurrentHashMap<>(2);
                 map.put("code", Integer.parseInt(code));
