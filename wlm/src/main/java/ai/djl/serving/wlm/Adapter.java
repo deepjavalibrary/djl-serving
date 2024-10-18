@@ -28,6 +28,7 @@ public abstract class Adapter {
 
     protected String name;
     protected String src;
+    protected boolean pin;
     protected Map<String, String> options;
 
     /**
@@ -35,11 +36,13 @@ public abstract class Adapter {
      *
      * @param name the adapter name
      * @param src the adapter source
+     * @param pin whether to pin the adapter
      * @param options additional adapter options
      */
-    protected Adapter(String name, String src, Map<String, String> options) {
+    protected Adapter(String name, String src, boolean pin, Map<String, String> options) {
         this.name = name;
         this.src = src;
+        this.pin = pin;
         this.options = options;
     }
 
@@ -52,11 +55,16 @@ public abstract class Adapter {
      * @param wpc the worker pool config for the new adapter
      * @param name the adapter name
      * @param src the adapter source
+     * @param pin whether to pin the adapter
      * @param options additional adapter options
      * @return the new adapter
      */
     public static Adapter newInstance(
-            WorkerPoolConfig<?, ?> wpc, String name, String src, Map<String, String> options) {
+            WorkerPoolConfig<?, ?> wpc,
+            String name,
+            String src,
+            boolean pin,
+            Map<String, String> options) {
         if (!(wpc instanceof ModelInfo)) {
             String modelName = wpc.getId();
             throw new IllegalArgumentException("The worker " + modelName + " is not a model");
@@ -75,11 +83,28 @@ public abstract class Adapter {
         ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wpc;
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
-            return new PyAdapter(name, src, options);
+            return new PyAdapter(name, src, pin, options);
         } else {
             throw new IllegalArgumentException(
                     "Adapters are only currently supported for Python models");
         }
+    }
+
+    /**
+     * Constructs a new {@link Adapter}.
+     *
+     * <p>After registration, you should call {@link #register(WorkerPool)}. This doesn't affect the
+     * worker pool itself.
+     *
+     * @param wpc the worker pool config for the new adapter
+     * @param name the adapter name
+     * @param src the adapter source
+     * @param options additional adapter options
+     * @return the new adapter
+     */
+    public static Adapter newInstance(
+            WorkerPoolConfig<?, ?> wpc, String name, String src, Map<String, String> options) {
+        return newInstance(wpc, name, src, false, options);
     }
 
     /**
@@ -122,6 +147,15 @@ public abstract class Adapter {
     }
 
     /**
+     * Returns whether to pin the adapter.
+     *
+     * @return whether to pin the adapter
+     */
+    public boolean isPin() {
+        return pin;
+    }
+
+    /**
      * Registers this adapter in a worker pool.
      *
      * <p>This registers it in the wpc for new threads and all existing threads.
@@ -136,6 +170,25 @@ public abstract class Adapter {
         for (WorkerGroup<I, O> wg : wp.getWorkerGroups().values()) {
             for (WorkerThread<I, O> t : wg.getWorkers()) {
                 t.addConfigJob(registerJob(wpc, t.getThreadType()));
+            }
+        }
+    }
+
+    /**
+     * Updates this adapter in a worker pool.
+     *
+     * <p>This registers it in the wpc for new threads and all existing threads.
+     *
+     * @param wp the worker pool to register this adapter in
+     * @param <I> the input type
+     * @param <O> the output type
+     */
+    public <I, O> void update(WorkerPool<I, O> wp) {
+        ModelInfo<I, O> wpc = (ModelInfo<I, O>) wp.getWpc();
+        wpc.updateAdapter(this);
+        for (WorkerGroup<I, O> wg : wp.getWorkerGroups().values()) {
+            for (WorkerThread<I, O> t : wg.getWorkers()) {
+                t.addConfigJob(updateJob(wpc, t.getThreadType()));
             }
         }
     }
@@ -158,6 +211,29 @@ public abstract class Adapter {
                         null,
                         in -> {
                             registerPredictor(t.getPredictor());
+                            return null;
+                        });
+        return new WorkerJob<>(job, new CompletableFuture<>());
+    }
+
+    /**
+     * Creates a {@link WorkerJob} to update this adapter in a {@link WorkerThread}.
+     *
+     * @param wpc the worker pool of the thread
+     * @param threadConfig the thread config to register
+     * @param <I> the input type
+     * @param <O> the output type
+     * @return the registration job
+     */
+    public <I, O> WorkerJob<I, O> updateJob(
+            WorkerPoolConfig<I, O> wpc, ThreadConfig<I, O> threadConfig) {
+        ModelInfo<I, O>.ModelThread t = (ModelInfo<I, O>.ModelThread) threadConfig;
+        Job<I, O> job =
+                new Job<>(
+                        wpc,
+                        null,
+                        in -> {
+                            updatePredictor(t.getPredictor());
                             return null;
                         });
         return new WorkerJob<>(job, new CompletableFuture<>());
@@ -187,6 +263,8 @@ public abstract class Adapter {
     }
 
     protected abstract void registerPredictor(Predictor<?, ?> predictor);
+
+    protected abstract void updatePredictor(Predictor<?, ?> predictor);
 
     protected abstract void unregisterPredictor(Predictor<?, ?> predictor);
 }
