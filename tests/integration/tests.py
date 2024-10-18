@@ -727,8 +727,9 @@ class TestNeuronx1:
             r.launch(container='pytorch-inf2-1')
             client.run("transformers_neuronx gpt2-quantize".split())
 
-    @pytest.mark.parametrize("model",
-                             ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant"])
+    @pytest.mark.parametrize(
+        "model",
+        ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant", "tiny-llama-lcnc"])
     def test_partition(self, model):
         with Runner('pytorch-inf2', f'partition-{model}') as r:
             try:

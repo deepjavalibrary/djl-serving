@@ -25,6 +25,7 @@ from djl_python.properties_manager.tnx_properties import TransformerNeuronXPrope
     TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
+from djl_python.neuron_utils.neuron_smart_default_utils import NeuronSmartDefaultUtils
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter
@@ -137,26 +138,6 @@ class TransformersNeuronXService(object):
                     f"VllmModelLoader does not support this config: {self.config}"
                 )
 
-    def set_max_position_embeddings(self) -> None:
-        """
-        Sets the maximum position embeddings for the model configuration.
-
-        If n_positions is not specified in the config, it sets the default value to the minimum of
-        max_position_embeddings from the model config and 4096.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        if self.config.n_positions is None:
-            self.config.n_positions = min(
-                self.model_config.max_position_embeddings, 4096)
-            logging.info(
-                f"Setting default n_positions to {self.config.n_positions} based on model config."
-            )
-
     def set_configs(self, properties: dict) -> None:
         """
         Sets the model configuration properties and performs necessary setup for model loading.
@@ -167,16 +148,19 @@ class TransformersNeuronXService(object):
         Returns:
             None
         """
+        self.model_config = AutoConfig.from_pretrained(
+            properties.get("model_id") or properties.get("model_dir"),
+            revision=properties.get("revision"),
+            trust_remote_code=properties.get("trust_remote_code"))
+
+        utils = NeuronSmartDefaultUtils()
+        utils.apply_smart_defaults(properties,
+                                   copy.deepcopy(self.model_config.__dict__))
+
         self.config = TransformerNeuronXProperties(**properties)
         if self.config.rolling_batch != "disable":
             """batch_size needs to match max_rolling_batch_size for precompiled neuron models running rolling batch"""
             self.config.batch_size = self.config.max_rolling_batch_size
-
-        self.model_config = AutoConfig.from_pretrained(
-            self.config.model_id_or_path,
-            revision=self.config.revision,
-            trust_remote_code=self.config.trust_remote_code)
-        self.set_max_position_embeddings()
 
         if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy is None:
             if (self.model_config.model_type
