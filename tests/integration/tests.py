@@ -921,17 +921,84 @@ class TestMultiModalLmiDist:
             r.launch()
             client.run("multimodal llava_v1.6-mistral".split())
 
-    def test_paligemma(self):
-        with Runner('lmi', 'paligemma-3b-mix-448') as r:
-            prepare.build_lmi_dist_model('paligemma-3b-mix-448')
-            r.launch()
-            client.run("multimodal paligemma-3b-mix-448".split())
-
     def test_phi3_v(self):
         with Runner('lmi', 'phi-3-vision-128k-instruct') as r:
             prepare.build_lmi_dist_model('phi-3-vision-128k-instruct')
             r.launch()
             client.run("multimodal phi-3-vision-128k-instruct".split())
+
+    def test_pixtral_12b(self):
+        with Runner('lmi', 'pixtral-12b') as r:
+            prepare.build_lmi_dist_model('pixtral-12b')
+            r.launch()
+            client.run("multimodal pixtral-12b".split())
+
+
+class TestMultiModalVllm:
+
+    def test_llava_next(self):
+        with Runner('lmi', 'llava_v1.6-mistral') as r:
+            prepare.build_vllm_model('llava_v1.6-mistral')
+            r.launch()
+            client.run("multimodal llava_v1.6-mistral".split())
+
+    def test_phi3_v(self):
+        with Runner('lmi', 'phi-3-vision-128k-instruct') as r:
+            prepare.build_vllm_model('phi-3-vision-128k-instruct')
+            r.launch()
+            client.run("multimodal phi-3-vision-128k-instruct".split())
+
+    def test_pixtral_12b(self):
+        with Runner('lmi', 'pixtral-12b') as r:
+            prepare.build_vllm_model('pixtral-12b')
+            r.launch()
+            client.run("multimodal pixtral-12b".split())
+
+    # MLlama is only supported by vllm backend currently
+    def test_mllama_11b(self):
+        with Runner('lmi', 'llama32-11b-multimodal') as r:
+            prepare.build_vllm_model('llama32-11b-multimodal')
+            r.launch()
+            client.run("multimodal llama32-11b-multimodal".split())
+
+
+class TestLmiDistPipelineParallel:
+
+    def test_llama32_3b_multi_worker_tp1_pp1(self):
+        with Runner('lmi', 'llama32-3b-multi-worker-tp1-pp1') as r:
+            prepare.build_lmi_dist_model("llama32-3b-multi-worker-tp1-pp1")
+            r.launch()
+            client.run("lmi_dist llama32-3b-multi-worker-tp1-pp1".split())
+
+    def test_llama32_3b_multi_worker_tp2_pp1(self):
+        with Runner('lmi', 'llama32-3b-multi-worker-tp2-pp1') as r:
+            prepare.build_lmi_dist_model("llama32-3b-multi-worker-tp2-pp1")
+            r.launch()
+            client.run("lmi_dist llama32-3b-multi-worker-tp2-pp1".split())
+
+    def test_llama32_3b_multi_worker_tp1_pp2(self):
+        with Runner('lmi', 'llama32-3b-multi-worker-tp1-pp2') as r:
+            prepare.build_lmi_dist_model("llama32-3b-multi-worker-tp1-pp2")
+            r.launch()
+            client.run("lmi_dist llama32-3b-multi-worker-tp1-pp2".split())
+
+    def test_llama31_8b_pp_only(self):
+        with Runner('lmi', 'llama31-8b-pp-only') as r:
+            prepare.build_lmi_dist_model("llama31-8b-pp-only")
+            r.launch()
+            client.run("lmi_dist llama31-8b-pp-only".split())
+
+    def test_llama31_8b_tp2_pp2(self):
+        with Runner('lmi', 'llama31-8b-tp2-pp2') as r:
+            prepare.build_lmi_dist_model('llama31-8b-tp2-pp2')
+            r.launch()
+            client.run("lmi_dist llama31-8b-tp2-pp2".split())
+
+    def test_llama31_8b_tp2_pp2_specdec(self):
+        with Runner('lmi', 'llama31-8b-tp2-pp2-spec-dec') as r:
+            prepare.build_lmi_dist_model('llama31-8b-tp2-pp2-spec-dec')
+            r.launch()
+            client.run("lmi_dist llama31-8b-tp2-pp2-spec-dec".split())
 
 
 @pytest.mark.gpu

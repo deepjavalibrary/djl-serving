@@ -384,7 +384,37 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "NousResearch/Hermes-3-Llama-3.1-8B"
-    }
+    },
+    "llama32-3b-multi-worker-tp1-pp1": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama32-3b-multi-worker-tp2-pp1": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama32-3b-multi-worker-tp1-pp2": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama31-8b-pp-only": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama31-8b-tp2-pp2": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama31-8b-tp2-pp2-spec-dec": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
 }
 
 lmi_dist_chat_model_spec = {
@@ -870,7 +900,15 @@ multi_modal_spec = {
         "max_memory_per_gpu": [25.0, 25.0],
         "batch_size": [1, 4],
         "tokenizer": "microsoft/Phi-3-vision-128k-instruct"
-    }
+    },
+    "pixtral-12b": {
+        "max_memory_per_gpu": [25.0, 25.0, 25.0],
+        "batch_size": [1, 4],
+    },
+    "llama32-11b-multimodal": {
+        "max_memory_per_gpu": [25.0, 25.0, 25.0],
+        "batch_size": [1],
+    },
 }
 
 text_embedding_model_spec = {
