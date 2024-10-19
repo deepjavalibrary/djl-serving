@@ -13,10 +13,9 @@
 from collections import OrderedDict
 from typing import Any
 
-from vllm import EngineArgs
+from vllm import EngineArgs, TokensPrompt, TextPrompt
 from vllm.outputs import CompletionOutput, RequestOutput as vLLMRequestOutput
 from vllm.lora.request import LoRARequest
-from vllm.inputs import PromptInputs
 
 from djl_python.request_io import Token, Sequence
 from djl_python.request import Request
@@ -59,18 +58,19 @@ def update_request_cache_with_output(request_cache: OrderedDict,
 
     # sets prompt token details if not set
     if not request_output.prompt_tokens_details:
-        # TODO: Temp check adding the check fo T5.
+        # TODO: Temp check adding the check for T5.
         if isinstance(vllm_request_output.prompt_token_ids, list):
+            converted_texts_from_ids = tokenizer.convert_ids_to_tokens(
+                vllm_request_output.prompt_token_ids)
             for index, prompt_token_id in enumerate(
                     vllm_request_output.prompt_token_ids):
                 log_prob = None
                 if vllm_request_output.prompt_logprobs and index > 0:
                     log_prob = vllm_request_output.prompt_logprobs[index][
                         prompt_token_id].logprob
-                prompt_token = Token(
-                    id=prompt_token_id,
-                    text=tokenizer.convert_ids_to_tokens(prompt_token_id),
-                    log_prob=log_prob)
+                prompt_token = Token(id=prompt_token_id,
+                                     text=converted_texts_from_ids[index],
+                                     log_prob=log_prob)
                 request_output.prompt_tokens_details.append(prompt_token)
 
     # sets the details of all sequences
@@ -288,6 +288,8 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             qlora_adapter_name_or_path=config.qlora_adapter_name_or_path,
             disable_logprobs_during_spec_decoding=config.
             disable_logprobs_during_spec_decoding,
+            limit_mm_per_prompt=config.limit_mm_per_prompt,
+            tokenizer_mode=config.tokenizer_mode,
         )
 
 
@@ -301,8 +303,14 @@ def get_multi_modal_data(request: Request) -> dict:
 
 
 def get_prompt_inputs(request: Request):
-    prompt_inputs: PromptInputs = {"prompt": request.request_input.input_text}
+    text_prompt = request.request_input.input_text
     multi_modal_data = get_multi_modal_data(request)
-    if multi_modal_data:
-        prompt_inputs["multi_modal_data"] = multi_modal_data
-    return prompt_inputs
+    # TODO: In chat cases, we need to apply the chat template to the messages object to get a string
+    # In both HuggingFace and mistral cases, that process can also yield token-ids directly
+    # that we may want to consider passing directly to the engine
+    if isinstance(text_prompt, list):
+        return TokensPrompt(prompt_token_ids=text_prompt,
+                            multi_modal_data=multi_modal_data)
+    else:
+        return TextPrompt(prompt=text_prompt,
+                          multi_modal_data=multi_modal_data)

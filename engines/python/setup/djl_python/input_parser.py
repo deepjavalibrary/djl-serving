@@ -129,6 +129,7 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     tokenizer = kwargs.get("tokenizer")
     image_token = kwargs.get("image_placeholder_token")
     configs = kwargs.get("configs")
+    is_mistral_tokenizer = kwargs.get("is_mistral_tokenizer", False)
     is_rolling_batch = kwargs.get("is_rolling_batch", False)
     is_bedrock = False
     if configs is not None:
@@ -139,7 +140,9 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
             kwargs.get("is_rolling_batch"),
             tokenizer,
             image_token=image_token,
-            configs=configs)
+            configs=configs,
+            is_mistral_tokenizer=is_mistral_tokenizer,
+        )
     elif is_bedrock:
         inputs, param = parse_3p_request(input_map,
                                          kwargs.get("is_rolling_batch"),

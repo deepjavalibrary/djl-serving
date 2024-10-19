@@ -87,6 +87,7 @@ class LmiDistRollingBatch(RollingBatch):
             disable_sliding_window=self.lmi_dist_config.disable_sliding_window,
             limit_mm_per_prompt=self.lmi_dist_config.limit_mm_per_prompt,
             use_passive_workers=self.lmi_dist_config.use_passive_workers,
+            tokenizer_mode=self.lmi_dist_config.tokenizer_mode,
             **engine_kwargs)
 
         kwargs = {}
@@ -104,6 +105,7 @@ class LmiDistRollingBatch(RollingBatch):
         self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
+        self.is_mistral_tokenizer = self.lmi_dist_config.tokenizer_mode == 'mistral'
 
     def reset(self) -> None:
         """
@@ -183,6 +185,7 @@ class LmiDistRollingBatch(RollingBatch):
             lmi_dist_request = Request(
                 id=request_id,
                 prompt=llm_input.get("prompt"),
+                prompt_token_ids=llm_input.get("prompt_token_ids"),
                 multi_modal_input=llm_input.get("multi_modal_data"),
                 params=request_params,
                 lora_request=lora_request_params["lora_request"]

@@ -159,13 +159,22 @@ class HuggingFaceService(object):
 
     def get_input_format_args(self):
         return {
-            "configs": self.hf_configs,
-            "tokenizer": self.tokenizer,
-            "adapter_registry": self.adapter_registry,
-            "model_config": self.model_config,
-            "peft_config": self.peft_config,
-            "rolling_batch": self.rolling_batch,
-            "image_placeholder_token": self.get_image_token(),
+            "configs":
+            self.hf_configs,
+            "tokenizer":
+            self.tokenizer,
+            "adapter_registry":
+            self.adapter_registry,
+            "model_config":
+            self.model_config,
+            "peft_config":
+            self.peft_config,
+            "rolling_batch":
+            self.rolling_batch,
+            "image_placeholder_token":
+            self.get_image_token(),
+            "is_mistral_tokenizer":
+            getattr(self.rolling_batch, 'is_mistral_tokenizer', False)
         }
 
     @staticmethod

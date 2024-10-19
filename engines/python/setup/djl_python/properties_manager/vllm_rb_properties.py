@@ -61,6 +61,7 @@ class VllmRbProperties(Properties):
     disable_sliding_window: Optional[bool] = False
     limit_mm_per_prompt: Optional[Mapping[str, int]] = None
     use_v2_block_manager: bool = False
+    tokenizer_mode: str = 'auto'
 
     # Speculative decoding configuration.
     speculative_model: Optional[str] = None
