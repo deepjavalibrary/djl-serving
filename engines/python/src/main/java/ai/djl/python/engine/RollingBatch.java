@@ -26,6 +26,7 @@ import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
+import ai.djl.util.Utils;
 
 import com.google.gson.JsonObject;
 
@@ -62,6 +63,9 @@ class RollingBatch implements Runnable {
                         t.setDaemon(true);
                         return t;
                     });
+
+    private static boolean isBackportForNonStreamingHttpErrorCodes =
+            getBackportForNonStreamingHttpErrorCodesOption();
 
     private PyProcess process;
     private int maxRollingBatchSize;
@@ -249,6 +253,21 @@ class RollingBatch implements Runnable {
         currentThread.interrupt();
     }
 
+    private static boolean getBackportForNonStreamingHttpErrorCodesOption() {
+
+        // Option the allows non-streaming requests to return non-200 error code on error
+        boolean result =
+                Boolean.parseBoolean(
+                        Utils.getEnvOrSystemProperty(
+                                "SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES"));
+        if (result) {
+            logger.info(
+                    "SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES is enabled."
+                            + " See https://github.com/deepjavalibrary/djl-serving/pull/2173");
+        }
+        return result;
+    }
+
     private static final class Request {
 
         Input input;
@@ -348,6 +367,11 @@ class RollingBatch implements Runnable {
                         break;
                 }
             }
+            if (isBackportForNonStreamingHttpErrorCodes && !last) {
+                // in non-streaming cases, do not return content until generation is finished
+                return;
+            }
+
             if (code != null) {
                 Map<String, Object> map = new ConcurrentHashMap<>(2);
                 map.put("code", Integer.parseInt(code));
