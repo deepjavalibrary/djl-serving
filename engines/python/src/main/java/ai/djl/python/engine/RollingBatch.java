@@ -26,6 +26,7 @@ import ai.djl.translate.TranslateException;
 import ai.djl.util.JsonUtils;
 import ai.djl.util.PairList;
 import ai.djl.util.RandomUtils;
+import ai.djl.util.Utils;
 
 import com.google.gson.JsonObject;
 
@@ -63,6 +64,8 @@ class RollingBatch implements Runnable {
                         return t;
                     });
 
+    private static boolean isBackportForNonStreamingHttpErrorCodes = getBackportForNonStreamingHttpErrorCodesOption();
+
     private PyProcess process;
     private int maxRollingBatchSize;
     private int timeout;
@@ -75,8 +78,6 @@ class RollingBatch implements Runnable {
     private boolean resetRollingBatch;
     private Metrics metrics;
     private Dimension dimension;
-
-    private boolean isBackportForNonStreamingHttpErrorCodes;
 
     RollingBatch(PyProcess process, Model model, int timeout) {
         this.process = process;
@@ -98,15 +99,6 @@ class RollingBatch implements Runnable {
                         MODEL_METRIC.info("{}", m.percentile(s, 50));
                         MODEL_METRIC.info("{}", m.percentile(s, 90));
                     });
-        }
-        // Option the allows non-streaming requests to return non-200 error code on error
-        isBackportForNonStreamingHttpErrorCodes =
-                Boolean.parseBoolean(
-                        Utils.getEnvOrSystemProperty("SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES"));
-        if (isBackportForNonStreamingHttpErrorCodes) {
-            logger.info(
-                    "SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES is enabled."
-                        + " See https://github.com/deepjavalibrary/djl-serving/pull/2173");
         }
     }
 
@@ -258,6 +250,20 @@ class RollingBatch implements Runnable {
         this.stop = true;
         threadPool.shutdown();
         currentThread.interrupt();
+    }
+
+    private static boolean getBackportForNonStreamingHttpErrorCodesOption() {
+
+        // Option the allows non-streaming requests to return non-200 error code on error
+        boolean result =
+                Boolean.parseBoolean(
+                        Utils.getEnvOrSystemProperty("SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES"));
+        if (result) {
+            logger.info(
+                    "SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES is enabled."
+                        + " See https://github.com/deepjavalibrary/djl-serving/pull/2173");
+        }
+        return result;
     }
 
     private static final class Request {
