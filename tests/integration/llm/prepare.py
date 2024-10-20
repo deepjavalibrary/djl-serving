@@ -986,7 +986,11 @@ trtllm_handler_list = {
     "flan-t5-xl": {
         "option.model_id": "s3://djl-llm/flan-t5-xl/",
         "option.dtype": "bf16"
-    }
+    },
+    "llama-3-1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.tensor_parallel_degree": 4,
+    },
 }
 
 correctness_model_list = {
