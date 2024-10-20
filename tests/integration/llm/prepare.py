@@ -388,6 +388,7 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
         "option.max_rolling_batch_size": 4,
+        "option.max_model_len": 32768,
         "option.quantize": "awq"
     },
     "mistral-7b-marlin": {
@@ -563,13 +564,66 @@ lmi_dist_model_list = {
         "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
         "option.limit_mm_per_prompt": "image=4",
         "option.trust_remote_code": True,
+        "option.max_model_len": 8192,
     },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
-    }
+    },
+    "pixtral-12b": {
+        "option.model_id": "s3://djl-llm/pixtral-12b/",
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.tokenizer_mode": "mistral",
+        "option.limit_mm_per_prompt": "image=4",
+        "option.entryPoint": "djl_python.huggingface"
+    },
+    "llama32-3b-multi-worker-tp1-pp1": {
+        "option.model_id": "s3://djl-llm/llama-3-2-3b-instruct/",
+        "option.tensor_parallel_degree": 1,
+        "option.pipeline_parallel_degree": 1,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama32-3b-multi-worker-tp2-pp1": {
+        "option.model_id": "s3://djl-llm/llama-3-2-3b-instruct/",
+        "option.tensor_parallel_degree": 2,
+        "option.pipeline_parallel_degree": 1,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama32-3b-multi-worker-tp1-pp2": {
+        "option.model_id": "s3://djl-llm/llama-3-2-3b-instruct/",
+        "option.tensor_parallel_degree": 1,
+        "option.pipeline_parallel_degree": 2,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama31-8b-pp-only": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 1,
+        "option.pipeline_parallel_degree": 4,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama31-8b-tp2-pp2": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 2,
+        "option.pipeline_parallel_degree": 2,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama31-8b-tp2-pp2-spec-dec": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 2,
+        "option.pipeline_parallel_degree": 2,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.speculative_draft_model_id":
+        "s3://djl-llm/llama-3-2-1b-instruct/",
+    },
 }
 
 vllm_model_list = {
@@ -796,6 +850,34 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
     },
+    "llava_v1.6-mistral": {
+        "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
+        "option.limit_mm_per_prompt": "image=4",
+    },
+    "paligemma-3b-mix-448": {
+        "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
+        "option.tensor_parallel_degree": 1,
+    },
+    "phi-3-vision-128k-instruct": {
+        "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
+        "option.limit_mm_per_prompt": "image=4",
+        "option.trust_remote_code": True,
+        "option.max_model_len": 8192,
+    },
+    "pixtral-12b": {
+        "option.model_id": "s3://djl-llm/pixtral-12b/",
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.tokenizer_mode": "mistral",
+        "option.limit_mm_per_prompt": "image=4",
+        "option.entryPoint": "djl_python.huggingface"
+    },
+    "llama32-11b-multimodal": {
+        "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.enforce_eager": True,
+    }
 }
 
 vllm_neo_model_list = {
