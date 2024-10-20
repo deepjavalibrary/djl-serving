@@ -38,9 +38,8 @@ TNX_ONLY_PROPERTIES = [
     "quantize", "neuron_optimize_level", "enable_mixed_precision_accumulation",
     "enable_saturate_infinity", "unroll", "load_in_8bit", "low_cpu_mem_usage",
     "load_split_model", "context_length_estimate", "amp",
-    "compiled_graph_path", "draft_model_compiled_path",
-    "speculative_draft_model", "speculative_length", "draft_model_tp_size",
-    "task", "save_mp_checkpoint_path", "group_query_attention", "model_loader",
+    "compiled_graph_path", "draft_model_compiled_path", "task",
+    "save_mp_checkpoint_path", "group_query_attention", "model_loader",
     "rolling_batch_strategy", "fuse_qkv", "on_device_embedding_config",
     "attention_layout", "collectives_layout", "cache_layout",
     "partition_schema", "all_reduce_dtype", "cast_logits_dtype"
