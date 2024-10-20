@@ -78,12 +78,15 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     input_formatter_function = configs.input_formatter if configs.input_formatter else format_input
     for i in range(start_batch_id, len(batch)):
         input_item = batch[i]
+        request_id = input_item.get_property("requestId")
+        if request_id is None:
+            req_id_counter.next_id() if req_id_counter else i
         try:
             # input formatter can be user written as well. We look for model.py and search for the decorator.
             request_input = input_formatter_function(input_item, **kwargs)
 
             # populate additional information in request_input
-            request_id = req_id_counter.next_id() if req_id_counter else i
+            request_id = request_id
             request_input.request_id = request_id
             request_input.tokenizer = kwargs.get("tokenizer")
             request_input.tgi_compat = configs.tgi_compat
@@ -91,9 +94,11 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
             # We add server maintained parameters
             add_server_maintained_params(request_input, input_item, **kwargs)
             request = Request(request_input=request_input)
+            logging.info(
+                f"[RequestId={request_id} Adding request for inference")
             requests.append(request)
         except Exception as e:  # pylint: disable=broad-except
-            err_msg = "Input Parsing failed. Ensure that the request payload is valid. "
+            err_msg = f"[RequestId={request_id}] Parsing failed. Ensure that the request payload is valid. "
             # str(e) for KeyError only yields the name of the key, which isn't useful as a response to the client
             if isinstance(e, KeyError):
                 err_msg += f"Invalid Request Property: {e}"
