@@ -88,7 +88,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
 
         // Register adapters
         for (AdapterReference adapter : adapters.values()) {
-            adapter.adapter.register(wlm.getWorkerPoolById(adapter.modelName));
+            adapter.adapter.register(wlm, wlm.getWorkerPoolById(adapter.modelName));
         }
     }
 
@@ -98,7 +98,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
         for (AdapterReference adapter : adapters.values()) {
             WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(adapter.modelName);
             if (wp != null) {
-                Adapter.unregister(wp, adapter.adapter.getName());
+                Adapter.unregister(wlm, wp, adapter.adapter.getName());
             }
         }
     }

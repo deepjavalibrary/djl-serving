@@ -12,8 +12,6 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.inference.Predictor;
-import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.WorkerJob;
 
 import java.net.URI;
@@ -46,8 +44,8 @@ public abstract class Adapter {
     /**
      * Constructs a new {@link Adapter}.
      *
-     * <p>After registration, you should call {@link #register(WorkerPool)}. This doesn't affect the
-     * worker pool itself.
+     * <p>After registration, you should call {@link #register(WorkLoadManager, WorkerPool)}. This
+     * doesn't affect the worker pool itself.
      *
      * @param wpc the worker pool config for the new adapter
      * @param name the adapter name
@@ -87,20 +85,16 @@ public abstract class Adapter {
      *
      * <p>This unregisters it in the wpc for new threads and all existing threads.
      *
-     * @param wp the worker pool to remove the adapter from
-     * @param adapterName the adapter name
      * @param <I> the input type
      * @param <O> the output type
+     * @param wp the worker pool to remove the adapter from
+     * @param adapterName the adapter name
      */
-    public static <I, O> void unregister(WorkerPool<I, O> wp, String adapterName) {
+    public static <I, O> void unregister(
+            WorkLoadManager wlm, WorkerPool<I, O> wp, String adapterName) {
         ModelInfo<I, O> wpc = (ModelInfo<I, O>) wp.getWpc();
         Adapter adapter = wpc.unregisterAdapter(adapterName);
-        // TODO Support worker adapter scheduling rather than register/unregister on all workers
-        for (WorkerGroup<I, O> wg : wp.getWorkerGroups().values()) {
-            for (WorkerThread<I, O> t : wg.getWorkers()) {
-                t.addConfigJob(adapter.unregisterJob(wpc, t.getThreadType()));
-            }
-        }
+        wlm.runJob(adapter.unregisterJob(wpc).getJob());
     }
 
     /**
@@ -126,40 +120,26 @@ public abstract class Adapter {
      *
      * <p>This registers it in the wpc for new threads and all existing threads.
      *
-     * @param wp the worker pool to register this adapter in
      * @param <I> the input type
      * @param <O> the output type
+     * @param wp the worker pool to register this adapter in
      */
-    public <I, O> void register(WorkerPool<I, O> wp) {
+    public <I, O> void register(WorkLoadManager wlm, WorkerPool<I, O> wp) {
         ModelInfo<I, O> wpc = (ModelInfo<I, O>) wp.getWpc();
         wpc.registerAdapter(this);
-        for (WorkerGroup<I, O> wg : wp.getWorkerGroups().values()) {
-            for (WorkerThread<I, O> t : wg.getWorkers()) {
-                t.addConfigJob(registerJob(wpc, t.getThreadType()));
-            }
-        }
+        wlm.runJob(registerJob(wpc).getJob());
     }
 
     /**
      * Creates a {@link WorkerJob} to register this adapter in a {@link WorkerThread}.
      *
      * @param wpc the worker pool of the thread
-     * @param threadConfig the thread config to register
      * @param <I> the input type
      * @param <O> the output type
      * @return the registration job
      */
-    public <I, O> WorkerJob<I, O> registerJob(
-            WorkerPoolConfig<I, O> wpc, ThreadConfig<I, O> threadConfig) {
-        ModelInfo<I, O>.ModelThread t = (ModelInfo<I, O>.ModelThread) threadConfig;
-        Job<I, O> job =
-                new Job<>(
-                        wpc,
-                        null,
-                        in -> {
-                            registerPredictor(t.getPredictor());
-                            return null;
-                        });
+    public <I, O> WorkerJob<I, O> registerJob(WorkerPoolConfig<I, O> wpc) {
+        Job<I, O> job = new Job<>(wpc, getRegisterInput());
         return new WorkerJob<>(job, new CompletableFuture<>());
     }
 
@@ -167,26 +147,16 @@ public abstract class Adapter {
      * Creates a {@link WorkerJob} to unregister this adapter from a {@link WorkerThread}.
      *
      * @param wpc the worker pool of the thread
-     * @param threadConfig the thread config to unregister
      * @param <I> the input type
      * @param <O> the output type
      * @return the unregistration job
      */
-    public <I, O> WorkerJob<I, O> unregisterJob(
-            WorkerPoolConfig<I, O> wpc, ThreadConfig<I, O> threadConfig) {
-        ModelInfo<I, O>.ModelThread t = (ModelInfo<I, O>.ModelThread) threadConfig;
-        Job<I, O> job =
-                new Job<>(
-                        wpc,
-                        null,
-                        in -> {
-                            unregisterPredictor(t.getPredictor());
-                            return null;
-                        });
+    public <I, O> WorkerJob<I, O> unregisterJob(WorkerPoolConfig<I, O> wpc) {
+        Job<I, O> job = new Job<>(wpc, getUnregisterInput());
         return new WorkerJob<>(job, new CompletableFuture<>());
     }
 
-    protected abstract void registerPredictor(Predictor<?, ?> predictor);
+    protected abstract <I> I getRegisterInput();
 
-    protected abstract void unregisterPredictor(Predictor<?, ?> predictor);
+    protected abstract <I> I getUnregisterInput();
 }
