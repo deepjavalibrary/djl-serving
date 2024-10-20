@@ -21,6 +21,7 @@ import ai.djl.serving.models.ModelManager;
 import ai.djl.serving.util.NettyUtils;
 import ai.djl.serving.wlm.Adapter;
 import ai.djl.serving.wlm.ModelInfo;
+import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerPool;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -151,8 +152,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         String adapterName = NettyUtils.getRequiredParameter(decoder, "name");
         String src = NettyUtils.getRequiredParameter(decoder, "src");
 
-        WorkerPool<Input, Output> wp =
-                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
+        WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
+        WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
             throw new BadRequestException("The model " + modelName + " was not found");
         }
@@ -165,7 +166,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         }
 
         Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, options);
-        adapter.register(wp);
+        adapter.register(wlm, wp);
 
         String msg = "Adapter " + adapterName + " registered";
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
@@ -192,12 +193,12 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
     private void handleUnregisterAdapter(
             ChannelHandlerContext ctx, String modelName, String adapterName) {
 
-        WorkerPool<Input, Output> wp =
-                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
+        WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
+        WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
             throw new BadRequestException("The model " + modelName + " was not found");
         }
-        Adapter.unregister(wp, adapterName);
+        Adapter.unregister(wlm, wp, adapterName);
 
         String msg = "Adapter " + adapterName + " registered";
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
