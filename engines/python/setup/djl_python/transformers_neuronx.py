@@ -120,7 +120,9 @@ class TransformersNeuronXService(object):
         if self.config.model_loader == "tnx":
             if self.config.speculative_draft_model and self.config.rolling_batch == "vllm":
                 self._model_loader_class = TNXVllmModelLoader
-                logging.info("Loading model using TNXVllmModelLoader for speculative decoding...")
+                logging.info(
+                    "Loading model using TNXVllmModelLoader for speculative decoding..."
+                )
             else:
                 self._model_loader_class = TNXModelLoader
                 logging.info("Loading model using TNXModelLoader...")
@@ -230,7 +232,8 @@ class TransformersNeuronXService(object):
             if self.model:
                 self.rolling_batch_config["preloaded_model"] = self.model
             if hasattr(self.model_config, "generation_config"):
-                self.rolling_batch_config["generation_config"] = self.model_config.generation_config
+                self.rolling_batch_config[
+                    "generation_config"] = self.model_config.generation_config
             self.rolling_batch = VLLMRollingBatch(self.config.model_id_or_path,
                                                   self.rolling_batch_config)
         elif self.config.rolling_batch != "disable":
@@ -319,11 +322,16 @@ class TransformersNeuronXService(object):
         Returns:
             None
         """
-        if self.config.rolling_batch == "vllm" and self.config.model_loader == "tnx":
-            if self.config.speculative_draft_model:
-                self.model = self.model_loader.load_model()
+        if self.config.rolling_batch == "vllm" and self.config.model_loader == "vllm":
             """Model loading is being deferred to vLLMs model loader"""
             return
+        elif self.config.rolling_batch == "vllm" and self.config.model_loader == "tnx":
+            if self.config.speculative_draft_model:
+                self.model = self.model_loader.load_model()
+            else:
+                raise ValueError(
+                    f"Preloaded tnx model is only supported for speculative decoding for vllm."
+                    f"Use vllm model_loader instead.")
         elif self.config.rolling_batch == "vllm":
             self.model = self.model_loader.load_unwrapped_model()
         else:
