@@ -65,6 +65,7 @@ class LmiDistRbProperties(Properties):
     disable_sliding_window: Optional[bool] = False
     limit_mm_per_prompt: Optional[Mapping[str, int]] = None
     use_passive_workers: Optional[bool] = True
+    tokenizer_mode: str = 'auto'
 
     @model_validator(mode='after')
     def validate_mpi(self):

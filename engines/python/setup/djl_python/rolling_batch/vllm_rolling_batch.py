@@ -51,6 +51,7 @@ class VLLMRollingBatch(RollingBatch):
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
+        self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
