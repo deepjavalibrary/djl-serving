@@ -686,7 +686,12 @@ trtllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "google/flan-t5-xl",
-    }
+    },
+    "llama-3-1-8b": {
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3.1-8B",
+    },
 }
 
 trtllm_chat_model_spec = {
