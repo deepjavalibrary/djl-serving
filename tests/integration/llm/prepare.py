@@ -870,7 +870,8 @@ vllm_model_list = {
         "option.max_rolling_batch_size": 16,
         "option.tokenizer_mode": "mistral",
         "option.limit_mm_per_prompt": "image=4",
-        "option.entryPoint": "djl_python.huggingface"
+        "option.entryPoint": "djl_python.huggingface",
+        "option.tensor_parallel_degree": "max"
     },
     "llama32-11b-multimodal": {
         "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
