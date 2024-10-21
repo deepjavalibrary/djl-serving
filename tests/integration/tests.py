@@ -729,7 +729,7 @@ class TestNeuronx1:
 
     @pytest.mark.parametrize(
         "model",
-        ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant", "tiny-llama-lcnc"])
+        ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant", "tiny-llama-rb-lcnc"])
     def test_partition(self, model):
         with Runner('pytorch-inf2', f'partition-{model}') as r:
             try:
