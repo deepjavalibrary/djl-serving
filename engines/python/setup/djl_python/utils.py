@@ -124,6 +124,9 @@ def rolling_batch_inference(parsed_input, inputs: Input, outputs: Output,
                         batch_index=i)
             if content_type is not None:
                 outputs.add_property(f"batch_{i}_Content-Type", content_type)
+            request_id = parsed_input.batch[i].get_property("requestId")
+            if request_id is not None:
+                outputs.add_property(f"batch_{i}_requestId", request_id)
             idx += 1
     return outputs
 

@@ -49,15 +49,16 @@ def stop_on_any_exception(func):
         except Exception as e:
             logging.exception("Rolling batch inference error")
             for request in self.active_requests:
+                error_message = f"[RequestId={request.id}] exception occurred during rolling batch inference.\n Details: {e}"
                 token = Token(-1,
                               "",
                               log_prob=-1,
                               special_token=True,
-                              error_msg=str(e))
+                              error_msg=error_message)
                 request.set_next_token(token,
                                        last_token=True,
                                        finish_reason="error")
-                request.set_error_message(str(e))
+                request.set_error_message(error_message)
                 # TODO: make configurable
                 request.set_error_code(424)
             response = self.postprocess_results()
