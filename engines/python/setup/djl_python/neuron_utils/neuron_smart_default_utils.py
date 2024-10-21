@@ -191,6 +191,12 @@ class NeuronSmartDefaultUtils:
             n_positions, param_bytes, model_config) * 0.95 /
                                     (1024.0 * 1024.0 * 1024.0))
 
+        if self.model_size_in_gb == 0 or self.sequence_size_in_gb == 0 or n_positions == 0:
+            raise Exception(
+                f"Failed to compute model size or sequence size or n_positions: {n_positions},"
+                f"model_size_in_gb: {self.model_size_in_gb}, sequence_size_in_gb: {self.sequence_size_in_gb}"
+            )
+
     def get_adjusted_model_size_in_gb(self, tp_degree: int) -> float:
         return self.model_size_in_gb * (1.0 + ((tp_degree * 2 - 2) / 100.0))
 
