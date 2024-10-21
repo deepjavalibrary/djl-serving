@@ -18,6 +18,7 @@ from collections import OrderedDict, defaultdict
 from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
+from lmi_dist.seq2seq_engine import Seq2SeqPreprocessor
 from vllm import SamplingParams
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
@@ -47,8 +48,6 @@ class LmiDistRollingBatch(RollingBatch):
         :param properties (dict): other properties of the model, such as decoder strategy
         """
         self.lmi_dist_config = LmiDistRbProperties(**properties)
-        self.model_type = getattr(kwargs.get("model_config", None),
-                                  "model_type", None)
         super().__init__(self.lmi_dist_config)
         self.supports_speculative_decoding = supports_speculative_decoding()
         engine_kwargs = {}
@@ -106,6 +105,8 @@ class LmiDistRollingBatch(RollingBatch):
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
         self.is_mistral_tokenizer = self.lmi_dist_config.tokenizer_mode == 'mistral'
+        self.is_t5_model = isinstance(self.engine.preprocessor,
+                                      Seq2SeqPreprocessor)
 
     def reset(self) -> None:
         """
@@ -116,7 +117,7 @@ class LmiDistRollingBatch(RollingBatch):
         super().reset()
 
     def get_tokenizer(self):
-        if "t5" == self.model_type:
+        if self.is_t5_model:
             return self.engine.preprocessor.tokenizer
         return self.engine.preprocessor.tokenizer.tokenizer
 
