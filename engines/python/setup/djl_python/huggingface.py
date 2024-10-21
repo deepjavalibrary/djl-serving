@@ -126,22 +126,22 @@ class HuggingFaceService(object):
 
     def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
-        self._read_model_config(self.hf_configs.model_id_or_path,
-                                self.hf_configs.is_peft_model)
-
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             _rolling_batch_cls = get_rolling_batch_class_from_str(
                 self.hf_configs.rolling_batch.value)
-            self.hf_configs.kwargs["model_config"] = self.model_config
             self.rolling_batch = _rolling_batch_cls(
                 self.hf_configs.model_id_or_path, properties,
                 **self.hf_configs.kwargs)
             self.tokenizer = self.rolling_batch.get_tokenizer()
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
+            self._read_model_config(self.hf_configs.model_id_or_path,
+                                    self.hf_configs.is_peft_model)
             self._init_tokenizer(self.hf_configs.model_id_or_path)
             self._init_model(self.hf_configs.model_id_or_path,
                              **self.hf_configs.kwargs)
         else:
+            self._read_model_config(self.hf_configs.model_id_or_path,
+                                    self.hf_configs.is_peft_model)
             if not self.hf_configs.task:
                 self.hf_configs.task = self.infer_task_from_model_architecture(
                 )
@@ -460,6 +460,8 @@ class HuggingFaceService(object):
         )
 
     def get_image_token(self):
+        if self.model_config is None:
+            return None
         model_type = self.model_config.model_type
         if model_type == "phi3_v":
             return "<|image_{}|>"
@@ -479,7 +481,7 @@ class HuggingFaceService(object):
         if model_type == "qwen2_vl":
             return "<|vision_start|><|image_pad|><|vision_end|>"
 
-        logging.warning(
+        logging.debug(
             "could not infer image token from the model artifacts. Using <image> as default."
         )
         return "<image>"
