@@ -309,6 +309,12 @@ class TestTrtLlmHandler1:
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm santacoder".split())
 
+    def test_llama_31_8b(self):
+        with Runner('tensorrt-llm', 'llama-3-1-8b') as r:
+            prepare.build_trtllm_handler_model('llama-3-1-8b')
+            r.launch()
+            client.run("trtllm llama-3-1-8b".split())
+
 
 @pytest.mark.trtllm
 @pytest.mark.gpu_4
@@ -729,7 +735,7 @@ class TestNeuronx1:
 
     @pytest.mark.parametrize(
         "model",
-        ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant", "tiny-llama-lcnc"])
+        ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant", "tiny-llama-rb-lcnc"])
     def test_partition(self, model):
         with Runner('pytorch-inf2', f'partition-{model}') as r:
             try:
