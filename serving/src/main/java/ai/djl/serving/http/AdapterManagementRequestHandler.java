@@ -61,7 +61,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throws ModelException {
         HttpMethod method = req.method();
 
-        if (segments.length < 4) {
+        if ("adapters".equals(segments[1])) {
             // API /adapters/*
             String modelName =
                     ModelManager.getInstance()
@@ -87,14 +87,15 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[2];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName);
+            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[3])) {
+                handleUpdateAdapter(ctx, modelName, adapterName);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName);
             } else {
                 throw new MethodNotAllowedException();
             }
-
-        } else {
-            // API /models/{modelName}/adapters/*
+        } else if ("models".equals(segments[1])) {
+            // API /models/{model_name}/adapters/*
 
             String modelName = segments[2];
             if (segments.length < 5) {
@@ -112,6 +113,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String adapterName = segments[4];
             if (HttpMethod.GET.equals(method)) {
                 handleDescribeAdapter(ctx, modelName, adapterName);
+            } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[5])) {
+                handleUpdateAdapter(ctx, modelName, adapterName);
             } else if (HttpMethod.DELETE.equals(method)) {
                 handleUnregisterAdapter(ctx, modelName, adapterName);
             } else {
@@ -163,8 +166,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 options.put(entry.getKey(), entry.getValue().get(0));
             }
         }
-
-        Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, options);
+        boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
+        Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, pin, options);
         adapter.register(wp);
 
         String msg = "Adapter " + adapterName + " registered";
@@ -189,6 +192,26 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         NettyUtils.sendJsonResponse(ctx, adapterResponse);
     }
 
+    private void handleUpdateAdapter(
+            ChannelHandlerContext ctx, String modelName, String adapterName) {
+        WorkerPool<Input, Output> wp =
+                ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
+        if (wp == null) {
+            throw new BadRequestException("The model " + modelName + " was not found");
+        }
+        ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
+        Adapter adapter = modelInfo.getAdapter(adapterName);
+
+        if (adapter == null) {
+            throw new BadRequestException("The adapter " + adapterName + " was not found");
+        }
+
+        adapter.update(wp);
+
+        String msg = "Adapter " + adapterName + " updated";
+        NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
+    }
+
     private void handleUnregisterAdapter(
             ChannelHandlerContext ctx, String modelName, String adapterName) {
 
@@ -199,7 +222,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         }
         Adapter.unregister(wp, adapterName);
 
-        String msg = "Adapter " + adapterName + " registered";
+        String msg = "Adapter " + adapterName + " unregistered";
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
     }
 

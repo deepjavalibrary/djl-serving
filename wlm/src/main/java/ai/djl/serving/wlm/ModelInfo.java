@@ -614,6 +614,23 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     /**
+     * Updates an adapter to this {@link ModelInfo}.
+     *
+     * @param adapter the adapter to add
+     */
+    public void updateAdapter(Adapter adapter) {
+        synchronized (this) {
+            if (!adapters.containsKey(adapter.getName())) {
+                throw new IllegalArgumentException(
+                        "The adapter "
+                                + adapter.getName()
+                                + " was not found and therefore can't be updated");
+            }
+            adapters.put(adapter.getName(), adapter);
+        }
+    }
+
+    /**
      * Removes an adapter from this {@link ModelInfo}.
      *
      * @param name the adapter to remove
