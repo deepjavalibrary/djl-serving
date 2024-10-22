@@ -37,39 +37,29 @@ class TestRollingBatch(unittest.TestCase):
             self.assertEqual(json.dumps({"generated_text": "Hello world"}),
                              req.get_next_token())
 
-
-def test_last_token_is_first_token(self):
-    req_input1 = TextInput(
-        request_id=0,
-        input_text="This is a wonderful day",
-        parameters={
-            "max_new_tokens": 256,
-            "details": True
-        },
-        output_formatter=_json_output_formatter,
-    )
-    req1 = Request(req_input1)
-    req_input2 = TextInput(
-        request_id=1,
-        input_text="This is a wonderful day",
-        parameters={
-            "max_new_tokens": 256,
-            "stream": False,
-            "details": True
-        },
-    )
-    req2 = Request(req_input2)
-
-    for req in [req1, req2]:
-        req.request_output.set_next_token(Token(244, "He", -0.334532),
+    def test_last_token_is_first_token(self):
+        req_input1 = TextInput(
+            request_id=0,
+            input_text="This is a wonderful day",
+            parameters={
+                "max_new_tokens": 256,
+                "details": True
+            },
+            output_formatter=_json_output_formatter,
+        )
+        req = Request(req_input1)
+        req.request_output.set_next_token(Token(244, "He", -0.334532, error_msg="Error in json formatter"),
                                           is_last_token=True,
                                           finish_reason="error")
         req.request_output.finished = True
-        result = req.get_next_token()
+        best_sequence = req.request_output.sequences[
+            req.request_output.best_sequence_index]
+        self.assertEqual("Error in json formatter", best_sequence.get_last_token().error_msg)
 
+        result = req.get_next_token()
         expected_output_json = json.dumps({
             "generated_text": None,
-            "error": None,
+            "error": "Error in json formatter",
             "code": 400,
             "details": {
                 "finish_reason": "error",
@@ -78,7 +68,8 @@ def test_last_token_is_first_token(self):
                 "tokens": [{
                     "id": 244,
                     "text": "He",
-                    "log_prob": -0.334532
+                    "log_prob": -0.334532,
+                    "error_msg": "Error in json formatter"
                 }]
             }
         })
