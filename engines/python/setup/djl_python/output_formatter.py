@@ -13,11 +13,12 @@
 import json
 import logging
 import time
-from typing import Union, Callable
+from typing import Dict, Union, Callable
 
 from typing_extensions import deprecated
 
 from djl_python.request_io import Token, TextGenerationOutput, RequestOutput
+from djl_python.utils import serving_backport_for_non_streaming_http_error_codes_enabled
 
 
 def _json_output_formatter(request_output: RequestOutput):
@@ -26,6 +27,10 @@ def _json_output_formatter(request_output: RequestOutput):
 
     :return: formatted output
     """
+    if serving_backport_for_non_streaming_http_error_codes_enabled():
+        return _json_output_formatter_backport_for_non_streaming_http_error_codes(
+            request_output)
+
     best_sequence = request_output.sequences[
         request_output.best_sequence_index]
 
@@ -63,6 +68,83 @@ def _json_output_formatter(request_output: RequestOutput):
             json_encoded_str = f"{json_encoded_str}]"
 
     return json_encoded_str
+
+
+def _json_output_formatter_backport_for_non_streaming_http_error_codes(
+        request_output: TextGenerationOutput):
+    """
+    json output formatter that allows non-streaming requests to return non-200 error codes on error.
+
+    Backported from djl-serving v0.29.0.
+
+    :return: formatted output
+    """
+
+    def _get_last_token(seq):
+        if seq._last_token_index:
+            return seq.tokens[seq._last_token_index]
+        return None
+
+    def _get_generated_text(sequence, request_output):
+        parameters = request_output.input.parameters
+        generated_text = request_output.input.input_text if parameters.get(
+            "return_full_text") else ""
+        for token in sequence.tokens:
+            generated_text += token.text
+        return generated_text
+
+    def _get_details_dict(request_output: TextGenerationOutput,
+                          include_tokens: bool = True) -> Dict:
+        parameters = request_output.input.parameters
+        best_sequence = request_output.sequences[
+            request_output.best_sequence_index]
+        if parameters.get("details", request_output.input.tgi_compat):
+            final_dict = {
+                "finish_reason": best_sequence.finish_reason,
+                "generated_tokens": len(best_sequence.tokens),
+                "inputs": request_output.input.input_text,
+            }
+
+            if include_tokens:
+                final_dict["tokens"] = request_output.get_tokens_as_dict()
+
+            if parameters.get("decoder_input_details"):
+                final_dict[
+                    "prefill"] = request_output.get_prompt_tokes_as_dict()
+            return final_dict
+        elif best_sequence.finish_reason == "error":
+            return {"finish_reason": best_sequence.finish_reason}
+        else:
+            return {}
+
+    best_sequence = request_output.sequences[
+        request_output.best_sequence_index]
+    # TODO: Fix this so it is not required. Right now, this call is needed to
+    # advance the token iterator, which is needed for rolling batch to work properly
+    next_token, _, _ = best_sequence.get_next_token()
+    if not request_output.finished:
+        return ""
+    details = _get_details_dict(request_output, include_tokens=True)
+    if details.get("finish_reason") == "error":
+        final_token = _get_last_token(best_sequence)
+        # In non-streaming, request either succeeds or fails so do not provide the
+        # partial generation response that may exist
+        result = {
+            "generated_text": None,
+            "error": getattr(final_token, "error_msg", "error"),
+            "code": 400,
+            "details": details,
+        }
+        return json.dumps(result, ensure_ascii=False)
+    generated_text = _get_generated_text(best_sequence, request_output)
+    result = {
+        "generated_text": generated_text,
+    }
+    if details:
+        result["details"] = details
+    if request_output.input.tgi_compat:
+        result = [result]
+    return json.dumps(result, ensure_ascii=False)
 
 
 def _jsonlines_output_formatter(request_output: RequestOutput):

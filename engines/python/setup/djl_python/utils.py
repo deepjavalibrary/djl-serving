@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
+import os
 from typing import Union, Callable, Any, List
 
 from djl_python.inputs import Input
@@ -192,3 +193,7 @@ def profile_objects(func):
         return result
 
     return apply_profiling
+
+
+def serving_backport_for_non_streaming_http_error_codes_enabled():
+    return os.getenv("SERVING_BACKPORT_FOR_NON_STREAMING_HTTP_ERROR_CODES")
