@@ -322,6 +322,9 @@ class SchedulerRollingBatch(RollingBatch):
     def get_tokenizer(self):
         return self.tokenizer
 
+    def get_huggingface_model_config(self):
+        return self.config
+
 
 def _get_request_ids_tensor(request_ids: List[int]) -> torch.Tensor:
     """

@@ -96,6 +96,13 @@ class RollingBatch(ABC):
         """
         raise RuntimeError("get_tokenizer function not supported")
 
+    def get_huggingface_model_config(self):
+        """
+        :return: the huggingface pretrained config if available
+        """
+        raise RuntimeError(
+            "get_huggingface_model_config must be implemented by subclass")
+
     @abstractmethod
     def inference(self, new_requests: List[Request]) -> List:
         """
