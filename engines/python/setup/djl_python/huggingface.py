@@ -133,6 +133,8 @@ class HuggingFaceService(object):
                 self.hf_configs.model_id_or_path, properties,
                 **self.hf_configs.kwargs)
             self.tokenizer = self.rolling_batch.get_tokenizer()
+            self.model_config = self.rolling_batch.get_huggingface_model_config(
+            )
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
             self._read_model_config(self.hf_configs.model_id_or_path,
                                     self.hf_configs.is_peft_model)
