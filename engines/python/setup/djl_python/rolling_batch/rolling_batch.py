@@ -17,6 +17,7 @@ from typing import List
 from djl_python.properties_manager.properties import Properties
 from djl_python.request import Request
 from djl_python.request_io import Token
+from djl_python.utils import serving_backport_for_non_streaming_http_error_codes_enabled
 
 FINISH_REASON_MAPPER = ["length", "eos_token", "stop_sequence"]
 
@@ -44,14 +45,31 @@ def stop_on_any_exception(func):
     def try_catch_handling(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
-        except Exception:
+        except Exception as e:
             logging.exception("Rolling batch inference error")
             for request in self.active_requests:
                 token = Token(-1, "", -1, True)
                 request.set_next_token(token,
                                        last_token=True,
                                        finish_reason="error")
+                if serving_backport_for_non_streaming_http_error_codes_enabled(
+                ):
+                    request.error_message = str(e)
+                    request.error_code = 424
             response = self.postprocess_results()
+            if (serving_backport_for_non_streaming_http_error_codes_enabled()
+                    and isinstance(response, list)):
+                # In case postprocess_results implementation doesn't set response "error"
+                # or "code", set it the same as we did on the request objects above.
+                # Note: We may want to forward-port this. Only downside is if we want
+                # `postprocess_results` to be able to "handle" the error, i.e., to
+                # intentionally not propagate the error_message and error_code above.
+                # But that's still doable by setting `error` to "" and `code` to 200.
+                for res in response:
+                    if res.get("error", None) is None:
+                        res["error"] = str(e)
+                    if res.get("code", None) is None:
+                        res["code"] = 424
             self.reset()
             return response
 
@@ -161,6 +179,13 @@ class RollingBatch(ABC):
                 "last": req.is_last_token(),
                 "content_type": req.get_content_type()
             }
+            if serving_backport_for_non_streaming_http_error_codes_enabled():
+                error_message = getattr(req, "error_message", None)
+                error_code = getattr(req, "error_code", None)
+                if error_message is not None:
+                    res["error"] = error_message
+                if error_code is not None:
+                    res["code"] = error_code
             req.reset_next_token()
             results.append(res)
 

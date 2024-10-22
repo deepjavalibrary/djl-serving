@@ -16,6 +16,7 @@ from typing import Union, Callable, Any
 from djl_python.output_formatter import get_output_formatter, _json_output_formatter, sse_response_formatter, \
     adapt_legacy_output_formatter
 from djl_python.request_io import Token, TextGenerationOutput, TextInput, RequestOutput
+from djl_python.utils import serving_backport_for_non_streaming_http_error_codes_enabled
 
 
 class Request(object):
@@ -114,6 +115,9 @@ class Request(object):
         self.request_output.set_finish_reason(finish_reason)
         self.request_output.prompt_tokens_details = prompt_tokens_details
         self.last_token = last_token
+        if (last_token and
+                serving_backport_for_non_streaming_http_error_codes_enabled()):
+            self.request_output.finished = True
 
     def get_next_token(self) -> str:
         """

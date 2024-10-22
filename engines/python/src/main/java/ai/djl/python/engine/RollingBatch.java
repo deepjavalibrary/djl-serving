@@ -374,9 +374,19 @@ class RollingBatch implements Runnable {
 
             if (code != null) {
                 Map<String, Object> map = new ConcurrentHashMap<>(2);
-                map.put("code", Integer.parseInt(code));
+                int httpStatusCode = Integer.parseInt(code);
+                map.put("code", httpStatusCode);
                 if (error != null) {
                     map.put("error", error);
+                }
+                if (isBackportForNonStreamingHttpErrorCodes) {
+                    // Update http status code and any error message to the values here, so
+                    // that non-streaming case can return non-200 on errors encountered during
+                    // inference.
+                    output.setCode(httpStatusCode);
+                    if (error != null) {
+                        output.setMessage(error);
+                    }
                 }
                 byte[] buffer = JsonUtils.GSON.toJson(map).getBytes(StandardCharsets.UTF_8);
                 data.appendContent(buffer, true);
