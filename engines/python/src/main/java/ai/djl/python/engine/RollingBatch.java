@@ -180,6 +180,11 @@ class RollingBatch implements Runnable {
                     BytesSupplier err = BytesSupplier.wrap(JsonUtils.GSON.toJson(out));
                     for (Request req : list) {
                         req.last = true;
+                        if (isBackportForNonStreamingHttpErrorCodes) {
+                            // Note: This will only change the HTTP response code if the first chunk
+                            // has not yet been sent
+                            req.output.setCode(code);
+                        }
                         req.data.appendContent(err, true);
                     }
                     list.clear();
