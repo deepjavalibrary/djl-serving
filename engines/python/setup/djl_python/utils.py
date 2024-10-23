@@ -119,11 +119,13 @@ def rolling_batch_inference(parsed_input, inputs: Input, outputs: Output,
             outputs.add_property(f"batch_{i}_Content-Type", "application/json")
         else:
             content_type = result[idx].get("content_type")
+            client_request_id = result[idx].get("request_id")
             outputs.add(Output.binary_encode(result[idx]),
                         key="data",
                         batch_index=i)
             if content_type is not None:
                 outputs.add_property(f"batch_{i}_Content-Type", content_type)
+            outputs.add_property(f"batch_{i}_requestId", client_request_id)
             idx += 1
     return outputs
 

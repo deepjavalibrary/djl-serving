@@ -78,6 +78,7 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     input_formatter_function = configs.input_formatter if configs.input_formatter else format_input
     for i in range(start_batch_id, len(batch)):
         input_item = batch[i]
+        client_request_id = input_item.get_property("requestId")
         try:
             # input formatter can be user written as well. We look for model.py and search for the decorator.
             request_input = input_formatter_function(input_item, **kwargs)
@@ -85,6 +86,7 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
             # populate additional information in request_input
             request_id = req_id_counter.next_id() if req_id_counter else i
             request_input.request_id = request_id
+            request_input.client_request_id = client_request_id
             request_input.tokenizer = kwargs.get("tokenizer")
             request_input.tgi_compat = configs.tgi_compat
 
@@ -92,6 +94,9 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
             add_server_maintained_params(request_input, input_item, **kwargs)
             request = Request(request_input=request_input)
             requests.append(request)
+            logging.info(
+                f"[RequestId={client_request_id}] parsed and scheduled for inference"
+            )
         except Exception as e:  # pylint: disable=broad-except
             err_msg = "Input Parsing failed. Ensure that the request payload is valid. "
             # str(e) for KeyError only yields the name of the key, which isn't useful as a response to the client
@@ -100,7 +105,8 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
             else:
                 err_msg += str(e)
             errors[i] = err_msg
-            logging.warning(err_msg, exc_info=True)
+            logging.warning(f"[RequestId={client_request_id}" + err_msg,
+                            exc_info=True)
             continue
 
     return ParsedInput(errors=errors, requests=requests, batch=batch)
