@@ -173,3 +173,11 @@ class Request(object):
         Sets the HTTP Status code to return when inference fails
         """
         self.error_code = code
+
+    def get_client_request_id(self) -> str:
+        """
+        Returns the requestId specified in the HTTP request
+
+        :return: the requestId specified in the HTTP request
+        """
+        return self.request_input.client_request_id

@@ -47,17 +47,23 @@ def stop_on_any_exception(func):
         try:
             return func(self, *args, **kwargs)
         except Exception as e:
-            logging.exception("Rolling batch inference error")
+            logging.exception(
+                f"Rolling batch inference error. There are {len(self.active_requests)} requests impacted. Dumping the impacted requestIds"
+            )
             for request in self.active_requests:
+                logging.info(
+                    f"[RequestId={request.get_client_request_id()}] impacted by rolling batch error"
+                )
+                error_message = "exception occurred during rolling batch inference"
                 token = Token(-1,
                               "",
                               log_prob=-1,
                               special_token=True,
-                              error_msg=str(e))
+                              error_msg=error_message)
                 request.set_next_token(token,
                                        last_token=True,
                                        finish_reason="error")
-                request.set_error_message(str(e))
+                request.set_error_message(error_message)
                 # TODO: make configurable
                 request.set_error_code(424)
             response = self.postprocess_results()
@@ -143,7 +149,8 @@ class RollingBatch(ABC):
             res = {
                 "data": req.get_next_token(),
                 "last": req.is_last_token(),
-                "content_type": req.get_content_type()
+                "content_type": req.get_content_type(),
+                "request_id": req.get_client_request_id(),
             }
             if req.get_error_message():
                 res["error"] = req.get_error_message()
