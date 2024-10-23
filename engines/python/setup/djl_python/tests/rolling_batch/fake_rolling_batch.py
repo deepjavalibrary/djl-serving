@@ -59,6 +59,9 @@ class FakeRollingBatch(RollingBatch):
     def get_tokenizer(self):
         return self.tokenizer
 
+    def get_huggingface_model_config(self):
+        return None
+
     def reset(self):
         self.cache = OrderedDict()
         super().reset()
