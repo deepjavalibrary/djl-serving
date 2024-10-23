@@ -467,6 +467,12 @@ class TestLmiDist1:
             client.run(
                 "lmi_dist falcon-11b-chunked-prefill --in_tokens 1200".split())
 
+    def test_flan_t5_xl(self):
+        with Runner('lmi', 'flan-t5-xl') as r:
+            prepare.build_lmi_dist_model("flan-t5-xl")
+            r.launch()
+            client.run("lmi_dist flan-t5-xl")
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.gpu_4
