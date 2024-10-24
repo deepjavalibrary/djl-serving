@@ -31,6 +31,13 @@ def register_adapter(inputs: Input):
     return Output().add("Successfully registered adapter")
 
 
+def update_adapter(inputs: Input):
+    global adapters
+    name = inputs.get_properties()["name"]
+    adapters[name] = inputs
+    return Output().add("Successfully updated adapter")
+
+
 def unregister_adapter(inputs: Input):
     global adapters
     name = inputs.get_properties()["name"]
