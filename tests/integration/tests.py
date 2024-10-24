@@ -799,6 +799,17 @@ class TestNeuronx2:
             client.run(
                 "neuron-stable-diffusion stable-diffusion-xl-neuron".split())
 
+    @pytest.mark.skip(reason="waiting for tnx release")
+    def test_tiny_llama_vllm_speculative(self):
+        with Runner('pytorch-inf2', 'tiny-llama-vllm-speculative-rb') as r:
+            env = ["NEURON_ON_DEV_GENERATION=true"]
+            prepare.build_transformers_neuronx_handler_model(
+                "tiny-llama-vllm-speculative-rb")
+            r.launch(container='pytorch-inf2-4', env_vars=env)
+            client.run(
+                "transformers_neuronx_rolling_batch tiny-llama-vllm-speculative-rb"
+                .split())
+
 
 @pytest.mark.inf
 class TestNeuronxRollingBatch:

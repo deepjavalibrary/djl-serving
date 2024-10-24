@@ -215,6 +215,19 @@ transformers_neuronx_handler_list = {
         "option.n_positions": 1024,
         "option.model_loading_timeout": 2400,
     },
+    "tiny-llama-vllm-speculative-rb": {
+        "option.model_id": "s3://djl-llm/llama-2-tiny/",
+        "option.speculative_draft_model": "s3://djl-llm/llama-2-tiny/",
+        "option.speculative_length": 4,
+        "option.rolling_batch": "vllm",
+        "option.model_loader": "tnx",
+        "option.tensor_parallel_degree": 8,
+        "option.neuron_cc_pipeline_factor": 2,
+        "option.context_length_estimate": "1024,2048",
+        "option.on_device_embedding": True,
+        "option.shard_over_sequence": True,
+        "option.sequence_parallel": True
+    },
     "llama-speculative-rb": {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.speculative_draft_model": "s3://djl-llm/llama-2-tiny/",
