@@ -471,7 +471,7 @@ class TestLmiDist1:
         with Runner('lmi', 'flan-t5-xl') as r:
             prepare.build_lmi_dist_model("flan-t5-xl")
             r.launch()
-            client.run("lmi_dist flan-t5-xl")
+            client.run("lmi_dist flan-t5-xl".split())
 
 
 @pytest.mark.lmi_dist
