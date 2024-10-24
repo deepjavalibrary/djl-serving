@@ -152,6 +152,11 @@ class TestConfigManager(unittest.TestCase):
             "speculative_draft_model": "draft_model_id",
             "speculative_length": 4,
             "draft_model_tp_size": 8,
+            "neuron_quant": "true",
+            "sequence_parallel": "false",
+            "multi_node": "false",
+            "neuron_cc_pipeline_factor": 2,
+            "compilation_worker_count": 2
         }
 
         generation_config = {"top_k": 25}
@@ -203,6 +208,11 @@ class TestConfigManager(unittest.TestCase):
         self.assertTrue(tnx_configs.on_device_embedding)
         self.assertDictEqual(tnx_configs.on_device_generation,
                              generation_config)
+        self.assertTrue(tnx_configs.neuron_quant)
+        self.assertFalse(tnx_configs.sequence_parallel)
+        self.assertFalse(tnx_configs.multi_node)
+        self.assertEqual(tnx_configs.neuron_cc_pipeline_factor, 2)
+        self.assertEqual(tnx_configs.compilation_worker_count, 2)
         self.assertEqual(tnx_configs.speculative_draft_model,
                          properties['speculative_draft_model'])
         self.assertEqual(tnx_configs.speculative_length,
@@ -220,6 +230,53 @@ class TestConfigManager(unittest.TestCase):
 
         test_tnx_cle_int('256')
         os.remove("sample.json")
+
+    @parameters([{
+        "is_env":
+        True,
+        "NEURON_ON_DEVICE_EMBEDDING":
+        "true",
+        "NEURON_ON_DEV_GENERATION":
+        "true",
+        "NEURON_SHARD_OVER_SEQUENCE":
+        "true",
+        "NEURON_QUANT":
+        "true",
+        "NEURON_SEQUENCE_PARALLEL":
+        "false",
+        "NEURON_MULTI_NODE":
+        "false",
+        "NEURON_COMPILATION_WORKER_COUNT":
+        "2",
+        "NEURON_CC_PIPELINE_FACTOR":
+        "2",
+        "NEURON_CONTEXT_LENGTH_ESTIMATE":
+        "[1024, 2048, 4096, 8192, 16384]"
+    }])
+    def test_neuron_env_configs(self, params):
+        is_env = params.pop("is_env", False)
+        if is_env:
+            properties = min_common_properties
+            for param in params:
+                os.environ[param] = params[param]
+        else:
+            properties = {**min_common_properties, **params}
+
+        tnx_configs = TransformerNeuronXProperties(**properties)
+        self.assertTrue(tnx_configs.neuron_quant)
+        self.assertTrue(tnx_configs.on_device_embedding)
+        self.assertTrue(tnx_configs.on_device_generation)
+        self.assertTrue(tnx_configs.shard_over_sequence)
+        self.assertFalse(tnx_configs.multi_node)
+        self.assertFalse(tnx_configs.sequence_parallel)
+        self.assertEqual(tnx_configs.compilation_worker_count, 2)
+        self.assertEqual(tnx_configs.neuron_cc_pipeline_factor, 2)
+        self.assertEqual(tnx_configs.context_length_estimate,
+                         [1024, 2048, 4096, 8192, 16384])
+
+        if is_env:
+            for param in params:
+                del os.environ[param]
 
     @parameters([{
         "compiled_graph_path": "https://random.url.address/"
