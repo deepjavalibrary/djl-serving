@@ -223,6 +223,7 @@ def get_lora_request_params(request: Request, lora_ids: dict) -> dict:
     if adapter is not None:
         adapter_name = adapter.get_property("name")
         adapter_path = adapter.get_property("src")
+        adapter_pin = adapter.get_property("pin")
         adapter_id = lora_ids[adapter_name]
         result["lora_request"] = LoRARequest(adapter_name, adapter_id,
                                              adapter_path)
@@ -260,7 +261,10 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             enable_lora=config.enable_lora,
             max_loras=config.max_loras,
             max_lora_rank=config.max_lora_rank,
+            fully_sharded_loras=config.fully_sharded_loras,
             lora_extra_vocab_size=config.lora_extra_vocab_size,
+            long_lora_scaling_factors=config.long_lora_scaling_factors,
+            lora_dtype=config.lora_dtype,
             max_cpu_loras=config.max_cpu_loras,
             revision=config.revision,
             max_logprobs=config.max_logprobs,

@@ -24,10 +24,11 @@ public class PyAdapter extends Adapter {
      *
      * @param name the adapter name
      * @param src the adapter src
+     * @param pin whether to pin the adapter
      * @param options additional adapter options
      */
-    protected PyAdapter(String name, String src, Map<String, String> options) {
-        super(name, src, options);
+    protected PyAdapter(String name, String src, boolean pin, Map<String, String> options) {
+        super(name, src, pin, options);
     }
 
     @SuppressWarnings("unchecked")
@@ -37,6 +38,21 @@ public class PyAdapter extends Adapter {
         input.addProperty("handler", "register_adapter");
         input.addProperty("name", name);
         input.addProperty("src", src);
+        input.addProperty("pin", String.valueOf(pin));
+        for (Map.Entry<String, String> entry : options.entrySet()) {
+            input.add(entry.getKey(), entry.getValue());
+        }
+        return (I) input;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected <I> I getUpdateAdapterInput() {
+        Input input = new Input();
+        input.addProperty("handler", "update_adapter");
+        input.addProperty("name", name);
+        input.addProperty("src", src);
+        input.addProperty("pin", String.valueOf(pin));
         for (Map.Entry<String, String> entry : options.entrySet()) {
             input.add(entry.getKey(), entry.getValue());
         }

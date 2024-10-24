@@ -153,6 +153,7 @@ public final class LmiConfigRecommender {
     private static void setWorkers(Properties lmiProperties) {
         // If option.enable_lora=true, set maxWorkers to 1 because we only support one worker thread
         // for LoRA.
+        // TODO: Support multiple worker threads for LoRA.
         boolean enableLora = Boolean.parseBoolean(lmiProperties.getProperty("option.enable_lora"));
         if (enableLora) {
             logger.info("option.enable_lora is set to true, setting maxWorkers to 1");
