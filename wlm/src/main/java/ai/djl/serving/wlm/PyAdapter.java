@@ -12,10 +12,7 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
-import ai.djl.modality.Output;
-import ai.djl.translate.TranslateException;
 
 import java.util.Map;
 
@@ -35,8 +32,7 @@ public class PyAdapter extends Adapter {
 
     @SuppressWarnings("unchecked")
     @Override
-    protected void registerPredictor(Predictor<?, ?> predictor) {
-        Predictor<Input, Output> p = (Predictor<Input, Output>) predictor;
+    protected <I> I getRegisterAdapterInput() {
         Input input = new Input();
         input.addProperty("handler", "register_adapter");
         input.addProperty("name", name);
@@ -44,24 +40,15 @@ public class PyAdapter extends Adapter {
         for (Map.Entry<String, String> entry : options.entrySet()) {
             input.add(entry.getKey(), entry.getValue());
         }
-        try {
-            p.predict(input);
-        } catch (TranslateException e) {
-            throw new IllegalStateException(e);
-        }
+        return (I) input;
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    protected void unregisterPredictor(Predictor<?, ?> predictor) {
-        Predictor<Input, Output> p = (Predictor<Input, Output>) predictor;
+    protected <I> I getUnregisterAdapterInput() {
         Input input = new Input();
         input.addProperty("handler", "unregister_adapter");
         input.addProperty("name", name);
-        try {
-            p.predict(input);
-        } catch (TranslateException e) {
-            throw new IllegalStateException(e);
-        }
+        return (I) input;
     }
 }
