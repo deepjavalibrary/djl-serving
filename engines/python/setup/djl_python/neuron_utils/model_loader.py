@@ -880,7 +880,7 @@ class TNXVllmModelLoader(ModelLoader):
         mlp_out_weight_transpose = get_default_if_none(
             self.config.mlp_out_weight_transpose,
             True if self.config.multi_node else False)
-        fused_qkv = get_default_if_none(self.config.fused_qkv, True)
+        fuse_qkv = get_default_if_none(self.config.fuse_qkv, True)
 
         neuron_config = NeuronConfig(
             continuous_batching=continuous_batching_config,
@@ -889,7 +889,7 @@ class TNXVllmModelLoader(ModelLoader):
             on_device_generation=on_dev_sampling_config,
             collectives_layout=collectives_layout.value,
             quant=quant_config,
-            fuse_qkv=fused_qkv,
+            fuse_qkv=fuse_qkv,
             compilation_worker_count=self.config.compilation_worker_count,
             sequence_parallel_norm=sequence_parallel,
             sequence_parallel_norm_threshold=sequence_parallel_norm_threshold,
