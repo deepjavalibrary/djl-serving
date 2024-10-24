@@ -624,6 +624,9 @@ lmi_dist_model_list = {
         "option.speculative_draft_model_id":
         "s3://djl-llm/llama-3-2-1b-instruct/",
     },
+    "flan-t5-xl": {
+        "option.model_id": "s3://djl-llm/flan-t5-xl/",
+    }
 }
 
 vllm_model_list = {
