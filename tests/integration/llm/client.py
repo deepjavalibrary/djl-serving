@@ -415,6 +415,11 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
     },
+    "flan-t5-xl": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    }
 }
 
 lmi_dist_chat_model_spec = {
