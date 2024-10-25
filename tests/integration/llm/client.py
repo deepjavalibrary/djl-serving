@@ -162,6 +162,10 @@ transformers_neuronx_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
     },
+    "tiny-llama-vllm-speculative-rb": {
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
     "llama-speculative-rb": {
         "batch_size": [1],
         "seq_length": [256],
