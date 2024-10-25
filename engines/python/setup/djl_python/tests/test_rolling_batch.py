@@ -48,13 +48,15 @@ class TestRollingBatch(unittest.TestCase):
             output_formatter=_json_output_formatter,
         )
         req = Request(req_input1)
-        req.request_output.set_next_token(Token(244, "He", -0.334532, error_msg="Error in json formatter"),
+        req.request_output.set_next_token(Token(
+            244, "He", -0.334532, error_msg="Error in json formatter"),
                                           is_last_token=True,
                                           finish_reason="error")
         req.request_output.finished = True
         best_sequence = req.request_output.sequences[
             req.request_output.best_sequence_index]
-        self.assertEqual("Error in json formatter", best_sequence.get_last_token().error_msg)
+        self.assertEqual("Error in json formatter",
+                         best_sequence.get_last_token().error_msg)
 
         result = req.get_next_token()
         expected_output_json = json.dumps({
@@ -62,9 +64,12 @@ class TestRollingBatch(unittest.TestCase):
             "error": "Error in json formatter",
             "code": 400,
             "details": {
-                "finish_reason": "error",
-                "generated_tokens": 1,
-                "inputs": "This is a wonderful day",
+                "finish_reason":
+                "error",
+                "generated_tokens":
+                1,
+                "inputs":
+                "This is a wonderful day",
                 "tokens": [{
                     "id": 244,
                     "text": "He",
