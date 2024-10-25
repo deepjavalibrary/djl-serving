@@ -621,7 +621,7 @@ lmi_dist_model_list = {
         "option.pipeline_parallel_degree": 2,
         "option.max_model_len": 8192,
         "option.max_rolling_batch_size": 16,
-        "option.speculative_draft_model_id":
+        "option.speculative_draft_model":
         "s3://djl-llm/llama-3-2-1b-instruct/",
     },
     "flan-t5-xl": {
