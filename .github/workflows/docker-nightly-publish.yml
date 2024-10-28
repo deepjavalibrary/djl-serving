@@ -116,7 +116,7 @@ jobs:
           repo="185921645874.dkr.ecr.us-east-1.amazonaws.com/djl-ci-temp"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $repo
           tempTag="$repo:${{ matrix.arch }}-${GITHUB_SHA}"
-          docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-nightly $tempTag
+          docker tag deepjavalibrary/djl-serving:${{ matrix.arch }}-beta-nightly $tempTag
           docker push $tempTag
       - name: Retag image for release
         if: ${{ matrix.arch == 'cpu' && inputs.mode == 'release' }}
