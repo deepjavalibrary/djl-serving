@@ -33,6 +33,11 @@ services:
       context: .
       dockerfile: tensorrt-llm.Dockerfile
     image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}tensorrt-llm${NIGHTLY}"
+  tensorrt-llm-beta:
+    build:
+      context: .
+      dockerfile: tensorrt-llm-beta.Dockerfile
+    image: "deepjavalibrary/djl-serving:${RELEASE_VERSION}tensorrt-llm-beta${NIGHTLY}"
   pytorch-inf2:
     build:
       context: .
