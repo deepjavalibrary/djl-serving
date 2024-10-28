@@ -105,7 +105,7 @@ jobs:
           ${{ matrix.arch }}
           docker compose push ${{ matrix.arch }}
       - name: Build and push trtllm-beta docker image (specific-temp)
-        if: ${{ inputs.model == 'trtllm-beta' && matrix.arch == 'tensorrt-llm' }}
+        if: ${{ inputs.mode == 'trtllm-beta' && matrix.arch == 'tensorrt-llm' }}
         working-directory: serving/docker
         run: |
           export NIGHTLY="-nightly"
