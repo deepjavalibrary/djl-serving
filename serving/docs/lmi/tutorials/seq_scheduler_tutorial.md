@@ -11,7 +11,8 @@ used as an example.
 ```
 # serving.properties
 
-engine=MPI
+engine=Python
+option.mpi_mode=true
 option.model_id=/workspace/llama-2-70b-hf/
 option.tensor_parallel_degree=1
 option.dtype=fp16

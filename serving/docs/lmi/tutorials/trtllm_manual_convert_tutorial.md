@@ -262,7 +262,8 @@ OPTION_MAX_ROLLING_BATCH_SIZE=64
 ### 2. `serving.properties`:
 
 ```
-engine=MPI
+engine=Python
+option.mpi_mode=true
 option.model_id=s3://lmi-llm/trtllm/0.5.0/baichuan-13b-tp2/
 option.tensor_parallel_degree=2
 option.max_rolling_batch_size=64
@@ -272,7 +273,8 @@ option.max_rolling_batch_size=64
 
 `serving.properties`:
 ```
-engine=MPI
+engine=Python
+option.mpi_mode=true
 option.rolling_batch=trtllm
 option.dtype=fp16
 option.tensor_parallel_degree=2
