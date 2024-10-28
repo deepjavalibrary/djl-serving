@@ -21,12 +21,12 @@ ARG accelerate_version=0.32.1
 ARG tensorrtlibs_version=10.1.0
 # %2B is the url escape for the '+' character
 ARG trtllm_toolkit_version=0.12.0%2Bnightly
-ARG trtllm_version=v0.12.0
+ARG trtllm_version=v0.13.0
 ARG cuda_python_version=12.5
 ARG peft_version=0.10.0
 ARG triton_version=r24.04
 ARG trtllm_toolkit_wheel="https://publish.djl.ai/tensorrt-llm/toolkit/tensorrt_llm_toolkit-${trtllm_toolkit_version}-py3-none-any.whl"
-ARG trtllm_wheel="https://publish.djl.ai/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.12.0-cp310-cp310-linux_x86_64.whl"
+ARG trtllm_wheel="https://publish.djl.ai/tensorrt-llm/${trtllm_version}/tensorrt_llm-0.13.0-cp310-cp310-linux_x86_64.whl"
 ARG triton_toolkit_wheel="https://publish.djl.ai/tritonserver/${triton_version}/tritontoolkit-24.4-py310-none-any.whl"
 ARG pydantic_version=2.6.1
 ARG modelopt_version=0.15.0
