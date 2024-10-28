@@ -37,6 +37,7 @@ ARG datasets_version=2.19.1
 
 EXPOSE 8080
 
+RUN echo "TensorRT-LLM beta container: used to test the version to bump up to."
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
 WORKDIR /opt/djl
