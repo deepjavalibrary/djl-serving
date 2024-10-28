@@ -1,5 +1,8 @@
 # HuggingFace Accelerate User Guide
 
+**Note: HuggingFace Accelerate support is currently in maintenance mode. New feature development and optimizations for 
+the HuggingFace Accelerate backend are not currently planned.**
+
 The HuggingFace Accelerate backend is only recommended when the model you are deploying is not supported by the other backends.
 It is typically less performant than the other available options.
 You should confirm that your model is not supported by other backends before using HuggingFace Accelerate.

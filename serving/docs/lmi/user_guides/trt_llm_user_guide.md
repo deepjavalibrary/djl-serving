@@ -37,7 +37,8 @@ You can leverage `tensorrtllm` with LMI using the following starter configuratio
 ### serving.properties
 
 ```
-engine=MPI
+engine=Python
+option.mpi_mode=true
 option.tensor_parallel_degree=max
 option.model_id=<your model id>
 # Adjust the following based on model size and instance type

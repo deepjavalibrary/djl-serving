@@ -1,10 +1,7 @@
 # Vision Language Models in LMI
 
-> [!WARNING]
-> Vision Language Model support is currently experimental in v0.29.0.
-> LMI currently only supports using VLMs with the lmi-dist and vllm backends.
 
-Starting with v0.29.0, LMI supports deploying the following types of Vision Language Models:
+LMI supports deploying the following types of Vision Language Models:
 
 * llava (e.g. llava-hf/llava-1.5-7b-hf)
 * llava_next (e.g. llava-hf/llava-v1.6-mistral-7b-hf)
@@ -12,6 +9,8 @@ Starting with v0.29.0, LMI supports deploying the following types of Vision Lang
 * paligemma (e.g. google/paligemma-3b-mix-224)
 * chameleon (facebook/chameleon-7b etc.)
 * fuyu (adept/fuyu-8b etc.)
+* pixtral (mistralai/Pixtral-12B-2409)
+* mLlama (meta-llama/Llama-3.2-11B-Vision-Instruct)
 
 ## Request Format
 

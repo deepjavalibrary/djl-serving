@@ -1,7 +1,7 @@
 # Chat Completions API Schema
 
 This document describes the API schema for the chat completions endpoints (`v1/chat/completions`) when using the built-in inference handlers in LMI containers.
-This schema is applicable to our latest release, v0.29.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
+This schema is applicable to our latest release, v0.30.0, and is compatible with [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).
 Documentation for previous releases is available on our GitHub on the relevant version branch (e.g. 0.28.0-dlc).
 
 On SageMaker, Chat Completions API schema is supported with the `/invocations` endpoint without additional configurations.
@@ -102,7 +102,7 @@ Example response:
 
 Chat Completions API supports streaming, and the response format for streaming differs from the response format for non-streaming.
 
-To use streaming, set `"stream": true`, or `option.output_formatter=jsonlines`.
+To use streaming, set `"stream": true`.
 
 The response is returned token by token as application/jsonlines content-type:
 
@@ -169,6 +169,8 @@ Example:
     ]
 }
 ```
+
+We recommend that you use the base64 encoding to ensure no network failures occur when retrieving the image within the endpoint.
 
 ### Choice
 
