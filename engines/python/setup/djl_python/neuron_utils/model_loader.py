@@ -412,6 +412,7 @@ class TNXModelLoader(ModelLoader):
         """
         Convert model to Neuron compiled format and save
         """
+        logging.info(f"Saving preshareded model to {save_path}...")
         # Neuron compiler serialization workaround
         path = os.getcwd()
         os.chdir("/tmp")
@@ -479,13 +480,9 @@ class TNXModelLoader(ModelLoader):
 
         :param save_path: Path to which to save the compiled model.
         """
-        self.split_model_path = os.path.join(save_path, "checkpoint")
-        os.mkdir(self.split_model_path)
         self.compiled_graph_path = os.path.join(save_path, "compiled")
         os.mkdir(self.compiled_graph_path)
 
-        self.model = self.load_hf_model()
-        self.model.save_pretrained(self.split_model_path)
         self.model = self.load_auto_model(self.config.model_id_or_path)
         self.compile_and_save(self.compiled_graph_path)
 
