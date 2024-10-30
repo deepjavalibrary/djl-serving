@@ -122,7 +122,7 @@ class Sequence:
         return None, False, False
 
     def get_last_token(self) -> Optional[Token]:
-        if self._last_token_index:
+        if self._last_token_index is not None:
             return self.tokens[self._last_token_index]
         return None
 
@@ -144,6 +144,7 @@ class RequestInput:
         server_parameters: parameters that are modified by the built-in handlers to support backend engines.
     """
     request_id: int = None
+    client_request_id: str = None
     output_formatter: Union[Callable, str] = None
     parameters: Dict = field(default_factory=lambda: {})
     server_parameters: Dict = field(default_factory=lambda: {})

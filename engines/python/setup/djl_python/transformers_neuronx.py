@@ -11,6 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 
+import os
 import copy
 import logging
 from transformers import AutoConfig, AutoTokenizer
@@ -24,7 +25,8 @@ from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, \
     TnXModelLoaders
 from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
-from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
+from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader, TNXVllmModelLoader
+from djl_python.neuron_utils.neuron_smart_default_utils import NeuronSmartDefaultUtils
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter
@@ -117,8 +119,14 @@ class TransformersNeuronXService(object):
             None
         """
         if self.config.model_loader == "tnx":
-            self._model_loader_class = TNXModelLoader
-            logging.info("Loading model using TNXModelLoader...")
+            if self.config.speculative_draft_model and self.config.rolling_batch == "vllm":
+                self._model_loader_class = TNXVllmModelLoader
+                logging.info(
+                    "Loading model using TNXVllmModelLoader for speculative decoding..."
+                )
+            else:
+                self._model_loader_class = TNXModelLoader
+                logging.info("Loading model using TNXModelLoader...")
             return
 
         if self.config.model_loader == "optimum":
@@ -137,26 +145,6 @@ class TransformersNeuronXService(object):
                     f"VllmModelLoader does not support this config: {self.config}"
                 )
 
-    def set_max_position_embeddings(self) -> None:
-        """
-        Sets the maximum position embeddings for the model configuration.
-
-        If n_positions is not specified in the config, it sets the default value to the minimum of
-        max_position_embeddings from the model config and 4096.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        if self.config.n_positions is None:
-            self.config.n_positions = min(
-                self.model_config.max_position_embeddings, 4096)
-            logging.info(
-                f"Setting default n_positions to {self.config.n_positions} based on model config."
-            )
-
     def set_configs(self, properties: dict) -> None:
         """
         Sets the model configuration properties and performs necessary setup for model loading.
@@ -167,16 +155,19 @@ class TransformersNeuronXService(object):
         Returns:
             None
         """
+        self.model_config = AutoConfig.from_pretrained(
+            properties.get("model_id") or properties.get("model_dir"),
+            revision=properties.get("revision"),
+            trust_remote_code=properties.get("trust_remote_code"))
+
+        utils = NeuronSmartDefaultUtils()
+        utils.apply_smart_defaults(properties,
+                                   copy.deepcopy(self.model_config.__dict__))
+
         self.config = TransformerNeuronXProperties(**properties)
         if self.config.rolling_batch != "disable":
             """batch_size needs to match max_rolling_batch_size for precompiled neuron models running rolling batch"""
             self.config.batch_size = self.config.max_rolling_batch_size
-
-        self.model_config = AutoConfig.from_pretrained(
-            self.config.model_id_or_path,
-            revision=self.config.revision,
-            trust_remote_code=self.config.trust_remote_code)
-        self.set_max_position_embeddings()
 
         if self.config.rolling_batch != "disable" and self.config.rolling_batch_strategy is None:
             if (self.model_config.model_type
@@ -188,6 +179,7 @@ class TransformersNeuronXService(object):
 
         logging.info(f"Model loading properties: {self.config}")
         self.set_model_loader_class()
+        logging.debug(f"Model loader class {self._model_loader_class}")
         if not self.config.task:
             self.config.task = task_from_config(self.model_config)
 
@@ -223,6 +215,9 @@ class TransformersNeuronXService(object):
             self.rolling_batch_config = build_vllm_rb_properties(properties)
             if self.model:
                 self.rolling_batch_config["preloaded_model"] = self.model
+            if hasattr(self.model_config, "generation_config"):
+                self.rolling_batch_config[
+                    "generation_config"] = self.model_config.generation_config
             self.rolling_batch = VLLMRollingBatch(self.config.model_id_or_path,
                                                   self.rolling_batch_config)
         elif self.config.rolling_batch != "disable":
@@ -284,7 +279,9 @@ class TransformersNeuronXService(object):
         Returns:
             None
         """
-        if properties.get("speculative_draft_model"):
+        rolling_batch = properties.get("rolling_batch", None)
+        is_vllm = rolling_batch and rolling_batch == "vllm"
+        if properties.get("speculative_draft_model") and not is_vllm:
             logging.info(
                 f"Loading draft model {properties.get('speculative_draft_model')} ..."
             )
@@ -312,6 +309,13 @@ class TransformersNeuronXService(object):
         if self.config.rolling_batch == "vllm" and self.config.model_loader == "vllm":
             """Model loading is being deferred to vLLMs model loader"""
             return
+        elif self.config.rolling_batch == "vllm" and self.config.model_loader == "tnx":
+            if self.config.speculative_draft_model:
+                self.model = self.model_loader.load_model()
+            else:
+                raise ValueError(
+                    f"Preloaded tnx model is only supported for speculative decoding for vllm."
+                    f"Use vllm model_loader instead.")
         elif self.config.rolling_batch == "vllm":
             self.model = self.model_loader.load_unwrapped_model()
         else:

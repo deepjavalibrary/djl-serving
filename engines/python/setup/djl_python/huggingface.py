@@ -126,21 +126,24 @@ class HuggingFaceService(object):
 
     def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
-        self._read_model_config(self.hf_configs.model_id_or_path)
-
         if is_rolling_batch_enabled(self.hf_configs.rolling_batch):
             _rolling_batch_cls = get_rolling_batch_class_from_str(
                 self.hf_configs.rolling_batch.value)
-            self.hf_configs.kwargs["model_config"] = self.model_config
             self.rolling_batch = _rolling_batch_cls(
                 self.hf_configs.model_id_or_path, properties,
                 **self.hf_configs.kwargs)
-            self._init_tokenizer(self.hf_configs.model_id_or_path)
+            self.tokenizer = self.rolling_batch.get_tokenizer()
+            self.model_config = self.rolling_batch.get_huggingface_model_config(
+            )
         elif is_streaming_enabled(self.hf_configs.enable_streaming):
+            self._read_model_config(self.hf_configs.model_id_or_path,
+                                    self.hf_configs.is_peft_model)
             self._init_tokenizer(self.hf_configs.model_id_or_path)
             self._init_model(self.hf_configs.model_id_or_path,
                              **self.hf_configs.kwargs)
         else:
+            self._read_model_config(self.hf_configs.model_id_or_path,
+                                    self.hf_configs.is_peft_model)
             if not self.hf_configs.task:
                 self.hf_configs.task = self.infer_task_from_model_architecture(
                 )
@@ -158,13 +161,22 @@ class HuggingFaceService(object):
 
     def get_input_format_args(self):
         return {
-            "configs": self.hf_configs,
-            "tokenizer": self.tokenizer,
-            "adapter_registry": self.adapter_registry,
-            "model_config": self.model_config,
-            "peft_config": self.peft_config,
-            "rolling_batch": self.rolling_batch,
-            "image_placeholder_token": self.get_image_token(),
+            "configs":
+            self.hf_configs,
+            "tokenizer":
+            self.tokenizer,
+            "adapter_registry":
+            self.adapter_registry,
+            "model_config":
+            self.model_config,
+            "peft_config":
+            self.peft_config,
+            "rolling_batch":
+            self.rolling_batch,
+            "image_placeholder_token":
+            self.get_image_token(),
+            "is_mistral_tokenizer":
+            getattr(self.rolling_batch, 'is_mistral_tokenizer', False)
         }
 
     @staticmethod
@@ -438,48 +450,40 @@ class HuggingFaceService(object):
             )
         return task
 
-    def _read_model_config(self, model_config_path: str):
-        try:
-            self.model_config = AutoConfig.from_pretrained(
-                model_config_path,
-                trust_remote_code=self.hf_configs.trust_remote_code,
-                revision=self.hf_configs.revision)
-        except OSError:
-            logging.warning(
-                f"config.json not found for {model_config_path}. Attempting to load with peft"
-            )
+    def _read_model_config(self, model_config_path: str, is_peft_model: bool):
+        base_model_id = model_config_path
+        if is_peft_model:
             self.peft_config = PeftConfig.from_pretrained(model_config_path)
-            self.model_config = AutoConfig.from_pretrained(
-                self.peft_config.base_model_name_or_path,
-                trust_remote_code=self.hf_configs.trust_remote_code,
-                revision=self.hf_configs.revision,
-            )
-        except Exception as e:
-            logging.error(
-                f"{model_config_path} does not contain a config.json or adapter_config.json for lora models. "
-                f"This is required for loading huggingface models",
-                exc_info=True)
-            raise e
-
-    def get_image_token(self):
-        if self.hf_configs.image_placeholder_token:
-            return self.hf_configs.image_placeholder_token
-
-        logging.warning(
-            "image_placeholder_token is not explicitly set. It is highly recommended to explicitly"
-            "set the image_placeholder_token as it differs between models, and is not easy to infer from the model or tokenizer"
+            base_model_id = self.peft_config.base_model_name_or_path
+        self.model_config = AutoConfig.from_pretrained(
+            base_model_id,
+            trust_remote_code=self.hf_configs.trust_remote_code,
+            revision=self.hf_configs.revision,
         )
 
-        # TODO: Improve. We hardcode these for know model architectures as it is the most accurate and quickest way to set
-        # This is less than ideal, but until there is a good way to obtain this from the tokenizer/model, it's the best way to do so
+    def get_image_token(self):
+        if self.model_config is None:
+            return None
         model_type = self.model_config.model_type
         if model_type == "phi3_v":
-            # phi3_v does support multiple images, but vllm/lmi-dist can only support 1 per request
-            return "<|image_1|>"
-        if model_type in {"llava", "llava_next", "paligemma"}:
+            return "<|image_{}|>"
+        if model_type == "minicpmv":
+            return "(<image>./</image>)"
+        if model_type in ("blip-2", "chatglm", "fuyu", "paligemma", "pixtral"):
+            # These models do not use image tokens in the prompt
+            return None
+        if model_type == "qwen":
+            return "Picture {}: <img></img>"
+        if model_type.startswith("llava"):
             return "<image>"
+        if model_type in ("chameleon", "internvl_chat"):
+            return "<image>"
+        if model_type == "mllama":
+            return "<|image|>"
+        if model_type == "qwen2_vl":
+            return "<|vision_start|><|image_pad|><|vision_end|>"
 
-        logging.warning(
+        logging.debug(
             "could not infer image token from the model artifacts. Using <image> as default."
         )
         return "<image>"

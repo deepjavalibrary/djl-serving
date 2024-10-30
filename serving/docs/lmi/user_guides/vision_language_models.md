@@ -1,10 +1,7 @@
 # Vision Language Models in LMI
 
-> [!WARNING]
-> Vision Language Model support is currently experimental in v0.29.0.
-> LMI currently only supports using VLMs with the lmi-dist and vllm backends.
 
-Starting with v0.29.0, LMI supports deploying the following types of Vision Language Models:
+LMI supports deploying the following types of Vision Language Models:
 
 * llava (e.g. llava-hf/llava-1.5-7b-hf)
 * llava_next (e.g. llava-hf/llava-v1.6-mistral-7b-hf)
@@ -12,6 +9,8 @@ Starting with v0.29.0, LMI supports deploying the following types of Vision Lang
 * paligemma (e.g. google/paligemma-3b-mix-224)
 * chameleon (facebook/chameleon-7b etc.)
 * fuyu (adept/fuyu-8b etc.)
+* pixtral (mistralai/Pixtral-12B-2409)
+* mLlama (meta-llama/Llama-3.2-11B-Vision-Instruct)
 
 ## Request Format
 
@@ -21,9 +20,9 @@ You can read more about the supported format in the [chat completions doc](chat_
 ## Deploying with LMI
 
 Deploying Vision Language Models with LMI is very similar to deploying Text Generation Models.
-There is an additional, optional config that is exposed, `option.image_placeholder_token` that we recommend you set.
-This config specifies the image placeholder token, which is then used by the model's processor and tokenizer to determine where to place the image content in the prompt.
-We recommend you set this value explicitly because it is challenging to determine from the model artifacts.
+
+There are some additional, optional configs that are exposed:
+* `option.limit_mm_per_prompt`: For each multimodal plugin, limit how many input instances to allow for each prompt. Expects a comma-separated list of items, e.g.: `image=16,video=2` allows a maximum of 16 images and 2 videos per prompt. Defaults to 1 for each modality.
 
 Example SageMaker deployment code:
 
@@ -33,7 +32,7 @@ from sagemaker.djl_inference import DJLModel
 model = DJLModel(
     model_id="llava-hf/llava-v1.6-mistral-7b-hf",
     env={
-        "OPTION_IMAGE_PLACEHOLDER_TOKEN": "<image>",
+        "OPTION_LIMIT_MM_PER_PROMPT": "image=2",
     }
 )
 
@@ -50,6 +49,12 @@ messages = {
                     "type": "image_url",
                     "image_url": {
                         "url": "https://resources.djl.ai/images/dog_bike_car.jpg"
+                    }
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "https://resources.djl.ai/images/kitten.jpg"
                     }
                 }
             ]

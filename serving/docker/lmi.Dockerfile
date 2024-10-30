@@ -12,32 +12,34 @@
 ARG version=12.4.1-devel-ubuntu22.04
 FROM nvidia/cuda:$version
 ARG cuda_version=cu124
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 # Base Deps
 ARG python_version=3.10
 ARG torch_version=2.4.0
 ARG torch_vision_version=0.19.0
 ARG onnx_version=1.19.0
 ARG pydantic_version=2.8.2
-ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.43.2
-ARG accelerate_version=0.32.1
-ARG bitsandbytes_version=0.43.1
-ARG optimum_version=1.21.2
+ARG transformers_version=4.45.2
+ARG accelerate_version=1.0.1
+ARG bitsandbytes_version=0.44.1
+ARG optimum_version=1.23.0
 ARG auto_gptq_version=0.7.1
-ARG datasets_version=2.20.0
+ARG datasets_version=3.0.1
 ARG autoawq_version=0.2.5
-ARG tokenizers_version=0.19.1
+ARG tokenizers_version=0.20.1
 # LMI-Dist Deps
-ARG vllm_version=0.5.5
+ARG vllm_wheel="https://publish.djl.ai/vllm/cu124-pt240/vllm-0.6.2%2Bcu124-cp310-cp310-linux_x86_64.whl"
 ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.2/flashinfer-0.1.2+cu121torch2.4-cp310-cp310-linux_x86_64.whl"
+ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp310-cp310-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
-ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
+# TODO: update this back to nightly wheel once required deps have been updated
+ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-12.0.0-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
-ARG peft_version=0.11.1
+ARG peft_version=0.13.2
 
 EXPOSE 8080
 
@@ -56,9 +58,12 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
-ENV PYTORCH_FLAVOR=cu121-precxx11
+ENV PYTORCH_FLAVOR=cu124-precxx11
 ENV VLLM_NO_USAGE_STATS=1
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
+# 0.6.2 is the last version that contains legacy support for beam search
+# TODO: update beam search logic and implementation in handlers
+ENV VLLM_ALLOW_DEPRECATED_BEAM_SEARCH=1
 
 
 ENV HF_HOME=/tmp/.cache/huggingface
@@ -88,19 +93,19 @@ RUN mv *.deb djl-serving_all.deb || true
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-dev libopenmpi-dev g++ \
     && scripts/install_openssh.sh \
-    && scripts/install_djl_serving.sh $djl_version \
-    && scripts/install_djl_serving.sh $djl_version ${torch_version} \
+    && scripts/install_djl_serving.sh $djl_version $djl_serving_version \
+    && scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} \
     && djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version \
     && djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version \
     && scripts/install_python.sh ${python_version} \
     && scripts/install_s5cmd.sh x64 \
     && mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin \
-    && echo "${djl_version} lmi" > /opt/djl/bin/telemetry \
+    && echo "${djl_serving_version} lmi" > /opt/djl/bin/telemetry \
     && pip3 cache purge \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
-    ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
+RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --index-url https://download.pytorch.org/whl/cu124
+RUN pip3 install ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
     auto-gptq==${auto_gptq_version} pandas pyarrow jinja2 retrying \
@@ -111,7 +116,7 @@ RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --
     && git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
     && pip3 cache purge
 
-RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} vllm==${vllm_version} ${flash_infer_wheel} \
+RUN pip3 install ${flash_attn_2_wheel} ${lmi_dist_wheel} ${vllm_wheel} ${flash_infer_wheel} \
     && pip3 cache purge
 
 # Add CUDA-Compat
@@ -128,10 +133,11 @@ RUN scripts/patch_oss_dlc.sh python \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.lmi="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.lmi="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.lmi="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
-# To use the 535 CUDA driver, CUDA 12.1 can work on this one too
-LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
+# To use the 535 CUDA driver, CUDA 12.4 can work on this one too
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.4

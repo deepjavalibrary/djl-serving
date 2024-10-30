@@ -141,7 +141,7 @@ class Slot:
         if self._generation_config.do_sample:
             self._generation_config.temperature = param.get("temperature", 0.9)
             self._generation_config.top_k = param.get("top_k", 0)
-            self._generation_config.top_p = param.get("top_p", 1.0)
+            self._generation_config.top_p = param.get("top_p", 0.9)
             self._generation_config.typical_p = param.get("typical_p", 1.0)
             self.seed = int(param.get("seed", 0))
 
@@ -231,7 +231,8 @@ class Slot:
         Return:
             `torch.LongTensor`: A scalar torch.LongTensor` containing the selected token.
         """
-        next_ids, next_log_probs = self._selector.select(input_ids, logits)
+        next_ids, next_log_probs = self._selector.select_with_logprobs(
+            input_ids, logits)
         return next_ids[0], next_log_probs
 
     def increment_cache_id(self):

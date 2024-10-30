@@ -5,12 +5,13 @@ In LMI, we offer two different running modes to operate the backend engine:
 - Distributed Environment (MPI): Used to operate on single machine multi-gpu or multiple machines multi-gpu use cases
 - Standard Python process (Python): Start a standalone python process to run the engine
 
-Depends on the engine architecture, settings and use case you are pursuing into, you can choose one of the options to run with LMI.
-Here we are providing the common Engine selection for different backends we offer:
+You specify this operating mode through the `option.mpi_mode=<true|false>` configuration.
+
+The operating modes for the built-in inference engines are described below.
 
 - TensorRT-LLM (MPI): Use multiple MPI processes to run the backends
 - LMI-Dist (MPI): Launching using multiple MPI processes to control for different GPUs
-- vLLM (Python): vLLM internally will use Ray to spin up multiple processes, so managed at vLLM layer
+- vLLM (Python): vLLM internally will use Ray to spin up multiple processes
 - HuggingFace Accelerate (Python): HF Accelerate internally managed the process workflow
 - TransformerNeuronX (Python): The Neuron backend engine, internally it will use multi-threading to run with Neuron cores.
 
@@ -20,10 +21,10 @@ In the next section, we will introduce a detailed breakdown on how we run those 
 
 ![python image](../imgs/python_mode.jpg)
 
-DJLServing could operate with our Python Engine. In Python operating mode, we will spin up a python process
-from the system environment and allocate Accelerators (GPU/Neuron) for each processes through `CUDA_VISIBLE_DEVICES`. During auto-scaling mode,
-DJLServing could manage workers' Accelerators allocation and spin up process with different Accelerators (GPU/Neuron).
-Under python Engine mode, DJLServing will establish socket connection and talk to the python process.
+In Python operating mode, LMI launches Python processes based on scanning
+the system environment and number of Accelerators (GPU/Neuron) for each process through `CUDA_VISIBLE_DEVICES`. During auto-scaling mode,
+LMI manages Accelerators allocation and spins up processes with different Accelerators (GPU/Neuron).
+Under python Engine mode, LMI will establish socket connection and talk to the python process.
 
 ### Enablement
 
@@ -33,9 +34,15 @@ serving.properties
 
 ```
 engine=Python
+option.mpi_mode=false
 ```
 
-Environment variable (no need to set)
+Environment variables
+
+```
+OPTION_ENGINE=Python
+OPTION_MPI_MODE=false
+```
 
 We use python mode by default as long as you specify `option.model_id`.
 
@@ -44,14 +51,14 @@ We use python mode by default as long as you specify `option.model_id`.
 ![mpi image](../imgs/mpi_mode.jpg)
 
 MPI in general means "Multi-Process-Interface". In LMI domain, you could also read as "Multi-Process-Inference".
-DJLServing internally will use `mpirun` to spin up multiple processes depends on the setup.
-The number of process for LLM applications following `tensor_parallel_degree`. 
-To operate in this model, DJLServing established multiple socket connects to each process for communication and health check.
-During each operation call (e.g. inference), DJLServing will send the same request to each process. At response back time, 
-DJLServing will just receive 1 result from rank 0 of the total processes.
+DJLServing internally uses `mpirun` to spin up multiple processes depends on the setup.
+The number of processes for LLM applications follows the `tensor_parallel_degree` configuration. 
+LMI establishes multiple socket connects to each process for communication and health check.
+During each operation call (e.g. inference), LMI will send the same request to each process. At response back time, 
+LMI will just receive 1 result from rank 0 of the total processes.
 
-MPI model also works well with DJLServing auto-scaling feature, user could specify multiple workers using different GPUs.
-DJLServing could spin up the corresponding copies in MPI environment.
+MPI model also works well with LMI auto-scaling feature, user could specify multiple workers using different GPUs.
+LMI will spin up the corresponding copies in MPI environment.
 
 ### Enablement
 
@@ -60,12 +67,14 @@ You can use the following ways to enable MPI Engine:
 serving.properties
 
 ```
-engine=MPI
+engine=Python
+option.mpi_mode=true
 ```
 
 Environment variable
 
 ```
+OPTION_ENGINE=Python
 OPTION_MPI_MODE=true
 ```
 

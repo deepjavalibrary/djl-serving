@@ -18,6 +18,7 @@ from collections import OrderedDict, defaultdict
 from lmi_dist.api import Request, RequestParams
 from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
+from lmi_dist.seq2seq_engine import Seq2SeqPreprocessor
 from vllm import SamplingParams
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
@@ -28,9 +29,8 @@ from djl_python.rolling_batch.rolling_batch_vllm_utils import (
 from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
-_WARMUP_PREFILL_TOKENS = 4096
 LMI_DIST_GENERATION_PARAMS = set(RequestParams().__dict__.keys()).union(
-    set(SamplingParams().__dict__.keys()))
+    set(SamplingParams().__struct_fields__)) - {"sampling_params"}
 
 
 class LmiDistRollingBatch(RollingBatch):
@@ -48,8 +48,6 @@ class LmiDistRollingBatch(RollingBatch):
         :param properties (dict): other properties of the model, such as decoder strategy
         """
         self.lmi_dist_config = LmiDistRbProperties(**properties)
-        self.model_type = getattr(kwargs.get("model_config", None),
-                                  "model_type", None)
         super().__init__(self.lmi_dist_config)
         self.supports_speculative_decoding = supports_speculative_decoding()
         engine_kwargs = {}
@@ -68,6 +66,7 @@ class LmiDistRollingBatch(RollingBatch):
             dtype=DTYPE_MAPPER[self.lmi_dist_config.dtype],
             seed=0,
             max_model_len=self.lmi_dist_config.max_model_len,
+            max_num_seqs=self.lmi_dist_config.max_rolling_batch_size,
             enforce_eager=self.lmi_dist_config.enforce_eager,
             gpu_memory_utilization=self.lmi_dist_config.gpu_memory_utilization,
             max_num_batched_tokens=self.lmi_dist_config.
@@ -85,16 +84,29 @@ class LmiDistRollingBatch(RollingBatch):
             cpu_offload_gb=self.lmi_dist_config.cpu_offload_gb_per_gpu,
             enable_prefix_caching=self.lmi_dist_config.enable_prefix_caching,
             disable_sliding_window=self.lmi_dist_config.disable_sliding_window,
+            limit_mm_per_prompt=self.lmi_dist_config.limit_mm_per_prompt,
+            use_passive_workers=self.lmi_dist_config.use_passive_workers,
+            tokenizer_mode=self.lmi_dist_config.tokenizer_mode,
             **engine_kwargs)
 
         kwargs = {}
         logging.info(f"engine_args: {engine_args}, kwargs: {kwargs}")
 
         if self.lmi_dist_config.max_rolling_batch_prefill_tokens is None:
-            kwargs["warmup_prefill_tokens"] = _WARMUP_PREFILL_TOKENS
+            logging.warning(
+                "djl-serving/lmi has changed the default behavior for max_rolling_batch_prefill_tokens in 0.30.0 (lmi v12). "
+                "Previously, when max_rolling_batch_prefill_tokens was unset, djl-serving would use a warmup prefill limit of 4096 tokens. "
+                "This behavior differs from vLLM's default behavior, which (essentially) defaults to max_model_len. As a result of this change, "
+                "model deployments that worked previously may fail due to higher memory requirements at model loading time for the warmup phase. "
+                "For more information on this change, and guidance on what configurations to set, please see "
+                "https://github.com/deepjavalibrary/djl-serving/tree/master/serving/docs/lmi/announcements/breaking_changes.md"
+            )
         self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
+        self.is_mistral_tokenizer = self.lmi_dist_config.tokenizer_mode == 'mistral'
+        self.is_t5_model = isinstance(self.engine.preprocessor,
+                                      Seq2SeqPreprocessor)
 
     def reset(self) -> None:
         """
@@ -105,9 +117,14 @@ class LmiDistRollingBatch(RollingBatch):
         super().reset()
 
     def get_tokenizer(self):
-        if "t5" == self.model_type:
+        if self.is_t5_model:
             return self.engine.preprocessor.tokenizer
         return self.engine.preprocessor.tokenizer.tokenizer
+
+    def get_huggingface_model_config(self):
+        # TODO: this is a hack right now to get the model config from the engine. We should expose this as
+        # an interface method and retrieve it from there after v12
+        return self.engine.preprocessor.model_config.hf_config if not self.is_t5_model else None
 
     def translate_lmi_dist_params(self, parameters: dict):
         """
@@ -162,6 +179,7 @@ class LmiDistRollingBatch(RollingBatch):
         """
         self.add_new_requests(new_requests)
         # step 0: register new requests to engine
+        new_lmi_dist_requests = []
         for request in new_requests:
             request_id = str(request.id)
             llm_input = get_prompt_inputs(request)
@@ -173,14 +191,18 @@ class LmiDistRollingBatch(RollingBatch):
             lmi_dist_request = Request(
                 id=request_id,
                 prompt=llm_input.get("prompt"),
+                prompt_token_ids=llm_input.get("prompt_token_ids"),
                 multi_modal_input=llm_input.get("multi_modal_data"),
                 params=request_params,
                 lora_request=lora_request_params["lora_request"]
                 if lora_request_params else None)
-            self.engine.add_request(lmi_dist_request)
+            new_lmi_dist_requests.append(lmi_dist_request)
             self.request_cache[request_id] = {
                 "request_output": request.request_output
             }
+        if new_lmi_dist_requests:
+            self.engine.add_requests(new_lmi_dist_requests)
+
         request_outputs = self.engine.step()
 
         # step 1: put result to cache

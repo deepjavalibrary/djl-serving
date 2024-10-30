@@ -61,16 +61,16 @@ hf_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [16, 32],
         "worker": 1,
-        "stream_output": True,
+        "stream": [True],
     },
     "t5-large": {
         "max_memory_per_gpu": [5.0],
         "batch_size": [1],
         "seq_length": [32],
         "worker": 1,
-        "stream_output": True,
+        "stream": [True],
     },
-    "gpt4all-lora": {
+    "llama3-tiny-random-lora": {
         "max_memory_per_gpu": [10.0, 12.0],
         "batch_size": [1, 4],
         "seq_length": [16, 32],
@@ -389,6 +389,41 @@ lmi_dist_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "NousResearch/Hermes-3-Llama-3.1-8B"
+    },
+    "llama32-3b-multi-worker-tp1-pp1": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama32-3b-multi-worker-tp2-pp1": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama32-3b-multi-worker-tp1-pp2": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama31-8b-pp-only": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama31-8b-tp2-pp2": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "llama31-8b-tp2-pp2-spec-dec": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+    },
+    "flan-t5-xl": {
+        "max_memory_per_gpu": [23.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
     }
 }
 
@@ -467,6 +502,18 @@ vllm_model_spec = {
         "batch_size": [1, 4],
         "seq_length": [256],
         "tokenizer": "tiiuae/falcon-11B"
+    },
+    "llama-68m-speculative-medusa": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "JackFram/llama-68m"
+    },
+    "llama-68m-speculative-eagle": {
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1, 4],
+        "seq_length": [256],
+        "tokenizer": "JackFram/llama-68m"
     },
     "llama-7b-unmerged-lora": {
         "max_memory_per_gpu": [15.0, 15.0],
@@ -654,7 +701,12 @@ trtllm_model_spec = {
         "batch_size": [1, 8],
         "seq_length": [256],
         "tokenizer": "google/flan-t5-xl",
-    }
+    },
+    "llama-3-1-8b": {
+        "batch_size": [1, 8],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3.1-8B",
+    },
 }
 
 trtllm_chat_model_spec = {
@@ -856,14 +908,27 @@ correctness_model_spec = {
 
 multi_modal_spec = {
     "llava_v1.6-mistral": {
-        "batch_size": [1, 4]
+        "max_memory_per_gpu": [25.0, 25.0],
+        "batch_size": [1, 4],
+        "tokenizer": "llava-hf/llava-v1.6-mistral-7b-hf"
     },
     "paligemma-3b-mix-448": {
-        "batch_size": [1, 4],
+        "max_memory_per_gpu": [25.0],
+        "batch_size": [1]
     },
     "phi-3-vision-128k-instruct": {
+        "max_memory_per_gpu": [25.0, 25.0],
         "batch_size": [1, 4],
-    }
+        "tokenizer": "microsoft/Phi-3-vision-128k-instruct"
+    },
+    "pixtral-12b": {
+        "max_memory_per_gpu": [25.0, 25.0, 25.0],
+        "batch_size": [1, 4],
+    },
+    "llama32-11b-multimodal": {
+        "max_memory_per_gpu": [25.0, 25.0, 25.0],
+        "batch_size": [1],
+    },
 }
 
 text_embedding_model_spec = {
@@ -1406,6 +1471,7 @@ def test_handler_rolling_batch(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     # dryrun phase
     req = {"inputs": batch_generation(1)[0]}
     seq_length = 100
@@ -1415,20 +1481,25 @@ def test_handler_rolling_batch(model, model_spec):
         req["parameters"].update(spec["parameters"])
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
-    LOGGER.info(f"req {req}")
-    res = send_json(req)
-    message = res.content.decode("utf-8")
-    LOGGER.info(f"res: {message}")
-    response_checker(res, message)
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        message = res.content.decode("utf-8")
+        LOGGER.info(f"res: {message}")
+        response_checker(res, message)
 
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            LOGGER.info(
-                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
-            )
-            req["parameters"]["max_new_tokens"] = seq_length
-            awscurl_run(req, spec.get("tokenizer", None), batch_size)
+            for stream in stream_values:
+                req["stream"] = stream
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                req["parameters"]["max_new_tokens"] = seq_length
+                awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
 def test_handler_adapters(model, model_spec):
@@ -1436,6 +1507,7 @@ def test_handler_adapters(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     # dryrun phase
     reqs = []
     inputs = batch_generation(len(spec.get("adapters")))
@@ -1450,24 +1522,28 @@ def test_handler_adapters(model, model_spec):
         req["parameters"] = params
         req["adapters"] = adapter
         reqs.append(req)
-    LOGGER.info(f"reqs {reqs}")
     for req in reqs:
-        res = send_json(req)
-        message = res.content.decode("utf-8")
-        LOGGER.info(f"res: {message}")
-        response_checker(res, message)
+        for stream in stream_values:
+            req["stream"] = stream
+            LOGGER.info(f"req: {req}")
+            res = send_json(req)
+            message = res.content.decode("utf-8")
+            LOGGER.info(f"res: {message}")
+            response_checker(res, message)
     # awscurl little benchmark phase
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            LOGGER.info(
-                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
-            )
-            for req in reqs:
-                req["parameters"]["max_new_tokens"] = seq_length
-            awscurl_run(reqs,
-                        spec.get("tokenizer", None),
-                        batch_size,
-                        dataset=True)
+            for stream in stream_values:
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                for req in reqs:
+                    req["parameters"]["max_new_tokens"] = seq_length
+                    req["stream"] = stream
+                awscurl_run(reqs,
+                            spec.get("tokenizer", None),
+                            batch_size,
+                            dataset=True)
     # Test removing and querying invalid/removed adapter
     del_adapter = spec.get("adapters")[0]
     res = requests.delete(
@@ -1499,6 +1575,7 @@ def test_handler_rolling_batch_chat(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     # dryrun phase
     req = {"messages": batch_generation_chat(1)[0]}
     seq_length = 100
@@ -1507,17 +1584,20 @@ def test_handler_rolling_batch_chat(model, model_spec):
     req["top_logprobs"] = 1
     if "adapters" in spec:
         req["adapters"] = spec.get("adapters")[0]
-    LOGGER.info(f"req {req}")
-    res = send_json(req)
-    LOGGER.info(f"res: {res.content}")
-    # awscurl little benchmark phase
-    for i, batch_size in enumerate(spec["batch_size"]):
-        for seq_length in spec["seq_length"]:
-            LOGGER.info(
-                f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
-            )
-            req["max_tokens"] = seq_length
-            awscurl_run(req, spec.get("tokenizer", None), batch_size)
+
+    for stream in stream_values:
+        req["stream"] = stream
+        LOGGER.info(f"req {req}")
+        res = send_json(req)
+        LOGGER.info(f"res: {res.content}")
+        # awscurl little benchmark phase
+        for i, batch_size in enumerate(spec["batch_size"]):
+            for seq_length in spec["seq_length"]:
+                LOGGER.info(
+                    f"Little benchmark: concurrency {batch_size} seq_len {seq_length}"
+                )
+                req["max_tokens"] = seq_length
+                awscurl_run(req, spec.get("tokenizer", None), batch_size)
 
 
 def test_handler(model, model_spec):
@@ -1525,38 +1605,41 @@ def test_handler(model, model_spec):
     spec = model_spec[args.model]
     if "worker" in spec:
         check_worker_number(spec["worker"])
+    stream_values = spec.get("stream", [False, True])
     for i, batch_size in enumerate(spec["batch_size"]):
         for seq_length in spec["seq_length"]:
-            if "t5" in model:
-                req = {"inputs": t5_batch_generation(batch_size)}
-            else:
-                req = {"inputs": batch_generation(batch_size)}
-            if spec.get("adapters", []):
-                req["adapters"] = spec.get("adapters")
-            params = {"max_new_tokens": seq_length}
-            if spec.get("details", False):
-                params["details"] = True
-            req["parameters"] = params
-            LOGGER.info(f"req {req}")
-            res = send_json(req)
-            if spec.get("stream_output", False):
-                LOGGER.info(f"res: {res.content}")
-                result = res.content.decode().split("\n")[:-1]
-                assert len(
-                    result
-                ) <= seq_length, "generated more tokens than max_new_tokens"
-            else:
-                res = res.json()
-                LOGGER.info(f"res {res}")
-                if isinstance(res, list):
-                    result = [item['generated_text'] for item in res]
-                    assert len(result) == batch_size
-                elif isinstance(res, dict):
-                    assert 1 == batch_size
-            if "max_memory_per_gpu" in spec:
-                validate_memory_usage(spec["max_memory_per_gpu"][i])
-            if "tokenizer" in spec:
-                awscurl_run(req, spec.get("tokenizer"), batch_size)
+            for stream in stream_values:
+                if "t5" in model:
+                    req = {"inputs": t5_batch_generation(batch_size)}
+                else:
+                    req = {"inputs": batch_generation(batch_size)}
+                if spec.get("adapters", []):
+                    req["adapters"] = spec.get("adapters")
+                params = {"max_new_tokens": seq_length}
+                if spec.get("details", False):
+                    params["details"] = True
+                req["parameters"] = params
+                req["stream"] = stream
+                LOGGER.info(f"req {req}")
+                res = send_json(req)
+                if stream:
+                    LOGGER.info(f"res: {res.content}")
+                    result = res.content.decode().split("\n")[:-1]
+                    assert len(
+                        result
+                    ) <= seq_length, "generated more tokens than max_new_tokens"
+                else:
+                    res = res.json()
+                    LOGGER.info(f"res {res}")
+                    if isinstance(res, list):
+                        result = [item['generated_text'] for item in res]
+                        assert len(result) == batch_size
+                    elif isinstance(res, dict):
+                        assert 1 == batch_size
+                if "max_memory_per_gpu" in spec:
+                    validate_memory_usage(spec["max_memory_per_gpu"][i])
+                if "tokenizer" in spec:
+                    awscurl_run(req, spec.get("tokenizer"), batch_size)
 
 
 def log_awscurl_benchmark(metric_name: str,
@@ -1733,19 +1816,40 @@ def test_correctness(model, model_spec):
             validate_correctness(dataset, data, score)
 
 
-def get_multimodal_prompt():
+def get_multimodal_prompt(batch_size):
+    image_urls = [{
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/dog_bike_car.jpg",
+        }
+    }, {
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/kitten.jpg",
+        }
+    }, {
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/kitten_small.jpg",
+        }
+    }, {
+        "type": "image_url",
+        "image_url": {
+            "url": "https://resources.djl.ai/images/truck.jpg",
+        }
+    }]
+
+    if batch_size > len(image_urls):
+        # dynamically extend to support larger bs by repetition
+        image_urls *= math.ceil(batch_size / len(image_urls))
+
     messages = [{
         "role":
         "user",
         "content": [{
             "type": "text",
             "text": "What is this an image of?",
-        }, {
-            "type": "image_url",
-            "image_url": {
-                "url": "https://resources.djl.ai/images/dog_bike_car.jpg",
-            }
-        }]
+        }, *image_urls[:batch_size]]
     }]
     return {
         "messages": messages,
@@ -1760,9 +1864,16 @@ def test_multimodal(model, model_spec):
         raise ValueError(
             f"{model} is not currently supported {list(model_spec.keys())}")
     spec = model_spec[model]
-    messages = get_multimodal_prompt()
     for i, batch_size in enumerate(spec["batch_size"]):
-        awscurl_run(messages,
+        req = get_multimodal_prompt(batch_size)
+        logging.info(f"req {req}")
+        res = send_json(req).json()
+        logging.info(f"res: {res}")
+        if "max_memory_per_gpu" in spec:
+            validate_memory_usage(spec["max_memory_per_gpu"][i])
+
+        # awscurl little benchmark phase
+        awscurl_run(req,
                     spec.get("tokenizer", None),
                     batch_size,
                     num_run=5,

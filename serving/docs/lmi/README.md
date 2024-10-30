@@ -25,11 +25,12 @@ LMI containers provide many features, including:
 * Multi GPU inference using Tensor Parallelism
 * Serving LoRA fine-tuned models
 * Text Embedding to convert text data into numerical vectors 
+* Speculative Decoding support to decrease latency
 
 LMI containers provide these features through integrations with popular inference libraries.
 A unified configuration format enables users to easily leverage the latest optimizations and technologies across libraries.
 We will refer to each of these libraries as `backends` throughout the documentation. 
-The term backend refers to a combination of Engine (LMI uses the Python and MPI Engines) and inference library.
+The term backend refers to a combination of Engine (LMI uses the Python Engine) and inference library.
 You can learn more about the components of LMI [here](deployment_guide/README.md#components-of-lmi).
 
 ## QuickStart
@@ -47,7 +48,7 @@ It also provides sample code to deploy your model using LMI on SageMaker.
 
 ### Advanced Deployment Guide
 
-We have put together a comprehensive [deployment guide](deployment_guide/README.md) that takes you through the steps needed to deploy a model using LMI containers on SageMaker.
+The [advanced deployment guide](deployment_guide/README.md) takes you through the steps needed to deploy a model using LMI containers on SageMaker.
 The document covers the phases from storing your model artifacts through benchmarking your SageMaker endpoint.
 It is intended for users moving towards deploying LLMs in production settings.
 
@@ -73,9 +74,9 @@ This information is also available on the SageMaker DLC [GitHub repository](http
 
 | Backend                | SageMakerDLC    | Example URI                                                                               |
 |------------------------|-----------------|-------------------------------------------------------------------------------------------|
-| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124         |
-| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124         |
-| `hf-accelerate`        | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-lmi11.0.0-cu124         |
+| `vLLM`                 | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
+| `lmi-dist`             | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
+| `hf-accelerate`        | djl-lmi         | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.30.0-lmi12.0.0-cu124         |
 | `tensorrt-llm`         | djl-tensorrtllm | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-tensorrtllm0.11.0-cu124 |
 | `transformers-neuronx` | djl-neuronx     | 763104351884.dkr.ecr.us-east-1.amazonaws.com/djl-inference:0.29.0-neuronx-sdk2.19.1       |
 

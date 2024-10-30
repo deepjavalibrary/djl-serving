@@ -13,10 +13,9 @@
 from collections import OrderedDict
 from typing import Any
 
-from vllm import EngineArgs
+from vllm import EngineArgs, TokensPrompt, TextPrompt
 from vllm.outputs import CompletionOutput, RequestOutput as vLLMRequestOutput
 from vllm.lora.request import LoRARequest
-from vllm.inputs import PromptInputs
 
 from djl_python.request_io import Token, Sequence
 from djl_python.request import Request
@@ -59,18 +58,19 @@ def update_request_cache_with_output(request_cache: OrderedDict,
 
     # sets prompt token details if not set
     if not request_output.prompt_tokens_details:
-        # TODO: Temp check adding the check fo T5.
+        # TODO: Temp check adding the check for T5.
         if isinstance(vllm_request_output.prompt_token_ids, list):
+            converted_texts_from_ids = tokenizer.convert_ids_to_tokens(
+                vllm_request_output.prompt_token_ids)
             for index, prompt_token_id in enumerate(
                     vllm_request_output.prompt_token_ids):
                 log_prob = None
                 if vllm_request_output.prompt_logprobs and index > 0:
                     log_prob = vllm_request_output.prompt_logprobs[index][
                         prompt_token_id].logprob
-                prompt_token = Token(
-                    id=prompt_token_id,
-                    text=tokenizer.convert_ids_to_tokens(prompt_token_id),
-                    log_prob=log_prob)
+                prompt_token = Token(id=prompt_token_id,
+                                     text=converted_texts_from_ids[index],
+                                     log_prob=log_prob)
                 request_output.prompt_tokens_details.append(prompt_token)
 
     # sets the details of all sequences
@@ -240,11 +240,14 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
                           max_num_seqs=config.max_rolling_batch_size,
                           block_size=config.max_model_len,
                           trust_remote_code=config.trust_remote_code,
-                          revision=config.revision)
+                          revision=config.revision,
+                          device=config.device,
+                          generation_config=config.generation_config)
     else:
         return EngineArgs(
             model=config.model_id_or_path,
             tensor_parallel_size=config.tensor_parallel_degree,
+            pipeline_parallel_size=config.pipeline_parallel_degree,
             dtype=DTYPE_MAPPER[config.dtype],
             seed=0,
             max_model_len=config.max_model_len,
@@ -265,6 +268,30 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             cpu_offload_gb=config.cpu_offload_gb_per_gpu,
             enable_prefix_caching=config.enable_prefix_caching,
             disable_sliding_window=config.disable_sliding_window,
+            max_num_seqs=config.max_rolling_batch_size,
+            use_v2_block_manager=config.use_v2_block_manager,
+            speculative_model=config.speculative_model,
+            speculative_model_quantization=config.
+            speculative_model_quantization,
+            speculative_draft_tensor_parallel_size=config.
+            speculative_draft_tensor_parallel_size,
+            num_speculative_tokens=config.num_speculative_tokens,
+            speculative_max_model_len=config.speculative_max_model_len,
+            speculative_disable_by_batch_size=config.
+            speculative_disable_by_batch_size,
+            ngram_prompt_lookup_max=config.ngram_prompt_lookup_max,
+            ngram_prompt_lookup_min=config.ngram_prompt_lookup_min,
+            spec_decoding_acceptance_method=config.
+            spec_decoding_acceptance_method,
+            typical_acceptance_sampler_posterior_threshold=config.
+            typical_acceptance_sampler_posterior_threshold,
+            typical_acceptance_sampler_posterior_alpha=config.
+            typical_acceptance_sampler_posterior_alpha,
+            qlora_adapter_name_or_path=config.qlora_adapter_name_or_path,
+            disable_logprobs_during_spec_decoding=config.
+            disable_logprobs_during_spec_decoding,
+            limit_mm_per_prompt=config.limit_mm_per_prompt,
+            tokenizer_mode=config.tokenizer_mode,
         )
 
 
@@ -273,14 +300,19 @@ def get_multi_modal_data(request: Request) -> dict:
     images = parameters.pop("images", None)
     multi_modal_data = None
     if images:
-        # vLLM only supports one image per request.
-        multi_modal_data = {"image": images[0]}
+        multi_modal_data = {"image": images}
     return multi_modal_data
 
 
 def get_prompt_inputs(request: Request):
-    prompt_inputs: PromptInputs = {"prompt": request.request_input.input_text}
+    text_prompt = request.request_input.input_text
     multi_modal_data = get_multi_modal_data(request)
-    if multi_modal_data:
-        prompt_inputs["multi_modal_data"] = multi_modal_data
-    return prompt_inputs
+    # TODO: In chat cases, we need to apply the chat template to the messages object to get a string
+    # In both HuggingFace and mistral cases, that process can also yield token-ids directly
+    # that we may want to consider passing directly to the engine
+    if isinstance(text_prompt, list):
+        return TokensPrompt(prompt_token_ids=text_prompt,
+                            multi_modal_data=multi_modal_data)
+    else:
+        return TextPrompt(prompt=text_prompt,
+                          multi_modal_data=multi_modal_data)

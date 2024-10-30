@@ -1006,6 +1006,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             int tpDegree;
             if ("max".equals(v)) {
                 if (gpuCount > 0) {
+                    // TODO pipeline parallel?
                     tpDegree = gpuCount;
                 } else {
                     tpDegree = NeuronUtils.getNeuronCores();
@@ -1013,13 +1014,18 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             } else {
                 tpDegree = Integer.parseInt(v);
             }
+
+            v = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
+            v = prop.getProperty("option.pipeline_parallel_degree", v);
+            int ppDegree = Integer.parseInt(v);
+
             if (gpuCount > 0) {
                 int gpuPerWorker = 1;
                 if (Boolean.parseBoolean(prop.getProperty("option.mpi_mode"))) {
                     return new String[] {"0"};
                 } else if ("Python".equals(engineName)) {
                     if (tpDegree > 0) {
-                        gpuPerWorker = tpDegree;
+                        gpuPerWorker = tpDegree * ppDegree;
                         int procs = gpuCount / gpuPerWorker;
                         if (procs == 0) {
                             throw new EngineException(
@@ -1045,6 +1051,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 int ncPerWorker;
                 if (tpDegree > 0) {
                     // Assume user understand TP only works on inf2
+                    // TODO Pipeline parallel?
                     ncPerWorker = tpDegree;
                     int procs = neurons / ncPerWorker;
                     if (procs == 0) {
@@ -1229,7 +1236,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
             synchronized (this) {
                 for (Map.Entry<String, Adapter> adapter : adapters.entrySet()) {
-                    configJobs.add(adapter.getValue().registerJob(ModelInfo.this, this).getJob());
+                    configJobs.add(adapter.getValue().registerJob(ModelInfo.this).getJob());
                 }
             }
         }

@@ -10,7 +10,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM arm64v8/ubuntu:22.04
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 ARG torch_version=2.3.1
 
 EXPOSE 8080
@@ -38,13 +39,13 @@ COPY config.properties /opt/djl/conf/
 COPY distribution[s]/ ./
 RUN mv *.deb djl-serving_all.deb || true
 
-RUN scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_djl_serving.sh $djl_version $torch_version && \
-    scripts/install_djl_serving.sh $djl_version $torch_version && \
+RUN scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version $torch_version && \
     scripts/install_s5cmd.sh aarch64 && \
     djl-serving -i ai.djl.pytorch:pytorch-native-cpu-precxx11:$torch_version:linux-aarch64 && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} aarch" > /opt/djl/bin/telemetry && \
+    echo "${djl_serving_version} aarch" > /opt/djl/bin/telemetry && \
     rm -f /usr/local/djl-serving-*/lib/mxnet-* && \
     rm -f /usr/local/djl-serving-*/lib/tensorflow-* && \
     rm -f /usr/local/djl-serving-*/lib/tensorrt-* && \
@@ -57,8 +58,9 @@ RUN scripts/install_djl_serving.sh $djl_version && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.aarch64="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.aarch64="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.aarch64="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL torch-version=$torch_version

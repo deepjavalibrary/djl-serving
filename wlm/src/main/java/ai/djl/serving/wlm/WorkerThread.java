@@ -36,12 +36,12 @@ import java.util.stream.Collectors;
 public final class WorkerThread<I, O> implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkerThread.class);
+
     private static final AutoIncIdGenerator ID_GEN = new AutoIncIdGenerator("WT-");
 
     private ThreadConfig<I, O> threadConfig;
     private AtomicBoolean running = new AtomicBoolean(true);
 
-    private LinkedBlockingDeque<WorkerJob<I, O>> configJobs;
     private BatchAggregator<I, O> aggregator;
     private Device device;
     private AtomicReference<Thread> currentThread = new AtomicReference<>();
@@ -63,7 +63,6 @@ public final class WorkerThread<I, O> implements Runnable {
         this.fixPoolThread = builder.fixPoolThread;
         this.device = builder.device;
         threadConfig = builder.workerPoolConfig.newThread(device);
-        configJobs = new LinkedBlockingDeque<>();
 
         logger.info(
                 "Starting worker thread {} for model {} on device {}",
@@ -87,7 +86,6 @@ public final class WorkerThread<I, O> implements Runnable {
                 req = aggregator.getRequest();
                 if (req != null && !req.isEmpty()) {
                     state = WorkerState.WORKER_BUSY;
-                    runAllConfigJobs(); // Run new config jobs
                     try {
                         runJobs(req);
                         aggregator.sendResponse();
@@ -123,10 +121,6 @@ public final class WorkerThread<I, O> implements Runnable {
         while (!threadConfig.getConfigJobs().isEmpty()) {
             // Run base worker pool configurations if present
             runConfigJob(threadConfig.getConfigJobs().pop());
-        }
-        while (!configJobs.isEmpty()) {
-            // Run thread config jobs if present
-            runConfigJob(configJobs.pop().getJob());
         }
     }
 
@@ -226,15 +220,6 @@ public final class WorkerThread<I, O> implements Runnable {
         }
         logger.info("Shutting down temporary worker {}", workerId);
         threadConfig.close();
-    }
-
-    /**
-     * Adds a configuration job to this thread.
-     *
-     * @param wj the configuration job to add
-     */
-    public void addConfigJob(WorkerJob<I, O> wj) {
-        configJobs.add(wj);
     }
 
     void setState(WorkerState newState) {

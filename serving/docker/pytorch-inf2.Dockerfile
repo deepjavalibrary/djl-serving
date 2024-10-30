@@ -10,21 +10,24 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 FROM ubuntu:22.04
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 ARG torch_version=2.1.2
 ARG torchvision_version=0.16.2
 ARG python_version=3.10
-ARG neuronsdk_version=2.19.1
-ARG torch_neuronx_version=2.1.2.2.2.0
-ARG transformers_neuronx_version=0.11.351
-ARG neuronx_distributed_version=0.8.0
-ARG neuronx_cc_version=2.14.227.0
-ARG protobuf_version=3.19.6
+ARG neuronsdk_version=2.20.0
+ARG torch_neuronx_version=2.1.2.2.3.0
+ARG transformers_neuronx_version=0.12.313
+ARG neuronx_distributed_version=0.9.0
+ARG neuronx_cc_version=2.15.128.0
+ARG neuronx_cc_stubs_version=2.15.128.0
+ARG torch_xla_version=2.1.4
 ARG transformers_version=4.43.2
 ARG accelerate_version=0.29.2
 ARG diffusers_version=0.28.2
 ARG pydantic_version=2.6.1
 ARG optimum_neuron_version=0.0.24
+ARG huggingface_hub_version=0.25.2
 # %2B is the url escape for the '+' character
 ARG vllm_wheel="https://publish.djl.ai/neuron_vllm/vllm-0.6.0%2Bnightly-py3-none-any.whl"
 EXPOSE 8080
@@ -68,15 +71,16 @@ RUN mkdir -p /opt/djl/conf && \
 COPY config.properties /opt/djl/conf/
 COPY partition /opt/djl/partition
 RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} inf2" > /opt/djl/bin/telemetry && \
+    echo "${djl_serving_version} inf2" > /opt/djl/bin/telemetry && \
     scripts/install_python.sh && \
-    scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} && \
     scripts/install_inferentia2.sh && \
     pip install accelerate==${accelerate_version} safetensors torchvision==${torchvision_version} \
     neuronx-cc==${neuronx_cc_version} torch-neuronx==${torch_neuronx_version} transformers-neuronx==${transformers_neuronx_version} \
-    neuronx_distributed==${neuronx_distributed_version} protobuf==${protobuf_version} sentencepiece jinja2 \
-    diffusers==${diffusers_version} opencv-contrib-python-headless  Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
+    torch_xla==${torch_xla_version} neuronx-cc-stubs==${neuronx_cc_stubs_version} huggingface-hub==${huggingface_hub_version} \
+    neuronx_distributed==${neuronx_distributed_version} protobuf sentencepiece jinja2 \
+    diffusers==${diffusers_version} opencv-contrib-python-headless Pillow --extra-index-url=https://pip.repos.neuron.amazonaws.com \
     pydantic==${pydantic_version} optimum optimum-neuron==${optimum_neuron_version} tiktoken blobfile && \
     pip install transformers==${transformers_version} ${vllm_wheel} && \
     echo y | pip uninstall triton && \
@@ -90,8 +94,9 @@ RUN mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.inf2="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.inf2="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.inf2="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL neuronsdk-version=$neuronsdk_version

@@ -51,9 +51,13 @@ class VLLMRollingBatch(RollingBatch):
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
+        self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
 
     def get_tokenizer(self):
         return self.engine.tokenizer.tokenizer
+
+    def get_huggingface_model_config(self):
+        return self.engine.model_config.hf_config
 
     def reset(self) -> None:
         """

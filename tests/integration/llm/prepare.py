@@ -45,8 +45,8 @@ hf_handler_list = {
         "option.device_map": "auto",
         "option.enable_streaming": True,
     },
-    "gpt4all-lora": {
-        "option.model_id": "s3://djl-llm/gpt4all-lora/",
+    "llama3-tiny-random-lora": {
+        "option.model_id": "llamafactory/tiny-random-Llama-3-lora",
         "option.tensor_parallel_degree": 4,
         "option.device_map": "auto",
         "option.task": "text-generation",
@@ -190,7 +190,6 @@ transformers_neuronx_handler_list = {
         "option.max_rolling_batch_size": 4,
         "option.model_loading_timeout": 2400,
         "option.load_split_model": True,
-        "option.output_formatter": "jsonlines"
     },
     "llama-3-8b-rb-vllm": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
@@ -199,7 +198,6 @@ transformers_neuronx_handler_list = {
         "option.max_rolling_batch_size": 4,
         "option.rolling_batch": 'vllm',
         "option.model_loading_timeout": 2400,
-        "option.output_formatter": "jsonlines"
     },
     "tiny-llama-rb-vllm": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
@@ -209,7 +207,6 @@ transformers_neuronx_handler_list = {
         "option.rolling_batch": 'vllm',
         "option.model_loader": 'vllm',
         "option.model_loading_timeout": 1200,
-        "option.output_formatter": "jsonlines"
     },
     "mistral-7b-rb": {
         "option.model_id": "s3://djl-llm/mistral-7b-instruct-v02/",
@@ -225,7 +222,6 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 12,
         "option.max_rolling_batch_size": 1,
         "option.model_loading_timeout": 3600,
-        "option.output_formatter": "jsonlines"
     },
     "llama-speculative-compiled-rb": {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
@@ -238,7 +234,11 @@ transformers_neuronx_handler_list = {
         "option.tensor_parallel_degree": 12,
         "option.max_rolling_batch_size": 1,
         "option.model_loading_timeout": 3600,
-        "option.output_formatter": "jsonlines"
+    },
+    "tiny-llama-rb-lcnc": {
+        "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.rolling_batch": "auto",
+        "option.model_loading_timeout": 3600,
     },
     "tiny-llama-rb-aot": {
         "option.model_id": "s3://djl-llm/tinyllama-1.1b-chat/",
@@ -388,6 +388,7 @@ lmi_dist_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 2,
         "option.max_rolling_batch_size": 4,
+        "option.max_model_len": 32768,
         "option.quantize": "awq"
     },
     "mistral-7b-marlin": {
@@ -553,6 +554,7 @@ lmi_dist_model_list = {
     },
     "llava_v1.6-mistral": {
         "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
+        "option.limit_mm_per_prompt": "image=4",
     },
     "paligemma-3b-mix-448": {
         "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
@@ -560,13 +562,70 @@ lmi_dist_model_list = {
     },
     "phi-3-vision-128k-instruct": {
         "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
+        "option.limit_mm_per_prompt": "image=4",
         "option.trust_remote_code": True,
+        "option.max_model_len": 8192,
     },
     "llama-3.1-8b": {
         "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4
+    },
+    "pixtral-12b": {
+        "option.model_id": "s3://djl-llm/pixtral-12b/",
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.tokenizer_mode": "mistral",
+        "option.limit_mm_per_prompt": "image=4",
+        "option.entryPoint": "djl_python.huggingface"
+    },
+    "llama32-3b-multi-worker-tp1-pp1": {
+        "option.model_id": "s3://djl-llm/llama-3-2-3b-instruct/",
+        "option.tensor_parallel_degree": 1,
+        "option.pipeline_parallel_degree": 1,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama32-3b-multi-worker-tp2-pp1": {
+        "option.model_id": "s3://djl-llm/llama-3-2-3b-instruct/",
+        "option.tensor_parallel_degree": 2,
+        "option.pipeline_parallel_degree": 1,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama32-3b-multi-worker-tp1-pp2": {
+        "option.model_id": "s3://djl-llm/llama-3-2-3b-instruct/",
+        "option.tensor_parallel_degree": 1,
+        "option.pipeline_parallel_degree": 2,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama31-8b-pp-only": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 1,
+        "option.pipeline_parallel_degree": 4,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama31-8b-tp2-pp2": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 2,
+        "option.pipeline_parallel_degree": 2,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+    },
+    "llama31-8b-tp2-pp2-spec-dec": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-instruct-hf/",
+        "option.tensor_parallel_degree": 2,
+        "option.pipeline_parallel_degree": 2,
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.speculative_draft_model":
+        "s3://djl-llm/llama-3-2-1b-instruct/",
+    },
+    "flan-t5-xl": {
+        "option.model_id": "s3://djl-llm/flan-t5-xl/",
     }
 }
 
@@ -603,13 +662,11 @@ vllm_model_list = {
         "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "jsonlines"
     },
     "mixtral-8x7b": {
         "option.model_id": "s3://djl-llm/mixtral-8x7b/",
         "option.tensor_parallel_degree": 8,
         "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "jsonlines"
     },
     "qwen2-7b-fp8": {
         "option.model_id": "neuralmagic/Qwen2-7B-Instruct-FP8",
@@ -629,6 +686,24 @@ vllm_model_list = {
         "option.task": "text-generation",
         "option.tensor_parallel_degree": 4,
         "option.enable_chunked_prefill": "true",
+    },
+    "llama-68m-speculative-medusa": {
+        "option.model_id": "s3://djl-llm/llama-68m/",
+        "option.task": "text-generation",
+        "option.speculative_model": "abhigoyal/vllm-medusa-llama-68m-random",
+        "option.num_speculative_tokens": 4,
+        "option.use_v2_block_manager": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
+    },
+    "llama-68m-speculative-eagle": {
+        "option.model_id": "s3://djl-llm/llama-68m/",
+        "option.task": "text-generation",
+        "option.speculative_model": "abhigoyal/vllm-eagle-llama-68m-random",
+        "option.num_speculative_tokens": 4,
+        "option.use_v2_block_manager": True,
+        "option.tensor_parallel_degree": 1,
+        "option.max_rolling_batch_size": 4,
     },
     "llama-7b-unmerged-lora": {
         "option.model_id": "s3://djl-llm/huggyllama-llama-7b",
@@ -778,6 +853,35 @@ vllm_model_list = {
         "option.tensor_parallel_degree": 4,
         "option.max_rolling_batch_size": 4,
     },
+    "llava_v1.6-mistral": {
+        "option.model_id": "s3://djl-llm/llava-v1.6-mistral-7b-hf/",
+        "option.limit_mm_per_prompt": "image=4",
+    },
+    "paligemma-3b-mix-448": {
+        "option.model_id": "s3://djl-llm/paligemma-3b-mix-448/",
+        "option.tensor_parallel_degree": 1,
+    },
+    "phi-3-vision-128k-instruct": {
+        "option.model_id": "s3://djl-llm/phi-3-vision-128k-instruct/",
+        "option.limit_mm_per_prompt": "image=4",
+        "option.trust_remote_code": True,
+        "option.max_model_len": 8192,
+    },
+    "pixtral-12b": {
+        "option.model_id": "s3://djl-llm/pixtral-12b/",
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.tokenizer_mode": "mistral",
+        "option.limit_mm_per_prompt": "image=4",
+        "option.entryPoint": "djl_python.huggingface",
+        "option.tensor_parallel_degree": "max"
+    },
+    "llama32-11b-multimodal": {
+        "option.model_id": "s3://djl-llm/llama-3-2-11b-vision-instruct/",
+        "option.max_model_len": 8192,
+        "option.max_rolling_batch_size": 16,
+        "option.enforce_eager": True,
+    }
 }
 
 vllm_neo_model_list = {
@@ -818,7 +922,6 @@ trtllm_handler_list = {
         "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
         "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
     },
     "llama2-7b-smoothquant": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
@@ -827,25 +930,21 @@ trtllm_handler_list = {
         "option.smoothquant_per_token": "True",
         "option.smoothquant_per_channel": "True",
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
     },
     "internlm-7b": {
         "option.model_id": "internlm/internlm-7b",
         "option.tensor_parallel_degree": 4,
-        "option.output_formatter": "jsonlines",
         "option.trust_remote_code": True
     },
     "baichuan2-13b": {
         "option.model_id": "s3://djl-llm/baichuan2-13b/",
         "option.tensor_parallel_degree": 4,
         "option.baichuan_model_version": "v2_13b",
-        "option.output_formatter": "jsonlines",
         "option.trust_remote_code": True
     },
     "chatglm3-6b": {
         "option.model_id": "s3://djl-llm/chatglm3-6b/",
         "option.tensor_parallel_degree": 4,
-        "option.output_formatter": "jsonlines",
         "option.trust_remote_code": True,
         "option.chatglm_model_version": "chatglm3"
     },
@@ -853,7 +952,6 @@ trtllm_handler_list = {
         "option.model_id": "s3://djl-llm/mistral-7b/",
         "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines"
     },
     "gpt-j-6b": {
         "option.model_id": "s3://djl-llm/gpt-j-6b/",
@@ -862,13 +960,11 @@ trtllm_handler_list = {
         "option.max_output_len": 256,
         "option.max_rolling_batch_size": 16,
         "option.rolling_batch": "auto",
-        "option.output_formatter": "jsonlines"
     },
     "qwen-7b": {
         "option.model_id": "Qwen/Qwen-7B",
         "option.tensor_parallel_degree": 4,
         "option.trust_remote_code": True,
-        "option.output_formatter": "jsonlines"
     },
     "gpt2": {
         "option.model_id": "gpt2",
@@ -876,7 +972,6 @@ trtllm_handler_list = {
         "option.max_rolling_batch_size": 16,
         "option.trust_remote_code": True,
         "option.max_draft_len": 20,
-        "option.output_formatter": "jsonlines"
     },
     "santacoder": {
         "option.model_id": "bigcode/santacoder",
@@ -884,21 +979,18 @@ trtllm_handler_list = {
         "option.max_rolling_batch_size": 16,
         "option.trust_remote_code": True,
         "option.gpt_model_version": "santacoder",
-        "option.output_formatter": "jsonlines"
     },
     "llama2-70b": {
         "option.model_id": "s3://djl-llm/llama-2-70b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.use_custom_all_reduce": True,
         "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "jsonlines"
     },
     "mixtral-8x7b": {
         "option.model_id": "s3://djl-llm/mixtral-8x7b/",
         "option.tensor_parallel_degree": 8,
         "option.use_custom_all_reduce": False,
         "option.max_rolling_batch_size": 32,
-        "option.output_formatter": "jsonlines"
     },
     "llama2-7b-chat": {
         "option.model_id": "s3://djl-llm/meta-llama-Llama-2-7b-chat-hf/",
@@ -909,7 +1001,11 @@ trtllm_handler_list = {
     "flan-t5-xl": {
         "option.model_id": "s3://djl-llm/flan-t5-xl/",
         "option.dtype": "bf16"
-    }
+    },
+    "llama-3-1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.tensor_parallel_degree": 4,
+    },
 }
 
 correctness_model_list = {
@@ -995,54 +1091,46 @@ trtllm_neo_list = {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.tensor_parallel_degree": 1,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines"
     },
     "llama3-8b-tp4-awq": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
         "option.quantize": "awq"
     },
     "llama3-8b-tp4-fp8": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
         "option.quantize": "fp8"
     },
     "llama3-8b-tp4-smoothquant": {
         "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
         "option.tensor_parallel_degree": 4,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
         "option.quantize": "smoothquant"
     },
     "llama3-70b-tp8-fp16": {
         "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines"
     },
     "llama3-70b-tp8-awq": {
         "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
         "option.quantize": "awq"
     },
     "llama3-70b-tp8-fp8": {
         "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
         "option.quantize": "fp8"
     },
     "llama3-70b-tp8-smoothquant": {
         "option.model_id": "s3://djl-llm/llama-3-70b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.rolling_batch": "trtllm",
-        "option.output_formatter": "jsonlines",
         "option.quantize": "smoothquant"
     }
 }
@@ -1306,7 +1394,6 @@ def build_lmi_dist_model(model):
     options = lmi_dist_model_list[model]
     options["engine"] = "MPI"
     options["option.rolling_batch"] = "lmi-dist"
-    options["option.output_formatter"] = "jsonlines"
 
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])
@@ -1324,7 +1411,6 @@ def build_vllm_model(model):
     options = vllm_model_list[model]
     options["engine"] = "Python"
     options["option.rolling_batch"] = "vllm"
-    options["option.output_formatter"] = "jsonlines"
 
     adapter_ids = options.pop("adapter_ids", [])
     adapter_names = options.pop("adapter_names", [])
@@ -1353,7 +1439,6 @@ def build_lmi_dist_aiccl_model(model):
     options["option.task"] = "text-generation"
     options["option.tensor_parallel_degree"] = 8
     options["option.rolling_batch"] = "lmi-dist"
-    options["option.output_formatter"] = "jsonlines"
     options["option.max_rolling_batch_size"] = 16
     write_model_artifacts(options)
 
@@ -1396,7 +1481,6 @@ def build_correctness_model(model):
             f"{model} is not one of the supporting handler {list(correctness_model_list.keys())}"
         )
     options = correctness_model_list[model]
-    options["option.output_formatter"] = "json"
     write_model_artifacts(options)
 
 

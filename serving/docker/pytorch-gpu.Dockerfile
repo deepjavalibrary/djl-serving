@@ -13,13 +13,16 @@ ARG version=12.4.1-devel-ubuntu22.04
 
 FROM nvidia/cuda:$version as base
 
-ARG djl_version=0.30.0~SNAPSHOT
+ARG djl_version
+ARG djl_serving_version
 ARG cuda_version=cu124
 ARG torch_version=2.4.0
 ARG torch_vision_version=0.19.0
 ARG onnx_version=1.19.0
 ARG python_version=3.10
 ARG numpy_version=1.26.4
+ARG pydantic_version=2.8.2
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
 
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
@@ -43,7 +46,7 @@ ENV PYTORCH_FLAVOR=cu124-precxx11
 ENV TORCH_CUDNN_V8_API_DISABLED=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV HF_HOME=/tmp/.cache/huggingface
-ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 
 COPY distribution[s]/ ./
@@ -52,17 +55,18 @@ RUN mv *.deb djl-serving_all.deb || true
 COPY scripts scripts/
 SHELL ["/bin/bash", "-c"]
 RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
-    scripts/install_djl_serving.sh $djl_version && \
-    scripts/install_djl_serving.sh $djl_version ${torch_version} && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version && \
+    scripts/install_djl_serving.sh $djl_version $djl_serving_version ${torch_version} && \
     djl-serving -i ai.djl.onnxruntime:onnxruntime-engine:$djl_version && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
-    pip3 install numpy==${numpy_version} && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \
+    pip3 install peft pydantic==${pydantic_version} ${djl_converter_wheel} hf-transfer && \
+    pip3 install numpy==${numpy_version} && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu124 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-gpu && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
-    echo "${djl_version} pytorchgpu" > /opt/djl/bin/telemetry && \
+    echo "${djl_serving_version} pytorchgpu" > /opt/djl/bin/telemetry && \
     useradd -m -d /home/djl djl && \
     chown -R djl:djl /opt/djl && \
     rm -rf scripts && pip3 cache purge && \
@@ -77,10 +81,11 @@ CMD ["serve"]
 LABEL maintainer="djl-dev@amazon.com"
 LABEL dlc_major_version="1"
 LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.pytorch-gpu="true"
-LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-30-0.pytorch-cu124="true"
+LABEL com.amazonaws.ml.engines.sagemaker.dlc.framework.djl.v0-31-0.pytorch-cu124="true"
 LABEL com.amazonaws.sagemaker.capabilities.multi-models="true"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
+LABEL djl-serving-version=$djl_serving_version
 LABEL cuda-version=$cuda_version
 LABEL torch-version=$torch_version
 # To use the 535 CUDA driver

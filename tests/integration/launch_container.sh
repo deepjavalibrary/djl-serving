@@ -212,6 +212,10 @@ elif $is_sm_neo_context; then
     -e SM_NEO_COMPILATION_ERROR_FILE=/opt/ml/compilation/errors/errors.json \
     -e SM_NEO_CACHE_DIR=/opt/ml/compilation/cache \
     -e SM_NEO_HF_CACHE_DIR=/opt/ml/compilation/cache \
+    -e COMPILER_OPTIONS={} \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     ${env_file} \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
@@ -231,6 +235,9 @@ elif $is_partition; then
     ${nvme:+-v ${nvme}} \
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     ${host_device:+ ${host_device}} \
@@ -247,6 +254,9 @@ elif [[ "$docker_image" == *"text-generation-inference"* ]]; then
     -v ~/sagemaker_infra/:/opt/ml/.sagemaker_infra/:ro \
     ${nvme:+-v ${nvme}} \
     ${env_file} \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \
     "${docker_image}" \
@@ -268,6 +278,9 @@ else
     ${env_file} \
     -e TEST_TELEMETRY_COLLECTION='true' \
     -e SERVING_OPTS='-Dai.djl.logging.level=debug' \
+    -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
     $uid_mapping \
     ${runtime:+--runtime="${runtime}"} \
     ${shm:+--shm-size="${shm}"} \

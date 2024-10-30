@@ -127,12 +127,13 @@ class Connection {
         int clusterSize = PyEnv.getClusterSize();
         int tensorParallelDegree = pyEnv.getTensorParallelDegree();
         int pipelineParallelDegree = pyEnv.getPipelineParallelDegree();
+        int worldSize = tensorParallelDegree * pipelineParallelDegree;
         String entryPoint = pyEnv.getEntryPoint();
         String recommendedEntryPoint = pyEnv.getRecommendedEntryPoint();
+        String pythonLogLevel = pyEnv.getPythonLogLevel();
 
         if (PyEnv.isMultiNode()) {
-            int worldSize = tensorParallelDegree * pipelineParallelDegree;
-            if (tensorParallelDegree * pipelineParallelDegree % clusterSize != 0) {
+            if (worldSize % clusterSize != 0) {
                 throw new IllegalArgumentException(
                         "Error: Cannot use cluster size: "
                                 + clusterSize
@@ -140,7 +141,7 @@ class Connection {
                                 + worldSize);
             }
 
-            int localSize = (tensorParallelDegree * pipelineParallelDegree) / clusterSize;
+            int localSize = worldSize / clusterSize;
 
             String cudaDevices = getVisibleDevices(workerId, localSize);
             logger.info("Set before mpirun CUDA_VISIBLE_DEVICES={}", cudaDevices);
@@ -159,7 +160,7 @@ class Connection {
                 }
                 sb.append(host).append(':').append(localSize);
             }
-            String[] args = new String[48];
+            String[] args = new String[50];
             args[0] = "mpirun";
             args[1] = "-np";
             args[2] = String.valueOf(worldSize);
@@ -194,6 +195,7 @@ class Connection {
             args[31] = model.getModelPath().toAbsolutePath().toString();
             args[32] = "--entry-point";
             args[33] = entryPoint == null ? "" : entryPoint;
+            // TODO: Use mix of Unix and TCP sockets for local/remote processes
             args[34] = "--sock-type";
             args[35] = "tcp";
             args[36] = "--sock-name";
@@ -208,14 +210,16 @@ class Connection {
             args[45] = String.valueOf(clusterSize);
             args[46] = "--recommended-entry-point";
             args[47] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+            args[48] = "--log-level";
+            args[49] = pythonLogLevel;
             return args;
         } else if (pyEnv.isMpiMode()) {
-            String cudaDevices = getVisibleDevices(workerId, tensorParallelDegree);
+            String cudaDevices = getVisibleDevices(workerId, worldSize);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
-            String[] args = new String[42];
+            String[] args = new String[46];
             args[0] = "mpirun";
             args[1] = "-np";
-            args[2] = String.valueOf(tensorParallelDegree);
+            args[2] = String.valueOf(worldSize);
             args[3] = "--allow-run-as-root";
             args[4] = "--bind-to";
             args[5] = "none";
@@ -253,19 +257,27 @@ class Connection {
             args[37] = getSocketPath(port);
             args[38] = "--tensor-parallel-degree";
             args[39] = String.valueOf(tensorParallelDegree);
-            args[40] = "--recommended-entry-point";
-            args[41] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+            args[40] = "--pipeline-parallel-degree";
+            args[41] = String.valueOf(pipelineParallelDegree);
+            args[42] = "--recommended-entry-point";
+            args[43] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+            args[44] = "--log-level";
+            args[45] = pythonLogLevel;
             return args;
         }
 
-        // TP settings
-        if (tensorParallelDegree > 0 && device.isGpu()) {
-            String cudaDevices = getVisibleDevices(deviceId, tensorParallelDegree);
+        // TP/PP settings
+        if (worldSize > 0 && device.isGpu()) {
+            String cudaDevices = getVisibleDevices(deviceId, worldSize);
             deviceId = 0; // re-map logic device to 0
             pyEnv.addEnv("CUDA_VISIBLE_DEVICES", cudaDevices);
             logger.info("Set CUDA_VISIBLE_DEVICES={}", cudaDevices);
         }
         if ("nc".equals(device.getDeviceType())) {
+            if (pipelineParallelDegree > 1) {
+                throw new IllegalArgumentException(
+                        "Error: Neuron does not currently support pipeline parallel degree > 1");
+            }
             String visibleCores = getNeuronVisibleCores(deviceId, tensorParallelDegree);
             // TODO: re-map logic device once neuron fixed bug
             pyEnv.addEnv("NEURON_RT_VISIBLE_CORES", visibleCores);
@@ -276,7 +288,7 @@ class Connection {
             logger.info("Set OMP_NUM_THREADS={}", neuronThreads);
         }
         boolean uds = Epoll.isAvailable() || KQueue.isAvailable();
-        String[] args = new String[16];
+        String[] args = new String[18];
         args[0] = pyEnv.getPythonExecutable();
         args[1] = PyEnv.getEngineCacheDir() + "/djl_python_engine.py";
         args[2] = "--sock-type";
@@ -293,22 +305,24 @@ class Connection {
         args[13] = String.valueOf(clusterSize);
         args[14] = "--recommended-entry-point";
         args[15] = recommendedEntryPoint == null ? "" : recommendedEntryPoint;
+        args[16] = "--log-level";
+        args[17] = pythonLogLevel;
         return args;
     }
 
-    private static String getVisibleDevices(int deviceId, int tensorParallelDegree) {
+    private static String getVisibleDevices(int deviceId, int localDevicesPerWorker) {
         StringBuilder sb = new StringBuilder(20);
         // CUDA_VISIBLE_DEVICES=0,2,3,7 TP2
         // -> 0,2 and 3,7
         if (Utils.getenv("CUDA_VISIBLE_DEVICES") != null) {
             String[] devices = Utils.getenv("CUDA_VISIBLE_DEVICES").split(",");
             sb.append(devices[deviceId]);
-            for (int i = 1; i < tensorParallelDegree; ++i) {
+            for (int i = 1; i < localDevicesPerWorker; ++i) {
                 sb.append(',').append(devices[deviceId + i]);
             }
         } else {
             sb.append(deviceId);
-            for (int i = 1; i < tensorParallelDegree; ++i) {
+            for (int i = 1; i < localDevicesPerWorker; ++i) {
                 sb.append(',').append(deviceId + i);
             }
         }

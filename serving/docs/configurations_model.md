@@ -177,7 +177,8 @@ To enable rolling batch for Python engine:
 
 ```
 # lmi-dist requires running mpi mode
-engine=MPI
+engine=Python
+option.mpi_mode=true
 option.rolling_batch=auto
 # use FlashAttention
 #option.rolling_batch=lmi-dist

@@ -86,6 +86,11 @@ class ArgParser(object):
                             type=str,
                             dest="recommended_entry_point",
                             help="Lmi recommended entry point")
+        parser.add_argument('--log-level',
+                            required=False,
+                            type=str,
+                            default="info",
+                            help="log level to use for djl_python logging")
         return parser
 
     @staticmethod

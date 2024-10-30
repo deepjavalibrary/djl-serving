@@ -339,7 +339,8 @@ public class PyEnv {
         if (tensorParallelDegree == 0) {
             String value = Utils.getenv("TENSOR_PARALLEL_DEGREE");
             if ("max".equals(value)) {
-                tensorParallelDegree = getDefaultTensorParallelDegree();
+                tensorParallelDegree =
+                        getDefaultTensorParallelDegree() / getPipelineParallelDegree();
             } else if (value != null) {
                 tensorParallelDegree = Integer.parseInt(value);
             }
@@ -350,7 +351,7 @@ public class PyEnv {
     static int getDefaultTensorParallelDegree() {
         int gpus = CudaUtils.getGpuCount();
         if (gpus > 0) {
-            return gpus;
+            return gpus * clusterSize;
         }
         return NeuronUtils.getNeuronCores();
     }
@@ -375,6 +376,8 @@ public class PyEnv {
             if (value != null) {
                 pipelineParallelDegree = Integer.parseInt(value);
             } else {
+                // TODO: Use clusterSize as default value of pipelineParallelDegree, but only when
+                // supported
                 pipelineParallelDegree = 1;
             }
         }
@@ -535,6 +538,18 @@ public class PyEnv {
      */
     public void setModelLoadingTimeout(int modelLoadingTimeout) {
         this.modelLoadingTimeout = modelLoadingTimeout;
+    }
+
+    /**
+     * Returns the log level to use in the djl_python logger.
+     *
+     * @return the log level to use.
+     */
+    public String getPythonLogLevel() {
+        if (logger.isDebugEnabled()) {
+            return "debug";
+        }
+        return "info";
     }
 
     String[] getEnvironmentVars(Model model) {

@@ -10,7 +10,7 @@
 # or in the "LICENSE.txt" file accompanying this file. This file is distributed on an "AS IS"
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
-
+import copy
 import os
 import time
 import json
@@ -22,10 +22,12 @@ import re
 from abc import ABC, abstractmethod
 from transformers import AutoModelForCausalLM, GenerationConfig
 from transformers_neuronx import NeuronAutoModelForCausalLM
-from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig, GenerationConfig as NeuronGenerationConfig
+from transformers_neuronx.config import NeuronConfig, QuantizationConfig, ContinuousBatchingConfig, \
+    GenerationConfig as NeuronGenerationConfig
 from djl_python.properties_manager.tnx_properties import TnXGenerationStrategy, TnXModelSchema, TnXMemoryLayout
 from transformers_neuronx.module import save_pretrained_split
-from djl_python.neuron_utils.utils import NeuronXModelAdapter, get_neuronxcc_version, build_context_length_estimates
+from djl_python.neuron_utils.utils import NeuronXRollingBatchModelAdapter, NeuronXDynamicBatchModelAdapter, \
+    get_neuronxcc_version, build_context_length_estimates
 from huggingface_hub import hf_hub_download
 
 # Temporary Fix: These loggers are disabled during vLLM import.
@@ -137,6 +139,7 @@ class TNXModelLoader(ModelLoader):
 
         # Workaround for issue with NeuronAuto gpt model class, and split model loading
         self._neuronx_class = self.set_neuronx_class()
+        self._adapter_class = self.set_adapter_class()
 
     def set_neuronx_class(self):
         try:
@@ -153,6 +156,11 @@ class TNXModelLoader(ModelLoader):
                 f"{class_name} not found in {module_name}. Please check transformers-neuronx version."
             )
         return neuronx_class
+
+    def set_adapter_class(self):
+        if self.config.rolling_batch != "disable":
+            return NeuronXRollingBatchModelAdapter
+        return NeuronXDynamicBatchModelAdapter
 
     def can_use_continuous_batching(self) -> bool:
         """
@@ -182,8 +190,19 @@ class TNXModelLoader(ModelLoader):
         if self.config.group_query_attention is not None:
             neuron_config[
                 "group_query_attention"] = self.config.group_query_attention
+        if self.config.shard_over_sequence:
+            neuron_config[
+                "shard_over_sequence"] = self.config.shard_over_sequence
         if self.config.fuse_qkv:
             neuron_config["fuse_qkv"] = self.config.fuse_qkv
+        if self.config.fuse_mlp:
+            neuron_config["fuse_mlp"] = self.config.fuse_mlp
+        if self.config.fused_rmsnorm_qkv:
+            neuron_config["fused_rmsnorm_qkv"] = self.config.fused_rmsnorm_qkv
+        if self.config.qkv_tiling:
+            neuron_config["qkv_tiling"] = self.config.qkv_tiling
+        if self.config.weight_tiling:
+            neuron_config["weight_tiling"] = self.config.weight_tiling
         if self.config.collectives_layout:
             neuron_config[
                 "collectives_layout"] = self.config.collectives_layout
@@ -195,9 +214,12 @@ class TNXModelLoader(ModelLoader):
             neuron_config["all_reduce_dtype"] = self.config.all_reduce_dtype
         if self.config.cast_logits_dtype:
             neuron_config["cast_logits_dtype"] = self.config.cast_logits_dtype
-        if self.config.on_device_embedding_config:
-            if len(self.config.on_device_embedding_config.keys()) > 0:
-                neuron_config["on_device_embedding"] = NeuronGenerationConfig(
+        if self.config.on_device_embedding:
+            neuron_config[
+                "on_device_embedding"] = self.config.on_device_generation
+        if self.config.on_device_generation:
+            if len(self.config.on_device_generation.keys()) > 0:
+                neuron_config["on_device_generation"] = NeuronGenerationConfig(
                     **self.config.on_device_embedding_config)
         self.neuron_config = NeuronConfig(**neuron_config)
 
@@ -390,29 +412,30 @@ class TNXModelLoader(ModelLoader):
         """
         Convert model to Neuron compiled format and save
         """
+        logging.info(f"Saving preshareded model to {save_path}...")
         # Neuron compiler serialization workaround
         path = os.getcwd()
         os.chdir("/tmp")
         self.model.to_neuron()
-        self.model.save(save_path)
+        self.model.save(save_path, sharded_weights=True)
 
         with open(os.path.join(save_path, "VERSION"), "w+") as version_file:
             version_file.write(f"{get_neuronxcc_version()}")
 
         os.chdir(path)
 
-    def load_model(self, **kwargs) -> NeuronXModelAdapter:
+    def load_model(self, **kwargs) -> "PretrainedModel":
         """
         Builds the NeuronX model.
 
-        :return: model (NeuronXModelAdapter)
+        :return: model (NeuronXRollingBatchModelAdapter)
         """
         self.set_model_format()
         self.set_neuron_model()
         self.maybe_compile_model()
         self.update_model_config_to_neuron()
         self.load_generation_config()
-        self.model = NeuronXModelAdapter(self.model, self.model_config,
+        self.model = self._adapter_class(self.model, self.model_config,
                                          self.load_path,
                                          self.generation_config)
         return self.model
@@ -457,13 +480,9 @@ class TNXModelLoader(ModelLoader):
 
         :param save_path: Path to which to save the compiled model.
         """
-        self.split_model_path = os.path.join(save_path, "checkpoint")
-        os.mkdir(self.split_model_path)
         self.compiled_graph_path = os.path.join(save_path, "compiled")
         os.mkdir(self.compiled_graph_path)
 
-        self.model = self.load_hf_model()
-        self.model.save_pretrained(self.split_model_path)
         self.model = self.load_auto_model(self.config.model_id_or_path)
         self.compile_and_save(self.compiled_graph_path)
 
@@ -473,7 +492,7 @@ class TNXModelLoader(ModelLoader):
 
         :param save_path: Path to which to save the compiled model.
 
-        :return: model (NeuronXModelAdapter)
+        :return: model (NeuronXRollingBatchModelAdapter)
         """
         tokenizer = kwargs.get("tokenizer")
         model_schema = kwargs.get("model_schema")
@@ -508,7 +527,7 @@ class TNXModelLoader(ModelLoader):
             if tokenizer:
                 tokenizer.save_pretrained(save_path)
 
-        self.model = NeuronXModelAdapter(self.model, self.model_config,
+        self.model = self._adapter_class(self.model, self.model_config,
                                          save_path)
         return self.model
 
@@ -571,8 +590,9 @@ class OptimumModelLoader(ModelLoader):
         if hasattr(self.model.generation_config, "max_length"):
             self.model.generation_config.max_length = self.config.n_positions
 
-    def load_optimum_model(self, compiler_args: dict,
-                           input_shapes: dict) -> NeuronXModelAdapter:
+    def load_optimum_model(
+            self, compiler_args: dict,
+            input_shapes: dict) -> NeuronXRollingBatchModelAdapter:
         """
         Helper function to load the model
 
@@ -599,7 +619,7 @@ class OptimumModelLoader(ModelLoader):
         if self.compile_model:
             self.model_config = self.model.config
         self.set_generation_config()
-        self.model = NeuronXModelAdapter(
+        self.model = NeuronXRollingBatchModelAdapter(
             self.model.model,
             self.model_config,
             self.get_load_path(),
@@ -627,7 +647,7 @@ class OptimumModelLoader(ModelLoader):
         self.model.save_pretrained(save_path)
         if tokenizer:
             tokenizer.save_pretrained(save_path)
-        self.model = NeuronXModelAdapter(
+        self.model = NeuronXRollingBatchModelAdapter(
             self.model.model,
             self.model_config,
             self.get_load_path(),
@@ -787,3 +807,119 @@ class OptimumStableDiffusionLoader(ModelLoader):
         self.load_pipeline(**kwargs)
         self.save_pipeline(save_path)
         return self.pipeline
+
+
+class TNXVllmModelLoader(ModelLoader):
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.generation_config = self.generate_generation_config()
+        self.model_config.generation_config = self.generation_config
+        self.neuron_config = self.generate_neuron_config()
+
+    def generate_generation_config(self):
+        generation_config = NeuronGenerationConfig(
+            max_length=self.config.n_positions,
+            do_sample=True,
+            per_batch_line=True,
+            top_k=[1] * self.config.max_rolling_batch_size,
+            top_p=[1] * self.config.max_rolling_batch_size,
+            temperature=[1] * self.config.max_rolling_batch_size,
+            dynamic=True,
+            global_top_k=256,
+            deterministic=True,
+        )
+        return generation_config
+
+    def generate_neuron_config(self):
+        continuous_batching_config = None
+        if self.config.max_rolling_batch_size > 1:
+            continuous_batching_config = ContinuousBatchingConfig(
+                batch_size_for_shared_caches=self.config.max_rolling_batch_size
+            )
+
+        on_dev_sampling_config = None
+        if self.config.on_device_generation:
+            on_dev_sampling_config = copy.deepcopy(
+                self.model_config.generation_config)
+
+        quant_config = None
+        if self.config.neuron_quant:
+            quant_dtype = 's8'
+            dequant_dtype = 'bf16'
+            logging.info(f'Quantization is enabled. '
+                         f'quant_dtype: {quant_dtype}, '
+                         f'dequant_dtype: {dequant_dtype}')
+            quant_config = QuantizationConfig(quant_dtype=quant_dtype,
+                                              dequant_dtype=dequant_dtype)
+
+        def get_default_if_none(value, default):
+            return default if value is None else value
+
+        attention_layout = get_default_if_none(self.config.attention_layout,
+                                               TnXMemoryLayout.LAYOUT_BSH)
+        collectives_layout = get_default_if_none(
+            self.config.collectives_layout, TnXMemoryLayout.LAYOUT_BSH)
+        sequence_parallel_norm_threshold = get_default_if_none(
+            self.config.sequence_parallel_norm_threshold, 1)
+        sequence_parallel = get_default_if_none(self.config.sequence_parallel,
+                                                True)
+
+        weight_tiling = get_default_if_none(
+            self.config.weight_tiling, False if self.config.multi_node
+            or self.config.speculative_draft_model else True)
+        qkv_tiling = get_default_if_none(
+            self.config.qkv_tiling, False if self.config.multi_node
+            or self.config.speculative_draft_model else True)
+
+        fuse_mlp = get_default_if_none(
+            self.config.fuse_mlp, True if self.config.multi_node else False)
+        mlp_out_weight_transpose = get_default_if_none(
+            self.config.mlp_out_weight_transpose,
+            True if self.config.multi_node else False)
+        fuse_qkv = get_default_if_none(self.config.fuse_qkv, True)
+
+        neuron_config = NeuronConfig(
+            continuous_batching=continuous_batching_config,
+            attention_layout=attention_layout.value,
+            on_device_embedding=self.config.on_device_embedding,
+            on_device_generation=on_dev_sampling_config,
+            collectives_layout=collectives_layout.value,
+            quant=quant_config,
+            fuse_qkv=fuse_qkv,
+            compilation_worker_count=self.config.compilation_worker_count,
+            sequence_parallel_norm=sequence_parallel,
+            sequence_parallel_norm_threshold=sequence_parallel_norm_threshold,
+            shard_over_sequence=self.config.shard_over_sequence,
+            weight_tiling=weight_tiling,
+            qkv_tiling=qkv_tiling,
+            fuse_mlp=fuse_mlp,
+            mlp_out_weight_transpose=mlp_out_weight_transpose,
+        )
+        logging.debug(f'Neuron config: {neuron_config}')
+        return neuron_config
+
+    def load_model(self, **kwargs):
+        from vllm.model_executor.model_loader.neuron import get_neuron_sd_model
+        if self.config.context_length_estimate is None:
+            self.config.context_length_estimate = build_context_length_estimates(
+                self.config.n_positions)
+
+        self.model = get_neuron_sd_model(
+            model_name=self.config.model_id_or_path,
+            tensor_parallel_degree=self.config.tensor_parallel_degree,
+            model_config=self.model_config,
+            neuron_config=self.neuron_config,
+            speculative_draft_model=self.config.speculative_draft_model,
+            num_speculative_tokens=self.config.speculative_length,
+            max_num_seqs=self.config.max_rolling_batch_size,
+            max_model_len=self.config.n_positions,
+            predefined_buckets=self.config.context_length_estimate,
+            dtype=self.config.amp,
+            neuron_cc_pipeline_factor=self.config.neuron_cc_pipeline_factor,
+            download_dir=kwargs.get('download_dir'))
+        return self.model
+
+    def partition(self, save_path, **kwargs):
+        kwargs['download_dir'] = save_path
+        self.load_model(**kwargs)

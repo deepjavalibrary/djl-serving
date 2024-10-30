@@ -227,7 +227,7 @@ class TestAarch64:
 class TestHfHandler:
 
     def test_gpt_neo(self):
-        with Runner('lmi', 'test_gpt4all_lora') as r:
+        with Runner('lmi', 'test_gpt_neo_2.7b') as r:
             prepare.build_hf_handler_model("gpt-neo-2.7b")
             r.launch()
             client.run("huggingface gpt-neo-2.7b".split())
@@ -250,11 +250,11 @@ class TestHfHandler:
             r.launch()
             client.run("huggingface gpt-j-6b".split())
 
-    def test_gpt4all_lora(self):
-        with Runner('lmi', 'gpt4all-lora') as r:
-            prepare.build_hf_handler_model("gpt4all-lora")
+    def test_llama3_lora(self):
+        with Runner('lmi', 'llama3-tiny-random-lora') as r:
+            prepare.build_hf_handler_model("llama3-tiny-random-lora")
             r.launch()
-            client.run("huggingface gpt4all-lora".split())
+            client.run("huggingface llama3-tiny-random-lora".split())
 
     def test_streaming_bigscience_bloom_3b(self):
         with Runner('lmi', 'bigscience/bloom-3b') as r:
@@ -308,6 +308,12 @@ class TestTrtLlmHandler1:
             prepare.build_trtllm_handler_model("santacoder")
             r.launch("CUDA_VISIBLE_DEVICES=0,1,2,3")
             client.run("trtllm santacoder".split())
+
+    def test_llama_31_8b(self):
+        with Runner('tensorrt-llm', 'llama-3-1-8b') as r:
+            prepare.build_trtllm_handler_model('llama-3-1-8b')
+            r.launch()
+            client.run("trtllm llama-3-1-8b".split())
 
 
 @pytest.mark.trtllm
@@ -461,6 +467,12 @@ class TestLmiDist1:
             client.run(
                 "lmi_dist falcon-11b-chunked-prefill --in_tokens 1200".split())
 
+    def test_flan_t5_xl(self):
+        with Runner('lmi', 'flan-t5-xl') as r:
+            prepare.build_lmi_dist_model("flan-t5-xl")
+            r.launch()
+            client.run("lmi_dist flan-t5-xl".split())
+
 
 @pytest.mark.lmi_dist
 @pytest.mark.gpu_4
@@ -604,6 +616,18 @@ class TestVllm1:
             client.run(
                 "vllm falcon-11b-chunked-prefill --in_tokens 1200".split())
 
+    def test_llama_68m_speculative_medusa(self):
+        with Runner('lmi', 'llama-68m-speculative-medusa') as r:
+            prepare.build_vllm_model("llama-68m-speculative-medusa")
+            r.launch()
+            client.run("vllm llama-68m-speculative-medusa".split())
+
+    def test_llama_68m_speculative_eagle(self):
+        with Runner('lmi', 'llama-68m-speculative-eagle') as r:
+            prepare.build_vllm_model("llama-68m-speculative-eagle")
+            r.launch()
+            client.run("vllm llama-68m-speculative-eagle".split())
+
 
 @pytest.mark.vllm
 @pytest.mark.lora
@@ -715,32 +739,9 @@ class TestNeuronx1:
             r.launch(container='pytorch-inf2-1')
             client.run("transformers_neuronx gpt2-quantize".split())
 
-    def test_opt_1_3b(self):
-        with Runner('pytorch-inf2', 'opt-1.3b') as r:
-            prepare.build_transformers_neuronx_handler_model("opt-1.3b")
-            r.launch(container='pytorch-inf2-6')
-            client.run("transformers_neuronx opt-1.3b".split())
-
-    def test_gpt_j_6b(self):
-        with Runner('pytorch-inf2', 'gpt-j-6b') as r:
-            prepare.build_transformers_neuronx_handler_model("gpt-j-6b")
-            r.launch(container='pytorch-inf2-6')
-            client.run("transformers_neuronx gpt-j-6b".split())
-
-    def test_pythia(self):
-        with Runner('pytorch-inf2', 'pythia-2.8b') as r:
-            prepare.build_transformers_neuronx_handler_model("pythia-2.8b")
-            r.launch(container='pytorch-inf2-2')
-            client.run("transformers_neuronx pythia-2.8b".split())
-
-    def test_bloom(self):
-        with Runner('pytorch-inf2', 'bloom-7b1') as r:
-            prepare.build_transformers_neuronx_handler_model("bloom-7b1")
-            r.launch(container='pytorch-inf2-2')
-            client.run("transformers_neuronx bloom-7b1".split())
-
-    @pytest.mark.parametrize("model",
-                             ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant"])
+    @pytest.mark.parametrize(
+        "model",
+        ["tiny-llama-rb-aot", "tiny-llama-rb-aot-quant", "tiny-llama-rb-lcnc"])
     def test_partition(self, model):
         with Runner('pytorch-inf2', f'partition-{model}') as r:
             try:
@@ -932,17 +933,84 @@ class TestMultiModalLmiDist:
             r.launch()
             client.run("multimodal llava_v1.6-mistral".split())
 
-    def test_paligemma(self):
-        with Runner('lmi', 'paligemma-3b-mix-448') as r:
-            prepare.build_lmi_dist_model('paligemma-3b-mix-448')
-            r.launch()
-            client.run("multimodal paligemma-3b-mix-448".split())
-
     def test_phi3_v(self):
         with Runner('lmi', 'phi-3-vision-128k-instruct') as r:
             prepare.build_lmi_dist_model('phi-3-vision-128k-instruct')
             r.launch()
             client.run("multimodal phi-3-vision-128k-instruct".split())
+
+    def test_pixtral_12b(self):
+        with Runner('lmi', 'pixtral-12b') as r:
+            prepare.build_lmi_dist_model('pixtral-12b')
+            r.launch()
+            client.run("multimodal pixtral-12b".split())
+
+
+class TestMultiModalVllm:
+
+    def test_llava_next(self):
+        with Runner('lmi', 'llava_v1.6-mistral') as r:
+            prepare.build_vllm_model('llava_v1.6-mistral')
+            r.launch()
+            client.run("multimodal llava_v1.6-mistral".split())
+
+    def test_phi3_v(self):
+        with Runner('lmi', 'phi-3-vision-128k-instruct') as r:
+            prepare.build_vllm_model('phi-3-vision-128k-instruct')
+            r.launch()
+            client.run("multimodal phi-3-vision-128k-instruct".split())
+
+    def test_pixtral_12b(self):
+        with Runner('lmi', 'pixtral-12b') as r:
+            prepare.build_vllm_model('pixtral-12b')
+            r.launch()
+            client.run("multimodal pixtral-12b".split())
+
+    # MLlama is only supported by vllm backend currently
+    def test_mllama_11b(self):
+        with Runner('lmi', 'llama32-11b-multimodal') as r:
+            prepare.build_vllm_model('llama32-11b-multimodal')
+            r.launch()
+            client.run("multimodal llama32-11b-multimodal".split())
+
+
+class TestLmiDistPipelineParallel:
+
+    def test_llama32_3b_multi_worker_tp1_pp1(self):
+        with Runner('lmi', 'llama32-3b-multi-worker-tp1-pp1') as r:
+            prepare.build_lmi_dist_model("llama32-3b-multi-worker-tp1-pp1")
+            r.launch()
+            client.run("lmi_dist llama32-3b-multi-worker-tp1-pp1".split())
+
+    def test_llama32_3b_multi_worker_tp2_pp1(self):
+        with Runner('lmi', 'llama32-3b-multi-worker-tp2-pp1') as r:
+            prepare.build_lmi_dist_model("llama32-3b-multi-worker-tp2-pp1")
+            r.launch()
+            client.run("lmi_dist llama32-3b-multi-worker-tp2-pp1".split())
+
+    def test_llama32_3b_multi_worker_tp1_pp2(self):
+        with Runner('lmi', 'llama32-3b-multi-worker-tp1-pp2') as r:
+            prepare.build_lmi_dist_model("llama32-3b-multi-worker-tp1-pp2")
+            r.launch()
+            client.run("lmi_dist llama32-3b-multi-worker-tp1-pp2".split())
+
+    def test_llama31_8b_pp_only(self):
+        with Runner('lmi', 'llama31-8b-pp-only') as r:
+            prepare.build_lmi_dist_model("llama31-8b-pp-only")
+            r.launch()
+            client.run("lmi_dist llama31-8b-pp-only".split())
+
+    def test_llama31_8b_tp2_pp2(self):
+        with Runner('lmi', 'llama31-8b-tp2-pp2') as r:
+            prepare.build_lmi_dist_model('llama31-8b-tp2-pp2')
+            r.launch()
+            client.run("lmi_dist llama31-8b-tp2-pp2".split())
+
+    def test_llama31_8b_tp2_pp2_specdec(self):
+        with Runner('lmi', 'llama31-8b-tp2-pp2-spec-dec') as r:
+            prepare.build_lmi_dist_model('llama31-8b-tp2-pp2-spec-dec')
+            r.launch()
+            client.run("lmi_dist llama31-8b-tp2-pp2-spec-dec".split())
 
 
 @pytest.mark.gpu

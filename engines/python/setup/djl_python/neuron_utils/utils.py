@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Optional, Union, List
 from djl_python.transformers_neuronx_scheduler.optimum_modeling import OptimumModelForCausalLM
 from optimum.exporters.neuron.model_configs import *
 from optimum.exporters.tasks import TasksManager
+from transformers_neuronx.generation_utils import HuggingFaceGenerationModelAdapter
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -37,9 +38,8 @@ TNX_ONLY_PROPERTIES = [
     "quantize", "neuron_optimize_level", "enable_mixed_precision_accumulation",
     "enable_saturate_infinity", "unroll", "load_in_8bit", "low_cpu_mem_usage",
     "load_split_model", "context_length_estimate", "amp",
-    "compiled_graph_path", "draft_model_compiled_path",
-    "speculative_draft_model", "speculative_length", "draft_model_tp_size",
-    "task", "save_mp_checkpoint_path", "group_query_attention", "model_loader",
+    "compiled_graph_path", "draft_model_compiled_path", "task",
+    "save_mp_checkpoint_path", "group_query_attention", "model_loader",
     "rolling_batch_strategy", "fuse_qkv", "on_device_embedding_config",
     "attention_layout", "collectives_layout", "cache_layout",
     "partition_schema", "all_reduce_dtype", "cast_logits_dtype"
@@ -118,14 +118,28 @@ def build_context_length_estimates(max_position_embeddings: int) -> List[int]:
     return context_estimates
 
 
-class NeuronXModelAdapter(OptimumModelForCausalLM):
+class NeuronXRollingBatchModelAdapter(OptimumModelForCausalLM):
 
     def __init__(self,
                  model: torch.nn.Module,
                  config: "PretrainedConfig",
                  model_path: Union[str, "Path", "TemporaryDirectory"],
-                 generation_config: Optional["GenerationConfig"] = None):
-        super().__init__(model, config, model_path, generation_config)
+                 generation_config: Optional["GenerationConfig"] = None,
+                 **kwargs):
+        super().__init__(model, config, model_path, generation_config,
+                         **kwargs)
+        self.model_type = config.model_type
+        self.cur_len = 0
+
+    def save(self, path):
+        return self.model.save(path)
+
+
+class NeuronXDynamicBatchModelAdapter(HuggingFaceGenerationModelAdapter):
+
+    def __init__(self, model: torch.nn.Module, config: "PretrainedConfig",
+                 *args, **kwargs):
+        super().__init__(config, model)
         self.model_type = config.model_type
         self.sample_options = ["start_ids", "top_k"]
         self.cur_len = 0
@@ -137,9 +151,6 @@ class NeuronXModelAdapter(OptimumModelForCausalLM):
     def neuron_sample(self, *args, **kwargs):
         sample_kwargs = self.simple_sample_parser(**kwargs)
         return self.model.sample(*args, **sample_kwargs)
-
-    def save(self, path):
-        return self.model.save(path)
 
     def simple_sample_parser(self, **kwargs):
         parsed_kwargs = dict()

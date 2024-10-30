@@ -36,8 +36,8 @@ model = DJLModel(
 )
 
 # Deploy your model to a SageMaker Endpoint and create a Predictor to make inference requests
-endpoint_name = sagemaker.utils.name_from_base("llama-7b-endpoint")
-predictor = model.deploy(instance_type="ml.g5.2xlarge", initial_instance_count=1, endpoint_name=endpoint_name)
+endpoint_name = sagemaker.utils.name_from_base("llama-8b-endpoint")
+predictor = model.deploy(instance_type="ml.g5.12xlarge", initial_instance_count=1, endpoint_name=endpoint_name)
 
 # Make an inference request against the llama2-7b endpoint
 outputs = predictor.predict({

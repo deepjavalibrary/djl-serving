@@ -199,7 +199,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         }
         Adapter.unregister(wp, adapterName);
 
-        String msg = "Adapter " + adapterName + " registered";
+        String msg = "Adapter " + adapterName + " unregistered";
         NettyUtils.sendJsonResponse(ctx, new StatusResponse(msg));
     }
 

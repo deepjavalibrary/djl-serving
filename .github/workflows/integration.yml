@@ -80,7 +80,7 @@ jobs:
 
   test:
     runs-on: [ "${{ matrix.test.gh-runner && matrix.test.instance || 'self-hosted' }}", "${{ matrix.test.instance }}" ]
-    timeout-minutes: 60
+    timeout-minutes: 90
     needs: create-runners
     strategy:
       fail-fast: false
@@ -123,6 +123,8 @@ jobs:
           - test: TestNeuronxRollingBatch
             instance: inf2
           - test: TestMultiModal
+            instance: g6
+          - test: TestLmiDistPipelineParallel
             instance: g6
     steps:
       - uses: actions/checkout@v4

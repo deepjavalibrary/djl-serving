@@ -1,4 +1,4 @@
-# LMI V10 containers release
+# LMI V11 containers release
 
 This document will contain the latest releases of our LMI containers. For details on any other previous releases, please refer our [github release page](https://github.com/deepjavalibrary/djl-serving/releases)
 
