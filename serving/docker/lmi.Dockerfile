@@ -58,7 +58,7 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
 ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
-ENV PYTORCH_FLAVOR=cu121-precxx11
+ENV PYTORCH_FLAVOR=cu124-precxx11
 ENV VLLM_NO_USAGE_STATS=1
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
 # 0.6.2 is the last version that contains legacy support for beam search

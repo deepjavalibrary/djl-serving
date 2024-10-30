@@ -21,6 +21,8 @@ ARG torch_vision_version=0.19.0
 ARG onnx_version=1.19.0
 ARG python_version=3.10
 ARG numpy_version=1.26.4
+ARG pydantic_version=2.8.2
+ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.31.0-py3-none-any.whl"
 
 RUN mkdir -p /opt/djl/conf && \
     mkdir -p /opt/ml/model
@@ -44,7 +46,7 @@ ENV PYTORCH_FLAVOR=cu124-precxx11
 ENV TORCH_CUDNN_V8_API_DISABLED=1
 ENV JAVA_OPTS="-Xmx1g -Xms1g -XX:+ExitOnOutOfMemoryError -Dai.djl.default_engine=PyTorch"
 ENV HF_HOME=/tmp/.cache/huggingface
-ENV TRANSFORMERS_CACHE=/tmp/.cache/huggingface/transformers
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
 ENV PYTORCH_KERNEL_CACHE_PATH=/tmp/.cache
 
 COPY distribution[s]/ ./
@@ -59,7 +61,8 @@ RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh && \
     djl-serving -i com.microsoft.onnxruntime:onnxruntime_gpu:$onnx_version && \
     scripts/install_python.sh ${python_version} && \
     scripts/install_s5cmd.sh x64 && \
-    pip3 install numpy==${numpy_version} && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 && \
+    pip3 install peft pydantic==${pydantic_version} ${djl_converter_wheel} hf-transfer && \
+    pip3 install numpy==${numpy_version} && pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu124 && \
     scripts/patch_oss_dlc.sh python && \
     scripts/security_patch.sh pytorch-gpu && \
     mkdir -p /opt/djl/bin && cp scripts/telemetry.sh /opt/djl/bin && \
