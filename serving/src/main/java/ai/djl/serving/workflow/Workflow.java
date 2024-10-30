@@ -227,11 +227,11 @@ public class Workflow implements AutoCloseable {
     /** {@inheritDoc} */
     @Override
     public void close() {
-        for (WorkerPoolConfig<Input, Output> wpc : getWpcs()) {
-            wpc.close();
-        }
         for (WorkflowFunction f : funcs.values()) {
             f.close();
+        }
+        for (WorkerPoolConfig<Input, Output> wpc : getWpcs()) {
+            wpc.close();
         }
     }
 
