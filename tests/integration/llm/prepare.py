@@ -885,9 +885,20 @@ vllm_model_list = {
 }
 
 vllm_neo_model_list = {
-    "llama-3-8b": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
-        "option.tensor_parallel_degree": 4
+    "llama-3.1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+    },
+    "llama-3.1-8b-awq-options": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.tensor_parallel_degree": "4",
+        "option.max_rolling_batch_size": "4",
+        "option.awq_block_size": "256"
+    },
+    "llama-3.1-8b-fp8-options": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
+        "option.quantize": "fp8",
+        "option.tensor_parallel_degree": "4",
+        "option.fp8_activation_scheme": "dynamic"
     }
 }
 
@@ -1125,8 +1136,8 @@ trtllm_neo_list = {
 }
 
 transformers_neuronx_neo_list = {
-    "llama-2-13b-rb": {
-        "option.model_id": "s3://djl-llm/llama-2-13b-hf/",
+    "llama-3.1-8b-rb": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 1024,
         "option.rolling_batch": "auto",
@@ -1134,16 +1145,16 @@ transformers_neuronx_neo_list = {
         "option.dtype": "fp16",
         "option.model_loading_timeout": 3600,
     },
-    "mixtral-8x22b": {
-        "option.model_id": "s3://djl-llm/mixtral-8x22b/",
+    "mixtral-random-tiny": {
+        "option.model_id": "s3://djl-llm/mixtral-random-tiny/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 512,
         "option.rolling_batch": "disable",
         "option.batch_size": 2,
         "option.model_loading_timeout": 3600,
     },
-    "codellama-34b": {
-        "option.model_id": "s3://djl-llm/codellama-34b/",
+    "codellama-7b-instruct": {
+        "option.model_id": "s3://djl-llm/CodeLlama-7b-Instruct-hf/",
         "option.tensor_parallel_degree": 8,
         "option.n_positions": 256,
         "option.rolling_batch": "disable",
@@ -1159,9 +1170,15 @@ transformers_neuronx_neo_list = {
         "option.dtype": "fp16",
         "option.model_loading_timeout": 3600,
     },
-    "llama-3-8b": {
-        "option.model_id": "s3://djl-llm/llama-3-8b-hf/",
+    "llama-3.1-8b": {
+        "option.model_id": "s3://djl-llm/llama-3.1-8b-hf/",
         "option.tensor_parallel_degree": 8
+    },
+    "llama-2-tiny-speculative": {
+        "option.model_id": "s3://djl-llm/llama-2-tiny/",
+        "option.speculative_draft_model": "s3://djl-llm/tinyllama-1.1b-chat/",
+        "option.tensor_parallel_degree": 2,
+        "option.max_rolling_batch_size": 1
     }
 }
 

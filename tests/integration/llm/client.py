@@ -179,17 +179,17 @@ transformers_neuronx_model_spec = {
 }
 
 transformers_neuronx_neo_model_spec = {
-    "llama-2-13b-rb": {
+    "llama-3.1-8b-rb": {
         "seq_length": [1024],
         "batch_size": [1, 4],
-        "tokenizer": "TheBloke/Llama-2-13B-fp16"
+        "tokenizer": "NousResearch/Meta-Llama-3.1-8B"
     },
-    "mixtral-8x22b": {
+    "mixtral-random-tiny": {
         "workers": 1,
         "seq_length": [512],
         "batch_size": [2]
     },
-    "codellama-34b": {
+    "codellama-7b-instruct": {
         "workers": 1,
         "seq_length": [256],
         "batch_size": [4]
@@ -199,7 +199,12 @@ transformers_neuronx_neo_model_spec = {
         "seq_length": [512],
         "batch_size": [2]
     },
-    "llama-3-8b": {
+    "llama-3.1-8b": {
+        "workers": 1,
+        "seq_length": [128],
+        "batch_size": [1]
+    },
+    "llama-2-tiny-speculative": {
         "workers": 1,
         "seq_length": [128],
         "batch_size": [1]
@@ -573,10 +578,15 @@ vllm_model_spec = {
 }
 
 vllm_neo_model_spec = {
-    "llama-3-8b": {
+    "llama-3.1-8b": {
         "batch_size": [1],
         "seq_length": [256],
-        "tokenizer": "NousResearch/Meta-Llama-3-8B"
+        "tokenizer": "NousResearch/Meta-Llama-3.1-8B"
+    },
+    "llama-3.1-8b-bs4": {
+        "batch_size": [4],
+        "seq_length": [256],
+        "tokenizer": "NousResearch/Meta-Llama-3.1-8B"
     }
 }
 
