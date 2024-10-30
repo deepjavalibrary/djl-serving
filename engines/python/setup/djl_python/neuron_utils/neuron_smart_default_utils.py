@@ -51,7 +51,8 @@ class NeuronSmartDefaultUtils:
         self.sequence_size_in_gb = sequence_size_in_gb
 
     def apply_smart_defaults(self, properties: Dict[str, Any],
-                             model_config: Dict[str, Any]) -> None:
+                             model_config: Dict[str, Any],
+                             is_partition: bool = False) -> None:
         """
         Applies smart defaults for Neuron models.
 
@@ -59,9 +60,13 @@ class NeuronSmartDefaultUtils:
         - n_positions: The default n_positions for the model.
         - tensor_parallel_degree: A heuristic based on available memory.
         - max_rolling_batch_size: A heuristic based on available memory.
+        - on_device_embedding: From neuron 2.20, saving and loading pre-sharded weights is
+                               only available for on_device_embedding.
 
         :param properties: The properties to update
         :param model_config: The model configuration to use
+        :param is_partition: Indicates whether we are saving pre-sharded checkpoints or not.
+                             We set some smart defaults for it.
         """
         if "n_positions" not in properties:
             if self.get_model_parameters(
@@ -72,6 +77,11 @@ class NeuronSmartDefaultUtils:
                 model_config.get("max_position_embeddings", 4096), 4096)
             logger.info(
                 f"[Smart Default] N_POSITIONS: {properties['n_positions']}.")
+
+        # if neuron exists in config.json, then we could safely assume, it is precomplied model.
+        if "neuron" in model_config.keys() or is_partition:
+            if "on_device_embedding" not in properties:
+                properties["on_device_embedding"] = True
 
         try:
             self.set_internal_settings(properties, model_config)
