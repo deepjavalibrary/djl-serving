@@ -141,7 +141,7 @@ class TestConfigManager(unittest.TestCase):
             "enable_saturate_infinity": "true",
             "rolling_batch_strategy": "continuous_batching",
             "collectives_layout": "HSB",
-            "partition_schema": "legacy",
+            "partition_schema": "safetensors",
             "attention_layout": "HSB",
             "cache_layout": "SBH",
             "all_reduce_dtype": "float32",
@@ -196,7 +196,8 @@ class TestConfigManager(unittest.TestCase):
                          TnXGenerationStrategy.continuous_batching)
         self.assertEqual(tnx_configs.collectives_layout,
                          TnXMemoryLayout.LAYOUT_HSB)
-        self.assertEqual(tnx_configs.partition_schema, TnXModelSchema.legacy)
+        self.assertEqual(tnx_configs.partition_schema,
+                         TnXModelSchema.safetensors)
         self.assertEqual(tnx_configs.draft_model_compiled_path,
                          properties['draft_model_compiled_path'])
         self.assertEqual(tnx_configs.attention_layout,
@@ -293,7 +294,6 @@ class TestConfigManager(unittest.TestCase):
         'partition_schema': 'optimum',
         'load_split_model': 'true'
     }, {
-        'partition_schema': 'legacy',
         'model_loader': 'optimum'
     }])
     def test_tnx_configs_error_case(self, params):
