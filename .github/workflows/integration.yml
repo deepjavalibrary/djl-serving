@@ -124,6 +124,8 @@ jobs:
             instance: inf2
           - test: TestMultiModal
             instance: g6
+          - test: TestTextEmbedding
+            instance: g6
           - test: TestLmiDistPipelineParallel
             instance: g6
     steps:
