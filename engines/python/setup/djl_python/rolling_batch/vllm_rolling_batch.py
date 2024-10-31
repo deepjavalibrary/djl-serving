@@ -193,7 +193,7 @@ class VLLMRollingBatch(RollingBatch):
         # If trying to pin an adapter that is not registered, we will get "LoRA is not registered" error.
         # However, registered adapters are maintained by LRUCache
         # and may be evicted if the number of adapters exceed capacity (max_cpu_loras).
-        # There will be two scenarios:
+        # So there will be two scenarios:
         # 1) An adapter is evicted, call add_lora() is necessary to avoid error.
         # 2) An adapter is not evicted, call add_lora() is not necessary.
         # But since whether an adapter is evicted is not exposed outside of engine,
