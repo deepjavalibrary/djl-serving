@@ -13,15 +13,15 @@
 from collections import OrderedDict, defaultdict
 
 from vllm import LLMEngine, SamplingParams
-from vllm.utils import random_uuid
+from vllm.utils import random_uuid, AtomicCounter
 
 from djl_python.request import Request
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
-    update_request_cache_with_output, get_lora_request_params,
+    update_request_cache_with_output, create_lora_request, get_lora_request,
     get_engine_args_from_config, get_prompt_inputs)
 from djl_python.properties_manager.vllm_rb_properties import VllmRbProperties
-from typing import List
+from typing import List, Optional
 
 # FIXME: Once all vllm versions are past 0.6.0 we can move to just struct_fields
 VLLM_GENERATION_PARAMS = set(SamplingParams().__struct_fields__) if hasattr(
@@ -50,7 +50,8 @@ class VLLMRollingBatch(RollingBatch):
         args = get_engine_args_from_config(self.vllm_configs)
         self.engine = LLMEngine.from_engine_args(args)
         self.request_cache = OrderedDict()
-        self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
+        self.lora_id_counter = AtomicCounter(0)
+        self.lora_requests = {}
         self.is_mistral_tokenizer = self.vllm_configs.tokenizer_mode == 'mistral'
 
     def get_tokenizer(self):
@@ -128,7 +129,11 @@ class VLLMRollingBatch(RollingBatch):
             prompt_inputs = get_prompt_inputs(request)
             params = self.translate_vllm_params(request.parameters)
             sampling_params = SamplingParams(**params)
-            request_params = get_lora_request_params(request, self.lora_ids)
+            request_params = dict()
+            if request.adapter is not None:
+                adapter_name = request.adapter.get_property("name")
+                request_params["lora_request"] = get_lora_request(
+                    adapter_name, self.lora_requests)
             self.engine.add_request(request_id=request_id,
                                     inputs=prompt_inputs,
                                     params=sampling_params,
@@ -155,3 +160,43 @@ class VLLMRollingBatch(RollingBatch):
         Currently not applicable for VLLM.
         """
         raise NotImplementedError("Not implemented for vLLM rolling batcher")
+
+    def add_lora(self,
+                 lora_name: str,
+                 lora_path: str,
+                 long_lora_max_len: Optional[int] = None):
+        """
+        Add LoRA adapter.
+        """
+        lora_id = self.lora_id_counter.inc(1)
+        lora_request = create_lora_request(lora_name,
+                                           lora_id,
+                                           lora_path,
+                                           long_lora_max_len=long_lora_max_len)
+        self.lora_requests[lora_request.lora_name] = lora_request
+        return self.engine.add_lora(lora_request)
+
+    def remove_lora(self, lora_name):
+        """
+        Remove LoRA adapter.
+        """
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+        return self.engine.remove_lora(lora_request.lora_int_id)
+
+    def pin_lora(self, lora_name):
+        """
+        Pin LoRA adapter.
+        """
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+
+        # To pin an adapter, adapter has to be registered already (by calling add_lora()).
+        # If trying to pin an adapter that is not registered, we will get "LoRA is not registered" error.
+        # However, registered adapters are maintained by LRUCache
+        # and may be evicted if the number of adapters exceed capacity (max_cpu_loras).
+        # So there will be two scenarios:
+        # 1) An adapter is evicted, call add_lora() is necessary to avoid error.
+        # 2) An adapter is not evicted, call add_lora() is not necessary.
+        # But since whether an adapter is evicted is not exposed outside of engine,
+        # and add_lora() in this case will take negligible time, we will still call add_lora().
+        self.engine.add_lora(lora_request)
+        return self.engine.pin_lora(lora_request.lora_int_id)

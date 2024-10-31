@@ -14,7 +14,9 @@ package ai.djl.serving.workflow.function;
 
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
+import ai.djl.serving.http.BadRequestException;
 import ai.djl.serving.wlm.Adapter;
+import ai.djl.serving.wlm.ModelInfo;
 import ai.djl.serving.wlm.WorkLoadManager;
 import ai.djl.serving.wlm.WorkerPool;
 import ai.djl.serving.workflow.Workflow.WorkflowArgument;
@@ -69,6 +71,7 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                 String modelName = (String) config.get("model");
                 String adapterName = entry.getKey();
                 String src = (String) config.get("src");
+                boolean pin = Boolean.parseBoolean((String) config.getOrDefault("pin", "false"));
 
                 Map<String, String> options = new ConcurrentHashMap<>();
                 if (config.containsKey("options") && config.get("options") instanceof Map) {
@@ -80,15 +83,17 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                     }
                 }
 
-                WorkerPool<?, ?> wp = wlm.getWorkerPoolById(modelName);
-                Adapter adapter = Adapter.newInstance(wp.getWpc(), adapterName, src, options);
+                WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
+                ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
+                Adapter<Input, Output> adapter =
+                        Adapter.newInstance(modelInfo, adapterName, src, pin, options);
                 adapters.put(adapterName, new AdapterReference(modelName, adapter));
             }
         }
 
         // Register adapters
         for (AdapterReference adapter : adapters.values()) {
-            adapter.adapter.register(wlm.getWorkerPoolById(adapter.modelName));
+            adapter.adapter.register(wlm);
         }
     }
 
@@ -98,7 +103,8 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
         for (AdapterReference adapter : adapters.values()) {
             WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(adapter.modelName);
             if (wp != null) {
-                Adapter.unregister(wp, adapter.adapter.getName());
+                ModelInfo<Input, Output> modelInfo = getModelInfo(wp);
+                Adapter.unregister(adapter.adapter.getName(), modelInfo, wlm);
             }
         }
     }
@@ -130,12 +136,20 @@ public class AdapterWorkflowFunction extends WorkflowFunction {
                         });
     }
 
+    private ModelInfo<Input, Output> getModelInfo(WorkerPool<Input, Output> wp) {
+        if (!(wp.getWpc() instanceof ModelInfo)) {
+            String modelName = wp.getWpc().getId();
+            throw new BadRequestException("The worker " + modelName + " is not a model");
+        }
+        return (ModelInfo<Input, Output>) wp.getWpc();
+    }
+
     private static final class AdapterReference {
 
         private String modelName;
-        private Adapter adapter;
+        private Adapter<Input, Output> adapter;
 
-        private AdapterReference(String modelName, Adapter adapter) {
+        private AdapterReference(String modelName, Adapter<Input, Output> adapter) {
             this.modelName = modelName;
             this.adapter = adapter;
         }

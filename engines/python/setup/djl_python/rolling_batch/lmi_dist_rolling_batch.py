@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import logging
 import os
-from typing import List
+from typing import List, Optional
 from collections import OrderedDict, defaultdict
 
 from lmi_dist.api import Request, RequestParams
@@ -20,12 +20,13 @@ from lmi_dist.arg_utils import VllmEngineArgs
 from lmi_dist.init_engine import engine_from_args
 from lmi_dist.seq2seq_engine import Seq2SeqPreprocessor
 from vllm import SamplingParams
+from vllm.utils import AtomicCounter
 
 from djl_python.rolling_batch.rolling_batch import RollingBatch, stop_on_any_exception, filter_unused_generation_params
 from djl_python.rolling_batch.rolling_batch_vllm_utils import (
     get_speculative_decoding_metrics_record, update_request_cache_with_output,
-    supports_speculative_decoding, get_lora_request_params, DTYPE_MAPPER,
-    get_prompt_inputs)
+    supports_speculative_decoding, create_lora_request, get_lora_request,
+    DTYPE_MAPPER, get_prompt_inputs)
 from djl_python.telemetry import telemetry_manager
 from djl_python.properties_manager.lmi_dist_rb_properties import LmiDistRbProperties
 
@@ -103,7 +104,8 @@ class LmiDistRollingBatch(RollingBatch):
             )
         self.engine = engine_from_args(engine_args, **kwargs)
         self.request_cache = OrderedDict()
-        self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
+        self.lora_id_counter = AtomicCounter(0)
+        self.lora_requests = {}
         self.is_mistral_tokenizer = self.lmi_dist_config.tokenizer_mode == 'mistral'
         self.is_t5_model = isinstance(self.engine.preprocessor,
                                       Seq2SeqPreprocessor)
@@ -185,8 +187,11 @@ class LmiDistRollingBatch(RollingBatch):
             llm_input = get_prompt_inputs(request)
             params = self.translate_lmi_dist_params(request.parameters)
             request_params = RequestParams(**params)
-            lora_request_params = get_lora_request_params(
-                request, self.lora_ids)
+            lora_request_params = dict()
+            if request.adapter is not None:
+                adapter_name = request.adapter.get_property("name")
+                lora_request_params["lora_request"] = get_lora_request(
+                    adapter_name, self.lora_requests)
             # Constructing Request in lmi-dist library
             lmi_dist_request = Request(
                 id=request_id,
@@ -194,8 +199,7 @@ class LmiDistRollingBatch(RollingBatch):
                 prompt_token_ids=llm_input.get("prompt_token_ids"),
                 multi_modal_input=llm_input.get("multi_modal_data"),
                 params=request_params,
-                lora_request=lora_request_params["lora_request"]
-                if lora_request_params else None)
+                **lora_request_params)
             new_lmi_dist_requests.append(lmi_dist_request)
             self.request_cache[request_id] = {
                 "request_output": request.request_output
@@ -241,3 +245,43 @@ class LmiDistRollingBatch(RollingBatch):
         """
         raise NotImplementedError(
             "Not implemented for lmidist rolling batcher")
+
+    def add_lora(self,
+                 lora_name: str,
+                 lora_path: str,
+                 long_lora_max_len: Optional[int] = None):
+        """
+        Add LoRA adapter.
+        """
+        lora_id = self.lora_id_counter.inc(1)
+        lora_request = create_lora_request(lora_name,
+                                           lora_id,
+                                           lora_path,
+                                           long_lora_max_len=long_lora_max_len)
+        self.lora_requests[lora_request.lora_name] = lora_request
+        return self.engine.add_lora(lora_request)
+
+    def remove_lora(self, lora_name):
+        """
+        Remove LoRA adapter.
+        """
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+        return self.engine.remove_lora(lora_request.lora_int_id)
+
+    def pin_lora(self, lora_name):
+        """
+        Pin LoRA adapter.
+        """
+        lora_request = get_lora_request(lora_name, self.lora_requests)
+
+        # To pin an adapter, adapter has to be registered already (by calling add_lora()).
+        # If trying to pin an adapter that is not registered, we will get "LoRA is not registered" error.
+        # However, registered adapters are maintained by LRUCache
+        # and may be evicted if the number of adapters exceed capacity (max_cpu_loras).
+        # So there will be two scenarios:
+        # 1) An adapter is evicted, call add_lora() is necessary to avoid error.
+        # 2) An adapter is not evicted, call add_lora() is not necessary.
+        # But since whether an adapter is evicted is not exposed outside of engine,
+        # and add_lora() in this case will take negligible time, we will still call add_lora().
+        self.engine.add_lora(lora_request)
+        return self.engine.pin_lora(lora_request.lora_int_id)

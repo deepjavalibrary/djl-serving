@@ -263,6 +263,7 @@ public class ModelServerTest {
 
             // adapter API
             testAdapterRegister(channel, true, true);
+            testAdapterUpdate(channel, true);
             testAdapterNoPredictRegister();
             testAdapterPredict(channel);
             testAdapterDirPredict(channel);
@@ -390,6 +391,7 @@ public class ModelServerTest {
             Channel channel = initTestChannel();
 
             testAdapterRegister(channel, false, false);
+            testAdapterUpdate(channel, false);
             testAdapterPredict(channel);
             testAdapterList(channel, false);
             testAdapterDescribe(channel, false);
@@ -990,6 +992,15 @@ public class ModelServerTest {
 
         String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
         url = strModelPrefix + "/adapters?name=adaptable&src=src&echooption=opt";
+        request(channel, HttpMethod.POST, url);
+        assertHttpOk();
+    }
+
+    private void testAdapterUpdate(Channel channel, boolean modelPrefix)
+            throws InterruptedException {
+        logTestFunction();
+        String strModelPrefix = modelPrefix ? "/models/adaptecho" : "";
+        String url = strModelPrefix + "/adapters/adaptable/update?pin=true";
         request(channel, HttpMethod.POST, url);
         assertHttpOk();
     }

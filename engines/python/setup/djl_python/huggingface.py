@@ -23,7 +23,7 @@ from transformers import (pipeline, Pipeline, AutoModelForCausalLM,
                           StoppingCriteriaList)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from peft import PeftConfig, PeftModel, PeftModelForCausalLM
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from djl_python.encode_decode import encode
 from djl_python.inputs import Input
@@ -496,41 +496,120 @@ def register_adapter(inputs: Input):
     """
     Registers lora adapter with the model.
     """
+    if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
+        raise NotImplementedError(
+            "LoRA adapter API is only supported for rolling batch.")
+
     adapter_name = inputs.get_property("name")
     adapter_path = inputs.get_property("src")
+    adapter_pin = inputs.get_property(
+        "pin").lower() == "true" if inputs.get_property("pin") else False
+
     if not os.path.exists(adapter_path):
         raise ValueError(
             f"Only local LoRA models are supported. {adapter_path} is not a valid path"
         )
-    logging.info(f"Registering adapter {adapter_name} from {adapter_path}")
     _service.adapter_registry[adapter_name] = inputs
+
+    added = False
+    try:
+        added = _service.rolling_batch.add_lora(adapter_name, adapter_path)
+        if not added:
+            raise RuntimeError(
+                f"Failed to register LoRA adapter {adapter_name}")
+
+        if adapter_pin:
+            pinned = _service.rolling_batch.pin_lora(adapter_name)
+            if not pinned:
+                raise RuntimeError(
+                    f"Failed to pin LoRA adapter {adapter_name}")
+    except Exception as e:
+        if added:
+            logging.info(
+                f"LoRA adapter {adapter_name} was successfully added, but failed to pin, removing ..."
+            )
+            _service.rolling_batch.remove_lora(adapter_name)
+        if any(msg in str(e)
+               for msg in ("No free lora slots",
+                           "greater than the number of GPU LoRA slots")):
+            raise MemoryError(str(e))
+        return Output().error(f"register_adapter_error", message=str(e))
+
+    logging.info(
+        f"Registered adapter {adapter_name} from {adapter_path} successfully")
+    return Output(message=f"Adapter {adapter_name} registered")
+
+
+def update_adapter(inputs: Input):
+    """
+    Updates lora adapter with the model.
+    """
     if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
-        if isinstance(_service.model, PeftModel):
-            _service.model.load_adapter(adapter_path, adapter_name)
-        else:
-            _service.model = PeftModel.from_pretrained(_service.model,
-                                                       adapter_path,
-                                                       adapter_name)
+        raise NotImplementedError(
+            "LoRA adapter API is only supported for rolling batch.")
 
-        if isinstance(_service.hf_pipeline, Pipeline):
-            _service.hf_pipeline.model = _service.model
+    adapter_name = inputs.get_property("name")
+    adapter_path = inputs.get_property("src")
+    adapter_pin = inputs.get_property(
+        "pin").lower() == "true" if inputs.get_property("pin") else False
 
-        if isinstance(_service.hf_pipeline_unwrapped, Pipeline):
-            _service.hf_pipeline_unwrapped.model = _service.model
-    return Output()
+    if adapter_name not in _service.adapter_registry:
+        raise ValueError(f"Adapter {adapter_name} not registered.")
+
+    try:
+        adapter_old = _service.adapter_registry[adapter_name]
+        if adapter_old.get_property("src") and adapter_old.get_property(
+                "src") != adapter_path:
+            raise NotImplementedError(
+                f"Updating adapter path is not supported.")
+
+        if adapter_old.get_property("pin") and adapter_old.get_property(
+                "pin").lower() == "true" and not adapter_pin:
+            raise NotImplementedError(f"Unpin adapter is not supported.")
+
+        _service.adapter_registry[adapter_name] = inputs
+
+        if adapter_pin:
+            pinned = _service.rolling_batch.pin_lora(adapter_name)
+            if not pinned:
+                raise RuntimeError(
+                    f"Failed to pin LoRA adapter {adapter_name}")
+    except Exception as e:
+        if any(msg in str(e)
+               for msg in ("No free lora slots",
+                           "greater than the number of GPU LoRA slots")):
+            raise MemoryError(str(e))
+        return Output().error("update_adapter_error", message=str(e))
+
+    logging.info(f"Updated adapter {adapter_name} successfully")
+    return Output(message=f"Adapter {adapter_name} updated")
 
 
 def unregister_adapter(inputs: Input):
     """
     Unregisters lora adapter from the model.
     """
-    adapter_name = inputs.get_property("name")
-    logging.info(f"Unregistering adapter {adapter_name}")
-    #TODO: delete in vllm engine as well
-    del _service.adapter_registry[adapter_name]
     if not is_rolling_batch_enabled(_service.hf_configs.rolling_batch):
-        _service.model.base_model.delete_adapter(adapter_name)
-    return Output()
+        raise NotImplementedError(
+            "LoRA adapter API is only supported for rolling batch.")
+
+    adapter_name = inputs.get_property("name")
+
+    if adapter_name not in _service.adapter_registry:
+        raise ValueError(f"Adapter {adapter_name} not registered.")
+    del _service.adapter_registry[adapter_name]
+
+    try:
+        removed = _service.rolling_batch.remove_lora(adapter_name)
+        if not removed:
+            logging.info(
+                f"Remove LoRA adapter {adapter_name} returned false, the adapter may have already been evicted."
+            )
+    except Exception as e:
+        return Output().error("remove_adapter_error", message=str(e))
+
+    logging.info(f"Unregistered adapter {adapter_name} successfully")
+    return Output(message=f"Adapter {adapter_name} unregistered")
 
 
 def handle(inputs: Input):

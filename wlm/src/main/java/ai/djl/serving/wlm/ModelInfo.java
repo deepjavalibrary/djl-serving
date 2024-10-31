@@ -57,6 +57,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
@@ -100,7 +101,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     private transient Class<O> outputClass;
     private transient Criteria<I, O> criteria;
     private transient Map<Device, ZooModel<I, O>> models;
-    private transient Map<String, Adapter> adapters;
+    private transient Map<String, Adapter<I, O>> adapters;
     private transient Engine engine;
     private transient boolean initialize;
     private transient EventManager eventManager;
@@ -277,7 +278,8 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                 engine = m.getNDManager().getEngine();
             }
 
-            if (models.isEmpty()) {
+            boolean enableLora = Boolean.parseBoolean(options.getOrDefault("enable_lora", "false"));
+            if (enableLora && models.isEmpty()) {
                 // Check for adapters on first load
                 List<Path> possibleAdapterDirs = new ArrayList<>(2);
                 possibleAdapterDirs.add(modelDir);
@@ -292,7 +294,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                                         eventManager.onAdapterLoading(this, adapterDir);
                                         long start = System.nanoTime();
                                         String adapterName = adapterDir.getFileName().toString();
-                                        Adapter adapter =
+                                        Adapter<I, O> adapter =
                                                 Adapter.newInstance(
                                                         this,
                                                         adapterName,
@@ -600,7 +602,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
      *
      * @param adapter the adapter to add
      */
-    public void registerAdapter(Adapter adapter) {
+    public void registerAdapter(Adapter<I, O> adapter) {
         synchronized (this) {
             if (adapters.containsKey(adapter.getName())) {
                 throw new IllegalArgumentException(
@@ -614,19 +616,36 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     }
 
     /**
+     * Updates an adapter to this {@link ModelInfo}.
+     *
+     * @param adapter the adapter to add
+     */
+    public void updateAdapter(Adapter<I, O> adapter) {
+        synchronized (this) {
+            if (!adapters.containsKey(adapter.getName())) {
+                throw new NoSuchElementException(
+                        "The adapter "
+                                + adapter.getName()
+                                + " was not found and therefore can't be updated");
+            }
+            adapters.put(adapter.getName(), adapter);
+        }
+    }
+
+    /**
      * Removes an adapter from this {@link ModelInfo}.
      *
      * @param name the adapter to remove
      * @return the removed adapter
      */
-    public Adapter unregisterAdapter(String name) {
+    public Adapter<I, O> unregisterAdapter(String name) {
         synchronized (this) {
             // TODO: Remove from current workers
             if (!adapters.containsKey(name)) {
-                throw new IllegalArgumentException(
+                throw new NoSuchElementException(
                         "The adapter "
                                 + name
-                                + " was not found and therefore can't be unregistered");
+                                + " was not found and therefore cannot be unregistered");
             }
             return adapters.remove(name);
         }
@@ -637,7 +656,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
      *
      * @return the adapters for this model
      */
-    public Map<String, Adapter> getAdapters() {
+    public Map<String, Adapter<I, O>> getAdapters() {
         return adapters;
     }
 
@@ -647,7 +666,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
      * @param name the adapter name to get
      * @return the adapter
      */
-    public Adapter getAdapter(String name) {
+    public Adapter<I, O> getAdapter(String name) {
         return adapters.get(name);
     }
 
@@ -846,6 +865,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
     private void configPerModelSettings() throws ModelException {
         // per model settings can only be configured once
+        LmiUtils.configureLmiModel(this);
         WlmConfigManager wlmc = WlmConfigManager.getInstance();
         if (queueSize <= 0) {
             queueSize = intValue(prop, "job_queue_size", wlmc.getJobQueueSize());
@@ -869,7 +889,6 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         if (engineName == null) {
             engineName = inferEngine();
         }
-        LmiUtils.configureLmiModel(this);
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<Object, Object> entry : prop.entrySet()) {
@@ -1235,7 +1254,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
 
             synchronized (this) {
-                for (Map.Entry<String, Adapter> adapter : adapters.entrySet()) {
+                for (Map.Entry<String, Adapter<I, O>> adapter : adapters.entrySet()) {
                     configJobs.add(adapter.getValue().registerJob(ModelInfo.this).getJob());
                 }
             }

@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from enum import Enum
-from typing import Optional, Any, Mapping
+from typing import Optional, Any, Mapping, Tuple
 
 from pydantic import field_validator, model_validator
 
@@ -49,7 +49,10 @@ class VllmRbProperties(Properties):
     enable_lora: Optional[bool] = False
     max_loras: Optional[int] = 4
     max_lora_rank: Optional[int] = 16
-    lora_extra_vocab_size: Optional[int] = 256
+    fully_sharded_loras: bool = False
+    lora_extra_vocab_size: int = 256
+    long_lora_scaling_factors: Optional[Tuple[float]] = None
+    lora_dtype: Optional[str] = 'auto'
     max_cpu_loras: Optional[int] = None
 
     # Neuron vLLM properties

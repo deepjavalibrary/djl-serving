@@ -148,7 +148,7 @@ public final class EventManager {
      * @param model the model
      * @param adapter the adapter
      */
-    public void onAdapterLoaded(ModelInfo<?, ?> model, Adapter adapter) {
+    public void onAdapterLoaded(ModelInfo<?, ?> model, Adapter<?, ?> adapter) {
         for (ModelServerListener l : listeners) {
             l.onAdapterLoaded(model, adapter);
         }
