@@ -214,7 +214,7 @@ class TNXModelLoader(ModelLoader):
             neuron_config["cast_logits_dtype"] = self.config.cast_logits_dtype
         if self.config.on_device_embedding:
             neuron_config[
-                "on_device_embedding"] = self.config.on_device_generation
+                "on_device_embedding"] = self.config.on_device_embedding
         if self.config.on_device_generation:
             if len(self.config.on_device_generation.keys()) > 0:
                 neuron_config["on_device_generation"] = NeuronGenerationConfig(
@@ -352,17 +352,14 @@ class TNXModelLoader(ModelLoader):
         """
         if "neuron" in self.model_config.to_dict(
         ) and not self.safetensors_format:
-            self.split_model_path = os.path.join(self.get_load_path(),
-                                                 "checkpoint")
             self.compiled_graph_path = os.path.join(self.get_load_path(),
                                                     "compiled")
-            if self.is_safetensors(self.split_model_path):
-                self.model = self.load_auto_model(self.split_model_path)
+            if self.is_safetensors(self.compiled_graph_path):
+                self.model = self.load_auto_model(self.compiled_graph_path)
                 self.load_path = self.get_load_path()
             else:
-                # Load legacy split model optimum format
                 self.config.load_split_model = True
-                self.load_path = self.split_model_path
+                self.load_path = self.compiled_graph_path
                 self.model = self.load_inf2_model_from_disk()
         elif self.config.load_split_model:
             self.load_path = self.config.model_id_or_path

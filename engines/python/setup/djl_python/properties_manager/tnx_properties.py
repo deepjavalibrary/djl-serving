@@ -262,3 +262,9 @@ class TransformerNeuronXProperties(Properties):
     def set_on_device_generation(cls, config_path):
         with open(config_path, "r") as f:
             return json.load(f)
+
+    @model_validator(mode='after')
+    def set_on_device_embedding(self):
+        if self.load_split_model:
+            self.on_device_embedding = True
+        return self
