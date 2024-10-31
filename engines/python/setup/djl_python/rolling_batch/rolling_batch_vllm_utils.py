@@ -11,7 +11,7 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 from collections import OrderedDict
-from typing import Any
+from typing import Any, Optional
 
 from vllm import EngineArgs, TokensPrompt, TextPrompt
 from vllm.outputs import CompletionOutput, RequestOutput as vLLMRequestOutput
@@ -217,16 +217,22 @@ def supports_speculative_decoding() -> bool:
         return False
 
 
-def get_lora_request_params(request: Request, lora_ids: dict) -> dict:
-    result = dict()
-    adapter = request.adapter
-    if adapter is not None:
-        adapter_name = adapter.get_property("name")
-        adapter_path = adapter.get_property("src")
-        adapter_id = lora_ids[adapter_name]
-        result["lora_request"] = LoRARequest(adapter_name, adapter_id,
-                                             adapter_path)
-    return result
+def create_lora_request(lora_name: str, lora_id: int, lora_path: str,
+                        long_lora_max_len: Optional[int]) -> LoRARequest:
+    params = {
+        "lora_name": lora_name,
+        "lora_int_id": lora_id,
+        "lora_path": lora_path
+    }
+    if long_lora_max_len is not None:
+        params["long_lora_max_len"] = long_lora_max_len
+    return LoRARequest(**params)
+
+
+def get_lora_request(lora_name: str, lora_requests: dict) -> dict:
+    if lora_name not in lora_requests:
+        raise ValueError(f"LoRA adapter {lora_name} not found.")
+    return lora_requests[lora_name]
 
 
 def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
@@ -260,7 +266,10 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             enable_lora=config.enable_lora,
             max_loras=config.max_loras,
             max_lora_rank=config.max_lora_rank,
+            fully_sharded_loras=config.fully_sharded_loras,
             lora_extra_vocab_size=config.lora_extra_vocab_size,
+            long_lora_scaling_factors=config.long_lora_scaling_factors,
+            lora_dtype=config.lora_dtype,
             max_cpu_loras=config.max_cpu_loras,
             revision=config.revision,
             max_logprobs=config.max_logprobs,

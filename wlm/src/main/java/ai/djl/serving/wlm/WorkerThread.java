@@ -13,6 +13,8 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.Device;
+import ai.djl.engine.EngineException;
+import ai.djl.modality.Output;
 import ai.djl.serving.wlm.WorkerPoolConfig.ThreadConfig;
 import ai.djl.serving.wlm.util.AutoIncIdGenerator;
 import ai.djl.serving.wlm.util.WlmException;
@@ -124,9 +126,15 @@ public final class WorkerThread<I, O> implements Runnable {
         }
     }
 
-    private O runConfigJob(Job<I, O> configJob) throws TranslateException {
+    private void runConfigJob(Job<I, O> configJob) throws TranslateException {
         runJobs(Collections.singletonList(configJob));
-        return configJob.getOutput();
+
+        if (configJob.getOutput() instanceof Output) {
+            Output output = (Output) configJob.getOutput();
+            if (output.getCode() >= 300) {
+                throw new EngineException("Failed to register adapter: " + output.getMessage());
+            }
+        }
     }
 
     private void runJobs(List<Job<I, O>> input) throws TranslateException {

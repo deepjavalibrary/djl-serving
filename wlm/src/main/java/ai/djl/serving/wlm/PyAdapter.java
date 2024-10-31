@@ -13,42 +13,61 @@
 package ai.djl.serving.wlm;
 
 import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 
 import java.util.Map;
 
 /** An overload of {@link Adapter} for the python engine. */
-public class PyAdapter extends Adapter {
+public class PyAdapter extends Adapter<Input, Output> {
 
     /**
      * Constructs an {@link Adapter}.
      *
      * @param name the adapter name
      * @param src the adapter src
+     * @param pin whether to pin the adapter
      * @param options additional adapter options
      */
-    protected PyAdapter(String name, String src, Map<String, String> options) {
-        super(name, src, options);
+    protected PyAdapter(
+            ModelInfo<Input, Output> modelInfo,
+            String name,
+            String src,
+            boolean pin,
+            Map<String, String> options) {
+        super(modelInfo, name, src, pin, options);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected <I> I getRegisterAdapterInput() {
+    protected Input getRegisterAdapterInput() {
         Input input = new Input();
         input.addProperty("handler", "register_adapter");
         input.addProperty("name", name);
         input.addProperty("src", src);
+        input.addProperty("pin", String.valueOf(pin));
         for (Map.Entry<String, String> entry : options.entrySet()) {
             input.add(entry.getKey(), entry.getValue());
         }
-        return (I) input;
+        return input;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected <I> I getUnregisterAdapterInput() {
+    protected Input getUpdateAdapterInput() {
+        Input input = new Input();
+        input.addProperty("handler", "update_adapter");
+        input.addProperty("name", name);
+        input.addProperty("src", src);
+        input.addProperty("pin", String.valueOf(pin));
+        for (Map.Entry<String, String> entry : options.entrySet()) {
+            input.add(entry.getKey(), entry.getValue());
+        }
+        return input;
+    }
+
+    @Override
+    protected Input getUnregisterAdapterInput() {
         Input input = new Input();
         input.addProperty("handler", "unregister_adapter");
         input.addProperty("name", name);
-        return (I) input;
+        return input;
     }
 }

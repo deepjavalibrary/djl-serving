@@ -88,5 +88,5 @@ public interface ModelServerListener {
      * @param model the model
      * @param adapter the adapter
      */
-    void onAdapterLoaded(ModelInfo<?, ?> model, Adapter adapter);
+    void onAdapterLoaded(ModelInfo<?, ?> model, Adapter<?, ?> adapter);
 }

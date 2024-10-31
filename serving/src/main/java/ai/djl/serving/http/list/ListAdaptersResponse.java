@@ -58,19 +58,22 @@ public class ListAdaptersResponse {
      *
      * @param name the adapter name
      * @param src the adapter source
+     * @param pin whether to pin the adapter
      */
-    public void addAdapter(String name, String src) {
-        adapters.add(new AdapterItem(name, src));
+    public void addAdapter(String name, String src, boolean pin) {
+        adapters.add(new AdapterItem(name, src, pin));
     }
 
     /** A class that holds the adapter response. */
     public static final class AdapterItem {
         private String name;
         private String src;
+        private boolean pin;
 
-        private AdapterItem(String name, String src) {
+        private AdapterItem(String name, String src, boolean pin) {
             this.name = name;
             this.src = src;
+            this.pin = pin;
         }
 
         /**
@@ -89,6 +92,15 @@ public class ListAdaptersResponse {
          */
         public String getSrc() {
             return src;
+        }
+
+        /**
+         * Returns whether to pin the adapter.
+         *
+         * @return whether to pin the adapter
+         */
+        public boolean isPin() {
+            return pin;
         }
     }
 }

@@ -12,6 +12,8 @@
  */
 package ai.djl.serving.wlm;
 
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.serving.wlm.util.WorkerJob;
 
 import java.net.URI;
@@ -22,10 +24,12 @@ import java.util.concurrent.CompletableFuture;
 /**
  * An adapter is a modification producing a variation of a model that can be used during prediction.
  */
-public abstract class Adapter {
+public abstract class Adapter<I, O> {
 
+    protected ModelInfo<I, O> modelInfo;
     protected String name;
     protected String src;
+    protected boolean pin;
     protected Map<String, String> options;
 
     /**
@@ -33,33 +37,42 @@ public abstract class Adapter {
      *
      * @param name the adapter name
      * @param src the adapter source
+     * @param pin whether to pin the adapter
      * @param options additional adapter options
      */
-    protected Adapter(String name, String src, Map<String, String> options) {
+    protected Adapter(
+            ModelInfo<I, O> modelInfo,
+            String name,
+            String src,
+            boolean pin,
+            Map<String, String> options) {
+        this.modelInfo = modelInfo;
         this.name = name;
         this.src = src;
+        this.pin = pin;
         this.options = options;
     }
 
     /**
      * Constructs a new {@link Adapter}.
      *
-     * <p>After registration, you should call {@link #register(WorkerPool)}. This doesn't affect the
-     * worker pool itself.
+     * <p>After registration, you should call {@link #register(WorkLoadManager)}. This doesn't
+     * affect the worker pool itself.
      *
-     * @param wpc the worker pool config for the new adapter
+     * @param modelInfo the base model for the new adapter
      * @param name the adapter name
      * @param src the adapter source
+     * @param pin whether to pin the adapter
      * @param options additional adapter options
      * @return the new adapter
      */
-    public static Adapter newInstance(
-            WorkerPoolConfig<?, ?> wpc, String name, String src, Map<String, String> options) {
-        if (!(wpc instanceof ModelInfo)) {
-            String modelName = wpc.getId();
-            throw new IllegalArgumentException("The worker " + modelName + " is not a model");
-        }
-
+    @SuppressWarnings("unchecked")
+    public static <I, O> Adapter<I, O> newInstance(
+            ModelInfo<I, O> modelInfo,
+            String name,
+            String src,
+            boolean pin,
+            Map<String, String> options) {
         // TODO Allow URL support
         try {
             URI uri = new URI(src);
@@ -70,10 +83,10 @@ public abstract class Adapter {
         } catch (URISyntaxException ignored) {
         }
 
-        ModelInfo<?, ?> modelInfo = (ModelInfo<?, ?>) wpc;
         // TODO Replace usage of class name with creating adapters by Engine.newPatch(name ,src)
         if ("PyEngine".equals(modelInfo.getEngine().getClass().getSimpleName())) {
-            return new PyAdapter(name, src, options);
+            return (Adapter<I, O>)
+                    new PyAdapter((ModelInfo<Input, Output>) modelInfo, name, src, pin, options);
         } else {
             throw new IllegalArgumentException(
                     "Adapters are only currently supported for Python models");
@@ -81,23 +94,50 @@ public abstract class Adapter {
     }
 
     /**
+     * Constructs a new {@link Adapter}.
+     *
+     * <p>After registration, you should call {@link #register(WorkLoadManager)}. This doesn't
+     * affect the worker pool itself.
+     *
+     * @param modelInfo the base model for the new adapter
+     * @param name the adapter name
+     * @param src the adapter source
+     * @param options additional adapter options
+     * @return the new adapter
+     */
+    public static <I, O> Adapter<I, O> newInstance(
+            ModelInfo<I, O> modelInfo, String name, String src, Map<String, String> options) {
+        return newInstance(modelInfo, name, src, false, options);
+    }
+
+    /**
      * Unregisters an adapter in a worker pool.
      *
      * <p>This unregisters it in the wpc for new threads and all existing threads.
      *
-     * @param wp the worker pool to remove the adapter from
+     * @param wlm the workflow manager to remove the adapter from
      * @param <I> the input type
      * @param <O> the output type
      * @param adapterName the adapter name
      */
-    public static <I, O> void unregister(WorkerPool<I, O> wp, String adapterName) {
-        ModelInfo<I, O> wpc = (ModelInfo<I, O>) wp.getWpc();
-        Adapter adapter = wpc.unregisterAdapter(adapterName);
+    public static <I, O> CompletableFuture<O> unregister(
+            String adapterName, ModelInfo<I, O> modelInfo, WorkLoadManager wlm) {
+        Adapter<I, O> adapter = modelInfo.unregisterAdapter(adapterName);
 
         // Add the unregister adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add unregister adapter job once.
-        wp.getJobQueue().offer(adapter.unregisterJob(wpc));
+        Job<I, O> job = new Job<>(modelInfo, adapter.getUnregisterAdapterInput());
+        return wlm.runJob(job);
+    }
+
+    /**
+     * Returns the base model info.
+     *
+     * @return the base model info
+     */
+    public ModelInfo<I, O> getModelInfo() {
+        return modelInfo;
     }
 
     /**
@@ -110,6 +150,15 @@ public abstract class Adapter {
     }
 
     /**
+     * Sets the adapter name.
+     *
+     * @param name the adapter name
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    /**
      * Returns the adapter src.
      *
      * @return the adapter src
@@ -119,34 +168,103 @@ public abstract class Adapter {
     }
 
     /**
+     * Sets the adapter src.
+     *
+     * @param src the adapter src
+     */
+    public void setSrc(String src) {
+        this.src = src;
+    }
+
+    /**
+     * Returns whether to pin the adapter.
+     *
+     * @return whether to pin the adapter
+     */
+    public boolean isPin() {
+        return pin;
+    }
+
+    /**
+     * Sets whether to pin the adapter.
+     *
+     * @param pin whether to pin the adapter
+     */
+    public void setPin(boolean pin) {
+        this.pin = pin;
+    }
+
+    /**
+     * Returns the adapter options.
+     *
+     * @return the adapter options
+     */
+    public Map<String, String> getOptions() {
+        return options;
+    }
+
+    /**
+     * Sets the adapter options.
+     *
+     * @param options the adapter options
+     */
+    public void setOptions(Map<String, String> options) {
+        this.options = options;
+    }
+
+    /**
      * Registers this adapter in a worker pool.
      *
      * <p>This registers it in the wpc for new threads and all existing threads.
      *
-     * @param wp the worker pool to register this adapter in
-     * @param <I> the input type
-     * @param <O> the output type
+     * @param wlm the workload manager
      */
-    public <I, O> void register(WorkerPool<I, O> wp) {
-        ModelInfo<I, O> wpc = (ModelInfo<I, O>) wp.getWpc();
-        wpc.registerAdapter(this);
+    public CompletableFuture<O> register(WorkLoadManager wlm) {
+        modelInfo.registerAdapter(this);
 
         // Add the register adapter job to job queue.
         // Because we only support one worker thread for LoRA,
         // it would be enough to add register adapter job once.
-        wp.getJobQueue().offer(registerJob(wpc));
+        Job<I, O> job = new Job<>(modelInfo, getRegisterAdapterInput());
+        return wlm.runJob(job);
+    }
+
+    /**
+     * Updates this adapter in a worker pool.
+     *
+     * <p>This registers it in the wpc for new threads and all existing threads.
+     *
+     * @param wlm the workload manager to register this adapter in
+     */
+    public CompletableFuture<O> update(WorkLoadManager wlm) {
+        modelInfo.updateAdapter(this);
+
+        // Add the update adapter job to job queue.
+        // Because we only support one worker thread for LoRA,
+        // it would be enough to add update adapter job once.
+        Job<I, O> job = new Job<>(modelInfo, getUpdateAdapterInput());
+        return wlm.runJob(job);
     }
 
     /**
      * Creates a {@link WorkerJob} to register this adapter in a {@link WorkerThread}.
      *
      * @param wpc the worker pool of the thread
-     * @param <I> the input type
-     * @param <O> the output type
      * @return the registration job
      */
-    public <I, O> WorkerJob<I, O> registerJob(WorkerPoolConfig<I, O> wpc) {
+    public WorkerJob<I, O> registerJob(WorkerPoolConfig<I, O> wpc) {
         Job<I, O> job = new Job<>(wpc, getRegisterAdapterInput());
+        return new WorkerJob<>(job, new CompletableFuture<>());
+    }
+
+    /**
+     * Creates a {@link WorkerJob} to update this adapter in a {@link WorkerThread}.
+     *
+     * @param wpc the worker pool of the thread
+     * @return the update job
+     */
+    public WorkerJob<I, O> updateJob(WorkerPoolConfig<I, O> wpc) {
+        Job<I, O> job = new Job<>(wpc, getUpdateAdapterInput());
         return new WorkerJob<>(job, new CompletableFuture<>());
     }
 
@@ -154,16 +272,16 @@ public abstract class Adapter {
      * Creates a {@link WorkerJob} to unregister this adapter from a {@link WorkerThread}.
      *
      * @param wpc the worker pool of the thread
-     * @param <I> the input type
-     * @param <O> the output type
      * @return the unregistration job
      */
-    public <I, O> WorkerJob<I, O> unregisterJob(WorkerPoolConfig<I, O> wpc) {
+    public WorkerJob<I, O> unregisterJob(WorkerPoolConfig<I, O> wpc) {
         Job<I, O> job = new Job<>(wpc, getUnregisterAdapterInput());
         return new WorkerJob<>(job, new CompletableFuture<>());
     }
 
-    protected abstract <I> I getRegisterAdapterInput();
+    protected abstract I getRegisterAdapterInput();
 
-    protected abstract <I> I getUnregisterAdapterInput();
+    protected abstract I getUnregisterAdapterInput();
+
+    protected abstract I getUpdateAdapterInput();
 }

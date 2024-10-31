@@ -69,6 +69,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.NoSuchElementException;
 import java.util.TimeZone;
 
 /** A utility class that handling Netty request and response. */
@@ -252,7 +253,9 @@ public final class NettyUtils {
     public static void sendError(ChannelHandlerContext ctx, Throwable t) {
         String requestId = NettyUtils.getRequestId(ctx.channel());
         String requestIdLogPrefix = "RequestId=[" + requestId + "]";
-        if (t instanceof ResourceNotFoundException || t instanceof ModelNotFoundException) {
+        if (t instanceof ResourceNotFoundException
+                || t instanceof ModelNotFoundException
+                || t instanceof NoSuchElementException) {
             logger.debug(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.NOT_FOUND, t);
         } else if (t instanceof BadRequestException) {
@@ -279,6 +282,9 @@ public final class NettyUtils {
         } else if (t instanceof ServiceUnavailableException || t instanceof WlmException) {
             logger.warn(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, t);
+        } else if (t instanceof IllegalArgumentException) {
+            logger.warn(requestIdLogPrefix, t);
+            NettyUtils.sendError(ctx, HttpResponseStatus.CONFLICT, t);
         } else {
             logger.error(requestIdLogPrefix, t);
             NettyUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, t);

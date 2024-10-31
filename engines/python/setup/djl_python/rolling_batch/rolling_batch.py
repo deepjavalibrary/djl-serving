@@ -11,9 +11,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
-import json
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from djl_python.properties_manager.properties import Properties
 from djl_python.request import Request
@@ -164,3 +163,15 @@ class RollingBatch(ABC):
         ]
 
         return results
+
+    def add_lora(self,
+                 lora_name: str,
+                 lora_path: str,
+                 long_lora_max_len: Optional[int] = None) -> bool:
+        raise NotImplementedError("add_lora function not supported.")
+
+    def remove_lora(self, lora_name) -> bool:
+        raise NotImplementedError("remove_lora function not supported.")
+
+    def pin_lora(self, lora_name) -> bool:
+        raise NotImplementedError("pin_lora function not supported.")

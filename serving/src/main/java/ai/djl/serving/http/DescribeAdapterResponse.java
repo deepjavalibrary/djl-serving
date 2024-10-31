@@ -12,21 +12,25 @@
  */
 package ai.djl.serving.http;
 
+import ai.djl.modality.Input;
+import ai.djl.modality.Output;
 import ai.djl.serving.wlm.Adapter;
 
 /** A class that holds information about adapter status. */
 public class DescribeAdapterResponse {
     private String name;
     private String src;
+    private boolean pin;
 
     /**
      * Constructs a {@link DescribeAdapterResponse}.
      *
      * @param adapter the adapter to describe
      */
-    public DescribeAdapterResponse(Adapter adapter) {
+    public DescribeAdapterResponse(Adapter<Input, Output> adapter) {
         this.name = adapter.getName();
         this.src = adapter.getSrc();
+        this.pin = adapter.isPin();
     }
 
     /**
@@ -45,5 +49,14 @@ public class DescribeAdapterResponse {
      */
     public String getSrc() {
         return src;
+    }
+
+    /**
+     * Returns whether to pin the adapter.
+     *
+     * @return whether to pin the adapter
+     */
+    public boolean isPin() {
+        return pin;
     }
 }

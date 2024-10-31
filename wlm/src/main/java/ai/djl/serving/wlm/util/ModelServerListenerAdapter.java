@@ -55,5 +55,5 @@ public abstract class ModelServerListenerAdapter implements ModelServerListener 
 
     /** {@inheritDoc} */
     @Override
-    public void onAdapterLoaded(ModelInfo<?, ?> model, Adapter adapter) {}
+    public void onAdapterLoaded(ModelInfo<?, ?> model, Adapter<?, ?> adapter) {}
 }
