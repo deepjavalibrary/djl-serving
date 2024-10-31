@@ -59,7 +59,6 @@ class TnXModelLoaders(str, Enum):
 
 
 class TnXModelSchema(str, Enum):
-    legacy = "legacy"
     optimum = "optimum"
     safetensors = "safetensors"
     compile_only = "compile_only"
