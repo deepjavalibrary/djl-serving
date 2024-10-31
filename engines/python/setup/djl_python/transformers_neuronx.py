@@ -145,7 +145,9 @@ class TransformersNeuronXService(object):
                     f"VllmModelLoader does not support this config: {self.config}"
                 )
 
-    def set_configs(self, properties: dict, is_partition: bool = False) -> None:
+    def set_configs(self,
+                    properties: dict,
+                    is_partition: bool = False) -> None:
         """
         Sets the model configuration properties and performs necessary setup for model loading.
 

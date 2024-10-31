@@ -50,7 +50,8 @@ class NeuronSmartDefaultUtils:
         self.model_size_in_gb = model_size_in_gb
         self.sequence_size_in_gb = sequence_size_in_gb
 
-    def apply_smart_defaults(self, properties: Dict[str, Any],
+    def apply_smart_defaults(self,
+                             properties: Dict[str, Any],
                              model_config: Dict[str, Any],
                              is_partition: bool = False) -> None:
         """
