@@ -107,7 +107,8 @@ class Properties(BaseModel):
             if rolling_batch is None:
                 properties['rolling_batch'] = RollingBatchEnum.disable.value
             elif rolling_batch != RollingBatchEnum.disable.value:
-                raise ValueError("You cannot enable rolling batch with dynamic batching. "
-                                 "Disable dynamic batch by setting batch_size to 1 or "
-                                 "remove/disable option.rolling_batch")
+                raise ValueError(
+                    "You cannot enable rolling batch with dynamic batching. "
+                    "Disable dynamic batch by setting batch_size to 1 or "
+                    "remove/disable option.rolling_batch")
         return properties
