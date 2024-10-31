@@ -602,7 +602,7 @@ def unregister_adapter(inputs: Input):
     try:
         removed = _service.rolling_batch.remove_lora(adapter_name)
         if not removed:
-            logging.debug(
+            logging.info(
                 f"Remove LoRA adapter {adapter_name} returned false, the adapter may have already been evicted."
             )
     except Exception as e:
