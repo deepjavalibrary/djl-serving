@@ -316,3 +316,9 @@ class TransformerNeuronXProperties(Properties):
                 )
         else:
             raise on_device_generation_value
+
+    @model_validator(mode='after')
+    def set_on_device_embedding(self):
+        if self.load_split_model:
+            self.on_device_embedding = True
+        return self
