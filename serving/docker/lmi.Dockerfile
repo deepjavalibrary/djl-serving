@@ -40,6 +40,9 @@ ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-13.0.0%2Bnightly-py
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
 ARG peft_version=0.13.2
 
+# TODO: replace with actual wheel location once published
+ARG sagemaker_fast_model_loader_wheel="https://publish.djl.ai/sagemaker_fast_model_loader/sagemaker_fast_model_loader-0.1.0-cp310-cp310-linux_x86_64.whl"
+
 EXPOSE 8080
 
 COPY dockerd-entrypoint-with-cuda-compat.sh /usr/local/bin/dockerd-entrypoint.sh
@@ -140,6 +143,7 @@ RUN pip3 install \
     ${lmi_dist_wheel} \
     torch==${torch_version} \
     torchvision==${torch_vision_version} \
+    ${sagemaker_fast_model_loader_wheel} \
     && git clone https://github.com/neuralmagic/AutoFP8.git && cd AutoFP8 && git reset --hard 4b2092c && pip3 install . && cd .. && rm -rf AutoFP8 \
     && pip3 cache purge
 
