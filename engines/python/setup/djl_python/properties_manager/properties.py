@@ -47,8 +47,7 @@ class Properties(BaseModel):
     model_id_or_path: str
     # Optional configurations with default values
     model_dir: Optional[str] = None
-    # Make the default to auto, after java front end changes and test cases are changed.
-    rolling_batch: RollingBatchEnum = RollingBatchEnum.disable
+    rolling_batch: RollingBatchEnum = RollingBatchEnum.auto
     tensor_parallel_degree: int = 1
     cluster_size: int = 1
     trust_remote_code: bool = False
@@ -98,4 +97,17 @@ class Properties(BaseModel):
         # Otherwise, we assume model artifacts are in the model_dir
         properties['model_id_or_path'] = properties.get(
             "model_id") or properties.get("model_dir")
+        return properties
+
+    @model_validator(mode='before')
+    def set_default_rolling_batch(cls, properties: dict) -> dict:
+        batch_size = int(properties.get('batch_size', 1))
+        rolling_batch = properties.get('rolling_batch')
+        if batch_size > 1:
+            if rolling_batch is None:
+                properties['rolling_batch'] = RollingBatchEnum.disable.value
+            elif rolling_batch != RollingBatchEnum.disable.value:
+                raise ValueError("You cannot enable rolling batch with dynamic batching. "
+                                 "Disable dynamic batch by setting batch_size to 1 or "
+                                 "remove/disable option.rolling_batch")
         return properties
