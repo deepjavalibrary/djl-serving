@@ -72,6 +72,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             String[] segments)
             throws ModelException {
         HttpMethod method = req.method();
+        String adapterAlias = req.headers().get("X-Amzn-SageMaker-Adapter-Alias");
 
         if ("adapters".equals(segments[1])) {
             // API /adapters/*
@@ -89,7 +90,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                     handleListAdapters(ctx, decoder, modelName);
                     return;
                 } else if (HttpMethod.POST.equals(method)) {
-                    handleRegisterAdapter(ctx, decoder, modelName);
+                    handleRegisterAdapter(ctx, decoder, modelName, adapterAlias);
                     return;
                 } else {
                     throw new MethodNotAllowedException();
@@ -98,11 +99,11 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
 
             String adapterName = segments[2];
             if (HttpMethod.GET.equals(method)) {
-                handleDescribeAdapter(ctx, modelName, adapterName);
+                handleDescribeAdapter(ctx, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[3])) {
-                handleUpdateAdapter(ctx, decoder, modelName, adapterName);
+                handleUpdateAdapter(ctx, decoder, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.DELETE.equals(method)) {
-                handleUnregisterAdapter(ctx, modelName, adapterName);
+                handleUnregisterAdapter(ctx, modelName, adapterName, adapterAlias);
             } else {
                 throw new MethodNotAllowedException();
             }
@@ -115,7 +116,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                     handleListAdapters(ctx, decoder, modelName);
                     return;
                 } else if (HttpMethod.POST.equals(method)) {
-                    handleRegisterAdapter(ctx, decoder, modelName);
+                    handleRegisterAdapter(ctx, decoder, modelName, adapterAlias);
                     return;
                 } else {
                     throw new MethodNotAllowedException();
@@ -124,11 +125,11 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
 
             String adapterName = segments[4];
             if (HttpMethod.GET.equals(method)) {
-                handleDescribeAdapter(ctx, modelName, adapterName);
+                handleDescribeAdapter(ctx, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.POST.equals(method) && "update".equalsIgnoreCase(segments[5])) {
-                handleUpdateAdapter(ctx, decoder, modelName, adapterName);
+                handleUpdateAdapter(ctx, decoder, modelName, adapterName, adapterAlias);
             } else if (HttpMethod.DELETE.equals(method)) {
-                handleUnregisterAdapter(ctx, modelName, adapterName);
+                handleUnregisterAdapter(ctx, modelName, adapterName, adapterAlias);
             } else {
                 throw new MethodNotAllowedException();
             }
@@ -167,7 +168,10 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
     }
 
     private void handleRegisterAdapter(
-            ChannelHandlerContext ctx, QueryStringDecoder decoder, String modelName) {
+            ChannelHandlerContext ctx,
+            QueryStringDecoder decoder,
+            String modelName,
+            String adapterAlias) {
 
         String adapterName = NettyUtils.getRequiredParameter(decoder, "name");
         String src = NettyUtils.getRequiredParameter(decoder, "src");
@@ -193,7 +197,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         }
         boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
         Adapter<Input, Output> adapter =
-                Adapter.newInstance(modelInfo, adapterName, src, pin, options);
+                Adapter.newInstance(modelInfo, adapterName, adapterAlias, src, pin, options);
         adapter.register(wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
@@ -204,7 +208,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
                 .exceptionally(
                         t -> {
                             onException(t.getCause(), ctx);
-                            Adapter.unregister(adapterName, modelInfo, wlm);
+                            Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm);
                             return null;
                         });
     }
@@ -213,7 +217,8 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             ChannelHandlerContext ctx,
             QueryStringDecoder decoder,
             String modelName,
-            String adapterName) {
+            String adapterName,
+            String adapterAlias) {
         WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
         WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
@@ -230,7 +235,11 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
 
         if (adapter == null) {
-            throw new BadRequestException(404, "The adapter " + adapterName + " was not found");
+            throw new BadRequestException(
+                    404,
+                    "The adapter "
+                            + (adapterAlias == null ? adapterName : adapterAlias)
+                            + " was not found");
         }
 
         Map<String, String> options = new ConcurrentHashMap<>();
@@ -242,6 +251,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         String src = options.get("src");
         boolean pin = Boolean.parseBoolean(options.getOrDefault("pin", "false"));
 
+        adapter.setAlias(adapterAlias);
         if (src != null) {
             adapter.setSrc(src);
         }
@@ -262,7 +272,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
     }
 
     private void handleDescribeAdapter(
-            ChannelHandlerContext ctx, String modelName, String adapterName) {
+            ChannelHandlerContext ctx, String modelName, String adapterName, String adapterAlias) {
         WorkerPool<Input, Output> wp =
                 ModelManager.getInstance().getWorkLoadManager().getWorkerPoolById(modelName);
         if (wp == null) {
@@ -279,7 +289,11 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
         Adapter<Input, Output> adapter = modelInfo.getAdapter(adapterName);
 
         if (adapter == null) {
-            throw new BadRequestException(404, "The adapter " + adapterName + " was not found");
+            throw new BadRequestException(
+                    404,
+                    "The adapter "
+                            + (adapterAlias == null ? adapterName : adapterAlias)
+                            + " was not found");
         }
 
         DescribeAdapterResponse adapterResponse = new DescribeAdapterResponse(adapter);
@@ -287,7 +301,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
     }
 
     private void handleUnregisterAdapter(
-            ChannelHandlerContext ctx, String modelName, String adapterName) {
+            ChannelHandlerContext ctx, String modelName, String adapterName, String adapterAlias) {
         WorkLoadManager wlm = ModelManager.getInstance().getWorkLoadManager();
         WorkerPool<Input, Output> wp = wlm.getWorkerPoolById(modelName);
         if (wp == null) {
@@ -301,7 +315,7 @@ public class AdapterManagementRequestHandler extends HttpRequestHandler {
             throw new BadRequestException("LoRA is not enabled.");
         }
 
-        Adapter.unregister(adapterName, modelInfo, wlm)
+        Adapter.unregister(adapterName, adapterAlias, modelInfo, wlm)
                 .whenCompleteAsync(
                         (o, t) -> {
                             if (o != null) {

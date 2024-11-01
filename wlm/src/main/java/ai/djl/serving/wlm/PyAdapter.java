@@ -31,10 +31,11 @@ public class PyAdapter extends Adapter<Input, Output> {
     protected PyAdapter(
             ModelInfo<Input, Output> modelInfo,
             String name,
+            String alias,
             String src,
             boolean pin,
             Map<String, String> options) {
-        super(modelInfo, name, src, pin, options);
+        super(modelInfo, name, alias, src, pin, options);
     }
 
     @Override
@@ -42,6 +43,7 @@ public class PyAdapter extends Adapter<Input, Output> {
         Input input = new Input();
         input.addProperty("handler", "register_adapter");
         input.addProperty("name", name);
+        input.addProperty("alias", alias);
         input.addProperty("src", src);
         input.addProperty("pin", String.valueOf(pin));
         for (Map.Entry<String, String> entry : options.entrySet()) {
@@ -55,6 +57,7 @@ public class PyAdapter extends Adapter<Input, Output> {
         Input input = new Input();
         input.addProperty("handler", "update_adapter");
         input.addProperty("name", name);
+        input.addProperty("alias", alias);
         input.addProperty("src", src);
         input.addProperty("pin", String.valueOf(pin));
         for (Map.Entry<String, String> entry : options.entrySet()) {
@@ -68,6 +71,7 @@ public class PyAdapter extends Adapter<Input, Output> {
         Input input = new Input();
         input.addProperty("handler", "unregister_adapter");
         input.addProperty("name", name);
+        input.addProperty("alias", alias);
         return input;
     }
 }

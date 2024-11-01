@@ -501,6 +501,7 @@ def register_adapter(inputs: Input):
             "LoRA adapter API is only supported for rolling batch.")
 
     adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
     adapter_pin = inputs.get_property(
         "pin").lower() == "true" if inputs.get_property("pin") else False
@@ -516,17 +517,17 @@ def register_adapter(inputs: Input):
         added = _service.rolling_batch.add_lora(adapter_name, adapter_path)
         if not added:
             raise RuntimeError(
-                f"Failed to register LoRA adapter {adapter_name}")
+                f"Failed to register LoRA adapter {adapter_alias}")
 
         if adapter_pin:
             pinned = _service.rolling_batch.pin_lora(adapter_name)
             if not pinned:
                 raise RuntimeError(
-                    f"Failed to pin LoRA adapter {adapter_name}")
+                    f"Failed to pin LoRA adapter {adapter_alias}")
     except Exception as e:
         if added:
             logging.info(
-                f"LoRA adapter {adapter_name} was successfully added, but failed to pin, removing ..."
+                f"LoRA adapter {adapter_alias} was successfully added, but failed to pin, removing ..."
             )
             _service.rolling_batch.remove_lora(adapter_name)
         if any(msg in str(e)
@@ -549,12 +550,13 @@ def update_adapter(inputs: Input):
             "LoRA adapter API is only supported for rolling batch.")
 
     adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
     adapter_path = inputs.get_property("src")
     adapter_pin = inputs.get_property(
         "pin").lower() == "true" if inputs.get_property("pin") else False
 
     if adapter_name not in _service.adapter_registry:
-        raise ValueError(f"Adapter {adapter_name} not registered.")
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
 
     try:
         adapter_old = _service.adapter_registry[adapter_name]
@@ -573,7 +575,7 @@ def update_adapter(inputs: Input):
             pinned = _service.rolling_batch.pin_lora(adapter_name)
             if not pinned:
                 raise RuntimeError(
-                    f"Failed to pin LoRA adapter {adapter_name}")
+                    f"Failed to pin LoRA adapter {adapter_alias}")
     except Exception as e:
         if any(msg in str(e)
                for msg in ("No free lora slots",
@@ -581,8 +583,8 @@ def update_adapter(inputs: Input):
             raise MemoryError(str(e))
         return Output().error("update_adapter_error", message=str(e))
 
-    logging.info(f"Updated adapter {adapter_name} successfully")
-    return Output(message=f"Adapter {adapter_name} updated")
+    logging.info(f"Updated adapter {adapter_alias} successfully")
+    return Output(message=f"Adapter {adapter_alias} updated")
 
 
 def unregister_adapter(inputs: Input):
@@ -594,22 +596,23 @@ def unregister_adapter(inputs: Input):
             "LoRA adapter API is only supported for rolling batch.")
 
     adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
 
     if adapter_name not in _service.adapter_registry:
-        raise ValueError(f"Adapter {adapter_name} not registered.")
+        raise ValueError(f"Adapter {adapter_alias} not registered.")
     del _service.adapter_registry[adapter_name]
 
     try:
         removed = _service.rolling_batch.remove_lora(adapter_name)
         if not removed:
             logging.info(
-                f"Remove LoRA adapter {adapter_name} returned false, the adapter may have already been evicted."
+                f"Remove LoRA adapter {adapter_alias} returned false, the adapter may have already been evicted."
             )
     except Exception as e:
         return Output().error("remove_adapter_error", message=str(e))
 
-    logging.info(f"Unregistered adapter {adapter_name} successfully")
-    return Output(message=f"Adapter {adapter_name} unregistered")
+    logging.info(f"Unregistered adapter {adapter_alias} successfully")
+    return Output(message=f"Adapter {adapter_alias} unregistered")
 
 
 def handle(inputs: Input):
