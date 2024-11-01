@@ -42,7 +42,7 @@ public final class LmiConfigRecommender {
         setTensorParallelDegree(lmiProperties);
         setRollingBatchSize(lmiProperties);
         setIsPeftModel(lmiProperties, modelConfig);
-        setWorkers(lmiProperties);
+        setPropertiesForLora(lmiProperties);
     }
 
     private static void setRollingBatch(
@@ -150,12 +150,17 @@ public final class LmiConfigRecommender {
         }
     }
 
-    private static void setWorkers(Properties lmiProperties) {
-        // If option.enable_lora=true, set maxWorkers to 1 because we only support one worker thread
+    private static void setPropertiesForLora(Properties lmiProperties) {
+        // If option.enable_lora=true, set load_on_devices=0 and maxWorkers=1 because we only
+        // support one worker thread
         // for LoRA.
+        // TODO: Support multiple worker threads for LoRA.
         boolean enableLora = Boolean.parseBoolean(lmiProperties.getProperty("option.enable_lora"));
         if (enableLora) {
-            logger.info("option.enable_lora is set to true, setting maxWorkers to 1");
+            logger.info(
+                    "option.enable_lora is set to true, setting load_on_devices=0 and"
+                            + " maxWorkers=1");
+            lmiProperties.setProperty("load_on_devices", "0");
             lmiProperties.setProperty("maxWorkers", "1");
         }
     }
